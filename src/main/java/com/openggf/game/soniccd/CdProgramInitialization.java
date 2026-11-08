@@ -66,6 +66,23 @@ final class CdProgramInitialization {
         }
     }
 
+    /** Native Initialization.Start56-90 order only. Port callbacks are genuine caller sites,
+     * not a value adopter or invocation token; the private owner must fence each callback. */
+    interface StartPort {
+        State initialization();ExecutionEnvironment executionEnvironment();
+        void clearScratch();void writeVersion(ExecutionRegion region);void writeMarker();
+        void initializeVideo();void initializeControllers();void selectLevelMode();
+    }
+    static void enterLevelProgram(StartPort port){
+        Objects.requireNonNull(port);
+        if(selectStartBranch(port.initialization())==Branch.DO_INIT){
+            port.clearScratch();
+            var region=requireExecutionRegion(port.executionEnvironment());
+            port.writeVersion(region);port.writeMarker();
+        }
+        port.initializeVideo();port.initializeControllers();port.selectLevelMode();
+    }
+
     enum Branch { DO_INIT, GAME_INIT }
     enum Read { CONTROLLER_SETUP_BIT, INIT_MARKER, EXECUTION_REGION, PAL_CLEAR_FLAG_BIT0 }
 

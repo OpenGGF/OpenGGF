@@ -673,6 +673,19 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         this.state = state; this.environment = environment; vIntClock = clock;
     }
 
+    /** Original USA Present component birth from complete actually owned values. No DEV cut,
+     * Init/clear/LoadPlayer, input, art preparation, native clock seed or World admission.
+     * Only the current private selected Module may authenticate original Start and loading. */
+    public static CdPlayerFrameRuntime fromPresentEntry(CdR11aAssets assets,CdPlayerBody.State state,
+            CdPlayerBody.Environment environment,CdPlayerArtRuntime.State artIngress,VIntClock clock){
+        Objects.requireNonNull(state);Objects.requireNonNull(environment);Objects.requireNonNull(artIngress);Objects.requireNonNull(clock);
+        var source=CdStagePlayerSource.fromPresent(Objects.requireNonNull(assets));
+        if(source.variant()!=CdReleaseVariant.USA||environment.movement().gates().zoneAct()!=source.ordinaryZoneActWord()
+                ||environment.movement().gates().timeZone()!=source.ordinaryPeriod())
+            throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY,"Exact original Present source required");
+        var frame=new CdPlayerFrameRuntime(assets,null,state,environment,artIngress);frame.vIntClock=clock;return frame;
+    }
+
     /**
      * Fresh actual-Past source binding over complete existing component values. The caller obtains
      * assets from the authenticated original-USA loader and owns actual entry/load-phase authority.

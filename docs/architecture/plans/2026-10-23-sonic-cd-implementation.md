@@ -1,5 +1,61 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — guarded original selected R11 Start
+
+The public factory5 and actual selected-slot session retain the real source,
+SaveManager/backend/slot/Boot lifetime and applied RunR11 continuation. Shared
+Start sequencing preserves conditional controller/marker reads, scratch before
+fallible VERSION, InitVDP/controllers/mode and actual PCM prefix. R31 delegates
+to that same sequence; its old Start algorithm is deleted. Original R11 birth
+uses the genuine clear products and source art owner: slot0/routine0, unknown
+absolute VInt/delta0, no actor/position/terrain/LoadPlayer or Ready. The existing
+requirePlayerFrame admission stays closed. The actual stop remains before native
+Main19's LevelStart stores, R11_LEVEL_START_LOADING. Later shared-LevelStart work
+is only an external partial SOURCE packet and is not installed in this save.
+
+Independent SOURCE review finds two P2 issues. R148 executes five genuine-source
+controls before Root corrections: four fail, one context-replacement control
+already passes, no errors/skips. The reproduced gaps are cancellation before the
+first createGame, full/course restore discarding pending input, and foreign-thread
+observation/capture/restore. Root consumes opening before fallible session work
+and binds its actual World/Boot before returning; retirement then reaches this
+preparation even before its first native publication. One current-cut preflight
+covers observation/capture/restore and repeats before assignments. Rejected work
+is a healthy nonwrite and retains pending input rather than closing/resetting it.
+
+R149 compiles and executes228 cases:216 pass/12 failures,0 errors/skips. The twelve
+real-entry assertions expose Root's unconditional LevelManager dereference: an
+actual pre-LevelStart GameplayModeContext has not yet attached that owner. R149b
+changes only the Module observation/guard and strengthens the real public-entry
+precondition/nonwrite assertions. It retains actual manager identity or absence,
+with OptionalLong generation only when observed; it installs no manager, creates
+no default generation and rejects any changed owner/context/thread/load cut.
+
+R149b passes23 affected cases,0 failures/errors/skips, including all twelve failed
+identities. Together with the unchanged earlier205 cases,228 distinct identities
+qualify; this is not one228-case green invocation. Original R148 and R149 failed
+receipts remain failed. The final source/index fingerprint is
+`3afa07a6adbd86ec9aacefa8c0fd773f23062121a46562edf86ea78368f126d3`.
+All ten final Java payloads match their installed/tested pins. Existing Frame,
+R31 loading/selected/World paths and legacy18/positions19 behavior are retained;
+no before-manifest of compiled outputs exists and binary custody is not claimed.
+
+Validation uses integration_packet.py run with external R149/R149b handoffs,
+--execute --lane normal --compact-output --maven-progress concise --evidence,
+Java25/-Dmse=off, original media, explicit surfaceless EGL and Maven queue.
+R149b waits540s before Maven; queue, execution and wrapper/unknown time remain
+separate in retained records. This is bounded source/Frame/lifetime validation,
+not whole-game certification or a full815-case Frame rerun. All source/identity,
+case/XML/environment/dependency details remain in the external original receipts.
+
+The observer's optional Spring image/endpoint remains unrun. A separate external
+SOURCE-only path fix addresses normalized setup versus raw cleanup aliases, with
+four actual-filesystem test proposals; it is not included here. No original R11
+loading/Ready/ordinary return, natural PPZ-to-CCZ transfer, new21932, save-completion,
+retail pixels, full-USA or JP/EU success is claimed. MAIN stays untouched; private
+branch only, no push/PR/publication. Parent next38c69fae was observed unchanged and
+already an ancestor.
+
 ## 8 November 2026 — original Flower position stores through existing World owners
 
 The same cached Flower now completes its native X then Y position stores after

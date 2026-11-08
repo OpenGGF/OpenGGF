@@ -314,18 +314,21 @@ final class SonicCdR31aLoadingVisit {
     void begin(){
         current();if(values.phase()!=Phase.START)throw new IllegalStateException("Already began");
         running=true;try{
-            if(CdProgramInitialization.selectStartBranch(values.initialization())==CdProgramInitialization.Branch.DO_INIT){
-                act(Action.START_SCRATCH_CLEAR);
-                var region=CdProgramInitialization.requireExecutionRegion(executionEnvironment);
-                values=values.initialization(CdProgramInitialization.writeVersionCache(values.initialization(),region));act(Action.VERSION_CACHE);
-                values=values.initialization(CdProgramInitialization.writeInitMarker(values.initialization()));act(Action.INIT_MARKER);
-            }
+            CdProgramInitialization.enterLevelProgram(new CdProgramInitialization.StartPort(){
+                public CdProgramInitialization.State initialization(){return values.initialization();}
+                public CdProgramInitialization.ExecutionEnvironment executionEnvironment(){return executionEnvironment;}
+                public void clearScratch(){act(Action.START_SCRATCH_CLEAR);}
+                public void writeVersion(CdProgramInitialization.ExecutionRegion region){values=values.initialization(CdProgramInitialization.writeVersionCache(values.initialization(),region));act(Action.VERSION_CACHE);}
+                public void writeMarker(){values=values.initialization(CdProgramInitialization.writeInitMarker(values.initialization()));act(Action.INIT_MARKER);}
+                public void initializeVideo(){
             values=values.progress(0,0,false);act(Action.INIT_VDP);
             values=values.colours(values.normalPalette(),values.fadePalette(),values.waterPalette(),zero(128));act(Action.CLEAR_DISPLAY_PALETTE);
             var s=readScroll();var b=s.background();storeScroll(s,new Scroll(s.foreground(),bg(b,b.cameraBgX(),b.cameraBgY(),b.cameraBg2X(),b.cameraBg2Y(),b.cameraBg3X(),b.cameraBg3Y(),b.crossingRam(),b.scrollFlagsBg(),b.scrollFlagsBg2(),b.scrollFlagsBg3(),b.cloudRam(),b.deformationRam(),b.hscrollRam(),0),s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord()));act(Action.CLEAR_SCROLL_OUTPUT);
             artOp(art::clearCurrentPatterns);
-            values=values.initialization(CdProgramInitialization.initializeControllers(values.initialization()));act(Action.INIT_CONTROLLERS);
-            values=values.program(values.program().gameMode(0));act(Action.GAME_MODE);
+                }
+                public void initializeControllers(){values=values.initialization(CdProgramInitialization.initializeControllers(values.initialization()));act(Action.INIT_CONTROLLERS);}
+                public void selectLevelMode(){values=values.program(values.program().gameMode(0));act(Action.GAME_MODE);}
+            });
             levelStart();
         }catch(RuntimeException|Error original){terminal(original);throw original;}finally{running=false;}
     }

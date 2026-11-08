@@ -33,9 +33,9 @@ final class CdOriginalBootPrefix {
         TITLE_FLAGS_90, FM_RETURN_STOP, IPX_RETURN_BLANK, BURAM_SOURCE,
         BURAM_WORDRAM_CLEAR, BURAM_HANDLER, BRAM_VARIABLES_CLEAR,
         BRAM_SELECTOR_CLEAR, BACKEND_INITIALIZED, BRAM_PARAMETERS, STORAGE_SEARCH,
-        STORAGE_RETURNED, INITIALIZATION_RETURN, R31_CONTINUATION_ISSUED
+        STORAGE_RETURNED, INITIALIZATION_RETURN, R31_CONTINUATION_ISSUED, R11_CONTINUATION_ISSUED
     }
-    enum Phase { PREPARING, STORAGE, PREPARED, WORLD_BOUND, INITIALIZATION_RETURNED, R31_PENDING, CONSUMED }
+    enum Phase { PREPARING, STORAGE, PREPARED, WORLD_BOUND, INITIALIZATION_RETURNED, R31_PENDING, CONSUMED, R11_PENDING }
     enum Boundary { R31_WORLD_OWNER }
     enum InterruptOwner { UNKNOWN, IPX, BURAM }
     /** Actual already-adopted engine prefix only; observing it cannot resume the failed attempt. */
@@ -273,10 +273,14 @@ final class CdOriginalBootPrefix {
         requireWorld(world);if(owner!=module||failed||retired||state.phase()!=Phase.WORLD_BOUND)throw new IllegalStateException("Original initialization already returned or retired");
         visit.requireInitializationReturn(owner,original);call(Call.INITIALIZATION_RETURN);returnStopAndBlank();phase(Phase.INITIALIZATION_RETURNED);
     }
-    Continuation issueR31(SonicCdGameModule owner,CdSelectedProfileVisit.Publication original){
-        requireWorld(world);if(owner!=module||failed||retired||continuation!=null||state.phase()!=Phase.INITIALIZATION_RETURNED)throw new IllegalStateException("Original R31 continuation is unavailable");
-        visit.requireProgrammeHandoff(owner,original);
-        continuation=new Continuation();call(Call.R31_CONTINUATION_ISSUED);phase(Phase.R31_PENDING);return continuation;
+    Continuation issueR31(SonicCdGameModule owner,CdSelectedProfileVisit.Publication original){return issueProgramme(owner,original,CdSelectedProfileVisit.Programme.R31A);}
+    Continuation issueR11(SonicCdGameModule owner,CdSelectedProfileVisit.Publication original){return issueProgramme(owner,original,CdSelectedProfileVisit.Programme.R11A);}
+    private Continuation issueProgramme(SonicCdGameModule owner,CdSelectedProfileVisit.Publication original,CdSelectedProfileVisit.Programme target){
+        requireWorld(world);if(owner!=module||failed||retired||continuation!=null||state.phase()!=Phase.INITIALIZATION_RETURNED)throw new IllegalStateException("Original programme continuation is unavailable");
+        visit.requireProgrammeHandoff(owner,original,target);
+        var ready=new Continuation(target);var calls=new ArrayList<>(state.calls());calls.add(target==CdSelectedProfileVisit.Programme.R31A?Call.R31_CONTINUATION_ISSUED:Call.R11_CONTINUATION_ISSUED);
+        var next=new State(target==CdSelectedProfileVisit.Programme.R31A?Phase.R31_PENDING:Phase.R11_PENDING,state.initialization(),state.loads(),state.progress(),state.main(),state.video(),state.cpuPalettes(),state.wordRam(),state.fm(),calls);
+        continuation=ready;state=next;return ready;
     }
     Unowned unownedR31(Continuation original){if(original!=continuation)throw new IllegalArgumentException("Another continuation");failed=true;original.retired=true;return new Unowned(Boundary.R31_WORLD_OWNER);}
 
@@ -295,7 +299,8 @@ final class CdOriginalBootPrefix {
         private CdR31aSectionArt art;
         private Thread loadingThread;
         private boolean consumed,retired;
-        private Continuation(){ }
+        private final CdSelectedProfileVisit.Programme target;
+        private Continuation(CdSelectedProfileVisit.Programme target){this.target=target;}
         private void require(){
             if(this!=continuation||attempt!=attemptIdentity||owner!=module||issuedWorld!=world||issuedSource!=source
                     ||failed||CdOriginalBootPrefix.this.retired||retired||consumed||CdOriginalBootPrefix.this.consumed)throw new IllegalStateException("Expired original R31 continuation");
@@ -304,11 +309,28 @@ final class CdOriginalBootPrefix {
         void bindLoading(SonicCdR31aLoadingVisit actual,SonicCdR31aLoadingVisit.Host actualHost,CdPlayerFrameRuntime actualFrame,CdR31aSectionArt actualArt){
             require();
             try{
+                if(target!=CdSelectedProfileVisit.Programme.R31A)throw new IllegalStateException("Not the original R31 target");
                 if(core!=null)throw new IllegalStateException("Original continuation already has a loading generation");
                 var c=Objects.requireNonNull(actual);var h=Objects.requireNonNull(actualHost);var f=Objects.requireNonNull(actualFrame);var a=Objects.requireNonNull(actualArt);var t=Thread.currentThread();
                 owner.requireOriginalBootR31Loading(this,c,h,f,a);
                 core=c;host=h;frame=f;art=a;loadingThread=t;
             }catch(RuntimeException|Error failure){retired=true;CdOriginalBootPrefix.this.failed=true;throw failure;}
+        }
+        final class R11Start {
+            private final State before,ready;private final Thread issuedThread=Thread.currentThread();private final CdPlayerFrameRuntime actual;private final CdSelectedProfileVisit.Publication publication;
+            private R11Start(CdPlayerFrameRuntime actual,CdSelectedProfileVisit.Publication publication){this.before=state;this.actual=actual;this.publication=publication;ready=new State(Phase.CONSUMED,before.initialization(),before.loads(),before.progress(),before.main(),before.video(),before.cpuPalettes(),before.wordRam(),before.fm(),before.calls());}
+        }
+        private R11Start pendingR11;
+        R11Start prepareR11Start(CdPlayerFrameRuntime actual,CdSelectedProfileVisit.Publication original){
+            require();if(target!=CdSelectedProfileVisit.Programme.R11A||pendingR11!=null)throw new IllegalStateException("Not original unprepared R11 target");
+            var ready=new R11Start(actual,original);visit.requireProgrammeHandoff(owner,original,target);owner.requireOriginalBootR11Frame(this,actual,original);
+            if(state!=ready.before)throw new IllegalStateException("Original R11 boot preimage changed");pendingR11=ready;return ready;
+        }
+        void adoptR11Start(R11Start actual){
+            if(actual==null||actual!=pendingR11||Thread.currentThread()!=actual.issuedThread||state!=actual.before||consumed||retired||failed||CdOriginalBootPrefix.this.retired||continuation!=this)
+                throw new IllegalStateException("Original prevalidated R11 start expired");
+            frame=actual.actual;consumed=true;CdOriginalBootPrefix.this.consumed=true;state=actual.ready;pendingR11=null;
+            visit.adoptR11StartAfterNative(owner,actual.publication);
         }
         void consume(SonicCdR31aLoadingVisit actual,SonicCdR31aLoadingVisit.Host actualHost,SonicCdR31aLoadingVisit.Publication original){
             require();
@@ -326,7 +348,7 @@ final class CdOriginalBootPrefix {
     void requireHandoffStarted(SonicCdGameModule owner,WorldSession actual,Object originalInvocation){
         requireWorld(actual);if(owner!=module||originalInvocation!=invocation||continuation==null||continuation.core==null||failed||retired||continuation.retired)throw new IllegalStateException("No actual R31 loading continuation was handed off");
     }
-    void retire(WorldSession actual){if(world==actual){retired=true;if(continuation!=null)continuation.retired=true;}}
+    void retire(WorldSession actual){if(world==actual){retired=true;if(continuation!=null){continuation.retired=true;continuation.pendingR11=null;}}}
 
     private static CdAssetBytes zero(int bytes){return CdAssetBytes.copyOf(new byte[bytes]);}
     private static List<OptionalInt> unknownTail(){return List.of(OptionalInt.empty(),OptionalInt.empty());}

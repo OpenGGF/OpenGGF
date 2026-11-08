@@ -52,11 +52,14 @@ final class CdSelectedProfileVisit {
         return new Prepared(source,manager,slot,entry,service,result);
     }
     // END fresh original preparation bridge.
+    enum Boundary { PROGRAMME_ENTRY, R11_LEVEL_START_LOADING }
     static final class Unowned extends UnsupportedOperationException {
-        private final Programme programme;
-        private Unowned(Programme programme){super(programme==Programme.LATER_ZONE?"SELECTED_LATER_ZONE_RUN_RX_SAVE_OWNER":"SELECTED_"+programme+"_PROGRAMME_ENTRY_OWNER: native cold-clock/level continuation unavailable");this.programme=programme;}
-        Programme programme(){return programme;}
+        private final Programme programme;private final Boundary boundary;
+        private Unowned(Programme programme){this(programme,Boundary.PROGRAMME_ENTRY);}
+        private Unowned(Programme programme,Boundary boundary){super(boundary==Boundary.R11_LEVEL_START_LOADING?"ORIGINAL_R11_LEVELSTART_LOADING_OWNER":programme==Programme.LATER_ZONE?"SELECTED_LATER_ZONE_RUN_RX_SAVE_OWNER":"SELECTED_"+programme+"_PROGRAMME_ENTRY_OWNER: native cold-clock/level continuation unavailable");this.programme=programme;this.boundary=boundary;}
+        Programme programme(){return programme;}Boundary boundary(){return boundary;}
     }
+
     static final class StorageStop extends UnsupportedOperationException {
         private final SaveProfileAccess.Disposition disposition;private final Throwable quarantineFailure;
         private StorageStop(SaveProfileAccess.Lookup actual){super("Actual selected profile read: "+actual.disposition(),actual.failure().orElse(null));disposition=actual.disposition();quarantineFailure=actual.quarantineFailure().orElse(null);}
@@ -80,7 +83,7 @@ final class CdSelectedProfileVisit {
     private final SonicCdGameModule owner;private final Prepared prepared;private final Object invocation;private final Object lifetime=new Object();
     private CdOriginalBootPrefix originalBoot; // Only the new ctor4 binds this actual preparation.
     private State state=new State(Phase.PREPARED,CdIpxProgress.unknown(),Optional.empty(),Optional.empty(),Optional.empty(),List.of(),Optional.empty(),Optional.empty(),OptionalInt.empty());
-    private WorldSession world;private boolean running,failed,retired;private Object scope;private Thread thread;private Publication pending;private Port port;private long ioOrdinal;
+    private WorldSession world;private boolean openingConsumed,running,failed,retired;private Object scope;private Thread thread;private Publication pending;private Port port;private long ioOrdinal;private Boundary programmeBoundary=Boundary.PROGRAMME_ENTRY;
     CdSelectedProfileVisit(SonicCdGameModule owner,Prepared prepared,Object invocation){this.owner=Objects.requireNonNull(owner);this.invocation=Objects.requireNonNull(invocation);this.prepared=Objects.requireNonNull(prepared);if(!prepared.healthy()||!prepared.service.ownsReceipt(prepared.result.receipt().orElseThrow()))throw new IllegalArgumentException("Original current selected storage receipt required");}
     // BEGIN fresh original boot/private applied-publication cuts 20261107.
     CdSelectedProfileVisit(SonicCdGameModule owner,Prepared prepared,Object invocation,CdOriginalBootPrefix boot){
@@ -97,14 +100,34 @@ final class CdSelectedProfileVisit {
         requireApplied(expected,original,Call.TEMPORARY_PREFIX_704);
         if(state.phase()!=Phase.INITIALIZED)throw new IllegalStateException("Not the initialization return cut");
     }
-    void requireProgrammeHandoff(SonicCdGameModule expected,Publication original){
-        requireApplied(expected,original,Call.RUN_R31_ENTRY);
+    void requireProgrammeHandoff(SonicCdGameModule expected,Publication original){requireProgrammeHandoff(expected,original,Programme.R31A);}
+    void requireProgrammeHandoff(SonicCdGameModule expected,Publication original,Programme target){
+        if(target!=Programme.R11A&&target!=Programme.R31A)throw new IllegalArgumentException("No native entry for this target");
+        requireApplied(expected,original,target==Programme.R31A?Call.RUN_R31_ENTRY:Call.RUN_R11_ENTRY);
         var g=state.globals().orElseThrow();
-        if(state.phase()!=Phase.PROGRAMME_ENTRY||state.programme().orElseThrow()!=Programme.R31A||g.zoneAct().orElse(-1)!=0x100
-                ||g.period()!=1||g.amyCaptured().orElse(-1)!=0||original.programmeHandoffCompleted)
-            throw new IllegalStateException("Not the original R31 selected load publication");
+        if(state.phase()!=Phase.PROGRAMME_ENTRY||state.programme().orElseThrow()!=target||g.zoneAct().orElse(-1)!=(target==Programme.R31A?0x100:0)
+                ||g.period()!=1||(target==Programme.R31A&&g.amyCaptured().orElse(-1)!=0)||original.programmeHandoffCompleted)
+            throw new IllegalStateException("Not the original selected load publication");
     }
     void completeProgrammeHandoff(SonicCdGameModule expected,Publication original){requireProgrammeHandoff(expected,original);original.programmeHandoffCompleted=true;}
+    void adoptR11StartAfterNative(SonicCdGameModule expected,Publication original){
+        if(expected!=owner||!running||failed||pending!=original||scope==null||original.issuedScope!=scope||thread!=Thread.currentThread()||!original.applied||state!=original.after||original.programmeHandoffCompleted||state.programme().orElseThrow()!=Programme.R11A)
+            throw new IllegalStateException("Original prevalidated R11 publication expired");
+        original.programmeHandoffCompleted=true;programmeBoundary=Boundary.R11_LEVEL_START_LOADING;
+    }
+    GameplayModeContext openSession(SonicCdGameModule expected,Object originalInvocation){
+        if(expected!=owner||originalInvocation!=invocation||openingConsumed||failed||retired||running||world!=null||state.phase()!=Phase.PREPARED||SessionManager.getCurrentWorldSession()!=null)
+            throw new IllegalStateException("Original fresh selected session already opened or unavailable");
+        // Consume before the first fallible opening. A partially opened or retired first
+        // World cannot license a second attempt from this original preparation.
+        openingConsumed=true;
+        try {
+            var mode=SessionManager.openGameplaySession(owner,owner,prepared.source,SaveSessionContext.forSlot(GameId.SCD.code(),prepared.slot,new SelectedTeam("sonic",List.of()),0,0));
+            world=mode.getWorldSession();requireWorld(world);
+            if(originalBoot!=null)originalBoot.bindWorld(owner,world,invocation);
+            return mode;
+        }catch(RuntimeException|Error original){failed=true;if(originalBoot!=null)originalBoot.retire(world);throw original;}
+    }
     // END fresh original boot/private applied-publication cuts.
     State state(){return state;}
     CdGameDataSource source(){return prepared.source;}
@@ -121,7 +144,7 @@ final class CdSelectedProfileVisit {
     void run(WorldSession actual,Port actualPort,Object originalInvocation){
         if(originalInvocation!=invocation)throw new IllegalStateException("Not the Modules original selected-entry invocation");
         requireWorld(actual);if(failed||running)throw new IllegalStateException("Selected visit failed/active");
-        if(state.phase()==Phase.PROGRAMME_ENTRY)throw new Unowned(state.programme().orElseThrow());
+        if(state.phase()==Phase.PROGRAMME_ENTRY)throw new Unowned(state.programme().orElseThrow(),programmeBoundary);
         if(state.phase()!=Phase.PREPARED||!prepared.service.ownsReceipt(prepared.result.receipt().orElseThrow()))throw new IllegalStateException("Selected visit cannot replay a partial attempt");
         world=actual;port=Objects.requireNonNull(actualPort);scope=new Object();thread=Thread.currentThread();running=true;
         try {
@@ -185,7 +208,7 @@ final class CdSelectedProfileVisit {
         if(write.missingRead().isPresent()||write.request().orElseThrow().mode()!=CdIpxProgress.SaveMode.BACKUP)throw new UnsupportedOperationException("Actual selected post-field write policy owner unavailable");
         write(patched);update(Phase.SAVE_FIELDS,state.progress(),state.buffer(),state.temporary(),state.globals(),Call.IPX_WRITE_ACK,state.programme());
     }
-    private void finish(Programme target,Globals globals,Call call){var publication=update(Phase.PROGRAMME_ENTRY,state.progress(),state.buffer(),state.temporary(),Optional.of(globals),call,Optional.of(target));if(target!=Programme.R31A||!publication.programmeHandoffCompleted)throw new Unowned(target);}
+    private void finish(Programme target,Globals globals,Call call){var publication=update(Phase.PROGRAMME_ENTRY,state.progress(),state.buffer(),state.temporary(),Optional.of(globals),call,Optional.of(target));if(target==Programme.R11A&&publication.programmeHandoffCompleted)throw new Unowned(target,programmeBoundary);if(target!=Programme.R31A||!publication.programmeHandoffCompleted)throw new Unowned(target);}
     private Publication update(Phase phase,CdIpxProgress.State progress,Optional<CdSaveProfile> buffer,Optional<CdSaveProfile> temporary,Optional<Globals> globals,Call call,Optional<Programme> programme){
         var calls=new ArrayList<>(state.calls());calls.add(call);return publish(new State(phase,progress,buffer,temporary,globals,calls,programme,state.subSpecial(),state.localSubPolicyByte()));
     }
