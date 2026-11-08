@@ -149,7 +149,8 @@ For a new S2 programme, `StageplayRouteTool --competition-entry <0..3>
 prefix and plans its continuation. A programme normally begins checks at
 `startRow:1200`, after the generated prefix. `competition.paused` observes the
 native pause owner. The semantic `input.menu` fact admits a searched Start tap
-when a menu or native pause needs one; it never clears pause by writing state.
+when a non-act menu needs one; it never authors an act unpause workaround. A pause
+carried from a synchronous menu load is a gameplay frontier, not a route repair.
 Competition checkpoints use the complete registry and previous input row inside
 one stable act, and refuse fades, pending loads and other modes. Boundary legs
 retire earlier checkpoints before continuing. Existing P1 guard semantics remain;
@@ -164,3 +165,22 @@ fresh engine evidence. CNZ `competition.flip.visible` requires resident ROM art
 in a non-flat pose, a full cell in a view, and a matching framebuffer pixel.
 The native programme entry is separate from the scene `--worker` protocol;
 editor jobs must select the S2 host for a title inlet and preserve both pad lanes.
+
+### Native export anchors
+
+Do not export engine title/load rows 1:1. A native programme export replaces engine
+rows before its first ordinary Level boundary (LFC 0) with the verified native
+witness prefix. `native.entry.prefixRows` is the native anchor count;
+`native.entry.engineAnchorRows` is the observed engine anchor count;
+`native.entry.anchorBoundary` is `first-ordinary-level-lfc-zero`. Both counts name
+completed rows. Native movie row `prefixRows` (zero-based) plays engine tape row
+`engineAnchorRows`; no fitted delays or lag fillers are inferred. `movie` identifies
+frozen BK2/input-log/.script rows and `inputHash` binds exactly the witness prefix.
+
+Supply `--native-witness FILE --native-anchor-rows N` with authoring, or with
+`--replay-native-route ... --publish NEW_STEM`. The tool reads the engine anchor
+from `input.gameplayAnchorRows`, an observation of the actual production boundary.
+Replay checks declared anchors against that observation. Title exports without
+anchors, changed witness hashes, and `native.exportBlocker` are refused. The blocker
+marks provisional routes while preserving their rows and historical engine evidence.
+Replay writes `state.csv` with offered rows, LFC, phase, pause and anchor observations.

@@ -34,6 +34,15 @@ class TestCompetitionTitleRoute {
         System.out.println("TITLE PREFIX END "+passed.end());
         assertEquals(2,passed.end().facts().get("competition.selection"));
         assertTrue(passed.end().p2().isPresent());
+        int anchor=passed.end().facts().get("input.gameplayAnchorRows");
+        assertTrue(anchor>0 && anchor<tape.size());
+        var entry=new NativeFacts.NativeEntry("unused-in-engine-replay",1337,tape.hash(),anchor,"first-ordinary-level-lfc-zero");
+        var anchored=new RouteArtifact(route.manifest().withNativeFacts(new NativeFacts(java.util.Optional.of(entry),java.util.List.of())),tape);
+        assertInstanceOf(ReplayResult.Passed.class,new RouteReplay(hosts).replay(anchored,Cancellation.NONE));
+        var wrong=new NativeFacts.NativeEntry(entry.movie(),entry.prefixRows(),entry.inputHash(),anchor+1,entry.anchorBoundary());
+        var wrongRoute=new RouteArtifact(route.manifest().withNativeFacts(new NativeFacts(java.util.Optional.of(wrong),java.util.List.of())),tape);
+        assertInstanceOf(ReplayResult.Failed.class,new RouteReplay(hosts).replay(wrongRoute,Cancellation.NONE),
+                "negative control: replay must observe the declared engine boundary, not accept a fitted row");
         var changed=new java.util.ArrayList<>(tape.rows());changed.set(1050,PadRow.NEUTRAL);
         var broken=RouteArtifact.of(launch,goals,InputTape.of(changed),route.manifest().provenance());
         assertInstanceOf(ReplayResult.Failed.class,new RouteReplay(hosts).replay(broken,Cancellation.NONE),

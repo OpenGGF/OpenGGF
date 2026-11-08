@@ -118,7 +118,7 @@
     "producer" : "RoutePlanner prefix-search/3 goal program",
     "engine" : "openggf 0.8.prerelease-b889211b3-dirty stageplay-s2-competition-title/1",
     "source" : "authored after a 2371-row prefix toward legs [retained-slot-spinning, p2-lower-path, p2-near-native-flip-tiles, mid-flip-visible-after-two-human-traversal]",
-    "notes" : [ ]
+    "notes" : [ "PROVISIONAL native export: menu Start carry-over pause frontier. Original controller rows retained; no native goal certification." ]
   },
   "qualification" : [ {
     "scope" : "ENGINE",
@@ -128,6 +128,14 @@
     "rows" : 2380
   } ],
   "native" : {
+    "entry" : {
+      "movie" : "src/test/resources/routes/s2/competition/witnesses/cnz-native-prefix.script",
+      "prefixRows" : 1337,
+      "inputHash" : "1b70915f57ed43f379cf8104f8917b80417a79dd1017d7efa4856e801993c66f",
+      "engineAnchorRows" : 1151,
+      "anchorBoundary" : "first-ordinary-level-lfc-zero"
+    },
+    "exportBlocker" : "PROVISIONAL: menu Start retained through synchronous title waits pauses engine at rowsOffered 1152; native frame 1338 is unpaused. Requires lane F fix and planner repair of affected rows.",
     "lag" : [ ]
   }
 }

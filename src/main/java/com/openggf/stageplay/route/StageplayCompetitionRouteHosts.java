@@ -84,6 +84,7 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
             catch(java.io.IOException e) { throw new java.io.UncheckedIOException(e); }
         });
         private int rows;
+        private int gameplayAnchorRows = -1;
         private long epoch;
         private Object level;
         private Object mode;
@@ -141,8 +142,12 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
             if (visit != null) {
                 var state = visit.session();
                 facts.put("competition.phase", state.phase().ordinal());
+                // loadAct has returned from its real title owner, before the ordinary LFC increment.
+                if (gameplayAnchorRows < 0 && state.phase()==com.openggf.game.sonic2.competition.Sonic2CompetitionSession.Phase.ACT
+                        && lm.getFrameCounter()==0) gameplayAnchorRows=rows;
+                if (gameplayAnchorRows >= 0) facts.put("input.gameplayAnchorRows",gameplayAnchorRows);
                 facts.put("competition.paused",state.gameState(0).isGamePaused()?1:0);
-                facts.put("input.menu",state.phase()==com.openggf.game.sonic2.competition.Sonic2CompetitionSession.Phase.ACT && !state.gameState(0).isGamePaused()?0:1);
+                facts.put("input.menu",state.phase()==com.openggf.game.sonic2.competition.Sonic2CompetitionSession.Phase.ACT?0:1);
                 for(int slot=0;slot<2;slot++) {
                     facts.put("competition.p"+(slot+1)+".rings",state.levelState(slot).getRings());
                     facts.put("competition.p"+(slot+1)+".totalRings",state.playerState(slot).totalRings());
