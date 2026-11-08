@@ -874,9 +874,9 @@ public final class RaceSession implements AutoCloseable {
                 com.openggf.mods.run.TrackKind.valueOf(round.trackKind()),
                 openggf.timeattack.CompetitionRoomSettings.Mode.valueOf(round.mode()),
                 switch (round.monitors()) {
-                    case "RANDOM" -> com.openggf.mods.run.MonitorRule.RANDOMISED;
-                    case "ITEMS" -> com.openggf.mods.run.MonitorRule.COMPETITION_ITEMS;
-                    default -> com.openggf.mods.run.MonitorRule.valueOf(round.monitors());
+                    case "RANDOM" -> com.openggf.game.arena.MonitorRule.RANDOMISED;
+                    case "ITEMS" -> com.openggf.game.arena.MonitorRule.COMPETITION_ITEMS;
+                    default -> com.openggf.game.arena.MonitorRule.valueOf(round.monitors());
                 }, launch.swapEnabled()));
         if (!run.isActive()) {
             notice = "This round could not be started here";

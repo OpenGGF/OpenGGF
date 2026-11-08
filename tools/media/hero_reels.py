@@ -30,9 +30,12 @@ MANIFEST_DIR = Path(__file__).resolve().with_name('hero-reels')
 GAMES = ('s1', 's2', 's3k')
 TRACE_ROOT = Path('src/test/resources/traces')
 CLASSPATH_FILE = Path('target/hero-reels-classpath.txt')
-ROM_PROPERTY_GAME = {'sonic1.rom.path': 's1', 'sonic2.rom.path': 's2', 's3k.rom.path': 's3k'}
+ROM_PROPERTY_GAME = {'sonic1.rom.path': 's1', 'sonic2.rom.path': 's2', 's3k.rom.path': 's3k',
+                     'kis2.rom.path': 'kis2'}
 ROM_CONFIG_KEY = {'s1': 'sonic1', 's2': 'sonic2', 's3k': 'sonic3k'}
 SOURCES = ('trace', 'capture')
+# Kis2GameModule logs this when no lock-on dump serves the KIS2 logical ROM.
+TIER_ONE_LOG = 'Knuckles in Sonic 2 tier one'
 CAPTURE_FLAGS = {  # manifest key -> GameplayCaptureTool flag (values pass through verbatim)
     'x': '--x', 'y': '--y', 'rings': '--rings', 'emeralds': '--emeralds', 'settle': '--settle',
     'width': '--width', 'vint_run_count': '--vint-run-count',
@@ -178,7 +181,12 @@ def runtime_config(roms, root=ROOT):
     for game in GAMES:
         if game in roms:
             lines.append(f'  {ROM_CONFIG_KEY[game]}: {json.dumps(roms[game])}')
-    lines += ['  directory: "empty-rom-dir"', 'debug:', '  testMode:',
+    # Knuckles in Sonic 2 reads its own art and palettes from the S&K + Sonic 2
+    # lock-on dump (tier two). The catalogue has no per-game key for it and finds
+    # it only by listing roms.directory (top level only), so point that at the
+    # verified dump's own folder; nothing is copied or linked.
+    directory = str(Path(roms['kis2']).parent) if 'kis2' in roms else 'empty-rom-dir'
+    lines += [f'  directory: {json.dumps(directory)}', 'debug:', '  testMode:',
               f'    catalogDir: {json.dumps(str(root / TRACE_ROOT))}',
               '  traceRender:', '    showDesyncGhosts: false', '    showGameHud: true',
               '    showDebugHud: false', '']
@@ -330,6 +338,9 @@ def render_shot(game, shot, rom, classpath, runtime, shot_dir, fps, root=ROOT):
         produced = len(pngs)
         input_args = ['-framerate', str(fps), '-start_number', str(shot['start']),
                       '-i', str(raw_dir / 'frames' / '%05d.png')]
+    if TIER_ONE_LOG in log.read_text(errors='replace'):
+        raise ReelError(f"{shot['id']}: Knuckles in Sonic 2 ran tier one, which substitutes S&K art; "
+                        'reels need the verified lock-on dump (kis2.rom.path) for its own HUD and palettes')
     if produced < shot['frames']:
         raise ReelError(f"{shot['id']}: produced {produced} frames, shot needs {shot['frames']}")
     subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y', *input_args, '-an', '-frames:v', str(shot['frames']),

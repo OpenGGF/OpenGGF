@@ -2368,6 +2368,21 @@ same SST4/5/6 and P1 as the fixture callback, with VInt unchanged, then matched
 all three boss milestones. Match the actual callback/slot/input boundary before
 reauthoring ordinary controls; never suppress setup or shift gameplay clocks.
 
+**A routine comparison is not a dispatch witness.** The S3K complete-run
+recorder writes main `player_present=1` even while the native slot is cleared;
+`TraceCharacterState.routineFromSprite` normally derives 2 from constructed
+engine state. Neither proves that `Sonic_Init` or the first `Process_Sprites`
+ran. At the four fresh shrine handoffs, native zero radii/collision pointers,
+absent sidekick, old rings and cleared objects identify pre-player load state.
+The executed engine gate rejects phase admission and requests initial sprites
+with heuristic 2; a compiled, comparison-only HPZS first-dispatch observer emits
+no witness. Preserve that controlled zero instead of claiming early execution.
+`loc_62B6` (sonic3k.asm:7762-7767) skips the shrine title, but not
+`loc_7870`'s terrain wait (sonic3k.asm:9772-9780). Model the real production
+continuation with independently observed timing; never fit the 61 recorded rows,
+force the routine, remove objects or skip the native scan. See the
+[bounded current-source record](validation/levels/s3k-mhz-act1.md#fresh-shrine-routine-frontier--2026-11-07).
+
 **A width override does not resize an already-created test camera.** The ROM
 Jupiter extension creates its gameplay managers before a test's session override.
 A local HeadlessTestFixture can retain that camera. Explicitly refresh its viewport
@@ -2517,6 +2532,19 @@ for detached UI fades. Keep renderer attachment separate: only the actively
 bound palette owner publishes CRAM fades. Origin: 2026-10-17 white-fade
 architecture guard repair; existing native component/22-V-int and immediate-scene
 rewind-release semantics are unchanged.
+
+
+**Scene capture must observe the uploaded palette generation.** CPU palette colors
+may already contain the next cycle while production drawing still uses the
+previous V-int publication. Copying live colors into a scene can rotate only
+animated colors, despite identical tile and player geometry. Keep a defensive
+color copy at the existing upload owner and read it through
+`PaletteUploadPresentation.copyDisplayedPaletteArgb`; never publish pending
+writes just to capture a picture. Headless rows without an upload retain the
+live-palette fallback. Origin: Competition fix lane G, 2026-11-08; exact smoke
+batch 17 reproduced 24,783 waterfall pixel differences, and texture readback
+identified only indices 19,20,30,31. See the
+[lane validation](validation/2026-11-07-s3k-hosted-arena-lane-b.md#fix-lane-g--2026-11-08).
 
 
 **A restored palette owner can rebind without submitting new work.** Whole-world

@@ -1,5 +1,7 @@
 package com.openggf.mods.run;
 
+import com.openggf.game.arena.RaceEvent;
+
 import com.openggf.game.ModApi;
 import com.openggf.net.identity.PlayerAppearance;
 

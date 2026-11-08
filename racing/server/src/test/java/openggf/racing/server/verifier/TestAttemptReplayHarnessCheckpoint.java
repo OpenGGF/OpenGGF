@@ -2,6 +2,7 @@ package openggf.racing.server.verifier;
 
 import com.openggf.game.session.GameplayRunPolicy;
 import com.openggf.mods.run.*;
+import com.openggf.game.arena.*;
 import com.openggf.net.ghost.GhostFrameCodec;
 import com.openggf.tests.rules.*;
 import openggf.timeattack.*;

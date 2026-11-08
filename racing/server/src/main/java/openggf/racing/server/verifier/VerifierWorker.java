@@ -159,7 +159,7 @@ public final class VerifierWorker {
         var requests=job.swaps().stream().map(VerificationJobQueue.SwapReceipt::nativeRequestFrame)
                 .filter(java.util.Objects::nonNull).sorted().toList();
         if(!replay.swapRequestFrames().equals(requests)) return VerdictCodec.RESULT_FAIL_DIVERGENT;
-        if (!replay.finished() || replay.outcome() != com.openggf.mods.run.RaceClock.Failure.NONE) {
+        if (!replay.finished() || replay.outcome() != com.openggf.game.arena.RaceClock.Failure.NONE) {
             return VerdictCodec.RESULT_FAIL_DIVERGENT;
         }
         if (!replay.lapFrames().equals(job.lapFrames()) || !replay.splitFrames().equals(job.splitFrames())

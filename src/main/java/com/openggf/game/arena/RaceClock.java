@@ -1,4 +1,4 @@
-package com.openggf.mods.run;
+package com.openggf.game.arena;
 
 import com.openggf.game.ModApi;
 

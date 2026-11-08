@@ -8,7 +8,7 @@ import com.openggf.game.sonic2.Sonic2RevisionProfile;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.data.RetailRomRevision;
 import com.openggf.level.objects.ObjectServices;
-import com.openggf.mods.run.*;
+import com.openggf.game.arena.*;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;

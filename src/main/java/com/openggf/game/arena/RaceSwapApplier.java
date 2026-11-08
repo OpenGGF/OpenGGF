@@ -2,9 +2,9 @@ package com.openggf.game.arena;
 
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.level.objects.ObjectServices;
-import com.openggf.mods.run.RaceEvent;
-import com.openggf.mods.run.RaceEventResult;
-import com.openggf.mods.run.RaceSignal;
+import com.openggf.game.arena.RaceEvent;
+import com.openggf.game.arena.RaceEventResult;
+import com.openggf.game.arena.RaceSignal;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /** Native game service for externally commanded race swaps. No transport owns gameplay writes. */

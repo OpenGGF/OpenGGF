@@ -1,6 +1,6 @@
 package openggf.timeattack;
 
-import com.openggf.mods.run.MonitorRule;
+import com.openggf.game.arena.MonitorRule;
 import com.openggf.mods.run.TrackKind;
 import com.openggf.game.session.GameplayRunPolicy;
 

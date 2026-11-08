@@ -1,5 +1,10 @@
 package com.openggf.mods.run;
 
+import com.openggf.game.arena.RaceClock;
+import com.openggf.game.arena.RaceEvent;
+import com.openggf.game.arena.RaceEventResult;
+import com.openggf.game.arena.RaceSignal;
+
 import com.openggf.game.ModApi;
 
 /**

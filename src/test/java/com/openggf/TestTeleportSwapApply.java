@@ -7,6 +7,7 @@ import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.*;
 import com.openggf.game.sonic2.objects.*;
 import com.openggf.mods.run.*;
+import com.openggf.game.arena.*;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;

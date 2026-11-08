@@ -56,7 +56,7 @@ final class HostedRunController {
     private GhostRenderRegistry registeredRegistry;
 
     @com.openggf.game.rewind.RewindTransient(reason="Run input queue, consumed before the next executed step")
-    private com.openggf.mods.run.RaceEvent pendingRaceEvent;
+    private com.openggf.game.arena.RaceEvent pendingRaceEvent;
     private com.openggf.game.arena.RaceSwapApplier raceSwaps;
     private com.openggf.game.arena.HostedArenaSession arenaSession;
     void bindArena(com.openggf.game.arena.HostedArenaSession session) {
@@ -254,7 +254,7 @@ final class HostedRunController {
                 checkpointRespawn ? com.openggf.mods.run.LevelStartCause.CHECKPOINT_RESPAWN
                         : deathRestart ? com.openggf.mods.run.LevelStartCause.FAST_DEATH_RESTART
                         : com.openggf.mods.run.LevelStartCause.LAUNCH,
-                com.openggf.mods.run.TrackGeometry.ACT, raceSwaps == null || raceMode.getLevelManager().getCurrentLevel() == null
+                com.openggf.game.arena.TrackGeometry.ACT, raceSwaps == null || raceMode.getLevelManager().getCurrentLevel() == null
                         ? 0 : raceSwaps.maxSwapSources(raceMode));
         guarded(() -> host.onLevelReady(start));
         if (host != null) applyLevelCover();
@@ -314,6 +314,15 @@ final class HostedRunController {
     }
 
     /** Paused iterations do not call the host, so its next physical input needs a new baseline. */
+    void prepareFocusPause(com.openggf.control.InputHandler input, GameLoopEditorController editor,
+            com.openggf.game.GameMode mode) {
+        discardFocusInput(input);
+        suspendInput();
+        editor.finishPendingEdits(mode);
+    }
+    void discardFocusInput(com.openggf.control.InputHandler input) {
+        com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(input);
+    }
     void suspendInput() { inputSuspended = true; }
 
     /** Asks the host whether this frame's step may run; false holds the run. */
@@ -383,7 +392,7 @@ final class HostedRunController {
                         p1.actionHeldMask(),p1.actionPressedMask(),false,false);
     }
 
-    void onArenaReady(com.openggf.mods.run.TrackGeometry geometry) {
+    void onArenaReady(com.openggf.game.arena.TrackGeometry geometry) {
         if (host == null) return;
         stepOrdinal = 0;
         debugAssistThisStep = false;
@@ -406,9 +415,9 @@ final class HostedRunController {
             guarded(() -> host.onLevelReady(start));
         }
         actCompleteSeen |= complete;
-        var step = new RunStep(stepOrdinal++,pendingHeldMask,false,arena.pose(),complete,-1,debugAssistThisStep,
-                arena.race(),raceSwaps==null ? com.openggf.mods.run.RaceSignal.NONE : raceSwaps.consumeSignal(),
-                raceSwaps==null ? com.openggf.mods.run.RaceEventResult.NONE : raceSwaps.consumeApplied());
+        var step = new RunStep(stepOrdinal++,pendingHeldMask,false,com.openggf.mods.run.NativePlayerPose.fromArena(arena.pose()),complete,-1,debugAssistThisStep,
+                arena.race(),raceSwaps==null ? com.openggf.game.arena.RaceSignal.NONE : raceSwaps.consumeSignal(),
+                raceSwaps==null ? com.openggf.game.arena.RaceEventResult.NONE : raceSwaps.consumeApplied());
         debugAssistThisStep = false;
         guarded(() -> host.afterStep(step));
     }
@@ -457,22 +466,22 @@ final class HostedRunController {
         actCompleteSeen |= actComplete;
         RunStep step = new RunStep(stepOrdinal++, pendingHeldMask, pendingStartHeld, poseOf(player),
                 actComplete, checkpointIndex, debugAssistThisStep, actRaceClock(level,gameState),
-                raceSwaps==null ? com.openggf.mods.run.RaceSignal.NONE : raceSwaps.consumeSignal(),
-                raceSwaps==null ? com.openggf.mods.run.RaceEventResult.NONE : raceSwaps.consumeApplied(),
+                raceSwaps==null ? com.openggf.game.arena.RaceSignal.NONE : raceSwaps.consumeSignal(),
+                raceSwaps==null ? com.openggf.game.arena.RaceEventResult.NONE : raceSwaps.consumeApplied(),
                 checkpointState == null ? 0 : checkpointState.getSavedX(),
                 checkpointState == null ? 0 : checkpointState.getSavedY());
         debugAssistThisStep = false;
         guarded(() -> host.afterStep(step));
     }
 
-    private com.openggf.mods.run.RaceClock actRaceClock(com.openggf.level.LevelManager level,
+    private com.openggf.game.arena.RaceClock actRaceClock(com.openggf.level.LevelManager level,
             com.openggf.game.GameStateManager state) {
         if (spec.policy().deathRestart()!=com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT)
-            return com.openggf.mods.run.RaceClock.ACT;
-        var failure = state.getLives() == 0 ? com.openggf.mods.run.RaceClock.Failure.GAME_OVER
-                : level.getLevelGamestate().isTimeOver() ? com.openggf.mods.run.RaceClock.Failure.TIME_OVER
-                : com.openggf.mods.run.RaceClock.Failure.NONE;
-        return new com.openggf.mods.run.RaceClock(true,0,0,failure);
+            return com.openggf.game.arena.RaceClock.ACT;
+        var failure = state.getLives() == 0 ? com.openggf.game.arena.RaceClock.Failure.GAME_OVER
+                : level.getLevelGamestate().isTimeOver() ? com.openggf.game.arena.RaceClock.Failure.TIME_OVER
+                : com.openggf.game.arena.RaceClock.Failure.NONE;
+        return new com.openggf.game.arena.RaceClock(true,0,0,failure);
     }
 
     static PlayerPose poseOf(AbstractPlayableSprite sprite) {
@@ -711,7 +720,7 @@ final class HostedRunController {
     private final class Handle implements RunHandle {
         private boolean active = true;
 
-        @Override public void queueRaceEvent(com.openggf.mods.run.RaceEvent event) {
+        @Override public void queueRaceEvent(com.openggf.game.arena.RaceEvent event) {
             if (!active) return;
             Objects.requireNonNull(event,"event");
             if (!spec.policy().swapEnabled()) throw new IllegalStateException("Swaps are disabled for this attempt");

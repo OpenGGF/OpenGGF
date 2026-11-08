@@ -266,8 +266,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                                 String name = session.players().stream().filter(p -> p.slot() == other)
                                         .map(ControlMessage.PlayerInfo::displayName).findFirst().orElse("?");
                                 var target = local == swap.slotA() ? swap.targetB() : swap.targetA();
-                                runtime.queueSwap(new com.openggf.mods.run.RaceEvent.SwapApply(swap.swapId(),
-                                        new com.openggf.mods.run.SwapTarget(target.centreX(), target.centreY(),
+                                runtime.queueSwap(new com.openggf.game.arena.RaceEvent.SwapApply(swap.swapId(),
+                                        new com.openggf.game.arena.SwapTarget(target.centreX(), target.centreY(),
                                                 target.xVel(), target.yVel(), target.facingLeft(), target.secondaryPath(),
                                                 target.priorityBucket(), target.highPriority(), target.shoeKind(),
                                                 target.shoeTimer(), target.progress())), name);
@@ -277,7 +277,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                         if (runtime != null && publisherActive && none.attemptId() == publisher.currentAttemptId()) {
                             if (runtime.nextStepIndex() > none.requestFrame() + 180) runtime.queueExpiredSwap(none.swapId());
                             else if (!"NO_PARTNER".equals(none.reason())) runtime.queueRefusedSwap(none.swapId());
-                            else runtime.queueSwap(new com.openggf.mods.run.RaceEvent.SwapFallback(none.swapId()), "");
+                            else runtime.queueSwap(new com.openggf.game.arena.RaceEvent.SwapFallback(none.swapId()), "");
                         }
                     } else if (control.message() instanceof ControlMessage.RaceCutoff cutoff) {
                         if (session.launch() != null && cutoff.roundId() == session.launch().roundId())

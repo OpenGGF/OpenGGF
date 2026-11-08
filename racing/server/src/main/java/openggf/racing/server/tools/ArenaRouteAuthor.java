@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.competition.*;
 import com.openggf.game.arena.*;
 import com.openggf.level.LevelArtInternalAccess;
 import com.openggf.mods.run.*;
+import com.openggf.game.arena.*;
 import com.openggf.route.*;
 import openggf.timeattack.*;
 import java.nio.file.Path;
@@ -61,7 +62,7 @@ public final class ArenaRouteAuthor {
                 crossing|=lap>0;backwards|=lap<previousLap && !world.arena.respawned();
                 death|=world.arena.respawned();previousLap=lap;
                 attempt.onFrame(row.toEngine(recording.frameCount()).p1InputMask(),world.arena.trackFinished(),-1,step.race());
-                var f=step.pose().toGhostFrame(false,Math.clamp(lap,0,15));
+                var f=com.openggf.mods.run.NativePlayerPose.fromArena(step.pose()).toGhostFrame(false,Math.clamp(lap,0,15));
                 var ghost=new com.openggf.net.ghost.GhostFrame(f.x(),f.y(),f.mappingFrame(),f.hFlip(),f.vFlip(),false,
                         f.priorityBucket(),f.highPriority(),f.hurt(),f.progress(),f.secondaryPath(),f.shoeKind(),world.arena.respawned());
                 byte[] bytes=new byte[com.openggf.net.ghost.GhostFrameCodec.BYTES];

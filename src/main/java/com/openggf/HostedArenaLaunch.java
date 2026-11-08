@@ -6,7 +6,7 @@ import com.openggf.game.GameMode;
 import com.openggf.game.arena.*;
 import com.openggf.game.nativemenu.NativeMenuHostContext;
 import com.openggf.game.nativemenu.NativeMenuScreen;
-import com.openggf.mods.run.MonitorRule;
+import com.openggf.game.arena.MonitorRule;
 import com.openggf.mods.run.RunSpec;
 
 /** Native-screen delegate for a scene-owned arena. The outer loop still owns PLC admission. */

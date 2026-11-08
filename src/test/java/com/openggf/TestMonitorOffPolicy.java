@@ -4,7 +4,7 @@ import com.openggf.game.session.GameplayRunPolicy;
 import com.openggf.game.sonic2.objects.MonitorObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
 import com.openggf.level.objects.*;
-import com.openggf.mods.run.MonitorRule;
+import com.openggf.game.arena.MonitorRule;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;

@@ -222,7 +222,7 @@ class TestTimeAttackMenuState {
         for (int i = 0; i < 3; i++) { state.adjust(1); starts.add(state.startInSeconds()); }
         assertEquals(List.of(15, 5, 10), starts);
         assertEquals(new CompetitionRoomSettings(CompetitionRoomSettings.Mode.COMPETITION,
-                com.openggf.mods.run.MonitorRule.NORMAL, 60, 10), state.competitionSettings());
+                com.openggf.game.arena.MonitorRule.NORMAL, 60, 10), state.competitionSettings());
     }
 
     @Test
@@ -268,7 +268,7 @@ class TestTimeAttackMenuState {
         focus(state, TimeAttackMenuState.Row.RACE_MODE);
         state.adjust(1);
         // The default pool holds S3K acts only: normal or off (the S3K ROM has no 2P monitor rule).
-        assertEquals(List.of(com.openggf.mods.run.MonitorRule.NORMAL, com.openggf.mods.run.MonitorRule.OFF),
+        assertEquals(List.of(com.openggf.game.arena.MonitorRule.NORMAL, com.openggf.game.arena.MonitorRule.OFF),
                 state.legalMonitors());
         focus(state, TimeAttackMenuState.Row.MONITORS);
         state.adjust(1);

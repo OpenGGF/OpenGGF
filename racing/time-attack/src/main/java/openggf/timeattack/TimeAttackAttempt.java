@@ -17,7 +17,7 @@ public final class TimeAttackAttempt {
     private int completedLaps;
     private int lapBoundary = -1;
     private final List<Integer> laps = new ArrayList<>();
-    private com.openggf.mods.run.RaceClock.Failure failure = com.openggf.mods.run.RaceClock.Failure.NONE;
+    private com.openggf.game.arena.RaceClock.Failure failure = com.openggf.game.arena.RaceClock.Failure.NONE;
 
     public TimeAttackAttempt() { this(TimingRule.FIRST_INPUT); }
     public TimeAttackAttempt(TimingRule timingRule) {
@@ -32,16 +32,16 @@ public final class TimeAttackAttempt {
     private final List<Integer> splits = new ArrayList<>();
 
     public void onFrame(int heldMask, boolean endOfLevelActive, int checkpointIndex) {
-        onFrame(heldMask, endOfLevelActive, checkpointIndex, com.openggf.mods.run.RaceClock.ACT);
+        onFrame(heldMask, endOfLevelActive, checkpointIndex, com.openggf.game.arena.RaceClock.ACT);
     }
 
     public void onFrame(int heldMask, boolean endOfLevelActive, int checkpointIndex,
-                        com.openggf.mods.run.RaceClock race) {
+                        com.openggf.game.arena.RaceClock race) {
         if (phase == Phase.FINISHED || phase == Phase.VOID) {
             return;
         }
         frameCount++;
-        if (race.failure() != com.openggf.mods.run.RaceClock.Failure.NONE) {
+        if (race.failure() != com.openggf.game.arena.RaceClock.Failure.NONE) {
             failure = race.failure();
             voidAttempt();
             return;
@@ -88,7 +88,7 @@ public final class TimeAttackAttempt {
     public int[] lapFrames() { return laps.stream().mapToInt(Integer::intValue).toArray(); }
     public int bestLapFrames() { return laps.stream().mapToInt(Integer::intValue).min().orElse(-1); }
     public int currentLapFrames() { return phase == Phase.RUNNING ? frameCount - lapBoundary : 0; }
-    public com.openggf.mods.run.RaceClock.Failure failure() { return failure; }
+    public com.openggf.game.arena.RaceClock.Failure failure() { return failure; }
     public boolean continuesAcross(com.openggf.mods.run.LevelStartCause cause) {
         return timingRule != TimingRule.FIRST_INPUT
                 && (cause == com.openggf.mods.run.LevelStartCause.CHECKPOINT_RESPAWN

@@ -291,7 +291,7 @@ public final class GhostRenderer {
             Slot slot = new Slot(new PlayerSpriteRenderer(ghostArt), code);
             slots.put(key, slot);
             return slot;
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Failed to create ghost slot for " + characterCode, e);
             return null;
         }

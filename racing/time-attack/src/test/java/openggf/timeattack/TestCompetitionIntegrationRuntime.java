@@ -1,5 +1,6 @@
 package openggf.timeattack;
 import com.openggf.mods.run.*;
+import com.openggf.game.arena.*;
 import com.openggf.control.*;
 import com.openggf.net.ghost.GhostFrame;
 import org.junit.jupiter.api.Test;

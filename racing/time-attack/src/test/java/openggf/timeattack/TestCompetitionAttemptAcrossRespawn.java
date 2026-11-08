@@ -9,7 +9,7 @@ class TestCompetitionAttemptAcrossRespawn {
         var runtime = new TimeAttackRuntime(new GhostStore(dir), dir.resolve("id"), () -> false);
         runtime.armForLaunch(new TimeAttackLaunchRequest("s2", 0, 0, "sonic", java.util.List.of(),
                 com.openggf.mods.run.TrackKind.ACT, CompetitionRoomSettings.Mode.COMPETITION,
-                com.openggf.mods.run.MonitorRule.OFF, false));
+                com.openggf.game.arena.MonitorRule.OFF, false));
         var lifecycle = new java.util.ArrayList<String>();
         runtime.setAttemptListener(new TimeAttackRuntime.AttemptListener() {
             public void onAttemptBegan(int n) { lifecycle.add("begin"); }
@@ -25,7 +25,7 @@ class TestCompetitionAttemptAcrossRespawn {
         runtime.afterStep(new com.openggf.mods.run.RunStep(0, 0, false, pose, false, -1, false));
         runtime.afterStep(new com.openggf.mods.run.RunStep(1, 0, false, pose, false, 1, false));
         runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 4096, 512,
-                LevelStartCause.CHECKPOINT_RESPAWN, com.openggf.mods.run.TrackGeometry.ACT));
+                LevelStartCause.CHECKPOINT_RESPAWN, com.openggf.game.arena.TrackGeometry.ACT));
         runtime.afterStep(new com.openggf.mods.run.RunStep(0, 0, false, pose, false, 1, false));
         runtime.afterStep(new com.openggf.mods.run.RunStep(1, 0, false, pose, true, 2, false));
         assertEquals(java.util.List.of("begin", "finish"), lifecycle);

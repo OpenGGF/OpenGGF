@@ -225,10 +225,10 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
             return;
         }
         initialized = true;
-        if (services().runPolicy().monitors() == com.openggf.mods.run.MonitorRule.OFF) {
+        if (services().runPolicy().monitors() == com.openggf.game.arena.MonitorRule.OFF) {
             // Hosted policy: omit the placement without setting its persistent break bit.
             // Content zero cannot implement OFF: its native reward is Robotnik/Eggman.
-            setDestroyed(true);
+            ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
 

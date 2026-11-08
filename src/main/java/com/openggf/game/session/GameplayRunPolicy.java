@@ -39,17 +39,17 @@ public record GameplayRunPolicy(boolean specialStageEntry,
                                 boolean editorEntry,
                                 DeathRestart deathRestart,
                                 boolean livesCounter,
-                                boolean zoneIntros, com.openggf.mods.run.MonitorRule monitors,
+                                boolean zoneIntros, com.openggf.game.arena.MonitorRule monitors,
                                 boolean swapEnabled) {
     /** Compatibility construction: a non-networked run never requests a partner swap. */
-    public GameplayRunPolicy(boolean specialStageEntry, boolean bonusStageEntry, ActCompletion actCompletion, boolean liveRewind, boolean editorEntry, DeathRestart deathRestart, boolean livesCounter, boolean zoneIntros, com.openggf.mods.run.MonitorRule monitors) {
+    public GameplayRunPolicy(boolean specialStageEntry, boolean bonusStageEntry, ActCompletion actCompletion, boolean liveRewind, boolean editorEntry, DeathRestart deathRestart, boolean livesCounter, boolean zoneIntros, com.openggf.game.arena.MonitorRule monitors) {
         this(specialStageEntry, bonusStageEntry, actCompletion, liveRewind, editorEntry, deathRestart, livesCounter, zoneIntros, monitors, false);
     }
     public GameplayRunPolicy(boolean specialStageEntry, boolean bonusStageEntry, ActCompletion actCompletion, boolean liveRewind, boolean editorEntry, DeathRestart deathRestart, boolean livesCounter, boolean zoneIntros) {
-        this(specialStageEntry, bonusStageEntry, actCompletion, liveRewind, editorEntry, deathRestart, livesCounter, zoneIntros, com.openggf.mods.run.MonitorRule.NORMAL);
+        this(specialStageEntry, bonusStageEntry, actCompletion, liveRewind, editorEntry, deathRestart, livesCounter, zoneIntros, com.openggf.game.arena.MonitorRule.NORMAL);
     }
     public static GameplayRunPolicy competition() {
-        return new GameplayRunPolicy(false, false, ActCompletion.RETURN_TO_HOST, false, false, DeathRestart.FAST_FROM_CHECKPOINT, false, false, com.openggf.mods.run.MonitorRule.NORMAL);
+        return new GameplayRunPolicy(false, false, ActCompletion.RETURN_TO_HOST, false, false, DeathRestart.FAST_FROM_CHECKPOINT, false, false, com.openggf.game.arena.MonitorRule.NORMAL);
     }
 
     /** What the engine does when a run's act is complete. */

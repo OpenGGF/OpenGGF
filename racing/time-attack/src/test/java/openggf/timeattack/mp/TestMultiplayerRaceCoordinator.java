@@ -177,7 +177,7 @@ class TestMultiplayerRaceCoordinator {
         var runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("id"), () -> false);
         runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", List.of(),
                 com.openggf.mods.run.TrackKind.ARENA, openggf.timeattack.CompetitionRoomSettings.Mode.COMPETITION,
-                com.openggf.mods.run.MonitorRule.OFF, false));
+                com.openggf.game.arena.MonitorRule.OFF, false));
         var coordinator = new MultiplayerRaceCoordinator(transport, session, () -> now);
         coordinator.attachRuntime(runtime);
         levelReady(runtime);
@@ -188,9 +188,9 @@ class TestMultiplayerRaceCoordinator {
         assertTrue(runtime.admitStep(keys()));
         assertEquals(1, transport.sentControl.stream().filter(ControlMessage.AttemptStart.class::isInstance).count());
         runtime.afterStep(new RunStep(0, 0, false, new PlayerPose(100, 100, 0, false, false, 2, false),
-                false, -1, false, new com.openggf.mods.run.RaceClock(false, 0, 0,
-                        com.openggf.mods.run.RaceClock.Failure.NONE), com.openggf.mods.run.RaceSignal.NONE,
-                com.openggf.mods.run.RaceEventResult.NONE));
+                false, -1, false, new com.openggf.game.arena.RaceClock(false, 0, 0,
+                        com.openggf.game.arena.RaceClock.Failure.NONE), com.openggf.game.arena.RaceSignal.NONE,
+                com.openggf.game.arena.RaceEventResult.NONE));
         assertTrue(runtime.isAttemptActive());
         assertFalse(coordinator.mayRetry());
         assertFalse(coordinator.continueAfterActCompletion());

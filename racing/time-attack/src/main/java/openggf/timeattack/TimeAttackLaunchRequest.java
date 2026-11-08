@@ -1,6 +1,6 @@
 package openggf.timeattack;
 
-import com.openggf.mods.run.MonitorRule;
+import com.openggf.game.arena.MonitorRule;
 import com.openggf.mods.run.TrackKind;
 
 /** Frozen local launch settings, including the room's competition rules. */

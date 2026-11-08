@@ -1,6 +1,7 @@
 package openggf.timeattack;
 
 import com.openggf.mods.run.*;
+import com.openggf.game.arena.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;

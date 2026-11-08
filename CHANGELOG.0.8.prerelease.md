@@ -26,6 +26,11 @@ under the matching area heading; see the
   shared touch owner. The Sonic+Tails chain advances from CNZ2 to HTZ2; later
   route errors and the special-stage return timing differences remain open.
 
+- **S2 diagonal launcher springs:** capture both riders before deciding to
+  release or decompress. A fresh Tails capture now uses the native launch force
+  and can hold Sonic on the spring. The complete-chain CNZ2 segment is green;
+  later campaign and art-gap failures remain open.
+
 
 - **Time Attack Competition mode and the Sonic 3&K Competition arenas:** a
   multiplayer room can now race in Competition mode as well as Time Attack.
@@ -73,7 +78,8 @@ under the matching area heading; see the
   rolling under the Flying Battery elevator, a Casino Night jackpot,
   custom-team Data Select saves, and every Sonic 3&K zone with its bonus
   and special stages. Shots sit inside their acts, and Super Sonic transforms
-  only once the replay has collected 50 rings. The reels render without native
+  only once the replay has collected 50 rings. Knuckles in Sonic 2 shots read the
+  verified lock-on dump, so the HUD shows the chip's own art and colours. The reels render without native
   sprite dropout, as normal play does: `TraceCaptureTool --no-sprite-limits` turns
   off the per-line limits that trace captures otherwise keep for ROM image
   comparison. `GameplayCaptureTool --rewind FRAME:LENGTH`
@@ -97,6 +103,13 @@ under the matching area heading; see the
   resume actual ROM-backed work; credits use their native wait and fade loops.
   Generic ending callers retain their gameplay order, and failed initialization
   preserves the original error while cleaning up its owned continuation.
-  Physics, auxiliary observations and movie input are preserved exactly. New red frontiers remain visible.
+  Recorded physics, auxiliary observations and movie input are preserved exactly.
+  The LRZ title owner submits its three enemy archives in native order,
+  preventing a later results-art FIFO overflow. AIZ2 art preparation preserves
+  Knuckles' terrain-only branch; Sonic/Tails also submit the battleship object
+  art. The boss-glide continuation remains open pending the Knuckles SOZ route.
+  Existing animation and route frontiers remain visible, including
+  the fresh sanctuary's intermediate load state; its routine comparison does
+  not establish player dispatch.
   Special-stage entry honors the recorded team and production lock-on module;
   the single entry-state import consumes S2-family manifest destination rings.

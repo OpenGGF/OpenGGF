@@ -139,6 +139,14 @@ public final class LoadedLevelScene {
         int count = Math.max(4, level.getCurrentLevel().getPaletteCount());
         int[] palette = new int[count * 16];
         for (int line = 0; line < level.getCurrentLevel().getPaletteCount(); line++) {
+            // The native display may still hold the previous V-int palette generation.
+            // Capturing a scene must observe that display without publishing pending writes.
+            var displayed = com.openggf.graphics.PaletteUploadPresentation.copyDisplayedPaletteArgb(
+                    graphics, line);
+            if (displayed != null) {
+                System.arraycopy(displayed, 0, palette, line * 16, 16);
+                continue;
+            }
             for (int color = 0; color < 16; color++) {
                 var rgb = level.getCurrentLevel().getPalette(line).getColor(color);
                 palette[line * 16 + color] = 0xFF000000 | (rgb.r & 255) << 16 | (rgb.g & 255) << 8 | rgb.b & 255;

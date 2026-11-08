@@ -4,7 +4,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.session.GameplayRunPolicy;
 import com.openggf.game.session.SessionManager;
-import com.openggf.mods.run.MonitorRule;
+import com.openggf.game.arena.MonitorRule;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;

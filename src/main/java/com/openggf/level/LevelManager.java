@@ -3572,20 +3572,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Power-ups and their timers remain with the local player.
      */
     public void reinitializeAfterRaceSwap() {
-        var player = camera.getFocusedSprite();
-        var objects = objectManager == null ? null : objectManager.capturePersistentRespawn();
-        var rings = ringManager == null ? null : ringManager.captureRingStatusTable();
-        camera.setFrozen(false);
-        camera.setFocusedSprite(player);
-        camera.updatePosition(true);
-        if (objectManager != null) objectManager.reset(camera.getX(),objects);
-        if (ringManager != null) {
-            ringManager.reset(camera.getX());
-            ringManager.restoreRingStatusTable(rings);
-            com.openggf.level.rings.RingDrawInternalAccess.bindNativeSlots(ringManager);
-        }
-        reregisterPlayerDynamicObjects(player);
-        for (var sidekick : spriteManager.getSidekicks()) reregisterPlayerDynamicObjects(sidekick);
+        RaceSwapPlacement.reinitialize(camera, objectManager, ringManager, spriteManager,
+                this::reregisterPlayerDynamicObjects);
     }
 
     /** Full native checkpoint restore, omitting only the initial title-card presentation.

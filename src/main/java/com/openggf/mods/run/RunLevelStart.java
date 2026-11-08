@@ -1,5 +1,7 @@
 package com.openggf.mods.run;
 
+import com.openggf.game.arena.TrackGeometry;
+
 import com.openggf.game.ModApi;
 
 /**

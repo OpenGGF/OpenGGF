@@ -75,11 +75,11 @@ public final class GhostFileCodec {
             String displayName = readText(in);
             com.openggf.mods.run.TrackKind kind;
             openggf.timeattack.CompetitionRoomSettings.Mode mode;
-            com.openggf.mods.run.MonitorRule monitors;
+            com.openggf.game.arena.MonitorRule monitors;
             try {
                 kind = com.openggf.mods.run.TrackKind.valueOf(readText(in));
                 mode = openggf.timeattack.CompetitionRoomSettings.Mode.valueOf(readText(in));
-                monitors = com.openggf.mods.run.MonitorRule.valueOf(readText(in));
+                monitors = com.openggf.game.arena.MonitorRule.valueOf(readText(in));
             } catch (IllegalArgumentException invalid) { throw new IOException("Invalid ghost rules", invalid); }
             int lapCount = in.readUnsignedByte();
             if (lapCount > 5) throw new IOException("Too many ghost laps");

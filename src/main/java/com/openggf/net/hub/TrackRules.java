@@ -5,11 +5,12 @@ import com.openggf.net.protocol.TrackKey;
 /** Shared room and relay eligibility, independent of a client's catalog. */
 public final class TrackRules {
     private TrackRules() { }
+    public static TrackRulesProvider shipped() { return CatalogTrackRules.SHIPPED; }
     public static boolean legal(TrackKey key, String mode) {
-        return com.openggf.game.internal.CompetitionTrackRules.legal(key, mode);
+        return CatalogTrackRules.SHIPPED.legal(key, mode);
     }
     static boolean monitorsLegal(com.openggf.net.protocol.ControlMessage.RoundConfig config) {
-        return com.openggf.game.internal.CompetitionTrackRules.monitorsLegal(config);
+        return CatalogTrackRules.SHIPPED.monitorsLegal(config);
     }
     static boolean swapsEnabled(com.openggf.net.protocol.ControlMessage.RoundConfig config) {
         return "COMPETITION".equals(config.mode()) && monitorsLegal(config)

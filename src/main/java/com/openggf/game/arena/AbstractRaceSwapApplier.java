@@ -2,8 +2,8 @@ package com.openggf.game.arena;
 
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.session.GameplayModeContext;
-import com.openggf.mods.run.RaceEvent;
-import com.openggf.mods.run.RaceEventResult;
+import com.openggf.game.arena.RaceEvent;
+import com.openggf.game.arena.RaceEventResult;
 
 /** One admitted external event, consumed before gameplay owners run in that executed step. */
 public abstract class AbstractRaceSwapApplier implements RaceSwapApplier {

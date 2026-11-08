@@ -12,6 +12,7 @@
       { "pattern": "icon/.*\\.png" },
       { "pattern": "load-time-profiles/.*\\.json" },
       { "pattern": "net/.*\\.json" },
+      { "pattern": "net/track-rules\\.properties" },
       { "pattern": "net/chat/.*\\.txt" },
       { "pattern": "presentation/heads/.*\\.txt" },
       { "pattern": "presentation/heads/profiles\\.list" },

@@ -5,9 +5,9 @@ import com.openggf.control.PlayerInputState;
 import com.openggf.game.arena.ArenaStep;
 import com.openggf.game.arena.HostedArenaRequest;
 import com.openggf.game.arena.HostedArenaSession;
-import com.openggf.mods.run.PlayerPose;
-import com.openggf.mods.run.RaceClock;
-import com.openggf.mods.run.TrackGeometry;
+import com.openggf.game.arena.ArenaPose;
+import com.openggf.game.arena.RaceClock;
+import com.openggf.game.arena.TrackGeometry;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 import java.util.Locale;
@@ -53,7 +53,7 @@ public final class S3kHostedArenaSession implements HostedArenaSession {
         var session = host.session();
         var player = session.player(0);
         int shoes = (player.statusSecondary() & 4) == 0 ? 0 : player.speeds().maxSpeed() == 0x300 ? 2 : 1;
-        var pose = new PlayerPose(player.centreX(), player.centreY(), player.mappingFrame(),
+        var pose = new ArenaPose(player.centreX(), player.centreY(), player.mappingFrame(),
                 (player.nativeRenderFlags() & 1) != 0, (player.nativeRenderFlags() & 2) != 0,
                 2, player.highPriority(), player.routine() == 4, player.topSolidBit() == 0xE, shoes);
         // Raw lap falls on backwards crossings/death. Only highestLap books a completed lap.

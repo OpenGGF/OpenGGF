@@ -1,7 +1,7 @@
 package openggf.timeattack;
 
 
-import com.openggf.mods.run.MonitorRule;
+import com.openggf.game.arena.MonitorRule;
 import openggf.timeattack.mp.VoteTrackPools;
 
 import java.io.IOException;

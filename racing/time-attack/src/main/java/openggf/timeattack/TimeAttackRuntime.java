@@ -106,8 +106,8 @@ public final class TimeAttackRuntime implements RunHost {
     private com.openggf.net.identity.PlayerIdentity identity;
     private TimeAttackLaunchRequest launch;
     private TimeAttackAttempt attempt;
-    private com.openggf.mods.run.TrackGeometry geometry = com.openggf.mods.run.TrackGeometry.ACT;
-    private com.openggf.mods.run.RaceClock raceClock = com.openggf.mods.run.RaceClock.ACT;
+    private com.openggf.game.arena.TrackGeometry geometry = com.openggf.game.arena.TrackGeometry.ACT;
+    private com.openggf.game.arena.RaceClock raceClock = com.openggf.game.arena.RaceClock.ACT;
     private int localCentreY;
     private int localProgressOrdinal;
     public double progressEstimate() {
@@ -124,15 +124,15 @@ public final class TimeAttackRuntime implements RunHost {
     private final java.util.Set<Long> expiredSwaps = new java.util.HashSet<>();
     private final java.util.Set<Long> refusedSwaps = new java.util.HashSet<>();
     public void queueRefusedSwap(long id) {
-        if (queueSwap(new com.openggf.mods.run.RaceEvent.SwapFallback(id), "")) refusedSwaps.add(id);
+        if (queueSwap(new com.openggf.game.arena.RaceEvent.SwapFallback(id), "")) refusedSwaps.add(id);
     }
     public void queueExpiredSwap(long id) {
-        if (queueSwap(new com.openggf.mods.run.RaceEvent.SwapFallback(id), "")) expiredSwaps.add(id);
+        if (queueSwap(new com.openggf.game.arena.RaceEvent.SwapFallback(id), "")) expiredSwaps.add(id);
     }
-    public boolean queueSwap(com.openggf.mods.run.RaceEvent event, String partner) {
+    public boolean queueSwap(com.openggf.game.arena.RaceEvent event, String partner) {
         if (!competition() || !launch.swapEnabled() || !isAttemptActive() || handle == null) return false;
-        long id = event instanceof com.openggf.mods.run.RaceEvent.SwapApply a ? a.swapId()
-                : ((com.openggf.mods.run.RaceEvent.SwapFallback)event).swapId();
+        long id = event instanceof com.openggf.game.arena.RaceEvent.SwapApply a ? a.swapId()
+                : ((com.openggf.game.arena.RaceEvent.SwapFallback)event).swapId();
         if (id != 0 && !queuedSwaps.add(id)) return false;
         swapPartners.put(id, partner);
         handle.queueRaceEvent(event);
@@ -248,7 +248,7 @@ public final class TimeAttackRuntime implements RunHost {
         inputRecording = new AttemptInputRecording(new AttemptStartDescriptor(
                 launch.gameId(), launch.zone(), launch.act(), launch.character(), fingerprint,
                 launch.kind(), launch.mode(), launch.monitors(), runSpec().policy().deathRestart(), launch.swapEnabled()));
-        raceClock = com.openggf.mods.run.RaceClock.ACT;
+        raceClock = com.openggf.game.arena.RaceClock.ACT;
         swapNotice = CompetitionHudState.SwapNotice.none();
         queuedSwaps.clear();
         swapPartners.clear();
@@ -412,7 +412,7 @@ public final class TimeAttackRuntime implements RunHost {
      * death reloads the act from its start as a fresh attempt with no lives and no title card,
      * and without intro cutscenes, so the clock measures the race alone.
      */
-    public static GameplayRunPolicy competitionPolicy(com.openggf.mods.run.MonitorRule monitors) {
+    public static GameplayRunPolicy competitionPolicy(com.openggf.game.arena.MonitorRule monitors) {
         GameplayRunPolicy p = GameplayRunPolicy.competition();
         return new GameplayRunPolicy(p.specialStageEntry(), p.bonusStageEntry(), p.actCompletion(),
                 p.liveRewind(), p.editorEntry(), p.deathRestart(), p.livesCounter(), p.zoneIntros(), monitors);
@@ -512,7 +512,7 @@ public final class TimeAttackRuntime implements RunHost {
         attempt.onFrame(heldMask, endOfLevel, checkpointIndex, raceClock);
         if (attempt.phase() == TimeAttackAttempt.Phase.VOID) {
             if (attemptListener != null) attemptListener.onAttemptVoided(attemptOrdinal,
-                    attempt.failure() == com.openggf.mods.run.RaceClock.Failure.NONE ? "LEFT" : attempt.failure().name());
+                    attempt.failure() == com.openggf.game.arena.RaceClock.Failure.NONE ? "LEFT" : attempt.failure().name());
             return;
         }
         inputRecording.appendFrame(heldMask, !competition() && startHeld);
@@ -716,24 +716,24 @@ public final class TimeAttackRuntime implements RunHost {
         }
         if (swapNotice.remainingFrames() > 0) swapNotice = new CompetitionHudState.SwapNotice(
                 swapNotice.partnerName(), swapNotice.remainingFrames() - 1);
-        if (isAttemptActive() && step.applied().outcome() != com.openggf.mods.run.RaceEventResult.Outcome.NONE) {
+        if (isAttemptActive() && step.applied().outcome() != com.openggf.game.arena.RaceEventResult.Outcome.NONE) {
             var result = step.applied();
-            long id = result.event() instanceof com.openggf.mods.run.RaceEvent.SwapApply a ? a.swapId()
-                    : ((com.openggf.mods.run.RaceEvent.SwapFallback)result.event()).swapId();
-            boolean applied = result.outcome() == com.openggf.mods.run.RaceEventResult.Outcome.APPLIED;
+            long id = result.event() instanceof com.openggf.game.arena.RaceEvent.SwapApply a ? a.swapId()
+                    : ((com.openggf.game.arena.RaceEvent.SwapFallback)result.event()).swapId();
+            boolean applied = result.outcome() == com.openggf.game.arena.RaceEventResult.Outcome.APPLIED;
             // Record what the engine actually applied, including deterministic admissibility fallback.
             inputRecording.appendEvent(inputRecording.frameCount(), applied ? result.event()
-                    : new com.openggf.mods.run.RaceEvent.SwapFallback(id));
+                    : new com.openggf.game.arena.RaceEvent.SwapFallback(id));
             swapNotice = applied ? CompetitionHudState.SwapNotice.applied(swapPartners.getOrDefault(id, "?"))
                     : CompetitionHudState.SwapNotice.fallback();
             if (attemptListener != null) attemptListener.onTeleportOutcome(id, inputRecording.frameCount(),
                     expiredSwaps.remove(id) ? "EXPIRED" : refusedSwaps.remove(id) ? "REFUSED" : applied ? "APPLIED" : "FALLBACK");
         }
-        if (isAttemptActive() && step.signal() == com.openggf.mods.run.RaceSignal.SWAP_REQUEST
+        if (isAttemptActive() && step.signal() == com.openggf.game.arena.RaceSignal.SWAP_REQUEST
                 && competition() && launch.swapEnabled() && attemptListener != null) {
             attemptListener.onTeleportRequest(attemptOrdinal, inputRecording.frameCount());
         }
-        if (competition() && step.signal() == com.openggf.mods.run.RaceSignal.ARENA_DEATH_RESPAWN)
+        if (competition() && step.signal() == com.openggf.game.arena.RaceSignal.ARENA_DEATH_RESPAWN)
             pendingRespawnReset = true;
         if (competition() && launch.kind() == com.openggf.mods.run.TrackKind.ACT && isAttemptActive()) {
             if (reportedCheckpointAttempt != attemptOrdinal) {

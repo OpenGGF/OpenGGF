@@ -1,7 +1,7 @@
 package com.openggf.net.hub;
 
 import com.openggf.net.protocol.ControlMessage;
-import com.openggf.mods.run.RaceEvent;
+import com.openggf.game.arena.RaceEvent;
 import openggf.timeattack.*;
 import openggf.racing.server.master.VerificationJobQueue;
 import openggf.racing.server.verifier.VerifierSwapLog;
@@ -23,7 +23,7 @@ class TestSwapRefusalReceipts {
         host.outcome(0,new ControlMessage.TeleportOutcome(receipt.swapId(),apply,outcome));
         var start = new AttemptStartDescriptor("s2",0,0,"sonic","fp",
                 com.openggf.mods.run.TrackKind.ACT, CompetitionRoomSettings.Mode.COMPETITION,
-                com.openggf.mods.run.MonitorRule.COMPETITION_ITEMS,
+                com.openggf.game.arena.MonitorRule.COMPETITION_ITEMS,
                 com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT,true);
         var recording = new AttemptInputRecording(start);
         recording.appendEvent(apply,new RaceEvent.SwapFallback(receipt.swapId()));
