@@ -34,6 +34,12 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Character-owned homing:** the 0.7 candidate Mod API now exposes homing and
+  Instagib strikes with per-call modes, an explicitly requested target reticle,
+  and a flight divebomb with a steep forward-down fallback. Runtime and rewind
+  ownership live in every world session; Mutator Lab retains its native-air-move
+  fallback and character selection.
+
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the
   capture's private save root before a title-first capture, and `--extra-teams`

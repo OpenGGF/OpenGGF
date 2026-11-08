@@ -1231,6 +1231,8 @@ CF-ANNOTATION TYPE com.openggf.sprites.playable.DrowningController visible @com.
 CF-ANNOTATION TYPE com.openggf.sprites.playable.DrowningController$FixedCountdownAirEvent visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.playable.DrowningController$RewindState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.playable.GroundWallResponseState visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.sprites.playable.HomingAttack visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.sprites.playable.HomingAttack$Mode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.playable.ObjectControlState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.playable.PlayableSensorSpec visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.playable.PlayableSpriteController visible @com.openggf.game.ModApi
@@ -4019,6 +4021,8 @@ FIELD com.openggf.sprites.playable.AbstractPlayableSprite public,static,final in
 FIELD com.openggf.sprites.playable.AbstractPlayableSprite public,static,final int INPUT_RIGHT
 FIELD com.openggf.sprites.playable.AbstractPlayableSprite public,static,final int INPUT_UP
 FIELD com.openggf.sprites.playable.AbstractPlayableSprite public,static,final int SYNTHETIC_INTERACT_SLOT
+FIELD com.openggf.sprites.playable.HomingAttack$Mode public,static,final com.openggf.sprites.playable.HomingAttack$Mode HOMING
+FIELD com.openggf.sprites.playable.HomingAttack$Mode public,static,final com.openggf.sprites.playable.HomingAttack$Mode INSTAGIB
 FIELD com.openggf.sprites.playable.ObjectControlState public,static,final com.openggf.sprites.playable.ObjectControlState ENGINE_SCRIPTED_PRESERVE_CPU_MOVEMENT_SUPPRESSED
 FIELD com.openggf.sprites.playable.ObjectControlState public,static,final com.openggf.sprites.playable.ObjectControlState ENGINE_SCRIPTED_TOUCH_SUPPRESSED_MOVEMENT_ACTIVE
 FIELD com.openggf.sprites.playable.ObjectControlState public,static,final com.openggf.sprites.playable.ObjectControlState MOVEMENT_SUPPRESSED_ONLY
@@ -15244,6 +15248,12 @@ METHOD com.openggf.sprites.playable.DrowningController$RewindState public  int r
 METHOD com.openggf.sprites.playable.DrowningController$RewindState public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.sprites.playable.DrowningController$RewindState public,final  int hashCode()
 METHOD com.openggf.sprites.playable.DrowningController$RewindState public,final  java.lang.String toString()
+METHOD com.openggf.sprites.playable.HomingAttack public,static  boolean divebomb(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.sprites.playable.HomingAttack$Mode)
+METHOD com.openggf.sprites.playable.HomingAttack public,static  boolean start(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.sprites.playable.HomingAttack$Mode)
+METHOD com.openggf.sprites.playable.HomingAttack public,static  boolean startIfTarget(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.sprites.playable.HomingAttack$Mode)
+METHOD com.openggf.sprites.playable.HomingAttack public,static  void requestReticle(com.openggf.sprites.playable.AbstractPlayableSprite,boolean)
+METHOD com.openggf.sprites.playable.HomingAttack$Mode public,static  com.openggf.sprites.playable.HomingAttack$Mode valueOf(java.lang.String)
+METHOD com.openggf.sprites.playable.HomingAttack$Mode public,static  com.openggf.sprites.playable.HomingAttack$Mode[] values()
 METHOD com.openggf.sprites.playable.ObjectControlState public  boolean objectControlAllowsCpu()
 METHOD com.openggf.sprites.playable.ObjectControlState public  boolean objectControlSuppressesMovement()
 METHOD com.openggf.sprites.playable.ObjectControlState public  boolean objectControlled()
@@ -17166,6 +17176,7 @@ NESTED com.openggf.sprites.managers.TailsTailsController com.openggf.sprites.man
 NESTED com.openggf.sprites.managers.TailsTailsController com.openggf.sprites.managers.TailsTailsController$RewindState
 NESTED com.openggf.sprites.playable.DrowningController com.openggf.sprites.playable.DrowningController$FixedCountdownAirEvent
 NESTED com.openggf.sprites.playable.DrowningController com.openggf.sprites.playable.DrowningController$RewindState
+NESTED com.openggf.sprites.playable.HomingAttack com.openggf.sprites.playable.HomingAttack$Mode
 NESTED com.openggf.sprites.playable.PlayableSpriteController com.openggf.sprites.playable.PlayableSpriteController$RewindState
 NESTED com.openggf.sprites.playable.SidekickCpuController com.openggf.sprites.playable.SidekickCpuController$DespawnCause
 NESTED com.openggf.sprites.playable.SidekickCpuController com.openggf.sprites.playable.SidekickCpuController$NormalStepDiagnostics
@@ -20906,6 +20917,7 @@ TYPE class public,final com.openggf.net.protocol.RoomPassword SUPER java.lang.Ob
 TYPE class public,final com.openggf.physics.SensorResult SUPER java.lang.Object
 TYPE class public,final com.openggf.sprites.NativePositionOps SUPER java.lang.Object
 TYPE class public,final com.openggf.sprites.managers.TailsFlightController SUPER java.lang.Object
+TYPE class public,final com.openggf.sprites.playable.HomingAttack SUPER java.lang.Object
 TYPE class public,final com.openggf.sprites.playable.TailsCarryController SUPER java.lang.Object
 TYPE class public,final com.openggf.stageplay.StageplayDialogue SUPER java.lang.Object
 TYPE class public,final com.openggf.stageplay.StageplayPlayback SUPER java.lang.Object
@@ -21158,6 +21170,7 @@ TYPE enum public,static,final com.openggf.net.protocol.ControlMessage$InviteOper
 TYPE enum public,static,final com.openggf.net.protocol.RoomAccessPolicy$Mode SUPER java.lang.Enum<com.openggf.net.protocol.RoomAccessPolicy$Mode>
 TYPE enum public,static,final com.openggf.physics.CollisionEvent$EventType SUPER java.lang.Enum<com.openggf.physics.CollisionEvent$EventType>
 TYPE enum public,static,final com.openggf.physics.FrameCollisionPlan$Phase SUPER java.lang.Enum<com.openggf.physics.FrameCollisionPlan$Phase>
+TYPE enum public,static,final com.openggf.sprites.playable.HomingAttack$Mode SUPER java.lang.Enum<com.openggf.sprites.playable.HomingAttack$Mode>
 TYPE enum public,static,final com.openggf.sprites.playable.SidekickCpuController$DespawnCause SUPER java.lang.Enum<com.openggf.sprites.playable.SidekickCpuController$DespawnCause>
 TYPE enum public,static,final com.openggf.sprites.playable.SidekickCpuController$State SUPER java.lang.Enum<com.openggf.sprites.playable.SidekickCpuController$State>
 TYPE enum public,static,final com.openggf.sprites.playable.TailsCarryController$CarryContext SUPER java.lang.Enum<com.openggf.sprites.playable.TailsCarryController$CarryContext>
@@ -23180,6 +23193,8 @@ TYPE-ANNOTATION com.openggf.sprites.playable.DrowningController @com.openggf.gam
 TYPE-ANNOTATION com.openggf.sprites.playable.DrowningController$FixedCountdownAirEvent @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.playable.DrowningController$RewindState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.playable.GroundWallResponseState @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.sprites.playable.HomingAttack @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.sprites.playable.HomingAttack$Mode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.playable.ObjectControlState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.playable.PlayableSensorSpec @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.playable.PlayableSpriteController @com.openggf.game.ModApi

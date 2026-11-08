@@ -33,7 +33,6 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
     private final java.util.Optional<MutatorPreferenceStore> store;
     private final com.openggf.game.mutators.LevelMutatorRuntime entryRuntime;
     private final com.openggf.game.mutators.GameplayMutatorPacing pacing;
-    private final com.openggf.game.mutators.HomingAttackRuntime homing;
     private java.util.Optional<MutatorPreferences> preferences;
     private boolean launched;
     private final java.util.Set<com.openggf.mods.mutators.MutatorConfigurationScreen> screens =
@@ -73,7 +72,6 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         pacing = new com.openggf.game.mutators.GameplayMutatorPacing(() ->
                 state.isClosed() ? com.openggf.game.mutators.GameplayMutatorPolicy.STOCK
                         : composed(state.effectiveBeforeNextForwardTick()).gameplayPolicy(availableCapabilities()));
-        homing = new com.openggf.game.mutators.HomingAttackRuntime(this::homingPolicy);
     }
 
     /** Only characters the support profile admits as leader keep the admitted homing mode. */
@@ -103,7 +101,6 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         // Entry reservations are cleared by the native load admission owner, which
         // preserves synchronous stage publication and stage-result ownership.
         pacing.reset();
-        homing.reset();
         if (!launched) {
             var admission = prepareLaunch();
             if (!admission.accepted()) {
@@ -121,9 +118,8 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
     }
 
     @Override public void bindRoster(SpriteManager sprites) {
-        homing.bindRoster(sprites);
         SpriteManagerInternalAccess.bindMutatorPolicies(sprites, new PlayableMutatorPolicySource() {
-            @Override public com.openggf.game.mutators.HomingAttackRuntime homingAttack() { return homing; }
+            @Override public com.openggf.game.mutators.HomingAttackRuntime homingAttack() { return com.openggf.game.session.WorldSessionPolicyAccess.getService(world, com.openggf.game.mutators.HomingAttackRuntime.class); }
             @Override public com.openggf.game.mutators.TransientMutatorPolicySource transientPolicies() { return temporary; }
             @Override public void beforeForwardTick() { state.onForwardTick(); }
             @Override public PlayableMutatorPolicy policyFor(AbstractPlayableSprite sprite) {
@@ -223,7 +219,7 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         if (type == MutatorWorldState.class) return type.cast(this);
         if (type == com.openggf.game.mutators.LevelMutatorRuntime.class) return type.cast(entryRuntime);
         if (type == com.openggf.game.mutators.GameplayMutatorPacing.class) return type.cast(pacing);
-        if (type == com.openggf.game.mutators.HomingAttackRuntime.class) return type.cast(homing);
+        if (type == com.openggf.game.mutators.HomingAttackRuntime.Policy.class) return type.cast(homingPolicy());
         if (type == com.openggf.game.mutators.LevelMutatorPolicySource.class) {
             return type.cast((com.openggf.game.mutators.LevelMutatorPolicySource)
                     () -> state.isClosed() ? com.openggf.game.mutators.LevelMutatorPolicy.STOCK
@@ -320,14 +316,14 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
     @Override public RewindSnapshottable<?> rewindAdapter() { return this; }
     @Override public void failedAssembly(LevelLoadCause cause) {
         if (cause != LevelLoadCause.DECODE_ONLY && cause != LevelLoadCause.PREVIEW) {
-            temporary.retire(); entryRuntime.retire(); pacing.reset(); homing.reset(); state.close();
+            temporary.retire(); entryRuntime.retire(); pacing.reset(); state.close();
         }
     }
     @Override public void retire() {
         if(retired)return; retired=true;
         var availableObservers=observers==null?java.util.List.<com.openggf.mods.code.GameplayObserverRegistry.Entry>of():
                 observers.entries().stream().filter(e -> faults.isOwnerAvailable(e.owner())).toList();
-        temporary.retire(); entryRuntime.retire(); pacing.reset(); homing.reset(); state.close();
+        temporary.retire(); entryRuntime.retire(); pacing.reset(); state.close();
         RuntimeException first=null;
         try { closeScreens(); } catch(RuntimeException failure) { first=failure; }
         for(var entry:availableObservers) {
@@ -339,14 +335,13 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         if(first!=null)throw first;
     }
     @Override public String key() { return "mutators"; }
-    @Override public Snapshot capture() { return new Snapshot(state.snapshot(), entryRuntime.capture(), pacing.capture(), homing.capture(),temporary.capture(),visitGeneration,nativeTicks,observation,loadCause); }
+    @Override public Snapshot capture() { return new Snapshot(state.snapshot(), entryRuntime.capture(), pacing.capture(),temporary.capture(),visitGeneration,nativeTicks,observation,loadCause); }
     @Override public void restore(Snapshot snapshot) {
         // The registered world adapter precedes player/object reconstruction. Saved
         // preferences and host owner quarantine remain outside this historical state.
         state.restore(snapshot.policies());
         entryRuntime.restore(snapshot.entries());
         pacing.restore(snapshot.pacing());
-        homing.restore(snapshot.homing());
         temporary.restore(snapshot.temporary());
         visitGeneration=snapshot.visitGeneration(); nativeTicks=snapshot.nativeTicks(); observation=snapshot.observation();loadCause=snapshot.loadCause();
         // A registry seek abandons presentation-only work from the former future.
@@ -355,14 +350,12 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
     record Snapshot(MutatorSessionState.Snapshot policies,
                     com.openggf.game.mutators.LevelMutatorRuntime.Snapshot entries,
                     com.openggf.game.mutators.GameplayMutatorPacing.Snapshot pacing,
-                    com.openggf.game.mutators.HomingAttackRuntime.Snapshot homing,
                     TemporaryMutatorState.Snapshot temporary,long visitGeneration,long nativeTicks,
                     com.openggf.game.GameplayObservation observation,LevelLoadCause loadCause) {
         Snapshot {
             java.util.Objects.requireNonNull(policies);
             java.util.Objects.requireNonNull(entries);
             java.util.Objects.requireNonNull(pacing);
-            java.util.Objects.requireNonNull(homing);
         }
     }
 }
