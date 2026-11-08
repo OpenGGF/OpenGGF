@@ -330,7 +330,10 @@ public abstract class SuperStateController {
     }
 
     /** Character-roster eligibility gate shared by every transformation entry point. */
+    protected boolean isTransformationEnabled() { return true; }
+
     private boolean transformationSupported() {
+        if (!isTransformationEnabled()) return false;
         com.openggf.game.CharacterKey key = player.boundCharacterKey;
         if (key == null) return false;
         if (key.isBuiltin()) return true;

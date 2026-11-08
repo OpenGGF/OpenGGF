@@ -72,6 +72,7 @@ class TestMicaCharacterIntegration {
             assertEquals(PlayerCharacter.SONIC_AND_TAILS,
                     com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(config));
             config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            verifyGilded(playable, resolved, game);
             var sprites = GameServices.sprites();
             var rewind = sprites.rewindSnapshottable();
             var state = rewind.capture();
@@ -130,6 +131,110 @@ class TestMicaCharacterIntegration {
             assertArrayEquals(saved, Files.readAllBytes(temp.resolve("saves").resolve(game).resolve("slot1.json")));
             assertTrue(fixture.runtime().runtimeDisabledOwners().isEmpty());
         }
+    }
+
+    private void verifyGilded(com.openggf.sprites.playable.AbstractPlayableSprite player,
+                               GameModule module, String game) throws Exception {
+        var controller = player.getSuperStateController();
+        assertInstanceOf(com.openggf.sprites.playable.ProfileSuperStateController.class, controller);
+        var state = player.currentGameState();
+        player.currentLevelState().resumeTimer();
+        com.openggf.sprites.playable.ObjectControlState.none().applyTo(player);
+        player.setAir(true); player.setJumping(true); player.setYSpeed((short) 0x28);
+        player.addRings(50 - player.getRingCount());
+        controller.checkTransformationBeforeMove();
+        assertFalse(controller.isSuper(), "No emeralds must not transform");
+        for (int i = 0; i < state.getChaosEmeraldCount(); i++) state.markEmeraldCollected(i);
+        player.addRings(-1);
+        if (game.equals("s3k")) assertFalse(controller.activateFromAirAbility());
+        else controller.checkTransformationBeforeMove();
+        assertFalse(controller.isSuper(), "49 rings must not transform");
+        player.addRings(1);
+        if (game.equals("s3k")) assertTrue(controller.activateFromAirAbility());
+        else controller.checkTransformationBeforeMove();
+        assertTrue(player.isSuperSonic());
+        var transforming = controller.captureRewindState();
+        var wholePlayer = player.captureRewindState(true);
+        for (int i = 0; i < 80; i++) controller.update();
+        assertEquals(com.openggf.sprites.playable.SuperState.SUPER, controller.getState());
+        assertFalse(controller.isHyperFormActive());
+        var definition = module.getPlayableCharacterRegistry().find(player.characterKey()).orElseThrow();
+        var form = definition.superFormSupplier().load(CODE).games().get(module.getGameId()).get(SuperFormProfile.Tier.SUPER);
+        // Observe a complete authored loop; every frame must be MICA's palette, never Sonic's.
+        for (int i = 0; i < form.cycleTicks() * form.dryCycle().size(); i++) {
+            var before = controller.captureRewindState();
+            controller.update();
+            var after = controller.captureRewindState();
+            assertEquals(before.paletteTimer() == 0 ? form.cycleTicks() - 1 : before.paletteTimer() - 1,
+                    after.paletteTimer());
+            assertEquals(before.paletteTimer() == 0 ? (before.paletteFrame() + 1) % form.dryCycle().size()
+                    : before.paletteFrame(), after.paletteFrame());
+            var palette = player.getSpriteRenderer().getRenderContext().getPalette(0);
+            assertTrue(form.dryCycle().stream().anyMatch(row -> paletteMatches(palette, row)));
+        }
+        assertTrue(player.getRingCount() < 50, "Native ring drain runs during transformation too");
+        var active = controller.captureRewindState();
+        controller.debugDeactivate();
+        for (int i = 0; i < 40; i++) controller.update();
+        assertFalse(player.isSuperSonic());
+        controller.restoreRewindState(active);
+        // Whole-player rewind owns the flag; the controller restore owns phase/physics/presentation.
+        player.setSuperSonic(true);
+        assertEquals(active, controller.captureRewindState());
+        player.restoreRewindState(wholePlayer);
+        assertTrue(player.isSuperSonic());
+        assertEquals(transforming, controller.captureRewindState());
+        controller.debugDeactivate();
+        for (int i = 0; i < 40; i++) controller.update();
+        if (game.equals("s3k")) {
+            for (int i = 0; i < 7; i++) state.markSuperEmeraldCollected(i);
+            player.addRings(50 - player.getRingCount()); player.setInvincibleFrames(0);
+            assertTrue(controller.activateFromAirAbility());
+            assertTrue(controller.isHyperFormActive());
+            for (int i = 0; i < 80; i++) controller.update();
+            assertFalse(GameServices.level().getObjectManager().getActiveObjects().stream().anyMatch(object ->
+                    object instanceof com.openggf.game.sonic3k.objects.HyperSonicStarsObjectInstance));
+        }
+        player.addRings(1 - player.getRingCount());
+        if (!controller.isSuper()) controller.debugActivate();
+        player.addRings(1 - player.getRingCount());
+        for (int i = 0; i < 100; i++) controller.update();
+        assertFalse(controller.isSuper(), "Exhausted rings revert");
+        for (int i = 0; i < 40; i++) controller.update();
+        player.setAir(false); player.setJumping(false);
+        state.resetState();
+        if (game.equals("s1")) {
+            var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+            var settings = com.openggf.mods.mutators.MutatorWorldAccess.state(world);
+            assertNotNull(settings);
+            String key = settings.requested().keySet().stream().filter(k -> k.endsWith(":gilded")).findFirst().orElseThrow();
+            settings.requestEnabled(key, true);
+            settings.requestOption(key, "emeralds", 0); settings.requestOption(key, "rings", 10);
+            assertTrue(settings.boundary(com.openggf.mods.mutators.MutatorScope.LOAD,
+                    com.openggf.mods.mutators.MutatorSessionState.LoadCause.FULL_LEVEL_ASSEMBLY).accepted());
+            var profile = definition.superFormSupplier().load(CODE);
+            var changed = new com.openggf.sprites.playable.ProfileSuperStateController(player, profile, GameId.S1);
+            player.setSuperStateController(changed);
+            player.addRings(10 - player.getRingCount()); player.setAir(true); player.setJumping(true);
+            player.setYSpeed((short) 0x28); player.currentLevelState().resumeTimer();
+            changed.checkTransformationBeforeMove(); assertTrue(changed.isSuper());
+            changed.debugDeactivate();
+            settings.requestOption(key, "s1", false);
+            assertTrue(settings.boundary(com.openggf.mods.mutators.MutatorScope.LOAD,
+                    com.openggf.mods.mutators.MutatorSessionState.LoadCause.FULL_LEVEL_ASSEMBLY).accepted());
+            var disabled = new com.openggf.sprites.playable.ProfileSuperStateController(player, profile, GameId.S1);
+            player.setSuperStateController(disabled); disabled.debugActivate(); assertFalse(disabled.isSuper());
+            settings.requestEnabled(key, false);
+            assertTrue(settings.boundary(com.openggf.mods.mutators.MutatorScope.LOAD,
+                    com.openggf.mods.mutators.MutatorSessionState.LoadCause.FULL_LEVEL_ASSEMBLY).accepted());
+            player.setSuperStateController(controller); player.setAir(false); player.setJumping(false);
+        }
+    }
+
+    private static boolean paletteMatches(com.openggf.level.Palette palette, List<Integer> words) {
+        var expected = new com.openggf.level.Palette();
+        for (int i = 0; i < 16; i++) expected.getColor(i).fromSegaFormat(words.get(i));
+        return expected.dataEquals(palette);
     }
 
     private Path buildSample() throws Exception {

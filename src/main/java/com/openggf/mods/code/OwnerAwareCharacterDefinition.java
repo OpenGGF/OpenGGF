@@ -55,7 +55,10 @@ final class OwnerAwareCharacterDefinition {
                 definition.presentationSupplier() == null ? null
                         : code -> callIo(owner, faultBoundary, () -> Objects.requireNonNull(
                                 definition.presentationSupplier().load(code),
-                                "Mod character presentation supplier returned null for " + key.persisted())));
+                                "Mod character presentation supplier returned null for " + key.persisted())),
+                definition.superFormSupplier() == null ? null
+                        : code -> callIo(owner, faultBoundary, () -> Objects.requireNonNull(
+                                definition.superFormSupplier().load(code), "Mod super profile returned null")));
     }
 
     private static <T> T callIo(String owner, ModFaultBoundary boundary, ModFaultBoundary.IoSupplier<T> callback) {
