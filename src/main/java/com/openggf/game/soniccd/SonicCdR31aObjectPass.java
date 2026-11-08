@@ -49,14 +49,14 @@ final class SonicCdR31aObjectPass {
             Objects.requireNonNull(completedCpu);sounds=List.copyOf(sounds);}
     }
     enum Boundary { OBJECT_INDEX,OBJECT_FAMILY,PHYSICAL_OWNER,PRIMARY_ROUTINE,PRIMARY_CONTEXT_OWNER,
-        PRIMARY_DISPLAY_OWNER,CURRENT_TERRAIN_OWNER,VINT,LAYER,TITLE_PLC_OWNER,INTRO_GLOBAL_OWNER,INTRO_PLC_OWNER,P2_ART_CLOCK_OWNER,P2_ANIMATION_OWNER,P2_PARENT_OWNER,SPRING_CHILD_OWNER,BUMPER_OWNER }
+        PRIMARY_DISPLAY_OWNER,CURRENT_TERRAIN_OWNER,VINT,LAYER,TITLE_PLC_OWNER,INTRO_GLOBAL_OWNER,INTRO_PLC_OWNER,P2_ART_CLOCK_OWNER,P2_ANIMATION_OWNER,P2_PARENT_OWNER,SPRING_CHILD_OWNER,BUMPER_OWNER,FLOWER_POSITION_OWNER,FLOWER_COUNT_ALIAS }
     static final class Unowned extends UnsupportedOperationException {
         private final Boundary boundary;private final int wholeIndex,value;
         private Unowned(Boundary b,int w,int v){super("R31 initial "+b+" at whole "+w+" value$"+Integer.toHexString(v));boundary=b;wholeIndex=w;value=v;}
         Boundary boundary(){return boundary;}int wholeIndex(){return wholeIndex;}int value(){return value;}
     }
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL,CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM,GAME_OVER,KAMA,SICKLE,EXPLOSION,POINTS,BUMPER,TIME_POST }
+    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL,CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM,GAME_OVER,KAMA,SICKLE,EXPLOSION,POINTS,BUMPER,TIME_POST,FLOWER }
     private static final class Dispatch {
         final Kind kind;final int whole,routine;final Object body;final Thread thread=Thread.currentThread();
         final Set<Object> calls=Collections.newSetFromMap(new IdentityHashMap<>());
@@ -77,6 +77,8 @@ final class SonicCdR31aObjectPass {
         private final ReadFrame timePostReadyFrame;
         private final boolean introPalette=intro!=null&&intro.op==IntroOp.PALETTE;
         private final GameOverOperation gameOverOwner=gameOverOperation;
+        private final FlowerOperation flowerCountOwner=flowerEffect!=null&&!flowerEffect.operations.isEmpty()
+            &&flowerEffect.operations.peek().call instanceof CdFlower.SavedCall c&&c.site()==CdFlower.SavedSite.COUNT_INCREMENT?flowerEffect.operations.peek():null;
         private final CdGameOver.ScalarCall gameOverScalar=gameOverOwner!=null&&gameOverOwner.call instanceof CdGameOver.ScalarCall c?c:null;
         private final Thread thread=Thread.currentThread();private boolean applied;
         // BEGIN original primary drain flag publication 20261107.
@@ -99,8 +101,13 @@ final class SonicCdR31aObjectPass {
             if(gameOverScalar!=null){requireGameOverOperation(gameOverOwner);if(!gameOver.isCurrentPrimitive(gameOverScalar)||!gameOverOwner.used)throw new IllegalStateException("No original Game Over scalar adoption");}
             return gameOverScalar;
         }
+        CdFlower.SavedCall flowerCountStore(){if(flowerCountOwner==null)return null;var c=(CdFlower.SavedCall)flowerCountOwner.call;
+            currentAdoption(this);requireFlowerReceiver();
+            if(flowerEffect.operations.peek()!=flowerCountOwner||!flower.isCurrentCall(c)||!flowerCountOwner.prepared||!flowerCountOwner.used||flowerCountOwner.after)
+                throw new IllegalStateException("Expired original Flower count store");return c;}
         void validateBefore(){currentAdoption(this);
             if(timePostOwner!=null){if(timePostOwner!=timePostInvocation||timePostOwner.current==null||!timePostOwner.used)throw new IllegalStateException("Expired Time Post adoption");timePost.requireCurrent(timePostOwner.current);}
+            if(flowerCountOwner!=null)flowerCountStore();
             if(gameOverOwner!=null){requireGameOverOperation(gameOverOwner);if(!gameOverOwner.prepared||!gameOverOwner.used||!gameOver.isCurrentPrimitive(gameOverOwner.call))throw new IllegalStateException("Expired Game Over primitive adoption");}
             requireCut(expected);requireFrame(before);requirePlacement(placed);
             if(poolOutput!=null)placement.pool().validateRestore(poolOutput);
@@ -281,6 +288,7 @@ final class SonicCdR31aObjectPass {
     private CdKamaKama kama;
     private final CdKamaSickle sickle;
     private ChildInvocation childEffect;
+    private FlowerInvocation flowerEffect;private CdFlower flower;private CdStageTerrain flowerTerrain;
     private final CdExplosion explosion;private final CdPoints points;
     private final CdTimePost timePost;private TimePostInvocation timePostInvocation;
     private IntroInvocation intro;private IntroPlcSubmission introPlc;
@@ -324,6 +332,7 @@ final class SonicCdR31aObjectPass {
         },c->childDraw(c,c.source()),new CdPoints.ReceiptGuard(){public void prepared(Object c){childPrepared(c);}public void completed(Object c){childCompleted(c);}});
         originalTerrain=assets.terrain();terrain=CdPlayerTerrain.fromStageTerrain(originalTerrain);solid=new CdSolidObject(CdPlayerMovement.fromStageSource(frame.stageSource()));
         bindKama(originalTerrain);
+        bindFlower(originalTerrain);
         var sicklePorts=new EnemyPorts(Kind.SICKLE);sickle=new CdKamaSickle(placement,sicklePorts,sicklePorts);sicklePorts.bind(sickle);
         hud=new CdReservedHud(common.reservedHudAssets(),new CdReservedHud.Slots(){
             public CdAssetBytes read(int w){requireWhole(Kind.HUD,w);return reserved(SonicCdR31aObjectPass.this.read(),w);}
@@ -361,14 +370,14 @@ final class SonicCdR31aObjectPass {
         queue=new CdObjectDrawQueue(new DrawSlots(),mappings,cut.cpuSat().copy(),reservedRefs);
         phase=Phase.WALKING;walkingThread=Thread.currentThread();
         try{queue.beginPass();for(int w=0;w<128;w++){
-                guard();int id=id(w);if(id==0)continue;var kind=kind(w,id);if(kind==Kind.KAMA)bindKama(read().currentTerrain());int routine=routine(w);
+                guard();int id=id(w);if(id==0)continue;var kind=kind(w,id);if(kind==Kind.KAMA)bindKama(read().currentTerrain());if(kind==Kind.FLOWER)bindFlower(read().currentTerrain());int routine=routine(w);
                 dispatch=new Dispatch(kind,w,routine,body(kind));
                 try{if(kind!=Kind.PRIMARY)checkpoint();execute(kind,w,levelFrames);
                     if(dispatch.solidCut!=null)throw new IllegalStateException("Unretired original Solid call");}
                 finally{dispatch=null;}
             }phase=Phase.WALKED;
         }catch(RuntimeException|Error original){phase=Phase.FAILED;queue.close();throw original;}
-        finally{walkingThread=null;dispatch=null;primaryPending=null;pending=null;plcPending=null;primaryDraw=null;intro=null;introPlc=null;gameOverOperation=null;enemy=null;childEffect=null;timePostInvocation=null;}
+        finally{walkingThread=null;dispatch=null;primaryPending=null;pending=null;plcPending=null;primaryDraw=null;intro=null;introPlc=null;gameOverOperation=null;enemy=null;childEffect=null;timePostInvocation=null;flowerEffect=null;}
     }
     CdObjectDrawQueue.CpuSat finishDraw(CdObjectDrawQueue.DrawCameras cameras){
         if(phase!=Phase.WALKED||busy()||dispatch!=null)throw new IllegalStateException("No complete R31 walk to drain");
@@ -387,8 +396,8 @@ final class SonicCdR31aObjectPass {
         queue.close();queue=null;phase=Phase.DONE;
     }
     void discard(){if(busy()||phase==Phase.WALKING||phase==Phase.DRAINING||dispatch!=null)throw new IllegalStateException("Active R31 pass");if(queue!=null)queue.close();queue=null;phase=Phase.DISCARDED;}
-    private boolean busy(){return timePostInvocation!=null||bumper!=null||enemy!=null||childEffect!=null||gameOverOperation!=null||p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
-    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;case GAME_OVER->gameOver;case KAMA->kama;case SICKLE->sickle;case EXPLOSION->explosion;case POINTS->points;case BUMPER->CdBumper.class;case TIME_POST->timePost;};}
+    private boolean busy(){return flowerEffect!=null||timePostInvocation!=null||bumper!=null||enemy!=null||childEffect!=null||gameOverOperation!=null||p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
+    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;case GAME_OVER->gameOver;case KAMA->kama;case SICKLE->sickle;case EXPLOSION->explosion;case POINTS->points;case BUMPER->CdBumper.class;case TIME_POST->timePost;case FLOWER->flower;};}
     private void execute(Kind kind,int w,int levelFrames){var c=read();var e=frame.environment();var g=e.movement().gates();switch(kind){
         case PRIMARY->runPrimary(levelFrames);
         case BUMPER->runBumper(w);
@@ -400,6 +409,7 @@ final class SonicCdR31aObjectPass {
         });if(result!=dispatch.gameOverResult||!result.state().equals(placement.pool().state(w))||gameOverOperation!=null)throw new IllegalStateException("No original Game Over completion");}
         case KAMA,SICKLE->runKamaSickle(kind,w);
         case EXPLOSION,POINTS->runChildEffect(kind,w);
+        case FLOWER->runFlower(w);
         case CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM->runP2(kind,w);
         case INTRO,METAL,AMY,HEART,EXHAUST,ROLL->runIntro(kind,w);
         case HUD->hud.runLive(w,new CdReservedHud.LiveGlobals(e.globals().debugCheat(),c.ring().rings(),e.globals().timeAttackMode(),g.timeWarpDirection(),e.globals().timeWarpTimer(),levelFrames,this::vIntLow));
@@ -974,6 +984,97 @@ final class SonicCdR31aObjectPass {
         boolean before=true,after=true;for(int n=0;n<96;n++){var row=actual.pool().slots().get(n).copyBytes();before&=Arrays.equals(row,op.placed.pool().slots().get(n).copyBytes());after&=Arrays.equals(row,op.expected.get(n));}
         if(!before&&!after)throw new IllegalArgumentException("Failed child is outside its exact native prefix");
     }
+    /** Ephemeral original Flower scope. Native pool/Frame/Core remain the only state owners. */
+    private final class FlowerInvocation {
+        final Dispatch visit=dispatch;final CdFlower receiver=flower;final Thread thread=Thread.currentThread();final int whole=dispatch.whole;
+        final ArrayDeque<FlowerOperation> operations=new ArrayDeque<>();long ordinal;ReadFrame frameCut;Cut cut;CdObjectPlacementRuntime.Snapshot placed;
+        int savedStage,period,oldCount;boolean drew;
+        FlowerInvocation(){sync();}void sync(){var f=readFrame();var c=read();var p=placement.capture();frameCut=f;cut=c;placed=p;}
+    }
+    private final class FlowerOperation {
+        final Object call;final CdObjectPlacementRuntime.Snapshot placed;final ReadFrame beforeFrame;final Cut beforeCut;
+        final List<byte[]> expected;ReadFrame readyFrame;Cut readyCut;boolean prepared,used,after;
+        FlowerOperation(Object call,CdObjectPlacementRuntime.Snapshot p,List<byte[]> rows){this.call=call;placed=p;expected=List.copyOf(rows);beforeFrame=readFrame();beforeCut=read();readyFrame=beforeFrame;readyCut=beforeCut;}
+    }
+    private void bindFlower(CdStageTerrain current){
+        if(flowerEffect!=null)throw new IllegalStateException("Active Flower terrain borrow");
+        if(flower==null||flowerTerrain!=current){
+            var next=CdFlower.withSavedOwner(placement,common.flowerAssets(),CdPlayerTerrain.fromStageTerrain(current),this::flowerSaved,this::flowerAngle,this::flowerDraw,
+                new CdFlower.DispatchObserver(){public void beforePublication(CdFlower.Publication c){flowerBegin(c,c.ordinal(),c.cut(),c.source(),c.output());}
+                    public void afterPublication(CdFlower.Publication c){flowerAfter(c);}public void beforeCall(Object c){flowerBeforeCall(c);}public void afterCall(Object c){flowerAfter(c);}},
+                new CdFlower.ReceiptGuard(){public void prepared(Object c){flowerPrepared(c);}public void completed(Object c){flowerCompleted(c);}});
+            flowerTerrain=current;flower=next;
+        }
+    }
+    private void requireFlowerReceiver(){var i=flowerEffect;
+        if(i==null||phase!=Phase.WALKING||dispatch!=i.visit||dispatch.kind!=Kind.FLOWER||i.receiver!=flower||dispatch.body!=flower
+                ||i.thread!=Thread.currentThread()||dispatch.thread!=Thread.currentThread()||walkingThread!=Thread.currentThread()||plc||drawing)
+            throw new IllegalStateException("No original Flower receiver/visit/thread");
+        guard();if(read().currentTerrain()!=flowerTerrain)throw new IllegalStateException("Changed Flower current terrain during visit");}
+    private void requireFlower(){requireFlowerReceiver();requireKind(Kind.FLOWER);}
+    private FlowerOperation currentFlower(Object call){requireFlower();var op=flowerEffect.operations.peek();if(op==null||op.call!=call||!flower.isCurrentCall(call))throw new IllegalStateException("No original pending Flower site");return op;}
+    private void runFlower(int whole){requireWhole(Kind.FLOWER,whole);if(flowerEffect!=null)throw new IllegalStateException("Flower reentry");var i=new FlowerInvocation();flowerEffect=i;
+        try{var r=flower.run(whole);requireFlower();if(!i.operations.isEmpty()||!i.drew||r.state()!=placement.pool().state(whole))throw new IllegalStateException("Missing original Flower completion");requireFrame(i.frameCut);requireCut(i.cut);requirePlacement(i.placed);}
+        catch(RuntimeException|Error fault){verify(fault,()->flowerFailed(i));throw fault;}finally{flowerEffect=null;}}
+    private void flowerBegin(Object call,long ordinal,CdObjectPlacementRuntime.Snapshot placed,CdObjectState source,CdObjectState output){
+        requireFlower();var i=flowerEffect;if(!flower.isCurrentCall(call)||ordinal!=i.ordinal+1||source!=placement.pool().state(i.whole))throw new IllegalStateException("Foreign/repeated Flower source/ordinal");
+        var parent=i.operations.peek();if(parent!=null){if(!(parent.call instanceof CdFlower.FloorCall)||!(call instanceof CdFlower.PrimaryAngleCall)||!parent.prepared||parent.after)throw new IllegalStateException("Only original floor-angle nesting");flowerPost(parent);}
+        else{requireFrame(i.frameCut);requireCut(i.cut);requirePlacement(i.placed);}
+        requirePlacement(placed);var rows=childRows(placed);
+        if(call instanceof CdFlower.Publication){if(output==null||!output.identity().equals(source.identity()))throw new IllegalArgumentException("Foreign Flower output");CdObjectPool.overlay(placed.pool(),List.of(output));rows.set(i.whole-32,output.copyBytes());}
+        else if(call instanceof CdFlower.DrawCall){var b=source.copyBytes();b[1]&=127;rows.set(i.whole-32,b);}
+        i.operations.push(new FlowerOperation(call,placed,rows));i.ordinal=ordinal;
+    }
+    private void flowerBeforeCall(Object call){switch(call){
+        case CdFlower.FloorCall c->flowerBegin(c,c.ordinal(),c.cut(),c.source(),null);
+        case CdFlower.PrimaryAngleCall c->flowerBegin(c,c.ordinal(),c.cut(),c.source(),null);
+        case CdFlower.DrawCall c->flowerBegin(c,c.ordinal(),c.cut(),c.source(),null);
+        case CdFlower.SavedCall c->flowerBegin(c,c.ordinal(),c.cut(),c.source(),null);
+        default->throw new IllegalStateException("Unknown Flower original site");}}
+    private void flowerPrepared(Object call){var op=currentFlower(call);if(op.prepared||op.after)throw new IllegalStateException("Repeated Flower preparation");requireFrame(op.beforeFrame);requireCut(op.beforeCut);requirePlacement(op.placed);claim(call);op.prepared=true;}
+    private FlowerOperation flowerUse(Object call){var op=currentFlower(call);if(!op.prepared||op.used||op.after)throw new IllegalStateException("Unprepared/repeated Flower operation");requireFrame(op.beforeFrame);requireCut(op.beforeCut);requirePlacement(op.placed);op.used=true;return op;}
+    private void flowerAngle(CdFlower.PrimaryAngleCall call){var op=flowerUse(call);var parent=flowerEffect.operations.size()>1?flowerEffect.operations.stream().skip(1).findFirst().orElseThrow():null;
+        if(parent==null||!(parent.call instanceof CdFlower.FloorCall))throw new IllegalStateException("No actual Flower floor angle");
+        var ready=frame.prepareObjectPrimaryAngle(frame.environment().movement().globals().primaryAngle(),call.value());
+        op.readyFrame=new ReadFrame(ready.finalState(),ready.finalEnvironment(),op.beforeFrame.display(),op.beforeFrame.art(),op.beforeFrame.clock(),op.beforeFrame.paused());
+        publish(op.beforeCut,op.beforeCut,null,ready);
+    }
+    private void flowerDraw(CdFlower.DrawCall call){flowerUse(call);if(flowerEffect.drew)throw new IllegalStateException("Repeated Flower Draw");drawDynamic(Kind.FLOWER,placement.pool(),call.source().identity());}
+    /** Native BYTE at flowerCount+period;3 aliases the already represented fade byte. No raw space. */
+    private static int flowerCountByte(CdLevelGlobals level,int period){if(period>=0&&period<3)return(level.flowerCount()>>>(8*(2-period)))&255;if(period==3)return level.fadeEnableDisplay();throw new IllegalArgumentException("Unrepresented Flower count byte");}
+    static CdLevelGlobals flowerCountLevel(CdLevelGlobals l,CdFlower.SavedCall c){int p=c.offset();if(p<0||p>3||c.site()!=CdFlower.SavedSite.COUNT_INCREMENT||c.value()!=((flowerCountByte(l,p)+1)&255))throw new IllegalArgumentException("Not original Flower count BYTE increment");
+        int count=l.flowerCount(),fade=l.fadeEnableDisplay();if(p==3)fade=c.value();else{int shift=8*(2-p);count=(count&~(255<<shift))|(c.value()<<shift);}
+        return new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),count,fade,l.powerup(),l.timeOver());}
+    private int flowerSaved(CdFlower.SavedCall c){var op=flowerUse(c);var i=flowerEffect;int routine=c.source().routine();
+        switch(c.site()){
+            case TIME_ZONE->{if(routine==0){if(i.savedStage!=0)throw new IllegalStateException("Wrong Init saved read");}
+                else if(routine==2){if(i.savedStage!=0&&i.savedStage!=3)throw new IllegalStateException("Wrong landing period order");i.savedStage=i.savedStage==0?1:4;}else throw new IllegalStateException("No Flower period site");
+                int raw=frame.environment().movement().gates().timeZone();i.period=raw&127;return raw;}
+            case COUNT_READ->{if(i.savedStage!=1||c.offset()!=i.period)throw new IllegalStateException("No original count read");if(c.offset()>3)throw stop(Boundary.FLOWER_COUNT_ALIAS,i.whole,c.offset());int count=flowerCountByte(op.beforeCut.core().level(),c.offset());i.oldCount=count;i.savedStage=2;return count;}
+            case COUNT_INCREMENT->{if(i.savedStage!=2||c.offset()!=i.period||c.value()!=((i.oldCount+1)&255))throw new IllegalStateException("No original count increment");if(c.offset()>3)throw stop(Boundary.FLOWER_COUNT_ALIAS,i.whole,c.offset());
+                var core=op.beforeCut.core();var next=flowerCountLevel(core.level(),c);op.readyCut=copy(op.beforeCut,core.level(next),op.beforeCut.scrollLockWord(),op.beforeCut.cpuSat(),op.beforeCut.completedCpu(),op.beforeCut.sounds());
+                publish(op.beforeCut,op.readyCut,null,null);i.savedStage=3;return c.value();}
+            case POSITION_X,POSITION_Y->{if(i.savedStage!=4)throw new IllegalStateException("No original position site");int offset=((i.oldCount&63)*4+(i.period<<8))&65535;if(c.offset()!=(c.site()==CdFlower.SavedSite.POSITION_X?offset:(offset+2)&65535))throw new IllegalStateException("Wrong native position offset");
+                throw stop(Boundary.FLOWER_POSITION_OWNER,i.whole,c.offset());}
+        }throw new IllegalStateException("Unknown Flower saved site");
+    }
+    private void flowerPost(FlowerOperation op){requireFrame(op.readyFrame);requireCut(op.readyCut);placement.validateRestore(op.placed);var actual=placement.capture();if(!actual.status().equals(op.placed.status())||!same(actual.savedFlags(),op.placed.savedFlags()))throw new IllegalArgumentException("Flower changed placement/saved nonwrites");for(int n=0;n<96;n++)if(!Arrays.equals(op.expected.get(n),actual.pool().slots().get(n).copyBytes()))throw new IllegalArgumentException("Flower full96 nonwrite violation "+(n+32));}
+    private void flowerAfter(Object call){var op=currentFlower(call);if(!op.prepared||op.after)throw new IllegalStateException("Missing Flower preparation");if(call instanceof CdFlower.FloorCall c){flower.currentFloorResult(c);op.used=true;}
+        if(!(call instanceof CdFlower.Publication)&&!op.used)throw new IllegalStateException("Missing original Flower callback consumption");flowerPost(op);op.after=true;}
+    private void flowerCompleted(Object call){var op=currentFlower(call);if(!op.after)throw new IllegalStateException("Missing Flower completion");flowerPost(op);var i=flowerEffect;
+        // Prepare checkpoint references before retiring the original receipt.
+        var f=readFrame();var c=read();var p=placement.capture();dispatch.frame=f;dispatch.cut=c;i.operations.pop();
+        if(!i.operations.isEmpty()){var parent=i.operations.peek();if(!(parent.call instanceof CdFlower.FloorCall)||!(call instanceof CdFlower.PrimaryAngleCall))throw new IllegalStateException("Foreign Flower nesting");parent.readyFrame=f;parent.readyCut=c;}
+        else{i.frameCut=f;i.cut=c;i.placed=p;}
+        if(call instanceof CdFlower.DrawCall)i.drew=true;
+    }
+    private void flowerFailed(FlowerInvocation i){if(flowerEffect!=i||dispatch!=i.visit||i.thread!=Thread.currentThread())throw new IllegalStateException("Foreign failed Flower visit");var op=i.operations.peek();if(op==null){requireFrame(i.frameCut);requireCut(i.cut);requirePlacement(i.placed);return;}
+        // Fault-only old/reached comparison never supplies a healthy completion receipt.
+        boolean oldFrame=frame.state()==op.beforeFrame.state()&&frame.environment()==op.beforeFrame.environment();requireFrame(oldFrame?op.beforeFrame:op.readyFrame);
+        var actualCut=read();if(!sameCut(actualCut,op.beforeCut)&&!sameCut(actualCut,op.readyCut))throw new IllegalArgumentException("Failed Flower changed Core/Host prefix");
+        var actual=placement.capture();placement.validateRestore(op.placed);if(!actual.status().equals(op.placed.status())||!same(actual.savedFlags(),op.placed.savedFlags()))throw new IllegalArgumentException("Failed Flower changed bank/status");
+        boolean before=true,after=true;for(int n=0;n<96;n++){var b=actual.pool().slots().get(n).copyBytes();before&=Arrays.equals(b,op.placed.pool().slots().get(n).copyBytes());after&=Arrays.equals(b,op.expected.get(n));}if(!before&&(!op.prepared||!after))throw new IllegalArgumentException("Failed Flower outside exact prepared prefix");
+    }
     private enum P2Op { NONE,PREFIX,READ,CONTACT,REWIND,HURT,LAUNCH,SINE,FM,DRAW,DESPAWN,PROJECTILE,PARENT_X,PARENT_Y,ANIMATE }
     /** Original current cached-body stack only. Staging/results are never an ingress token. */
     private final class P2Invocation {
@@ -1253,6 +1354,7 @@ final class SonicCdR31aObjectPass {
         if(id==0x3B){if(w<32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.GAME_OVER;}
         if(id==0x3C)return Kind.TITLE;
         if(id==0x10){if(w<32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.RING;}
+        if(id==0x1F){if(w<32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.FLOWER;}
         if(id==0x18){if(w<32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.EXPLOSION;}
         if(id==0x1C){if(w>=32){if((placement.pool().state(w).subtype()&128)!=0)return Kind.POINTS;throw stop(Boundary.PHYSICAL_OWNER,w,id);}return Kind.HUD;}
         if(id==0x19){if(w<32)return Kind.HUD;return placement.pool().state(w).subtype()>=8?Kind.TIME_POST:Kind.MONITOR;}

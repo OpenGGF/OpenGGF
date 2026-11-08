@@ -89,7 +89,9 @@ class TestSonicCdR31aExplosionPointsPass {
     }
     @Test void flowerConversionCompletesOnlyItsTwoNativeStoresThenStopsAtNextVisit() throws Exception {
         try(var h=new TestSonicCdR31aObjectPass.Harness()) {var s=explosion(h,32,4,0);h.walk();assertEquals(s.moveByte(ID,0x1F).moveByte(ROUTINE,0),h.placement.pool().state(32));h.finish();
-            var e=assertThrows(SonicCdR31aObjectPass.Unowned.class,h::walk);assertEquals(SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY,e.boundary());assertEquals(0x1F,e.value());}
+            // Historical identifier retained. The conversion assertions above stay exact;
+            // this next physical visit now enters the original Flower Init/Seed.
+            h.walk();assertEquals(0x1F,h.placement.pool().state(32).id());assertEquals(2,h.placement.pool().state(32).routine());assertEquals(0x6D7,h.placement.pool().state(32).word(TILE));h.finish();}
     }
     @Test void pointsInitFallsThroughOnceAndPreservesAllUnwrittenBytes() throws Exception {
         try(var h=new TestSonicCdR31aObjectPass.Harness()) {var s=points(h,32,0,0x85).moveWord(Y_FRACTION,0xBEEF).moveByte(PRIORITY,3).moveByte(WIDTH,17);h.placement.pool().write(s);var before=h.placement.capture();h.walk();assertEquals(pointStep(s),h.placement.pool().state(32));assertEquals(23,h.placement.pool().state(32).unsignedByte(POINTS_TIMER));nonwrites(before,h,Set.of(32));h.finish();}

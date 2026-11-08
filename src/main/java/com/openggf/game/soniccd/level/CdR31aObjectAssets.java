@@ -34,6 +34,10 @@ public final class CdR31aObjectAssets {
     private CdReservedHud.Assets reservedHud;
     private CdMonitor.Assets monitor;
     private CdTitleCard.Assets title;
+    private com.openggf.game.soniccd.objects.CdFlower.Assets flower;
+    enum FlowerView { DISPATCH(0x6064,20), MAPPING_STORE(0x60A6,8), ANIMATION_LEA(0x612E,6);
+        final int offset,length;FlowerView(int o,int n){offset=o;length=n;} }
+
     private CdCczEnemyAssets kamaSickle;
     /** Fixed borrowed keys; append no public R31A Asset enum or R32A range identity. */
     enum KamaView {
@@ -209,6 +213,29 @@ public final class CdR31aObjectAssets {
         var expected=java.util.HexFormat.of().parseHex(hex);var bytes=effectRead(view);
         if(!Arrays.equals(expected,bytes.slice(fileOffset-view.offset,expected.length).copy()))
             throw new IllegalArgumentException("Original R31A effect operand differs at "+Integer.toHexString(fileOffset));
+    }
+
+    /** Original R31A DATA only; P6's finite adapter supplies the existing eight/four/39 format.
+     * N1ecc5f3 Flower/Main.asm:10-162, R3 Compatibility:518-522 and data_1a:323-329. */
+    public synchronized com.openggf.game.soniccd.objects.CdFlower.Assets flowerAssets(){
+        if(flower==null){assets.requireAuthenticated();
+            if(assets.view(CdR31aAssets.Asset.OBJECT_INDEX).unsignedLong((0x1F-1)*4)!=0x206064L)throw new IllegalArgumentException("Original R31A Flower dispatch differs");
+            var reader=assets.internalReader();
+            if(!java.util.HexFormat.of().formatHex(reader.view(FlowerView.DISPATCH).copy()).equals("700010280024303b000c4ebb00084ef900203a72")
+                ||!java.util.HexFormat.of().formatHex(reader.view(FlowerView.MAPPING_STORE).copy()).equals("217c002336d80004")
+                ||!java.util.HexFormat.of().formatHex(reader.view(FlowerView.ANIMATION_LEA).copy()).equals("43f9002336bc"))throw new IllegalArgumentException("Original R31A Flower STORE/LEA differs");
+            var adapter=new CdR31EcologyEndAssets(new FlowerSource());flower=adapter.flower();
+        }return flower;
+    }
+
+    /** Finite P6 DATA borrow only. The enclosing original reader authenticates identity. */
+    private final class FlowerSource implements CdR31EcologyEndAssets.Source {
+        public CdNativeFile file(){return assets.identity().file();}
+        public CdAssetBytes borrow(CdR31EcologyEndAssets.View view){
+            if(view!=CdR31EcologyEndAssets.View.FLOWER_MAP&&view!=CdR31EcologyEndAssets.View.FLOWER_ANI)
+                throw new IllegalArgumentException("Only authenticated Flower pair");
+            return assets.internalReader().view(view);
+        }
     }
 
 }

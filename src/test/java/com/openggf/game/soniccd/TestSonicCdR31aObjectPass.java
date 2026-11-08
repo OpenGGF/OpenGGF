@@ -119,8 +119,8 @@ class TestSonicCdR31aObjectPass {
             var e=assertThrows(SonicCdR31aObjectPass.Unowned.class,h::walk);assertEquals(32,e.wholeIndex());assertEquals(0x1A,e.value());}
     }
     @Test void laterUnsupportedObjectKeepsEarlierHudAndSkipsLaterPhysicalSlot() throws Exception {
-        try(var h=new Harness()){h.reserved(2,0x1C,0);h.dynamic(32,0x1F,0,0);h.dynamic(33,0x19,0,2);var later=h.placement.pool().state(33);
-            var e=assertThrows(SonicCdR31aObjectPass.Unowned.class,h::walk);assertEquals(32,e.wholeIndex());assertEquals(0x1F,e.value());
+        try(var h=new Harness()){h.reserved(2,0x1C,0);h.dynamic(32,0x06,0,0);h.dynamic(33,0x19,0,2);var later=h.placement.pool().state(33);
+            var e=assertThrows(SonicCdR31aObjectPass.Unowned.class,h::walk);assertEquals(32,e.wholeIndex());assertEquals(0x06,e.value());
             assertEquals(2,h.row(2).unsignedByte(0x24));assertEquals(later,h.placement.pool().state(33));
             assertThrows(IllegalStateException.class,h::walk);}
     }

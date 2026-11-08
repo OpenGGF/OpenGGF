@@ -29,7 +29,10 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
     }
     @Test void actualDoneConversionStopsAtTheGenuineUnownedFlowerOnItsNextVisit() throws Exception {
         try(var b=fixture.start(1,0x80)){ready(b);seed(b,32,4,0);var pool=b.module.r31WorldHost().placement().pool();TestSonicCdR31aSelectedProfileLoading.step(b,8);assertEquals(0x1F,pool.state(32).id());assertEquals(0,pool.state(32).routine());
-            var e=assertThrows(SonicCdR31aObjectPass.Unowned.class,()->TestSonicCdR31aSelectedProfileLoading.step(b,8));assertEquals(SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY,e.boundary());assertEquals(32,e.wholeIndex());assertEquals(0x1F,e.value());}
+            // Constructed bank control AFTER the exact conversion: native saved bit6
+            // bypasses floor and reads the actual placement owner on the next visit.
+            b.module.r31WorldHost().placement().bsetSavedFlag(pool.state(32).savedFlagsId(),1,com.openggf.game.soniccd.objects.CdObjectPlacementRuntime.SavedBit.MEMBER_7);
+            TestSonicCdR31aSelectedProfileLoading.step(b,8);assertEquals(0x1F,pool.state(32).id());assertEquals(4,pool.state(32).routine());assertEquals(3,pool.state(32).unsignedByte(ANIMATION));}
     }
     private static void ready(TestSonicCdR31aSelectedProfileLoading.Booted b){TestSonicCdR31aSelectedProfileLoading.ready(b);TestSonicCdR31aSelectedProfileLoading.step(b,8);}
     private static void seed(TestSonicCdR31aSelectedProfileLoading.Booted b,int whole,int routine,int origin){var p=b.module.r31WorldHost().placement().pool();for(int w=32;w<128;w++)p.deleteObject(w);var m=b.module.requirePlayerFrame().state().motion();p.write(p.state(whole).moveByte(ID,0x18).moveByte(ROUTINE,routine).moveByte(ROUTINE_2,origin).moveByte(SPRITE_FLAGS,4).moveWord(X,(m.centreX16_16()>>>16)+100).moveWord(Y,m.centreY16_16()>>>16));}

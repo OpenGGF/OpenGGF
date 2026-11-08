@@ -29,7 +29,7 @@ class TestCdR31aObjectAssets {
     @Test void wrapperIsFinitePrivateSourceBindingWithExactlyTenPublicMethods() {
         assertEquals(0,CdR31aObjectAssets.class.getConstructors().length);
         assertEquals(1,CdR31aObjectAssets.class.getDeclaredConstructors().length);
-        assertEquals(List.of("explosionAssets/0","fromAssets/1","hudVisuals/0","identity/0","kamaSickleAssets/0","monitorAssets/0","monitorTime/0",
+        assertEquals(List.of("explosionAssets/0","flowerAssets/0","fromAssets/1","hudVisuals/0","identity/0","kamaSickleAssets/0","monitorAssets/0","monitorTime/0",
                         "ownsAssets/1","pointsAssets/0","reservedHudAssets/0","ringData/0","titleCard/0","titleCardAssets/0"),
                 Arrays.stream(CdR31aObjectAssets.class.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers()))
                         .map(m->m.getName()+"/"+m.getParameterCount()).sorted().toList());
@@ -145,7 +145,14 @@ class TestCdR31aObjectAssets {
                 assertThrows(UnsupportedOperationException.class,()->mapper.resolve(root,true,0));
                 assertThrows(UnsupportedOperationException.class,()->mapper.resolve(root|0xFF000000,false,0));
                 assertThrows(UnsupportedOperationException.class,()->mapper.resolve(root+1,false,0));}
-            assertThrows(UnsupportedOperationException.class,()->mapper.resolve(0x20A74E,false,0));
+            // The original six-frame Points table is explicitly registered; it is never a fallback.
+            var points=assets.view(CdR31aAssets.Asset.POINTS_MAPPINGS);
+            for(int frame=0;frame<6;frame++)assertEquals(body(points,frame),mapper.resolve(0x20A74E,false,frame));
+            assertThrows(UnsupportedOperationException.class,()->mapper.resolve(0x20A74E,false,6));
+            assertThrows(UnsupportedOperationException.class,()->mapper.resolve(0x20A74E,false,255));
+            assertThrows(UnsupportedOperationException.class,()->mapper.resolve(0x20A74E,true,0));
+            assertThrows(UnsupportedOperationException.class,()->mapper.resolve(0xFF20A74E,false,0));
+            assertThrows(UnsupportedOperationException.class,()->mapper.resolve(0x20A74F,false,0));
             assertThrows(IllegalArgumentException.class,()->mapper.resolve(0x20A850,false,-1));
             assertThrows(IllegalArgumentException.class,()->mapper.resolve(0x20A850,false,256));
         }

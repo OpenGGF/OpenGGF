@@ -60,12 +60,12 @@ import static com.openggf.game.soniccd.objects.CdObjectState.LongField.*;
             assertSame(frame,b.module.requirePlayerFrame());assertSame(host,b.module.r31WorldHost());assertSame(core,b.module.r31LoadingVisit());
             assertEquals(SonicCdR31aLoadingVisit.Phase.READY,core.state().phase());assertEquals(score,host.globals().score());
             assertEquals(placed.status(),host.placement().status());assertArrayEquals(placed.savedFlags().copy(),host.placement().capture().savedFlags().copy());
-            var error=assertThrows(SonicCdR31aObjectPass.Unowned.class,()->TestSonicCdR31aSelectedProfileLoading.step(b,8));
-            assertEquals(SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY,error.boundary());assertEquals(32,error.wholeIndex());assertEquals(0x1F,error.value());
-            assertArrayEquals(expected,pool.state(32).copyBytes());
-            // The genuine failed owner is terminal. The returned conversion's unchanged
-            // score was required above; do not reborrow globals through the retired Host.
-            assertThrows(IllegalStateException.class,host::globals);
+            // Labelled constructed bank control, introduced only after all historical
+            // conversion/full-bank/score assertions above: skip floor via the genuine bit6.
+            host.placement().bsetSavedFlag(pool.state(32).savedFlagsId(),1,com.openggf.game.soniccd.objects.CdObjectPlacementRuntime.SavedBit.MEMBER_7);
+            TestSonicCdR31aSelectedProfileLoading.step(b,8);
+            assertEquals(0x1F,pool.state(32).id());assertEquals(4,pool.state(32).routine());assertEquals(3,pool.state(32).unsignedByte(ANIMATION));
+            assertFalse(frame.closed());assertSame(frame,b.module.requirePlayerFrame());assertEquals(score,host.globals().score());
         }
     }
     private static void constructedParent(TestSonicCdR31aSelectedProfileLoading.Booted b,int whole) {

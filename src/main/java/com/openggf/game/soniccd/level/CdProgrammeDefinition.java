@@ -305,6 +305,8 @@ final class CdProgrammeDefinition {
         b.borrow(CdProgrammeReader.Borrow.HUD_VINT,0x1DFA,6);
         for(var view:CdR31IntroAssets.View.values())b.borrow(view,view.offset,view.length);
         for(var view:CdR31aSolidsSource.View.values())b.borrow(view,view.offset,view.length);
+        for(var view:List.of(CdR31EcologyEndAssets.View.FLOWER_MAP,CdR31EcologyEndAssets.View.FLOWER_ANI))b.borrow(view,view.fileOffset(CdNativeFile.R31A),view.length());
+        for(var view:CdR31aObjectAssets.FlowerView.values())b.borrow(view,view.offset,view.length);
         for(var view:CdR31aObjectAssets.KamaView.values())b.borrow(view,view.offset,view.length);
         for(var view:CdR31aObjectAssets.EffectView.values())b.borrow(view,view.offset,view.length);
         r3Bindings(b,0x100,CdStageTerrain.Shape.CCZ1_PRESENT,CdProgrammeReader.Blocks.R31,CdR31aLoadMetadata.SourceId.STAGE_GFX,

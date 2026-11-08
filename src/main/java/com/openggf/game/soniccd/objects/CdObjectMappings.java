@@ -505,6 +505,8 @@ public final class CdObjectMappings implements CdDrawMappings {
         tables.add(new DeclaredTable(explosion.mappingsAddress(),explosion.explosion().mappings(),0,7));
         tables.add(new DeclaredTable(points.mappingsAddress(),points.points().mappings(),0,6));
         tables.add(CdR31aBumperSource.fromAssets(assets).mapping());
+        var flower=common.flowerAssets();
+        tables.add(new DeclaredTable(flower.mappingsAddress(),flower.flower().mappings(),0,8));
         return declaredSourceViews(tables, List.of());
     }
     // END R31 COMMON COUNTED METADATA JOIN 20261107

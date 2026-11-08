@@ -1,5 +1,70 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — original Flower through existing count and terrain owners
+
+Cached Flower joins the increasing physical pass through the unchanged shared
+`CdFlower` kernel. Explosion still returns after only its ID1F/routine0 stores;
+Flower runs on the next original visit. Saved-bit6 Init bypass and respawn-free
+Seed/Animate/Growing/Done paths are concrete. There is no Flower allocation,
+reward, sound, clock read, duplicate algorithm, new World/Frame/capture lifetime
+or manufactured art knowledge. Current-terrain reads and original primary-angle
+and Core count publications use the existing owners and full-cut guards.
+
+One lazy common getter raises the public inventory13 to14. The original reader
+authenticates FLOWER_ANI336BC/28, FLOWER_MAP336D8/90 and three finite native
+consumer windows; actual source-backed checks execute these views. Only the
+native counted Flower mapping is registered. Selected frame/current-art failure
+remains deferred to its real owner. Root composes12 Java files by intent and
+retains Bumper, TimePost, Kama/effects/P2, sound38, complete Core/reserved1984/
+Frame/environment/display/art/clock/pause/physical96/status/saved-bank fences,
+the stronger palette observer, returned-death ordering and strict1200 reload.
+One independent first source review finds no concrete P1/P2; execution evidence
+comes from the separately observed installed checks below.
+
+R136 first compiles the public World probe on prior production. Explosion returns
+as1F before the next visit reaches actual OBJECT_FAMILY/whole32/ID1F; this intended
+one-error RED stays failed. R137 compiles the candidate and executes184 cases:
+183 pass, one fails, zero errors/skips. The sole failure is an old asset assertion
+still rejecting the already registered Points root20A74E. The strict wrapper
+also lacks the explicitly required nested report and remains INCOMPLETE; neither
+the actual failure nor that receipt is reclassified as a green run.
+
+Root changes only the existing asset assertion: all six original Points frames
+must equal an independent native counted-byte oracle, while frame6/255, static
+mode, high address and misalignment still reject. The two-report inventory is
+literal: root0 cases; ActualUsa11 cases with actual raw owners root1/child10.
+R138 passes all11, zero failures/errors/skips, with the same identities. Exact
+source/dependency/XML observations and13586 byte-identical production class
+files qualify183+11-10=184 distinct cases across those runs. The206 non-class
+resources were not in the before-manifest; whole-directory equality is unclaimed.
+
+The first25 new Flower cases include two public World Init/restore controls.
+Root adds a third public World case for the actual count path: its openly
+constructed96/1024 Seed requires a real current-terrain landing precondition;
+the existing Core publishes Present count BYTE1 (packed value000100), retains
+aligned Y and the actual angle, then stops at FLOWER_POSITION_OWNER before X
+store offset0100. The failed Frame is terminal; only component diagnostics are
+read afterward, with no closed World capture, render, restore or retry. R139
+passes this one new case. Its unchanged production and unchanged old test bodies
+extend the source-coherent qualification to185 distinct cases across three runs;
+this is not a fresh185-case run or a native algorithm oracle.
+
+Native flowerPosBuf is `$300` bytes,768 decimal, atFF1600..FF18FF; earlier source
+notes' unmarked “300” is hexadecimal shorthand. The count/fade bytes atFF1900..03
+are already represented; the position buffer has no admitted R31 storage/clear/
+capture owner in this slice. Seed landing completes aligned Y, real angle writes,
+wrapping count increment and a fresh second raw timeZone read before the precise
+first X WORD-store boundary. No Y/TouchDown/animation/Draw is fabricated past it.
+Raw count offset3 aliases fade; larger unsupported count aliases still stop.
+Full Seed completion, Flower pixels, rewards, a whole act and regional parity
+remain unqualified.
+
+Separate unchanged-controller observation R135 returns1130 alive, with Time Post
+Init1119; attempted1131 stops at SPRING_CHILD_OWNER/ID0A/whole49. The boundary name
+does not independently establish its birth/placement provenance. That failed cut
+is diagnostic only. Spring source work and original historical IPX progress work
+continue independently; global21931/first21932 and full-USA thenJP/EU remain open.
+
 ## 8 November 2026 — original Time Post publication through the common World
 
 One cached `CdTimePost` now receives dynamic ID19/subtype>=8 through the existing

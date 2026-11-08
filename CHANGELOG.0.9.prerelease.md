@@ -104,8 +104,16 @@ matching area heading; see the
   Points now use that same physical pass, original child/Draw receipts and shared
   kernels. Their focused cohort plus two corrected test classes qualifies121
   distinct cases; native dirty-slot reuse retains its deferred mapping failure.
-  Explosion's actual Flower conversion returns without redispatch; Flower remains
-  an explicit next-owner boundary. Bumper now uses a primary-only path through
+  Explosion's actual Flower conversion returns without redispatch. Flower now
+  joins the existing physical pass on its next visit through the unchanged shared
+  kernel, genuine current terrain, angle, count, saved-bank and Draw owners.
+  Its finite original-source views add no art residency or reward allocator.
+  Source-coherent qualification covers185 distinct cases across three runs after
+  a stale Points-mapper assertion and explicit nested-report inventory correction;
+  the original incomplete/failed receipts remain. A public-World Seed check retains
+  landing, angle and the actual count increment before the first unsupported
+  position store. The native768-byte position-buffer owner remains separate.
+  Bumper now uses a primary-only path through
   the same pinball kernel, retaining its legacy paired API without constructing a
   secondary actor. Original Frame, saved-bank, score and Draw publications share
   the existing owners; selected-anchor despawn replaces duplicate period logic.
