@@ -33,4 +33,28 @@ class TestSonic3kCharacterSurfaces {
             assertSame(stock, Sonic3kCharacterPresentation.hud(rom,stock,null));
         }
     }
+    @Test void actResultsReplaceAllNativeNameFramesWithoutTouchingGotThrough() throws Exception {
+        var rom = GameServices.rom().getRom();
+        var objectArt = new com.openggf.game.sonic3k.Sonic3kObjectArt(null,
+                com.openggf.data.RomByteReader.fromRom(rom));
+        var mappings = objectArt.loadResultsMappings();
+        var stock = new com.openggf.level.Pattern[12];
+        var custom = Sonic3kCharacterPresentation.results(rom, stock, mappings, mica(), 0);
+        assertSame(mappings.get(0x11), custom.mappings().get(0x11)); // GOT THROUGH
+        assertSame(mappings.get(0x10), custom.mappings().get(0x10)); // ACT
+        assertSame(stock, Sonic3kCharacterPresentation.results(rom, stock, mappings, null, 0).patterns());
+        for (int frame = 0x13; frame <= 0x16; frame++) {
+            var pieces = custom.mappings().get(frame).pieces();
+            assertEquals(stock.length, pieces.getFirst().tileIndex());
+            assertEquals(16, pieces.getFirst().heightTiles() * 8);
+            var expected = CharacterNameComposer.compose("MICA", resultsFont(rom), Map.of(), 0).image();
+            assertArrayEquals(expected.pixels(), CharacterNameComposer.extract(custom.patterns(),
+                    stock.length, pieces.size(), 2, 0, 0, expected.width(), expected.height()).pixels());
+        }
+    }
+    private static Map<Character, Image> resultsFont(com.openggf.data.Rom rom) throws Exception {
+        var font = new java.util.LinkedHashMap<>(Sonic3kCharacterFont.results(rom));
+        Sonic3kCharacterFont.title(rom).forEach(font::putIfAbsent);
+        return font;
+    }
 }

@@ -44,6 +44,37 @@ public final class Sonic3kCharacterPresentation {
         return result;
     }
 
+    /** Derived render data only: native queued jobs and their timing remain unchanged. */
+    public record ResultsArt(Pattern[] patterns,
+            java.util.List<com.openggf.level.render.SpriteMappingFrame> mappings) { }
+
+    public static ResultsArt results(Rom rom, Pattern[] nativeTiles,
+            java.util.List<com.openggf.level.render.SpriteMappingFrame> nativeMappings,
+            CharacterPresentation presentation, int drawTileOffset) throws IOException {
+        if (presentation == null || presentation.displayName() == null)
+            return new ResultsArt(nativeTiles, nativeMappings);
+        Image image = compose(rom, presentation, presentation.displayName(), Style.RESULTS);
+        Pattern[] name = CharacterNameComposer.tiles(image);
+        Pattern[] tiles = java.util.Arrays.copyOf(nativeTiles, nativeTiles.length + name.length);
+        System.arraycopy(name, 0, tiles, nativeTiles.length, name.length);
+        var mappings = new java.util.ArrayList<>(nativeMappings);
+        int columns = (image.width() + 7) / 8;
+        int rows = (image.height() + 7) / 8;
+        for (int frame = 0x13; frame <= 0x16; frame++) {
+            var original = nativeMappings.get(frame).pieces();
+            int right = original.stream().mapToInt(p -> p.xOffset() + p.widthTiles() * 8).max().orElse(0);
+            int top = original.stream().mapToInt(p -> p.yOffset()).min().orElse(0);
+            var pieces = new java.util.ArrayList<com.openggf.level.render.SpriteMappingPiece>();
+            for (int column = 0; column < columns; column++)
+                pieces.add(new com.openggf.level.render.SpriteMappingPiece(
+                        right - image.width() + column * 8, top, 1, rows,
+                        nativeTiles.length + column * rows - drawTileOffset,
+                        false, false, original.getFirst().paletteIndex(), original.getFirst().priority()));
+            mappings.set(frame, new com.openggf.level.render.SpriteMappingFrame(pieces));
+        }
+        return new ResultsArt(tiles, mappings);
+    }
+
     private static Image compose(Rom rom, CharacterPresentation presentation, String name, Style style) throws IOException {
         Map<Character, Image> font;
         if (style == Style.HUD) font = Sonic3kCharacterFont.hud(rom);
