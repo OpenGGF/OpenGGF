@@ -41,6 +41,9 @@ public final class TimeAttackRuntime implements RunHost {
         /** Called after every executed step. */
         void afterStep();
 
+        /** Adds the companion's room state to the runtime's local race snapshot. */
+        default CompetitionHudState competitionHud(CompetitionHudState local) { return local; }
+
         /** The run's level is loaded (launch or retry). */
         default void levelReady(RunLevelStart start) {
         }
@@ -70,6 +73,7 @@ public final class TimeAttackRuntime implements RunHost {
 
         /** A chat shortcut handled this tick; the same edge must not restart the act. */
         default boolean consumesRetryKey() { return false; }
+        default void openRaceChat() { }
 
         /** The companion's own countdown digit now on screen (a round's start), or 0 for none. */
         default int countdownDigit() {
@@ -89,14 +93,56 @@ public final class TimeAttackRuntime implements RunHost {
                                AttemptInputRecording recording);
 
         void onAttemptVoided(int attemptOrdinal);
+        default void onAttemptVoided(int attemptOrdinal, String reason) { onAttemptVoided(attemptOrdinal); }
+        default void onCheckpoint(int attemptOrdinal, int frame, int progress, int x, int y) { }
+        default void onTeleportRequest(int attemptOrdinal, int frame) { }
+        default void onTeleportOutcome(long swapId, int frame, String outcome) { }
     }
 
+    private int reportedCheckpointAttempt = Integer.MIN_VALUE, reportedCheckpoint = -1;
     private final GhostStore store;
     private final java.nio.file.Path identityDir;
     private final java.util.function.BooleanSupplier launchBlocked;
     private com.openggf.net.identity.PlayerIdentity identity;
     private TimeAttackLaunchRequest launch;
     private TimeAttackAttempt attempt;
+    private com.openggf.mods.run.TrackGeometry geometry = com.openggf.mods.run.TrackGeometry.ACT;
+    private com.openggf.mods.run.RaceClock raceClock = com.openggf.mods.run.RaceClock.ACT;
+    private int localCentreY;
+    private int localProgressOrdinal;
+    public double progressEstimate() {
+        return RaceProgressEstimate.progress(localProgressOrdinal, localCentreX, levelWidth,
+                geometry.wrapWidthPx(), geometry.lapLineX());
+    }
+    public double progressEstimate(int ordinal, int x) {
+        return RaceProgressEstimate.progress(ordinal, x, levelWidth, geometry.wrapWidthPx(), geometry.lapLineX());
+    }
+    private openggf.timeattack.mp.RaceLobbyScreen.RaceMenu liveRaceMenu;
+    private CompetitionHudState.SwapNotice swapNotice = CompetitionHudState.SwapNotice.none();
+    private final java.util.Map<Long, String> swapPartners = new java.util.HashMap<>();
+    private final java.util.Set<Long> queuedSwaps = new java.util.HashSet<>();
+    private final java.util.Set<Long> expiredSwaps = new java.util.HashSet<>();
+    private final java.util.Set<Long> refusedSwaps = new java.util.HashSet<>();
+    public void queueRefusedSwap(long id) {
+        if (queueSwap(new com.openggf.mods.run.RaceEvent.SwapFallback(id), "")) refusedSwaps.add(id);
+    }
+    public void queueExpiredSwap(long id) {
+        if (queueSwap(new com.openggf.mods.run.RaceEvent.SwapFallback(id), "")) expiredSwaps.add(id);
+    }
+    public boolean queueSwap(com.openggf.mods.run.RaceEvent event, String partner) {
+        if (!competition() || !launch.swapEnabled() || !isAttemptActive() || handle == null) return false;
+        long id = event instanceof com.openggf.mods.run.RaceEvent.SwapApply a ? a.swapId()
+                : ((com.openggf.mods.run.RaceEvent.SwapFallback)event).swapId();
+        if (id != 0 && !queuedSwaps.add(id)) return false;
+        swapPartners.put(id, partner);
+        handle.queueRaceEvent(event);
+        return true;
+    }
+    public boolean competition() { return launch != null && launch.competition(); }
+    public int nextStepIndex() { return inputRecording == null ? 0 : inputRecording.frameCount(); }
+    public int[] lapFrames() { return attempt == null ? new int[0] : attempt.lapFrames(); }
+    public int[] splitFrames() { return attempt == null ? new int[0] : attempt.splitFrames(); }
+
     private AttemptInputRecording inputRecording;
     private final GhostCaptureBuffer capture = new GhostCaptureBuffer();
     private final List<GhostPlaybackCursor> opponents = new ArrayList<>();
@@ -125,6 +171,7 @@ public final class TimeAttackRuntime implements RunHost {
     private int leadInSteps;
     /** The step just admitted runs with the player's input held (the lead-in). */
     private boolean holdInputThisStep;
+    private boolean pendingRespawnReset;
     /**
      * Frames sampled before the player had control, and any queued behind them, waiting for
      * the attempt listener. A room's {@code AttemptStart} goes out with the first frame, so it
@@ -195,17 +242,27 @@ public final class TimeAttackRuntime implements RunHost {
 
     /** Spawn hook: level for an armed run is loaded. Fingerprint captured by caller. */
     void beginAttemptForTest(String fingerprint) {
-        attempt = new TimeAttackAttempt();
+        attempt = new TimeAttackAttempt(!competition() ? TimeAttackAttempt.TimingRule.FIRST_INPUT
+                : launch.kind() == com.openggf.mods.run.TrackKind.ARENA
+                ? TimeAttackAttempt.TimingRule.RACE_CLOCK : TimeAttackAttempt.TimingRule.RELEASE);
         inputRecording = new AttemptInputRecording(new AttemptStartDescriptor(
-                launch.gameId(), launch.zone(), launch.act(), launch.character(), fingerprint));
+                launch.gameId(), launch.zone(), launch.act(), launch.character(), fingerprint,
+                launch.kind(), launch.mode(), launch.monitors(), runSpec().policy().deathRestart(), launch.swapEnabled()));
+        raceClock = com.openggf.mods.run.RaceClock.ACT;
+        swapNotice = CompetitionHudState.SwapNotice.none();
+        queuedSwaps.clear();
+        swapPartners.clear();
+        liveRaceMenu = null;
+        localProgressOrdinal = 0;
         capture.reset();
         tainted = false;
         newBest = false;
         saveNotice="";
         opponents.clear();
         opponentRecordings.clear();
+        bestGhost = null;
         try {
-            bestGhost = store.loadBest(launch.gameId(), launch.zone(), launch.act(),
+            bestGhost = competition() ? null : store.loadBest(launch.gameId(), launch.zone(), launch.act(),
                     launch.character()).orElse(null);
             if (bestGhost != null) {
                 opponents.add(new GhostPlaybackCursor(bestGhost));
@@ -240,6 +297,7 @@ public final class TimeAttackRuntime implements RunHost {
     public void markTainted() { tainted = true; }
 
     public void requestRetry() {
+        if (competition()) return;
         voidCurrentAttempt();
         retryRequested = true;
         if (handle != null) {
@@ -299,6 +357,7 @@ public final class TimeAttackRuntime implements RunHost {
 
     /** Asks the engine to end the run and return to the host at the next safe boundary. */
     public void leaveRun() {
+        if (competition()) voidCurrentAttempt();
         if (handle != null) {
             handle.leave();
         }
@@ -353,9 +412,15 @@ public final class TimeAttackRuntime implements RunHost {
      * death reloads the act from its start as a fresh attempt with no lives and no title card,
      * and without intro cutscenes, so the clock measures the race alone.
      */
+    public static GameplayRunPolicy competitionPolicy(com.openggf.mods.run.MonitorRule monitors) {
+        GameplayRunPolicy p = GameplayRunPolicy.competition();
+        return new GameplayRunPolicy(p.specialStageEntry(), p.bonusStageEntry(), p.actCompletion(),
+                p.liveRewind(), p.editorEntry(), p.deathRestart(), p.livesCounter(), p.zoneIntros(), monitors);
+    }
+
     public RunSpec runSpec() {
         return new RunSpec(launch.gameId(), launch.zone(), launch.act(), launch.character(),
-                runPolicy());
+                competition() ? competitionPolicy(launch.monitors()) : runPolicy(), null, launch.kind(), launch.swapEnabled());
     }
 
     /**
@@ -371,7 +436,7 @@ public final class TimeAttackRuntime implements RunHost {
      * lead-in: the digits appear only once the reloaded level is visible and frozen.
      */
     public int countdownDigit() {
-        return restartCountdownFrames > 0 ? (restartCountdownFrames + 59) / 60 : 0;
+        return launch != null && launch.kind() == com.openggf.mods.run.TrackKind.ARENA ? 0 : restartCountdownFrames > 0 ? (restartCountdownFrames + 59) / 60 : 0;
     }
 
     /** True while a death restart's lead-in steps run with the player's input held. */
@@ -427,7 +492,7 @@ public final class TimeAttackRuntime implements RunHost {
         }
         attempt.voidAttempt();
         if (attemptListener != null) {
-            attemptListener.onAttemptVoided(attemptOrdinal);
+            attemptListener.onAttemptVoided(attemptOrdinal, competition() ? "LEFT" : "RETRY");
         }
     }
     public boolean consumeRetryRequested() {
@@ -440,28 +505,34 @@ public final class TimeAttackRuntime implements RunHost {
                      GhostFrame sampledFrame) {
         if (!isAttemptActive()) return;
         if (capture.frameCount() >= GhostFileCodec.MAX_FRAMES) {
-            voidCurrentAttempt(); // ROM 10:00 time-over cap — over-cap ghosts can never exist
+            voidCurrentAttempt(); // Recording bound includes countdown; RaceClock owns the ROM cap.
             return;
         }
         TimeAttackAttempt.Phase before = attempt.phase();
-        attempt.onFrame(heldMask, endOfLevel, checkpointIndex);
-        if (attempt.phase() == TimeAttackAttempt.Phase.VOID) return;
-        inputRecording.appendFrame(heldMask, startHeld);
+        attempt.onFrame(heldMask, endOfLevel, checkpointIndex, raceClock);
+        if (attempt.phase() == TimeAttackAttempt.Phase.VOID) {
+            if (attemptListener != null) attemptListener.onAttemptVoided(attemptOrdinal,
+                    attempt.failure() == com.openggf.mods.run.RaceClock.Failure.NONE ? "LEFT" : attempt.failure().name());
+            return;
+        }
+        inputRecording.appendFrame(heldMask, !competition() && startHeld);
         GhostFrame streamed = new GhostFrame(sampledFrame.x(), sampledFrame.y(),
                 sampledFrame.mappingFrame(), sampledFrame.hFlip(), sampledFrame.vFlip(),
                 false,
-                sampledFrame.priorityBucket(), sampledFrame.highPriority(), sampledFrame.hurt());
+                sampledFrame.priorityBucket(), sampledFrame.highPriority(), sampledFrame.hurt(), sampledFrame.progress(),
+                sampledFrame.secondaryPath(), sampledFrame.shoeKind(), pendingRespawnReset);
+        pendingRespawnReset = false;
         capture.capture(attempt.phase() == TimeAttackAttempt.Phase.FINISHED
                 ? new GhostFrame(streamed.x(), streamed.y(), streamed.mappingFrame(), streamed.hFlip(),
                         streamed.vFlip(), true, streamed.priorityBucket(), streamed.highPriority(),
-                        streamed.hurt()) : streamed);
+                        streamed.hurt(), streamed.progress(), streamed.secondaryPath(), streamed.shoeKind(), streamed.respawnReset()) : streamed);
         offerFrame(streamed);
         if (before != TimeAttackAttempt.Phase.FINISHED
                 && attempt.phase() == TimeAttackAttempt.Phase.FINISHED) {
             // The finish needs its whole stream; a backlog only outlives the first seconds.
             holdingFrames = false;
             deliverPending(pendingFrames.size());
-            if (!tainted) {
+            if (!tainted && !competition()) {
                 persistIfBest();
             }
             if (attemptListener != null) {
@@ -483,6 +554,16 @@ public final class TimeAttackRuntime implements RunHost {
         saveNotice=result.notice();
     }
 
+    public CompetitionHudState competitionHudState() {
+        if (!competition() || attempt == null) return CompetitionHudState.inactive();
+        CompetitionHudState local = new CompetitionHudState(launch.mode(), launch.kind(), raceClock.currentLap(), geometry.lapCount(),
+                launch.kind() == com.openggf.mods.run.TrackKind.ARENA ? attempt.currentLapFrames() : 0,
+                java.util.Arrays.stream(attempt.lapFrames()).boxed().toList(),
+                attempt.bestLapFrames(), 0, 0, false, 0, CompetitionHudState.MassStartPhase.RELEASED,
+                0, swapNotice, List.of(), false);
+        return companion == null ? local : companion.competitionHud(local);
+    }
+
     public TimeAttackHudState hudState() {
         if (attempt == null) return TimeAttackHudState.inactive();
         int best = bestGhost != null ? bestGhost.header().finalTimeFrames() : -1;
@@ -496,7 +577,7 @@ public final class TimeAttackRuntime implements RunHost {
             lastDelta = attempt.finalTimeFrames() - best;
         }
         return new TimeAttackHudState(true, attempt.elapsedDisplayFrames(), best, lastDelta,
-                attempt.phase() == TimeAttackAttempt.Phase.FINISHED, newBest,saveNotice);
+                attempt.phase() == TimeAttackAttempt.Phase.FINISHED, newBest,saveNotice, competitionHudState());
     }
 
     int attemptFrameCountForPlayback() { return attempt == null ? 0 : attempt.frameCount(); }
@@ -510,6 +591,14 @@ public final class TimeAttackRuntime implements RunHost {
     @Override
     public void onLevelReady(RunLevelStart start) {
         levelWidth = start.levelWidth();
+        geometry = start.geometry();
+        if (attempt != null && attempt.continuesAcross(start.cause())) {
+            pendingRespawnReset = true;
+            if (start.debugAssisted()) markTainted();
+            if (companion != null) companion.levelReady(start);
+            return;
+        }
+        pendingRespawnReset = false;
         localCentreX = -1;
         // A death restart reloads the act under a still-running attempt; it can never finish.
         voidCurrentAttempt();
@@ -557,6 +646,7 @@ public final class TimeAttackRuntime implements RunHost {
 
     /** The countdown digit drawn over the run: a fast restart's, else the companion's round start. */
     private int shownCountdownDigit() {
+        if (launch != null && launch.kind() == com.openggf.mods.run.TrackKind.ARENA) return 0;
         int digit = countdownDigit();
         return digit == 0 && companion != null ? companion.countdownDigit() : digit;
     }
@@ -566,6 +656,21 @@ public final class TimeAttackRuntime implements RunHost {
         // the retry key.
         FrameCompanion partner = companion;
         boolean admitted = partner == null || partner.admit(input);
+        if (competition() && input.input() != null) {
+            if (input.input().menuStart() || input.keyPressed(com.openggf.mods.scene.SceneKeys.ESCAPE)) {
+                if (liveRaceMenu == null) liveRaceMenu = new openggf.timeattack.mp.RaceLobbyScreen.RaceMenu();
+                else if (liveRaceMenu.update(false, false, false, true)
+                        == openggf.timeattack.mp.RaceLobbyScreen.RaceMenu.Outcome.CLOSE) liveRaceMenu = null;
+            } else if (liveRaceMenu != null) {
+                switch (liveRaceMenu.update(input.input().menuUp(), input.input().menuDown(),
+                        input.input().menuAccept(), false)) {
+                    case FORFEIT -> { leaveRun(); liveRaceMenu = null; }
+                    case CHAT -> { if (partner != null) partner.openRaceChat(); liveRaceMenu = null; }
+                    case CLOSE -> liveRaceMenu = null;
+                    case NONE -> { }
+                }
+            }
+        }
         if (retryKey != null && (partner == null || !partner.consumesRetryKey())
                 && input.keyPressed(retryKey.getAsInt())
                 && (partner == null || partner.mayRetry())) {
@@ -595,13 +700,13 @@ public final class TimeAttackRuntime implements RunHost {
     /** Lead-in steps run with the player's input held. */
     @Override
     public boolean holdsPlayerInput() {
-        return holdInputThisStep;
+        return holdInputThisStep || competition() && liveRaceMenu != null;
     }
 
     /** Solo runs return to their host; a multiplayer companion may keep an open window going. */
     @Override
     public boolean retryOnActCompletion() {
-        return companion != null && companion.continueAfterActCompletion();
+        return !competition() && companion != null && companion.continueAfterActCompletion();
     }
 
     @Override
@@ -609,10 +714,46 @@ public final class TimeAttackRuntime implements RunHost {
         if (step.debugAssisted()) {
             markTainted();
         }
+        if (swapNotice.remainingFrames() > 0) swapNotice = new CompetitionHudState.SwapNotice(
+                swapNotice.partnerName(), swapNotice.remainingFrames() - 1);
+        if (isAttemptActive() && step.applied().outcome() != com.openggf.mods.run.RaceEventResult.Outcome.NONE) {
+            var result = step.applied();
+            long id = result.event() instanceof com.openggf.mods.run.RaceEvent.SwapApply a ? a.swapId()
+                    : ((com.openggf.mods.run.RaceEvent.SwapFallback)result.event()).swapId();
+            boolean applied = result.outcome() == com.openggf.mods.run.RaceEventResult.Outcome.APPLIED;
+            // Record what the engine actually applied, including deterministic admissibility fallback.
+            inputRecording.appendEvent(inputRecording.frameCount(), applied ? result.event()
+                    : new com.openggf.mods.run.RaceEvent.SwapFallback(id));
+            swapNotice = applied ? CompetitionHudState.SwapNotice.applied(swapPartners.getOrDefault(id, "?"))
+                    : CompetitionHudState.SwapNotice.fallback();
+            if (attemptListener != null) attemptListener.onTeleportOutcome(id, inputRecording.frameCount(),
+                    expiredSwaps.remove(id) ? "EXPIRED" : refusedSwaps.remove(id) ? "REFUSED" : applied ? "APPLIED" : "FALLBACK");
+        }
+        if (isAttemptActive() && step.signal() == com.openggf.mods.run.RaceSignal.SWAP_REQUEST
+                && competition() && launch.swapEnabled() && attemptListener != null) {
+            attemptListener.onTeleportRequest(attemptOrdinal, inputRecording.frameCount());
+        }
+        if (competition() && step.signal() == com.openggf.mods.run.RaceSignal.ARENA_DEATH_RESPAWN)
+            pendingRespawnReset = true;
+        if (competition() && launch.kind() == com.openggf.mods.run.TrackKind.ACT && isAttemptActive()) {
+            if (reportedCheckpointAttempt != attemptOrdinal) {
+                reportedCheckpointAttempt = attemptOrdinal; reportedCheckpoint = -1;
+            }
+            if (step.checkpointIndex() >= 0 && step.checkpointIndex() != reportedCheckpoint) {
+                reportedCheckpoint = step.checkpointIndex();
+                if (attemptListener != null) attemptListener.onCheckpoint(attemptOrdinal, inputRecording.frameCount(),
+                        Math.clamp(step.checkpointIndex()+1,1,15), step.checkpointCentreX(), step.checkpointCentreY());
+            }
+        }
         PlayerPose pose = step.player();
         localCentreX = pose.centreX();
+        localCentreY = pose.centreY();
+        raceClock = step.race();
+        int progress = launch.kind() == com.openggf.mods.run.TrackKind.ARENA
+                ? raceClock.currentLap() : step.checkpointIndex() + 1;
+        localProgressOrdinal = Math.clamp(progress, 0, 15);
         tickForTest(step.heldMask(), step.startHeld(), step.actComplete(), step.checkpointIndex(),
-                pose.toGhostFrame(false));
+                pose.toGhostFrame(false, Math.clamp(progress, 0, 15)));
         localHurt = pose.hurt();
         if (restartLeadIn) {
             leadInSteps++;
@@ -637,6 +778,7 @@ public final class TimeAttackRuntime implements RunHost {
         if (companion != null) {
             companion.drawOverlay(canvas, levelWidth, localCentreX);
         }
+        if (liveRaceMenu != null) liveRaceMenu.draw(canvas);
         int digit = countdownDigit();
         if (digit > 0) {
             openggf.timeattack.mp.MultiplayerHudRenderer.drawCountdown(canvas, digit);
@@ -668,7 +810,13 @@ public final class TimeAttackRuntime implements RunHost {
                         break;
                     }
                     if (extra != null) {
-                        active.add(extra);
+                        if (localCentreX < 0) { active.add(extra); continue; }
+                        PlayerPose p = extra.pose();
+                        active.add(new GhostPose(extra.slotId(), extra.characterCode(),
+                                new PlayerPose(RaceProgressEstimate.nearestImage(p.centreX(), localCentreX, geometry.wrapWidthPx()),
+                                        RaceProgressEstimate.nearestImage(p.centreY(), localCentreY, geometry.wrapHeightPx()),
+                                        p.mappingFrame(), p.hFlip(), p.vFlip(), p.priorityBucket(), p.highPriority(),
+                                        p.hurt(), p.secondaryPath(), p.shoeKind()), extra.nameplate(), extra.opacity(), extra.appearance()));
                     }
                 }
             }

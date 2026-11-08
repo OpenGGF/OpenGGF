@@ -37,6 +37,10 @@ public final class VerifierWorker {
     public interface Replayer {
         AttemptReplayHarness.Result replay(AttemptInputRecording recording,
                                            String determinismFingerprint);
+        default AttemptReplayHarness.Result replay(AttemptInputRecording recording, String fingerprint,
+                java.util.List<VerificationJobQueue.SwapReceipt> receipts) {
+            return replay(recording,fingerprint);
+        }
     }
 
     private final MasterApi api;
@@ -123,8 +127,23 @@ public final class VerifierWorker {
         } catch (RuntimeException invalid) {
             return VerdictCodec.RESULT_FAIL_DIVERGENT;
         }
-        String recordedTrack = recording.start().gameId() + ":"
-                + recording.start().zone() + ":" + recording.start().act();
+        var policy=job.launchPolicy();
+        if(policy==null) return VerdictCodec.RESULT_VOID_VERIFIER_UNAVAILABLE;
+        String monitor=switch(policy.monitors()) {
+            case "ITEMS" -> "COMPETITION_ITEMS";
+            case "RANDOM" -> "RANDOMISED";
+            default -> policy.monitors();
+        };
+        var restart="COMPETITION".equals(policy.mode())
+                ? com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT
+                : com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_START;
+        if(!recording.start().mode().name().equals(policy.mode())
+                || !recording.start().monitors().name().equals(monitor)
+                || recording.start().swapEnabled()!=policy.swapEnabled()
+                || recording.start().deathRestart()!=restart) return VerdictCodec.RESULT_FAIL_TRACK_MISMATCH;
+        String recordedTrack = new com.openggf.net.protocol.TrackKey(recording.start().gameId(),
+                recording.start().trackKind().name(), recording.start().zone(), recording.start().act()).format();
+        if (!VerifierSwapLog.matches(recording, job.swaps())) return VerdictCodec.RESULT_FAIL_DIVERGENT;
         if (!recordedTrack.equals(job.trackKey())
                 || !recording.start().character().equals(job.character())
                 || !recording.start().fingerprint().equals(
@@ -132,14 +151,19 @@ public final class VerifierWorker {
             return VerdictCodec.RESULT_FAIL_TRACK_MISMATCH;
         }
         AttemptReplayHarness.Result replay = replayer.replay(
-                recording, job.determinismFingerprint());
+                recording, job.determinismFingerprint(),job.swaps());
+        if ("race event diverged".equals(replay.failureReason())) return VerdictCodec.RESULT_FAIL_DIVERGENT;
         if (replay.failureReason() != null) {
             return VerdictCodec.RESULT_VOID_VERIFIER_UNAVAILABLE;
         }
-        if (!replay.finished()) {
+        var requests=job.swaps().stream().map(VerificationJobQueue.SwapReceipt::nativeRequestFrame)
+                .filter(java.util.Objects::nonNull).sorted().toList();
+        if(!replay.swapRequestFrames().equals(requests)) return VerdictCodec.RESULT_FAIL_DIVERGENT;
+        if (!replay.finished() || replay.outcome() != com.openggf.mods.run.RaceClock.Failure.NONE) {
             return VerdictCodec.RESULT_FAIL_DIVERGENT;
         }
-        if (replay.finalTimeFrames() != job.claimedTimeFrames()
+        if (!replay.lapFrames().equals(job.lapFrames()) || !replay.splitFrames().equals(job.splitFrames())
+                || replay.finalTimeFrames() != job.claimedTimeFrames()
                 || replay.firstInputFrame() != job.firstInputFrame()
                 || replay.finishFrame() != job.finishFrame()) {
             return VerdictCodec.RESULT_FAIL_TIME_MISMATCH;

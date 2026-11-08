@@ -134,7 +134,7 @@ frame. Quick Chat wording is English for this MVP. Messages carry stable phrase
 IDs and host-supplied track context so a future community translation can render
 the recipient's language without changing the wire meaning.
 
-The racing wire protocol is version **8**. Upgrade clients, room hosts and the
+The racing wire protocol is version **9**. Upgrade clients, room hosts and the
 master together; older or incomplete message schemas are rejected.
 
 `settings.txt` keys for the look: `lookBase` is the base colour (three hex digits `BGR`, the
@@ -398,3 +398,42 @@ Outputs are `gameplay-silent.mp4` (30 fps), stereo `audio.pcm`, `chapters.csv`,
 and `result.txt` (including the audio rate, final rank and churn totals). Mux the PCM as
 signed 16-bit little-endian stereo at that rate with the MP4 using FFmpeg. The
 capture includes rendering, encoding and client work, and is not a benchmark.
+
+## Competition rooms (protocol 9)
+
+All peers and the master use protocol 9. `TrackKey` parses act keys (`s2:0:0`)
+and arena keys (`s3k:arena:0` through `s3k:arena:4`). Arenas are Competition-only;
+S1 is Time Attack-only. S2 and S3K acts support both modes.
+
+Competition schedules GO after a 10-second load countdown. Each participant has
+one attempt; starts later than GO plus two seconds are DNS. Leaving, forfeiting,
+game over and time over are DNF. Finish frames determine placement and equal
+frames tie. Arena laps must partition the total; split frames strictly increase.
+The first accepted finish broadcasts `RaceCutoff`; both winner frames plus the
+configured cutoff and the hub wall-clock cutoff apply. Finish messages retain
+the two-second transit grace. The hard window adds 30 seconds to the track limit.
+Rejected or expired verified Competition claims become DNF.
+DNF rows precede DNS rows after all finishers. `BEST_LAP` pages accompany totals.
+
+Unverified rooms publish rows labelled UNVERIFIED. The host's single Time Attack
+publication switch defaults on; Competition publication is always on. Trust and
+verification admission remain separate from publication.
+
+Swap-capable Competition rounds freeze `RaceLaunch.swapEnabled`. The room picks
+the nearest eligible rival ahead by progress, otherwise behind, with lower-slot
+ties. Only fresh validated streams supply targets; the host waits up to 250 ms for
+the requester frame, including its first batch. The host serialises requests,
+requires outcomes within 180 stream frames, enforces 64-frame cooldown and the
+profile source cap, and retains decision/target/outcome logs for verifier jobs.
+Arena numeric profiles are conservative placeholders pending the A3 ROM export;
+they are not arena certification.
+
+Host integrations using the legacy `RoomHostConfig` constructors call
+`RoomHost.configureTrackIdentity(kind, mode)` before the first round (and before
+advertising or accepting joins) to initialise an arena or Competition room.
+Playback integrations call `RemoteGhostRegistry.configureGeometry(width, height)`
+from the local run's geometry; use zero for each non-wrapping axis.
+
+Partner eligibility reserves the recording format's 64-event budget for each
+recipient's remaining pickup requests, so repeated incoming swaps cannot exhaust
+an honest player's recording before its own pickups.

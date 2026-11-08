@@ -141,4 +141,51 @@ class TestTimeAttackSettingsVotePools {
         input.tapEnter(view::update);
         assertTrue(settings.votePools("s2").isEmpty());
     }
+
+    @Test
+    void competitionEditorListsTheArenasUnderTheirOwnCaptionAndSavesThem() {
+        TimeAttackSettings settings = new TimeAttackSettings();
+        VotePoolEditorView view = new VotePoolEditorView(settings, "s3k", CompetitionRoomSettings.Mode.COMPETITION,
+                () -> { }, cue -> { });
+        FakeViewInput input = new FakeViewInput();
+        input.tapEnter(view::update); // a new pool from the default acts
+        // NAME, the ACTS caption (skipped), the acts, the ARENAS caption (skipped), then the arenas.
+        input.tapDown(view::update);
+        assertEquals(2, view.focusIndex(), "the arrows step over the Acts caption");
+        int acts = TimeAttackTrackCatalog.eligibleFor("s3k").size();
+        for (int i = 0; i < acts; i++) input.tapDown(view::update);
+        assertEquals(acts + 3, view.focusIndex(), "and over the Arenas caption, to Azure Lake");
+        input.tapEnter(view::update); // add AZURE LAKE
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
+        view.draw(canvas);
+        assertTrue(canvas.shows("ARENAS"), canvas.joined());
+        assertTrue(canvas.shows("5 LAPS") && canvas.shows("COMP ONLY"), "the focused arena's badges");
+        assertTrue(canvas.shows("of 32 tracks"));
+        input.tapUp(view::update);
+        assertEquals(acts + 1, view.focusIndex(), "up from the first arena skips its caption");
+        for (int i = 0; i < 6; i++) input.tapDown(view::update); // past the five arenas to SAVE
+        input.tapEnter(view::update);
+        VotePool saved = settings.votePools("s3k").getFirst();
+        assertEquals("arena:0", saved.acts().getLast(), view.status());
+        assertTrue(VoteTrackPools.rejection("s3k", VoteTrackPools.keysOf("s3k", saved), null,
+                CompetitionRoomSettings.Mode.COMPETITION).isEmpty());
+        assertTrue(VoteTrackPools.rejection("s3k", VoteTrackPools.keysOf("s3k", saved), null,
+                CompetitionRoomSettings.Mode.TIME_ATTACK).isPresent(), "arenas are Competition only");
+    }
+
+    @Test
+    void timeAttackEditorHidesArenasButKeepsThemOnSave() {
+        TimeAttackSettings settings = new TimeAttackSettings();
+        settings.putVotePool("s3k", null, new VotePool("Mixed", List.of("0:0", "0:1", "1:0", "arena:2")));
+        VotePoolEditorView view = new VotePoolEditorView(settings, "s3k", () -> { }, cue -> { });
+        FakeViewInput input = new FakeViewInput();
+        input.tapDown(view::update); // DEFAULT -> Mixed
+        input.tapEnter(view::update);
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
+        view.draw(canvas);
+        assertFalse(canvas.shows("ARENAS"));
+        for (int i = 0; i <= TimeAttackTrackCatalog.eligibleFor("s3k").size(); i++) input.tapDown(view::update);
+        input.tapEnter(view::update); // SAVE
+        assertEquals(List.of("0:0", "0:1", "1:0", "arena:2"), settings.votePool("s3k", "Mixed").orElseThrow().acts());
+    }
 }

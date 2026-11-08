@@ -30,4 +30,14 @@ class TestMinimapLayout {
         assertEquals('.', MinimapLayout.glyphForFarStatus(1));
         assertEquals(' ', MinimapLayout.glyphForFarStatus(0));
     }
+
+    @Test
+    void raceShareAndLapTicksSpanTheStrip() {
+        assertEquals(0, MinimapLayout.permilleX(-5, 102));
+        assertEquals(50, MinimapLayout.permilleX(500, 102));
+        assertEquals(100, MinimapLayout.permilleX(MinimapLayout.PERMILLE, 102), "the marker's own width stays inside");
+        assertEquals(100, MinimapLayout.permilleX(4000, 102));
+        assertEquals(List.of(20, 40, 60, 80), MinimapLayout.lapTicks(5, 102), "five laps: four lap lines");
+        assertEquals(List.of(), MinimapLayout.lapTicks(0, 102), "acts have no lap lines");
+    }
 }

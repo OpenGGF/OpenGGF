@@ -293,7 +293,8 @@ public final class LevelFrameStep {
             return LevelFrameResult.SETUP_ONLY;
         }
 
-        if (phase == PlcLifecyclePhase.ORDINARY_LEVEL)
+        boolean raceSwapBoundary = com.openggf.game.arena.RaceSwapRuntime.active(context);
+        if (phase == PlcLifecyclePhase.ORDINARY_LEVEL && !raceSwapBoundary)
             com.openggf.game.session.WorldSessionPolicyAccess.beforeNativeTick(context);
         frame.claim(phase);
         if (frame.consumedHeldLoopTailPreparation()) {
@@ -302,6 +303,11 @@ public final class LevelFrameStep {
         }
         dispatchGameVBlank(context, frame);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+        if (raceSwapBoundary) {
+            com.openggf.game.arena.RaceSwapRuntime.afterVBlank(context);
+            if (phase == PlcLifecyclePhase.ORDINARY_LEVEL)
+                com.openggf.game.session.WorldSessionPolicyAccess.beforeNativeTick(context);
+        }
 
         // Retire runtime-art work submitted by an earlier object pass before
         // this frame's objects poll it. A request made below during object
@@ -386,33 +392,38 @@ public final class LevelFrameStep {
                 || gate.runsLevelScrollAndEventsThisLockedPass();
         // 2. Player-slot ReactToItem runs before ExecuteObjects, so touch checks
         //    read a frame-start snapshot of object touch state.
-        levelManager.prepareTouchResponseSnapshots();
+        boolean raceObjectsFrozen = com.openggf.game.arena.RaceSwapRuntime.freezesObjects(context);
+        if (!raceObjectsFrozen) {
+            levelManager.prepareTouchResponseSnapshots();
 
-        // 2. Player slots first (ExecuteObjects / RunObjects / Process_Sprites
-        //    dispatch slot 0, then slot 1). Touch responses run per player inside
-        //    tickPlayablePhysics after movement.
-        wrapper.wrap("physics", spriteUpdate);
+            // 2. Player slots first (ExecuteObjects / RunObjects / Process_Sprites
+            //    dispatch slot 0, then slot 1). Touch responses run per player inside
+            //    tickPlayablePhysics after movement.
+            wrapper.wrap("physics", spriteUpdate);
 
-        LevelEventProvider fixedSlotEvents = context.levelEventProvider();
-        if (fixedSlotEvents != null) {
-            wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
+            LevelEventProvider fixedSlotEvents = context.levelEventProvider();
+            if (fixedSlotEvents != null) {
+                wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
+            }
+            runNativeFixedObjectsBeforeDynamic(context, wrapper);
+
+            // 3. Object slots in slot order; each object resolves its own solid
+            //    calls, so later objects see earlier contact adjustments.
+            Runnable zoneFeaturesAfterObjects = runsLevelScrollAndEvents
+                    ? levelManager::updateZoneFeaturesAfterObjectExecution
+                    : () -> { };
+            Runnable afterExecBeforePlacement = levelOnlyFixedSlots != null
+                    ? () -> {
+                        levelOnlyFixedSlots.advancePlayableFixedSlotsAfterObjectExecution();
+                        zoneFeaturesAfterObjects.run();
+                    }
+                    : zoneFeaturesAfterObjects;
+            wrapper.wrap("objects",
+                    () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
+                            afterExecBeforePlacement, false));
+        } else if (levelManager.getObjectManager() != null) {
+            levelManager.getObjectManager().advanceVblaCounter();
         }
-        runNativeFixedObjectsBeforeDynamic(context, wrapper);
-
-        // 3. Object slots in slot order; each object resolves its own solid
-        //    calls, so later objects see earlier contact adjustments.
-        Runnable zoneFeaturesAfterObjects = runsLevelScrollAndEvents
-                ? levelManager::updateZoneFeaturesAfterObjectExecution
-                : () -> { };
-        Runnable afterExecBeforePlacement = levelOnlyFixedSlots != null
-                ? () -> {
-                    levelOnlyFixedSlots.advancePlayableFixedSlotsAfterObjectExecution();
-                    zoneFeaturesAfterObjects.run();
-                }
-                : zoneFeaturesAfterObjects;
-        wrapper.wrap("objects",
-                () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
-                        afterExecBeforePlacement, false));
 
         // 4. Camera scroll + dynamic level events, in ROM order.
         //
@@ -467,7 +478,7 @@ public final class LevelFrameStep {
 
         // 4a. Camera scroll (ROM ScrollHoriz + ScrollVertical): move + clamp to the
         //     prior-frame bottom boundary, BEFORE the zone event handler runs.
-        if (runsLevelScrollAndEvents && !suppressDefaultCamera && !cameraDrivenScroll
+        if (runsLevelScrollAndEvents && !suppressDefaultCamera && !cameraDrivenScroll && !raceObjectsFrozen
                 && !bonusStageExitRequestedThisFrame
                 && !levelExitRequestedDuringObjects) {
             wrapper.wrap("camera-scroll", camera::updatePosition);
@@ -476,7 +487,7 @@ public final class LevelFrameStep {
         //     transitions. ROM runs the zone handler (DLE_Index) here, after the
         //     scroll, so camera-X gates and the left-boundary lock see the
         //     post-scroll camera. fixed-in-level objects run alongside.
-        if (levelEvents != null && !levelExitRequestedDuringObjects) {
+        if (levelEvents != null && !levelExitRequestedDuringObjects && !raceObjectsFrozen) {
             wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
         }
 		// ROM ScreenEvents publishes Camera_*_pos_copy before the zone event

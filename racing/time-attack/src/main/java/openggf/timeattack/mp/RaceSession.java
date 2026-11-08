@@ -122,8 +122,16 @@ public final class RaceSession implements AutoCloseable {
      */
     public record RoundSetup(String gameId, int zone, int act, String character,
                              String characterPolicy, String lockedCharacter, int windowSeconds,
-                             List<String> voteTrackKeys) {
+                             List<String> voteTrackKeys, com.openggf.mods.run.TrackKind kind,
+                             openggf.timeattack.CompetitionRoomSettings competition) {
+        public RoundSetup(String gameId, int zone, int act, String character,
+                String characterPolicy, String lockedCharacter, int windowSeconds, List<String> voteTrackKeys) {
+            this(gameId, zone, act, character, characterPolicy, lockedCharacter, windowSeconds, voteTrackKeys,
+                    com.openggf.mods.run.TrackKind.ACT, openggf.timeattack.CompetitionRoomSettings.defaults());
+        }
         public RoundSetup {
+            Objects.requireNonNull(kind, "kind");
+            Objects.requireNonNull(competition, "competition");
             Objects.requireNonNull(gameId, "gameId");
             Objects.requireNonNull(character, "character");
             Objects.requireNonNull(characterPolicy, "characterPolicy");
@@ -222,7 +230,7 @@ public final class RaceSession implements AutoCloseable {
         requireCredentials(policy, password);
         leave();
         Optional<String> rejected = VoteTrackPools.rejection(setup.gameId(), setup.voteTrackKeys(),
-                setup.lockedCharacter());
+                setup.lockedCharacter(), setup.competition().mode());
         if (rejected.isPresent()) {
             fail("Cannot host: " + rejected.get());
             return;
@@ -245,6 +253,7 @@ public final class RaceSession implements AutoCloseable {
                     roomConfig(name, setup, fingerprint, policy, op.password, chatMode), me,
                     TrackValidationProfileSource.none())), JdkRaceHostServer::close);
             op.await(server.room().ready(), RaceClient.JOIN_TIMEOUT_MILLIS, ignored -> { });
+            server.room().configureTrackIdentity(setup.kind().name(), setup.competition().mode().name());
             MasterClient registered = null;
             DirectRoomRegistration registration = null;
             if (seekListing) {
@@ -266,8 +275,10 @@ public final class RaceSession implements AutoCloseable {
                             roomConfig(name, setup, fingerprint, policy, op.password, chatMode), me,
                             TrackValidationProfileSource.none()), JdkRaceHostServer::close);
                     op.await(server.room().ready(), RaceClient.JOIN_TIMEOUT_MILLIS, ignored -> { });
+            server.room().configureTrackIdentity(setup.kind().name(), setup.competition().mode().name());
                 }
             }
+            server.room().configureTrackIdentity(setup.kind().name(), setup.competition().mode().name());
             String pin = server.tlsCertificateSha256();
             String invite = "HOST_IP:" + server.port() + "#" + DirectJoinAddress.shareCode(pin, me.fingerprint());
             RaceConnection client;
@@ -526,7 +537,7 @@ public final class RaceSession implements AutoCloseable {
         MasterClient client = master;
         RoundSetup setup = browseSetup;
         String fingerprint = browseFingerprint;
-        Optional<String> rejected = VoteTrackPools.rejection(setup.gameId(), setup.voteTrackKeys(), setup.lockedCharacter());
+        Optional<String> rejected = VoteTrackPools.rejection(setup.gameId(), setup.voteTrackKeys(), setup.lockedCharacter(), setup.competition().mode());
         if (rejected.isPresent()) {
             notice = "Cannot create the room: " + rejected.get();
             return;
@@ -547,6 +558,8 @@ public final class RaceSession implements AutoCloseable {
             DirectRoomRegistration registration;
             if (direct) {
                 op.await(server.room().ready(), RaceClient.JOIN_TIMEOUT_MILLIS, ignored -> { });
+            server.room().configureTrackIdentity(setup.kind().name(), setup.competition().mode().name());
+                server.room().configureTrackIdentity(setup.kind().name(), setup.competition().mode().name());
                 registration = registerDirect(op, client, server, setup, fingerprint);
                 created = registration.created();
             } else {
@@ -842,17 +855,29 @@ public final class RaceSession implements AutoCloseable {
         if (launch == null) {
             return;
         }
+        if ("COMPETITION".equals(launch.config().mode())
+                && coordinator.session().hubNowEstimateMillis() > launch.countdownEndsAtHubMillis() - 2000
+                && coordinator.roundsStarted() == 0) return;
         ControlMessage.RoundConfig round = launch.config();
         launchedRound = coordinator.roundsStarted();
         String chosen = launch.effectiveCharacter();
-        List<String> permitted = TimeAttackTrackCatalog.eligible(round.gameId(), round.zone(), round.act())
-                .map(TimeAttackTrackCatalog.Track::characters).orElse(List.of());
+        List<String> permitted = TimeAttackTrackCatalog.eligibleFor(round.gameId(),
+                openggf.timeattack.CompetitionRoomSettings.Mode.valueOf(round.mode())).stream()
+                .filter(t -> t.kind().name().equals(round.trackKind()) && t.zone() == round.zone() && t.act() == round.act())
+                .findFirst().map(TimeAttackTrackCatalog.Track::characters).orElse(List.of());
         if (!permitted.isEmpty() && !permitted.contains(chosen)) {
             notice = chosen.toUpperCase() + " cannot race this act";
             return;
         }
         TimeAttackRuntime run = runtimeFactory.get();
-        run.armForLaunch(new TimeAttackLaunchRequest(round.gameId(), round.zone(), round.act(), chosen, List.of()));
+        run.armForLaunch(new TimeAttackLaunchRequest(round.gameId(), round.zone(), round.act(), chosen, List.of(),
+                com.openggf.mods.run.TrackKind.valueOf(round.trackKind()),
+                openggf.timeattack.CompetitionRoomSettings.Mode.valueOf(round.mode()),
+                switch (round.monitors()) {
+                    case "RANDOM" -> com.openggf.mods.run.MonitorRule.RANDOMISED;
+                    case "ITEMS" -> com.openggf.mods.run.MonitorRule.COMPETITION_ITEMS;
+                    default -> com.openggf.mods.run.MonitorRule.valueOf(round.monitors());
+                }, launch.swapEnabled()));
         if (!run.isActive()) {
             notice = "This round could not be started here";
             return;
@@ -899,6 +924,7 @@ public final class RaceSession implements AutoCloseable {
         // Uploads use the endpoint the master connection was admitted on, never settings text.
         coordinator = new MultiplayerRaceCoordinator(RaceTransport.from(connection), clientSession, clockMillis,
                 master == null ? null : master.endpoint(), master != null && masterInsecure, ghostStore);
+        if (hostingRoom && "COMPETITION".equals(round.mode())) coordinator.sendRoundConfigure(round);
         coordinator.setShowMinimap(settings.minimap());
         coordinator.setChatPreferenceSource(censorChat, disableChat);
         if (hostingRoom && host != null) {
@@ -1229,7 +1255,8 @@ public final class RaceSession implements AutoCloseable {
     private static ControlMessage.RoomDescriptor descriptor(String name, RoundSetup setup, RoomAccessPolicy policy,
                                                              String chatMode) {
         return new ControlMessage.RoomDescriptor(roomName(name), setup.gameId(), setup.zone(), setup.act(),
-                setup.characterPolicy(), setup.lockedCharacter(), MAX_ROOM_PLAYERS, false, policy, chatMode);
+                setup.characterPolicy(), setup.lockedCharacter(), MAX_ROOM_PLAYERS, false, policy, chatMode,
+                setup.kind().name(), setup.competition().mode().name());
     }
 
     private static void requireCredentials(RoomAccessPolicy policy, RoomPassword password) {
@@ -1287,7 +1314,12 @@ public final class RaceSession implements AutoCloseable {
 
     private static ControlMessage.RoundConfig roundConfigFor(RoundSetup setup) {
         return new ControlMessage.RoundConfig(setup.gameId(), setup.zone(), setup.act(), setup.windowSeconds(),
-                setup.characterPolicy(), setup.lockedCharacter());
+                setup.characterPolicy(), setup.lockedCharacter(), setup.kind().name(), setup.competition().mode().name(),
+                switch (setup.competition().monitors()) {
+                    case RANDOMISED -> "RANDOM";
+                    case COMPETITION_ITEMS -> "ITEMS";
+                    default -> setup.competition().monitors().name();
+                }, setup.competition().cutoffSeconds(), setup.competition().startInSeconds());
     }
 
     static String rootMessage(Throwable failure) {
@@ -1326,6 +1358,7 @@ public final class RaceSession implements AutoCloseable {
         private final Thread thread;
         private final AtomicBoolean heartbeatPending = new AtomicBoolean();
         private volatile boolean stopped;
+        private String advertisedKind;
         private int advertisedZone;
         private int advertisedAct;
         private String advertisedChatMode;
@@ -1334,6 +1367,7 @@ public final class RaceSession implements AutoCloseable {
             this.client = client;
             this.roomId = roomId;
             this.server = server;
+            this.advertisedKind = null;
             this.advertisedZone = setup == null ? -1 : setup.zone();
             this.advertisedAct = setup == null ? -1 : setup.act();
             this.thread = Thread.ofVirtual().name("time-attack-master-link").start(this::run);
@@ -1375,8 +1409,9 @@ public final class RaceSession implements AutoCloseable {
                 return;
             }
             ControlMessage.RoomDescriptor current = server.room().descriptor();
-            if (current.zone() != advertisedZone || current.act() != advertisedAct) {
-                client.sendControl(new ControlMessage.RoomTrackUpdate(roomId, current.zone(), current.act()));
+            if (current.zone() != advertisedZone || current.act() != advertisedAct || !Objects.equals(current.trackKind(), advertisedKind)) {
+                client.sendControl(new ControlMessage.RoomTrackUpdate(roomId, current.zone(), current.act(), current.trackKind()));
+                advertisedKind = current.trackKind();
                 advertisedZone = current.zone();
                 advertisedAct = current.act();
             }

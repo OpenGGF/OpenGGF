@@ -678,7 +678,10 @@ public class GameLoop {
      * Pauses the game loop due to window losing focus.
      * Audio is also paused to prevent music continuing while game is frozen.
      */
+    boolean continuesWithoutFocus() { return hostedRuns.continuesWithoutFocus(); }
+
     public synchronized void pause() {
+        if (continuesWithoutFocus()) return;
         if (!paused) {
             com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
             hostedRuns.suspendInput();
@@ -1958,7 +1961,7 @@ public class GameLoop {
     }
 
     /** Ends the session's hosted run and hands control back to its host. */
-    private void endHostedRun(RunEndReason reason) {
+    void endHostedRun(RunEndReason reason) {
         Consumer<RunEndReason> back = hostedRunReturn;
         hostedRunReturn = ignored -> { };
         hostedRuns.end(reason);
@@ -2714,6 +2717,10 @@ public class GameLoop {
 
     private void openNativeTitleMode(boolean options) {
         nativeMenuFlow.openNativeTitleMode(options);
+    }
+
+    void openHostedArenaScreen(com.openggf.game.nativemenu.NativeMenuScreen screen) {
+        nativeMenus.open(screen);
     }
 
     com.openggf.game.nativemenu.NativeMenuScreen getNativeMenuScreen() {

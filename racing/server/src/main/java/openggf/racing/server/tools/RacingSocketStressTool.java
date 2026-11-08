@@ -53,7 +53,7 @@ import java.util.function.BooleanSupplier;
 public final class RacingSocketStressTool {
     /** Optional diagnostic boundary; disabled unless an external JFR recording enables it. */
     @jdk.jfr.Name("openggf.RacingStressWindow")
-    @jdk.jfr.Label("Measured socket traffic through accepted finishes and hidden casual standings")
+    @jdk.jfr.Label("Measured socket traffic through accepted finishes and UNVERIFIED casual standings")
     @jdk.jfr.StackTrace(false)
     public static final class TrafficWindow extends jdk.jfr.Event {
         public String transport;
@@ -398,10 +398,9 @@ public final class RacingSocketStressTool {
                 for (Peer peer : peers) {
                     check(peer.observedGhostFrames > 0, "peer received no other-player ghosts: " + peer.name);
                 }
-                // Unverified load rooms retain accepted claims internally but must
-                // expose neither ranks nor a standings page to clients.
+                // D17 exposes casual claims with an explicit UNVERIFIED label.
                 peers.getFirst().control(new ControlMessage.StandingsPageRequest(0), totals);
-                await(() -> standingsPages.containsKey(0), "empty casual standings page");
+                await(() -> standingsPages.containsKey(0), "UNVERIFIED casual standings page");
             } finally {
                 totals.measuring = false;
                 measurement.finish(proxy, totals);
@@ -662,17 +661,18 @@ public final class RacingSocketStressTool {
                     if (totals.measuring) totals.samplePing(System.nanoTime() - sent);
                 }
                 case ControlMessage.StandingsDelta delta ->
-                        check(delta.rows().isEmpty(), "unverified standings were published");
-                case ControlMessage.RankUpdate ignored ->
-                        throw new IllegalStateException("unverified private rank was published");
+                        check(delta.rows().stream().allMatch(row -> "UNVERIFIED".equals(row.verifyState())), "casual rows must be UNVERIFIED");
+                case ControlMessage.RankUpdate rank ->
+                        check(rank.rank() > 0 && rank.bestTimeFrames() > 0, "invalid casual private rank");
                 case ControlMessage.StandingsPage page -> {
-                    check(page.totalPages() == 0 && page.page() == 0 && page.rows().isEmpty(),
-                            "unverified standings page was published");
+                    check(page.totalPages() > 0 && page.page() == 0 && !page.rows().isEmpty()
+                            && page.rows().stream().allMatch(row -> "UNVERIFIED".equals(row.verifyState())),
+                            "casual standings page must carry UNVERIFIED rows");
                     check(standingsPages.putIfAbsent(page.page(), page.rows()) == null, "duplicate standings page response");
                 }
                 case ControlMessage.RoundEnd end -> {
-                    check(end.finalStandings().isEmpty(),
-                            "unverified round-end standings were published");
+                    check(end.finalStandings().stream().allMatch(row -> "UNVERIFIED".equals(row.verifyState())),
+                            "casual final rows must be UNVERIFIED");
                     peer.roundEnded = true;
                 }
                 case ControlMessage.Kick kick -> throw new IllegalStateException("unexpected kick: " + kick.reason());

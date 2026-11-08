@@ -226,6 +226,16 @@ New in 0.7. Experimental. Time Attack is a bundled mod. Open it from
 - **Solo runs.** Time your runs, retry instantly and race ghosts of your best times.
 - **Racing.** Host or join races on your local network, or browse public and private
   rooms on a master server. Every player needs the same engine build and ROM.
+- **Competition mode.** New in 0.8. A room can race in Competition mode instead of
+  Time Attack: everyone starts together, there are no restarts, and the first past
+  the post wins. The host picks the monitor rules and a cutoff after the first
+  finisher. Sonic 2 and Sonic 3&K acts work in either mode. Sonic 1 stays Time
+  Attack only.
+- **Sonic 3&K Competition arenas.** New in 0.8. Azure Lake, Balloon Park, Chrome
+  Gadget, Desert Palace and Endless Mine are Competition tracks. You race them alone
+  in a full-screen view under the original five-lap rules, and lap times, total
+  time and best lap are ranked. Rooms without a verifier label their results
+  UNVERIFIED.
 - **Chat.** Players can chat, and an optional filter masks profanity.
 
 Time Attack comes with every build, including the native packages. See
