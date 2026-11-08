@@ -36,13 +36,13 @@ class DebugSonic2CompetitionRouteVideo {
         boolean limit=config.getBoolean(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT);
         config.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT,true);
         var ffmpeg=new ProcessBuilder("ffmpeg","-y","-loglevel","error","-f","rawvideo","-pix_fmt","argb",
-                "-s","320x224","-r","60","-i","-","-c:v","ffv1","-level","3",out.resolve("engine.mkv").toString())
+                "-s","320x448","-r","60","-i","-","-c:v","ffv1","-level","3",out.resolve("engine.mkv").toString())
                 .redirectErrorStream(true).redirectOutput(out.resolve("ffmpeg.log").toFile()).start();
         try(var video=new BufferedOutputStream(ffmpeg.getOutputStream(),1<<20);
             var csv=Files.newBufferedWriter(out.resolve("engine-frames.csv"))) {
             csv.write("row,mode,phase,lfc,p1x,p1y,p2x,p2y,p1rings,p2rings,p1total,p2total,p1time,p2time\n");
             var hosts=new StageplayCompetitionRouteHosts(Path.of(System.getProperty("sonic2.rom.path")));
-            byte[] frame=new byte[320*224*4];
+            byte[] frame=new byte[320*448*4];
             var result=new RouteReplay(hosts).replay(route,Cancellation.NONE,(row,sample)->{
                 try {
                     var image=hosts.renderAnyCurrent();

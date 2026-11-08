@@ -30,12 +30,12 @@ class TestObj34CompetitionPixels {
         GameServices.audio().setBackend(new NullAudioBackend());
         HeadlessTestFixture.builder().withZoneAndAct(0,0).build();
         var services=EngineServices.current();var root=SessionManager.getCurrentWorldSession().rootGameModule();
-        try(var gl=PresentationOffscreenTestContext.openConfigured(320,224,PresentationOffscreenTestContext.LegacyProfile.CORE_41);
+        try(var gl=PresentationOffscreenTestContext.openConfigured(320,448,PresentationOffscreenTestContext.LegacyProfile.CORE_41);
             AutoCloseable cleanup=()->{try{SessionManager.closeGameplaySession();}finally{services.graphics().cleanup();}};
             var views=new Sonic2CompetitionViews(services.graphics())) {
             var graphics=services.graphics();graphics.setHeadlessMode(false);
             graphics.init(com.openggf.Engine.RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
-            graphics.setViewport(0,0,320,224);glViewport(0,0,320,224);Files.createDirectories(OUT);
+            graphics.setViewport(0,0,320,448);glViewport(0,0,320,448);Files.createDirectories(OUT);
             var title=(TitleCardManager)root.getTitleCardProvider();
             var restored=new boolean[1];var full=new boolean[1];var forwardChecked=new boolean[1];
             var saved=new Object[1];var original=new int[1][];var forward=new int[1][];
@@ -106,7 +106,7 @@ class TestObj34CompetitionPixels {
         try{
             var graphics=GameServices.graphics();graphics.bindRuntimeManagedReferences(context.getCamera(),context.getFadeManager());
             PaletteUploadPresentation.withoutDisplayedFade(graphics,()->views.draw(context,session));
-            var image=ScreenshotCapture.captureFramebuffer(320,224);
+            var image=ScreenshotCapture.captureFramebuffer(320,448);
             assertTrue(Arrays.stream(image.pixels()).distinct().count()>3,"actual native renderer output");
             ScreenshotCapture.savePNG(image,OUT.resolve(name+".png"));
             var video=context.getWorldSession().getGameModule().getGameService(Sonic2CompetitionVideoFrame.class);

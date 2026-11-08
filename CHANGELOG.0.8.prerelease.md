@@ -44,7 +44,9 @@ under the matching area heading; see the
   Cave, Casino Night or the special stage. Each zone plays two acts with
   separate rings, lives, score, time and results, then zone and game results
   with their own music; a tied zone goes to a special-stage tiebreaker. The
-  screen splits at line 108 through the shared Competition renderer, and each
+  screen renders at 320x448 progressive resolution with half-height pixels,
+  preserving every row of the native 8x16 cells without interlace combing.
+  It splits at progressive line 216 through the shared Competition renderer; each
   half draws its player's planes, sprites and HUD from the ROM's two-player art.
   Title cards run in both halves. Teleport monitors swap the players' positions,
   speeds, cameras and backgrounds. Badnik, bumper, bonus-block and cage
@@ -54,7 +56,7 @@ under the matching area heading; see the
   reload when revisited; the finish-grace countdown runs before players move;
   GAME OVER and TIME OVER cards appear in both views. The competitive special stage runs both players
   on one halfpipe with its checkpoints and results. Held rewind is off in
-  Competition; the interlace field, seam and lag-frame limits are in
+  Competition; the progressive presentation, seam and lag-frame limits are in
   [known discrepancies](docs/status/known-discrepancies.md#s2-competition-split-screen-native-lag-and-rewind-scope).
 
 - **S2 and KiS2 badnik chains are shared:** one chain counter serves both

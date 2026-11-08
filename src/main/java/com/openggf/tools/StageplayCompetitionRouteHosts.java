@@ -88,7 +88,7 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
                     throw new RouteHostException(RouteHostException.Reason.ROM_UNAVAILABLE, "S2 ROM SHA-1 mismatch");
             } catch (java.io.IOException e) { throw new java.io.UncheckedIOException(e); }
             if(launch.initial().vIntStart()!=0) throw new RouteHostException(RouteHostException.Reason.UNSUPPORTED_LAUNCH,"title inlet owns its initial clock");
-            boot = new HeadlessGameBoot(launch.width(),224);
+            boot = new HeadlessGameBoot(launch.width(),448,launch.width(),224);
             try {
                 boot.setModuleDecorator(base -> adapter[0] = new Sonic2CompetitionRouteAdapter(base));
                 boot.setBootToTitle(true);
@@ -260,7 +260,7 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
         private com.openggf.graphics.RgbaImage render() {
             if(adapter[0].visit()==null) throw new IllegalStateException("no native visit to draw");
             adapter[0].visit().draw();
-            return com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224);
+            return com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,448);
         }
         /** Video-demo draw of whatever the loop shows: title, native menu/competition screens, or black. */
         private com.openggf.graphics.RgbaImage renderAny() {
@@ -286,7 +286,7 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
                 org.lwjgl.opengl.GL11.glClearColor(0,0,0,1); org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT);
             }
             org.lwjgl.opengl.GL11.glFinish();
-            return com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224);
+            return com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,448);
         }
 
         private static PlayerView view(com.openggf.sprites.playable.AbstractPlayableSprite p) {

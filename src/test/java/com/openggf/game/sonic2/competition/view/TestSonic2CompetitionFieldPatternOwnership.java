@@ -169,7 +169,7 @@ class TestSonic2CompetitionFieldPatternOwnership {
                 return buffer;
             });
             for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
-                int expected = Im2FieldOracle.pixel(source, id & 1023, x, y * 2 + (id >>> 10));
+                int expected = Im2FieldOracle.pixel(source, id / 2, x, y + (id % 2) * 8);
                 int cpu = patterns[id].getPixel(x, y);
                 if (expected != cpu) fail("CPU field pattern " + id + " pixel " + x + "," + y
                         + ": expected " + expected + ", actual " + cpu);

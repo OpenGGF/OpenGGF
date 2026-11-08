@@ -23,10 +23,10 @@ class TestSonic2CompetitionFieldSprites {
             var entry = new Sonic2CompetitionSatBuilder.SatEntry(nativeY + 256, 9, 0, word, 128 + 31);
             var page = new Sonic2CompetitionSatBuilder.Page(0, List.of(entry), 1, List.of(), false);
             var projected = Sonic2CompetitionFieldSprites.project(page);
-            assertEquals(1, projected.size()); assertEquals(6, projected.getFirst().fragments().size());
+            assertEquals(1, projected.size()); assertEquals(12, projected.getFirst().fragments().size());
             for (var tile : projected.getFirst().fragments()) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
                 int localX = tile.x() + x - 31;
-                int localY = 2 * (tile.y() + y) - nativeY;
+                int localY = tile.y() + y - nativeY;
                 if (h) localX = 23 - localX;
                 if (v) localY = 31 - localY;
                 int cell = (19 + localX / 8 * 2 + localY / 16) & 1023;

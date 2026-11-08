@@ -413,7 +413,7 @@ public class TilemapGpuRenderer {
             return;
         }
         foregroundLineScrollBuffer.upload(packedHScroll);
-        enablePerLineScroll(foregroundLineScrollBuffer.getTextureId(), 224.0f, 0.0f, 0.0f, 0.0f);
+        enablePerLineScroll(foregroundLineScrollBuffer.getTextureId(), foregroundLineScrollBuffer.lineCount(), 0.0f, 0.0f, 0.0f);
     }
 
     public void enablePerLineForegroundScroll(IntIndexedView packedHScroll) {
@@ -422,7 +422,7 @@ public class TilemapGpuRenderer {
             return;
         }
         foregroundLineScrollBuffer.upload(packedHScroll);
-        enablePerLineScroll(foregroundLineScrollBuffer.getTextureId(), 224.0f, 0.0f, 0.0f, 0.0f);
+        enablePerLineScroll(foregroundLineScrollBuffer.getTextureId(), foregroundLineScrollBuffer.lineCount(), 0.0f, 0.0f, 0.0f);
     }
 
     /**

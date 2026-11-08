@@ -14,10 +14,10 @@ import com.openggf.level.render.SpritePresentationRenderer;
 import java.util.List;
 import java.util.Objects;
 
-/** Fixed-field presentation of the native world's completed semantic display pages. */
+/** Progressive double-height presentation of the native world's completed semantic display pages. */
 public final class Sonic2CompetitionViews implements Sonic2NativeCompetitionHost.Views, AutoCloseable {
     private final GraphicsManager graphics;
-    private final NativeCompetitionRenderer renderer = new NativeCompetitionRenderer();
+    private final NativeCompetitionRenderer renderer = new NativeCompetitionRenderer(448);
     private boolean closed;
     public Sonic2CompetitionViews(GraphicsManager graphics) { this.graphics = Objects.requireNonNull(graphics); }
     @Override public void prepare(GameplayModeContext context, Sonic2CompetitionSession session,
@@ -34,22 +34,23 @@ public final class Sonic2CompetitionViews implements Sonic2NativeCompetitionHost
         var fields = world.art().fields();
         fields.flush(graphics);
         publishPalette(state.paletteWords());
-        var first = prepareFrame(fields, state.pages().first(), 0, 108);
-        var second = prepareFrame(fields, state.pages().second(), 108, 116);
-        int[] horizontal = state.horizontal().stream().mapToInt(Integer::intValue).toArray();
+        var first = prepareFrame(fields, state.pages().first(), 0, 216);
+        var second = prepareFrame(fields, state.pages().second(), 216, 232);
+        int[] horizontal = new int[448];
+        for (int y = 0; y < horizontal.length; y++) horizontal[y] = state.horizontal().get(y / 2);
         renderer.draw(context, List.of(
-                new NativeCompetitionRenderer.View(state.firstCamera(), 0, 108,
-                        state.foreground1() >> 1, state.background1() >> 1, 0, 512, horizontal, first,
+                new NativeCompetitionRenderer.View(state.firstCamera(), 0, 216,
+                        state.foreground1(), state.background1(), 0, 512, horizontal, first,
                         world.planes().source(state.upperPlane())),
-                new NativeCompetitionRenderer.View(state.secondCamera(), 108, 116,
-                        state.foreground2() >> 1, state.background2() >> 1, 0, 512, horizontal, second,
+                new NativeCompetitionRenderer.View(state.secondCamera(), 216, 232,
+                        state.foreground2(), state.background2(), 0, 512, horizontal, second,
                         world.planes().source(Sonic2CompetitionPlanes.PlaneId.FOREGROUND_P2))),
                 backdropRgb(state.paletteWords().get(32)));
     }
     private SpritePresentation.Frame prepareFrame(Sonic2CompetitionFieldPatterns fields,
             Sonic2CompetitionSatBuilder.Page page, int start, int height) {
         var patterns = fields.live();
-        return NativeCompetitionRenderer.prepareSprites(graphics, start, height, () -> {
+        return NativeCompetitionRenderer.prepareSprites(graphics, start, height, 448, () -> {
             for (var piece : Sonic2CompetitionFieldSprites.project(page)) {
                 for (var fragment : piece.fragments())
                     SpritePresentation.bindPatternVersion(graphics, fragment.firstPatternIndex(),

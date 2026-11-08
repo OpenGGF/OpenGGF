@@ -57,6 +57,7 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen {
         for (int i = 0; i < 4; i++) if (supportsSelection(i)) return true;
         return false;
     }
+    @Override public int presentationHeight() { return 448; }
     @Override public GameMode mode() {
         return switch (session.phase()) {
             case SELECT -> GameMode.COMPETITION_MENU;

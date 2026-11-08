@@ -632,9 +632,9 @@ blocked. The presentation and timing differences are:
 
 | ID | Engine behaviour |
 | --- | --- |
-| U-1 | Each view shows interlace field 0 (even interlaced lines) on every frame. There is no field alternation or weave; detail present only on odd lines never appears and nothing flickers. Planes are retained 8x16-cell tables presented through field-projected patterns. |
+| U-1 | S2 renders both halves progressively into 320x448 logical pixels, preserving all sixteen rows of each ROM 8x16 cell. The window keeps the native picture aspect with half-height pixels. There is no alternating field clock or interlace combing; this supersedes the earlier single-field scope (user decision, 2026-11-08). S3K retains its 224-line presentation. |
 | U-2 | Each view shows its last completed sprite page, so the lag-frame torn table cannot occur. The `Hint_flag` busy-wait plays no part in timing. |
-| U-3, U-4 | The split is exact at line 108: no blanked band and no sprite carry-over from the upper table. Native pictures differ from the engine on field rows 108-112 at the seam. |
+| U-3, U-4 | The split is exact at progressive line 216 (field line 108): no blanked band and no sprite carry-over from the upper table. Native pictures differ from the engine on field rows 108-112 at the seam. |
 | U-5 | The art residency holds only patterns the game loads. Cell words that point at VDP table memory show loaded art or zeros, not table bytes; DMA source wrap is not modelled. |
 | U-7 | Sprite pieces past the 80th table entry are dropped instead of overwriting the RAM after the table. |
 | Lag | Every logical iteration completes in its frame. Native CPU-overrun lag frames are not reproduced in levels or in the competitive special stage, which also does not use the one-player special stage's slowdown approximation. |
