@@ -1,0 +1,588 @@
+{
+  "format" : "openggf-route/1",
+  "launch" : {
+    "rom" : {
+      "game" : "s2",
+      "crc32" : "7B905383",
+      "sha1" : "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9"
+    },
+    "inlet" : {
+      "kind" : "title"
+    },
+    "roster" : {
+      "main" : "sonic",
+      "sidekick" : "tails"
+    },
+    "width" : 320,
+    "donor" : "off",
+    "initial" : {
+      "vIntStart" : 0
+    }
+  },
+  "checks" : {
+    "guard" : {
+      "allowHurt" : true,
+      "allowRingLoss" : true,
+      "allowDeath" : false,
+      "allowBoundary" : true,
+      "holds" : {
+        "kind" : "fact-equals",
+        "key" : "competition.p2.dead",
+        "value" : 0
+      }
+    },
+    "startRow" : 1200,
+    "legs" : [ {
+      "id" : "p1-upper-approach",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 4600, 0, 4800, 700 ]
+        }
+      }
+    }, {
+      "id" : "p1-over-lower-wall",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 6300, 0, 6500, 800 ]
+        }
+      }
+    }, {
+      "id" : "p1-act1-finish",
+      "maxRows" : 7000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 10816, 0, 11328, 850 ]
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.p1.timerPaused",
+            "value" : 1
+          } ]
+        }
+      }
+    }, {
+      "id" : "p2-early-upper-path",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P2",
+          "region" : [ 1000, 0, 1200, 640 ]
+        }
+      }
+    }, {
+      "id" : "p2-upper-midpoint",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P2",
+          "region" : [ 3000, 0, 3200, 700 ]
+        }
+      }
+    }, {
+      "id" : "p2-upper-wall-approach",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P2",
+          "region" : [ 4600, 0, 4800, 700 ]
+        }
+      }
+    }, {
+      "id" : "p2-over-lower-wall",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P2",
+          "region" : [ 6300, 0, 6500, 800 ]
+        }
+      }
+    }, {
+      "id" : "p2-act1-finish",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P2",
+            "region" : [ 10816, 0, 11328, 2048 ]
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.p2.timerPaused",
+            "value" : 1
+          } ]
+        }
+      }
+    }, {
+      "id" : "act1-results-ready",
+      "maxRows" : 1000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "fact-equals",
+            "key" : "competition.phase",
+            "value" : 2
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.resultsReady",
+            "value" : 1
+          } ]
+        }
+      }
+    }, {
+      "id" : "act1-results-finish-grace-hold",
+      "maxRows" : 4000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true,
+        "holds" : {
+          "kind" : "fact-equals",
+          "key" : "competition.phase",
+          "value" : 2
+        }
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "fact-equals",
+          "key" : "competition.presentationFrame",
+          "value" : 9058
+        }
+      }
+    }, {
+      "id" : "act2-native-entry",
+      "maxRows" : 1000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "fact-equals",
+            "key" : "competition.phase",
+            "value" : 1
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.act",
+            "value" : 1
+          } ]
+        }
+      }
+    }, {
+      "id" : "p2-act2-upper-approach",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P2",
+          "region" : [ 3000, 0, 3200, 1400 ]
+        }
+      }
+    }, {
+      "id" : "p2-act2-spring-approach",
+      "maxRows" : 5000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P2",
+          "region" : [ 3158, 700, 3184, 770 ]
+        }
+      }
+    }, {
+      "id" : "p2-act2-upper-spring-exit",
+      "maxRows" : 5000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P2",
+          "region" : [ 3300, 0, 3450, 560 ]
+        }
+      }
+    }, {
+      "id" : "p2-act2-second-half",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P2",
+          "region" : [ 6200, 0, 6400, 1500 ]
+        }
+      }
+    }, {
+      "id" : "p2-act2-finish",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P2",
+            "region" : [ 10888, 0, 11200, 1800 ]
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.p2.timerPaused",
+            "value" : 1
+          } ]
+        }
+      }
+    }, {
+      "id" : "p1-act2-approach",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 3000, 0, 3200, 1400 ]
+        }
+      }
+    }, {
+      "id" : "p1-act2-spring-approach",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 3158, 700, 3184, 770 ]
+        }
+      }
+    }, {
+      "id" : "p1-act2-upper-spring-exit",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 3300, 0, 3450, 560 ]
+        }
+      }
+    }, {
+      "id" : "p1-act2-second-half",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 6200, 0, 6400, 1500 ]
+        }
+      }
+    }, {
+      "id" : "p1-act2-finish",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 10888, 0, 11200, 1800 ]
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.p1.timerPaused",
+            "value" : 1
+          } ]
+        }
+      }
+    }, {
+      "id" : "act2-results-ready",
+      "maxRows" : 1000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "fact-equals",
+            "key" : "competition.phase",
+            "value" : 2
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.resultsReady",
+            "value" : 1
+          }, {
+            "kind" : "facts-equal",
+            "left" : "competition.zoneWins.p1",
+            "right" : "competition.zoneWins.p2"
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.zoneWins.p1",
+            "value" : 1
+          } ]
+        }
+      }
+    }, {
+      "id" : "act2-results-finish-grace-hold",
+      "maxRows" : 4000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true,
+        "holds" : {
+          "kind" : "fact-equals",
+          "key" : "competition.phase",
+          "value" : 2
+        }
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "fact-equals",
+          "key" : "competition.presentationFrame",
+          "value" : 17172
+        }
+      }
+    }, {
+      "id" : "tied-act-wins-to-special-stage",
+      "maxRows" : 1000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "fact-equals",
+            "key" : "competition.phase",
+            "value" : 5
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.specialStage",
+            "value" : 1
+          }, {
+            "kind" : "facts-equal",
+            "left" : "competition.zoneWins.p1",
+            "right" : "competition.zoneWins.p2"
+          } ]
+        }
+      }
+    }, {
+      "id" : "show-competitive-special-stage-start",
+      "maxRows" : 900,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true,
+        "holds" : {
+          "kind" : "fact-equals",
+          "key" : "competition.phase",
+          "value" : 5
+        }
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "fact-equals",
+          "key" : "competition.presentationFrame",
+          "value" : 17773
+        }
+      }
+    } ]
+  },
+  "tape" : {
+    "script" : "ehz-tied-act-wins-special.script",
+    "rows" : 18724,
+    "sha256" : "72cf8717aa6519becf4100e42e45deab96618a69fbb84b16845b637a338847d2"
+  },
+  "provenance" : {
+    "producer" : "RoutePlanner prefix-search/3 goal program",
+    "engine" : "openggf 0.8.prerelease-fb572165e-dirty stageplay-s2-competition-title/1",
+    "source" : "authored after a 14463-row prefix toward legs [p1-upper-approach, p1-over-lower-wall, p1-act1-finish, p2-early-upper-path, p2-upper-midpoint, p2-upper-wall-approach, p2-over-lower-wall, p2-act1-finish, act1-results-ready, act1-results-finish-grace-hold, act2-native-entry, p2-act2-upper-approach, p2-act2-spring-approach, p2-act2-upper-spring-exit, p2-act2-second-half, p2-act2-finish, p1-act2-approach, p1-act2-spring-approach, p1-act2-upper-spring-exit, p1-act2-second-half, p1-act2-finish, act2-results-ready, act2-results-finish-grace-hold, tied-act-wins-to-special-stage, show-competitive-special-stage-start]",
+    "notes" : [ ]
+  },
+  "qualification" : [ {
+    "scope" : "ENGINE",
+    "passed" : true,
+    "content" : "dc34f120c6be1ed23c33744be7f3a88b1ad2a0f3a73d20deecbf36fc463d5629",
+    "environment" : "openggf 0.8.prerelease-fb572165e-dirty stageplay-s2-competition-title/1",
+    "rows" : 18724
+  }, {
+    "scope" : "BIZHAWK",
+    "passed" : true,
+    "content" : "dc34f120c6be1ed23c33744be7f3a88b1ad2a0f3a73d20deecbf36fc463d5629",
+    "environment" : "BizHawk2.11/GPGX cold read-only required-goals movie a91f3f1b89ab0923a76cf6a76da87d0d1af5811bcec37494aea22d70caa1d47a; accepted comparison boundary null",
+    "rows" : 18724,
+    "coverage" : [ "ehz-act1-play", "ehz-act2-play", "tied-act-wins-to-competitive-special-stage" ]
+  } ],
+  "native" : {
+    "entry" : {
+      "movie" : "src/test/resources/routes/s2/competition/witnesses/ehz-native-prefix.script",
+      "prefixRows" : 1329,
+      "inputHash" : "8f8669ed648d485c9dfc349e1bdba91d2a29743b76a3be7b5644ade8e3d30c34",
+      "engineAnchorRows" : 1151,
+      "anchorBoundary" : "first-ordinary-level-lfc-zero"
+    },
+    "inlets" : [ {
+      "engineFromRows" : 10009,
+      "movie" : "src/test/resources/routes/s2/competition/witnesses/ehz-act2-native-prefix.script",
+      "prefixRows" : 10364,
+      "inputHash" : "4f13d68aab05c8164dab1d8eb45a79630ed46934baaff228d0b6865726df561e",
+      "engineAnchorRows" : 10010,
+      "anchorBoundary" : "first-ordinary-level-lfc-zero"
+    } ],
+    "lag" : [ ]
+  }
+}
