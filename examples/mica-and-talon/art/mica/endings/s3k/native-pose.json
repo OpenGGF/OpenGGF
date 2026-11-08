@@ -2,6 +2,7 @@
   "tool": "Built-in GPT Image; latest exposed (model version not returned)",
   "frames": {
     "normal_pose-00": {
+      "layout_fit": "complete silhouette uniform fit",
       "prompt": "Use case: style-transfer. Redraw reference 1, the stock native ending pose, as ORIGINAL MICA pangolin from concept reference 2 and approved pixel style reference 3. New drawing, never recolor. Match reference 1 pose, facing LEFT, framing, extent and limb placement exactly: upright hovering, both gloved hands forward, boots dangling. Native canvas 48x72, enlarged 8x. MICA has jade overlapping rounded scales hood, tan long pangolin muzzle and segmented belly, eyelashes, white gloves, red lace boots, scaled tapering tail. No Sonic features, no blue, no quills. Crisp 16-bit pixel art with dark outline, limited colors, transparent background, one character only; no text, no ground shadow. Preserve entire native canvas padding.",
       "raw_sha256": "9e649606d5a8e5a4964d043ca66707f8bd2cc38d8bb17d9cb3b559cab95eeb08",
       "rows": [
@@ -78,11 +79,12 @@
         "000000000000000000000000000000000000000000000000",
         "000000000000000000000000000000000000000000000000"
       ],
-      "reduction": "Largest alpha component at threshold 128; Lanczos to manifest canvas; nearest fixed palette; largest complete silhouette fit inside native piece union; inside outline (except tiny passengers).",
+      "reduction": "Largest alpha component at threshold 128; Lanczos to manifest canvas; nearest fixed palette; native piece layout fit (see layout_fit); inside outline (except tiny passengers).",
       "reference": "native_pose.py piece semantics; build.py reference decoder; pinned docs/skdisasm",
       "coverage_note": ""
     },
     "normal_pose-01": {
+      "layout_fit": "complete silhouette uniform fit",
       "prompt": "Use case: style-transfer. One ORIGINAL MICA pangolin ending sprite. Reference 1 is native pose/framing, reference 2 character identity, reference 3 approved pixel-art style. normal form jade. Facing RIGHT, airborne upright, left side raised hand makes two-finger victory sign, other hand at waist, feet dangling. Preserve native pose exactly. Redraw from scratch as MICA: overlapping rounded scale hood and tapering scaled tail, long tan pangolin muzzle, eyelashes, tan segmented belly, white gloves, red lace-up boots. No hedgehog ears/quills, no Sonic face, no blue. Match native pose, proportions of bounding box and limb placement, no added props or companions. Crisp 16-bit pixel art limited flat colors, one-pixel dark outline, no gradients or glow. Completely transparent background, no shadow, no text.",
       "raw_sha256": "14f71036e24aa307c58e8110ac80f819041fe392efb667856dc49165d02dfc26",
       "rows": [
@@ -215,11 +217,12 @@
         "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
       ],
-      "reduction": "Largest alpha component at threshold 128; Lanczos to manifest canvas; nearest fixed palette; largest complete silhouette fit inside native piece union; inside outline (except tiny passengers).",
+      "reduction": "Largest alpha component at threshold 128; Lanczos to manifest canvas; nearest fixed palette; native piece layout fit (see layout_fit); inside outline (except tiny passengers).",
       "reference": "native_pose.py piece semantics; build.py reference decoder; pinned docs/skdisasm",
       "coverage_note": ""
     },
     "super_pose-00": {
+      "layout_fit": "complete silhouette uniform fit",
       "prompt": "Use case: style-transfer. One ORIGINAL MICA pangolin ending sprite. Reference 1 is native pose/framing, reference 2 character identity, reference 3 approved pixel-art style. GILDED GOLD scales instead of jade. Native reference 1 has scrambled art (coverage-only selector): use extra normal pose reference for its pose: facing LEFT upright hovering, gloves forward, boots dangling. Redraw from scratch as MICA: overlapping rounded scale hood and tapering scaled tail, long tan pangolin muzzle, eyelashes, tan segmented belly, white gloves, red lace-up boots. No hedgehog ears/quills, no Sonic face, no blue. Match native pose, proportions of bounding box and limb placement, no added props or companions. Crisp 16-bit pixel art limited flat colors, one-pixel dark outline, no gradients or glow. Completely transparent background, no shadow, no text.",
       "raw_sha256": "70a5718fc730bec79a43886693e5887ac3cab8825b4145034d86a1132d6a92ed",
       "rows": [
@@ -296,11 +299,12 @@
         "000000000000000000000000000000000000000000000000",
         "000000000000000000000000000000000000000000000000"
       ],
-      "reduction": "Largest alpha component at threshold 128; Lanczos to manifest canvas; nearest fixed palette; largest complete silhouette fit inside native piece union; inside outline (except tiny passengers).",
+      "reduction": "Largest alpha component at threshold 128; Lanczos to manifest canvas; nearest fixed palette; native piece layout fit (see layout_fit); inside outline (except tiny passengers).",
       "reference": "native_pose.py piece semantics; build.py reference decoder; pinned docs/skdisasm",
       "coverage_note": "Native Super selectors 0/1 scrambled; matching normal pose supplied as additional guide."
     },
     "super_pose-01": {
+      "layout_fit": "complete silhouette uniform fit",
       "prompt": "Use case: style-transfer. One ORIGINAL MICA pangolin ending sprite. Reference 1 is native pose/framing, reference 2 character identity, reference 3 approved pixel-art style. GILDED GOLD scales instead of jade. Native reference 1 has scrambled art (coverage-only selector): use extra normal pose reference for its pose: facing RIGHT upright airborne with raised two-finger victory-sign hand. Redraw from scratch as MICA: overlapping rounded scale hood and tapering scaled tail, long tan pangolin muzzle, eyelashes, tan segmented belly, white gloves, red lace-up boots. No hedgehog ears/quills, no Sonic face, no blue. Match native pose, proportions of bounding box and limb placement, no added props or companions. Crisp 16-bit pixel art limited flat colors, one-pixel dark outline, no gradients or glow. Completely transparent background, no shadow, no text.",
       "raw_sha256": "f84c79b8eb292ef63144c49d329b62f72b21c53f2a47ce99961ef8101b9702b5",
       "rows": [
@@ -433,11 +437,12 @@
         "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
       ],
-      "reduction": "Largest alpha component at threshold 128; Lanczos to manifest canvas; nearest fixed palette; largest complete silhouette fit inside native piece union; inside outline (except tiny passengers).",
+      "reduction": "Largest alpha component at threshold 128; Lanczos to manifest canvas; nearest fixed palette; native piece layout fit (see layout_fit); inside outline (except tiny passengers).",
       "reference": "native_pose.py piece semantics; build.py reference decoder; pinned docs/skdisasm",
       "coverage_note": "Native Super selectors 0/1 scrambled; matching normal pose supplied as additional guide."
     },
     "super_pose-02": {
+      "layout_fit": "complete silhouette uniform fit",
       "prompt": "Use case: style-transfer. One ORIGINAL MICA pangolin ending sprite. Reference 1 is native pose/framing, reference 2 character identity, reference 3 approved pixel-art style. GILDED GOLD scales instead of jade. Flying nearly horizontal toward LEFT, foreshortened leading left glove, smiling face left, boots extending to right. Match silhouette placement. Redraw from scratch as MICA: overlapping rounded scale hood and tapering scaled tail, long tan pangolin muzzle, eyelashes, tan segmented belly, white gloves, red lace-up boots. No hedgehog ears/quills, no Sonic face, no blue. Match native pose, proportions of bounding box and limb placement, no added props or companions. Crisp 16-bit pixel art limited flat colors, one-pixel dark outline, no gradients or glow. Completely transparent background, no shadow, no text.",
       "raw_sha256": "bd6ca5a6bfedd19843eb1070ea11b74d04fc9b87d8771f4a82ceacd7128b2b17",
       "rows": [
@@ -578,7 +583,7 @@
         "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
       ],
-      "reduction": "Largest alpha component at threshold 128; Lanczos to manifest canvas; nearest fixed palette; largest complete silhouette fit inside native piece union; inside outline (except tiny passengers).",
+      "reduction": "Largest alpha component at threshold 128; Lanczos to manifest canvas; nearest fixed palette; native piece layout fit (see layout_fit); inside outline (except tiny passengers).",
       "reference": "native_pose.py piece semantics; build.py reference decoder; pinned docs/skdisasm",
       "coverage_note": ""
     },

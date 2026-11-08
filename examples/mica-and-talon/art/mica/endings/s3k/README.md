@@ -64,7 +64,10 @@ With the disposable inputs available, re-reduce a group using:
 python3 -I examples/mica-and-talon/art/mica/endings/s3k/native_pose_redraw.py --review /tmp/mica-np-endings-s3k-20261108 --group reunion
 ```
 
-The reducer clips only to the manifest's native piece union, then inks its inside
-edge. Reviews retain native 8× inputs, full raw GPT images, and four-column
+The reducer fits reunion portraits as complete silhouettes inside the irregular
+piece union; these may be smaller within the unchanged canvas. Other groups
+preserve native height and compact rows that exceed native piece spans. This
+can narrow hood, glove or boot clusters; compare the raw column when judging
+that compromise. All silhouettes receive an inside ink edge. Reviews retain native 8× inputs, full raw GPT images, and four-column
 native/raw/reduced/previous MICA pages at 1×/4×. These checks certify image storage
 and native layout only; scene backgrounds and animation contact need engine review.
