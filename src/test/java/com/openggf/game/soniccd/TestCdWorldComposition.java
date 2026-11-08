@@ -112,7 +112,7 @@ import static org.junit.jupiter.api.Assertions.*;
   }
  }
  /** Genuine historical selected ingress: bounded positive Ring continuation and first-owner witness. */
- @Test void genuineControllerContinuesThroughDeathToTheNextMeasuredOwner()throws Exception{
+ @Test void genuineControllerPreservesGameOverAndTheLastClosedPreTransferCut()throws Exception{
   try(var b=fixture.start(1,0x80)){
    TestSonicCdR31aSelectedProfileLoading.ready(b);var frame=b.module.requirePlayerFrame();var host=b.module.r31WorldHost();var world=world(b.module);var placement=host.placement();
    var core=b.module.r31LoadingVisit();var terrain=host.currentTerrain();long generation=b.mode.getLevelManager().getCompletedProductionLoadGeneration();
@@ -122,7 +122,7 @@ import static org.junit.jupiter.api.Assertions.*;
    TestSonicCdR31aSelectedProfileLoading.Values p2before=null;byte[] p2pixels=null;int p2replayNext=-1;boolean p2replayed=false;
    int deathCut=-1;boolean deathReplayed=false,gameOverReplayed=false;
    java.util.Optional<com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat> ringCpu=java.util.Optional.empty();
-   for(int n=1;n<=1200;n++){
+   for(int n=1;n<=494;n++){
     try{
     TestSonicCdR31aSelectedProfileLoading.step(b,8);
     }catch(SonicCdR31aObjectPass.Unowned reached){frontier=reached;break;}catch(CdWorld.Unowned reached){frontier=reached;break;}
@@ -195,7 +195,7 @@ import static org.junit.jupiter.api.Assertions.*;
     assertThrows(IllegalStateException.class,()->b.module.serviceR31Loading(8));
     assertSame(beforeState,frame.state());assertSame(beforeEnvironment,frame.environment());assertSame(beforeClock,frame.vIntClock());
     var afterPool=placement.capture();assertEquals(beforePool.status(),afterPool.status());assertEquals(beforePool.pool().slots(),afterPool.pool().slots());assertArrayEquals(beforePool.savedFlags().copy(),afterPool.savedFlags().copy());
-   }else assertEquals(1200,completed);
+   }else assertEquals(494,completed);
 
   }
  }

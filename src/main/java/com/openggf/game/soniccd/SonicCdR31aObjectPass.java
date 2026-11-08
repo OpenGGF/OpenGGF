@@ -342,6 +342,13 @@ final class SonicCdR31aObjectPass {
             queue.close();queue=null;phase=Phase.DONE;return cpu;
         }catch(RuntimeException|Error original){phase=Phase.FAILED;queue.close();throw original;}finally{walkingThread=null;}
     }
+    /** Original World transfer only, after the actual walk and before its unexecuted draw tail. */
+    void abandonCompletedWalk(){
+        if(phase!=Phase.WALKED||queue==null||queue.phase()!=CdObjectDrawQueue.Phase.COLLECTING||busy()||dispatch!=null||walkingThread!=null)
+            throw new IllegalStateException("No complete unborrowed R31 walk to abandon");
+        if(frame.closed()||!frame.stageSource().ownsR31aAssets(assets)||!placement.ownsR31aAssets(assets)||!common.ownsAssets(assets))throw new IllegalStateException("R31 walk source retired");
+        queue.close();queue=null;phase=Phase.DONE;
+    }
     void discard(){if(busy()||phase==Phase.WALKING||phase==Phase.DRAINING||dispatch!=null)throw new IllegalStateException("Active R31 pass");if(queue!=null)queue.close();queue=null;phase=Phase.DISCARDED;}
     private boolean busy(){return gameOverOperation!=null||p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
     private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;case GAME_OVER->gameOver;};}

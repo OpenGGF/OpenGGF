@@ -1,5 +1,47 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — original R31 LevelStart reload and all-ten R6 initial DATA
+
+The same source-bound World/Core/Host/Frame lifetime now transfers its completed
+ordinary physical walk through native LevelStartNoReset, the existing fade/PLC
+loading owners and Ready. Grouped flower/object/camera clears prebuild complete
+owner references before original once-only adoption. Saved history outside those
+clear spans survives; placement cursors and pointers follow the native later
+SpawnInit. Boot and reload share the pure cleared-object values without a second
+state owner. The retained Root introSolid failure guard remains exact.
+
+The strict original-controller test requires both reloads: LevelStart returns at495,
+Ready reenters at541 and1082, and1,200 services return with612 ordinary services
+after the first transfer. Earlier Unowned stops cannot satisfy the oracle. This
+is repeated death/reload qualification, not forward-route or act completion.
+All ten Wacky Workbench INITIAL immutable terrain DATA bindings use the existing
+reader/decoder/cache/query owners; missing raw staging and actor/live projection
+boundaries stay explicit. TT and remaining QQZ packets are not installed here.
+
+R115 Maven exited0 with910 passing cases, zero failures/errors/skips, but its
+source-bound request remains INCOMPLETE: Root named PlayerBody in the wrong
+package and omitted the BootPrefix nested report/selector group. R115b changes
+only the external selection and passes327 cases, zero failures/errors/skips:
+315 actual level.TestCdPlayerBody and12 complete BootPrefix cases in its explicit
+nested topology. The two outer Boot identities occur in both runs.
+
+Qualification is the exact union910+327-2 =1,235 distinct identities, not one
+single1,235-case green execution. Both run source/index fingerprints are identical:
+`962f25b5eeae7ea93e35bb630bce75086ee5ac44679337aff0e0f1922cd0698a`.
+All13,539 production and13,555 test class files remain byte-exact across the
+supplemental run, the other32 original XML hashes are unchanged, the12 Frame
+selectors match literal identities, and all15 installed Java payloads match.
+The original incomplete receipt remains unchanged; no production or test source
+was adjusted to correct the selection. The first external readiness draft also
+rejected owner-only evidence dependencies before launching Maven; its corrected
+selection uses an explicit provenance description and preserves original modes.
+
+First source reviews found no scoped P1/P2 in the reload and remaining-R6 deltas.
+Focused checks use integration_packet run through normal Maven queue, Java25,
+original USA media and surfaceless EGL; no category/full-suite or regional result
+is implied. The natural21931/first21932 frontier remains a separate unfinished
+obligation. MAIN is untouched and this checkpoint remains private/local.
+
 ## 8 November 2026 — R61A/B and all-ten R8 initial terrain DATA
 
 Eight exact Java payloads qualify this checkpoint: three R61A/B bindings/tests,

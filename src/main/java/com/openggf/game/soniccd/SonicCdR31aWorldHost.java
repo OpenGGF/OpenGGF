@@ -317,6 +317,19 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
    if(publication!=null)frame.applyPreparedObjectSolidPublication(publication);image=next;
   }finally{eventing=false;}
  }
+ @Override public void clear(SonicCdR31aLoadingVisit.NativeClearCall original){
+  current();operationIdle();original.requireOwner(this);
+  if(!new Snapshot(image,placement.capture()).equals(original.externalBefore()))throw new IllegalStateException("Changed full native-clear Host/pool cut");
+  var before=externalCut();var action=original.action();var o=image.ordinary();Image ready;CdObjectPool.Snapshot poolReady=null;
+  switch(action){
+   case CLEAR_FLOWERS -> {var g=image.globals().flowers();ready=copy(g,original.scroll(),image.foreground(),image.background(),image.video(),image.sounds());ready=withOrdinary(ready,new OrdinaryImage(o.terrain(),OptionalInt.of(0),o.bossStarted(),Optional.of(zero(0x480)),o.writers(),o.amyCaptured()));}
+   case CLEAR_OBJECTS -> {if(!allZero(original.ready().reserved()))throw new HostBoundary(Boundary.LOAD_PRODUCT);var staging=CdObjectPool.stagingCopy(before.placement().pool());staging.clearDynamicSlots();poolReady=staging.capture();placement.pool().validateRestore(poolReady);ready=image;}
+   case CLEAR_CAMERA -> {ready=copy(image.globals().camera(),original.scroll(),image.foreground(),image.background(),image.video(),image.sounds());ready=new Image(this,ready.globals(),ready.scroll(),ready.foreground(),ready.background(),ready.video(),ready.clears(),ready.geometryReady(),ready.collisionPointer(),ready.fadeInfoWithoutTail(),ready.rngSeedLong(),OptionalInt.of(0),ready.sounds(),ready.ordinary());ready=withOrdinary(ready,new OrdinaryImage(o.terrain(),o.noBumper(),OptionalInt.of(0),o.shieldCpu(),o.writers(),o.amyCaptured()));}
+   default -> throw new IllegalArgumentException("Not a named native loop");
+  }
+  ready=receipt(ready,action);original.requireOwner(this);unchanged(before);
+  acting=true;try{original.applyNative();if(poolReady!=null)placement.pool().restore(poolReady);if(action==Action.CLEAR_CAMERA)placement.clearLevelStartCameraValues();image=ready;}finally{acting=false;}
+ }
  @Override public void act(Action action,State state){
   current();operationIdle();owner.requireAction(this,action,state);acting=true;
   try{switch(action){
@@ -331,15 +344,10 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
    case FRESH_RESET_PREFIX -> {var g=image.globals();image=receipt(globalsImage(with(g,g.ring(),g.live(),g.contact(),new CdOpeningObjectRuntime.ScoreGlobals(g.score().score(),5000,g.score().updateHudScore()),g.pauseMusicBit(),g.bonus(),g.animations(),g.paletteSteps7(),g.paletteTimers7())),action);}
    case RESET_SAVED_OBJECT_FLAGS -> {var ready=receipt(image,action);placement.resetSavedObjectFlags();image=ready;}
    case FRESH_RESET_SUFFIX -> {var g=image.globals();var r=g.ring();var next=with(g,new CdRingGlobals(r.rings(),frame.environment().globals().timeAttackMode()==0?3:1,r.livesFlags(),r.updateHudRings(),r.updateHudLives(),r.timeStopTimer(),r.ringAnimationTimer(),r.ringAnimationFrame()),g.live(),g.contact(),new CdOpeningObjectRuntime.ScoreGlobals(0,g.score().nextLifeScore(),g.score().updateHudScore()),g.pauseMusicBit(),g.bonus(),g.animations(),g.paletteSteps7(),g.paletteTimers7());var ready=receipt(globalsImage(next),action);external(()->authority.resetGoodFutureFlags(this));image=ready;}
-   case PLAY_LEVEL_MUSIC -> {if(state.calls().contains(Call.PLAY_LEVEL_MUSIC))throw new IllegalStateException("Music replay");var command=state.music().orElseThrow(()->new IllegalStateException("No original R31 programme command"));var sounds=new ArrayList<>(image.sounds());sounds.add(new SonicCdGameModule.PastLevelMusic(command));var ready=receipt(copy(image.globals(),image.scroll(),image.foreground(),image.background(),image.video(),sounds),action);external(()->authority.levelMusic(this,command));image=ready;}
-   case CLEAR_FLOWERS -> {
-    var o=image.ordinary();var ready=globalsImage(image.globals().flowers());
-    // Main178-184 [FF1600,FF2000): R3 noBumper FF1950 AND aniArtBuffer FF1980..FF1E00.
-    image=receipt(withOrdinary(ready,new OrdinaryImage(o.terrain(),OptionalInt.of(0),o.bossStarted(),Optional.of(zero(0x480)),o.writers(),o.amyCaptured())),action);
-   }
-   case CLEAR_OBJECTS -> {if(frame.state().header().slotId()!=0||!allZero(state.reserved()))throw new HostBoundary(Boundary.LOAD_PRODUCT);var actual=placement.capture();var staging=CdObjectPool.stagingCopy(actual.pool());staging.clearDynamicSlots();var cleared=staging.capture();var ready=receipt(image,action);placement.pool().validateRestore(cleared);if(!samePlacement(actual,placement.capture()))throw new IllegalStateException("Pool clear preimage changed");placement.pool().restore(cleared);image=ready;}
+   case PLAY_LEVEL_MUSIC -> {var command=state.music().orElseThrow(()->new IllegalStateException("No original R31 programme command"));var sounds=new ArrayList<>(image.sounds());sounds.add(new SonicCdGameModule.PastLevelMusic(command));var ready=receipt(copy(image.globals(),image.scroll(),image.foreground(),image.background(),image.video(),sounds),action);external(()->authority.levelMusic(this,command));image=ready;}
+   case CLEAR_FLOWERS,CLEAR_OBJECTS,CLEAR_CAMERA -> throw new IllegalStateException("Native loop requires original coupled clear call");
    case CLEAR_MISC -> {var ready=globalsImage(image.globals().misc());image=receipt(new Image(this,ready.globals(),ready.scroll(),ready.foreground(),ready.background(),ready.video(),ready.clears(),ready.geometryReady(),ready.collisionPointer(),ready.fadeInfoWithoutTail(),OptionalLong.of(0),ready.targetRightBoundWord(),ready.sounds(),ready.ordinary()),action);}
-   case CLEAR_CAMERA -> {if(!coldSpawner(placement.status()))throw new HostBoundary(Boundary.SPAWNER_CAMERA_CLEAR_OWNER);var ready=globalsImage(image.globals().camera());var cleared=receipt(new Image(this,ready.globals(),ready.scroll(),ready.foreground(),ready.background(),ready.video(),ready.clears(),ready.geometryReady(),ready.collisionPointer(),ready.fadeInfoWithoutTail(),ready.rngSeedLong(),OptionalInt.of(0),ready.sounds(),ready.ordinary()),action);var o=cleared.ordinary();image=withOrdinary(cleared,new OrdinaryImage(o.terrain(),o.noBumper(),OptionalInt.of(0),o.shieldCpu(),o.writers(),o.amyCaptured()));}
+
    case CLEAR_SCREEN -> {clearScreen(state);image=receipt(image,action);}
    case LEVEL_SIZE -> image=receipt(new Image(this,image.globals(),image.scroll(),image.foreground(),image.background(),image.video(),image.clears(),image.geometryReady(),image.collisionPointer(),image.fadeInfoWithoutTail(),image.rngSeedLong(),OptionalInt.of(assets.bounds().right()),image.sounds(),image.ordinary()),action);
    case DROWN_TIMER -> image=receipt(globalsImage(image.globals().drown()),action);

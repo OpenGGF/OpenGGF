@@ -326,6 +326,12 @@ public final class CdObjectPlacementRuntime {
         return new Status(routine, previousChunk, right, left, header(0), header(1), nullRight, nullLeft);
     }
 
+    /** Main.ClearCamera [FFF700,FFF800), Definitions291-298 at N1ecc5f3a:
+     * only spawner routine/previous WORD/four layout pointers. Zero pointers are represented
+     * as unbound cursors until native Init binds the actual source lists. Saved2+764 and full96
+     * are nonwrites. Caller owns genuine native action; this finite writer grants no authority. */
+    public void clearLevelStartCameraValues(){routine=0;previousChunk=0;right=0;left=0;nullRight=-1;nullLeft=-1;}
+
     /** ResetSavedObjFlags (11-20), a separate source lifetime from Init, pool clear and rewind. */
     public void resetSavedObjectFlags() {
         Arrays.fill(savedFlags, (byte) 0);

@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd;
 
+import com.openggf.game.soniccd.SonicCdR31aLoadingVisit.NativeClearCall;
 import com.openggf.game.soniccd.level.*;
 import com.openggf.game.soniccd.media.CdProgramAssets;
 import com.openggf.game.soniccd.objects.*;
@@ -19,7 +20,7 @@ import static com.openggf.game.soniccd.SonicCdR31aLoadingVisit.*;
 /** Tests FIRST, author Java/GL UNRUN. Actual immutable original USA source with explicitly
  * CONSTRUCTED complete Host/Entry/Authority controls, not Module/boot/World/FULL/pixel admission. */
 class TestSonicCdR31aWorldHost {
- @Test void finiteSurfaceRetainsConstructorFiveAndUnchangedHostEleven(){assertEquals(5,SonicCdR31aWorldHost.class.getDeclaredConstructors()[0].getParameterCount());assertEquals(6,SonicCdR31aWorldHost.Initial.class.getRecordComponents().length);assertEquals(11,Host.class.getDeclaredMethods().length);assertFalse(java.lang.reflect.Modifier.isPublic(SonicCdR31aWorldHost.class.getModifiers()));}
+ @Test void finiteSurfaceRetainsConstructorFiveAndAddsOnlyTheOriginalClearPort(){assertEquals(5,SonicCdR31aWorldHost.class.getDeclaredConstructors()[0].getParameterCount());assertEquals(6,SonicCdR31aWorldHost.Initial.class.getRecordComponents().length);assertEquals(12,Host.class.getDeclaredMethods().length);assertTrue(Arrays.stream(NativeClearCall.class.getDeclaredConstructors()).allMatch(c->java.lang.reflect.Modifier.isPrivate(c.getModifiers())));assertFalse(java.lang.reflect.Modifier.isPublic(SonicCdR31aWorldHost.class.getModifiers()));}
  @Test void constructorRetainsTheActualPoolBankFrameAndUnknownClockWithoutInit()throws Exception{
   try(var h=new Harness(3,0,OptionalInt.empty())){assertEquals(Phase.START,h.core.state().phase());assertSame(h.pool,h.host.placement());assertEquals(h.poolBefore.status(),h.pool.status());assertEquals(h.poolBefore.pool().slots(),h.pool.capture().pool().slots());assertArrayEquals(h.poolBefore.savedFlags().copy(),h.pool.capture().savedFlags().copy());assertSame(h.initial.video(),h.host.video());assertSame(h.initial.scroll(),h.host.scroll());assertSame(h.initial.globals(),h.host.globals());assertTrue(h.frame.vIntClock().absoluteSeed().isEmpty());assertEquals(7,h.frame.vIntClock().deltaSinceAdmittedCut());assertTrue(h.host.clears().isEmpty());assertTrue(h.selections.isEmpty());assertFalse(h.host.geometryReady());assertEquals(OptionalInt.of(0xBEEF),h.host.targetRightBoundWord());assertEquals(OptionalLong.of(0x123456),h.host.collisionPointer());assertEquals(OptionalLong.of(0x89ABCDEFL),h.host.rngSeedLong());assertEquals(OptionalInt.of(0x1234),h.host.paletteFadeInfoWord());}
  }
@@ -82,10 +83,10 @@ class TestSonicCdR31aWorldHost {
  @Test void actualInitialPlacementAndCurrentSourceCannotBeSubstituted()throws Exception{
   try(var h=new Harness(1,0,OptionalInt.of(0))){var detached=new CdObjectPlacementRuntime(h.assets.placements());var i=h.initial;var bad=new SonicCdR31aWorldHost.Initial(i.globals(),i.scroll(),i.planes(),i.video(),detached,i.nativeCarry());assertThrows(IllegalArgumentException.class,()->new SonicCdR31aWorldHost(h,h.assets,h.frame,h.art,bad));assertThrows(IllegalArgumentException.class,()->new SonicCdR31aWorldHost.Video(fill(512,0),Optional.empty(),h.frame.artState(),i.video().current(),i.video().selected()));}
  }
- @Test void initializedSpawnerStopsAtTheActualCameraClearWithoutRollingBackEarlierPoolClear()throws Exception{
+ @Test void initializedSpawnerReceivesActualCameraClearWithoutChangingSavedFlags()throws Exception{
   try(var h=new Harness(3,0,OptionalInt.of(0))){
    // Explicit component-only prior spawner invocation, not a natural R31 World ingress.
-   h.pool.spawnObjects(0,1);assertNotEquals(0,h.pool.status().routine());h.core.begin();var f=assertThrows(SonicCdR31aWorldHost.HostBoundary.class,()->h.core.service(0));assertEquals(SonicCdR31aWorldHost.Boundary.SPAWNER_CAMERA_CLEAR_OWNER,f.boundary());assertTrue(h.core.state().calls().contains(Call.CLEAR_OBJECTS));assertFalse(h.core.state().calls().contains(Call.CLEAR_CAMERA));for(var slot:h.pool.capture().pool().slots())assertTrue(zero(CdAssetBytes.copyOf(slot.copyBytes())));assertNotEquals(0,h.pool.status().routine());assertTrue(h.frame.closed());
+   h.pool.spawnObjects(0,1);assertNotEquals(0,h.pool.status().routine());var saved=h.pool.capture().savedFlags();h.core.begin();h.core.service(0);assertTrue(h.core.state().calls().contains(Call.CLEAR_OBJECTS));assertTrue(h.core.state().calls().contains(Call.CLEAR_CAMERA));for(var slot:h.pool.capture().pool().slots())assertTrue(zero(CdAssetBytes.copyOf(slot.copyBytes())));assertEquals(new CdObjectPlacementRuntime.Status(0,0,0,0,saved.unsignedByte(0),saved.unsignedByte(1),-1,-1),h.pool.status());assertArrayEquals(saved.copy(),h.pool.capture().savedFlags().copy());assertFalse(h.frame.closed());
   }
  }
  @Test void publicationFullPoolFenceRejectsAnUnownedCallbackMutationWithoutHidingItsPrefix()throws Exception{

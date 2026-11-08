@@ -62,6 +62,7 @@ final class SonicCdR31aLoadingVisit {
         Scroll scroll();void storeScroll(Scroll before,Scroll ready);void events(State state);
         CdAssetBytes cpuSat(State expectedState);
         void act(Action action,State state);
+        void clear(NativeClearCall original);
         /**
          * Publish under the original scope. Selector C always uses normal colours; selector12
          * reads the actual Host-owned waterFullscreen byte (Main.asm DoVIntUpdates:942-952).
@@ -155,6 +156,15 @@ final class SonicCdR31aLoadingVisit {
                 throw new IllegalStateException("Original prevalidated R31 Core pair expired");
             values=ready;preparedBefore=null;prepared=null;
         }
+        /** Original Main405-408 transfer, only after this World's actual complete physical walk.
+         * Reuses LevelStart over retained live fields; never Start or an Entry/capture reseed. */
+        void beginLevelStart(CdWorld world){
+            requireOwner(world);world.requireLevelStartOwner(SonicCdR31aLoadingVisit.this);
+            if(values.program().demoDataIndexWord()!=0x800&&values.level().levelRestart()==0)
+                throw new IllegalStateException("Native LevelStart branch not reached");
+            world.abandonLevelStartWalk(SonicCdR31aLoadingVisit.this);
+            levelStart();
+        }
         /** Native slow service reads the actual scrollLock WORD; artOp retains reached fault prefixes. */
         void serviceSlowPlc(State expected,int scrollLockWord){validate(expected);word(scrollLockWord);artOp(a->art.serviceSlow(a,scrollLockWord));}
         /** Actual ProcessPLCs over the current descriptor/decoder pair, not completed-effect replay. */
@@ -204,6 +214,34 @@ final class SonicCdR31aLoadingVisit {
             var result=new CycleResult(normal,CdAssetBytes.copyOf(t),CdAssetBytes.copyOf(s),writes,fault);
             return result;
         }
+    }
+    /** Three finite native loops, produced only by current mainLoad. Not a generic State adopter.
+     * Candidates are inert; only this private pending identity can execute once on its full pair. */
+    final class NativeClearCall {
+        private final Action action;private final State before=values,ready;
+        private final CdPlayerFrameRuntime.LevelStartClear frameReady;
+        private final Scroll scrollBefore,scrollReady;private final Object hostBefore;
+        private final Thread thread=Thread.currentThread();private boolean applied;
+        private NativeClearCall(Action a){
+            action=a;ready=a==Action.CLEAR_OBJECTS?before.reserved(zero(1984)):before;
+            frameReady=switch(a){case CLEAR_FLOWERS->frame.prepareLevelStartFlowersClear();case CLEAR_OBJECTS->frame.prepareLevelStartObjectClear();case CLEAR_CAMERA->frame.prepareLevelStartCameraClear();default->throw new IllegalArgumentException("Not a native clear loop");};
+            scrollBefore=readScroll();scrollReady=switch(a){case CLEAR_FLOWERS->flowersCleared(scrollBefore);case CLEAR_CAMERA->cameraCleared(scrollBefore);default->scrollBefore;};
+            hostBefore=Objects.requireNonNull(host.capture());
+        }
+        Action action(){return action;}State before(){return before;}State ready(){return ready;}Scroll scroll(){return scrollReady;}Object externalBefore(){return hostBefore;}
+        void requireOwner(Host expected){
+            if(expected!=host||nativeClear!=this||!running||failed||activeAction!=action||values!=before||applied||thread!=Thread.currentThread())throw new IllegalStateException("No original current native clear loop");
+            validateHost();frame.validateLevelStartClear(frameReady);
+        }
+        void applyNative(){requireOwner(host);frame.applyLevelStartClear(frameReady);values=ready;applied=true;}
+    }
+    private NativeClearCall nativeClear;
+    private void clearNative(Action action){
+        validateHost();if(nativeClear!=null||activeAction!=null)throw new IllegalStateException("Native clear reentry");
+        var original=new NativeClearCall(action);nativeClear=original;activeAction=action;
+        try{original.requireOwner(host);host.clear(original);if(!original.applied)throw new IllegalStateException("Native clear omitted original publication");validateHost();}
+        finally{nativeClear=null;activeAction=null;}
+        call(Call.valueOf(action.name()));
     }
     private final Host host;private final CdR31aAssets assets;private final CdPlayerFrameRuntime frame;private final CdR31aSectionArt art;
     private final CdProgramInitialization.ExecutionEnvironment executionEnvironment;private final CdR31aBackgroundScroll background;
@@ -279,6 +317,8 @@ final class SonicCdR31aLoadingVisit {
         }catch(RuntimeException|Error original){terminal(original);throw original;}finally{running=false;}
     }
     private void levelStart(){
+        // Progress is continuation metadata. Live native fields/display/owners survive entry.
+        values=values.progress(0,0,values.displayEnabled()).returnKind(ReturnKind.NONE);
         var p=values.program();values=values.program(p.entry(p.timeStonesByte()==0x7F&&frame.environment().globals().timeAttackMode()==0));frame.beginLevelStart();act(Action.ENTRY_STORES);
         var l=values.level();boolean fresh=(l.plcLoadFlags()&1)==0;
         values=values.level(level(l,l.levelRestart(),l.updateHudTime(),fresh?0:l.checkpoint(),l.spawnMode(),l.plcLoadFlags()|1,l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()));
@@ -357,9 +397,9 @@ final class SonicCdR31aLoadingVisit {
         values=values.music(Optional.of(programme.selectLevelMusic(g.zoneAct(),g.timeZone(),frame.environment().globals().timeAttackMode(),values.program().goodFutureByte())));act(Action.PLAY_LEVEL_MUSIC);
         int id=assets.view(CdR31aAssets.Asset.LEVEL_DATA_INDEX).unsignedByte(0);if(id!=0){artOp(a->art.loadImmediateList(a,id));call(Call.IMMEDIATE_LEVEL);}artOp(a->art.loadImmediateList(a,1));call(Call.IMMEDIATE_STANDARD);
         var l=values.level();values=values.level(level(l,l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),0,0,0,l.timeOver()));act(Action.CLEAR_POWERUP_FLOWERS);act(Action.CLEAR_DRAW_QUEUE);
-        frame.clearLevelStartFlowersPlayerValues();clearFlowersScroll();act(Action.CLEAR_FLOWERS);
-        values=values.reserved(zero(1984));act(Action.CLEAR_OBJECTS);act(Action.CLEAR_UNKNOWN_BUFFER);act(Action.CLEAR_MISC);
-        frame.clearLevelStartCameraPlayerValues();clearCameraScroll();act(Action.CLEAR_CAMERA);values=values.program(values.program().demoIndex(0));act(Action.CLEAR_DEMO_INDEX);
+        clearNative(Action.CLEAR_FLOWERS);
+        clearNative(Action.CLEAR_OBJECTS);act(Action.CLEAR_UNKNOWN_BUFFER);act(Action.CLEAR_MISC);
+        clearNative(Action.CLEAR_CAMERA);values=values.program(values.program().demoIndex(0));act(Action.CLEAR_DEMO_INDEX);
         byte[] water=values.waterPalette().copy();Arrays.fill(water,0,4,(byte)0);values=values.colours(values.normalPalette(),values.fadePalette(),CdAssetBytes.copyOf(water),values.displayedPalette());clearScreenScroll();act(Action.CLEAR_SCREEN);act(Action.DROWN_TIMER);
         paletteCopy(assets.view(CdR31aAssets.Asset.PAL_SONIC),0,true);paletteCopy(assets.view(CdR31aAssets.Asset.PAL_SONIC),0,false);call(Call.PALETTE_SONIC);
         var bounds=assets.bounds();frame.initializeLevelSizePlayerValues(new CdPlayerMovement.Bounds(bounds.left(),bounds.right(),bounds.bottom(),frame.environment().movement().bounds().bossFight()),bounds.cameraCentreY());initializeSizeScroll();act(Action.LEVEL_SIZE);
@@ -389,8 +429,9 @@ final class SonicCdR31aLoadingVisit {
         values=values.colours(CdAssetBytes.copyOf(normal),values.fadePalette(),values.waterPalette(),values.displayedPalette()).phase(white?Phase.FROM_WHITE:Phase.FROM_BLACK);
     }
     private void paletteCopy(CdAssetBytes source,int offset,boolean normal){byte[] bytes=(normal?values.normalPalette():values.fadePalette()).copy();System.arraycopy(source.copy(),0,bytes,offset,source.length());values=values.colours(normal?CdAssetBytes.copyOf(bytes):values.normalPalette(),normal?values.fadePalette():CdAssetBytes.copyOf(bytes),values.waterPalette(),values.displayedPalette());}
-    private void clearFlowersScroll(){var s=readScroll();var b=s.background();var c=new CdR11aBackgroundPlane.Camera(0,0);var copies=new Copies(0,0,new CdR11aBackgroundPlane.CopiedCameras(c,c,c),0,new CdR11aBackgroundPlane.FlagWords(0,0,0));storeScroll(s,new Scroll(s.foreground(),bg(b,b.cameraBgX(),b.cameraBgY(),b.cameraBg2X(),b.cameraBg2Y(),b.cameraBg3X(),b.cameraBg3Y(),b.crossingRam(),b.scrollFlagsBg(),b.scrollFlagsBg2(),b.scrollFlagsBg3(),zero(512),b.deformationRam(),b.hscrollRam(),b.vscroll()),copies,s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord()));}
-    private void clearCameraScroll(){var s=readScroll();var b=s.background();storeScroll(s,new Scroll(new CdR11aForegroundScroll.State(0,0,0,0,0,0,0,0,0,0,0),bg(b,0,0,0,0,0,0,zero(8),0,0,0,b.cloudRam(),b.deformationRam(),b.hscrollRam(),b.vscroll()),s.copies(),0,0,0));}
+    private static Scroll flowersCleared(Scroll s){var b=s.background();var c=new CdR11aBackgroundPlane.Camera(0,0);var copies=new Copies(0,0,new CdR11aBackgroundPlane.CopiedCameras(c,c,c),0,new CdR11aBackgroundPlane.FlagWords(0,0,0));return new Scroll(s.foreground(),bg(b,b.cameraBgX(),b.cameraBgY(),b.cameraBg2X(),b.cameraBg2Y(),b.cameraBg3X(),b.cameraBg3Y(),b.crossingRam(),b.scrollFlagsBg(),b.scrollFlagsBg2(),b.scrollFlagsBg3(),zero(512),b.deformationRam(),b.hscrollRam(),b.vscroll()),copies,s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord());}
+    private static Scroll cameraCleared(Scroll s){var b=s.background();return new Scroll(new CdR11aForegroundScroll.State(0,0,0,0,0,0,0,0,0,0,0),bg(b,0,0,0,0,0,0,zero(8),0,0,0,b.cloudRam(),b.deformationRam(),b.hscrollRam(),b.vscroll()),s.copies(),0,0,0);}
+
     private void clearScreenScroll(){var s=readScroll();var b=s.background();storeScroll(s,new Scroll(s.foreground(),bg(b,b.cameraBgX(),b.cameraBgY(),b.cameraBg2X(),b.cameraBg2Y(),b.cameraBg3X(),b.cameraBg3Y(),b.crossingRam(),b.scrollFlagsBg(),b.scrollFlagsBg2(),b.scrollFlagsBg3(),b.cloudRam(),b.deformationRam(),zero(1024),0),s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord()));}
     private void initializeSizeScroll(){var s=readScroll();var f=s.foreground();var b=assets.bounds();storeScroll(s,new Scroll(new CdR11aForegroundScroll.State(f.cameraX(),f.cameraY16_16(),16,16,f.scrollXDiff(),f.scrollYDiff(),f.scrollFlags(),b.bottom(),b.left(),f.bottomBoundShift(),f.scrollLock()),s.background(),s.copies(),s.foregroundXFractionWord(),b.top(),s.waterDeformWord()));}
     private void setupScroll(){var s=readScroll();var m=frame.state().motion();var f=CdR11aForegroundScroll.checkpointSetupCamera(s.foreground(),m.centreX16_16()>>>16,m.centreY16_16()>>>16,frame.environment().movement().bounds());var b=background.initialize(s.background(),new CdR31aBackgroundScroll.InitInput(f.cameraX(),f.cameraYWord()));storeScroll(s,new Scroll(f,b,s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord()));}

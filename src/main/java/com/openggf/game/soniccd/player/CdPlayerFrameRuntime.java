@@ -1174,7 +1174,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      * Native title-lock1 is conditional and is not part of this clear. Prepare every
      * immutable reference before adopting the complete represented projection.
      */
-    public void clearLevelStartCameraPlayerValues() {
+    public LevelStartClear prepareLevelStartCameraClear() {
         requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
         var before = state; var old = environment; var movement = old.movement();
         var gates = movement.gates(); var globals = movement.globals(); var bodyGlobals = old.globals();
@@ -1193,8 +1193,10 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 new CdPlayerBody.Globals(bodyGlobals.levelFrames(), 0, bodyGlobals.timeAttackMode(), bodyGlobals.debugMode(),
                         bodyGlobals.debugCheat(), 0, bodyGlobals.invincible(), bodyGlobals.bossMusic()), old.dynamicSlots());
         var nextArt = new CdPlayerArtRuntime.State(oldArt.cpuBuffer(), oldArt.residentBank(), 0, false);
-        state = nextState; environment = nextEnvironment; art.restore(nextArt);
+        return new LevelStartClear(nextState,nextEnvironment,nextArt,display,vIntClock);
     }
+    public void clearLevelStartCameraPlayerValues(){applyLevelStartClear(prepareLevelStartCameraClear());}
+
 
     // BEGIN fixed native LevelStart player value writers.
     /**
@@ -1382,7 +1384,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      * The earlier selector-C pulse precedes these stores. No other player, input,
      * art, clock authority or source value is reset; the actual Module owns order.
      */
-    public void clearLevelStartFlowersPlayerValues() {
+    public LevelStartClear prepareLevelStartFlowersClear() {
         requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
         var old = environment; var movement = old.movement(); var gates = movement.gates(); var globals = old.globals();
         var nextGates = new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), 0, gates.waterSlide(),
@@ -1392,8 +1394,10 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         var next = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(movement.physics(), movement.bounds(),
                 nextGates, movement.globals()), old.controls(), nextGlobals, old.dynamicSlots());
         var clock = new VIntClock(OptionalLong.of(0), 0);
-        environment = next; vIntClock = clock;
+        return new LevelStartClear(state,next,art.capture(),display,clock);
     }
+    public void clearLevelStartFlowersPlayerValues(){applyLevelStartClear(prepareLevelStartFlowersClear());}
+
 
     /**
      * PP LevelSizeLoad:21-36 writes the source current bounds and camera centres.
@@ -1427,6 +1431,36 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      * changes only this Frame's existing pause authority; it neither represents the omitted native
      * music-pause latch/lower byte nor certifies a LevelStart invocation. Root owns the actual scope.
      */
+    /** Pure DATA projection of the represented primary64 clear. History is outside objects;
+     * Main186-192 clears actor bytes including links/rotation, never the surviving history.
+     * Used by the real broad boot clear and the current LevelStart clear; no invocation authority. */
+    public static CdPlayerBody.State clearedObjectValues(CdPlayerBody.History history){
+        Objects.requireNonNull(history);
+        return new CdPlayerBody.State(new CdPlayerMotionState(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),
+            new CdPlayerBody.AnimationCursor(0,0,0),new CdPlayerBody.Header(0,0,0,0,0),new CdPlayerBody.Timers(0,0,0,0),history,0,new CdPlayerBody.ObjectLinks(0,0),0);
+    }
+    /** Finite prepared primary-clear DATA. Original Core/Host action alone authenticates execution.
+     * Full reference fences and once retirement supplement the existing value-CAS conventions. */
+    public final class LevelStartClear {
+        private final CdPlayerFrameRuntime owner=CdPlayerFrameRuntime.this;
+        private final CdPlayerBody.State before=state,ready;
+        private final CdPlayerBody.Environment env=environment,readyEnv;
+        private final Optional<CdPlayerBody.DisplayPublication> shown=display,readyDisplay;
+        private final CdPlayerArtRuntime.State artBefore=art.capture(),readyArt;
+        private final VIntClock clock=vIntClock,readyClock;private final boolean pause=paused;
+        private final Thread thread=Thread.currentThread();private boolean applied;
+        private LevelStartClear(CdPlayerBody.State s,CdPlayerBody.Environment e,CdPlayerArtRuntime.State a,Optional<CdPlayerBody.DisplayPublication> d,VIntClock c){ready=s;readyEnv=e;readyArt=a;readyDisplay=d;readyClock=c;}
+    }
+    public LevelStartClear prepareLevelStartObjectClear(){requireOpenIdle();requireClosedFrame();requireSourceFamily();return new LevelStartClear(clearedObjectValues(state.history()),environment,art.capture(),Optional.empty(),vIntClock);}
+    public void validateLevelStartClear(LevelStartClear p){
+        requireOpenIdle();requireClosedFrame();requireSourceFamily();Objects.requireNonNull(p);
+        if(p.owner!=this||p.applied||p.thread!=Thread.currentThread()||state!=p.before||environment!=p.env||display!=p.shown||art.capture()!=p.artBefore||vIntClock!=p.clock||paused!=p.pause)
+            throw new IllegalArgumentException("Stale/retired complete native-clear pair");
+    }
+    public void applyLevelStartClear(LevelStartClear p){validateLevelStartClear(p);state=p.ready;environment=p.readyEnv;art.restore(p.readyArt);display=p.readyDisplay;vIntClock=p.readyClock;p.applied=true;}
+
+    /** Native LevelStart35 pause store, independently of the named clear preparations above. */
+
     public void beginLevelStart() {
         requireOpenIdle(); requireClosedFrame();
         paused = false;

@@ -18,9 +18,10 @@ matching area heading; see the
   their native callback and fault prefixes;1,155 focused checks pass without skips.
   One source-bound World now replaces the R13-only coordinator and drives both
   R13 and R31 through their existing ordinary owners. Selected original-USA CCZ
-  entry now completes494 controller services through Ring, the intro family,
-  guarded Solid publication, the shared native primary death lifecycle and
-  original Game Over, stopping before LevelStart reload on attempted495.
+  entry now completes1,200 controller services through Ring, the intro family,
+  guarded Solid publication, shared native death/Game Over and two genuine
+  LevelStart reloads. Ready reenters at541 and1082 through the same World lifetime;
+  this verifies repeated-death reloads, with forward-route work continuing.
   Full/course restore retains
   selected closed state and pixels. Compound Solid preparation faults preserve
   the original native exception; available prefixes publish after preparation;
@@ -53,24 +54,28 @@ matching area heading; see the
   boundaries; real no-section and unavailable-palette metadata does not invent work.
   R13 and R31 now share death-camera stores and lifecycle preparation. The combined
   1,460 checks pass without failures, errors or skips, including315 direct Body cases;
-  no completed reload, natural CCZ transition or regional parity is claimed.
+  natural CCZ transition and regional parity remain separate qualifications.
   QQZ1 Present/Past terrain and physical R6/R7 placement DATA now use the same
   shared readers and decoders. Metallic Madness's compact188-frame visual DATA
   uses the existing Sonic decoder without padding or a second format algorithm.
   The combined1,100 checks pass without failures, errors or skips; the existing
   sky-colour regression and selected CCZ replay remain qualified. These DATA
-  bindings do not admit later-zone gameplay or complete a CCZ reload.
+  bindings alone do not admit later-zone gameplay.
   Stardust Speedway's ten DATA profiles now parse all authenticated load formats,
   retaining the genuine unavailable palette slot, real RTS section alternatives
   and canonical act-gated cycle data. One cached shared Game Over component uses
   original R31/R13 publications and dirty-slot allocation semantics. The combined
   1,008 World, component and DATA checks pass without failures, errors or skips;
-  reload and live later-zone palette/section service remain separate.
+  live later-zone palette/section service remains separate.
   Wacky Workbench1 Present/Past and all ten Metallic Madness initial terrain DATA
   profiles use that same decoder, cache and query machinery, retaining raw unknown
   staging references and native collision bounds. Across the terrain cohort and
   its test-only fixture recheck,457 distinct focused identities are qualified;
   live R6/R8 player and World admission remain unsupported.
+  All ten Wacky Workbench initial terrain DATA profiles now use the shared
+  mechanism. The reload/terrain checkpoint qualifies1,235 distinct focused cases
+  across two source-identical runs, without failures or skips in executed cases;
+  the original incomplete selection receipt remains explicit.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

@@ -59,7 +59,7 @@ final class CdR6ProgrammeProfiles {
                 cycles,f.bossPaletteOverride()?CycleProgramme.FOUR_WITH_BOSS_COLOR_OVERRIDE:CycleProgramme.STANDARD_FOUR,
                 new InitQueueUpdateRts(2),background);
     }
-    /** Initial immutable source profiles only. Other originals have no terrain DATA binding.
+    /** Initial immutable source profiles only; no live staging or source-family admission.
      * N LoadLevelData (Level/Wacky Workbench/Load Level Data.asm:11-32,52-93),
      * LoadStageData/LoadStageMap (r6/stage_data_load_1b.asm:3-69).
      * Native collision tests solidity13/14 before its BYTE read; raw render1019 in R61B stays unowned.
@@ -67,8 +67,7 @@ final class CdR6ProgrammeProfiles {
     private static Optional<Terrain> initialTerrain(CdR6DataLayout.Programme p) {
         return switch(p) {
             case R61A -> Optional.of(initialTerrain(p,"LevelBlocks","Art_LevelTiles","LevelCollision","ColAngleMap","ColHeightMap","ColWidthMap"));
-            case R61B -> Optional.of(initialTerrain(p,"StageBlocks","StageGfx","StageCollision","StageCollisionAngles","StageCollisionColumns","StageCollisionRows"));
-            case R61C,R61D,R62A,R62B,R62C,R62D,R63C,R63D -> Optional.empty();
+            case R61B,R61C,R61D,R62A,R62B,R62C,R62D,R63C,R63D -> Optional.of(initialTerrain(p,"StageBlocks","StageGfx","StageCollision","StageCollisionAngles","StageCollisionColumns","StageCollisionRows"));
         };
     }
     private static Terrain initialTerrain(CdR6DataLayout.Programme p,String blocks,String patterns,String ids,

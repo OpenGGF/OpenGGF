@@ -53,9 +53,7 @@ class TestCdR6DataLayout {
             assertEquals(span,equal);assertThrows(IllegalArgumentException.class,()->r.view(equal));
         }
         assertEquals(p.payload(),r.definition().payload());assertTrue(r.definition().r3().isEmpty());assertTrue(r.definition().tt().isEmpty());
-        if(p==CdR6DataLayout.Programme.R61A || p==CdR6DataLayout.Programme.R61B) {
-            assertEquals(p.terrain().blockBytes()/8,r.terrain().blockCount());assertThrows(UnsupportedOperationException.class,r.terrain()::shape);
-        } else assertThrows(UnsupportedOperationException.class,r::terrain);
+        assertEquals(p.terrain().blockBytes()/8,r.terrain().blockCount());assertThrows(UnsupportedOperationException.class,r.terrain()::shape);
         assertThrows(UnsupportedOperationException.class,r::ordinaryZoneActWord);
         assertThrows(IllegalArgumentException.class,()->CdProgrammeData.fromReader(r));
     }

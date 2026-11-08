@@ -95,10 +95,8 @@ final class CdOriginalBootPrefix {
         var c=mainClears();
         // BRAM Initialization64-69 [FFA000,FFFC00), together with the retained MAINVARS outputs.
         // Definitions125-167: actual primary/history/artCPU/reserved/pool. No actor Init executes here.
-        var actor=new com.openggf.game.soniccd.player.CdPlayerBody.State(new com.openggf.game.soniccd.player.CdPlayerMotionState(
-                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),
-                new com.openggf.game.soniccd.player.CdPlayerBody.AnimationCursor(0,0,0),new com.openggf.game.soniccd.player.CdPlayerBody.Header(0,0,0,0,0),
-                new com.openggf.game.soniccd.player.CdPlayerBody.Timers(0,0,0,0),new com.openggf.game.soniccd.player.CdPlayerBody.History(zero(256),0),0,new com.openggf.game.soniccd.player.CdPlayerBody.ObjectLinks(0,0),0);
+        var actor=com.openggf.game.soniccd.player.CdPlayerFrameRuntime.clearedObjectValues(
+                new com.openggf.game.soniccd.player.CdPlayerBody.History(zero(256),0));
         var environment=new com.openggf.game.soniccd.player.CdPlayerBody.Environment(new com.openggf.game.soniccd.player.CdPlayerMovement.Environment(
                 new com.openggf.game.soniccd.player.CdPlayerMovement.Physics(0,0,0),new com.openggf.game.soniccd.player.CdPlayerMovement.Bounds(0,0,0,0),
                 new com.openggf.game.soniccd.player.CdPlayerMovement.Gates(0,0,c.miniSonic(),0,0,c.speedShoes(),0),

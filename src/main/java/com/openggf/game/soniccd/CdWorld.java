@@ -73,6 +73,8 @@ final class CdWorld implements SonicCdAct3FutureLoadingVisit.OrdinaryOwner,
  void requirePlace(CdPlayerFrameRuntime.R31PlaceCall original){requireCut(Cut.RUN_OBJECTS);if(!(binding instanceof R31 b))throw new IllegalArgumentException("Foreign PlaceBlock programme");b.objects.requirePlace(original);}
  void requireOldExitOwner(SonicCdAct3FutureLoadingVisit core){requireCut(Cut.POST_OBJECT_CAMERA);if(!(binding instanceof R13 b))throw new IllegalArgumentException("Foreign transfer programme");b.requireOldExitOwner(core);}
  void abandonOldExitWalk(SonicCdAct3FutureLoadingVisit core){requireOldExitOwner(core);((R13)binding).abandonOldExitWalk(core);}
+ void requireLevelStartOwner(SonicCdR31aLoadingVisit core){requireCut(Cut.POST_OBJECT_CAMERA);if(!(binding instanceof R31 b)||core!=b.core||!b.walkReturned)throw new IllegalStateException("No original completed R31 walk transfer");}
+ void abandonLevelStartWalk(SonicCdR31aLoadingVisit core){requireLevelStartOwner(core);var b=(R31)binding;b.objects.abandonCompletedWalk();b.walkReturned=false;}
  SonicCdAct3FutureLoadingVisit.Snapshot captureR13(){idle();if(!(binding instanceof R13 b))throw new IllegalArgumentException("Foreign capture source");return b.core.capture();}
  SonicCdR31aLoadingVisit.Snapshot captureR31(){idle();if(!(binding instanceof R31 b))throw new IllegalArgumentException("Foreign capture source");return b.core.capture();}
  void validateRestore(SonicCdAct3FutureLoadingVisit.Snapshot snapshot){idle();if(!(binding instanceof R13 b))throw new IllegalArgumentException("Foreign capture source");b.core.validateRestore(snapshot);}
@@ -389,7 +391,7 @@ final class CdWorld implements SonicCdAct3FutureLoadingVisit.OrdinaryOwner,
    public void runObjects(int levelFrame){require();walkReturned=false;objects.runWalk(levelFrame);walkReturned=true;}
    public CdOrdinaryLoop.MainContinuation postObjectCamera(){
     require();if(!walkReturned)throw new IllegalStateException("No completed actual physical walk");var s=active.state();
-    if(s.program().demoDataIndexWord()==0x800||s.level().levelRestart()!=0)throw new Unowned(Boundary.LEVEL_FLOW);
+    if(s.program().demoDataIndexWord()==0x800||s.level().levelRestart()!=0){active.beginLevelStart(CdWorld.this);return CdOrdinaryLoop.MainContinuation.TRANSFERRED;}
     if(frame.environment().globals().debugMode()==0&&frame.state().motion().routine()>=6){deathCamera();return CdOrdinaryLoop.MainContinuation.ORDINARY_TAIL;}
     active.scroll(s);return CdOrdinaryLoop.MainContinuation.ORDINARY_TAIL;
    }
