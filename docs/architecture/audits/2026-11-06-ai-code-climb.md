@@ -3096,3 +3096,208 @@ with that newer upstream. PR271 is open/draft and reported MERGEABLE; task remot
 head remained df33. Preserve the source-specific checks here and reconcile the
 newer development line explicitly before the next structural increment, rather
 than claim the completed run covered it. No destination branch was changed.
+
+
+### 2026-11-08 — package-private contact-memory boundary
+
+This bounded increment starts from clean `ccf2a3d24ac54bbd501a2f6dc52772e2ce9b95a0`
+in the existing `feature/ai-code-climb-followup` checkout. It follows the local
+`target/code-climb/contact-memory-boundary/decision.json`: retain the cohesive
+mutable owner, colocate it with its sole production consumer, and remove its
+unnecessary public surface and duplicate simple name. The owner is now
+package-private final `level.objects.SolidContactMemory`; the controller field
+remains `contactState`. Manager/controller/population boundaries are unchanged.
+No compatibility shim, generic lifetime protocol or new creator API was added.
+
+`TestDynamicSolidContactRetirement#placedRangeUnloadExpiresBitsBeforeEqualSpawnReentry`
+is reused unchanged. It already existed at `7a93b4f2e0`, before `f628`; it is a
+ROM-free placed unload/reentry and retained-player witness, not evidence of an
+ordinary per-frame-history bug. This refactor makes no usability-score claim.
+
+The incoming mutable-owner blob is `ed9428d07c68874ba7740852bd8fc4dbb2da6d0d`
+(5,009 Java tokens); controller blob is
+`a28cc4aeb9dfcbbfbf6164aeb4ff455fc6eed0fd` (18,316 tokens); direct-test blob is
+`d38e75429202f61e6c5e56e751060a77628cad97` (3,275 tokens). The complete immutable
+`ObjectManagerSnapshot.java` blob remains
+`359a7773a86d8326b7a2d36d9e04c03b6bd960c7`, including the exact
+`ObjectManagerSnapshot.SolidContactState` name, definition and schema.
+
+Local reproducible evidence is retained under
+`target/code-climb/contact-memory-boundary/`: `before.json`, incoming source and
+token files, `preserve.py`, `preservation.json`, and `visibility.json`. Run
+`python3 target/code-climb/contact-memory-boundary/preserve.py` from this checkout.
+It reconstructs the expected bytes from pinned `ccf` blobs with explicit
+package/import/type/declaration-access/Javadoc edits only, then requires exact
+byte equality and records before/after token digests. The immutable qualified
+record name is excluded from mutable-name substitution. This preserves every
+executable body/expression, callback count/order and dispatch guard, all
+spawn/instance/occurrence/piece equality, field names and initialization order,
+frame-only history, retained rides/status, rewind/transfer and upstream
+`repairSwappedStanding`. The guard adaptation is also matched against an exact
+edit allowlist; classifier bodies, regexes and budgets remain byte-identical.
+
+Visibility changes (the old declarations below were public and are now
+package-private, with the mutable type renamed to `SolidContactMemory`; existing
+private members stay private):
+
+- `final class SolidContactState`
+- `interface Access`
+- `SolidContactState(Access access)`
+- `static final class Ride`
+- `ObjectInstance object()`
+- `int pieceIndex()`
+- `void markStandingBitEstablishedThisFrame(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `Object resolvedOwnerKey(ObjectInstance instance)`
+- `void evictResolvedOwnerKey(Object key)`
+- `void setObjectStandingBit(PlayableEntity player, ObjectInstance instance)`
+- `void setObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `boolean hasObjectStandingBit(PlayableEntity player, ObjectInstance instance)`
+- `boolean hasObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `boolean wasStandingBitEstablishedThisFrame(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `void setObjectPushingBit(PlayableEntity player, ObjectInstance instance)`
+- `void releaseObjectPushLatchForAllPlayers(ObjectInstance instance)`
+- `void releaseObjectStandingLatchForAllPlayers(ObjectInstance instance)`
+- `void releaseObjectLatchesForAllPlayers(ObjectInstance instance)`
+- `boolean releaseObjectPushLatch(PlayableEntity player, ObjectInstance instance)`
+- `boolean hasPushingLatch(PlayableEntity player)`
+- `boolean clearObjectPushingBit(PlayableEntity player, ObjectInstance instance)`
+- `void clearObjectStandingBit(PlayableEntity player, ObjectInstance instance)`
+- `void clearObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `void snapshotObjectStandingBit(PlayableEntity player, ObjectInstance instance)`
+- `void snapshotObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `void rememberAndClearStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `boolean wasObjectStandingBitSetThisFrame(PlayableEntity player, ObjectInstance instance)`
+- `boolean wasObjectStandingBitSetThisFrame(PlayableEntity player, ObjectInstance instance, int pieceIndex)`
+- `void evictLatchForDestroyedSpawn(ObjectSpawn spawn)`
+- `void evictLatchForDestroyedInstance(ObjectInstance instance)`
+- `void inheritRetainedSstContacts(SolidContactState previous, Collection<? extends ObjectInstance> carried)`
+- `ObjectManagerSnapshot.SolidContactState captureRewindState()`
+- `ObjectManagerSnapshot.SolidContactState captureRewindState(RewindCaptureContext context)`
+- `void restoreRewindState(ObjectManagerSnapshot.SolidContactState state)`
+- `void restoreRewindState(ObjectManagerSnapshot.SolidContactState state, RewindCaptureContext context)`
+- `void restoreRewindState(List<ObjectManagerSnapshot.SolidContactRidingEntry> entries)`
+- `boolean isRidingObject(PlayableEntity player)`
+- `boolean isAnyPlayerRiding()`
+- `boolean isPlayerRiding(PlayableEntity player, ObjectInstance instance)`
+- `boolean isAnyPlayerRiding(ObjectInstance instance)`
+- `void clearRidingObject(PlayableEntity player)`
+- `void clearSameFrameMonitorBreakBounces()`
+- `void markSameFrameMonitorBreakBounce(PlayableEntity player)`
+- `boolean hadSameFrameMonitorBreakBounce(PlayableEntity player)`
+- `ObjectInstance getRidingObject(PlayableEntity player)`
+- `int getRidingPieceIndex(PlayableEntity player)`
+- `Ride rideFor(PlayableEntity player)`
+- `void repairSwappedStanding(com.openggf.sprites.playable.AbstractPlayableSprite p1, com.openggf.sprites.playable.AbstractPlayableSprite p2, java.util.function.Function<com.openggf.sprites.playable.AbstractPlayableSprite, ObjectInstance> occupant)`
+- `void ride(PlayableEntity player, ObjectInstance object, int pieceIndex)`
+- `void forEachRide(BiConsumer<PlayableEntity, Ride> action)`
+- `int frameCounter()`
+- `void beginFrame()`
+- `void reset()`
+- `void rememberControllerRelease(PlayableEntity player, ObjectInstance object)`
+- `boolean consumeControllerRelease(PlayableEntity player, ObjectInstance object)`
+
+`Ride(ObjectInstance, int)` additionally narrows from package-private to private,
+because only the enclosing memory constructs it. `Access` methods remain
+implicitly public abstract as required by Java; controller and test-harness
+implementation overrides remain public. The only production consumer remains
+`ObjectSolidContactController`. The direct tests share the owner's package; the
+rewind guard loads the actual nonpublic class via
+`Class.forName(name, false, loader)` and still classifies its real source path.
+No genuine external consumer, API descriptor/signature-pin edit or guard
+allowance/budget change was found or needed.
+
+The existing guard's `NonActorFactory` now declares
+`public void restoreRewindState(Object state)` and its existing classification
+case asserts that public method shape while still rejecting the helper as an
+actor. Narrowing production restores therefore does not remove the original
+public-shaped nonactor regression boundary. No new test case or test class was
+added for that boundary.
+
+Exact JUnit identity mapping follows. Every row maps the old class
+`com.openggf.level.objects.contact.TestSolidContactState` to the new class
+`com.openggf.level.objects.TestSolidContactMemory`; each listed method name is
+identical on both sides. All 11 case bodies and annotations are preserved modulo
+the mutable type rename; no case disappears. Full old/new `class#method` strings
+are also retained in `preservation.json`.
+
+| Old method (old class above) | New method (new class above) |
+| --- | --- |
+| `nextFrameExpiresHistoryButKeepsLiveObjectBitsAndTheSameRideHolder` | `nextFrameExpiresHistoryButKeepsLiveObjectBitsAndTheSameRideHolder` |
+| `objectRetirementExpiresBothPlayersLiveBitsWithoutChangingTheirRideOrPhysicalState` | `objectRetirementExpiresBothPlayersLiveBitsWithoutChangingTheirRideOrPhysicalState` |
+| `permanentInstanceRetirementExpiresPieceHistoryWithoutDroppingTheRide` | `permanentInstanceRetirementExpiresPieceHistoryWithoutDroppingTheRide` |
+| `occurrenceExpiryCannotClearAnotherInstanceSharingTheSameSpawnValue` | `occurrenceExpiryCannotClearAnotherInstanceSharingTheSameSpawnValue` |
+| `retainedMultipartSstKeepsLivePieceBitButDoesNotRecreateAnExplicitlyClearedBit` | `retainedMultipartSstKeepsLivePieceBitButDoesNotRecreateAnExplicitlyClearedBit` |
+| `successfulRestoreDiscardsUncapturedFutureFrameObservationsWithoutAdvancingTheSavedClock` | `successfulRestoreDiscardsUncapturedFutureFrameObservationsWithoutAdvancingTheSavedClock` |
+| `failedStructuralRoleResolutionPreservesLiveAndFrameState` | `failedStructuralRoleResolutionPreservesLiveAndFrameState` |
+| `structuralSnapshotRestoresFreshRoleAndPieceOwnerOnTwoSuccessiveIncarnations` | `structuralSnapshotRestoresFreshRoleAndPieceOwnerOnTwoSuccessiveIncarnations` |
+| `invalidatingKeyCallbackIsRejectedBeforeAnyLiveBitIsPublished` | `invalidatingKeyCallbackIsRejectedBeforeAnyLiveBitIsPublished` |
+| `pieceIdentityCallbacksValidateTheOriginalOuterAndInnerReservationsInOrder` | `pieceIdentityCallbacksValidateTheOriginalOuterAndInnerReservationsInOrder` |
+| `fullResetDropsRidesAllLiveAndFrameStateAndRestoresTheInitialClock` | `fullResetDropsRidesAllLiveAndFrameStateAndRestoresTheInitialClock` |
+
+The current package Javadoc, contributor architecture/testing guides, engine
+map and existing prerelease contributor-readability entry describe the new
+internal owner and unchanged saved form. Earlier audit entries and plans are
+historical and were not rewritten. No trace frontier, ROM policy, configuration,
+version/signature pin, agent instruction or skill changed.
+
+The single bounded focused invocation completed successfully against the changed
+source from `ccf2a3d24a`. The command below uses a checkout-relative report path;
+`command.txt` retains the exact invocation with its absolute resolved report path:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dopenggf.surefire.reports=target/code-climb/contact-memory-boundary/surefire -Dtest=TestSolidContactMemory,TestDynamicSolidContactRetirement,TestObjectSolidContactController,TestSolidObjectManager,TestObjectManagerRewindSnapshot,TestTasS3kOrtExhaustion,TestObjectRemovalCallbackOwnership,TestInitialObjectDispatchSuccessorOwnership,TestInitialDispatchNestedFreshLoad,TestInitialSolidCallbackLifetime,TestInitialSolidAdapterLifetime,TestInitialCollisionCallbackLifetime,TestNativeCompetitionFixedSstAccess,TestNativeObjectQueries,TestRewindArchitectureGuard,TestModApiSignatureSurface test > target/code-climb/contact-memory-boundary/focused.log 2>&1
+```
+
+Java was OpenJDK `25.0.5.0.3`; Lua was `5.4.9`. `DISPLAY` and `WAYLAND_DISPLAY`
+were unset, `LUA_BIN=lua5.4`, `-Dmse=off`, surfaceless EGL, and `--normal`
+selected the normal-memory lane. The wrapper found all six ROM properties, with
+none missing; no ROM files or links were changed. The fresh, initially empty
+report directory is this increment's own `surefire/` directory.
+
+| Fresh suite | Cases | Failures / errors / skips |
+| --- | ---: | --- |
+| `com.openggf.game.rewind.TestRewindArchitectureGuard` | 8 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestDynamicSolidContactRetirement` | 15 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestInitialCollisionCallbackLifetime` | 6 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestInitialDispatchNestedFreshLoad` | 2 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestInitialObjectDispatchSuccessorOwnership` | 15 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestInitialSolidAdapterLifetime` | 6 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestInitialSolidCallbackLifetime` | 6 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestNativeCompetitionFixedSstAccess` | 20 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestNativeObjectQueries` | 11 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestObjectManagerRewindSnapshot` | 19 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestObjectRemovalCallbackOwnership` | 15 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestObjectSolidContactController` | 17 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestSolidContactMemory` | 11 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestSolidObjectManager` | 88 | 0 / 0 / 0 |
+| `com.openggf.level.objects.TestTasS3kOrtExhaustion` | 10 | 0 / 0 / 0 |
+| `com.openggf.mods.TestModApiSignatureSurface` | 12 | 0 / 0 / 0 |
+
+Total: **261 cases / 16 suites**, zero failures, errors or skips. Fresh XML
+identities include every requested suite, all 11 mapped direct cases exactly
+once, and the unchanged placed unload/reentry witness.
+`TestModApiSignatureSurface` includes the candidate signature and engine-internal
+terminal checks; no descriptor, signature pin or internal-type allowance changed.
+No source/inherited failure attribution run was needed in this exact selection.
+The test-source manifest was unchanged before, during and after the invocation;
+its SHA-256 is `9cde9c0ad1e233e6d7d03f812c87dbbe30737c0f353fddb5d826b71e24656f1f`.
+
+Timing covers this wrapper invocation: queue **388 s** (rounded admission log),
+Maven **104 s** (reported total), wall **493.069348 s**, user wait **0 s**,
+residual wrapper/startup/teardown time **1.069348 s**. Coding and investigation
+were not separately instrumented. `focused-result.json` retains the full fresh
+case identities, suite/XML hashes, ROM discovery and timing; `run.json`,
+`command.txt`, `focused.log` and `tested-source.json` retain the raw job context.
+`docs-checks.json` records changed Markdown fences/relative links, canonical type
+names and resolvable test-command classes. The historical audit prefix and the
+existing reentry witness remain byte-identical to the base. `git diff --check`
+and the operation/token proof passed.
+
+This is a focused pass only. Category `VERDICT` is not applicable because no
+category run or guards lane was launched. Root owns the live immutable c4
+baseline, final combined broad comparison, independent Opus review and any
+publication to draft PR271. That baseline was not observed, changed, built,
+cancelled or relaunched here. No delegate, reviewer, watcher, task/destination
+push, PR write or integration was performed. Local commit identity, source/test
+manifest and the exact remaining handoff are recorded in
+`target/code-climb/contact-memory-boundary/handoff.json`.

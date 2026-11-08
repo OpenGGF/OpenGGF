@@ -149,7 +149,9 @@ under the matching area heading; see the
 
 - **Contributor readability:** live objects, slots and stable identities share
   population storage; actor reconstruction and contact memory have separate owners
-  behind the existing runtime entry points. Retiring multipart solids expires
+  behind the existing runtime entry points. Mutable contact memory is package-private
+  beside its collision controller, distinct from the immutable saved contact state.
+  Retiring multipart solids expires
   owned contact bits and frame history without releasing player state. Contact
   restore discards uncaptured future observations. Sole spawn-keyed dynamic solids
   now expire contact bits without clearing surviving shared owners. Constructor-child

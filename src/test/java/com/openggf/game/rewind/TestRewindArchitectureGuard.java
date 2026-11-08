@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
-import com.openggf.level.objects.contact.SolidContactState;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -412,12 +411,16 @@ class TestRewindArchitectureGuard {
     }
 
     @Test
-    void objectOverrideClassificationUsesActorTypesIncludingNestedActors() {
+    void objectOverrideClassificationUsesActorTypesIncludingNestedActors() throws ReflectiveOperationException {
         assertTrue(containsObjectType(AbstractObjectInstance.class));
         assertTrue(containsObjectType(ActorContainer.class));
-        assertFalse(containsObjectType(SolidContactState.class));
+        assertFalse(containsObjectType(Class.forName("com.openggf.level.objects.SolidContactMemory", false,
+                TestRewindArchitectureGuard.class.getClassLoader())));
         assertFalse(containsObjectType(ObjectManager.class));
         assertFalse(containsObjectType(NonActorFactory.class));
+        assertTrue(java.lang.reflect.Modifier.isPublic(NonActorFactory.class
+                .getDeclaredMethod("restoreRewindState", Object.class).getModifiers()),
+                "a public-shaped restore helper must not incur actor override debt");
     }
 
     @Test
@@ -435,7 +438,7 @@ class TestRewindArchitectureGuard {
         assertTrue(containsObjectType(Path.of(
                 "src/test/java/com/openggf/game/rewind/RewindActorSourceFixture.java")));
         assertFalse(containsObjectType(Path.of(
-                "src/main/java/com/openggf/level/objects/contact/SolidContactState.java")));
+                "src/main/java/com/openggf/level/objects/SolidContactMemory.java")));
     }
 
     private static final class ActorContainer {
@@ -466,6 +469,9 @@ class TestRewindArchitectureGuard {
     }
 
     private static final class NonActorFactory {
+        // Preserve the public restore-helper shape that originally triggered false actor debt.
+        public void restoreRewindState(Object state) { }
+
         Class<?> helperType() {
             class LocalHelper { }
             return LocalHelper.class;

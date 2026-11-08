@@ -1,15 +1,10 @@
-package com.openggf.level.objects.contact;
+package com.openggf.level.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
-import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.MultiPieceSolidProvider;
-import com.openggf.level.objects.ObjectInstance;
-import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.sprites.Sprite;
 
 import java.util.ArrayList;
@@ -32,12 +27,12 @@ import java.util.function.BiConsumer;
  * newly-established standing history expires at the next {@link #beginFrame()}.
  * Rewind captures live bits and rides, never that frame-only history.
  *
- * <p>This is an internal engine capability. Public visibility permits the existing
- * collision controller to use it across packages; it is not a creator API.
+ * <p>Package-private memory for {@link ObjectSolidContactController}; the immutable
+ * saved form remains {@link ObjectManagerSnapshot.SolidContactState}.
  */
-public final class SolidContactState {
+final class SolidContactMemory {
     /** Only identity lookup and callback-validity services are required. */
-    public interface Access {
+    interface Access {
         boolean usesOccurrenceKey(ObjectInstance object);
         ObjectInstance restoredOccupant(ObjectSpawn spawn, int slotIndex);
         Runnable captureDispatchGuard();
@@ -46,7 +41,7 @@ public final class SolidContactState {
     private final Access access;
     private int frameCounter;
 
-    public SolidContactState(Access access) {
+    SolidContactMemory(Access access) {
         this.access = java.util.Objects.requireNonNull(access, "access");
     }
 
@@ -58,11 +53,11 @@ public final class SolidContactState {
     // A live holder is reused to avoid allocations on continued rides. Read its
     // values before changing the same player's ride; this view is not a snapshot.
     // Native carry uses d4 from the object's routine entry, not a stored previous X.
-    public static final class Ride {
+    static final class Ride {
         private ObjectInstance object;
         private int pieceIndex;
 
-        Ride(ObjectInstance object, int pieceIndex) {
+        private Ride(ObjectInstance object, int pieceIndex) {
             set(object, pieceIndex);
         }
 
@@ -71,10 +66,10 @@ public final class SolidContactState {
             this.pieceIndex = pieceIndex;
         }
 
-        public ObjectInstance object() {
+        ObjectInstance object() {
             return object;
         }
-        public int pieceIndex() {
+        int pieceIndex() {
             return pieceIndex;
         }
     }
@@ -119,7 +114,7 @@ public final class SolidContactState {
     private final Map<PlayableEntity, Set<Object>> standingBitEstablishedThisFrame =
             new IdentityHashMap<>(2);
 
-    public void markStandingBitEstablishedThisFrame(PlayableEntity player, ObjectInstance instance,
+    void markStandingBitEstablishedThisFrame(PlayableEntity player, ObjectInstance instance,
             int pieceIndex) {
         if (player == null) {
             return;
@@ -134,10 +129,10 @@ public final class SolidContactState {
     }
 
     /** Internal resolved owner, using the same value equality as the latch maps. */
-    public Object resolvedOwnerKey(ObjectInstance instance) { return latchKeyFor(instance); }
+    Object resolvedOwnerKey(ObjectInstance instance) { return latchKeyFor(instance); }
 
     /** Expire bits and frame history together; player rides/status remain untouched. */
-    public void evictResolvedOwnerKey(Object key) { evictLatchKey(key); }
+    void evictResolvedOwnerKey(Object key) { evictLatchKey(key); }
 
     private Object latchKeyFor(ObjectInstance instance) {
         var initialDispatch = access.captureDispatchGuard();
@@ -172,11 +167,11 @@ public final class SolidContactState {
         return key;
     }
 
-    public void setObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
+    void setObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
         setObjectStandingBit(player, instance, -1);
     }
 
-    public void setObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
+    void setObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         if (player == null) {
             return;
         }
@@ -236,11 +231,11 @@ public final class SolidContactState {
         return key instanceof PieceStandingLatchKey piece ? piece.objectKey() : key;
     }
 
-    public boolean hasObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
+    boolean hasObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
         return hasObjectStandingBit(player, instance, -1);
     }
 
-    public boolean hasObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
+    boolean hasObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         if (player == null) {
             return false;
         }
@@ -252,7 +247,7 @@ public final class SolidContactState {
         return key != null && set.contains(key);
     }
 
-    public boolean wasStandingBitEstablishedThisFrame(PlayableEntity player, ObjectInstance instance,
+    boolean wasStandingBitEstablishedThisFrame(PlayableEntity player, ObjectInstance instance,
             int pieceIndex) {
         if (player == null) {
             return false;
@@ -265,7 +260,7 @@ public final class SolidContactState {
         return key != null && set.contains(key);
     }
 
-    public void setObjectPushingBit(PlayableEntity player, ObjectInstance instance) {
+    void setObjectPushingBit(PlayableEntity player, ObjectInstance instance) {
         if (player == null) {
             return;
         }
@@ -294,7 +289,7 @@ public final class SolidContactState {
      * {@code btst d4,status(a0)} (docs/s2disasm/s2.asm:35462-35466) from
      * passing.
      */
-    public void releaseObjectPushLatchForAllPlayers(ObjectInstance instance) {
+    void releaseObjectPushLatchForAllPlayers(ObjectInstance instance) {
         Object key = latchKeyFor(instance);
         if (key == null) {
             return;
@@ -328,7 +323,7 @@ public final class SolidContactState {
      * <p>Piece-scoped keys are collapsed to their owning object, matching
      * {@code bclr d6,status(a0)} clearing one status byte for the whole object.
      */
-    public void releaseObjectStandingLatchForAllPlayers(ObjectInstance instance) {
+    void releaseObjectStandingLatchForAllPlayers(ObjectInstance instance) {
         Object owner = latchKeyFor(instance);
         if (owner == null) {
             return;
@@ -351,7 +346,7 @@ public final class SolidContactState {
      * Instance-only dynamic retirement also evicts per-frame keys through
      * {@link #evictLatchForDestroyedInstance}.
      */
-    public void releaseObjectLatchesForAllPlayers(ObjectInstance instance) {
+    void releaseObjectLatchesForAllPlayers(ObjectInstance instance) {
         releaseObjectPushLatchForAllPlayers(instance);
         releaseObjectStandingLatchForAllPlayers(instance);
     }
@@ -374,7 +369,7 @@ public final class SolidContactState {
      *
      * @return true when the object's pushing bit for that player was set
      */
-    public boolean releaseObjectPushLatch(PlayableEntity player, ObjectInstance instance) {
+    boolean releaseObjectPushLatch(PlayableEntity player, ObjectInstance instance) {
         if (player == null) {
             return false;
         }
@@ -392,12 +387,12 @@ public final class SolidContactState {
         return true;
     }
 
-    public boolean hasPushingLatch(PlayableEntity player) {
+    boolean hasPushingLatch(PlayableEntity player) {
         Set<Object> set = objectPushingBitSet.get(player);
         return set != null && !set.isEmpty();
     }
 
-    public boolean clearObjectPushingBit(PlayableEntity player, ObjectInstance instance) {
+    boolean clearObjectPushingBit(PlayableEntity player, ObjectInstance instance) {
         if (player == null) {
             return false;
         }
@@ -415,11 +410,11 @@ public final class SolidContactState {
         return true;
     }
 
-    public void clearObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
+    void clearObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
         clearObjectStandingBit(player, instance, -1);
     }
 
-    public void clearObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
+    void clearObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         if (player == null) {
             return;
         }
@@ -433,11 +428,11 @@ public final class SolidContactState {
         }
     }
 
-    public void snapshotObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
+    void snapshotObjectStandingBit(PlayableEntity player, ObjectInstance instance) {
         snapshotObjectStandingBit(player, instance, -1);
     }
 
-    public void snapshotObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
+    void snapshotObjectStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         if (player == null) {
             return;
         }
@@ -451,16 +446,16 @@ public final class SolidContactState {
     }
 
     /** Remember the helper-entry bit before consuming it; preserve both callback boundaries. */
-    public void rememberAndClearStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
+    void rememberAndClearStandingBit(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         snapshotObjectStandingBit(player, instance, pieceIndex);
         clearObjectStandingBit(player, instance, pieceIndex);
     }
 
-    public boolean wasObjectStandingBitSetThisFrame(PlayableEntity player, ObjectInstance instance) {
+    boolean wasObjectStandingBitSetThisFrame(PlayableEntity player, ObjectInstance instance) {
         return wasObjectStandingBitSetThisFrame(player, instance, -1);
     }
 
-    public boolean wasObjectStandingBitSetThisFrame(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
+    boolean wasObjectStandingBitSetThisFrame(PlayableEntity player, ObjectInstance instance, int pieceIndex) {
         if (player == null) {
             return false;
         }
@@ -502,11 +497,11 @@ public final class SolidContactState {
         }
     }
 
-    public void evictLatchForDestroyedSpawn(ObjectSpawn spawn) {
+    void evictLatchForDestroyedSpawn(ObjectSpawn spawn) {
         evictLatchKey(spawn);
     }
 
-    public void evictLatchForDestroyedInstance(ObjectInstance instance) {
+    void evictLatchForDestroyedInstance(ObjectInstance instance) {
         var initialDispatch = access.captureDispatchGuard();
         // This primitive handles instance/occurrence keys only. Dynamic retirement
         // resolves shared spawn ownership in ObjectSolidContactController.
@@ -519,7 +514,7 @@ public final class SolidContactState {
         }
     }
 
-    public void inheritRetainedSstContacts(SolidContactState previous,
+    void inheritRetainedSstContacts(SolidContactMemory previous,
             Collection<? extends ObjectInstance> carried) {
         var initialDispatch = access.captureDispatchGuard();
         Set<Object> retainedKeys = new HashSet<>();
@@ -553,7 +548,7 @@ public final class SolidContactState {
         }
     }
 
-    public ObjectManagerSnapshot.SolidContactState captureRewindState() {
+    ObjectManagerSnapshot.SolidContactState captureRewindState() {
         List<ObjectManagerSnapshot.SolidContactRidingEntry> entries = new ArrayList<>();
         for (var entry : ridingStates.entrySet()) {
             PlayableEntity player = entry.getKey();
@@ -575,7 +570,7 @@ public final class SolidContactState {
                 captureLatchEntries(objectPushingBitSet));
     }
 
-    public ObjectManagerSnapshot.SolidContactState captureRewindState(RewindCaptureContext context) {
+    ObjectManagerSnapshot.SolidContactState captureRewindState(RewindCaptureContext context) {
         var state = captureRewindState();
         var table = context.identityTable().orElse(null);
         if (table == null) return state;
@@ -625,7 +620,7 @@ public final class SolidContactState {
                 }
             }
             if (!snapshotKeys.isEmpty()) {
-                snapshotKeys.sort(Comparator.comparing(SolidContactState::latchKeySnapshotKey)
+                snapshotKeys.sort(Comparator.comparing(SolidContactMemory::latchKeySnapshotKey)
                         .thenComparingInt(ObjectManagerSnapshot.SolidContactLatchKey::pieceIndex));
                 entries.add(new ObjectManagerSnapshot.SolidContactLatchEntry(player, snapshotKeys));
             }
@@ -684,11 +679,11 @@ public final class SolidContactState {
         return null;
     }
 
-    public void restoreRewindState(ObjectManagerSnapshot.SolidContactState state) {
+    void restoreRewindState(ObjectManagerSnapshot.SolidContactState state) {
         restoreRewindState(state, RewindCaptureContext.none());
     }
 
-    public void restoreRewindState(ObjectManagerSnapshot.SolidContactState state, RewindCaptureContext context) {
+    void restoreRewindState(ObjectManagerSnapshot.SolidContactState state, RewindCaptureContext context) {
         if (state == null) {
             restoreResolvedRewindState(null);
             return;
@@ -744,7 +739,7 @@ public final class SolidContactState {
         }
     }
 
-    public void restoreRewindState(List<ObjectManagerSnapshot.SolidContactRidingEntry> entries) {
+    void restoreRewindState(List<ObjectManagerSnapshot.SolidContactRidingEntry> entries) {
         restoreRewindState(ObjectManagerSnapshot.SolidContactState.fromRiding(entries));
     }
 
@@ -786,70 +781,70 @@ public final class SolidContactState {
                 ? new PieceStandingLatchKey(owner, key.pieceIndex()) : owner;
     }
 
-    public boolean isRidingObject(PlayableEntity player) {
+    boolean isRidingObject(PlayableEntity player) {
         if (player == null) return false;
         Ride state = ridingStates.get(player);
         return state != null && state.object != null;
     }
 
-    public boolean isAnyPlayerRiding() {
+    boolean isAnyPlayerRiding() {
         for (Ride state : ridingStates.values()) {
             if (state != null && state.object != null) return true;
         }
         return false;
     }
 
-    public boolean isPlayerRiding(PlayableEntity player, ObjectInstance instance) {
+    boolean isPlayerRiding(PlayableEntity player, ObjectInstance instance) {
         if (player == null) return false;
         Ride state = ridingStates.get(player);
         return state != null && state.object == instance;
     }
 
-    public boolean isAnyPlayerRiding(ObjectInstance instance) {
+    boolean isAnyPlayerRiding(ObjectInstance instance) {
         for (Ride state : ridingStates.values()) {
             if (state != null && state.object == instance) return true;
         }
         return false;
     }
 
-    public void clearRidingObject(PlayableEntity player) {
+    void clearRidingObject(PlayableEntity player) {
         if (player != null) {
             ridingStates.remove(player);
         }
     }
 
-    public void clearSameFrameMonitorBreakBounces() {
+    void clearSameFrameMonitorBreakBounces() {
         sameFrameMonitorBreakBounces.clear();
     }
 
-    public void markSameFrameMonitorBreakBounce(PlayableEntity player) {
+    void markSameFrameMonitorBreakBounce(PlayableEntity player) {
         if (player != null) sameFrameMonitorBreakBounces.add(player);
     }
 
-    public boolean hadSameFrameMonitorBreakBounce(PlayableEntity player) {
+    boolean hadSameFrameMonitorBreakBounce(PlayableEntity player) {
         return player != null && sameFrameMonitorBreakBounces.contains(player);
     }
 
-    public ObjectInstance getRidingObject(PlayableEntity player) {
+    ObjectInstance getRidingObject(PlayableEntity player) {
         if (player == null) return null;
         Ride state = ridingStates.get(player);
         return state != null ? state.object : null;
     }
 
     /** Get the piece index this player is riding, or -1 if not riding a multi-piece object. */
-    public int getRidingPieceIndex(PlayableEntity player) {
+    int getRidingPieceIndex(PlayableEntity player) {
         if (player == null) return -1;
         Ride state = ridingStates.get(player);
         return state != null ? state.pieceIndex : -1;
     }
 
     /** Read-only, reused ride holder. Read needed values before changing this player's ride. */
-    public Ride rideFor(PlayableEntity player) {
+    Ride rideFor(PlayableEntity player) {
         return ridingStates.get(player);
     }
 
     /** Rebind exchanged standing ownership in player order, retaining native same-owner precedence. */
-    public void repairSwappedStanding(com.openggf.sprites.playable.AbstractPlayableSprite p1,
+    void repairSwappedStanding(com.openggf.sprites.playable.AbstractPlayableSprite p1,
             com.openggf.sprites.playable.AbstractPlayableSprite p2,
             java.util.function.Function<com.openggf.sprites.playable.AbstractPlayableSprite, ObjectInstance> occupant) {
         var old1 = ridingStates.remove(p1);
@@ -874,22 +869,22 @@ public final class SolidContactState {
         }
     }
 
-    public void ride(PlayableEntity player, ObjectInstance object, int pieceIndex) {
+    void ride(PlayableEntity player, ObjectInstance object, int pieceIndex) {
         putRide(player, object, pieceIndex);
     }
 
     /** Iterates a stable membership copy; each holder remains the same live ride. */
-    public void forEachRide(BiConsumer<PlayableEntity, Ride> action) {
+    void forEachRide(BiConsumer<PlayableEntity, Ride> action) {
         for (var entry : List.copyOf(ridingStates.entrySet())) {
             action.accept(entry.getKey(), entry.getValue());
         }
     }
 
-    public int frameCounter() {
+    int frameCounter() {
         return frameCounter;
     }
 
-    public void beginFrame() {
+    void beginFrame() {
         frameCounter++;
         clearStandingFrameHistory();
     }
@@ -901,7 +896,7 @@ public final class SolidContactState {
         controllerAirborneReleaseSupports.clear();
     }
 
-    public void reset() {
+    void reset() {
         frameCounter = 0;
         ridingStates.clear();
         sameFrameMonitorBreakBounces.clear();
@@ -910,12 +905,12 @@ public final class SolidContactState {
         clearStandingFrameHistory();
     }
 
-    public void rememberControllerRelease(PlayableEntity player, ObjectInstance object) {
+    void rememberControllerRelease(PlayableEntity player, ObjectInstance object) {
         controllerAirborneReleaseSupports.computeIfAbsent(player,
                 ignored -> Collections.newSetFromMap(new IdentityHashMap<>(4))).add(object);
     }
 
-    public boolean consumeControllerRelease(PlayableEntity player, ObjectInstance object) {
+    boolean consumeControllerRelease(PlayableEntity player, ObjectInstance object) {
         Set<ObjectInstance> released = controllerAirborneReleaseSupports.get(player);
         if (released == null || !released.remove(object)) {
             return false;

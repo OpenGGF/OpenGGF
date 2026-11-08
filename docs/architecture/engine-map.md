@@ -300,7 +300,9 @@ this; editor commands and initial layout decoders (e.g. `Sonic3kLevel`) are exem
 
 - **`ObjectManager`** coordinates placement, touch responses and plane switching.
   `ObjectSolidContactController` applies riding/landing/ceiling/side collision;
-  `level.objects.contact.SolidContactState` owns rides, bits and frame history.
+  package-private `level.objects.SolidContactMemory` owns rides, bits and frame
+  history beside its sole runtime caller, `ObjectSolidContactController`. The
+  immutable saved form remains `ObjectManagerSnapshot.SolidContactState`.
   `ObjectPopulation` owns membership/identity; `ObjectRewindLifecycle` owns actor
   capture, construction-family adoption and reconstruction. The manager injects
   `ObjectServices` at construction.
