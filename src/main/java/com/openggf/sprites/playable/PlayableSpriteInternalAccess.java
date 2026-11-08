@@ -194,7 +194,10 @@ public final class PlayableSpriteInternalAccess {
 
     public static com.openggf.game.mutators.HomingAttackRuntime homingAttack(AbstractPlayableSprite sprite) {
         PlayableMutatorPolicySource source = sprite.mutatorPolicySource;
-        return source == null ? null : source.homingAttack();
+        var level = sprite.currentLevelManagerIfAvailable();
+        return level == null ? (source == null ? null : source.homingAttack())
+                : com.openggf.game.session.WorldSessionPolicyAccess.getService(level.getWorldSession(),
+                        com.openggf.game.mutators.HomingAttackRuntime.class);
     }
 
     public static PlayableMutatorPolicy mutatorPolicy(AbstractPlayableSprite sprite) {

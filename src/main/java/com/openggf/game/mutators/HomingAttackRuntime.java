@@ -94,6 +94,7 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
     // Presentation-only reticle, recomputed every leader tick from live objects.
     private boolean reticleVisible, reticleLocked;
     private int reticleX, reticleY;
+    private boolean characterStrike, previewRequested;
 
     public HomingAttackRuntime(Supplier<Policy> policies) {
         this.policies = Objects.requireNonNull(policies, "policies");
@@ -114,7 +115,7 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
     /** Native {@code getInvulnerable()} hook: true while the sprite's world grants an Instagib strike. */
     public static boolean invulnerable(com.openggf.sprites.playable.PlayableMutatorPolicySource source,
                                        AbstractPlayableSprite sprite) {
-        var homing = source == null ? null : source.homingAttack();
+        var homing = com.openggf.sprites.playable.PlayableSpriteInternalAccess.homingAttack(sprite);
         return homing != null && homing.invulnerable(sprite);
     }
 
@@ -184,16 +185,21 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
         else if (flameTicks > 0) flameTicks--;
         if (flameTicks == 0 && phase == Phase.IDLE) heatTicks = 0;
         else if (phase == Phase.IDLE && heatTicks < HEAT_BUILD_TICKS) heatTicks++;
-        if (!sprite.getAir() || !enabledFor(sprite) || !free(sprite)) {
+        if (!sprite.getAir() || (!characterStrike && !enabledFor(sprite)) || !free(sprite)) {
             // Landing, a grab, hurt, death or a policy change ends the air action and refreshes it.
             phase = Phase.IDLE;
             spent = false;
             ticks = 0;
+            characterStrike = false;
         }
         updateReticle(sprite);
     }
 
     private void updateReticle(AbstractPlayableSprite sprite) {
+        if (!enabledFor(sprite) && !previewRequested) {
+            reticleVisible = false;
+            return;
+        }
         reticleLocked = phase == Phase.HOMING;
         if (reticleLocked) {
             reticleVisible = true;
@@ -201,7 +207,7 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
             reticleY = targetY;
             return;
         }
-        var target = enabledFor(sprite) && free(sprite) && !spent ? select(sprite) : null;
+        var target = (enabledFor(sprite) || previewRequested) && free(sprite) && !spent ? select(sprite) : null;
         reticleVisible = target != null;
         if (target != null) {
             reticleX = target.x();
@@ -273,37 +279,78 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
      */
     public boolean tryLaunch(AbstractPlayableSprite sprite) {
         if (!enabledFor(sprite) || !free(sprite) || spent) return false;
-        var target = select(sprite);
-        if (target == null) return false;
-        launch(sprite, target);
-        return true;
+        boolean launched = com.openggf.sprites.playable.HomingAttack.startIfTarget(sprite, facadeMode());
+        if (launched) characterStrike = false;
+        return launched;
     }
 
-    /** No target and no native move fired: the forward air dash. */
+    /** No target and no native move fired: the forward air dash through the shared facade. */
     public boolean tryAirDash(AbstractPlayableSprite sprite) {
         if (!enabledFor(sprite) || !free(sprite) || spent) return false;
-        boolean right = sprite.getDirection() == Direction.RIGHT;
-        sprite.setXSpeed((short) (right ? DASH_SPEED : -DASH_SPEED));
-        if (sprite.getYSpeed() > 0) sprite.setYSpeed((short) 0);
-        sprite.setGSpeed(sprite.getXSpeed());
-        spent = true;
-        phase = Phase.DASH;
-        ticks = 0;
-        launchMode = policy().mode();
-        flameTicks = FLAME_AFTER_TICKS;
-        heatTicks = HEAT_BUILD_TICKS / 2;
-        guardTicks = INSTAGIB_GUARD_TICKS;
+        boolean launched = com.openggf.sprites.playable.HomingAttack.start(sprite, facadeMode());
+        if (launched) characterStrike = false;
+        return launched;
+    }
+
+    private com.openggf.sprites.playable.HomingAttack.Mode facadeMode() {
+        return policy().mode() == Mode.INSTAGIB ? com.openggf.sprites.playable.HomingAttack.Mode.INSTAGIB
+                : com.openggf.sprites.playable.HomingAttack.Mode.HOMING;
+    }
+
+    /** Character-owned launch, independent of mutator admission. */
+    public boolean activate(AbstractPlayableSprite sprite, Mode mode, boolean dive, boolean requireTarget) {
+        Objects.requireNonNull(mode, "mode");
+        if (mode == Mode.OFF || !leader(sprite) || !free(sprite) || spent) return false;
+        var target = previewRequested && reticleVisible ? trackPreview(sprite) : select(sprite);
+        if (target == null && requireTarget) return false;
+        if (sprite.getSecondaryAbility() == com.openggf.sprites.playable.SecondaryAbility.FLY)
+            sprite.getTailsFlightController().clear();
+        characterStrike = true;
+        if (target != null) launch(sprite, target, mode);
+        else {
+            sprite.setXSpeed((short) ((sprite.getDirection() == Direction.RIGHT ? 1 : -1) * (dive ? 0x400 : DASH_SPEED)));
+            sprite.setYSpeed((short) (dive ? 0xA00 : Math.min(0, sprite.getYSpeed())));
+            sprite.setGSpeed(sprite.getXSpeed());
+            sprite.setRolling(true);
+            spent = true; phase = Phase.DASH; ticks = 0; launchMode = mode;
+            flameTicks = FLAME_AFTER_TICKS; heatTicks = HEAT_BUILD_TICKS / 2; guardTicks = INSTAGIB_GUARD_TICKS;
+        }
+        sprite.resetPositionAndStatTableHistory();
+        var camera = sprite.currentCamera();
+        if (camera != null && camera.getFocusedSprite() == sprite) camera.setHorizScrollDelay(CAMERA_LAG_FRAMES);
+        com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, com.openggf.audio.GameSound.SPINDASH_RELEASE);
         return true;
     }
 
-    private void launch(AbstractPlayableSprite sprite, HomingTarget target) {
+    private HomingTarget trackPreview(AbstractPlayableSprite sprite) {
+        // Re-resolve the preview by aim point, never retain a live object in history.
+        var level = sprite.currentLevelManagerIfAvailable();
+        if (level == null || level.getObjectManager() == null) return null;
+        HomingTarget nearest = null;
+        int nearestDistance = TRACK_RADIUS + 1;
+        for (var object : level.getObjectManager().getActiveObjects()) {
+            var candidate = HomingTargets.classify(object, sprite);
+            if (candidate == null) continue;
+            int distance = distance(reticleX, reticleY, candidate.x(), candidate.y());
+            if (distance < nearestDistance) { nearest = candidate; nearestDistance = distance; }
+        }
+        return nearest;
+    }
+
+    public void requestPreview(AbstractPlayableSprite sprite, boolean requested) {
+        if (!leader(sprite)) return;
+        previewRequested = requested;
+        updateReticle(sprite);
+    }
+
+    private void launch(AbstractPlayableSprite sprite, HomingTarget target, Mode mode) {
         spent = true;
         phase = Phase.HOMING;
         ticks = 0;
         kind = target.kind();
         targetX = target.x();
         targetY = target.y();
-        launchMode = policy().mode();
+        launchMode = mode;
         flameTicks = FLAME_AFTER_TICKS;
         guardTicks = INSTAGIB_GUARD_TICKS;
         aim(sprite, targetX, targetY);
@@ -515,13 +562,14 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
         guardTicks = 0;
         shards = java.util.List.of();
         reticleVisible = false;
+        characterStrike = previewRequested = false;
     }
 
     @Override public String key() { return "homing-attack"; }
 
     @Override public Snapshot capture() {
         return new Snapshot(phase, spent, ticks, targetX, targetY, kind, launchMode, flameTicks,
-                heatTicks, guardTicks, shards, nextBurst);
+                heatTicks, guardTicks, shards, nextBurst, characterStrike, previewRequested);
     }
 
     @Override public void restore(Snapshot snapshot) {
@@ -539,6 +587,8 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
         guardTicks = snapshot.guardTicks();
         shards = snapshot.shards();
         nextBurst = snapshot.nextBurst();
+        characterStrike = snapshot.characterStrike();
+        previewRequested = snapshot.previewRequested();
         reticleVisible = false;
     }
 
@@ -546,7 +596,7 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
 
     public record Snapshot(Phase phase, boolean spent, int ticks, int targetX, int targetY,
                            HomingTargetKind kind, Mode launchMode, int flameTicks,
-                           int heatTicks, int guardTicks, java.util.List<Shard> shards, long nextBurst) {
+                           int heatTicks, int guardTicks, java.util.List<Shard> shards, long nextBurst, boolean characterStrike, boolean previewRequested) {
         public Snapshot {
             shards = java.util.List.copyOf(shards);
             Objects.requireNonNull(phase, "phase");

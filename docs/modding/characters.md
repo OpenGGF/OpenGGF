@@ -209,6 +209,29 @@ an on-screen name or face yet. GGFP presentation sections are also pending.
 
 ## Ability and super-form rules
 
+Characters can own the world-session homing capability independently of Mutator Lab.
+Import `com.openggf.sprites.playable.HomingAttack` and return
+`HomingAttack.start(this, HomingAttack.Mode.HOMING)` from `onAbilityActivate`.
+Choose `Mode.INSTAGIB` per call for a Super/Hyper strike; no menu setting or native
+character identity is required. A target uses native contact/defeat rules, refreshes
+the air action for chaining, and retains the existing effects and camera lag.
+Without a target, `start` dashes forward. Use `startIfTarget(this, mode)` to
+return false without dashing when a native air move should get the press instead.
+
+For a flight move, call `HomingAttack.requestReticle(this, downHeld)` from your tick
+hook, and `HomingAttack.divebomb(this, mode)` on the down+jump activation. Release
+the request with `false` to hide the reticle, including during a strike. The dive
+uses the previewed live target; without one it dives steeply forward-down. The
+facade accepts a free airborne controlled leader, including flight without native
+`jumping` state, and rejects a spent air action, grounded, hurt, dead, controlled or
+locked player. It does not grant flight or intercept native flapping input: the
+character owns that dispatch. Returning false leaves native air moves available.
+
+The runtime, air-action latch and plain-value rewind snapshot belong to the world;
+characters must not cache engine targets or serialize the runtime. Other character
+state still follows the subclass rewind contract below.
+
+
 Use `INSTA_SHIELD`, `FLY`, `GLIDE`, or `NONE` when an existing
 `SecondaryAbility` is sufficient. For one novel airborne activation, override:
 
