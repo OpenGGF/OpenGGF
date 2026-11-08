@@ -259,6 +259,19 @@ final class CdProgrammeDefinition {
         for(var a:CdR31aAssets.Asset.values())b.raw(a,a.offset,a.length,a.sha);
         b.raw(CdR31aGameOverSource.View.CODE,0xF17E,0xE4,"2bbfc2728531c5ca3612ea7e87b34ef9056fc02a8490decae80e25d2d6a2e58b");
         b.raw(CdR31aGameOverSource.View.MAPPINGS,0xF262,56,"ab185aa60f83919e611dd47457d7fb9b5b87e99f2b9210d0dc0508c71dcea44b");
+        // Genuine same-owner P3 DATA; only Bumper is physically admitted.
+        b.operand(0xADB4,"217c0020b0aa0004");
+        b.operand(0xAF1E,"217c0020b0ea0004");
+        b.operand(0xB2E0,"217c0020b30e0004");
+        b.operand(0xB154,"217c0020b26c0004");
+        b.operand(0xB63E,"217c0020b8800004");
+        b.operand(0xB8E0,"217c0020b9180004");
+        b.operand(0xAEEE,"43f90020b09a");
+        b.operand(0xAF52,"43f90020b0dc");
+        b.operand(0xB2F4,"43fa000e");
+        b.operand(0xB8FC,"43fa0014");
+        b.operand(0xAFB0,"47f90020b01a");
+        for(var view:CdR31aBumperSource.View.values())b.raw(view,view.offset,view.length,view.sha);
         var nativeInputs=new EnumMap<CdR31aLoadMetadata.SourceId,ReadExtent>(CdR31aLoadMetadata.SourceId.class);
         for(var line:CdR31aLoadPlan.NATIVE_READERS.strip().lines().toList()) {
             var w=line.split(" ");var id=CdR31aLoadMetadata.SourceId.valueOf(w[0]);

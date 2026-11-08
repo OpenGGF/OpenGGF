@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdR31BumperCall;
+
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStageKey;
@@ -523,4 +525,42 @@ public final class CdObjectPlacementRuntime {
         }
         return placements.records().get(row);
     }
+    /** Original Bumper byte store only: linear counter and period-loaded clear remain distinct. */
+    public static final class BumperSavedPublication {
+        private final CdObjectPlacementRuntime owner;private final CdR31BumperCall original;
+        private final Snapshot before;private final int index,value;private boolean used;
+        private BumperSavedPublication(CdObjectPlacementRuntime owner,CdR31BumperCall original,int index,int value){
+            this.owner=owner;this.original=original;before=owner.capture();this.index=index;this.value=value;
+        }
+    }
+    private boolean bumperSavedApplying;
+    public BumperSavedPublication prepareBumperSavedStore(CdR31BumperCall original){
+        if(bumperSavedApplying)throw new IllegalStateException("Bumper saved preparation reentry");
+        Objects.requireNonNull(original).requireSavedPreparation(this);var op=original.savedStore();int at;
+        if(op.kind()==CdPinballContext.SavedKind.BUMPER_LINEAR_COUNTER){
+            if(op.savedId()==0||op.period()!=-1)throw new IllegalArgumentException("Not original linear counter");
+            at=Objects.checkIndex(2+op.savedId(),SAVED_BANK_BYTES);
+            if(op.expectedByte()>=0x8a||op.outputByte()!=op.expectedByte()+1)throw new IllegalArgumentException("Counter cap/output differs");
+        }else{at=bankIndex(op.savedId(),op.period());if(op.outputByte()!=(op.expectedByte()&127))throw new IllegalArgumentException("Loaded clear differs");}
+        if(Byte.toUnsignedInt(savedFlags[at])!=op.expectedByte())throw new IllegalArgumentException("Stale selected Bumper bank byte");
+        return new BumperSavedPublication(this,original,at,op.outputByte());
+    }
+    private void bumperSavedCut(BumperSavedPublication p){
+        if(p==null||p.owner!=this||p.used)throw new IllegalArgumentException("Foreign/used Bumper saved store");
+        validateRestore(p.before);var n=capture();
+        if(!n.status().equals(p.before.status())||!n.pool().slots().equals(p.before.pool().slots())
+                ||!Arrays.equals(n.savedFlags().copy(),p.before.savedFlags().copy()))throw new IllegalArgumentException("Changed complete placement cut");
+    }
+    public void validateBumperSavedStore(BumperSavedPublication p){
+        if(bumperSavedApplying)throw new IllegalStateException("Bumper saved validation reentry");
+        bumperSavedCut(p);p.original.requireSavedPreparation(this);bumperSavedCut(p);
+    }
+    public void applyBumperSavedStore(BumperSavedPublication p){
+        if(bumperSavedApplying)throw new IllegalStateException("Bumper saved application reentry");bumperSavedApplying=true;
+        try{bumperSavedCut(p);p.original.requireSavedApplication(this);bumperSavedCut(p);
+            // No allocation/callback after the last preflight and before the one native byte write.
+            p.used=true;savedFlags[p.index]=(byte)p.value;
+        }finally{bumperSavedApplying=false;}
+    }
+
 }

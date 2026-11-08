@@ -432,6 +432,16 @@ final class CdWorld implements SonicCdAct3FutureLoadingVisit.OrdinaryOwner,
     if(next.scrollLockWord()!=host.scroll().foreground().scrollLock())hp=host.prepareScrollLock(hp,next.scrollLockWord());
     active.validatePrepared(before,ready);host.validateOrdinary(hp);original.validateBefore();original.applyNative();active.adoptAfterNative(before,ready);host.adoptAfterNative(hp);
    }
+   public void bumper(SonicCdR31aObjectPass.BumperPublication original){
+    requireCut(Cut.RUN_OBJECTS);if(original.owner()!=objects)throw new IllegalArgumentException("Foreign Bumper physical owner");original.validateBefore();
+    var before=objectCut();if(!SonicCdR31aObjectPass.sameCutForBumper(before,original.expected()))throw new IllegalArgumentException("Changed complete Bumper Core/Host cut");
+    // Every Bumper operation changes one owner. Core/reserved and the other owners are fenced,
+    // so no redundant Core/Host assignments follow a pool/Frame/saved write.
+    if(original.changesHost()){
+     var next=original.next();var hp=host.prepareOrdinary(host.globals(),host.video(),worldValues(next),soundSuffix(next),next.completedCpu());
+     host.validateOrdinary(hp);original.validateBefore();original.applyNative();host.adoptAfterNative(hp);original.acknowledge();
+    }else{original.validateBefore();original.applyNative();original.acknowledge();}
+   }
    public CdPlayerBody.R31Context primaryContext(){
     requireCut(Cut.RUN_OBJECTS);var c=objectCut();var state=frame.state();var pool=host.placement().capture().pool();
     return new CdPlayerBody.R31Context(frame.stageSource(),assets,c.currentTerrain(),pool,Optional.of(new CdPlayerMovement.ObjectContext(pool,state.objectLinks().standObject(),state.header().slotId(),state.header().width())),scanner,new CdPlayerBody.ResponseContext(response,c.contact(),c.world()),c.noBumperByte(),host.bossStartedByte(),OptionalInt.of(active.state().program().goodFutureByte()),c.cameraXWord(),c.cameraYWord());

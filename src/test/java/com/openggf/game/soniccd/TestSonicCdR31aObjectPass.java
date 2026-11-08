@@ -505,6 +505,12 @@ class TestSonicCdR31aObjectPass {
         public void validate(SonicCdR31aObjectPass p,CdR31aAssets a,CdPlayerFrameRuntime f,CdObjectPlacementRuntime v,CdR31aObjectAssets o){if(!active||p!=pass||a!=assets||f!=frame||v!=placement||o!=objects)throw new IllegalStateException("No constructed private caller");}
         public SonicCdR31aObjectPass.Cut read(){reads++;onRead.run();if(terrainDiverged)return new SonicCdR31aObjectPass.Cut(cut.core(),cut.ring(),divergedTerrain,cut.contact(),cut.world(),cut.noBumperByte(),cut.cameraXWord(),cut.cameraYWord(),cut.scrollLockWord(),cut.layerByte(),cut.cpuSat(),cut.completedCpu(),cut.sounds(),cut.amyCapturedByte());return cut;}
         public void adopt(SonicCdR31aObjectPass.Adoption a){lastAdoption=a;a.validateBefore();beforeAdopt.run();if(fault instanceof RuntimeException e)throw e;if(fault instanceof Error e)throw e;var next=a.next();a.applyNative();cut=next;adoptions++;var once=afterAdopt;afterAdopt=()->{};once.run();}
+        SonicCdR31aObjectPass.BumperPublication lastBumper;
+        public void bumper(SonicCdR31aObjectPass.BumperPublication p){
+            lastBumper=p;p.validateBefore();beforeAdopt.run();if(fault instanceof RuntimeException e)throw e;if(fault instanceof Error e)throw e;
+            p.validateBefore();var next=p.next();p.applyNative();cut=next;p.acknowledge();adoptions++;
+            var once=afterAdopt;afterAdopt=()->{};once.run();
+        }
         public CdPlayerBody.R31Context primaryContext(){
             if(!realPrimary)throw new AssertionError("Constructed initial tests do not mint Main/Hurt context");
             return new CdPlayerBody.R31Context(frame.stageSource(),assets,cut.currentTerrain(),placement.pool().capture(),Optional.empty(),

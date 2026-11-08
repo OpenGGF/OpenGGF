@@ -23,6 +23,7 @@ import com.openggf.game.soniccd.level.CdR31aObjectAssets;
 import com.openggf.game.soniccd.level.CdR31IntroAssets;
 import com.openggf.game.soniccd.level.CdR31aSolidsSource;
 import com.openggf.game.soniccd.level.CdR31aGameOverSource;
+import com.openggf.game.soniccd.level.CdR31aBumperSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -503,6 +504,7 @@ public final class CdObjectMappings implements CdDrawMappings {
         var explosion=common.explosionAssets();var points=common.pointsAssets();
         tables.add(new DeclaredTable(explosion.mappingsAddress(),explosion.explosion().mappings(),0,7));
         tables.add(new DeclaredTable(points.mappingsAddress(),points.points().mappings(),0,6));
+        tables.add(CdR31aBumperSource.fromAssets(assets).mapping());
         return declaredSourceViews(tables, List.of());
     }
     // END R31 COMMON COUNTED METADATA JOIN 20261107

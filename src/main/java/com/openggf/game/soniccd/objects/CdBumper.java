@@ -8,6 +8,7 @@ package com.openggf.game.soniccd.objects;
 public final class CdBumper {
     private CdBumper() { }
     public static CdPinballContext.Result run(CdPinballContext c,int wholeIndex){return c.run(wholeIndex,0x1d,()->body(c));}
+    public static CdPinballContext.PrimaryResult runPrimary(CdPinballContext c,int wholeIndex){return c.runPrimary(wholeIndex,0x1d,()->body(c));}
     private static void body(CdPinballContext c){var i=c.image();CdPinballContext.routine(i,0,2);
         if(i.b(0x24)==0){i.b(0x24,2);i.l(4,c.assets.bumper().mappingAddress());i.w(2,0x4ce);i.b(1,4);
             i.b(0x17,16);i.b(0x19,16);i.b(0x16,16);i.b(0x18,1);i.b(0x20,0xd7);i.w(0x32,i.w(8));i.w(0x34,5);

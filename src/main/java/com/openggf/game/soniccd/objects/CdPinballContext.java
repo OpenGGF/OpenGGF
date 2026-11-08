@@ -5,7 +5,8 @@ import com.openggf.game.soniccd.player.*;
 import java.util.*;
 
 /** One constructed component invocation, never a World/pass/Frame or live publication authority.
- * Owns a same-owner staging copy of all96 slots and complete actor pair/environment values.
+ * Owns one shared staging kernel for complete legacy pairs or an explicitly primary-only input.
+ * PrimaryResult makes no typed-secondary claim; actual reserved storage stays with Core/World.
  * Completed Result/Prefix values are inert. Root must provide actual original source admission,
  * publication receipts and typed shared Draw/Despawn/Stand/GetOff/sound joins at their real sites.
  */
@@ -25,6 +26,21 @@ public final class CdPinballContext {
                          CdAssetBytes savedFlags,List<String> completed) {
         public Result {completed=List.copyOf(completed);}
     }
+    /** Native Bumper reads only primary (Main.asm:124-141). No secondary supplier or placeholder. */
+    public record PrimaryInput(CdObjectPool.Snapshot pool,CdPlayerBody.State primary,
+                               CdPlayerBody.Environment environment,CdPlayerTouchResponse.WorldGlobals score,
+                               CdAssetBytes savedFlags,int period,int goodFuture,int debugMode,int act) {
+        public PrimaryInput {Objects.requireNonNull(pool);Objects.requireNonNull(primary);Objects.requireNonNull(environment);
+            Objects.requireNonNull(score);Objects.requireNonNull(savedFlags);
+            if(savedFlags.length()!=CdObjectPlacementRuntime.SAVED_BANK_BYTES)throw new IllegalArgumentException("Complete saved bank required");
+            if((period&~255)!=0||(goodFuture&~255)!=0||(debugMode&~65535)!=0||(act&~255)!=0)throw new IllegalArgumentException("Native globals");}
+    }
+    /** Inert completed/stopped values, explicitly no complete secondary-pair claim or live authority. */
+    public record PrimaryResult(CdObjectPool.Snapshot pool,CdPlayerBody.State primary,
+                                CdPlayerBody.Environment environment,CdPlayerTouchResponse.WorldGlobals score,
+                                CdAssetBytes savedFlags,List<String> completed) {
+        public PrimaryResult {completed=List.copyOf(completed);}
+    }
     /** Original synchronous calls, not replay of completed effects. There are no default success ports. */
     public interface Ports {
         void sound(Sound operation);
@@ -39,11 +55,13 @@ public final class CdPinballContext {
     public enum SoundKind { FM, SUB_CPU }
     public enum AttachmentKind { STAND_ON_OBJECT, GET_OFF_OBJECT }
     public abstract class Operation {
-        private boolean done;
+        private boolean done;private final int ordinal=++operationOrdinal;
         private Operation() { }
-        final void current() {if(pending!=this||done||!running)throw new IllegalStateException("Stale, duplicate or foreign pinball operation");}
+        final void current() {if(pending!=this||done||!running||invokingThread!=Thread.currentThread())throw new IllegalStateException("Stale, duplicate or foreign pinball operation");}
         final void finish(String label) {current();done=true;completed.add(label);}
         public final Result before() {current();return result();}
+        public final PrimaryResult primaryBefore() {current();return primaryResult();}
+        public final int ordinal() {current();return ordinal;}
         public final void requireOwner(CdPinballContext owner){current();if(owner!=CdPinballContext.this)throw new IllegalArgumentException("Foreign pinball producer");}
     }
     public final class ObjectStore extends Operation {
@@ -118,22 +136,37 @@ public final class CdPinballContext {
             pool.write(object);for(var old:detached)pool.write(old);actor=player;finish(kind.name());
         }
     }
-    private final Input input;final CdR31PinballAssets assets;final CdPlayerMath math;
+    private final PrimaryInput input;private final Optional<Pair> legacyPair;final CdR31PinballAssets assets;final CdPlayerMath math;
     private final Ports ports;private final CdObjectPool pool;private final byte[] saved;
     private CdPlayerBody.State actor;private CdPlayerTouchResponse.WorldGlobals score;
-    private final List<String> completed=new ArrayList<>();private Operation pending;private boolean running,used;private int whole;
+    private final List<String> completed=new ArrayList<>();private Operation pending;private boolean running,used;private int whole,operationOrdinal;private Thread invokingThread;
     public CdPinballContext(Input input,CdR31PinballAssets assets,CdPlayerMath math,Ports ports){
-        this.input=Objects.requireNonNull(input);this.assets=Objects.requireNonNull(assets);this.math=Objects.requireNonNull(math);
-        this.ports=Objects.requireNonNull(ports);pool=CdObjectPool.stagingCopy(input.pool());saved=input.savedFlags().copy();
-        actor=input.players().primary();score=input.score();
+        this(primaryInput(input),Optional.of(input.players()),assets,math,ports);
     }
-    /** Exact completed stopped prefix, also available after a synchronous port/read failure. Not retry authority. */
-    public Result result(){return new Result(pool.capture(),new Pair(actor,input.players().primaryEnvironment(),
-            input.players().secondary(),input.players().secondaryEnvironment()),score,CdAssetBytes.copyOf(saved),completed);}
+    private static PrimaryInput primaryInput(Input input){Objects.requireNonNull(input);
+        return new PrimaryInput(input.pool(),input.players().primary(),input.players().primaryEnvironment(),
+                input.score(),input.savedFlags(),input.period(),input.goodFuture(),input.debugMode(),input.act());}
+    public static CdPinballContext forPrimary(PrimaryInput input,CdR31PinballAssets assets,CdPlayerMath math,Ports ports){
+        return new CdPinballContext(input,Optional.empty(),assets,math,ports);
+    }
+    private CdPinballContext(PrimaryInput input,Optional<Pair> legacyPair,CdR31PinballAssets assets,CdPlayerMath math,Ports ports){
+        this.input=Objects.requireNonNull(input);this.legacyPair=legacyPair;this.assets=Objects.requireNonNull(assets);this.math=Objects.requireNonNull(math);
+        this.ports=Objects.requireNonNull(ports);pool=CdObjectPool.stagingCopy(input.pool());saved=input.savedFlags().copy();
+        actor=input.primary();score=input.score();
+    }
+    /** Legacy packaging requires an actually supplied pair; reject before invoking/copying anything. */
+    public Result result(){var pair=legacyPair.orElseThrow(()->new IllegalStateException("No complete legacy secondary pair supplied"));
+        return new Result(pool.capture(),new Pair(actor,input.environment(),pair.secondary(),pair.secondaryEnvironment()),score,CdAssetBytes.copyOf(saved),completed);}
+    public PrimaryResult primaryResult(){return new PrimaryResult(pool.capture(),actor,input.environment(),score,CdAssetBytes.copyOf(saved),completed);}
     Result run(int index,int id,Runnable body){
+        if(legacyPair.isEmpty())throw new IllegalStateException("Legacy invocation requires a complete supplied pair");
+        return invoke(index,id,body,this::result);
+    }
+    PrimaryResult runPrimary(int index,int id,Runnable body){return invoke(index,id,body,this::primaryResult);}
+    private <T>T invoke(int index,int id,Runnable body,java.util.function.Supplier<T> result){
         if(used)throw new IllegalStateException("One component invocation per context");used=true;whole=index;
-        if(pool.state(index).id()!=id)throw new IllegalArgumentException("Native dispatch ID differs");running=true;
-        try{body.run();return result();}finally{running=false;pending=null;}
+        if(pool.state(index).id()!=id)throw new IllegalArgumentException("Native dispatch ID differs");running=true;invokingThread=Thread.currentThread();
+        try{body.run();return result.get();}finally{running=false;pending=null;invokingThread=null;}
     }
     private void call(Operation op,Runnable invoke){
         if(!running||pending!=null)throw new IllegalStateException("Nested pinball call");pending=op;
@@ -171,9 +204,7 @@ public final class CdPinballContext {
         if(op.delete){int id=image().b(0x23);if(id!=0){int period=despawnPeriod();int at=2+3*id+period;Objects.checkIndex(at,saved.length);
             saved(SavedKind.DESPAWN_PERIOD_LOADED,id,period,at,Byte.toUnsignedInt(saved[at])&127);}delete();}}
     // common/object_spawn.asm:DespawnObject..DespawnObjectClearState, actual raw warp selection.
-    private int despawnPeriod(){int period=input.period();if((period&128)==0)return period;
-        int selected=(period&127)-(byte)input.players().primaryEnvironment().movement().gates().timeWarpDirection();
-        return Math.max(0,Math.min(2,selected));}
+    private int despawnPeriod(){return CdSpinTunnelTag.selectedDespawnPeriod(input.period(),input.environment().movement().gates().timeWarpDirection());}
     void attachment(AttachmentKind kind){var op=new Attachment(kind);call(op,()->ports.attachment(op));}
     void delete(){var op=new ObjectStore(pool.state(whole),null);call(op,()->ports.objectStore(op));}
     void points(){var result=CdPlayerTouchResponse.addPoints(score,10);var op=new ScoreStore(result.world());call(op,()->ports.scoreStore(op));

@@ -301,26 +301,37 @@ public final class CdSpinTunnelTag {
      */
     public DespawnResult despawn(CdObjectState afterDrawLiveImage, DespawnGlobals globals) {
         Objects.requireNonNull(afterDrawLiveImage, "post-draw live image");
+        return despawnAtX(afterDrawLiveImage, afterDrawLiveImage.centreX(), globals);
+    }
+
+    /** Shared CheckObjectDespawn2's explicit selected-X operand; original image is not rewritten. */
+    public DespawnResult despawnAtX(CdObjectState afterDrawLiveImage,int selectedXWord,DespawnGlobals globals) {
+        Objects.requireNonNull(afterDrawLiveImage, "post-draw live image");
+        if((selectedXWord&~65535)!=0)throw new IllegalArgumentException("Selected native X WORD required");
         Objects.requireNonNull(globals, "despawn globals");
         boolean warp = (globals.rawTimeZoneByte() & 0x80) != 0;
         boolean distanceDelete = false;
         if ((afterDrawLiveImage.spriteFlags() & 0x80) == 0) {
             int cameraChunk = ((globals.cameraXWord() - 0x80) & 0xFFFF) & 0xFF80;
-            int distance = ((afterDrawLiveImage.centreX() & 0xFF80) - cameraChunk) & 0xFFFF;
+            int distance = ((selectedXWord & 0xFF80) - cameraChunk) & 0xFFFF;
             distanceDelete = distance > 0x280; // BLS keeps equality; unsigned WORD, fixed native320 constant.
         }
         if (!distanceDelete && !warp) return new DespawnResult(false, Optional.empty());
         int savedId = afterDrawLiveImage.savedFlagsId();
         if (savedId == 0) return new DespawnResult(true, Optional.empty());
 
-        int period = globals.rawTimeZoneByte() & 0x7F;
-        if (warp) {
-            // EXT.W timeWarpDir, NEG.W, ADD.W; clamp ONLY this time-warp branch (Spawner:417-432).
-            period = (short) (period - (byte) globals.rawTimeWarpDirByte());
-            if (period < 0) period = 0;
-            else if (period >= 3) period = 2;
-        }
+        int period = selectedDespawnPeriod(globals.rawTimeZoneByte(),globals.rawTimeWarpDirByte());
         return new DespawnResult(true, Optional.of(new LoadedClear(savedId, period, 2 + 3 * savedId + period)));
+    }
+
+    /** One semantic native warp-period selection, also used by the P3 staging saved-store caller. */
+    static int selectedDespawnPeriod(int rawTimeZoneByte,int rawTimeWarpDirByte) {
+        int period=rawTimeZoneByte&0x7f;
+        if((rawTimeZoneByte&0x80)!=0){
+            period=(short)(period-(byte)rawTimeWarpDirByte);
+            if(period<0)period=0;else if(period>=3)period=2;
+        }
+        return period;
     }
 
     /** Tag:166-188; signed BMI followed by unsigned BCC on the wrapped distance word. */

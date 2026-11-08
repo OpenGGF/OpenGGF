@@ -1,5 +1,61 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — genuine primary-only Bumper through shared owners
+
+One Context staging/invocation kernel now supports genuine primary-only Bumper
+input/result/prefix as well as its preserved legacy Pair/Input/Result APIs. The
+private Bumper body is unchanged. Primary-only legacy entry/result rejects before
+body effects and never constructs or reads a secondary actor/Environment. The
+remaining P3 bodies still require their real legacy pair. No second body, World,
+walker, capture partition, source reader, clock, ledger or gameplay owner is added.
+
+The actual R31A source lazily authenticates the six genuine existing P3 visual
+views and129-byte slope hull required by their aggregate; only Bumper's three-frame
+mapping is registered for live use. Original private Context operations bind the
+cached receiver, source, phase/thread/slot/site/ordinal and once-only receipt.
+Frame, pool, saved bank or Host publishes only its own prebuilt reference. Complete
+Core/reserved1984, Frame/Environment/display/art/clock/pause,96 slots/status/all
+saved bytes remain fenced. Public records, effects and prepared values do not
+mint a pass invocation or original application window.
+
+The native body retains signed full-WORD subtype/dirty motion, budget decrement,
+shared AddPoints10 and first-free dirty Points child,7A/7F typed request order,
+angle/sine launch, linear saved counter/cap8A, explicit bit7-clear then original
+queue Draw, and live postDraw anchor despawn. Old current-X despawn delegates to one
+selected-X algorithm; the displaced Context period calculation calls that same
+helper. The actual data/kernel/owner structure implements reuse without a fake
+inactive counterpart. Source/source-history and value-CAS concurrency limits are
+not expanded into claims of hardware or host atomicity.
+
+Root composes22 Java files by intent, preserving all existing Kama/Sickle/effect/
+P2 blocks and later strict intro/reload/lower-route tests. The original Bumper
+source review found one P1: the anonymous Draw callback shadowed the enclosing
+pass method. Root qualifies exactly that call. Sound alternatives retain Kama
+and append Bumper at38, with three exact coupled inventories. Two Points controls
+keep dirty D7/C1 routines and require the genuine routine-dispatch fault; valid
+routine0 subcases prove earlier-slot waiting/next-pass Init and later-slot same-
+pass Init/Main, timer23 and complete dirty nonwrites. No routine is normalized.
+
+R131's new public-World test first compiles on prior production and reaches the
+actual missing OBJECT_FAMILY/whole127/ID1D. That intended RED remains failed.
+R132 compiles production but test compilation fails on one new local variable
+shadowed by an inherited fixture Sound field; zero tests execute. It stays
+INCOMPLETE. Root renames only that AtomicReference and its two uses (39 bytes),
+without production changes. R132b then passes213 cases across19 flat roots,
+including3 exact method subsets, zero failures/errors/skips. Source/index is
+unchanged with fingerprint
+`e9d29cdc2ed19c8c5e17c5e02dfb889b41c2eca996d14aa9b62cf2965906d1f7`.
+This is one complete213-case focused run, not a category/full-suite result.
+
+New public-World controls qualify constructed contact-free motion/Init, original
+range despawn and full/course reentry. Actual contact launch/score/saved behavior
+has component and real-source-pass controls with a constructed Host; it is not
+claimed as naturally reached World contact. Native request metadata is not
+an audible driver result. Selected Bumper pixels, natural contacts/reward chain,
+remaining P3 live bindings, completed acts, full USA and JP/EU remain separate.
+Independent Time Post source review and Flower/reward source authoring continue;
+no remote or public delivery occurs.
+
 ## 8 November 2026 — original lower passage, RollTunnel and first Time Post
 
 Two test-only payloads reuse eight package-visible support declarations while

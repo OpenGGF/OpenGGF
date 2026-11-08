@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.player;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdR31BumperCall;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.media.CdMmdImage;
@@ -639,6 +640,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     private boolean paused;
     private boolean closed;
     private boolean inOperation;
+    private boolean bumperApplying;
     private PendingInput pending;
     private boolean bodyEntitled;
     // Meaningful only while bodyEntitled; no capture or independent service authority.
@@ -2529,7 +2531,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
     private void requireOpenIdle() {
         if (closed) throw new IllegalStateException("CD player frame admission is closed; a known rebuild is required");
-        if (inOperation) throw new IllegalStateException("Reentrant CD frame mutation is not admitted");
+        if (inOperation || bumperApplying) throw new IllegalStateException("Reentrant CD frame mutation is not admitted");
     }
     private void requireClosedFrame() {
         if (pending != null || bodyEntitled) throw new IllegalStateException("A closed frame cut requires no pending input or body entitlement");
@@ -3168,6 +3170,41 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                     actualEnvironment.globals(), actualEnvironment.dynamicSlots());
         }
         return new ObjectSolidPublication(actualState, actualEnvironment, actualState, nextEnvironment);
+    }
+
+    /** Already-built complete primary pair, tied to one original live Bumper PlayerStore.
+     * No secondary claim. Environment/display/art/clock/pause are explicit nonwrites. */
+    public static final class BumperPlayerPublication {
+        private final CdPlayerFrameRuntime owner;private final CdR31BumperCall original;
+        private final CdPlayerBody.State before,ready;private final CdPlayerBody.Environment environment;
+        private final Optional<CdPlayerBody.DisplayPublication> display;private final CdPlayerArtRuntime.State art;
+        private final VIntClock clock;private final boolean paused;private boolean used;
+        private BumperPlayerPublication(CdPlayerFrameRuntime owner,CdR31BumperCall original){
+            this.owner=owner;this.original=original;before=owner.state;ready=original.playerStore().output();
+            environment=owner.environment;display=owner.display;art=owner.art.capture();clock=owner.vIntClock;paused=owner.paused;
+        }
+    }
+    public BumperPlayerPublication prepareBumperPlayerStore(CdR31BumperCall original){
+        requireOpenIdle();requireClosedFrame();Objects.requireNonNull(original).requirePlayerPreparation(this);
+        if(original.playerStore().expected()!=state)throw new IllegalArgumentException("Not original primary reference");
+        return new BumperPlayerPublication(this,original);
+    }
+    private void bumperPair(BumperPlayerPublication p){
+        if(p==null||p.owner!=this||p.used||state!=p.before||environment!=p.environment||display!=p.display
+                ||!art.capture().equals(p.art)||vIntClock!=p.clock||paused!=p.paused||closed)
+            throw new IllegalArgumentException("Stale complete Bumper Frame cut");
+        if(p.original.playerStore().expected()!=state||p.original.playerStore().output()!=p.ready)
+            throw new IllegalArgumentException("Foreign original Bumper output");
+    }
+    public void validateBumperPlayerStore(BumperPlayerPublication p){
+        requireOpenIdle();requireClosedFrame();bumperPair(p);p.original.requirePlayerPreparation(this);bumperPair(p);
+    }
+    public void applyBumperPlayerStore(BumperPlayerPublication p){
+        requireOpenIdle();requireClosedFrame();bumperApplying=true;
+        try{bumperPair(p);p.original.requirePlayerApplication(this);bumperPair(p);
+            // All checks/callbacks complete. Only already-built original primary State is assigned.
+            p.used=true;state=p.ready;
+        }finally{bumperApplying=false;}
     }
 
 }

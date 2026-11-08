@@ -105,7 +105,13 @@ matching area heading; see the
   kernels. Their focused cohort plus two corrected test classes qualifies121
   distinct cases; native dirty-slot reuse retains its deferred mapping failure.
   Explosion's actual Flower conversion returns without redispatch; Flower remains
-  an explicit next-owner boundary.
+  an explicit next-owner boundary. Bumper now uses a primary-only path through
+  the same pinball kernel, retaining its legacy paired API without constructing a
+  secondary actor. Original Frame, saved-bank, score and Draw publications share
+  the existing owners; selected-anchor despawn replaces duplicate period logic.
+  The213-case component/World/legacy/route cohort passes without failures, errors
+  or skips after a test-only name-shadow correction. Natural contact, selected
+  Bumper pixels and completed reward/act/regional coverage remain separate.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

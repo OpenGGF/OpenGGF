@@ -195,6 +195,11 @@ public final class CdR31aAssets {
     }
     // END fixed R31 native-HUD source borrow 20261107.
 
+    private CdR31aBumperSource bumperSource;
+    synchronized CdR31aBumperSource bumperSource(){
+        if(bumperSource==null)bumperSource=CdR31aBumperSource.create(this);
+        return bumperSource;
+    }
     CdProgrammeReader internalReader(){return reader;}
     void requireAuthenticated() {
         reader.requireRetained();

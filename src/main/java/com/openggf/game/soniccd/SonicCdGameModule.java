@@ -1107,7 +1107,7 @@ public final class SonicCdGameModule implements GameModule {
         PastLoadBoundary boundary() { return boundary; }
     }
     // Typed request metadata and one native music-latch projection; no audio synthesis.
-    sealed interface PastSound permits PastIntroFm, PastIntroSubCpu, PastCcFm, PastKamaSickleFm, PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastLostRingFm, PastRobotGeneratorFm, PastProjectorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing, PastTunnelDoorSplashFm, PastDiscFm, PastVerticalDoorFm, PastSpeedShoesSubCpu, PastLevelMusic, PastR13BossFm, PastR13BossSubCpu, PastR13CapsuleExplosion, PastR13CapsuleSubCpu, PastGameOverSubCpu { }
+    sealed interface PastSound permits PastIntroFm, PastIntroSubCpu, PastCcFm, PastKamaSickleFm, PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastLostRingFm, PastRobotGeneratorFm, PastProjectorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing, PastTunnelDoorSplashFm, PastDiscFm, PastVerticalDoorFm, PastSpeedShoesSubCpu, PastLevelMusic, PastR13BossFm, PastR13BossSubCpu, PastR13CapsuleExplosion, PastR13CapsuleSubCpu, PastGameOverSubCpu, PastBumperSubCpu { }
     record PastR13CapsuleExplosion() implements PastSound { }
     record PastR13CapsuleSubCpu(com.openggf.game.soniccd.objects.CdR13Capsule.CpuCommand command) implements PastSound {
         PastR13CapsuleSubCpu { Objects.requireNonNull(command); }
@@ -1152,6 +1152,7 @@ public final class SonicCdGameModule implements GameModule {
     /** Completed B9 ledger metadata only; private original pass publication owns the operation. */
     record PastKamaSickleFm() implements PastSound { }
     record PastCcFm(int id) implements PastSound {PastCcFm{if(id!=0xB7)throw new IllegalArgumentException("Actual CC Spikes FM B7");}}
+    record PastBumperSubCpu(int nativeId) implements PastSound {PastBumperSubCpu{if(nativeId!=0x7a&&nativeId!=0x7f)throw new IllegalArgumentException("Actual Bumper SubCPU");}}
     record PastIntroFm(int nativeId) implements PastSound {PastIntroFm{if(nativeId!=0xA3&&nativeId!=0xCA)throw new IllegalArgumentException("Actual intro FM");}}
     record PastIntroSubCpu(int nativeId) implements PastSound {PastIntroSubCpu{if(nativeId!=0x7D)throw new IllegalArgumentException("Actual intro SubCPU");}}
     record PastFrameSound(CdPlayerFrameRuntime.Sound sound) implements PastSound {
