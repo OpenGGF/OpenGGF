@@ -34,10 +34,10 @@ def native(pieces,data,colors):
   im.paste(p,(48+x,48+y),p.point(lambda i:255 if i else 0, mode='L'))
  return im
 
-def back(phase,angle=0,ball=False):
+def back(phase,angle=0,ball=False,yscale=1,yoffset=0):
  """Pixel-coordinate polygons, never resample a bitmap. Stride has four poses."""
  im=indexed((96,96));d=ImageDraw.Draw(im);c=math.cos(math.radians(angle));s=math.sin(math.radians(angle))
- def pts(p):return [(48+round(x*c-y*s)-(5 if angle else 0),48+round(x*s+y*c)-(2 if angle==45 else 0)) for x,y in p]
+ def pts(p):return [(48+round(x*c-y*s)-(5 if angle else 0),48+round((x*s+y*c)*yscale)+yoffset-(2 if angle==45 else 0)) for x,y in p]
  def poly(p,fill,outline=1):d.polygon(pts(p),fill=fill,outline=outline)
  def line(p,fill,width=1):d.line(pts(p),fill=fill,width=width)
  if ball:
@@ -144,8 +144,69 @@ def s2(dest):
  if dest:review(dest,'s2-halfpipe',frames,refs,sequences)
  return surface
 
+def blue(dest):
+ path='docs/skdisasm/General/Sprites/Sonic/Map - SStage Sonic.asm'
+ text=(ROOT/path).read_text()
+ maps=re.findall(r'dc.w (word_\w+)-Map_SStageSonic_',text)
+ plcs=re.findall(r'dc.w (word_\w+)-PLC_SStageSonic_',text)
+ fixed=pal(ROOT/'docs/skdisasm/General/Special Stage/Palettes/Main.bin')
+ lut=[0]+[min(range(1,16),key=lambda j:sum((COLORS[i][k]-fixed[j][k])**2 for k in range(3))) for i in range(1,16)]
+ raw=(ROOT/'docs/skdisasm/General/Sprites/Sonic/Art/SStage Sonic.unc').read_bytes() if dest else None
+ frames=[];refs=[]
+ def block(label):return text.split(label+':')[1].split('\nword_')[0]
+ for i,(label,plc) in enumerate(zip(maps,plcs)):
+  pieces=[]
+  for args in re.findall(r'dc.b([^\n]+)',block(label)):
+   y,size,hi,lo,xhi,xlo=map(num,args.split(','));x=(xhi<<8)|xlo;t=(hi<<8)|lo
+   pieces.append([x-65536 if x>=32768 else x,y-256 if y>=128 else y,(size>>2)+1,(size&3)+1,t&2047,int(bool(t&2048)),int(bool(t&4096)),(t>>13)&3,1])
+  vals=[num(v) for v in re.findall(r'dc.w\s+(\$[0-9A-F]+|\d+)',block(plc))];loads=[[(v>>12)+1,v&4095] for v in vals[1:]];assert len(loads)==vals[0]
+  if not pieces:
+   out=indexed((1,1));hot=[0,0]
+  else:
+   if i<9:
+    im=back([0,0,0,2,4,6,2,4,6][i],yscale=.72 if i==1 else .88,yoffset=-15 if i==1 else -17)
+    # Native lower pieces alternate a long support boot and a raised boot.
+    # Explicit coordinates keep soles continuous inside the narrow 8/16px pieces.
+    d=ImageDraw.Draw(im);d.rectangle((0,38,95,95),fill=0)
+    def poly(points,fill,outline=1):d.polygon([(48+x,48+y) for x,y in points],fill=fill,outline=outline)
+    if i in (1,2):boots=[(-10,-4,0),(2,-5,0)]
+    elif i in (3,4):boots=[(-11,3,0),(2,-10,0)]
+    elif i==5:boots=[(-9,3,1),(2,-10,0)]
+    elif i in (6,7):boots=[(4,3,0),(-9,-10,0)]
+    else:boots=[(1,3,1),(-9,-10,0)]
+    poly([(-7,-12),(7,-12),(6,-5),(0,-1),(-6,-5)],3)
+    for x,y,narrow in boots:
+     w=6 if narrow else 8
+     poly([(x+3,-11),(x+w-1,-10),(x+w-3,-3),(x+w-1,y+2),(x+1,y+2),(x,-3)],4)
+     poly([(x,y),(x+w-2,y),(x+w,y+3),(x+w,y+7),(x,y+7)],10)
+     d.line([(48+x+1,48+y+6),(48+x+w-1,48+y+6)],fill=9)
+     d.line([(48+x+1,48+y+1),(48+x+w-3,48+y+1)],fill=12)
+    poly([(-3,-10),(3,-10),(2,-5),(0,0),(-2,-4)],4,2)
+    d.line([(46,40),(48,42),(50,40)],fill=6)
+   else:
+    im=indexed((96,96));d=ImageDraw.Draw(im)
+    d.ellipse((33,11,62,41),fill=3,outline=1)
+    for y in range(13+(i-9)*2,39,6):
+     for x in range(35 if (y//6)%2 else 39,60,8):
+      d.polygon([(x,y),(x+3,y-1),(x+6,y+1),(x+5,y+4),(x+2,y+5),(x,y+3)],fill=4,outline=2);d.line([(x+1,y),(x+3,y),(x+5,y+1)],fill=6)
+    # Preserve the circular ink contour; scales stay within the curl.
+    for y in range(96):
+     for x in range(96):
+      r=((x-47.5)/15)**2+((y-26)/15.5)**2
+      if r>1:im.putpixel((x,y),0)
+      elif r>.85:im.putpixel((x,y),1)
+   out,hot,_=crop_mapping(im,pieces)
+  file=f's3k-blue-sphere-{i:02}.png';out.save(HERE/file,bits=4,transparency=0)
+  q=indexed(out.size,fixed);q.putdata([lut[v] for v in out.get_flattened_data()]);q.save(HERE/f's3k-blue-sphere-{i:02}-fixed.png',bits=4,transparency=0)
+  frames.append(dict(id=i,file=file,dimensions=list(out.size),hotspot=hot,native_source_label=label,pieces=pieces,dplc_label=plc,dplc_entries=loads,tile_budget=sum(n for n,t in loads),fixed_palette_file=f's3k-blue-sphere-{i:02}-fixed.png'))
+  if dest:refs.append(native(pieces,b''.join(raw[t*32:(t+n)*32] for n,t in loads),fixed))
+ sequences=[('run',[2,6,7,8,7,6,2,3,4,5,4,3],5),('jump',[9,11,10,11],5),('stationary',[1],20)]
+ surface=dict(surface='blue_sphere',game='s3k',native_source_label='Map_SStageSonic / PLC_SStageSonic / ArtUnc_SStageSonic / byte_91E8 / byte_91F6',source='docs/skdisasm/sonic3k.asm',mapping_source=path,palette='../palette.yaml',palette_line=0,fixed_palette=dict(source='docs/skdisasm/General/Special Stage/Palettes/Main.bin',line=0,colors=fixed,index_lut=lut,note='Fixed native approximation; shared-palette originals require a character palette binding.'),frame_count_correction='Pinned S3K has 12 mapping entries (0 blank, 1 standing, 2-8 run, 9-11 curl), not 24. The run sequence has 12 steps and jumping another 12 steps, reusing these entries. Turning rotates the stage via Special_stage_angle; no additional player turn art.',timing=dict(source='loc_907E / loc_90A8 / byte_91E8 / byte_91F6 / sub_9580',run='anim_frame_timer += Special_stage_velocity >> 5; wrap 12; preview ticks illustrative',jump='same phase timer; stationary jump uses Level_frame_counter & 3'),sequences=[dict(name=n,frames=f,preview_ticks=t) for n,f,t in sequences],frames=frames)
+ if dest:review(dest,'s3k-blue-sphere',frames,refs,sequences)
+ return surface
+
 def main():
  p=argparse.ArgumentParser();p.add_argument('--review',type=Path);a=p.parse_args()
- manifest=dict(format='openggf-wave3-art-handoff-1',palette='../palette.yaml',tick_rate=60,notes='Original hand-authored native-coordinate pixel source. Not GGFP or runtime certification.',surfaces=[s2(a.review)])
+ manifest=dict(format='openggf-wave3-art-handoff-1',palette='../palette.yaml',tick_rate=60,notes='Original hand-authored native-coordinate pixel source. Not GGFP or runtime certification.',surfaces=[s2(a.review),blue(a.review)])
  (HERE/'wave3.yaml').write_text(json.dumps(manifest,indent=2)+'\n')
 if __name__=='__main__':main()

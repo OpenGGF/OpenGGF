@@ -287,8 +287,19 @@ byte-for-byte rebuild checks pass without Java. Leaning heads were repositioned
 after the first review clipped their crests; balls were redrawn inside their
 native oval. Scales on the ball are simplified; torso motion is restrained.
 No GGFP, stage palette binding or gameplay certification is claimed.
-Remaining round-4 items: Blue Sphere, S1 reuse audit, slot bonus, all continue
-screens and data-select/team composition.
+Blue Sphere now supplies every native `Map_SStageSonic_` mapping entry and
+`PLC_SStageSonic_` layout from `General/Sprites/Sonic/Map - SStage Sonic.asm`:
+12 entries, including transparent frame 0, standing frame 1, seven running
+frames 2–8 and three curl frames 9–11. The earlier 24-frame estimate counts
+sequence steps, not distinct mapping entries: `byte_91E8` and `byte_91F6` each
+select twelve steps with reuse. Turning rotates the stage in `sub_9580`, with
+no extra player turning set. Native `Pal_SStage_Main` line 0 quantizations
+accompany shared-palette originals. `loc_907E` derives phase from velocity;
+GIF timings are illustrative. Three native-side-by-side GIFs and both-size
+sheets join the S2 reviews. Lower limbs were redrawn for the narrow mapping
+pieces; stride remains restrained and boots are blockier than the core sheet.
+Remaining round-4 items: S1 reuse audit, slot bonus, all continue screens and
+data-select/team composition.
 
 ### W8 — Example, tutorial and evidence (M)
 
