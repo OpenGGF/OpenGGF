@@ -43,7 +43,8 @@ under the matching area heading; see the
   headless launch/save/rewind/fallback acceptance and temporary original art.
   Custom team archetypes now use the solo Sonic route without a sidekick.
   Presentation font inventories now include the native small HUD letters in all
-  three hosts and S3K per-zone title/results-name letters. Surface wiring and
+  three hosts and S3K per-zone title/results-name letters. S3K HUD presentation
+  now consumes custom life icons and native-font names. Remaining surface wiring and
   packaging MICA’s presentation art remain pending. Stock S2 Tails-alone results
   now show the region-selected Miles/Tails name instead of Sonic.
 - Character definitions can supply an authored underwater palette through the

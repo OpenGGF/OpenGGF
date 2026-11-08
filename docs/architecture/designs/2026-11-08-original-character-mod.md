@@ -411,3 +411,6 @@ Status log (times UTC):
   surfaces still pending in W4b) and the W5 homing facade (`13515a986`). Lead check of
   the merged tree passed: homing (15), name composer, signature pin, Mutator Lab
   package, character registry and MICA integration tests, all ROMs found.
+
+- 2026-11-08: S3K surface lane resumed: HUD life icon/name adapter restored;
+  results, Blue Sphere and independent 1-up face wiring still pending.

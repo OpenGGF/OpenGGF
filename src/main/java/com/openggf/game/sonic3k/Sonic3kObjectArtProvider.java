@@ -337,7 +337,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
         // Lives icon - Nemesis compressed, character-specific
         int livesIconAddr = resolveLifeIconAddr();
-        hudLivesPatterns = PatternDecompressor.nemesis(rom, livesIconAddr);
+        hudLivesPatterns = Sonic3kCharacterPresentation.hud(rom,
+                PatternDecompressor.nemesis(rom, livesIconAddr), Sonic3kCharacterPresentation.active());
         LOG.info("Loaded " + (hudLivesPatterns != null ? hudLivesPatterns.length : 0) + " HUD lives icon patterns");
 
         // Lives digits (0-9) - uncompressed
