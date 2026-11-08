@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * and HyperTouch_DestroyEnemy (sonic3k.asm:21403-21421).
  * The ROM increments a word by two, selects early points using the old word,
  * then checks the incremented unsigned word for the sixteen-enemy bonus.
- * These are scoring-owner checks, not full game routes or shared-player RAM tests.
+ * These check scoring and explicit native floor-reset owners, rather than full game routes.
  */
 class TestBadnikChainScoring {
     private Sonic player;
@@ -83,7 +83,7 @@ class TestBadnikChainScoring {
         player.clearAirForNativeControlRestore();
         assertEquals(10_000, award(powered), "direct native status clear does not run ResetOnFloor");
         player.setAir(true);
-        player.setAir(false);
+        resetOnFloor(player);
         assertEquals(100, award(powered), "ordinary floor landing resets the chain");
     }
 
@@ -96,6 +96,28 @@ class TestBadnikChainScoring {
             award(true);
         }
         assertEquals(10_000, award(false));
+    }
+
+    @Test
+    void onePlayerCpuTailsFloorResetClearsSonicsSharedChain() {
+        var tails = new Tails("tails", (short) 110, (short) 200);
+        tails.setCpuControlled(true);
+        assertEquals(100, player.incrementBadnikChain());
+        assertEquals(200, tails.incrementBadnikChain());
+        tails.setAir(true);
+        resetOnFloor(tails);
+        // Tails_ResetOnFloor_Part3 (s2.asm:41033-41044), fixBugs=0:
+        // CPU Tails resets the same word even during ordinary one-player play.
+        assertEquals(100, player.incrementBadnikChain());
+        assertEquals(200, tails.incrementBadnikChain());
+    }
+
+    private static void resetOnFloor(AbstractPlayableSprite sprite) {
+        try {
+            var reset = com.openggf.sprites.managers.PlayableSpriteMovement.class.getDeclaredMethod("resetOnFloor");
+            reset.setAccessible(true);
+            reset.invoke(sprite.getMovementManager());
+        } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
     }
 
     private void advanceToFifteen() {

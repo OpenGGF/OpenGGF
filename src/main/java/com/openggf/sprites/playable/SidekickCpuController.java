@@ -3420,6 +3420,8 @@ public class SidekickCpuController {
     }
 
     private void applyKillCharacterTouchFloorReset() {
+        // KillCharacter (s2.asm:85671-85677) calls the native floor-reset tail.
+        PlayableNativeFloorReset.resetChain(sidekick);
         int centreX = sidekick.getCentreX();
         int centreY = sidekick.getCentreY();
         if (sidekick.getRolling()) {

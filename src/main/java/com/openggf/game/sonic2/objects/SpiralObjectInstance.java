@@ -249,6 +249,7 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Rewi
         if (!player.getAir()) {
             return;
         }
+        com.openggf.sprites.playable.PlayableNativeFloorReset.resetChain(player);
         // Obj06_Cylinder calls RideObject_SetRide after snapping y_pos
         // (docs/s2disasm/s2.asm:47356-47364). RideObject_SetRide then calls
         // Sonic/Tails_ResetOnFloor_Part2 for airborne players before setting

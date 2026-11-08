@@ -86,6 +86,14 @@ public class InvincibilityStarsObjectInstance extends AbstractObjectInstance
     // ── S2 mutable state ──
     private final int[] angleByte;
     private final int[] animCounter;
+    // Obj35 selects/writes its display before incrementing angle/cursor; BuildSprites reads those
+    // completed triples afterwards: loc_1DA44 (s2.asm:42517-42542), loc_1DAE4 (s2.asm:42587-42615).
+    // Preserve their inputs here. Ordinary draw continues to read the incremented legacy state.
+    // Rows: centre X/Y, angle byte, animation counter. Empty until an actual update reaches display.
+    private int[] nativeDisplayPose = new int[0];
+
+    final int[] nativeDisplayPose() { return nativeDisplayPose.clone(); }
+
 
     // ── S1 trail mode constants (unchanged) ──
     private static final int S1_TRAIL_PHASE_COUNT = 6;
@@ -136,7 +144,19 @@ public class InvincibilityStarsObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        boolean facingLeft = player.getDirection() == Direction.LEFT;
+        boolean nativeDisplay = ObjectDrawInternalAccess.nativeDisplayOwned(this, tryServices());
+        if (nativeDisplay) {
+            int[] pose = new int[STAR_COUNT * 4];
+            for (int layer = 0; layer < STAR_COUNT; layer++) {
+                pose[layer * 4] = layer == 0 ? this.player.getCentreX() : this.player.getCentreX(TRAIL_LAG_FRAMES[layer]);
+                pose[layer * 4 + 1] = layer == 0 ? this.player.getCentreY() : this.player.getCentreY(TRAIL_LAG_FRAMES[layer]);
+                pose[layer * 4 + 2] = angleByte[layer];
+                pose[layer * 4 + 3] = animCounter[layer];
+            }
+            nativeDisplayPose = pose;
+        }
+
+        boolean facingLeft = (nativeDisplay ? this.player : player).getDirection() == Direction.LEFT;
 
         // Update parent star (star 0, State 2): fast rotation
         int parentInc = PARENT_ROTATION_BYTES;

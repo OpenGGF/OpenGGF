@@ -99,6 +99,7 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
             new com.openggf.game.common.CommonObjectPlacementEncoding();
     private final CNZPrizeSoundState cnzPrizeSoundState =
             new CNZPrizeSoundState();
+    private final Sonic2BadnikChain badnikChain = new Sonic2BadnikChain();
     private final GameAudioProfile audioProfile = new Sonic2AudioProfile();
     private final Sonic2LevelEventManager levelEventManager = new Sonic2LevelEventManager();
     private final Sonic2PlayerArtModeAuthority playerArtModeAuthority = () ->
@@ -223,8 +224,8 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     @Override
     public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
         return plcService == null
-                ? List.of(levelMusicScheduler, cnzPrizeSoundState)
-                : List.of(plcService, levelMusicScheduler, cnzPrizeSoundState);
+                ? List.of(levelMusicScheduler, cnzPrizeSoundState, badnikChain)
+                : List.of(plcService, levelMusicScheduler, cnzPrizeSoundState, badnikChain);
     }
 
     @Override
@@ -367,6 +368,7 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.BadnikChainPolicy.class) return type.cast(badnikChain);
         if (type == com.openggf.game.resources.PlayerArtTransferPlan.class) {
             return type.cast(new com.openggf.game.resources.PlayerArtTransferPlan(java.util.Map.of(
                     "sonic", new com.openggf.game.resources.PlayerArtBank(
@@ -447,7 +449,8 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
         BonusBlockObjectInstance.resetGroupCounters();
         LauncherBallObjectInstance.clearActiveCaptures();
         ButtonVineTriggerManager.reset();
-        SmashableGroundObjectInstance.resetGlobalState();
+        // Level RAM clearing includes Chain_Bonus_counter (s2.asm:4807-4811).
+        badnikChain.reset();
         MTZLongPlatformObjectInstance.resetGlobalState();
         cnzPrizeSoundState.resetForMissingSnapshot();
     }

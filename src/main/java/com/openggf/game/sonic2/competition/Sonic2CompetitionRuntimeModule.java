@@ -43,6 +43,7 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
     Sonic2CompetitionPlaneScroll planeScroll() { return planeScroll; }
     void clearMenuCameraRam() { planeScroll.menuClear(); scroll.owner().menuClear(); }
     private Sonic2CompetitionHudArt hudArt;
+    private Sonic2CompetitionDustDisplay dustDisplay;
     private final com.openggf.game.sonic2.competition.state.Sonic2CompetitionRingAnimation rings =
             new com.openggf.game.sonic2.competition.state.Sonic2CompetitionRingAnimation();
 
@@ -98,6 +99,12 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         // the derived field table once, then retire BOTH halves of the combined owner.
         fields.rebuild();
         try {
+            dustDisplay=new Sonic2CompetitionDustDisplay(com.openggf.data.RomByteReader.fromRom(host.rom()),
+                    nativeVramOwner(),host.session(),context.getObjectManager(),lifecycle::nativeRoutineByte);
+            var registry=context.getRewindRegistry();registry.deregister(dustDisplay.key());registry.register(dustDisplay);
+            for(int slot:new int[]{128,132,133})
+                com.openggf.level.objects.ObjectManagerInternalAccess.replaceNativeCompetitionFixedObject(
+                        context.getObjectManager(),slot,()->new Sonic2CompetitionFixedAccessory(slot));
             var slots=host.profile().romZone()==12 ? new Sonic2CompetitionSlotPictures(
                     com.openggf.data.RomByteReader.fromRom(host.rom()),nativeVramOwner(),
                     ()->features.getSlotMachineManager()==null ? null : features.getSlotMachineManager().snapshot()) : null;
@@ -230,6 +237,7 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         var plc = Objects.requireNonNull(super.getGameService(Sonic2PlcService.class), "fresh S2 PLC service");
         videoFrame = null;
         hudArt = null;
+        dustDisplay = null;
         requireArtRuntime().install(rom, plc, host.session());
     }
 
@@ -245,6 +253,8 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
             return type.cast((com.openggf.level.objects.ObjectDrawInternalAccess.NativeDisplayOwner)
                     Sonic2CompetitionObjectDisplay::adopted);
         var owner = runtimeArt == null ? null : runtimeArt.ownerOrNull();
+        if (type == com.openggf.sprites.managers.NativeDustDisplayInternalAccess.Source.class
+                || type == Sonic2CompetitionDustDisplay.class) return type.cast(dustDisplay);
         if (type == Sonic2CompetitionHudArt.class) return type.cast(hudArt);
         if (type == Sonic2CompetitionVideoFrame.class) return type.cast(videoFrame);
         if (type == Sonic2CompetitionArtResidency.class) return type.cast(owner);
