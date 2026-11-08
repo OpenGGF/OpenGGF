@@ -184,7 +184,12 @@ final class RouteHud implements RouteTapeOverlay.Painter {
     void draw(EditorHudCanvas c, EditorHudLayout layout) {
         var nextHits = new ArrayList<Hit>();
         Rect game = layout.game();
-        paintPath(c, layout, game);
+        if (workspace.hasRoute() && workspace.sceneRows() == null && !workspace.levelMatches()) {
+            c.rect(game.x(), game.y(), game.w(), game.h(), BACKDROP, 1);
+            String empty = UiMessages.text("editor.route_tape.preview_none");
+            c.text(empty, game.x() + (game.w() - EditorHudCanvas.textWidth(empty, Size.SMALL)) / 2,
+                    game.y() + game.h() / 2, Size.SMALL, TEXT_DIM, 1);
+        } else paintPath(c, layout, game);
         c.rect(0, 0, layout.width(), game.y(), BACKDROP, 1);
         c.rect(0, game.bottom(), layout.width(), layout.height() - game.bottom(), BACKDROP, 1);
         c.rect(0, game.y(), game.x(), game.h(), BACKDROP, 1);
@@ -281,13 +286,17 @@ final class RouteHud implements RouteTapeOverlay.Painter {
             if (gy + pitch > bottom) break;
             float chip = EditorHudCanvas.textWidth(goal.player(), Size.SMALL) + 8;
             c.pill(x, gy - 1, chip, 10, PANEL_RAISED, 1);
-            c.text(goal.player(), x + 4, gy, Size.SMALL, ACCENT, 1);
+            c.text(goal.player(), x + 4, gy, Size.SMALL, com.openggf.editor.route.RouteEditorStyle.playerColour(goal.player()), 1);
             c.fittedText(goal.predicate(), x + chip + 4, gy, half - chip - 4, Size.SMALL, TEXT, 1);
             gy += pitch;
         }
         float rx = x + half + 8, ry = y;
-        c.text(UiMessages.text("editor.route_tape.hud_native_caps"), rx, ry, Size.SMALL, TEXT_FAINT, 1);
-        ry = facts(c, rx, ry + pitch, half, workspace.nativeFacts(), TEXT_DIM, pitch);
+        c.text(workspace.evidenceSummary(), rx, ry, Size.SMALL, TEXT_DIM, 1);
+        ry += pitch;
+        if (!workspace.exportBlocker().isBlank()) {
+            c.fittedText(workspace.exportSummary(), rx, ry, half, Size.SMALL, WARN, 1);
+            ry += pitch;
+        }
         var goals = workspace.goalFacts();
         String repair = workspace.repairText();
         if (!repair.isEmpty() && ry + pitch <= bottom) {
@@ -396,7 +405,7 @@ final class RouteHud implements RouteTapeOverlay.Painter {
         for (var lane : PlayerSlot.values()) {
             int firstTrack = lane.ordinal() * RouteTapeTimeline.TRACKS_PER_LANE;
             c.rect(left, trackY(firstTrack), width, RouteTapeTimeline.TRACKS_PER_LANE * TRACK, TILE, 1);
-            c.text(lane.name(), dock.x() + 8, trackY(firstTrack) + 1, Size.SMALL, lane == PlayerSlot.P1 ? TEXT : RouteTapeOverlay.SIDEKICK, 1);
+            c.text(lane.name(), dock.x() + 8, trackY(firstTrack) + 1, Size.SMALL, com.openggf.editor.route.RouteEditorStyle.playerColour(lane.name()), 1);
         }
         for (int t = 0; t < RouteTapeTimeline.TRACKS.size(); t++) {
             var label = RouteTapeTimeline.TRACKS.get(t);
@@ -409,21 +418,30 @@ final class RouteHud implements RouteTapeOverlay.Painter {
             float ex = view.x(Math.min(view.first() + view.rows(), view.selectionTo()), left, width);
             c.rect(sx, grid.y(), Math.max(1, ex - sx), grid.h(), ACCENT_DARK, .55f);
         }
+        int locked = workspace.immutablePrefixRows();
+        if (locked > view.first()) {
+            float end = view.x(Math.min(locked, view.first() + view.rows()), left, width);
+            c.rect(left, grid.y(), end - left, grid.h(), 0x030611, 1);
+        }
         for (var run : view.runs()) {
             var lane = RouteTapeTimeline.TRACKS.get(run.track());
             int colour = lane.button() == PhysicalButton.START ? START
                     : lane.button().ordinal() >= PhysicalButton.A.ordinal() ? ACTION : DIRECTION;
-            float rx = view.x(run.from(), left, width);
-            float rw = Math.max(1, (run.to() - run.from()) * rowWidth - (run.continuesAfter() ? 0 : .5f));
-            c.rect(rx, trackY(run.track()) + 1, rw, TRACK - 2, colour, lane.slot() == PlayerSlot.P1 ? 1 : .8f);
+            int split = Math.max(run.from(), Math.min(run.to(), locked));
+            if (split > run.from()) c.rect(view.x(run.from(), left, width), trackY(run.track()) + 1,
+                    Math.max(1, (split - run.from()) * rowWidth - .5f), TRACK - 2,
+                    com.openggf.editor.route.RouteEditorStyle.lockedColour(colour), 1);
+            if (run.to() > split) c.rect(view.x(split, left, width), trackY(run.track()) + 1,
+                    Math.max(1, (run.to() - split) * rowWidth - .5f), TRACK - 2, colour, 1);
         }
-        int locked = workspace.immutablePrefixRows();
-        if (locked > view.first()) {
-            float end = view.x(Math.min(locked, view.first() + view.rows()), left, width);
-            c.rect(left, grid.y(), end - left, grid.h(), PANEL, .6f);
+        if (locked > 0) {
             c.menuIcon(com.openggf.game.MenuChrome.Icon.LOCK, dock.right() - 100, header, TEXT_DIM);
             c.text(UiMessages.text("editor.route_tape.locked_prefix"), dock.right() - 89, header, Size.SMALL, TEXT_DIM, 1);
-            if (locked < view.first() + view.rows()) c.rect(end, ruler, 1, grid.bottom() - ruler, TEXT_DIM, 1);
+            if (locked >= view.first() && locked < view.first() + view.rows()) {
+                float edge = view.x(locked, left, width);
+                c.rect(edge, ruler, 1, grid.bottom() - ruler, TEXT, 1);
+                c.menuIcon(com.openggf.game.MenuChrome.Icon.LOCK, edge - 3, ruler - 5, TEXT);
+            }
         }
         for (var marker : view.markers()) {
             float mx = view.x(marker.from(), left, width);
@@ -484,7 +502,8 @@ final class RouteHud implements RouteTapeOverlay.Painter {
 
     private void button(EditorHudCanvas c, List<Hit> nextHits, Rect rect, String label, String key, EditorHud.Glyph glyph,
                         Runnable action, boolean selected) {
-        c.panel(rect.x(), rect.y(), rect.w(), rect.h(), selected ? ACCENT_DARK : PANEL_RAISED, 1);
+        boolean disabled = label.equals(Action.EXPORT_BK2.label()) && !workspace.exportBlocker().isBlank();
+        c.panel(rect.x(), rect.y(), rect.w(), rect.h(), disabled ? TILE : selected ? ACCENT_DARK : PANEL_RAISED, 1);
         float centre = rect.y() + rect.h() / 2f;
         float shortcut = 0;
         if (key != null) {
@@ -496,7 +515,7 @@ final class RouteHud implements RouteTapeOverlay.Painter {
         }
         c.text(com.openggf.game.MenuStyle.pageText(label, Math.max(1, (int) (rect.w() - 10 - shortcut)), Size.SMALL.scale, ticks),
                 rect.x() + 5, rect.y() + Math.max(0, (rect.h() - EditorHudCanvas.lineHeight(Size.SMALL)) / 2), Size.SMALL,
-                selected ? GOLD : TEXT, 1);
-        nextHits.add(new Hit(rect, action));
+                disabled ? TEXT_FAINT : selected ? GOLD : TEXT, 1);
+        if (!disabled) nextHits.add(new Hit(rect, action));
     }
 }
