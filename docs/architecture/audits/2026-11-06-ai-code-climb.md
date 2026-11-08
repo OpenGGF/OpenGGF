@@ -1823,3 +1823,236 @@ and Lua5.4; verified ROM discovery missing=none. Maven total114 s includes norma
 compilation and tests; queue wait is separately recorded in its admission line.
 This source remains pending broad comparison, final-source EHZ1 rerun and blind
 C/D measurement. It is not a smoke/full-suite/route-parity certification.
+
+### Fresh affected-task assessment at 735fcf7ad — 2026-11-07
+
+One new independent Claude Opus 5.5 reviewer (maximum effort, fast mode off)
+walked the ORIGINAL C and D tasks and adjacent holdouts at
+735fcf7adf56aa368450cbb1406fa897f8768f71. The brief supplied the exact original
+rubric and tasks, withholding prior grades, targets, runtime results and previous
+review discussions. Audit/changelog/history/diff/PR/status/log access was
+forbidden. The reviewer reported clean, unchanged starting/ending HEAD, no edits,
+builds, tests, posts or subagents. This was the single fresh affected-task
+measurement, distinct from the correctness review. Both delegated tasks completed.
+
+These are static contributor-usability judgements. They are not human onboarding
+or elapsed verification measurements, runtime certification or a repository-wide
+grade. Runtime passes earn no usability credit. Approximate file/concept counts
+below are reviewer observations rather than measured onboarding cost.
+
+Axis order/weights remain owner 15, browse 15, understand 15, locality 15, concepts 10,
+verify 10, rules 10, readability 10. Sol independently recomputed both totals.
+
+| Original task | Owner | Browse | Understand | Locality | Concepts | Verify | Rules | Readability | /100 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| C: Solid standing/pushing expiry across unload | 3 | 2 | 3 | 3 | 2 | 3 | 3 | 3 | 68.75 |
+| D: Ordinary dynamic parent/linked-child reconstruction | 3 | 2 | 2 | 3 | 1 | 3 | 3 | 2 | 60.00 |
+
+The 85-per-task goal remains unmet. Both have axes below 3; neither has 4 for owner,
+understanding and readability. A/B/E/F were NOT remeasured: their existing 336db11fd
+scores and limits remain older evidence. No aggregate substitutes for per-task
+requirements, and reviewer/scope differences are not causal measurements of gain.
+
+C's route began with AGENTS → engine-map, then the contact state, controller,
+population, manager retirement paths and provider hooks. The short architecture
+guide route was found later through CONTRIBUTING. Holdouts included equal-spawn
+solid siblings, a non-solid child borrowing a parent's spawn, multipart expiry
+and duplicate placement occurrences. The reviewer estimated 6 necessary source
+files plus 2–3 tests/one guide, 8 concept groups and roughly 14 unnecessary files
+inspected. Object-bit/player-ride/frame-history contracts and population order
+comments were positive exemplars; source evidence supports a 2–3-file shared fix
+or a local object-key-policy correction depending on the actual defect.
+
+C's remaining barriers: retirement order/expiry selection spans copied manager
+paths; the controller and manager still require navigating roughly 4k-line files;
+key kinds, expiry variants and callback/dispatch guards add concepts. The placed
+shared-key asymmetry is stated only in the guide. object-implementation-reference
+still names ObjectManager.SolidContacts; S3K pitfall P41 ambiguously describes key
+identity across reload without clearly distinguishing bit expiry. The testing
+page's ready command omits DynamicSolidContactRetirement, and no focused manager
+witness performs placed range-unload → replacement. Its composed ROM-free command:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestDynamicSolidContactRetirement,TestSolidContactState,TestObjectSolidContactController,TestTasS3kOrtExhaustion,TestObjectRemovalCallbackOwnership' test
+```
+
+D's route began with engine-map → ObjectRewindLifecycle, then spawning helpers,
+recreate interfaces/codecs, family metadata, identity/reference policies and the
+coverage guard. Its ordinary family witness was readily discoverable. Holdouts
+covered nested generations, independent recreation with a missing parent,
+retired/excluded owners, raw admission and legacy entries. The creator-owned
+neighbor verifies independent recreation, not creator-owned constructor adoption;
+no creator-family adoption witness was found. The reviewer estimated 9 necessary
+source files plus 2 tests/one guide, 11 concept groups and roughly 11 unnecessary
+files inspected. The lifecycle's order, retry/adoption comments, family record
+contract and scenario-named witness were positive exemplars; a typical family
+matching/order correction stays in the lifecycle plus its witness.
+
+D's remaining barriers: about 20 marker recipes plus a compatibility alias,
+constructor probing and nearest-object relinking overlap with family adoption.
+Global reference-field names and hundreds of exact class-name dispositions impose
+external rules; copied helper branches and nested construction lambdas add reading
+work. Coverage guidance still lacks a clear compliant production route for a truly
+adoption-only class under the empty missing-recreate baseline. The testing page
+still routes ordinary adoption work toward exact-SST adoption tests, and stale
+plan/restore references remain in unchanged neighbors. The main fixture uses the
+compatibility recipe name; fully qualified types and the duplicate registration
+names were further reading costs. Its ready ROM-free command, found in the guide:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestConstructorChildFamilyRewind,TestObjectManagerDynamicChainRewindRestore,TestTwoPhaseRestoreOrdering,TestObjectManagerRewindSnapshot,TestModOwnedDynamicObjectRewind' test -B
+```
+
+The reviewer identified close calls at C understanding/discovery (2–3), D concepts
+(1–2) and D owner discovery (3–4), and consulted no other judgement. These remain
+honest barriers for a later increment, not permission to expand this bounded repair
+or change grades after the frozen-source measurement. No additional grader or
+repeated review of unchanged areas was launched.
+
+### Frozen-source smoke comparison and delivery evidence — 2026-11-08
+
+Runtime/test/ordinary-navigation source is frozen at
+`735fcf7adf56aa368450cbb1406fa897f8768f71`; the clean detached baseline is
+`e8d90f4e080bf95242604a3a34a2fe851267cf22`. The e8..735 diff of
+src/main/java, src/test/java, docs/guide/contributing and engine-map has SHA-256
+`f6156999ca86f631e4105e14d7f956ab99322626181325ed70e9d1f7bc0b2ecf`.
+This final evidence update changes only this existing audit. No tracked file was
+changed, and no second build was started, in either tree while its category run
+was live. Sol remains the single implementation/validation/delivery lead. T3 owns
+both completed Opus review lifecycles; no additional worker or reviewer was used.
+
+Both fresh smoke plans were announced before execution: baseline 4471 and
+candidate 4473 classes, two workers, 40-minute accumulated execution cap excluding
+queue. Java 25, Lua 5.4, -Dmse=off, unset DISPLAY/WAYLAND_DISPLAY and surfaceless EGL
+were used; every test-running Maven invocation went through maven_queue.py.
+The actual broad commands, each in its own tree, were:
+
+```bash
+python3 tools/testing/run_categories.py --category all --workers 2 --headless-gl surfaceless-egl --max-minutes 40 --run
+python3 tools/testing/run_categories.py --base e8d90f4e080bf95242604a3a34a2fe851267cf22 --workers 2 --headless-gl surfaceless-egl --max-minutes 40 --run
+```
+
+| Source / run | Classes | Ordinary tests / failures / errors / skips | Guards | Final verdict |
+| --- | ---: | --- | --- | --- |
+| e8 / 20261107T113946Z-9dcbbe16 | 4471/4471 | 37051 / 29 / 0 / 49 allowed | 843 passed, zero skips | FAILED |
+| 735 / 20261107T123801Z-cf10f8fb | 4473/4473 | 37076 / 29 / 0 / 49 allowed | 843 passed, zero skips | FAILED |
+
+Both final VERDICT FAILED lines report all 91 ordinary batches plus 1/1 guard
+batch, missing ROM properties none, allowed 49/unexplained 0. Required, undeclared
+input and unidentified skip counts are zero. No failed/skipped case was omitted;
+no full assertion was capped (maximum 428 characters). These are completed bounded
+smoke results with inherited negatives, not green or release full-suite results.
+The 25 added ordinary cases are family 9, retirement 14, lightning-spark 1 and
+survivor-dispatch-invalidation 1. The new witnesses are absent from the e8 baseline;
+their original RED is separate evidence and was not relabeled as a baseline pass.
+
+Fresh comparison validated both lane inventories and read every full causal
+assertion through tools/testing/compare_category_outcomes.py. All 29 failure
+identities, kinds and exception types match; all are AssertionFailedError.
+Full retained stack/cause details also match in 25 cases; only the first message
+line changes in the same four presentation cases below. No detail reaches its
+8192-character cap (maximum 5607). The inherited audio producer cause remains
+IllegalArgumentException: S3K run manifest identity does not match the fixed
+profile, from CompleteRunAudioFiles.requireDigest; it is not silently counted as
+its expected FileAlreadyExistsException.
+Their exact identities are the 29 listed in the earlier
+[second-increment negative-case table](#final-second-increment-validation-and-delivery),
+independently checked against these new e8/735 inventories. Twenty-five messages
+match byte-for-byte. Four presentation differences were inspected against unchanged
+owning tests and values, without normalizing gameplay values or assertion limits:
+
+- ThreeIslandsScene.physicalTrailsConnectFieldsAndBattleUsesTheEncounterField:
+  expected FieldScreen@b5ce6fa / actual StoryScreen@1a838c09 on e8 versus
+  FieldScreen@5c8a7b52 / StoryScreen@32d0b511 on 735. Both concrete classes implement
+  Screen directly with no equals/toString override; the same assertion at 485
+  compares the original screen to the still-present story screen. Only default
+  Java identity addresses differ; no different screen type or state was hidden.
+- TestS3kMhzAuthoredRoute.freshSonicCompletesActOneAndReplaysItsLiveInteractions:
+  Set.of expected members at 79 are identical, in different printed order;
+  exact actual collection remains [pulley].
+- TestS3kMhzTailsAuthoredRoute.freshTailsCompletesActOneAndReplaysItsLiveInteractions:
+  Set.of at 75 has identical expected members; exact actual collection remains
+  [lower-approach, upper-flight, early-traversal].
+- TestS3kMhzWideAuthoredRoute.wideSonicCompletesActOneAndReplaysItsLiveInteractions:
+  Set.of at 89 has identical expected members; exact actual collection remains
+  [upper-loop, sticky-vine, pulley-pull, arena-approach, spike-passage,
+  before-pulley, pulley-release, lower-loop, early-traversal].
+
+All 49 FULL skip dictionaries match exactly, including projection/source-length/
+stack metadata where present. SHA-256 of the identity-keyed complete dictionary,
+serialized with sort_keys=True and separators(',', ':'), is
+`807a596fef33a4bc2479c14382914344395951189a344c061356ca141db75b3f`
+on both sources. No new/worsened failure, error, skip or guard outcome was found.
+The Three Islands, MHZ, ICZ, CNZ1, checkpoint, lobby, final-route and audio producer
+negatives remain inherited; this increment does not repair or certify them.
+
+| Cost in seconds | Baseline e8 | Candidate 735 |
+| --- | ---: | ---: |
+| Preparation execution | 102.06 | 39.36 |
+| Ordinary execution | 1804.54 | 1729.20 |
+| Guards execution | 211.12 | 157.74 |
+| Sum of 92 reported admission waits | 29437 | 41351 |
+| Maximum single admission wait | 5640 | 5360 |
+
+Queue sums use rounded admission lines and can overlap between jobs; they are not
+elapsed delivery time. Execution is within the announced 40-minute cap on each
+source. User wait 0; other unmeasured time is unknown. The shared queue was left
+intact, with no lock deletion, policy changes, duplicate jobs or disturbed
+unrelated work. Model-free bounded native observation relinquished ownership on
+completion; no agent watched the queue or repeated another agent's work.
+
+Fresh EHZ1 baseline/candidate runs occurred only after each tree's category run
+ended. Both used the queued normal lane under the same Java 25/Lua 5.4, unset-display,
+-Dmse=off and surfaceless-EGL environment:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay '-Dtest=TestS2Ehz1TraceReplay' test -B
+```
+
+Each passed one test with zero failures/errors/skips. Fresh mtimes and exact owner
+sidecars were inspected. The ENTIRE parsed JSON reports are equal: 5852 compared
+and planned rows, comparison gate reached, verification all, zero gameplay and
+bootstrap errors/warnings. Physics and animation groups both report zero errors/
+warnings. Canonical report SHA-256 (sorted keys, compact separators) is
+`7aaa7601537dc41d81033b0f562d36f59408aa1f004821e88f5714d9f5f0fb2c`.
+This is new e8/735 evidence, not reuse of the older ef run. Baseline admission 410s
+and Maven 47.614s; candidate admission 831s and Maven 38.787s. Both logs contain the
+same FAST load-time-profile missing-manifest warning and use NONE; zero warnings
+above refers to comparison/bootstrap reports, not a claim of warning-free logs or
+hardware-timing certification. This bounded heldout establishes only its 5852-row
+fixture scope. User wait 0; other unmeasured time unknown.
+
+Earlier HCZ2 baseline/candidate equality belongs to ce4ae5d96 and its own baseline:
+26 inherited groups, first 6640/player_animation_id, 14149 compared/14208 gate,
+eight absent advertised aux schemas. It was not rerun here; no new HCZ2, whole-act,
+run-chain or broader parity claim follows. HCZ1 short green would not certify its
+wall. Native heldouts here instead exercise the actual CNZ defeat graph,
+lightning-shield deferred effects, broad constructor graphs and EHZ1 comparison.
+
+Both failed-category diagnostic runs were inspected and explicitly acknowledged;
+the runner deleted their retained directories. Only concise derived evidence is
+preserved here, with no raw/regenerable output committed. The owned detached e8
+baseline was clean and natively removed without force after report comparison.
+Its ignored outputs were generated by this validation; 13 hook-managed symlinks
+were removed with that tree. Every target retains its exact device/inode/size/
+mtime, including ROM/configuration/reference resources. Main/user files and global
+queue locks were not changed by cleanup. The ai-code-climb task worktree/branch
+remain for the open draft PR 266.
+
+Final audit-only edits pass whitespace and the added internal-link check. The
+runtime/navigation digest was independently recomputed unchanged at 735. Candidate
+API signatures, strict schemas/reference policies, construction/probe guards,
+creator callbacks and required startup coverage are included in the fresh broad
+or focused checks above. Source-range e8..735 ci-push policy passed (16637 release
+tree entries); normal commit/push hooks and final range policy apply to this
+artifact-only delivery as well. No public surface/version/signature/debt/skip gate
+was relaxed. The 0.8 maintenance note is already folded into its existing entry;
+no release index, frozen 0.7 changelog, skill or mirror update is required here.
+
+Live owned validation jobs 0; both Opus tasks completed, with their source/read-only
+limits above. Sol owns the final task-branch push and draft-body evidence update;
+no destination push/merge, public release or CI watching is authorized or used.
+The review handoff remains PR 266 against develop, with the task worktree kept.
+The 85-per-task target and stronger per-axis requirements remain unmet; the next
+structural increment must address the recorded ordinary-construction and contact
+navigation barriers, without treating runtime passes as usability credit.
