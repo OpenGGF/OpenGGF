@@ -663,7 +663,7 @@ final class LevelPlayableArtInitializer {
             var art = definition.artSupplier().load(playable.characterKey().persisted());
             if (com.openggf.level.objects.PlayableSheetAnimationBinding.requiresBinding(art)) {
                 var host = levelManager.activeGameModule();
-                if (host != null && host.getGameId() == GameId.STANDALONE) return art;
+                if (host != null && host.getDonorCapabilities() == null) return art;
                 if (host == null || host.getDonorCapabilities() == null
                         || !(levelManager.game instanceof PlayerSpriteArtProvider hostProvider))
                     throw new IOException("Host cannot bind canonical playable animations");
@@ -694,7 +694,12 @@ final class LevelPlayableArtInitializer {
     private RenderContext createCharacterPaletteContext(AbstractPlayableSprite playable,
                                                          SpriteArtSet artSet,
                                                          Palette palette, Palette underwaterPalette) {
-        if (palette == null || playable.characterKey().isBuiltin()) return null;
+        if (playable.characterKey().isBuiltin()) return null;
+        if (palette == null) {
+            var definition = activeRegistry().find(playable.characterKey()).orElse(null);
+            if (definition == null || definition.superFormSupplier() == null) return null;
+            palette = levelManager.getCurrentLevel().getPalette(artSet.paletteIndex());
+        }
         GameModule module = levelManager.activeGameModule();
         RenderContext context = RenderContext.createSidekickContext(
                 module == null ? null : module.getGameId());
@@ -982,7 +987,18 @@ final class LevelPlayableArtInitializer {
         if (gameModule == null) {
             return;
         }
-        var superCtrl = gameModule.createSuperStateController(playable);
+        var definition = activeRegistry().find(playable.characterKey()).orElse(null);
+        com.openggf.sprites.playable.SuperStateController superCtrl;
+        if (!playable.characterKey().isBuiltin() && definition != null && definition.supportsSuperForm()
+                && definition.superFormSupplier() != null) {
+            try {
+                var profile = definition.superFormSupplier().load(playable.characterKey().persisted());
+                superCtrl = profile.games().containsKey(gameModule.getGameId())
+                        ? new com.openggf.sprites.playable.ProfileSuperStateController(playable, profile, gameModule.getGameId()) : null;
+            } catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+        } else {
+            superCtrl = gameModule.createSuperStateController(playable);
+        }
         playable.setSuperStateController(superCtrl);
 
         if (superCtrl != null && !superCtrl.isRomDataPreLoaded()) {

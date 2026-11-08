@@ -78,7 +78,7 @@ class TestOwnedCharacterRegistry {
         var supplied = new CharacterDefinition(raw.key(), raw.displayName(), raw.spriteFactory(),
                 raw.respawnStrategyFactory(), raw.behavesLike(), raw.secondaryAbility(),
                 raw.supportsSuperForm(), raw.artSupplier(), null, Set.of(), null,
-                code -> { throw new IllegalStateException("presentation"); });
+                code -> { throw new IllegalStateException("presentation"); }, null);
         var bound = mapped(supplied, fixture);
         assertOwner(fixture, assertThrows(ModFaultBoundary.CallbackAborted.class,
                 () -> bound.presentationSupplier().load(MOD.persisted())), "presentation");

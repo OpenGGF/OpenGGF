@@ -44,6 +44,34 @@ class TestMicaCharacterIntegration {
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
     void sonic3k() throws Exception { acceptance(new com.openggf.game.sonic3k.Sonic3kGameModule(), "s3k", 1, 0); }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void titleRouteKeepsExplicitDevelopmentCharacter() throws Exception {
+        Path input = temp.resolve("title.txt");
+        com.openggf.tools.InputLogAuthorTool.main(new String[]{"--inline",
+                "121 -; 4 S; 18 -; 5 S; 25 -; 5 S; 200 -; 1 D; 60 -; 1 S; 240 -",
+                "--out", input.toString()});
+        String previous = System.getProperty("openggf.saveRoot");
+        System.setProperty("openggf.saveRoot", temp.resolve("capture-saves").toString());
+        try {
+            com.openggf.tools.GameplayCaptureTool.run(
+                    com.openggf.tools.GameplayCaptureTool.Arguments.parse(new String[]{
+                            "--game", "s3k", "--zone", "aiz", "--act", "1", "--mod", buildSample().toString(),
+                            "--main", CODE, "--extra-teams", CODE, "--title-screen", "--interactive-pacing",
+                            "--input", input.toString(), "--every", "400", "--no-video",
+                            "--out-dir", temp.resolve("capture").toString()}));
+            var rows = Files.readAllLines(temp.resolve("capture/state.csv"));
+            assertTrue(rows.stream().anyMatch(row -> row.contains(",DATA_SELECT,")));
+            // Session teardown retires the world; inspect the final native mapping frame.
+            // MICA's four idle frames are 0..3; stock Sonic's idle is 186.
+            var last = rows.getLast().split(",");
+            assertEquals("LEVEL", last[19]);
+            assertTrue(Integer.parseInt(last[12]) < 4, rows.getLast());
+        } finally {
+            if (previous == null) System.clearProperty("openggf.saveRoot");
+            else System.setProperty("openggf.saveRoot", previous);
+        }
+    }
+
     private void acceptance(GameModule base, String game, int waterZone, int waterAct) throws Exception {
         try (CatalogFixture fixture = load(buildSample())) {
             var config = SonicConfigurationService.getInstance();
@@ -72,6 +100,7 @@ class TestMicaCharacterIntegration {
             assertEquals(PlayerCharacter.SONIC_AND_TAILS,
                     com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(config));
             config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            verifyGilded(playable, resolved, game);
             var sprites = GameServices.sprites();
             var rewind = sprites.rewindSnapshottable();
             var state = rewind.capture();
@@ -128,7 +157,7 @@ class TestMicaCharacterIntegration {
             assertTrue(custom.dataEquals(context.getPalette(0)));
             assertNull(context.getUnderwaterPalette(0), "Absent authored palette retains live host derivation");
             var derived = com.openggf.graphics.RenderContext.deriveUnderwaterPalette(custom, dry, water[0]);
-            assertFalse(custom.dataEquals(derived), "Water must change the jade placeholder");
+            assertFalse(custom.dataEquals(derived), "Water must change the jade art");
 
             // Disabled owner: use the stock registry and preserve the persisted slot.
             var findings = new ArrayList<com.openggf.game.session.GameplayTeamBootstrap.CharacterFinding>();
@@ -144,6 +173,110 @@ class TestMicaCharacterIntegration {
             assertArrayEquals(saved, Files.readAllBytes(temp.resolve("saves").resolve(game).resolve("slot1.json")));
             assertTrue(fixture.runtime().runtimeDisabledOwners().isEmpty());
         }
+    }
+
+    private void verifyGilded(com.openggf.sprites.playable.AbstractPlayableSprite player,
+                               GameModule module, String game) throws Exception {
+        var controller = player.getSuperStateController();
+        assertInstanceOf(com.openggf.sprites.playable.ProfileSuperStateController.class, controller);
+        var state = player.currentGameState();
+        player.currentLevelState().resumeTimer();
+        com.openggf.sprites.playable.ObjectControlState.none().applyTo(player);
+        player.setAir(true); player.setJumping(true); player.setYSpeed((short) 0x28);
+        player.addRings(50 - player.getRingCount());
+        controller.checkTransformationBeforeMove();
+        assertFalse(controller.isSuper(), "No emeralds must not transform");
+        for (int i = 0; i < state.getChaosEmeraldCount(); i++) state.markEmeraldCollected(i);
+        player.addRings(-1);
+        if (game.equals("s3k")) assertFalse(controller.activateFromAirAbility());
+        else controller.checkTransformationBeforeMove();
+        assertFalse(controller.isSuper(), "49 rings must not transform");
+        player.addRings(1);
+        if (game.equals("s3k")) assertTrue(controller.activateFromAirAbility());
+        else controller.checkTransformationBeforeMove();
+        assertTrue(player.isSuperSonic());
+        var transforming = controller.captureRewindState();
+        var wholePlayer = player.captureRewindState(true);
+        for (int i = 0; i < 80; i++) controller.update();
+        assertEquals(com.openggf.sprites.playable.SuperState.SUPER, controller.getState());
+        assertFalse(controller.isHyperFormActive());
+        var definition = module.getPlayableCharacterRegistry().find(player.characterKey()).orElseThrow();
+        var form = definition.superFormSupplier().load(CODE).games().get(module.getGameId()).get(SuperFormProfile.Tier.SUPER);
+        // Observe a complete authored loop; every frame must be MICA's palette, never Sonic's.
+        for (int i = 0; i < form.cycleTicks() * form.dryCycle().size(); i++) {
+            var before = controller.captureRewindState();
+            controller.update();
+            var after = controller.captureRewindState();
+            assertEquals(before.paletteTimer() == 0 ? form.cycleTicks() - 1 : before.paletteTimer() - 1,
+                    after.paletteTimer());
+            assertEquals(before.paletteTimer() == 0 ? (before.paletteFrame() + 1) % form.dryCycle().size()
+                    : before.paletteFrame(), after.paletteFrame());
+            var palette = player.getSpriteRenderer().getRenderContext().getPalette(0);
+            assertTrue(form.dryCycle().stream().anyMatch(row -> paletteMatches(palette, row)));
+        }
+        assertTrue(player.getRingCount() < 50, "Native ring drain runs during transformation too");
+        var active = controller.captureRewindState();
+        controller.debugDeactivate();
+        for (int i = 0; i < 40; i++) controller.update();
+        assertFalse(player.isSuperSonic());
+        controller.restoreRewindState(active);
+        // Whole-player rewind owns the flag; the controller restore owns phase/physics/presentation.
+        player.setSuperSonic(true);
+        assertEquals(active, controller.captureRewindState());
+        player.restoreRewindState(wholePlayer);
+        assertTrue(player.isSuperSonic());
+        assertEquals(transforming, controller.captureRewindState());
+        controller.debugDeactivate();
+        for (int i = 0; i < 40; i++) controller.update();
+        if (game.equals("s3k")) {
+            for (int i = 0; i < 7; i++) state.markSuperEmeraldCollected(i);
+            player.addRings(50 - player.getRingCount()); player.setInvincibleFrames(0);
+            assertTrue(controller.activateFromAirAbility());
+            assertTrue(controller.isHyperFormActive());
+            for (int i = 0; i < 80; i++) controller.update();
+            assertFalse(GameServices.level().getObjectManager().getActiveObjects().stream().anyMatch(object ->
+                    object instanceof com.openggf.game.sonic3k.objects.HyperSonicStarsObjectInstance));
+        }
+        player.addRings(1 - player.getRingCount());
+        if (!controller.isSuper()) controller.debugActivate();
+        player.addRings(1 - player.getRingCount());
+        for (int i = 0; i < 100; i++) controller.update();
+        assertFalse(controller.isSuper(), "Exhausted rings revert");
+        for (int i = 0; i < 40; i++) controller.update();
+        player.setAir(false); player.setJumping(false);
+        state.resetState();
+        if (game.equals("s1")) {
+            var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+            var settings = com.openggf.mods.mutators.MutatorWorldAccess.state(world);
+            assertNotNull(settings);
+            String key = settings.requested().keySet().stream().filter(k -> k.endsWith(":gilded")).findFirst().orElseThrow();
+            settings.requestEnabled(key, true);
+            settings.requestOption(key, "emeralds", 0); settings.requestOption(key, "rings", 10);
+            assertTrue(settings.boundary(com.openggf.mods.mutators.MutatorScope.LOAD,
+                    com.openggf.mods.mutators.MutatorSessionState.LoadCause.FULL_LEVEL_ASSEMBLY).accepted());
+            var profile = definition.superFormSupplier().load(CODE);
+            var changed = new com.openggf.sprites.playable.ProfileSuperStateController(player, profile, GameId.S1);
+            player.setSuperStateController(changed);
+            player.addRings(10 - player.getRingCount()); player.setAir(true); player.setJumping(true);
+            player.setYSpeed((short) 0x28); player.currentLevelState().resumeTimer();
+            changed.checkTransformationBeforeMove(); assertTrue(changed.isSuper());
+            changed.debugDeactivate();
+            settings.requestOption(key, "s1", false);
+            assertTrue(settings.boundary(com.openggf.mods.mutators.MutatorScope.LOAD,
+                    com.openggf.mods.mutators.MutatorSessionState.LoadCause.FULL_LEVEL_ASSEMBLY).accepted());
+            var disabled = new com.openggf.sprites.playable.ProfileSuperStateController(player, profile, GameId.S1);
+            player.setSuperStateController(disabled); disabled.debugActivate(); assertFalse(disabled.isSuper());
+            settings.requestEnabled(key, false);
+            assertTrue(settings.boundary(com.openggf.mods.mutators.MutatorScope.LOAD,
+                    com.openggf.mods.mutators.MutatorSessionState.LoadCause.FULL_LEVEL_ASSEMBLY).accepted());
+            player.setSuperStateController(controller); player.setAir(false); player.setJumping(false);
+        }
+    }
+
+    private static boolean paletteMatches(com.openggf.level.Palette palette, List<Integer> words) {
+        var expected = new com.openggf.level.Palette();
+        for (int i = 0; i < 16; i++) expected.getColor(i).fromSegaFormat(words.get(i));
+        return expected.dataEquals(palette);
     }
 
     private Path buildSample() throws Exception {
@@ -170,6 +303,21 @@ class TestMicaCharacterIntegration {
         Path jar = temp.resolve("mica-and-talon.jar");
         assertEquals(0,com.openggf.tools.modsdk.GgfModCli.run(new String[]{"package","--input",
                 classes.toString(),"--out",jar.toString(),"--warnings","error"},System.out));
+        try (JarFile packed = new JarFile(jar.toFile())) {
+            var sheet = com.openggf.level.objects.PlayableSheetReader.read(
+                    packed.getInputStream(packed.getJarEntry("art/mica.ggfp")).readAllBytes());
+            assertEquals(96, sheet.frames().size());
+            assertEquals(17, sheet.animations().size());
+            assertFalse(sheet.animations().containsKey("HOMING_DIVE"));
+            assertEquals(List.of(8, 8, 8, 8), sheet.animations().get("WALK").slopes()
+                    .stream().map(List::size).toList());
+            var base = com.openggf.level.objects.BakedSheetReader.read(sheet.baseSheetV1());
+            assertArrayEquals(new int[]{0x0000, 0x0222, 0x0440, 0x0660, 0x0680, 0x08A2,
+                    0x0AC6, 0x08CE, 0x06AC, 0x068A, 0x044E, 0x022A, 0x0EEE, 0x0CCC,
+                    0x088E, 0x0024}, base.palette().orElseThrow().colors());
+            assertTrue(sheet.frames().stream().allMatch(f -> f.runs().stream()
+                    .mapToInt(r -> r.tileCount()).sum() <= 36));
+        }
         return jar;
     }
 

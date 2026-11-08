@@ -562,6 +562,11 @@ public final class HeadlessGameBoot implements AutoCloseable {
         loop.setGameMode(GameMode.LEVEL);
         loop.setDataSelectActionHandler(action -> com.openggf.game.dataselect.NativeDataSelectLaunchFlow.launch(
                 action, services, loop, new com.openggf.game.dataselect.NativeDataSelectLaunchFlow.Host() {
+                    @Override public java.util.List<String> additionalMainCharacters() {
+                        // Only this boot's explicitly decorated registry, not arbitrary saved keys.
+                        return module.getPlayableCharacterRegistry().definitions().keySet().stream()
+                                .map(com.openggf.game.CharacterKey::persisted).toList();
+                    }
                     @Override public ModuleResolutionService.PreparedLaunch prepareLaunch() {
                         return services.moduleResolutionService().prepareLaunch(ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
                     }

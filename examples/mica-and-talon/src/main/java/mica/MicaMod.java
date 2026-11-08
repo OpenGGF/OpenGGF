@@ -6,6 +6,8 @@ import com.openggf.mods.code.ModContext;
 
 public final class MicaMod implements GgfMod {
     @Override public void register(ModContext context) {
+        context.registerMutator(GildedSettings.definition());
+        for (String game : java.util.List.of("s1", "s2", "s3k")) context.registerGamePatch(new GildedSettings.Patch(game));
         try {
             byte[] bytes = context.modAssets().readBounded(
                     "art/mica.ggfp", context.modAssets().limits().maxAssetBytes());

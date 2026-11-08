@@ -41,12 +41,17 @@ under the matching area heading; see the
   HUD/results/monitor wiring remains in parallel lanes.
 
 - Added the maintained MICA character skeleton for all three stock games, with
-  headless launch/save/rewind/fallback acceptance and temporary original art.
+  headless launch/save/rewind/fallback acceptance and a rerunnable 96-frame original
+  playable sheet with 17 canonical animations, shared palette and slope cycles.
+  Headless native Data Select retains explicitly loaded development characters.
   Custom team archetypes now use the solo Sonic route without a sidekick.
   Presentation font inventories now include the native small HUD letters in all
   three hosts and S3K per-zone title/results-name letters. Surface wiring and
   packaging MICA’s presentation art remain pending. Stock S2 Tails-alone results
   now show the region-selected Miles/Tails name instead of Sonic.
+  MICA's Gilded Super/Hyper forms use owner-bound profiles and her jade-to-gold
+  palette cycles; host settings configure the gates. S1's donor-free six-emerald
+  form is a mod-defined rule. Powered-form state and palettes participate in rewind.
 - Character definitions can supply an authored underwater palette through the
   owner fault boundary; absent suppliers retain zone-aware host water derivation.
 - Playable mod sheets now declare canonical animation tables shared by Sonic 1,
