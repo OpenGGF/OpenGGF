@@ -256,10 +256,14 @@ S1 yellow, S2/S3K orange and alternate S2 blue. Their native palette line is 0
 composition requires a separate available runtime palette line, recorded in
 `presentation.yaml`. No GGFP/runtime binding is supplied. Native-side-by-side
 1×/4× reviews are in `/tmp/mica-art3-review-20261108/`. Python generation and
-palette/dimension checks pass without a Java build. The 24 WALK/RUN `up45` and `steep` frames now use explicit native pixel rows in
+palette/dimension checks pass without a Java build. All 36 WALK/RUN `up45`, `steep` and `inverted` frames now use explicit native pixel rows in
 `recipe.json`, with redrawn broad-scale heads, eyes, bent legs and coral boots;
-flat-cycle stride order is retained. The remaining 12 inverted frames
-still await this pass. The steep pass also repairs cut-off gloves in `up45`. The 16px far eye is necessarily
+flat-cycle stride order is retained. The final pass repairs cut-off gloves, inverted eye placement and sole contact.
+The torso/tail seeds are retained; the new crest/eyes, gloves, bent limbs and
+boots use native contours. Six side-by-side slope GIFs accompany 1×/4× sheets.
+Python palette/alpha/outline/geometry/coverage and byte-for-byte frame rebuild
+checks pass. The broader crest scales are simpler than the flat art, arm swing
+is restrained, and runtime foot contact remains unverified. The 16px far eye is necessarily
 narrow; the small crest has fewer scale separations than the playable head.
 
 ### W8 — Example, tutorial and evidence (M)

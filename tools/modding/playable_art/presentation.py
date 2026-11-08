@@ -103,9 +103,6 @@ def sign(game, alternate=False):
     # Peace glove at left, with two separated raised fingers and folded thumb.
     glove=[(8,30),(6,26),(3,22),(2,17),(3,16),(5,17),(9,21),
            (8,14),(9,12),(11,13),(13,21),(16,20),(18,22),(17,26),(14,29),(14,30)]
-    if game=='s1':
-        # Native S1 composition puts the gesture at the right; mirror whole bust.
-        pass
     d.polygon(glove,fill=12,outline=1)
     d.line([(4,19),(7,23),(9,24)],fill=13)
     d.line([(12,22),(15,22),(16,23)],fill=1)
@@ -236,6 +233,7 @@ def main(review=None):
             key=Path(rec['file']).stem
             bg=backing(game,'alternate' in key,'spin' in key,'spin3' in key)
             name=key+'-backing.png';bg.save(OUT/name,transparency=0,bits=4,optimize=True)
+            assert bg.size==tuple(rec['dimensions']) and max(bg.get_flattened_data())<=5
             rec['backing'] = dict(file=name,native_palette_line=0,
                 native_color_index=2 if 'alternate' in key else (9 if game=='s3k' else 15),
                 rgb=[36,36,182] if 'alternate' in key else BACKGROUNDS[game],

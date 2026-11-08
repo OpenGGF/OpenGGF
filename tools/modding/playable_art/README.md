@@ -41,9 +41,9 @@ The handoff `frames.yaml` records id, canonical animation name, order, file,
 hotspot, angle set, notes and suggested 60Hz preview ticks. WALK is set-major:
 8 flat, 8 up45, 8 steep, 8 inverted; RUN uses the same ordering with stride 4.
 Angles are +0/+45/+90/+135 degrees visually counterclockwise, before engine facing
-and orientation. These are rigid rotations, with repeated outline cleanup, rather
-than separately drawn ground-contact deformations. Integration must check the W2
-slope stride and direction contract before materializing the sheet.
+and orientation. The round 3 slope frames use explicit native pixel rows, with redrawn heads,
+gloves, bent limbs and boots. Integration must check the W2 slope stride and
+direction contract and runtime ground contact before materializing the sheet.
 
 `HOMING_DIVE` is a **custom handoff key**, not an existing `CanonicalAnimation`
 enum member. The ability lane must bind the four scale-first poses explicitly.
@@ -141,3 +141,18 @@ without rotating a bitmap; the common silhouette ink pass still applies.
 The redraw retains upper-body/tail seeds and replaces the head and lower limbs,
 using the matching flat frame's support/lift phase. The broad crest scales are
 simpler than the flat artwork. Pixel validation does not certify runtime contact.
+
+To regenerate all six slope comparison sheets (1×/4×) and GIFs without Java:
+
+```bash
+python3 -I tools/modding/playable_art/slope_review.py --review /tmp/mica-art3-review-20261108
+```
+
+This review-only decoder reads S1 `MS_Walk21`–`MS_Walk46`, `MS_Run21`–`MS_Run44`
+and their `SonPLC_` entries. MICA has eight walk phases; S1 has six, so the sheets
+label each native phase explicitly and repeat the first two for comparison.
+They are size/contour references, not assertions of animation-phase parity.
+All 36 revised slopes retain the unchanged shared palette. Their floor support
+is authored at local centre+18 (last occupied row), before orientation. Runtime
+contact remains an integration check. Arm motion is restrained and the simpler
+head/crest may need another art pass beside the more detailed flat cycles.
