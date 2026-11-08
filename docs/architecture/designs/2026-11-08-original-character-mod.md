@@ -91,7 +91,8 @@ Status: API foundation delivered; group 1 follow-up in progress on
 fonts and S3K per-zone title/results-name art. S2 stock Tails-alone results select
 Miles/Tails using the native graphics-region flag. The resumed S3K lane wires HUD
 icon/name, act-results name, Blue Sphere results name and independent 1-up faces;
-focused verification is pending. Other surface wiring, sign spin/backing
+focused tile/mapping and regression verification passed (310 tests, no skips).
+Other surface wiring, sign spin/backing
 contract extensions, packaged MICA presentation assets and gameplay captures remain
 pending; group 1 is not complete. The existing owner-bounded supplier, immutable
 indexed images, pixel composer and S1/S2 title readers remain the foundation.
@@ -458,3 +459,18 @@ Status log (times UTC):
 
 - 2026-11-08: W4 S3K 1-up art uses its independent presentation slot at the
   existing monitor life-icon mapping offset. Missing slots retain the native face.
+
+- 2026-11-08: W4 S3K surface lane complete on
+  `feature/ai-mica-s3k-surfaces-r2`: HUD life icon/name, act-results name,
+  Blue Sphere results name and independent 1-up face. Native slots retain stock
+  tiles/mappings. No contract, other-host or signpost changes in this lane.
+  Tested source `a67bbed5f` with queued Maven (`-Dmse=off`, surfaceless EGL):
+  310 tests passed, zero failures/errors/skips, including five new tile/mapping
+  surface cases, S3K HUD/results/monitor regressions, MICA integration, signature
+  surface and all four required S3K loading checks. Checkpoint compilation passed.
+  The initial focused attempt failed test compilation because a newly added test
+  ran against main classes compiled before the 1-up method was added; the fresh
+  fixed-tree run above passed. Final validation queued about 5.5 minutes, executed
+  1m50s; user wait zero. No gameplay captures, broad smoke or release suite run.
+  The lead owns remaining asset packaging, other surfaces and integration; this
+  lane has made no push and keeps its worktree/branch for handoff.
