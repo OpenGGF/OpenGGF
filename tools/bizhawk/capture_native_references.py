@@ -59,6 +59,8 @@ def argument_parser(description=__doc__):
     parser.add_argument("--movie", type=Path)
     parser.add_argument("--output", type=Path, help="new external task directory")
     parser.add_argument("--timeout", type=int, default=180)
+    parser.add_argument("--dump-wave-frames", type=int, metavar="N",
+                        help="also write BizHawk's own audio for the first N frames to audio.wav")
     parser.add_argument("--require-output", action="append", default=[], metavar="RELATIVE_PATH",
                         help="fail unless the exporter creates this nonempty file; repeatable")
     return parser
@@ -139,7 +141,11 @@ def run_capture(args, parser, *, plan_text=None, environment_aliases=None, entry
                 "MONO_CRASH_NOFILE": "1", "MONO_WINFORMS_XIM_STYLE": "disabled"})
     command = ["mono", str(home / "EmuHawk.exe"), "--audiosync", "false", "--config",
                str(output / "config.ini"), "--chromeless", "--lua", str(exporter),
-               "--movie", str(movie), str(rom)]
+               "--movie", str(movie)]
+    if getattr(args, "dump_wave_frames", None):
+        command += ["--dump-type", "wave", "--dump-name", str(output / "audio.wav"),
+                    "--dump-length", str(args.dump_wave_frames), "--dump-close"]
+    command.append(str(rom))
     receipt = {"command": command, "rom_sha1": digest(rom, "sha1"), "bk2_sha256": digest(movie),
                "lua_sha256": digest(exporter), "plan_sha256": digest(output / "plan.lua"),
                "host_sha256": digest(Path(__file__)),

@@ -32,6 +32,12 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
         if(current==null) throw new IllegalStateException("no open competition route world");
         return current.render();
     }
+    /** Video demo: renders the current game mode of the open world, including title and menus. */
+    public com.openggf.graphics.RgbaImage renderAnyCurrent() {
+        if(current==null) throw new IllegalStateException("no open competition route world");
+        return current.renderAny();
+    }
+    public String currentGameMode() { return current==null?"none":String.valueOf(current.loop.getCurrentGameMode()); }
 
     /** ROM-backed geometry inventory for editor picking and bounded goal declarations; no controller rows. */
     public java.util.List<Region> flipTileLocations() {
@@ -254,6 +260,32 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
         private com.openggf.graphics.RgbaImage render() {
             if(adapter[0].visit()==null) throw new IllegalStateException("no native visit to draw");
             adapter[0].visit().draw();
+            return com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224);
+        }
+        /** Video-demo draw of whatever the loop shows: title, native menu/competition screens, or black. */
+        private com.openggf.graphics.RgbaImage renderAny() {
+            var graphics=GameServices.graphics();
+            graphics.runPendingRenderThreadTasks();
+            var gameMode=loop.getCurrentGameMode();
+            if(gameMode==com.openggf.game.GameMode.TITLE_SCREEN && !loop.isTitleEntryShowingLevel()) {
+                var title=loop.getTitleScreenProvider();
+                title.setClearColor(); org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT|org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+                title.draw();
+                title.drawOverlay(new com.openggf.mods.ui.LevelOverlayCanvas(graphics,graphics.getProjectionWidth(),graphics.getConfiguredScreenHeightPx()));
+                graphics.flushScreenSpace();
+                if(graphics.getUiRenderPipeline()!=null) graphics.getUiRenderPipeline().renderFadePass();
+            } else if(com.openggf.game.nativemenu.NativeMenuController.handles(gameMode)
+                    && com.openggf.NativeMenuPresentationAccess.screen(loop)!=null) {
+                var screen=com.openggf.NativeMenuPresentationAccess.screen(loop);
+                screen.setClearColor(); org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT|org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+                graphics.resetForFixedFunction();
+                screen.draw();
+                graphics.flushScreenSpace();
+                if(graphics.getUiRenderPipeline()!=null) graphics.getUiRenderPipeline().renderFadePass();
+            } else {
+                org.lwjgl.opengl.GL11.glClearColor(0,0,0,1); org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT);
+            }
+            org.lwjgl.opengl.GL11.glFinish();
             return com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224);
         }
 
