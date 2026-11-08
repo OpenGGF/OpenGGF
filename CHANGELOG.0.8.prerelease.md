@@ -37,7 +37,7 @@ under the matching area heading; see the
 
 - **MICA, an original character framework example:** the maintained
   `examples/mica-and-talon` demo plays in all three stock games with Sonic's
-  single-player physics, character-owned homing (including an untargeted forward
+  single-player physics, native S2/S3K spindash (disabled in S1), character-owned homing (including an untargeted forward
   dash), a four-frame HOMING_DIVE pose, and powered Instagib strikes. Its
   rerunnable original sheet has 98 frames, 18 canonical animations, slope cycles,
   a shared palette and a breathing/fidget idle. The 36 rotated WALK/RUN poses

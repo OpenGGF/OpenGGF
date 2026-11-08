@@ -63,8 +63,12 @@ public final class PlayableSheetAnimationBinding {
         profile.setPushDelayShift(nativeProfile.getPushDelayShift());
         profile.setDuckReleasePublishesWalk(nativeProfile.isDuckReleasePublishesWalk());
         profile.setAirborneSlidePreservesPublishedAnimation(nativeProfile.isAirborneSlidePreservesPublishedAnimation());
-        profile.setBlinkAnimId(scripts.getScript(nativeProfile.getBlinkAnimId()) != null ? nativeProfile.getBlinkAnimId() : -1);
-        profile.setGetUpAnimId(scripts.getScript(nativeProfile.getGetUpAnimId()) != null ? nativeProfile.getGetUpAnimId() : -1);
+        // Native deep-wait interruption requires an authored finite exit script.
+        // A looping WAIT fallback cannot finish Blink/GetUp and would lock input.
+        profile.setBlinkAnimId(art.animationSet().getScript(CanonicalAnimation.BLINK.ordinal()) != null
+                ? nativeProfile.getBlinkAnimId() : -1);
+        profile.setGetUpAnimId(art.animationSet().getScript(CanonicalAnimation.GET_UP.ordinal()) != null
+                ? nativeProfile.getGetUpAnimId() : -1);
         profile.setTumbleFrameBase(ScriptedVelocityAnimationProfile.NO_TUMBLE_FRAMES);
         profile.setSuperAlternateFrameStep(0, 0, 0);
         profile.setHighSpeedWalkRunAnimId(-1);

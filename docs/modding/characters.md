@@ -390,6 +390,16 @@ SONIC/MILES/TAILS letters in a 40×8 cell, with HUD-style supplements only for
 missing letters. Stock and unsupported names retain their native art.
 GGFP presentation sections are pending.
 
+## Native ground abilities
+
+Declare `CharacterDefinition.MovementAbility.SPINDASH` in the definition's
+movement-ability set to use the host's native charge/release path. The registry
+intersects declarations with native host capabilities: MICA can spindash in S2
+and S3K; S1 retains its native no-spindash rule. A canonical sheet should supply
+SPINDASH poses. Canonical sheets enable native deep-wait Blink/GetUp interrupts
+only when those scripts are authored; a looping WAIT fallback cannot finish an
+input-locking native interrupt.
+
 ## Ability and super-form rules
 
 Characters can own the world-session homing capability independently of Mutator Lab.

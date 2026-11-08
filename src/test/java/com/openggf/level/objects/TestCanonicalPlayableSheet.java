@@ -72,6 +72,8 @@ class TestCanonicalPlayableSheet {
         assertEquals(nativeProfile.getPushDelayShift(), profile.getPushDelayShift());
         assertEquals(nativeProfile.isDuckReleasePublishesWalk(), profile.isDuckReleasePublishesWalk());
         assertEquals(nativeProfile.isAirborneSlidePreservesPublishedAnimation(), profile.isAirborneSlidePreservesPublishedAnimation());
+        assertEquals(-1, profile.getBlinkAnimId(), "WAIT fallback cannot serve a native input-locking Blink");
+        assertEquals(-1, profile.getGetUpAnimId(), "WAIT fallback cannot serve a native input-locking GetUp");
         int slow = changes(art, module, 0x100);
         int fast = changes(art, module, 0x500);
         assertTrue(fast > slow, "native ground-speed walk timing: " + slow + " / " + fast);

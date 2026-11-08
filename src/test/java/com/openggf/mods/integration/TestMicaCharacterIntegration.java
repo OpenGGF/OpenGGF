@@ -45,6 +45,42 @@ class TestMicaCharacterIntegration {
     void sonic3k() throws Exception { acceptance(new com.openggf.game.sonic3k.Sonic3kGameModule(), "s3k", 1, 0); }
 
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void spindashCaptureS2() throws Exception { captureSpindash("s2", "sonic2.rom.path"); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void spindashCaptureS3k() throws Exception { captureSpindash("s3k", "s3k.rom.path"); }
+
+    private void captureSpindash(String game, String romProperty) throws Exception {
+        Path output = Path.of(System.getProperty("mica.poses.captureRoot", "target/mica-poses")).resolve(game + "-spindash");
+        Files.createDirectories(output);
+        var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320, CODE, "", "off", null, null, null);
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            GameServices.configuration().setSessionOverride(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
+            session.boot(Path.of(System.getProperty(romProperty)), 0, 0, settings);
+            var csv = new StringBuilder(com.openggf.tools.GameplayCaptureSession.stateHeader()).append('\n');
+            for (int frame = 0; frame < 220; frame++) {
+                int mask = frame >= 150 && frame < 190 ? 2 : 0;
+                boolean jump = frame == 155 || frame == 165 || frame == 175;
+                if (jump) mask |= 0x10;
+                var input = new com.openggf.debug.playback.Bk2FrameInput(frame, mask, jump ? 1 : 0, false, "spindash");
+                session.step(input);
+                csv.append(session.stateLine(frame, input)).append('\n');
+                if (frame == 180) {
+                    assertTrue(session.player().getSpindash(), "native charge " + game);
+                    assertEquals(GameServices.module().getDonorCapabilities().resolveNativeId(CanonicalAnimation.SPINDASH), session.player().getAnimationId());
+                }
+                if (frame == 190) {
+                    assertFalse(session.player().getSpindash());
+                    assertTrue(Math.abs(session.player().getGSpeed()) > 0, "native release " + game);
+                }
+                if (frame == 154 || frame == 180 || frame == 190 || frame == 205)
+                    com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve("frame-" + frame + ".png"));
+            }
+            Files.writeString(output.resolve("state.csv"), csv);
+        }
+    }
+
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
     void sonic2SessionHudAndOneUpCapture() throws Exception {
         Path output = Path.of(System.getProperty("mica.hud.captureRoot",
                 "target/mica-s2-hud-capture"));
@@ -764,6 +800,26 @@ class TestMicaCharacterIntegration {
                     com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(config));
             assertNotNull(GameServices.level().getCurrentLevel());
             assertNotNull(playable.getSpriteRenderer());
+            assertTrue(resolved.getPlayableCharacterRegistry().find(playable.characterKey()).orElseThrow()
+                    .movementAbilities().contains(CharacterDefinition.MovementAbility.SPINDASH));
+            assertEquals(!game.equals("s1"), resolved.getPlayableCharacterRegistry()
+                    .movementAbilities(playable.characterKey(), base)
+                    .contains(CharacterDefinition.MovementAbility.SPINDASH));
+            fixtureWorld.stepIdleFrames(120);
+            for (int duck = 0; duck < 4; duck++) fixtureWorld.stepFrame(false, true, false, false, false);
+            assertFalse(playable.getAir(), "settled on floor: " + game);
+            assertEquals(base.getDonorCapabilities().resolveNativeId(CanonicalAnimation.DUCK), playable.getAnimationId(), "crouching: " + game + " x=" + playable.getCentreX() + " y=" + playable.getCentreY() + " speed=" + playable.getGSpeed() + " crouch=" + playable.getCrouching() + " angle=" + playable.getAngle());
+            fixtureWorld.stepFrame(false, true, false, false, true);
+            assertEquals(!game.equals("s1"), playable.getSpindash(), "native host capability: " + game);
+            if (!game.equals("s1")) {
+                assertEquals(base.getDonorCapabilities().resolveNativeId(CanonicalAnimation.SPINDASH),
+                        playable.getAnimationId());
+                fixtureWorld.stepFrame(false, true, false, false, false);
+                assertTrue(playable.getSpindash());
+                fixtureWorld.stepFrame(false, false, false, false, false);
+                assertFalse(playable.getSpindash());
+                assertTrue(Math.abs(playable.getGSpeed()) > 0, "release must launch MICA");
+            }
             verifySignTiles(resolved, game);
             verifyContinuePresentation(resolved, game);
             config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
