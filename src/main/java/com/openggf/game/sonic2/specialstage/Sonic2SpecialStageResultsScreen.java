@@ -848,7 +848,10 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
 
     @Override
     public void update(int frameCounter, Object context) {
-        if (!artLoaded) loadArt();
+        // Logic-only owners can advance the tally without ROM presentation services.
+        // Prepare on update once a ROM is available; draw remains read-only.
+        var romManager = services().romManager();
+        if (!artLoaded && romManager != null && romManager.isRomAvailable()) loadArt();
         this.frameCounter = frameCounter;
         resolvePresentation();
         if (!plcReadinessPassed) {
