@@ -69,6 +69,22 @@ class TestCompetitionRouteConversion {
         assertNotEquals(0x4C9AFF,RouteEditorStyle.lockedColour(0x4C9AFF));
     }
 
+    @Test void importedUnknownFactRemainsVisibleAndCanBeRepaired() throws Exception {
+        Path source=Path.of("src/test/resources/routes/s2/competition/cnz1-slot-flip.route.json");
+        Path manifest=dir.resolve("unknown.route.json");
+        var original=RouteFiles.readDraft(source);
+        String text=RouteCodec.formatManifest(original.manifest(),"unknown.script")
+                .replace("competition.slot.inUse","competition.slot.unknown");
+        Files.writeString(manifest,text);Files.copy(source.resolveSibling("cnz1-slot-flip.script"),dir.resolve("unknown.script"));
+        var w=new RouteTapeWorkspace(new RouteTapeWorkspace.Host(){}); w.open(manifest);
+        assertTrue(w.goalRows().getFirst().predicate().startsWith("Error:"));
+        w.editGoal(0);
+        assertNotNull(w.menu().error()); assertEquals("competition.slot.unknown",w.menu().values().get("fact"));
+        assertTrue(w.menu().formFields().stream().filter(f->f.key().equals("fact")).findFirst().orElseThrow().choices().contains("competition.slot.unknown"));
+        w.menu().setValue("fact","competition.slot.inUse");w.menu().submit();assertNull(w.menu().error());
+        assertFalse(w.goalRows().getFirst().predicate().startsWith("Error:"));
+    }
+
     @Test void missingObservedKeysAndAnchorUndoAreExplicit() throws Exception {
         final RouteArtifact[] requested={null}; final int[] polls={0};
         var w=new RouteTapeWorkspace(new RouteTapeWorkspace.Host(){

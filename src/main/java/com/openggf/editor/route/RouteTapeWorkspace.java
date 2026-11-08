@@ -1241,9 +1241,9 @@ public final class RouteTapeWorkspace {
             boolean equal = predicate instanceof com.openggf.route.SamplePredicate.FactsEqual;
             var fields=new ArrayList<EditorProjectMenu.Field>();
             fields.add(new EditorProjectMenu.Field("id",UiMessages.text("editor.route_tape.field_leg_id"),old.id(),MenuTextEditor.Mode.TEXT,32));
-            fields.add(new EditorProjectMenu.Field("fact",UiMessages.text("editor.route_tape.fact_key"),key,RouteCompetitionFacts.KEYS));
+            fields.add(new EditorProjectMenu.Field("fact",UiMessages.text("editor.route_tape.fact_key"),key,factChoices(key)));
             if(equal) fields.add(new EditorProjectMenu.Field("otherFact",UiMessages.text("editor.route_tape.other_fact"),
-                    ((com.openggf.route.SamplePredicate.FactsEqual)predicate).right(),RouteCompetitionFacts.KEYS));
+                    ((com.openggf.route.SamplePredicate.FactsEqual)predicate).right(),factChoices(((com.openggf.route.SamplePredicate.FactsEqual)predicate).right())));
             else fields.add(new EditorProjectMenu.Field("factValue",UiMessages.text("editor.route_tape.fact_value"),String.valueOf(
                     ((com.openggf.route.SamplePredicate.FactEquals)predicate).value()),MenuTextEditor.Mode.TEXT,12));
             fields.add(new EditorProjectMenu.Field("rows",UiMessages.text("editor.route_tape.field_leg_rows"),String.valueOf(old.maxRows()),MenuTextEditor.Mode.TEXT,9));
@@ -1251,6 +1251,8 @@ public final class RouteTapeWorkspace {
                     new com.openggf.route.Leg(values.get("id"),new com.openggf.route.RouteGoal.Achieve(
                             factPredicate(values.get("fact"),values.get("factValue"),equal?values.get("otherFact"):null)),
                             old.guard(),Integer.parseInt(values.get("rows")))));
+            try { RouteCompetitionFacts.keys(predicate).forEach(RouteCompetitionFacts::requireKey); }
+            catch (IllegalArgumentException invalid) { menu.report(invalid); }
         } else {
             String text=com.openggf.route.RouteCodec.formatGoals(new com.openggf.route.GoalProgram(
                     com.openggf.route.Guard.NONE,List.of(old),goals.startRow()));
@@ -1262,6 +1264,12 @@ public final class RouteTapeWorkspace {
                     }));
             menu.setMultilinePreview("leg");
         }
+    }
+
+    private static List<String> factChoices(String current) {
+        if (RouteCompetitionFacts.KEYS.contains(current)) return RouteCompetitionFacts.KEYS;
+        var choices=new ArrayList<>(RouteCompetitionFacts.KEYS); choices.addFirst(current);
+        return List.copyOf(choices);
     }
 
     private void replaceGoal(int index, com.openggf.route.Leg replacement) {
