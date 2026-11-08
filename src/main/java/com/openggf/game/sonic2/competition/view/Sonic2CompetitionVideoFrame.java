@@ -34,6 +34,7 @@ public final class Sonic2CompetitionVideoFrame {
     private java.util.function.Consumer<Boolean> cameraCopies = title -> { };
     public void bindCameraCopies(java.util.function.Consumer<Boolean> copies) { cameraCopies = Objects.requireNonNull(copies); }
     private Runnable titleCardPlanes = () -> { };
+    private Runnable hudPatterns = () -> { };
 
     public Sonic2CompetitionVideoFrame(Sonic2CompetitionArtResidency art, Sonic2CompetitionPlaneScroll planeScroll,
                                       Sonic2CompetitionPlanes planes, Sonic2CompetitionPlaneDraw planeDraw,
@@ -53,16 +54,23 @@ public final class Sonic2CompetitionVideoFrame {
     public void prepareSprites(com.openggf.game.session.GameplayModeContext context,
             com.openggf.game.sonic2.competition.Sonic2CompetitionSession session,
             com.openggf.game.sonic2.competition.Sonic2CompetitionLevelProfile profile) {
-        // A2-S supplies ordered ObjectManager admissions after C1. No alternate draw fallback.
+        var objects=Sonic2CompetitionObjectDisplay.admissions(context.getObjectManager(),
+                context.getWorldSession().getGameModule().getObjectArtProvider());
         spritePages.prepare(Objects.requireNonNull(spriteSource, "Native sprite inputs").current(
-                context, session, profile, List.of(), displayState));
+                context, session, profile, objects, displayState));
         // BuildSprites_2P merges P1/P2 visibility. Replace the generic primary-
         // camera result for the actual admitted humans; omitted bodies retain it.
         for (var visibility : spritePages.visibility())
             if (visibility.slot() < 2)
                 session.player(visibility.slot()).setRenderFlagOnScreen(visibility.onScreen());
+            else for (var owner:context.getObjectManager().getActiveObjects())
+                if(owner instanceof com.openggf.level.objects.AbstractObjectInstance object
+                        && object.getSlotIndex()==visibility.slot())
+                    com.openggf.level.objects.ObjectDrawInternalAccess.commitNativeDisplayVisibility(
+                            object,visibility.onScreen());
     }
     public void setTitleCardPlanes(Runnable draw) { titleCardPlanes = Objects.requireNonNull(draw); }
+    public void setHudPatterns(Runnable update) { hudPatterns = Objects.requireNonNull(update); }
     public static boolean accepts(PlcLifecyclePhase phase) {
         return phase == PlcLifecyclePhase.ORDINARY_LEVEL || phase == PlcLifecyclePhase.NORMAL_PAUSE
                 || phase == PlcLifecyclePhase.LEVEL_TITLE_CARD || phase == PlcLifecyclePhase.LAG
@@ -81,6 +89,7 @@ public final class Sonic2CompetitionVideoFrame {
         if (title) titleCardPlanes.run();
         if (ordinary || title) { planeScroll.copyAtVInt(title); cameraCopies.accept(title); }
         if (ordinary) planeScroll.drawForeground(planes, planeDraw);
+        if (ordinary) hudPatterns.run(); // Do_Updates (s2.asm:805-808): planes, HudUpdate, PLC.
         if (ordinary || title || phase == PlcLifecyclePhase.PALETTE_FADE) art.servicePlc(phase);
     }
     public Sonic2CompetitionViewRegisters registers() { return registers; }

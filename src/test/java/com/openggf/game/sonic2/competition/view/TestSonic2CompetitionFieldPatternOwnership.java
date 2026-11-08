@@ -59,7 +59,7 @@ class TestSonic2CompetitionFieldPatternOwnership {
             graphics.bindRuntimeManagedReferences(context.getCamera(), context.getFadeManager());
             var art = context.getWorldSession().getGameModule().getGameService(Sonic2CompetitionArtResidency.class);
             assertNotNull(art);
-            assertSame(art.fields(), context.getLevelManager().getAnimatedPatternManager());
+            assertInstanceOf(Sonic2CompetitionAnimatedArt.class, context.getLevelManager().getAnimatedPatternManager());
             var palettes = assertInstanceOf(Sonic2PaletteCycleInternalAccess.Owner.class,
                     context.getLevelManager().getAnimatedPaletteManager());
             assertNotSame(context.getLevelManager().getAnimatedPatternManager(), palettes);
@@ -81,7 +81,7 @@ class TestSonic2CompetitionFieldPatternOwnership {
             }
             assertEquals(120, completed);
             assertInstanceOf(NullAudioBackend.class, services.audio().getBackend());
-            assertSame(art.fields(), context.getLevelManager().getAnimatedPatternManager());
+            assertInstanceOf(Sonic2CompetitionAnimatedArt.class, context.getLevelManager().getAnimatedPatternManager());
             assertAtlas(art, graphics);
             // Continue with real P2 input: jump and hold Down in place.
             // This exercises changing directional/rolling tail cues without a fabricated art stream.
@@ -109,7 +109,7 @@ class TestSonic2CompetitionFieldPatternOwnership {
             assertTrue(sawRolling, "P2 input must exercise a rolling body/tail pose");
             assertTrue(tailFrames.size() > 2, "tail DPLC must select distinct stored frames: " + tailFrames);
             var registry = new RewindRegistry();
-            registry.register(art); registry.register(art.fields()); registry.register(palettes);
+            registry.register(art); registry.register((Sonic2CompetitionAnimatedArt)context.getLevelManager().getAnimatedPatternManager()); registry.register(palettes);
             var saved = registry.capture();
             byte[] paletteState = palettes.capture().bytes();
             var artState = art.capture();
