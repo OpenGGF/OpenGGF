@@ -1,5 +1,6 @@
-# Verified native menu witness through first ordinary Level frame / LFC 0.
-# Copied from /tmp/s2comp-analysis-20261107/lane-p/ehz2-p1-approach-r7.bk2; frozen prefix rows only, no gameplay input authoring.
+# R2 cold BizHawk 2.11 observed ACT2 ordinary Level/LFC 0 at native row 10364.
+# Initial native witness, planner-authored shared traversal repair, retained native load inputs.
+# Input rows re-confirmed by both R2 native goal runs; no RAM writes or timing hydration.
 900 -
 1 D
 49 -
@@ -356,117 +357,106 @@
 34 -
 1 - / D
 5 - / D+R
-10 - / D
-24 -
-124 - / R
-2 -
-1 - / R
-21 - / D
-1 - / D+A
-2 - / D
-2 - / R
-13 -
-8 - / L
-1 -
-30 - / L
-20 - / R
-8 -
-2 - / A
-1 -
-30 - / R
-24 - / D
-20 - / R
-1 - / R+A
-11 - / A
-35 -
-1 - / R
-1 -
-1 - / R
-1 -
-1 - / R
-1 -
-1 - / R
-1 -
-1 - / R
-1 -
-1 - / R
-1 -
-1 - / R
-1 -
-1 - / R
-1 -
-1 - / R
-1 -
-1 - / R
-1 -
-14 - / R
-1 -
-24 - / R
-12 - / R+A
-18 - / R
-24 - / D
-6 - / R
-24 - / D
-6 - / R
-1 - / D
-1 - / D+A
-22 - / D
-2 - / R
-23 -
-118 - / R
-28 - / D+R
-1 - / D
-1 - / D+R
-30 -
-24 - / R
-1 -
-1 - / R
-1 -
-3 - / R
-30 - / D+R
-30 - / R
-13 - / D+R
-17 - / D
-31 -
-8 - / A
-4 - / R+A
-17 - / R
-30 -
-1 - / R
-1 - / R+A
-5 - / A
-50 -
-3 - / R
-4 - / D+R
-57 - / R
-12 - / R+A
-13 - / R
+14 - / D
 20 -
+124 - / R
+23 -
+24 - / R+A
+51 - / R
+4 -
+12 - / L
+8 - / R
+24 - / D
+9 - / R
+24 -
+25 - / R
+7 - / D+R
+1 - / R
+24 - / R+A
+28 - / R
+11 -
+18 - / R
+39 - / D+R
+3 - / D
+3 - / D+R
+45 - / D
+4 - / D+L
+1 - / D
+2 - / D+L
+1 - / D
+11 - / D+L
+2 - / D+R
+3 - / D+L
+1 - / D+R
+3 - / D+L
+1 - / R
+6 - / R+A
+44 - / R
+6 - / R+A
+58 - / R
+1 -
 1 - / R
 1 -
 1 - / R
-19 -
-1 - / A
-5 - / R+A
-35 - / R
-8 -
-3 - / A
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+56 - / R
+21 - / D+R
+9 - / D
+44 -
+17 - / R
+6 - / R+A
+15 - / R
+9 -
+6 - / A
+23 -
+1 - / R
+10 - / D
+14 - / D+R
+6 - / R
+12 - / R+A
+78 - / R
+2 - / D
+1 - / D+R
+6 - / D
+1 - / D+A
+14 - / D
+2 - / R
+2 -
+2 - / R
+24 - / D
+75 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+17 -
+1 - / R
+1 -
+1 - / R
+20 -
+7 - / R
+2 - / R+A
+4 - / A
 1 -
 34 - / R
-6 -
-4 - / A
-2 - / R+A
-44 - / R
-12 - / R+A
-38 - / R
-6 - / D+R
-1 - / D
-2 - / D+R
-31 - / R
-12 - / R+A
-48 - / R
-12 - / R+A
-71 - / R
+10 -
+6 - / A
+1 -
+34 - / R
+2 -
+26 - / R
+19 - / D
+1 - / D+A
+4 - / D
+2 - / R
+15 -
+1 - / A
+11 - / R+A
+45 - / R
 1 -
 1 - / R
 1 -
@@ -474,18 +464,30 @@
 1 -
 1 - / R
 1 -
-2 - / R+A
-12 - / A
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+14 - / A
 10 - / R+A
 22 - / R
-43 -
-24 - / R
-1 -
-6 - / R
-24 - / R+A
-88 - / R
-6 -
+5 -
 1 - / R
+1 -
+3 - / R
+1 -
+2 - / R
 1 -
 1 - / R
 1 -
@@ -514,7 +516,56 @@
 1 - / R
 1 -
 1 - / R
-3844 -
+1 -
+1 - / R
+1 - / D
+29 - / D+R
+1 - / R
+12 - / R+A
+53 - / R
+12 - / R+A
+43 - / R
+2 - / D
+7 - / D+R
+6 - / D
+1 - / D+A
+8 - / D
+2 - / R
+1 -
+2 - / R
+16 - / D+R
+82 - / R
+1 -
+4 - / R
+8 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+1 -
+1 - / R
+3812 -
 1 S
 1 R
 2 D
