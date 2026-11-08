@@ -11,19 +11,6 @@ HERE=Path(__file__).resolve().parent
 s=importlib.util.spec_from_file_location('art',HERE.parent/'s1/build.py');a=importlib.util.module_from_spec(s);s.loader.exec_module(a)
 r=a.r;ROOT=a.ROOT;ART=a.ART
 
-def fox(im,x,y,w,h):
- d=ImageDraw.Draw(im)
- def p(points,c):d.polygon([(x+round(xx*w/40),y+round(yy*h/40)) for xx,yy in points],fill=c,outline=1)
- def line(points,c):d.line([(x+round(xx*w/40),y+round(yy*h/40)) for xx,yy in points],fill=c)
- p([(1,20),(7,0),(19,9),(34,0),(39,24),(33,36),(19,40),(6,35)],8)
- p([(7,7),(8,16),(14,12)],14);p([(31,7),(26,13),(34,16)],14)
- p([(5,24),(13,23),(19,29),(26,23),(36,21),(33,33),(21,38),(9,34)],7)
- for xx in (12,25):
-  p([(xx,15),(xx+4,14),(xx+5,24),(xx,25)],12)
-  line([(xx+3,17),(xx+3,22)],15)
- p([(16,27),(23,27),(20,30)],1)
- line([(15,33),(21,35),(27,31)],1)
-
 def plane(im,points=None):
  d=ImageDraw.Draw(im)
  # Original banked biplane silhouette, composed like the distant photo.
@@ -38,43 +25,55 @@ def plane(im,points=None):
 
 def photos():
  out=[]
- # 1: two friends meet fists across the central backlit burst.
+ # 1: a solo victory fist against the same moment's backlit burst.
  im=a.indexed((96,72));d=ImageDraw.Draw(im);d.rectangle((0,0,95,71),fill=2)
  star=[]
  for i in range(36):
-  an=i*math.pi/18;rad=29 if i%2==0 else 18;star.append((48+round(math.cos(an)*rad),26+round(math.sin(an)*rad)))
- d.polygon(star,fill=12);d.ellipse((32,10,66,44),fill=6)
- a.body(im,9,42,23,29);a.head(im,1,13,33,37)
- a.limb(im,(27,48),(43,39),5);a.glove(im,37,31,12,13)
- a.body(im,65,44,24,28);fox(im,62,11,33,38)
- a.limb(im,(66,48),(52,39),5,8);a.glove(im,48,31,12,13)
- a.boot(im,8,65,13,7);a.boot(im,25,65,13,7)
+  an=i*math.pi/18;rad=34 if i%2==0 else 23;star.append((48+round(math.cos(an)*rad),33+round(math.sin(an)*rad)))
+ d.polygon(star,fill=6);d.ellipse((23,8,75,58),fill=5)
+ # Broad tail and planted boots ground the single central silhouette.
+ d.polygon([(38,48),(49,56),(31,64),(9,65),(24,56)],fill=4,outline=1)
+ for x,y in [(17,61),(25,57),(33,53)]:d.line((x,y,x+5,y+1),fill=6)
+ a.body(im,36,36,27,29)
+ a.limb(im,(40,62),(36,67),5);a.limb(im,(57,62),(63,67),5)
+ a.boot(im,28,65,18,7);a.boot(im,57,65,18,7)
+ a.limb(im,(59,43),(72,25),6);a.glove(im,66,10,20,22)
+ a.limb(im,(38,44),(29,51),5);a.glove(im,22,46,14,15)
+ a.head(im,24,5,42,43)
  out.append(im)
- # 2: Tails fills the right two thirds; MICA rides the wing at lower left.
+ # 2: MICA close-up alone in the slipstream, her hand on the wing.
  im=a.indexed((96,72));d=ImageDraw.Draw(im);d.rectangle((0,0,95,71),fill=3)
- for x,y in [(0,8),(8,3),(19,12),(2,30)]:d.line((x,y,x+22,y),fill=6)
- fox(im,34,0,69,73)
- for y in (19,23,27):d.line((21,y,43,y+1),fill=8)
- d.polygon([(0,66),(34,59),(42,64),(8,71),(0,71)],fill=10,outline=1)
- a.body(im,13,54,9,11);a.head(im,9,42,15,16);a.glove(im,23,51,7,8,True)
- a.boot(im,11,63,7,4);a.boot(im,19,62,6,4)
+ for x,y,length in [(0,8,29),(5,16,21),(0,30,17),(5,47,19),(66,5,28)]:
+  d.line((x,y,x+length,y),fill=6)
+ d.polygon([(23,48),(44,59),(23,67),(2,64),(12,56)],fill=4,outline=1)
+ for x,y in [(10,60),(18,57),(26,54)]:d.line((x,y,x+6,y-1),fill=6)
+ a.body(im,41,44,31,29);a.head(im,22,2,58,55,True)
+ # Wing occupies the foreground; no distant second character silhouette.
+ d.polygon([(0,66),(94,55),(95,64),(21,71),(0,71)],fill=10,outline=1)
+ d.line((3,68,91,58),fill=12,width=2)
+ a.limb(im,(66,50),(78,59),5);a.glove(im,71,51,15,15)
  out.append(im)
- # 3: framing and diagonals of the cockpit, MICA left, Tails right.
+ # 3: solo cockpit portrait, a raised greeting framed by biplane struts.
  im=a.indexed((96,72));d=ImageDraw.Draw(im);d.rectangle((0,0,95,71),fill=6)
- d.rectangle((0,17,95,65),fill=2);d.polygon([(0,54),(96,43),(96,72),(0,72)],fill=10)
- a.body(im,17,40,21,23);a.head(im,12,23,29,31)
- fox(im,58,26,28,29);a.glove(im,79,41,12,14,True)
+ d.rectangle((0,22,95,65),fill=3)
+ for box in [(-10,27,17,36),(73,25,108,35)]:d.ellipse(box,fill=5)
+ d.polygon([(0,54),(96,43),(96,72),(0,72)],fill=10)
+ a.body(im,38,42,24,25);a.head(im,23,18,38,39)
+ a.limb(im,(60,48),(74,35),5);a.glove(im,68,23,15,20,True)
+ a.limb(im,(40,51),(34,58),4);a.glove(im,28,51,13,13)
  d.polygon([(0,10),(68,4),(96,11),(96,22),(0,22)],fill=12,outline=1)
  d.line((0,19,95,19),fill=10,width=3)
- for p,q in [((4,22),(28,71)),((54,13),(50,71)),((90,22),(89,68))]:d.line([p,q],fill=1,width=3);d.line([p,q],fill=13)
- d.polygon([(0,61),(43,55),(43,61),(0,70)],fill=12,outline=1)
- d.polygon([(57,58),(95,49),(95,55),(56,65)],fill=12,outline=1)
+ for p,q in [((4,22),(22,71)),((90,22),(89,68))]:
+  d.line([p,q],fill=1,width=3);d.line([p,q],fill=13)
+ d.polygon([(0,63),(95,51),(95,58),(0,71)],fill=12,outline=1)
+ d.line((3,67,93,55),fill=10,width=2)
  out.append(im)
- # 4: sky, distant cloud mass and banking plane with tiny visible jade rider.
+ # 4: lone jade rider on an original banked biplane above the clouds.
  im=a.indexed((96,72));d=ImageDraw.Draw(im);d.rectangle((0,0,95,71),fill=3)
  for box in [(-16,52,45,90),(28,49,76,84),(61,39,116,88),(-13,-12,37,15),(23,-8,61,14)]:d.ellipse(box,fill=5)
  for y in (59,64,69):d.line((48,y,95,y-9),fill=6,width=2)
- plane(im);a.head(im,33,29,10,12);a.glove(im,41,35,4,5);fox(im,47,35,9,10)
+ plane(im);a.body(im,37,37,7,8);a.head(im,33,26,13,15)
+ a.limb(im,(42,39),(49,31),2);a.glove(im,47,27,5,6,True)
  out.append(im)
  return out
 
@@ -213,7 +212,7 @@ def generate(group,inv):
  if group=='photos':
   for i,im in enumerate(photos(),1):
    file=f'photo-{i}.png';im.save(HERE/file,bits=4,transparency=0)
-   frames.append(dict(id=f'photo-{i}',file=file,native_source_label=f'MapEng_Ending{i}',native_art_label='ArtNem_EndingPics',dimensions=[96,72],bounds_px=[0,0,96,72],palette_line=0,timing='Static; fade wait $180 NTSC/$100 PAL, then $80.',composition=['fist bump; MICA left, Tails right','Tails closeup; tiny MICA lower-left wing rider','MICA left cockpit, Tails right; native framing diagonals','banked distant biplane; tiny MICA wing rider'][i-1],scene_policy='Entire original illustration; unchanged MICA palette for character and scene. Replaces 12x9 tile panel, no reference pixels.'))
+   frames.append(dict(id=f'photo-{i}',file=file,native_source_label=f'MapEng_Ending{i}',native_art_label='ArtNem_EndingPics',dimensions=[96,72],bounds_px=[0,0,96,72],palette_line=0,timing='Static; fade wait $180 NTSC/$100 PAL, then $80.',composition=['solo MICA victory fist in backlit burst','solo MICA wing-rider closeup in slipstream','solo MICA greeting from cockpit; biplane framing','banked distant biplane; lone MICA wing rider'][i-1],scene_policy='Entire original illustration; unchanged MICA palette for character and scene. Replaces 12x9 tile panel, no reference pixels.'))
  else:
   keys={'normal':['s2_normal_turn','s2_normal_leap'],'super':['s2_super_depart','s2_super_hero'],'float':['s2_float']}[group]
   mm=r.maps(ROOT/('docs/s2disasm/mappings/sprite/Sonic.asm' if group=='float' else 'docs/s2disasm/mappings/sprite/objCF.asm'))
@@ -244,7 +243,9 @@ def generate(group,inv):
 
 def main():
  p=argparse.ArgumentParser();p.add_argument('--group',choices=['photos','normal','super','float','all'],default='all');p.add_argument('--review',type=Path);args=p.parse_args();inv=__import__('yaml').safe_load((ART/'endings/endings-inventory.yaml').read_text())
- dest=HERE/'s2.yaml';m=json.loads(dest.read_text()) if dest.exists() else dict(format='openggf-ending-art-handoff-1',game='s2',native_source_label='ArtNem_EndingPics / ArtNem_EndingSonic / ArtNem_EndingSuperSonic / SonAni_Float2',palette='../../palette.yaml',gilded='../../presentation/gilded.yaml',tick_rate=60,palette_binding='Keep all MICA indices: photos/normal leap/Float2 on line 0; Tornado rider line 1 shared with native Tails pilot requires engine palette arbitration or per-piece reassignment. Plane line 0 remains ROM-owned; PNGs for 7..11 are character-only transparent overlays. Super stores unchanged indices with the first Gilded s2 palette for static viewing; install the full s2 cycle on line 0. Photo backgrounds/companions redrawn in shared MICA palette; reserve entire panel line 0 and rewrite native tile palette attributes.',layout='Native piece coordinates, dimensions, flips and priorities. Reallocate original tiles into per-frame banks; do not retain inter-frame source aliases. Full composite bounds include blank plane area in character overlays.',timing={s['id']:s['animation_timing'] for s in inv['sequences'] if s['game']=='s2'},groups={})
+ dest=HERE/'s2.yaml';m=json.loads(dest.read_text()) if dest.exists() else dict(format='openggf-ending-art-handoff-1',game='s2',native_source_label='ArtNem_EndingPics / ArtNem_EndingSonic / ArtNem_EndingSuperSonic / SonAni_Float2',palette='../../palette.yaml',gilded='../../presentation/gilded.yaml',tick_rate=60,palette_binding='Keep all MICA indices: photos/normal leap/Float2 on line 0; Tornado rider line 1 shared with native Tails pilot requires engine palette arbitration or per-piece reassignment. Plane line 0 remains ROM-owned; PNGs for 7..11 are character-only transparent overlays. Super stores unchanged indices with the first Gilded s2 palette for static viewing; install the full s2 cycle on line 0. Solo photo backgrounds redrawn in shared MICA palette; reserve entire panel line 0 and rewrite native tile palette attributes.',layout='Native piece coordinates, dimensions, flips and priorities. Reallocate original tiles into per-frame banks; do not retain inter-frame source aliases. Full composite bounds include blank plane area in character overlays.',timing={s['id']:s['animation_timing'] for s in inv['sequences'] if s['game']=='s2'},groups={})
+ m['photo_cast_note']='Phase 1: MICA alone in all four photo panels. TALON is deferred to phase 2; no companion stand-in or Sega character drawings.'
+ m['palette_binding']=m['palette_binding'].replace('Photo backgrounds/companions redrawn','Solo photo backgrounds redrawn')
  m['palette_binding']=m['palette_binding'].replace('Super stores unchanged indices; install Gilded s2 cycle on line 0.', 'Super stores unchanged indices with the first Gilded s2 palette for static viewing; install the full s2 cycle on line 0.')
  for group in (['photos','normal','super','float'] if args.group=='all' else [args.group]):
   fs=generate(group,inv);m['groups'][group]=[f['id'] for f in fs];updates={f['id']:f for f in fs};old=m.get('frames',[]);m['frames']=[updates.pop(f['id'],f) for f in old]+list(updates.values());a.verify(HERE,dict(frames=fs))
