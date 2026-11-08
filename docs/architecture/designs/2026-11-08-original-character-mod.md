@@ -86,6 +86,11 @@ the S3K water zones.
 
 ### W4 — Character presentation contract (L)
 
+Status: API foundation in progress on `feature/ai-mica-presentation`; optional
+owner-bounded supplier, immutable indexed images, pixel composer and S1/S2 title
+font readers implemented. Surface wiring, S3K font inventory, small HUD fonts,
+S2 Tails results correction and MICA presentation assets are not delivered yet.
+
 Add a `CharacterPresentation` record carried by `CharacterDefinition` (and stored as
 GGFP v3 sections), modelled on KiS2's internal seams (`Sonic2ArtOverlays`, the S2
 continue `PlayerPresentation`, the S2 ending `Presentation`). Every stock surface asks

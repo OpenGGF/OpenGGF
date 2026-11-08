@@ -73,6 +73,7 @@ public final class OwnedCharacterRegistry {
         var result=new ArrayList<Object>(4);
         result.add(definition.spriteFactory());result.add(definition.respawnStrategyFactory());result.add(definition.artSupplier());
         if (definition.paletteSupplier()!=null) result.add(definition.paletteSupplier());
+        if (definition.presentationSupplier()!=null) result.add(definition.presentationSupplier());
         return result;
     }
     private static void requireCompatible(String owner,Object value) {
