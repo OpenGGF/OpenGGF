@@ -43,7 +43,8 @@ under the matching area heading; see the
   native timing, departure movement, text and stock Tails. S3K data select
   composes MICA’s portrait with stock team portraits using isolated colours,
   and save-slot life counters consume her HUD life icon. NO SAVE portrait
-  selection refreshes immediately for custom solo and partner teams.
+  selection refreshes immediately for custom solo and partner teams. The S2
+  half-pipe HUD composes her name from its native SONIC/MILES/TAILS letter art.
   Her 13-frame ICZ snowboard set retains the native intro choreography, with
   isolated rider and native board/spray palettes.
 

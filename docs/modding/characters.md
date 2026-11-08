@@ -245,6 +245,9 @@ renderer-owned graphics bank; no native menu line is replaced.
 The S3K `snowboard` bank supplies the 13 native rider mapping IDs (0–12).
 The host retains intro timing, movement, separate board/spray and snow occlusion;
 private renderer palettes keep rider and native effects independent.
+S2's half-pipe ring HUD composes the short/display name from its own native
+SONIC/MILES/TAILS letters in a 40×8 cell, with HUD-style supplements only for
+missing letters. Stock and unsupported names retain their native art.
 GGFP presentation sections are pending.
 
 ## Ability and super-form rules
