@@ -2,6 +2,7 @@ package com.openggf;
 
 import com.openggf.game.sonic3k.competition.*;
 import com.openggf.mods.run.*;
+import com.openggf.game.arena.*;
 import com.openggf.game.session.*;
 import com.openggf.game.competition.NativeCompetitionRoster;
 import com.openggf.game.nativemenu.NativeMenuHostContext;

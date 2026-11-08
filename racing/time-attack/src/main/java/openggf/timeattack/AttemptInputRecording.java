@@ -23,11 +23,11 @@ public final class AttemptInputRecording {
     public static final int FORMAT_VERSION = 3;
     public static final int MAX_EVENTS = 1024;
     private int encodingVersion = FORMAT_VERSION;
-    public record RecordedEvent(int step, com.openggf.mods.run.RaceEvent event) { }
+    public record RecordedEvent(int step, com.openggf.game.arena.RaceEvent event) { }
     private final java.util.List<RecordedEvent> events = new java.util.ArrayList<>();
     public java.util.List<RecordedEvent> events() { return java.util.List.copyOf(events); }
     /** Append the engine's actual result before its input step is appended. */
-    public void appendEvent(int step, com.openggf.mods.run.RaceEvent event) {
+    public void appendEvent(int step, com.openggf.game.arena.RaceEvent event) {
         if (start.mode() != CompetitionRoomSettings.Mode.COMPETITION || !start.swapEnabled())
             throw new IllegalArgumentException("race events require a swap-enabled competition attempt");
         if (event == null || step < 0 || step >= MAX_FRAMES || events.size() >= MAX_EVENTS
@@ -81,13 +81,13 @@ public final class AttemptInputRecording {
             for (RecordedEvent e : events) {
                 if (e.step() >= data.length) throw new IllegalStateException("event has no recorded step");
                 out.writeInt(e.step());
-                boolean apply = e.event() instanceof com.openggf.mods.run.RaceEvent.SwapApply;
+                boolean apply = e.event() instanceof com.openggf.game.arena.RaceEvent.SwapApply;
                 out.writeByte(apply ? 1 : 2);
-                long id = apply ? ((com.openggf.mods.run.RaceEvent.SwapApply)e.event()).swapId()
-                        : ((com.openggf.mods.run.RaceEvent.SwapFallback)e.event()).swapId();
+                long id = apply ? ((com.openggf.game.arena.RaceEvent.SwapApply)e.event()).swapId()
+                        : ((com.openggf.game.arena.RaceEvent.SwapFallback)e.event()).swapId();
                 if (id < 0 || id > 0xffffffffL) throw new IllegalArgumentException("swap id outside u32");
                 out.writeInt((int)id);
-                if (e.event() instanceof com.openggf.mods.run.RaceEvent.SwapApply a) {
+                if (e.event() instanceof com.openggf.game.arena.RaceEvent.SwapApply a) {
                     var t = a.target();
                     out.writeInt(t.centreX()); out.writeInt(t.centreY());
                     out.writeInt(t.xVel()); out.writeInt(t.yVel());
@@ -119,7 +119,7 @@ public final class AttemptInputRecording {
                 start = new AttemptStartDescriptor(in.readUTF(), in.readUnsignedByte(), in.readUnsignedByte(),
                         in.readUTF(), in.readUTF(), com.openggf.mods.run.TrackKind.valueOf(in.readUTF()),
                         CompetitionRoomSettings.Mode.valueOf(in.readUTF()),
-                        com.openggf.mods.run.MonitorRule.valueOf(in.readUTF()),
+                        com.openggf.game.arena.MonitorRule.valueOf(in.readUTF()),
                         com.openggf.game.session.GameplayRunPolicy.DeathRestart.valueOf(in.readUTF()), in.readBoolean());
             } catch (IllegalArgumentException invalid) { throw new IOException("Invalid recording rules", invalid); }
             openggf.timeattack.ghost.GhostFileCodec.validateRoute(start.gameId(),start.zone(),start.act(),start.character());
@@ -141,12 +141,12 @@ public final class AttemptInputRecording {
                 int step = in.readInt();
                 int kind = in.readUnsignedByte();
                 long id = Integer.toUnsignedLong(in.readInt());
-                com.openggf.mods.run.RaceEvent event;
-                if (kind == 1) event = new com.openggf.mods.run.RaceEvent.SwapApply(id,
-                        new com.openggf.mods.run.SwapTarget(in.readInt(), in.readInt(), in.readInt(), in.readInt(),
+                com.openggf.game.arena.RaceEvent event;
+                if (kind == 1) event = new com.openggf.game.arena.RaceEvent.SwapApply(id,
+                        new com.openggf.game.arena.SwapTarget(in.readInt(), in.readInt(), in.readInt(), in.readInt(),
                                 in.readBoolean(), in.readBoolean(), in.readInt(), in.readBoolean(),
                                 in.readInt(), in.readInt(), in.readInt()));
-                else if (kind == 2) event = new com.openggf.mods.run.RaceEvent.SwapFallback(id);
+                else if (kind == 2) event = new com.openggf.game.arena.RaceEvent.SwapFallback(id);
                 else throw new IOException("Unknown race event kind");
                 if (step >= length) throw new IOException("Race event outside recording");
                 try { recording.appendEvent(step, event); }

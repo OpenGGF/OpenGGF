@@ -1,8 +1,8 @@
 package com.openggf.game.arena;
 
 import com.openggf.game.session.GameplayModeContext;
-import com.openggf.mods.run.SwapTarget;
-import com.openggf.mods.run.TrackGeometry;
+import com.openggf.game.arena.SwapTarget;
+import com.openggf.game.arena.TrackGeometry;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;

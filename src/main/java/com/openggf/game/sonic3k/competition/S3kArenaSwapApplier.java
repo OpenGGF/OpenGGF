@@ -6,7 +6,7 @@ import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.level.objects.ObjectServices;
-import com.openggf.mods.run.*;
+import com.openggf.game.arena.*;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /** Streamed partner reconstruction for loc_3652A; the native box still owns its animation. */

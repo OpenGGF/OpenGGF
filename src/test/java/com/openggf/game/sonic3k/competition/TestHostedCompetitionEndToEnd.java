@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.competition;
 
 import com.openggf.control.PlayerInputState;
 import com.openggf.game.arena.HostedArenaRequest;
+import com.openggf.game.arena.*;
 import com.openggf.mods.run.*;
 import com.openggf.net.hub.*;
 import com.openggf.net.protocol.ControlMessage;
@@ -41,7 +42,7 @@ class TestHostedCompetitionEndToEnd {
                 fixture.iteration(()-> {
                     var step = arena.step(PlayerInputState.neutral());
                     attempt.onFrame(0,arena.trackFinished(),-1,step.race());
-                    var f = step.pose().toGhostFrame(false,Math.clamp(step.race().currentLap(),0,15));
+                    var f = com.openggf.mods.run.NativePlayerPose.fromArena(step.pose()).toGhostFrame(false,Math.clamp(step.race().currentLap(),0,15));
                     byte[] bytes = new byte[com.openggf.net.ghost.GhostFrameCodec.BYTES];
                     com.openggf.net.ghost.GhostFrameCodec.encode(f,bytes,0); hash.update(bytes);
                 });
@@ -76,7 +77,7 @@ class TestHostedCompetitionEndToEnd {
             Runnable step = () -> fixture.iteration(() -> {
                 var observation = arena.step(PlayerInputState.neutral());
                 attempt.onFrame(0,arena.trackFinished(),-1,observation.race());
-                runtime.afterStep(new RunStep(ordinal[0]++,0,false,observation.pose(),arena.trackFinished(),-1,false,
+                runtime.afterStep(new RunStep(ordinal[0]++,0,false,com.openggf.mods.run.NativePlayerPose.fromArena(observation.pose()),arena.trackFinished(),-1,false,
                         observation.race(),RaceSignal.NONE,RaceEventResult.NONE));
             });
             while (!fixture.host.session().started()) { assertTrue(ordinal[0]<400); step.run(); }

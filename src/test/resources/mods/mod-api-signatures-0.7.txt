@@ -309,6 +309,17 @@ CF-ANNOTATION TYPE com.openggf.game.animation.ChannelGuard visible @java.lang.Fu
 CF-ANNOTATION TYPE com.openggf.game.animation.DestinationPlan visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.animation.PhaseSource visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.animation.PhaseSource visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.game.arena.MonitorRule visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.arena.RaceClock visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.arena.RaceClock$Failure visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.arena.RaceEvent visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.arena.RaceEvent$SwapApply visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.arena.RaceEvent$SwapFallback visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.arena.RaceEventResult visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.arena.RaceEventResult$Outcome visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.arena.RaceSignal visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.arena.SwapTarget visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.arena.TrackGeometry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.dataselect.AbstractDataSelectProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.dataselect.DataSelectAction visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.dataselect.DataSelectActionType visible @com.openggf.game.ModApi
@@ -916,16 +927,7 @@ CF-ANNOTATION TYPE com.openggf.mods.objects.MushroomHillFactory visible @com.ope
 CF-ANNOTATION TYPE com.openggf.mods.run.CharacterLooks visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.GhostPose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.LevelStartCause visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.mods.run.MonitorRule visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.PlayerPose visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.mods.run.RaceClock visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.mods.run.RaceClock$Failure visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.mods.run.RaceEvent visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.mods.run.RaceEvent$SwapApply visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.mods.run.RaceEvent$SwapFallback visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.mods.run.RaceEventResult visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.mods.run.RaceEventResult$Outcome visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.mods.run.RaceSignal visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.RunArea visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.RunEndReason visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.RunHandle visible @com.openggf.game.ModApi
@@ -934,8 +936,6 @@ CF-ANNOTATION TYPE com.openggf.mods.run.RunInput visible @com.openggf.game.ModAp
 CF-ANNOTATION TYPE com.openggf.mods.run.RunLevelStart visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.RunSpec visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.RunStep visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.mods.run.SwapTarget visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.mods.run.TrackGeometry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.TrackKind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.ActLaunch visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.ActResult visible @com.openggf.game.ModApi
@@ -1083,6 +1083,7 @@ CF-ANNOTATION TYPE com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener visibl
 CF-ANNOTATION TYPE com.openggf.net.hub.RoomHostHooks$VerificationHooks visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.hub.RoomInviteService visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.hub.RoomInviteService visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.net.hub.TrackRulesProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.hub.TrackValidationProfile visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.hub.TrackValidationProfileSource visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.hub.ViolationSink visible @com.openggf.game.ModApi
@@ -1525,6 +1526,12 @@ CONSTRUCTOR com.openggf.game.animation.AnimatedTileChannel public  <init>(java.l
 CONSTRUCTOR com.openggf.game.animation.AnimatedTileChannelGraph public  <init>()
 CONSTRUCTOR com.openggf.game.animation.ChannelContext public  <init>(com.openggf.game.animation.AnimatedTileChannelGraph,com.openggf.game.animation.AnimatedTileChannel,com.openggf.level.Level,java.lang.Object,int,int,int)
 CONSTRUCTOR com.openggf.game.animation.DestinationPlan public  <init>(int,java.lang.Integer)
+CONSTRUCTOR com.openggf.game.arena.RaceClock public  <init>(boolean,int,int,com.openggf.game.arena.RaceClock$Failure)
+CONSTRUCTOR com.openggf.game.arena.RaceEvent$SwapApply public  <init>(long,com.openggf.game.arena.SwapTarget)
+CONSTRUCTOR com.openggf.game.arena.RaceEvent$SwapFallback public  <init>(long)
+CONSTRUCTOR com.openggf.game.arena.RaceEventResult public  <init>(com.openggf.game.arena.RaceEvent,com.openggf.game.arena.RaceEventResult$Outcome)
+CONSTRUCTOR com.openggf.game.arena.SwapTarget public  <init>(int,int,int,int,boolean,boolean,int,boolean,int,int,int)
+CONSTRUCTOR com.openggf.game.arena.TrackGeometry public  <init>(int,int,int,int)
 CONSTRUCTOR com.openggf.game.dataselect.AbstractDataSelectProvider public  <init>()
 CONSTRUCTOR com.openggf.game.dataselect.DataSelectAction public  <init>(com.openggf.game.dataselect.DataSelectActionType,int,int,int,com.openggf.game.save.SelectedTeam)
 CONSTRUCTOR com.openggf.game.dataselect.DataSelectDestination public  <init>(int,int)
@@ -1685,8 +1692,8 @@ CONSTRUCTOR com.openggf.game.save.SelectedTeam public  <init>(java.lang.String,j
 CONSTRUCTOR com.openggf.game.session.EngineContext public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.graphics.GraphicsManager,com.openggf.audio.AudioManager,com.openggf.data.RomManager,com.openggf.debug.PerformanceProfiler,com.openggf.debug.DebugOverlayManager,com.openggf.debug.playback.PlaybackDebugManager,com.openggf.game.RomDetectionService,com.openggf.game.CrossGameFeatureProvider)
 CONSTRUCTOR com.openggf.game.session.EngineContext public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.graphics.GraphicsManager,com.openggf.audio.AudioManager,com.openggf.data.RomManager,com.openggf.debug.PerformanceProfiler,com.openggf.debug.DebugOverlayManager,com.openggf.debug.playback.PlaybackDebugManager,com.openggf.game.RomDetectionService,com.openggf.game.CrossGameFeatureProvider,com.openggf.game.patch.ModuleResolutionService)
 CONSTRUCTOR com.openggf.game.session.GameplayRunPolicy public  <init>(boolean,boolean,com.openggf.game.session.GameplayRunPolicy$ActCompletion,boolean,boolean,com.openggf.game.session.GameplayRunPolicy$DeathRestart,boolean,boolean)
-CONSTRUCTOR com.openggf.game.session.GameplayRunPolicy public  <init>(boolean,boolean,com.openggf.game.session.GameplayRunPolicy$ActCompletion,boolean,boolean,com.openggf.game.session.GameplayRunPolicy$DeathRestart,boolean,boolean,com.openggf.mods.run.MonitorRule)
-CONSTRUCTOR com.openggf.game.session.GameplayRunPolicy public  <init>(boolean,boolean,com.openggf.game.session.GameplayRunPolicy$ActCompletion,boolean,boolean,com.openggf.game.session.GameplayRunPolicy$DeathRestart,boolean,boolean,com.openggf.mods.run.MonitorRule,boolean)
+CONSTRUCTOR com.openggf.game.session.GameplayRunPolicy public  <init>(boolean,boolean,com.openggf.game.session.GameplayRunPolicy$ActCompletion,boolean,boolean,com.openggf.game.session.GameplayRunPolicy$DeathRestart,boolean,boolean,com.openggf.game.arena.MonitorRule)
+CONSTRUCTOR com.openggf.game.session.GameplayRunPolicy public  <init>(boolean,boolean,com.openggf.game.session.GameplayRunPolicy$ActCompletion,boolean,boolean,com.openggf.game.session.GameplayRunPolicy$DeathRestart,boolean,boolean,com.openggf.game.arena.MonitorRule,boolean)
 CONSTRUCTOR com.openggf.game.session.WorldSession public  <init>(com.openggf.game.GameModule)
 CONSTRUCTOR com.openggf.game.session.WorldSession public  <init>(com.openggf.game.GameModule,com.openggf.game.GameModule,com.openggf.game.GameDataSource,com.openggf.game.save.SaveSessionContext)
 CONSTRUCTOR com.openggf.game.session.WorldSession public  <init>(com.openggf.game.GameModule,com.openggf.game.GameModule,com.openggf.game.save.SaveSessionContext)
@@ -1965,23 +1972,17 @@ CONSTRUCTOR com.openggf.mods.run.GhostPose public  <init>(java.lang.String,java.
 CONSTRUCTOR com.openggf.mods.run.PlayerPose public  <init>(int,int,int,boolean,boolean,int,boolean)
 CONSTRUCTOR com.openggf.mods.run.PlayerPose public  <init>(int,int,int,boolean,boolean,int,boolean,boolean)
 CONSTRUCTOR com.openggf.mods.run.PlayerPose public  <init>(int,int,int,boolean,boolean,int,boolean,boolean,boolean,int)
-CONSTRUCTOR com.openggf.mods.run.RaceClock public  <init>(boolean,int,int,com.openggf.mods.run.RaceClock$Failure)
-CONSTRUCTOR com.openggf.mods.run.RaceEvent$SwapApply public  <init>(long,com.openggf.mods.run.SwapTarget)
-CONSTRUCTOR com.openggf.mods.run.RaceEvent$SwapFallback public  <init>(long)
-CONSTRUCTOR com.openggf.mods.run.RaceEventResult public  <init>(com.openggf.mods.run.RaceEvent,com.openggf.mods.run.RaceEventResult$Outcome)
 CONSTRUCTOR com.openggf.mods.run.RunArea public  <init>(int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.mods.run.RunLevelStart public  <init>(com.openggf.mods.run.RunSpec,java.lang.String,boolean,int,int,boolean)
-CONSTRUCTOR com.openggf.mods.run.RunLevelStart public  <init>(com.openggf.mods.run.RunSpec,java.lang.String,boolean,int,int,com.openggf.mods.run.LevelStartCause,com.openggf.mods.run.TrackGeometry)
-CONSTRUCTOR com.openggf.mods.run.RunLevelStart public  <init>(com.openggf.mods.run.RunSpec,java.lang.String,boolean,int,int,com.openggf.mods.run.LevelStartCause,com.openggf.mods.run.TrackGeometry,int)
+CONSTRUCTOR com.openggf.mods.run.RunLevelStart public  <init>(com.openggf.mods.run.RunSpec,java.lang.String,boolean,int,int,com.openggf.mods.run.LevelStartCause,com.openggf.game.arena.TrackGeometry)
+CONSTRUCTOR com.openggf.mods.run.RunLevelStart public  <init>(com.openggf.mods.run.RunSpec,java.lang.String,boolean,int,int,com.openggf.mods.run.LevelStartCause,com.openggf.game.arena.TrackGeometry,int)
 CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy)
 CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy,com.openggf.mods.run.RunArea)
 CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy,com.openggf.mods.run.RunArea,com.openggf.mods.run.TrackKind)
 CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy,com.openggf.mods.run.RunArea,com.openggf.mods.run.TrackKind,boolean)
 CONSTRUCTOR com.openggf.mods.run.RunStep public  <init>(long,int,boolean,com.openggf.mods.run.PlayerPose,boolean,int,boolean)
-CONSTRUCTOR com.openggf.mods.run.RunStep public  <init>(long,int,boolean,com.openggf.mods.run.PlayerPose,boolean,int,boolean,com.openggf.mods.run.RaceClock,com.openggf.mods.run.RaceSignal,com.openggf.mods.run.RaceEventResult)
-CONSTRUCTOR com.openggf.mods.run.RunStep public  <init>(long,int,boolean,com.openggf.mods.run.PlayerPose,boolean,int,boolean,com.openggf.mods.run.RaceClock,com.openggf.mods.run.RaceSignal,com.openggf.mods.run.RaceEventResult,int,int)
-CONSTRUCTOR com.openggf.mods.run.SwapTarget public  <init>(int,int,int,int,boolean,boolean,int,boolean,int,int,int)
-CONSTRUCTOR com.openggf.mods.run.TrackGeometry public  <init>(int,int,int,int)
+CONSTRUCTOR com.openggf.mods.run.RunStep public  <init>(long,int,boolean,com.openggf.mods.run.PlayerPose,boolean,int,boolean,com.openggf.game.arena.RaceClock,com.openggf.game.arena.RaceSignal,com.openggf.game.arena.RaceEventResult)
+CONSTRUCTOR com.openggf.mods.run.RunStep public  <init>(long,int,boolean,com.openggf.mods.run.PlayerPose,boolean,int,boolean,com.openggf.game.arena.RaceClock,com.openggf.game.arena.RaceSignal,com.openggf.game.arena.RaceEventResult,int,int)
 CONSTRUCTOR com.openggf.mods.scene.ActLaunch public  <init>(com.openggf.game.ZoneKey$Mod,int,com.openggf.game.CharacterKey,java.util.List<com.openggf.game.CharacterKey>,java.util.OptionalInt,java.util.OptionalInt,int,java.util.Map<java.lang.String,java.lang.String>)
 CONSTRUCTOR com.openggf.mods.scene.ActResult public  <init>(com.openggf.game.ZoneKey$Mod,com.openggf.game.ActExit,int,long,java.util.Map<java.lang.String,java.lang.String>)
 CONSTRUCTOR com.openggf.mods.scene.RomSpriteRequest public  <init>(int,com.openggf.mods.scene.RomSpriteRequest$Compression,int,int,int,com.openggf.mods.scene.RomSpriteRequest$DplcLayout,int,int)
@@ -2045,6 +2046,7 @@ CONSTRUCTOR com.openggf.net.host.jdk.JdkRaceHostServer$RetirementReceipt public 
 CONSTRUCTOR com.openggf.net.hub.GhostHub public  <init>(java.util.function.LongSupplier,com.openggf.net.hub.TrackValidationProfileSource,com.openggf.net.hub.GhostHub$HubViolationRecorder)
 CONSTRUCTOR com.openggf.net.hub.GhostHub public  <init>(java.util.function.LongSupplier,com.openggf.net.hub.TrackValidationProfileSource,com.openggf.net.hub.GhostHub$HubViolationRecorder,boolean)
 CONSTRUCTOR com.openggf.net.hub.HostRoundEngine public  <init>(java.util.function.LongSupplier,java.util.function.Consumer<com.openggf.net.protocol.ControlMessage>)
+CONSTRUCTOR com.openggf.net.hub.HostRoundEngine public  <init>(java.util.function.LongSupplier,java.util.function.Consumer<com.openggf.net.protocol.ControlMessage>,com.openggf.net.hub.TrackRulesProvider)
 CONSTRUCTOR com.openggf.net.hub.HostRoundEngine$FinishOutcome public  <init>(int,int,boolean,int)
 CONSTRUCTOR com.openggf.net.hub.HostRoundEngine$FinishOutcome public  <init>(int,int,boolean,int,java.lang.String)
 CONSTRUCTOR com.openggf.net.hub.RoomHost public  <init>(com.openggf.net.hub.RoomHostConfig,com.openggf.net.identity.PlayerIdentity,java.util.function.LongSupplier,com.openggf.net.hub.TrackValidationProfileSource)
@@ -3010,6 +3012,22 @@ FIELD com.openggf.game.ZoneProgressionPlan$Completion public,static,final com.op
 FIELD com.openggf.game.ZoneProgressionPlan$Credits public,static,final com.openggf.game.ZoneProgressionPlan$Credits INSTANCE
 FIELD com.openggf.game.animation.AnimatedTileCachePolicy public,static,final com.openggf.game.animation.AnimatedTileCachePolicy ALWAYS
 FIELD com.openggf.game.animation.AnimatedTileCachePolicy public,static,final com.openggf.game.animation.AnimatedTileCachePolicy ON_PHASE_CHANGE
+FIELD com.openggf.game.arena.MonitorRule public,static,final com.openggf.game.arena.MonitorRule COMPETITION_ITEMS
+FIELD com.openggf.game.arena.MonitorRule public,static,final com.openggf.game.arena.MonitorRule NORMAL
+FIELD com.openggf.game.arena.MonitorRule public,static,final com.openggf.game.arena.MonitorRule OFF
+FIELD com.openggf.game.arena.MonitorRule public,static,final com.openggf.game.arena.MonitorRule RANDOMISED
+FIELD com.openggf.game.arena.RaceClock public,static,final com.openggf.game.arena.RaceClock ACT
+FIELD com.openggf.game.arena.RaceClock$Failure public,static,final com.openggf.game.arena.RaceClock$Failure GAME_OVER
+FIELD com.openggf.game.arena.RaceClock$Failure public,static,final com.openggf.game.arena.RaceClock$Failure NONE
+FIELD com.openggf.game.arena.RaceClock$Failure public,static,final com.openggf.game.arena.RaceClock$Failure TIME_OVER
+FIELD com.openggf.game.arena.RaceEventResult public,static,final com.openggf.game.arena.RaceEventResult NONE
+FIELD com.openggf.game.arena.RaceEventResult$Outcome public,static,final com.openggf.game.arena.RaceEventResult$Outcome APPLIED
+FIELD com.openggf.game.arena.RaceEventResult$Outcome public,static,final com.openggf.game.arena.RaceEventResult$Outcome FALLBACK
+FIELD com.openggf.game.arena.RaceEventResult$Outcome public,static,final com.openggf.game.arena.RaceEventResult$Outcome NONE
+FIELD com.openggf.game.arena.RaceSignal public,static,final com.openggf.game.arena.RaceSignal ARENA_DEATH_RESPAWN
+FIELD com.openggf.game.arena.RaceSignal public,static,final com.openggf.game.arena.RaceSignal NONE
+FIELD com.openggf.game.arena.RaceSignal public,static,final com.openggf.game.arena.RaceSignal SWAP_REQUEST
+FIELD com.openggf.game.arena.TrackGeometry public,static,final com.openggf.game.arena.TrackGeometry ACT
 FIELD com.openggf.game.dataselect.AbstractDataSelectProvider protected com.openggf.game.DataSelectProvider$State state
 FIELD com.openggf.game.dataselect.AbstractDataSelectProvider protected com.openggf.game.dataselect.DataSelectAction pendingAction
 FIELD com.openggf.game.dataselect.AbstractDataSelectProvider protected com.openggf.game.dataselect.DataSelectSessionController sessionController
@@ -3628,26 +3646,10 @@ FIELD com.openggf.mods.run.LevelStartCause public,static,final com.openggf.mods.
 FIELD com.openggf.mods.run.LevelStartCause public,static,final com.openggf.mods.run.LevelStartCause FAST_DEATH_RESTART
 FIELD com.openggf.mods.run.LevelStartCause public,static,final com.openggf.mods.run.LevelStartCause LAUNCH
 FIELD com.openggf.mods.run.LevelStartCause public,static,final com.openggf.mods.run.LevelStartCause RETRY
-FIELD com.openggf.mods.run.MonitorRule public,static,final com.openggf.mods.run.MonitorRule COMPETITION_ITEMS
-FIELD com.openggf.mods.run.MonitorRule public,static,final com.openggf.mods.run.MonitorRule NORMAL
-FIELD com.openggf.mods.run.MonitorRule public,static,final com.openggf.mods.run.MonitorRule OFF
-FIELD com.openggf.mods.run.MonitorRule public,static,final com.openggf.mods.run.MonitorRule RANDOMISED
-FIELD com.openggf.mods.run.RaceClock public,static,final com.openggf.mods.run.RaceClock ACT
-FIELD com.openggf.mods.run.RaceClock$Failure public,static,final com.openggf.mods.run.RaceClock$Failure GAME_OVER
-FIELD com.openggf.mods.run.RaceClock$Failure public,static,final com.openggf.mods.run.RaceClock$Failure NONE
-FIELD com.openggf.mods.run.RaceClock$Failure public,static,final com.openggf.mods.run.RaceClock$Failure TIME_OVER
-FIELD com.openggf.mods.run.RaceEventResult public,static,final com.openggf.mods.run.RaceEventResult NONE
-FIELD com.openggf.mods.run.RaceEventResult$Outcome public,static,final com.openggf.mods.run.RaceEventResult$Outcome APPLIED
-FIELD com.openggf.mods.run.RaceEventResult$Outcome public,static,final com.openggf.mods.run.RaceEventResult$Outcome FALLBACK
-FIELD com.openggf.mods.run.RaceEventResult$Outcome public,static,final com.openggf.mods.run.RaceEventResult$Outcome NONE
-FIELD com.openggf.mods.run.RaceSignal public,static,final com.openggf.mods.run.RaceSignal ARENA_DEATH_RESPAWN
-FIELD com.openggf.mods.run.RaceSignal public,static,final com.openggf.mods.run.RaceSignal NONE
-FIELD com.openggf.mods.run.RaceSignal public,static,final com.openggf.mods.run.RaceSignal SWAP_REQUEST
 FIELD com.openggf.mods.run.RunEndReason public,static,final com.openggf.mods.run.RunEndReason ABORTED
 FIELD com.openggf.mods.run.RunEndReason public,static,final com.openggf.mods.run.RunEndReason ACT_COMPLETED
 FIELD com.openggf.mods.run.RunEndReason public,static,final com.openggf.mods.run.RunEndReason LEFT
 FIELD com.openggf.mods.run.RunEndReason public,static,final com.openggf.mods.run.RunEndReason LOAD_FAILED
-FIELD com.openggf.mods.run.TrackGeometry public,static,final com.openggf.mods.run.TrackGeometry ACT
 FIELD com.openggf.mods.run.TrackKind public,static,final com.openggf.mods.run.TrackKind ACT
 FIELD com.openggf.mods.run.TrackKind public,static,final com.openggf.mods.run.TrackKind ARENA
 FIELD com.openggf.mods.scene.RomSpriteRequest$Compression public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression KOSINSKI
@@ -4309,6 +4311,8 @@ INTERFACE com.openggf.game.ZoneKey$Stock com.openggf.game.ZoneKey
 INTERFACE com.openggf.game.ZoneProgressionPlan$Credits com.openggf.game.ZoneProgressionPlan$ProgressionResult
 INTERFACE com.openggf.game.ZoneProgressionPlan$Successor com.openggf.game.ZoneProgressionPlan$ProgressionResult
 INTERFACE com.openggf.game.animation.AnimatedTileChannelGraph com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot>
+INTERFACE com.openggf.game.arena.RaceEvent$SwapApply com.openggf.game.arena.RaceEvent
+INTERFACE com.openggf.game.arena.RaceEvent$SwapFallback com.openggf.game.arena.RaceEvent
 INTERFACE com.openggf.game.dataselect.AbstractDataSelectProvider com.openggf.game.DataSelectProvider
 INTERFACE com.openggf.game.dataselect.DataSelectGameProfile com.openggf.game.dataselect.DataSelectHostProfile
 INTERFACE com.openggf.game.mutation.ZoneLayoutMutationPipeline com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.MutationPipelineSnapshot>
@@ -4411,8 +4415,6 @@ INTERFACE com.openggf.mods.mutators.SignedGravityPolicy com.openggf.mods.mutator
 INTERFACE com.openggf.mods.mutators.SpringResponsePolicy com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.SpritePresentationPolicy com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.TransportPolicy com.openggf.mods.mutators.MutatorPolicy
-INTERFACE com.openggf.mods.run.RaceEvent$SwapApply com.openggf.mods.run.RaceEvent
-INTERFACE com.openggf.mods.run.RaceEvent$SwapFallback com.openggf.mods.run.RaceEvent
 INTERFACE com.openggf.mods.scene.SceneCanvas com.openggf.mods.ui.PixelCanvas
 INTERFACE com.openggf.mods.scene.SceneStorage com.openggf.mods.ModStorage
 INTERFACE com.openggf.mods.scene.art.SceneArtCache java.lang.AutoCloseable
@@ -7245,6 +7247,56 @@ METHOD com.openggf.game.animation.DestinationPlan public,final  int hashCode()
 METHOD com.openggf.game.animation.DestinationPlan public,final  java.lang.String toString()
 METHOD com.openggf.game.animation.DestinationPlan public,static  com.openggf.game.animation.DestinationPlan single(int)
 METHOD com.openggf.game.animation.PhaseSource public,abstract  int resolve(com.openggf.game.animation.ChannelContext)
+METHOD com.openggf.game.arena.MonitorRule public,static  com.openggf.game.arena.MonitorRule valueOf(java.lang.String)
+METHOD com.openggf.game.arena.MonitorRule public,static  com.openggf.game.arena.MonitorRule[] values()
+METHOD com.openggf.game.arena.RaceClock public  boolean running()
+METHOD com.openggf.game.arena.RaceClock public  com.openggf.game.arena.RaceClock$Failure failure()
+METHOD com.openggf.game.arena.RaceClock public  int completedLaps()
+METHOD com.openggf.game.arena.RaceClock public  int currentLap()
+METHOD com.openggf.game.arena.RaceClock public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.arena.RaceClock public,final  int hashCode()
+METHOD com.openggf.game.arena.RaceClock public,final  java.lang.String toString()
+METHOD com.openggf.game.arena.RaceClock$Failure public,static  com.openggf.game.arena.RaceClock$Failure valueOf(java.lang.String)
+METHOD com.openggf.game.arena.RaceClock$Failure public,static  com.openggf.game.arena.RaceClock$Failure[] values()
+METHOD com.openggf.game.arena.RaceEvent$SwapApply public  com.openggf.game.arena.SwapTarget target()
+METHOD com.openggf.game.arena.RaceEvent$SwapApply public  long swapId()
+METHOD com.openggf.game.arena.RaceEvent$SwapApply public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.arena.RaceEvent$SwapApply public,final  int hashCode()
+METHOD com.openggf.game.arena.RaceEvent$SwapApply public,final  java.lang.String toString()
+METHOD com.openggf.game.arena.RaceEvent$SwapFallback public  long swapId()
+METHOD com.openggf.game.arena.RaceEvent$SwapFallback public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.arena.RaceEvent$SwapFallback public,final  int hashCode()
+METHOD com.openggf.game.arena.RaceEvent$SwapFallback public,final  java.lang.String toString()
+METHOD com.openggf.game.arena.RaceEventResult public  com.openggf.game.arena.RaceEvent event()
+METHOD com.openggf.game.arena.RaceEventResult public  com.openggf.game.arena.RaceEventResult$Outcome outcome()
+METHOD com.openggf.game.arena.RaceEventResult public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.arena.RaceEventResult public,final  int hashCode()
+METHOD com.openggf.game.arena.RaceEventResult public,final  java.lang.String toString()
+METHOD com.openggf.game.arena.RaceEventResult$Outcome public,static  com.openggf.game.arena.RaceEventResult$Outcome valueOf(java.lang.String)
+METHOD com.openggf.game.arena.RaceEventResult$Outcome public,static  com.openggf.game.arena.RaceEventResult$Outcome[] values()
+METHOD com.openggf.game.arena.RaceSignal public,static  com.openggf.game.arena.RaceSignal valueOf(java.lang.String)
+METHOD com.openggf.game.arena.RaceSignal public,static  com.openggf.game.arena.RaceSignal[] values()
+METHOD com.openggf.game.arena.SwapTarget public  boolean facingLeft()
+METHOD com.openggf.game.arena.SwapTarget public  boolean highPriority()
+METHOD com.openggf.game.arena.SwapTarget public  boolean secondaryPath()
+METHOD com.openggf.game.arena.SwapTarget public  int centreX()
+METHOD com.openggf.game.arena.SwapTarget public  int centreY()
+METHOD com.openggf.game.arena.SwapTarget public  int priorityBucket()
+METHOD com.openggf.game.arena.SwapTarget public  int progress()
+METHOD com.openggf.game.arena.SwapTarget public  int shoeKind()
+METHOD com.openggf.game.arena.SwapTarget public  int shoeTimer()
+METHOD com.openggf.game.arena.SwapTarget public  int xVel()
+METHOD com.openggf.game.arena.SwapTarget public  int yVel()
+METHOD com.openggf.game.arena.SwapTarget public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.arena.SwapTarget public,final  int hashCode()
+METHOD com.openggf.game.arena.SwapTarget public,final  java.lang.String toString()
+METHOD com.openggf.game.arena.TrackGeometry public  int lapCount()
+METHOD com.openggf.game.arena.TrackGeometry public  int lapLineX()
+METHOD com.openggf.game.arena.TrackGeometry public  int wrapHeightPx()
+METHOD com.openggf.game.arena.TrackGeometry public  int wrapWidthPx()
+METHOD com.openggf.game.arena.TrackGeometry public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.arena.TrackGeometry public,final  int hashCode()
+METHOD com.openggf.game.arena.TrackGeometry public,final  java.lang.String toString()
 METHOD com.openggf.game.dataselect.AbstractDataSelectProvider protected  void attachSessionController(com.openggf.game.dataselect.DataSelectSessionController)
 METHOD com.openggf.game.dataselect.AbstractDataSelectProvider public  com.openggf.game.dataselect.DataSelectAction consumePendingAction()
 METHOD com.openggf.game.dataselect.AbstractDataSelectProvider public  com.openggf.game.dataselect.DataSelectExitTransition exitTransition()
@@ -8662,11 +8714,11 @@ METHOD com.openggf.game.session.GameplayRunPolicy public  boolean returnsToHostO
 METHOD com.openggf.game.session.GameplayRunPolicy public  boolean specialStageEntry()
 METHOD com.openggf.game.session.GameplayRunPolicy public  boolean swapEnabled()
 METHOD com.openggf.game.session.GameplayRunPolicy public  boolean zoneIntros()
+METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.game.arena.MonitorRule monitors()
 METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.game.session.GameplayRunPolicy withFastRestarts()
 METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.game.session.GameplayRunPolicy withoutZoneIntros()
 METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.game.session.GameplayRunPolicy$ActCompletion actCompletion()
 METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.game.session.GameplayRunPolicy$DeathRestart deathRestart()
-METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.mods.run.MonitorRule monitors()
 METHOD com.openggf.game.session.GameplayRunPolicy public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.session.GameplayRunPolicy public,final  int hashCode()
 METHOD com.openggf.game.session.GameplayRunPolicy public,final  java.lang.String toString()
@@ -12840,8 +12892,6 @@ METHOD com.openggf.mods.run.GhostPose public,final  int hashCode()
 METHOD com.openggf.mods.run.GhostPose public,final  java.lang.String toString()
 METHOD com.openggf.mods.run.LevelStartCause public,static  com.openggf.mods.run.LevelStartCause valueOf(java.lang.String)
 METHOD com.openggf.mods.run.LevelStartCause public,static  com.openggf.mods.run.LevelStartCause[] values()
-METHOD com.openggf.mods.run.MonitorRule public,static  com.openggf.mods.run.MonitorRule valueOf(java.lang.String)
-METHOD com.openggf.mods.run.MonitorRule public,static  com.openggf.mods.run.MonitorRule[] values()
 METHOD com.openggf.mods.run.PlayerPose public  boolean hFlip()
 METHOD com.openggf.mods.run.PlayerPose public  boolean highPriority()
 METHOD com.openggf.mods.run.PlayerPose public  boolean hurt()
@@ -12857,33 +12907,6 @@ METHOD com.openggf.mods.run.PlayerPose public  int shoeKind()
 METHOD com.openggf.mods.run.PlayerPose public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.run.PlayerPose public,final  int hashCode()
 METHOD com.openggf.mods.run.PlayerPose public,final  java.lang.String toString()
-METHOD com.openggf.mods.run.RaceClock public  boolean running()
-METHOD com.openggf.mods.run.RaceClock public  com.openggf.mods.run.RaceClock$Failure failure()
-METHOD com.openggf.mods.run.RaceClock public  int completedLaps()
-METHOD com.openggf.mods.run.RaceClock public  int currentLap()
-METHOD com.openggf.mods.run.RaceClock public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.mods.run.RaceClock public,final  int hashCode()
-METHOD com.openggf.mods.run.RaceClock public,final  java.lang.String toString()
-METHOD com.openggf.mods.run.RaceClock$Failure public,static  com.openggf.mods.run.RaceClock$Failure valueOf(java.lang.String)
-METHOD com.openggf.mods.run.RaceClock$Failure public,static  com.openggf.mods.run.RaceClock$Failure[] values()
-METHOD com.openggf.mods.run.RaceEvent$SwapApply public  com.openggf.mods.run.SwapTarget target()
-METHOD com.openggf.mods.run.RaceEvent$SwapApply public  long swapId()
-METHOD com.openggf.mods.run.RaceEvent$SwapApply public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.mods.run.RaceEvent$SwapApply public,final  int hashCode()
-METHOD com.openggf.mods.run.RaceEvent$SwapApply public,final  java.lang.String toString()
-METHOD com.openggf.mods.run.RaceEvent$SwapFallback public  long swapId()
-METHOD com.openggf.mods.run.RaceEvent$SwapFallback public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.mods.run.RaceEvent$SwapFallback public,final  int hashCode()
-METHOD com.openggf.mods.run.RaceEvent$SwapFallback public,final  java.lang.String toString()
-METHOD com.openggf.mods.run.RaceEventResult public  com.openggf.mods.run.RaceEvent event()
-METHOD com.openggf.mods.run.RaceEventResult public  com.openggf.mods.run.RaceEventResult$Outcome outcome()
-METHOD com.openggf.mods.run.RaceEventResult public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.mods.run.RaceEventResult public,final  int hashCode()
-METHOD com.openggf.mods.run.RaceEventResult public,final  java.lang.String toString()
-METHOD com.openggf.mods.run.RaceEventResult$Outcome public,static  com.openggf.mods.run.RaceEventResult$Outcome valueOf(java.lang.String)
-METHOD com.openggf.mods.run.RaceEventResult$Outcome public,static  com.openggf.mods.run.RaceEventResult$Outcome[] values()
-METHOD com.openggf.mods.run.RaceSignal public,static  com.openggf.mods.run.RaceSignal valueOf(java.lang.String)
-METHOD com.openggf.mods.run.RaceSignal public,static  com.openggf.mods.run.RaceSignal[] values()
 METHOD com.openggf.mods.run.RunArea public  int maxX()
 METHOD com.openggf.mods.run.RunArea public  int maxY()
 METHOD com.openggf.mods.run.RunArea public  int minX()
@@ -12896,7 +12919,7 @@ METHOD com.openggf.mods.run.RunArea public,final  java.lang.String toString()
 METHOD com.openggf.mods.run.RunEndReason public,static  com.openggf.mods.run.RunEndReason valueOf(java.lang.String)
 METHOD com.openggf.mods.run.RunEndReason public,static  com.openggf.mods.run.RunEndReason[] values()
 METHOD com.openggf.mods.run.RunHandle public  void holdControls(boolean)
-METHOD com.openggf.mods.run.RunHandle public  void queueRaceEvent(com.openggf.mods.run.RaceEvent)
+METHOD com.openggf.mods.run.RunHandle public  void queueRaceEvent(com.openggf.game.arena.RaceEvent)
 METHOD com.openggf.mods.run.RunHandle public  void setHudProfile(com.openggf.level.objects.HudProfile)
 METHOD com.openggf.mods.run.RunHandle public  void setHudTime(int)
 METHOD com.openggf.mods.run.RunHandle public  void setHudTimeHundredths(boolean)
@@ -12922,9 +12945,9 @@ METHOD com.openggf.mods.run.RunInput public,abstract  boolean keyPressed(int)
 METHOD com.openggf.mods.run.RunInput public,abstract  com.openggf.control.LogicalInputSnapshot input()
 METHOD com.openggf.mods.run.RunLevelStart public  boolean deathRestart()
 METHOD com.openggf.mods.run.RunLevelStart public  boolean debugAssisted()
+METHOD com.openggf.mods.run.RunLevelStart public  com.openggf.game.arena.TrackGeometry geometry()
 METHOD com.openggf.mods.run.RunLevelStart public  com.openggf.mods.run.LevelStartCause cause()
 METHOD com.openggf.mods.run.RunLevelStart public  com.openggf.mods.run.RunSpec spec()
-METHOD com.openggf.mods.run.RunLevelStart public  com.openggf.mods.run.TrackGeometry geometry()
 METHOD com.openggf.mods.run.RunLevelStart public  int levelHeight()
 METHOD com.openggf.mods.run.RunLevelStart public  int levelWidth()
 METHOD com.openggf.mods.run.RunLevelStart public  int maxSwapSources()
@@ -12946,10 +12969,10 @@ METHOD com.openggf.mods.run.RunSpec public,final  java.lang.String toString()
 METHOD com.openggf.mods.run.RunStep public  boolean actComplete()
 METHOD com.openggf.mods.run.RunStep public  boolean debugAssisted()
 METHOD com.openggf.mods.run.RunStep public  boolean startHeld()
+METHOD com.openggf.mods.run.RunStep public  com.openggf.game.arena.RaceClock race()
+METHOD com.openggf.mods.run.RunStep public  com.openggf.game.arena.RaceEventResult applied()
+METHOD com.openggf.mods.run.RunStep public  com.openggf.game.arena.RaceSignal signal()
 METHOD com.openggf.mods.run.RunStep public  com.openggf.mods.run.PlayerPose player()
-METHOD com.openggf.mods.run.RunStep public  com.openggf.mods.run.RaceClock race()
-METHOD com.openggf.mods.run.RunStep public  com.openggf.mods.run.RaceEventResult applied()
-METHOD com.openggf.mods.run.RunStep public  com.openggf.mods.run.RaceSignal signal()
 METHOD com.openggf.mods.run.RunStep public  int checkpointCentreX()
 METHOD com.openggf.mods.run.RunStep public  int checkpointCentreY()
 METHOD com.openggf.mods.run.RunStep public  int checkpointIndex()
@@ -12958,27 +12981,6 @@ METHOD com.openggf.mods.run.RunStep public  long ordinal()
 METHOD com.openggf.mods.run.RunStep public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.run.RunStep public,final  int hashCode()
 METHOD com.openggf.mods.run.RunStep public,final  java.lang.String toString()
-METHOD com.openggf.mods.run.SwapTarget public  boolean facingLeft()
-METHOD com.openggf.mods.run.SwapTarget public  boolean highPriority()
-METHOD com.openggf.mods.run.SwapTarget public  boolean secondaryPath()
-METHOD com.openggf.mods.run.SwapTarget public  int centreX()
-METHOD com.openggf.mods.run.SwapTarget public  int centreY()
-METHOD com.openggf.mods.run.SwapTarget public  int priorityBucket()
-METHOD com.openggf.mods.run.SwapTarget public  int progress()
-METHOD com.openggf.mods.run.SwapTarget public  int shoeKind()
-METHOD com.openggf.mods.run.SwapTarget public  int shoeTimer()
-METHOD com.openggf.mods.run.SwapTarget public  int xVel()
-METHOD com.openggf.mods.run.SwapTarget public  int yVel()
-METHOD com.openggf.mods.run.SwapTarget public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.mods.run.SwapTarget public,final  int hashCode()
-METHOD com.openggf.mods.run.SwapTarget public,final  java.lang.String toString()
-METHOD com.openggf.mods.run.TrackGeometry public  int lapCount()
-METHOD com.openggf.mods.run.TrackGeometry public  int lapLineX()
-METHOD com.openggf.mods.run.TrackGeometry public  int wrapHeightPx()
-METHOD com.openggf.mods.run.TrackGeometry public  int wrapWidthPx()
-METHOD com.openggf.mods.run.TrackGeometry public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.mods.run.TrackGeometry public,final  int hashCode()
-METHOD com.openggf.mods.run.TrackGeometry public,final  java.lang.String toString()
 METHOD com.openggf.mods.run.TrackKind public,static  com.openggf.mods.run.TrackKind valueOf(java.lang.String)
 METHOD com.openggf.mods.run.TrackKind public,static  com.openggf.mods.run.TrackKind[] values()
 METHOD com.openggf.mods.scene.ActLaunch public  com.openggf.game.CharacterKey main()
@@ -13874,6 +13876,9 @@ METHOD com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener public,abstract  v
 METHOD com.openggf.net.hub.RoomHostHooks$VerificationHooks public  void onPendingExpired(java.lang.String,int,int)
 METHOD com.openggf.net.hub.RoomHostHooks$VerificationHooks public,abstract  void onFinishNeedingVerification(java.lang.String,int,java.lang.String,com.openggf.net.protocol.ControlMessage$AttemptFinish,java.lang.String,java.lang.String,java.lang.String,boolean)
 METHOD com.openggf.net.hub.RoomInviteService public,abstract  java.util.concurrent.CompletableFuture<com.openggf.net.protocol.ControlMessage$RoomInviteControlResult> control(java.lang.String,long,long,com.openggf.net.protocol.ControlMessage$InviteOperation,boolean)
+METHOD com.openggf.net.hub.TrackRulesProvider public,abstract  boolean legal(com.openggf.net.protocol.TrackKey,java.lang.String)
+METHOD com.openggf.net.hub.TrackRulesProvider public,abstract  boolean monitorsLegal(com.openggf.net.protocol.ControlMessage$RoundConfig)
+METHOD com.openggf.net.hub.TrackRulesProvider public,abstract  int clockStartFrame(com.openggf.net.protocol.TrackKey)
 METHOD com.openggf.net.hub.TrackValidationProfile public  int lapCount()
 METHOD com.openggf.net.hub.TrackValidationProfile public  int levelHeightPx()
 METHOD com.openggf.net.hub.TrackValidationProfile public  int levelWidthPx()
@@ -17105,6 +17110,10 @@ NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan
 NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan$Successor
 NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan$ZoneMetadata
 NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan$ZoneTopology
+NESTED com.openggf.game.arena.RaceClock com.openggf.game.arena.RaceClock$Failure
+NESTED com.openggf.game.arena.RaceEvent com.openggf.game.arena.RaceEvent$SwapApply
+NESTED com.openggf.game.arena.RaceEvent com.openggf.game.arena.RaceEvent$SwapFallback
+NESTED com.openggf.game.arena.RaceEventResult com.openggf.game.arena.RaceEventResult$Outcome
 NESTED com.openggf.game.dataselect.HostSlotPreview com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType
 NESTED com.openggf.game.mode.CourseControl com.openggf.game.mode.CourseControl$DirectedPlayerState
 NESTED com.openggf.game.mode.CourseControl com.openggf.game.mode.CourseControl$PlayerState
@@ -17280,10 +17289,6 @@ NESTED com.openggf.mods.mutators.TemporaryMutators com.openggf.mods.mutators.Tem
 NESTED com.openggf.mods.mutators.TemporaryMutators com.openggf.mods.mutators.TemporaryMutators$ActiveActivation
 NESTED com.openggf.mods.mutators.TemporaryMutators com.openggf.mods.mutators.TemporaryMutators$Availability
 NESTED com.openggf.mods.mutators.TransportPolicy com.openggf.mods.mutators.TransportPolicy$Kind
-NESTED com.openggf.mods.run.RaceClock com.openggf.mods.run.RaceClock$Failure
-NESTED com.openggf.mods.run.RaceEvent com.openggf.mods.run.RaceEvent$SwapApply
-NESTED com.openggf.mods.run.RaceEvent com.openggf.mods.run.RaceEvent$SwapFallback
-NESTED com.openggf.mods.run.RaceEventResult com.openggf.mods.run.RaceEventResult$Outcome
 NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$Compression
 NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$DplcLayout
 NESTED com.openggf.mods.scene.SceneBackdrop com.openggf.mods.scene.SceneBackdrop$Band
@@ -17595,6 +17600,8 @@ PERMITS com.openggf.game.ZoneKey com.openggf.game.ZoneKey$Mod
 PERMITS com.openggf.game.ZoneKey com.openggf.game.ZoneKey$Stock
 PERMITS com.openggf.game.ZoneProgressionPlan$ProgressionResult com.openggf.game.ZoneProgressionPlan$Credits
 PERMITS com.openggf.game.ZoneProgressionPlan$ProgressionResult com.openggf.game.ZoneProgressionPlan$Successor
+PERMITS com.openggf.game.arena.RaceEvent com.openggf.game.arena.RaceEvent$SwapApply
+PERMITS com.openggf.game.arena.RaceEvent com.openggf.game.arena.RaceEvent$SwapFallback
 PERMITS com.openggf.game.patch.PatchOwner com.openggf.game.patch.PatchOwner$BuiltIn
 PERMITS com.openggf.game.patch.PatchOwner com.openggf.game.patch.PatchOwner$Mod
 PERMITS com.openggf.game.patch.ResolutionResult com.openggf.game.patch.ResolutionResult$LaunchAborted
@@ -17650,8 +17657,6 @@ PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.Signed
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.SpringResponsePolicy
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.SpritePresentationPolicy
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.TransportPolicy
-PERMITS com.openggf.mods.run.RaceEvent com.openggf.mods.run.RaceEvent$SwapApply
-PERMITS com.openggf.mods.run.RaceEvent com.openggf.mods.run.RaceEvent$SwapFallback
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$Control
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$Disconnected
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$GhostData
@@ -18168,6 +18173,30 @@ RECORD-COMPONENT com.openggf.game.animation.ChannelContext runtimeState java.lan
 RECORD-COMPONENT com.openggf.game.animation.ChannelContext zoneIndex int
 RECORD-COMPONENT com.openggf.game.animation.DestinationPlan primaryTile int
 RECORD-COMPONENT com.openggf.game.animation.DestinationPlan secondaryTile java.lang.Integer
+RECORD-COMPONENT com.openggf.game.arena.RaceClock completedLaps int
+RECORD-COMPONENT com.openggf.game.arena.RaceClock currentLap int
+RECORD-COMPONENT com.openggf.game.arena.RaceClock failure com.openggf.game.arena.RaceClock$Failure
+RECORD-COMPONENT com.openggf.game.arena.RaceClock running boolean
+RECORD-COMPONENT com.openggf.game.arena.RaceEvent$SwapApply swapId long
+RECORD-COMPONENT com.openggf.game.arena.RaceEvent$SwapApply target com.openggf.game.arena.SwapTarget
+RECORD-COMPONENT com.openggf.game.arena.RaceEvent$SwapFallback swapId long
+RECORD-COMPONENT com.openggf.game.arena.RaceEventResult event com.openggf.game.arena.RaceEvent
+RECORD-COMPONENT com.openggf.game.arena.RaceEventResult outcome com.openggf.game.arena.RaceEventResult$Outcome
+RECORD-COMPONENT com.openggf.game.arena.SwapTarget centreX int
+RECORD-COMPONENT com.openggf.game.arena.SwapTarget centreY int
+RECORD-COMPONENT com.openggf.game.arena.SwapTarget facingLeft boolean
+RECORD-COMPONENT com.openggf.game.arena.SwapTarget highPriority boolean
+RECORD-COMPONENT com.openggf.game.arena.SwapTarget priorityBucket int
+RECORD-COMPONENT com.openggf.game.arena.SwapTarget progress int
+RECORD-COMPONENT com.openggf.game.arena.SwapTarget secondaryPath boolean
+RECORD-COMPONENT com.openggf.game.arena.SwapTarget shoeKind int
+RECORD-COMPONENT com.openggf.game.arena.SwapTarget shoeTimer int
+RECORD-COMPONENT com.openggf.game.arena.SwapTarget xVel int
+RECORD-COMPONENT com.openggf.game.arena.SwapTarget yVel int
+RECORD-COMPONENT com.openggf.game.arena.TrackGeometry lapCount int
+RECORD-COMPONENT com.openggf.game.arena.TrackGeometry lapLineX int
+RECORD-COMPONENT com.openggf.game.arena.TrackGeometry wrapHeightPx int
+RECORD-COMPONENT com.openggf.game.arena.TrackGeometry wrapWidthPx int
 RECORD-COMPONENT com.openggf.game.dataselect.DataSelectAction act int
 RECORD-COMPONENT com.openggf.game.dataselect.DataSelectAction slot int
 RECORD-COMPONENT com.openggf.game.dataselect.DataSelectAction team com.openggf.game.save.SelectedTeam
@@ -18679,7 +18708,7 @@ RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy deathRestart com.ope
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy editorEntry boolean
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy liveRewind boolean
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy livesCounter boolean
-RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy monitors com.openggf.mods.run.MonitorRule
+RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy monitors com.openggf.game.arena.MonitorRule
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy specialStageEntry boolean
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy swapEnabled boolean
 RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy zoneIntros boolean
@@ -19554,15 +19583,6 @@ RECORD-COMPONENT com.openggf.mods.run.PlayerPose priorityBucket int
 RECORD-COMPONENT com.openggf.mods.run.PlayerPose secondaryPath boolean
 RECORD-COMPONENT com.openggf.mods.run.PlayerPose shoeKind int
 RECORD-COMPONENT com.openggf.mods.run.PlayerPose vFlip boolean
-RECORD-COMPONENT com.openggf.mods.run.RaceClock completedLaps int
-RECORD-COMPONENT com.openggf.mods.run.RaceClock currentLap int
-RECORD-COMPONENT com.openggf.mods.run.RaceClock failure com.openggf.mods.run.RaceClock$Failure
-RECORD-COMPONENT com.openggf.mods.run.RaceClock running boolean
-RECORD-COMPONENT com.openggf.mods.run.RaceEvent$SwapApply swapId long
-RECORD-COMPONENT com.openggf.mods.run.RaceEvent$SwapApply target com.openggf.mods.run.SwapTarget
-RECORD-COMPONENT com.openggf.mods.run.RaceEvent$SwapFallback swapId long
-RECORD-COMPONENT com.openggf.mods.run.RaceEventResult event com.openggf.mods.run.RaceEvent
-RECORD-COMPONENT com.openggf.mods.run.RaceEventResult outcome com.openggf.mods.run.RaceEventResult$Outcome
 RECORD-COMPONENT com.openggf.mods.run.RunArea maxX int
 RECORD-COMPONENT com.openggf.mods.run.RunArea maxY int
 RECORD-COMPONENT com.openggf.mods.run.RunArea minX int
@@ -19572,7 +19592,7 @@ RECORD-COMPONENT com.openggf.mods.run.RunArea spawnY int
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart cause com.openggf.mods.run.LevelStartCause
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart debugAssisted boolean
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart determinismFingerprint java.lang.String
-RECORD-COMPONENT com.openggf.mods.run.RunLevelStart geometry com.openggf.mods.run.TrackGeometry
+RECORD-COMPONENT com.openggf.mods.run.RunLevelStart geometry com.openggf.game.arena.TrackGeometry
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart levelHeight int
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart levelWidth int
 RECORD-COMPONENT com.openggf.mods.run.RunLevelStart maxSwapSources int
@@ -19586,7 +19606,7 @@ RECORD-COMPONENT com.openggf.mods.run.RunSpec policy com.openggf.game.session.Ga
 RECORD-COMPONENT com.openggf.mods.run.RunSpec swapEnabled boolean
 RECORD-COMPONENT com.openggf.mods.run.RunSpec zone int
 RECORD-COMPONENT com.openggf.mods.run.RunStep actComplete boolean
-RECORD-COMPONENT com.openggf.mods.run.RunStep applied com.openggf.mods.run.RaceEventResult
+RECORD-COMPONENT com.openggf.mods.run.RunStep applied com.openggf.game.arena.RaceEventResult
 RECORD-COMPONENT com.openggf.mods.run.RunStep checkpointCentreX int
 RECORD-COMPONENT com.openggf.mods.run.RunStep checkpointCentreY int
 RECORD-COMPONENT com.openggf.mods.run.RunStep checkpointIndex int
@@ -19594,24 +19614,9 @@ RECORD-COMPONENT com.openggf.mods.run.RunStep debugAssisted boolean
 RECORD-COMPONENT com.openggf.mods.run.RunStep heldMask int
 RECORD-COMPONENT com.openggf.mods.run.RunStep ordinal long
 RECORD-COMPONENT com.openggf.mods.run.RunStep player com.openggf.mods.run.PlayerPose
-RECORD-COMPONENT com.openggf.mods.run.RunStep race com.openggf.mods.run.RaceClock
-RECORD-COMPONENT com.openggf.mods.run.RunStep signal com.openggf.mods.run.RaceSignal
+RECORD-COMPONENT com.openggf.mods.run.RunStep race com.openggf.game.arena.RaceClock
+RECORD-COMPONENT com.openggf.mods.run.RunStep signal com.openggf.game.arena.RaceSignal
 RECORD-COMPONENT com.openggf.mods.run.RunStep startHeld boolean
-RECORD-COMPONENT com.openggf.mods.run.SwapTarget centreX int
-RECORD-COMPONENT com.openggf.mods.run.SwapTarget centreY int
-RECORD-COMPONENT com.openggf.mods.run.SwapTarget facingLeft boolean
-RECORD-COMPONENT com.openggf.mods.run.SwapTarget highPriority boolean
-RECORD-COMPONENT com.openggf.mods.run.SwapTarget priorityBucket int
-RECORD-COMPONENT com.openggf.mods.run.SwapTarget progress int
-RECORD-COMPONENT com.openggf.mods.run.SwapTarget secondaryPath boolean
-RECORD-COMPONENT com.openggf.mods.run.SwapTarget shoeKind int
-RECORD-COMPONENT com.openggf.mods.run.SwapTarget shoeTimer int
-RECORD-COMPONENT com.openggf.mods.run.SwapTarget xVel int
-RECORD-COMPONENT com.openggf.mods.run.SwapTarget yVel int
-RECORD-COMPONENT com.openggf.mods.run.TrackGeometry lapCount int
-RECORD-COMPONENT com.openggf.mods.run.TrackGeometry lapLineX int
-RECORD-COMPONENT com.openggf.mods.run.TrackGeometry wrapHeightPx int
-RECORD-COMPONENT com.openggf.mods.run.TrackGeometry wrapWidthPx int
 RECORD-COMPONENT com.openggf.mods.scene.ActLaunch act int
 RECORD-COMPONENT com.openggf.mods.scene.ActLaunch destination com.openggf.game.ZoneKey$Mod
 RECORD-COMPONENT com.openggf.mods.scene.ActLaunch main com.openggf.game.CharacterKey
@@ -21358,6 +21363,8 @@ TYPE enum public,final com.openggf.game.ShieldType SUPER java.lang.Enum<com.open
 TYPE enum public,final com.openggf.game.SpecialStageAccessType SUPER java.lang.Enum<com.openggf.game.SpecialStageAccessType>
 TYPE enum public,final com.openggf.game.SpecialStageStartupPolicy SUPER java.lang.Enum<com.openggf.game.SpecialStageStartupPolicy>
 TYPE enum public,final com.openggf.game.animation.AnimatedTileCachePolicy SUPER java.lang.Enum<com.openggf.game.animation.AnimatedTileCachePolicy>
+TYPE enum public,final com.openggf.game.arena.MonitorRule SUPER java.lang.Enum<com.openggf.game.arena.MonitorRule>
+TYPE enum public,final com.openggf.game.arena.RaceSignal SUPER java.lang.Enum<com.openggf.game.arena.RaceSignal>
 TYPE enum public,final com.openggf.game.dataselect.DataSelectActionType SUPER java.lang.Enum<com.openggf.game.dataselect.DataSelectActionType>
 TYPE enum public,final com.openggf.game.mode.GameplayFrameDisposition SUPER java.lang.Enum<com.openggf.game.mode.GameplayFrameDisposition>
 TYPE enum public,final com.openggf.game.modzone.ModObjectZoneSet SUPER java.lang.Enum<com.openggf.game.modzone.ModObjectZoneSet>
@@ -21426,8 +21433,6 @@ TYPE enum public,final com.openggf.mods.code.RomArtCompression SUPER java.lang.E
 TYPE enum public,final com.openggf.mods.mutators.MutatorCapability SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorCapability>
 TYPE enum public,final com.openggf.mods.mutators.MutatorScope SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorScope>
 TYPE enum public,final com.openggf.mods.run.LevelStartCause SUPER java.lang.Enum<com.openggf.mods.run.LevelStartCause>
-TYPE enum public,final com.openggf.mods.run.MonitorRule SUPER java.lang.Enum<com.openggf.mods.run.MonitorRule>
-TYPE enum public,final com.openggf.mods.run.RaceSignal SUPER java.lang.Enum<com.openggf.mods.run.RaceSignal>
 TYPE enum public,final com.openggf.mods.run.RunEndReason SUPER java.lang.Enum<com.openggf.mods.run.RunEndReason>
 TYPE enum public,final com.openggf.mods.run.TrackKind SUPER java.lang.Enum<com.openggf.mods.run.TrackKind>
 TYPE enum public,final com.openggf.mods.scene.art.StockSceneArt SUPER java.lang.Enum<com.openggf.mods.scene.art.StockSceneArt>
@@ -21491,6 +21496,8 @@ TYPE enum public,static,final com.openggf.game.TitleScreenProvider$State SUPER j
 TYPE enum public,static,final com.openggf.game.TitleScreenProvider$TitleScreenAction SUPER java.lang.Enum<com.openggf.game.TitleScreenProvider$TitleScreenAction>
 TYPE enum public,static,final com.openggf.game.ZoneProgressionPlan$Completion SUPER java.lang.Enum<com.openggf.game.ZoneProgressionPlan$Completion>
 TYPE enum public,static,final com.openggf.game.ZoneProgressionPlan$Credits SUPER java.lang.Enum<com.openggf.game.ZoneProgressionPlan$Credits>
+TYPE enum public,static,final com.openggf.game.arena.RaceClock$Failure SUPER java.lang.Enum<com.openggf.game.arena.RaceClock$Failure>
+TYPE enum public,static,final com.openggf.game.arena.RaceEventResult$Outcome SUPER java.lang.Enum<com.openggf.game.arena.RaceEventResult$Outcome>
 TYPE enum public,static,final com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType SUPER java.lang.Enum<com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType>
 TYPE enum public,static,final com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy SUPER java.lang.Enum<com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy>
 TYPE enum public,static,final com.openggf.game.mutators.NativeObjectFieldTarget$Kind SUPER java.lang.Enum<com.openggf.game.mutators.NativeObjectFieldTarget$Kind>
@@ -21542,8 +21549,6 @@ TYPE enum public,static,final com.openggf.mods.mutators.ScenePresentationPolicy$
 TYPE enum public,static,final com.openggf.mods.mutators.SpritePresentationPolicy$Mode SUPER java.lang.Enum<com.openggf.mods.mutators.SpritePresentationPolicy$Mode>
 TYPE enum public,static,final com.openggf.mods.mutators.SpritePresentationPolicy$Target SUPER java.lang.Enum<com.openggf.mods.mutators.SpritePresentationPolicy$Target>
 TYPE enum public,static,final com.openggf.mods.mutators.TransportPolicy$Kind SUPER java.lang.Enum<com.openggf.mods.mutators.TransportPolicy$Kind>
-TYPE enum public,static,final com.openggf.mods.run.RaceClock$Failure SUPER java.lang.Enum<com.openggf.mods.run.RaceClock$Failure>
-TYPE enum public,static,final com.openggf.mods.run.RaceEventResult$Outcome SUPER java.lang.Enum<com.openggf.mods.run.RaceEventResult$Outcome>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$Compression>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$DplcLayout SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$DplcLayout>
 TYPE enum public,static,final com.openggf.mods.scene.SceneClipboard$Result SUPER java.lang.Enum<com.openggf.mods.scene.SceneClipboard$Result>
@@ -21734,6 +21739,7 @@ TYPE interface public,abstract com.openggf.net.client.RaceConnection SUPER <none
 TYPE interface public,abstract com.openggf.net.host.RaceRoomHost SUPER <none>
 TYPE interface public,abstract com.openggf.net.hub.HubConnection SUPER <none>
 TYPE interface public,abstract com.openggf.net.hub.RoomInviteService SUPER <none>
+TYPE interface public,abstract com.openggf.net.hub.TrackRulesProvider SUPER <none>
 TYPE interface public,abstract com.openggf.net.hub.TrackValidationProfileSource SUPER <none>
 TYPE interface public,abstract com.openggf.net.hub.ViolationSink SUPER <none>
 TYPE interface public,abstract com.openggf.physics.BackgroundPlaneCollisionProvider SUPER <none>
@@ -21753,6 +21759,7 @@ TYPE interface public,abstract,non-sealed com.openggf.io.SnapshotModAssetRoot SU
 TYPE interface public,abstract,sealed com.openggf.audio.rewind.AudioCommand SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.game.MusicReference SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.game.ZoneKey SUPER <none>
+TYPE interface public,abstract,sealed com.openggf.game.arena.RaceEvent SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.game.patch.PatchOwner SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.game.patch.ResolutionResult SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.io.ModAssetRoot SUPER <none>
@@ -21760,7 +21767,6 @@ TYPE interface public,abstract,sealed com.openggf.io.PackedModAssetRoot SUPER <n
 TYPE interface public,abstract,sealed com.openggf.level.objects.authored.AuthoredObjectProperties SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.mods.mutators.MutatorOption SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.mods.mutators.MutatorPolicy SUPER <none>
-TYPE interface public,abstract,sealed com.openggf.mods.run.RaceEvent SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.net.protocol.ControlMessage SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.trace.TraceEvent SUPER <none>
 TYPE interface public,abstract,static com.openggf.audio.StreamedMusicPort$OneShot SUPER <none>
@@ -21831,6 +21837,10 @@ TYPE record public,final com.openggf.game.SpecialStageEntryRequest SUPER java.la
 TYPE record public,final com.openggf.game.StaticFixup SUPER java.lang.Record
 TYPE record public,final com.openggf.game.animation.ChannelContext SUPER java.lang.Record
 TYPE record public,final com.openggf.game.animation.DestinationPlan SUPER java.lang.Record
+TYPE record public,final com.openggf.game.arena.RaceClock SUPER java.lang.Record
+TYPE record public,final com.openggf.game.arena.RaceEventResult SUPER java.lang.Record
+TYPE record public,final com.openggf.game.arena.SwapTarget SUPER java.lang.Record
+TYPE record public,final com.openggf.game.arena.TrackGeometry SUPER java.lang.Record
 TYPE record public,final com.openggf.game.dataselect.DataSelectAction SUPER java.lang.Record
 TYPE record public,final com.openggf.game.dataselect.DataSelectDestination SUPER java.lang.Record
 TYPE record public,final com.openggf.game.dataselect.DataSelectExitTransition SUPER java.lang.Record
@@ -21968,14 +21978,10 @@ TYPE record public,final com.openggf.mods.mutators.SpritePresentationPolicy SUPE
 TYPE record public,final com.openggf.mods.mutators.TransportPolicy SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.run.GhostPose SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.run.PlayerPose SUPER java.lang.Record
-TYPE record public,final com.openggf.mods.run.RaceClock SUPER java.lang.Record
-TYPE record public,final com.openggf.mods.run.RaceEventResult SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.run.RunArea SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.run.RunLevelStart SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.run.RunSpec SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.run.RunStep SUPER java.lang.Record
-TYPE record public,final com.openggf.mods.run.SwapTarget SUPER java.lang.Record
-TYPE record public,final com.openggf.mods.run.TrackGeometry SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.ActLaunch SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.ActResult SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.RomSpriteRequest SUPER java.lang.Record
@@ -22057,6 +22063,8 @@ TYPE record public,static,final com.openggf.game.ZoneKey$Mod SUPER java.lang.Rec
 TYPE record public,static,final com.openggf.game.ZoneKey$Stock SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneProgressionPlan$Successor SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneProgressionPlan$ZoneMetadata SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.arena.RaceEvent$SwapApply SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.arena.RaceEvent$SwapFallback SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.mode.CourseControl$PlayerState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.modzone.ModLevelSettings$StockScrollSource SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.modzone.ModLevelSettingsProvider$StockScrollOption SUPER java.lang.Record
@@ -22152,8 +22160,6 @@ TYPE record public,static,final com.openggf.mods.mutators.TemporaryMutators$Acti
 TYPE record public,static,final com.openggf.mods.mutators.TemporaryMutators$ActivationResult SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.TemporaryMutators$ActiveActivation SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.TemporaryMutators$Availability SUPER java.lang.Record
-TYPE record public,static,final com.openggf.mods.run.RaceEvent$SwapApply SUPER java.lang.Record
-TYPE record public,static,final com.openggf.mods.run.RaceEvent$SwapFallback SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.scene.SceneBackdrop$Band SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.scene.ScenePeer$Message SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.scene.art.AnimationSampling$Timing SUPER java.lang.Record
@@ -22678,6 +22684,17 @@ TYPE-ANNOTATION com.openggf.game.animation.ChannelGuard @java.lang.FunctionalInt
 TYPE-ANNOTATION com.openggf.game.animation.DestinationPlan @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.animation.PhaseSource @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.animation.PhaseSource @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.game.arena.MonitorRule @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.arena.RaceClock @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.arena.RaceClock$Failure @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.arena.RaceEvent @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.arena.RaceEvent$SwapApply @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.arena.RaceEvent$SwapFallback @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.arena.RaceEventResult @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.arena.RaceEventResult$Outcome @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.arena.RaceSignal @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.arena.SwapTarget @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.arena.TrackGeometry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.dataselect.AbstractDataSelectProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.dataselect.DataSelectAction @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.dataselect.DataSelectActionType @com.openggf.game.ModApi
@@ -23285,16 +23302,7 @@ TYPE-ANNOTATION com.openggf.mods.objects.MushroomHillFactory @com.openggf.game.M
 TYPE-ANNOTATION com.openggf.mods.run.CharacterLooks @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.GhostPose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.LevelStartCause @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.mods.run.MonitorRule @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.PlayerPose @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.mods.run.RaceClock @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.mods.run.RaceClock$Failure @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.mods.run.RaceEvent @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.mods.run.RaceEvent$SwapApply @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.mods.run.RaceEvent$SwapFallback @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.mods.run.RaceEventResult @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.mods.run.RaceEventResult$Outcome @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.mods.run.RaceSignal @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.RunArea @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.RunEndReason @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.RunHandle @com.openggf.game.ModApi
@@ -23303,8 +23311,6 @@ TYPE-ANNOTATION com.openggf.mods.run.RunInput @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.RunLevelStart @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.RunSpec @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.RunStep @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.mods.run.SwapTarget @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.mods.run.TrackGeometry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.TrackKind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.ActLaunch @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.ActResult @com.openggf.game.ModApi
@@ -23452,6 +23458,7 @@ TYPE-ANNOTATION com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener @java.lan
 TYPE-ANNOTATION com.openggf.net.hub.RoomHostHooks$VerificationHooks @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.hub.RoomInviteService @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.hub.RoomInviteService @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.net.hub.TrackRulesProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.hub.TrackValidationProfile @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.hub.TrackValidationProfileSource @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.hub.ViolationSink @com.openggf.game.ModApi

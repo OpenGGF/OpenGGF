@@ -108,7 +108,7 @@ public final class HostRoundEngine {
             out.putIfAbsent(id, "DNS".equals(reason) ? "DNS" : "DNF");
     }
     private boolean validTiming(ControlMessage.AttemptFinish f) {
-        if (competition() && f.clockStartFrame() != com.openggf.game.internal.CompetitionTrackRules.clockStartFrame(
+        if (competition() && f.clockStartFrame() != trackRules.clockStartFrame(
                 new TrackKey(config.gameId(), config.trackKind(), config.zone(), config.act()))) return false;
         int laps = profile == null ? ("ARENA".equals(config.trackKind()) ? 5 : 0) : profile.lapCount();
         if (f.lapFrames().size() != laps) return false;
@@ -144,6 +144,13 @@ public final class HostRoundEngine {
 
     public HostRoundEngine(LongSupplier hubClockMillis,
                            Consumer<ControlMessage> broadcaster) {
+        this(hubClockMillis, broadcaster, TrackRules.shipped());
+    }
+
+    private final TrackRulesProvider trackRules;
+    public HostRoundEngine(LongSupplier hubClockMillis, Consumer<ControlMessage> broadcaster,
+            TrackRulesProvider trackRules) {
+        this.trackRules = java.util.Objects.requireNonNull(trackRules);
         this.hubClockMillis = hubClockMillis;
         this.broadcaster = broadcaster;
     }
@@ -670,7 +677,7 @@ public final class HostRoundEngine {
         }
         try {
             TrackKey track = TrackKey.parse(key);
-            if (!track.gameId().equals(config.gameId()) || !TrackRules.legal(track, config.mode())) return false;
+            if (!track.gameId().equals(config.gameId()) || !trackRules.legal(track, config.mode())) return false;
         } catch (IllegalArgumentException invalid) { return false; }
         return knownTrack == null || knownTrack.test(key);
     }
@@ -699,7 +706,7 @@ public final class HostRoundEngine {
             votedNextConfig = new ControlMessage.RoundConfig(track.gameId(), track.zone(), track.act(),
                     config.windowSeconds(), config.characterPolicy(), config.lockedCharacter(), track.kind(),
                     config.mode(), config.monitors(), config.cutoffSeconds(), config.startInSeconds());
-            if (!TrackRules.monitorsLegal(votedNextConfig))
+            if (!trackRules.monitorsLegal(votedNextConfig))
                 votedNextConfig = new ControlMessage.RoundConfig(track.gameId(), track.zone(), track.act(),
                         config.windowSeconds(), config.characterPolicy(), config.lockedCharacter(), track.kind(),
                         config.mode(), "ARENA".equals(track.kind()) ? "ITEMS" : "NORMAL", config.cutoffSeconds(), config.startInSeconds());

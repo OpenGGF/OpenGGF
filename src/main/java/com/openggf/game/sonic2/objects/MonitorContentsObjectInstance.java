@@ -53,8 +53,8 @@ public final class MonitorContentsObjectInstance extends AbstractMonitorObjectIn
         if (iconPendingInit) { iconPendingInit = false; return; }
         if (!contentsInitialized) {
             var policy = services().runPolicy();
-            if (policy.monitors() == com.openggf.mods.run.MonitorRule.OFF) {
-                setDestroyed(true);
+            if (policy.monitors() == com.openggf.game.arena.MonitorRule.OFF) {
+                ObjectLifetimeOps.deleteNoRespawn(this);
                 return;
             }
             if (usesHostedRandomContents(policy.monitors())) {
@@ -67,12 +67,12 @@ public final class MonitorContentsObjectInstance extends AbstractMonitorObjectIn
         updateIcon();
     }
 
-    static boolean usesHostedRandomContents(com.openggf.mods.run.MonitorRule rule) {
-        return rule == com.openggf.mods.run.MonitorRule.RANDOMISED
-                || rule == com.openggf.mods.run.MonitorRule.COMPETITION_ITEMS;
+    static boolean usesHostedRandomContents(com.openggf.game.arena.MonitorRule rule) {
+        return rule == com.openggf.game.arena.MonitorRule.RANDOMISED
+                || rule == com.openggf.game.arena.MonitorRule.COMPETITION_ITEMS;
     }
 
-    static int selectHostedContents(com.openggf.mods.run.MonitorRule rule,int levelFrame,
+    static int selectHostedContents(com.openggf.game.arena.MonitorRule rule,int levelFrame,
             boolean timerRunning,boolean swapEnabled) {
         // Obj2E_Init (s2.asm:25755-25776) samples Level_frame_counter at this SST's init,
         // rather than V_int_run_count or the frame when its parent shell broke.

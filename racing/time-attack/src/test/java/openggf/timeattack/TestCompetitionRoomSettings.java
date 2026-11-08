@@ -1,12 +1,12 @@
 package openggf.timeattack;
 
-import com.openggf.mods.run.MonitorRule;
+import com.openggf.game.arena.MonitorRule;
 import com.openggf.mods.run.TrackKind;
 import openggf.timeattack.mp.VoteTrackPools;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import static openggf.timeattack.CompetitionRoomSettings.Mode.*;
-import static com.openggf.mods.run.MonitorRule.*;
+import static com.openggf.game.arena.MonitorRule.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestCompetitionRoomSettings {

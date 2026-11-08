@@ -5,6 +5,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.arena.HostedArenaRequest;
 import com.openggf.game.sonic3k.competition.*;
 import com.openggf.mods.run.*;
+import com.openggf.game.arena.*;
 import com.openggf.net.ghost.GhostFrame;
 import com.openggf.tests.rules.*;
 import openggf.timeattack.*;

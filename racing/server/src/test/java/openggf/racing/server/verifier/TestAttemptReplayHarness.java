@@ -210,7 +210,7 @@ class TestAttemptReplayHarness {
                         && GameServices.level().consumeRespawnRequest()) {
                     GameServices.level().restartCurrentLevelFromCheckpointAfterDeath();
                     runtime.onLevelReady(new RunLevelStart(runtime.runSpec(),recording.start().fingerprint(),false,
-                            0,0,com.openggf.mods.run.LevelStartCause.CHECKPOINT_RESPAWN,com.openggf.mods.run.TrackGeometry.ACT));
+                            0,0,com.openggf.mods.run.LevelStartCause.CHECKPOINT_RESPAWN,com.openggf.game.arena.TrackGeometry.ACT));
                 }
                 if (!runtime.isAttemptActive()) break;
             }

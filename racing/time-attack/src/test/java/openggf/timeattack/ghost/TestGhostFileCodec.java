@@ -84,7 +84,7 @@ class TestGhostFileCodec {
         var h = new GhostHeader(GhostFileCodec.FORMAT_VERSION, "s3k", 1, 0, "sonic", "Racer",
                 240, 255, new int[0], new byte[32], com.openggf.mods.run.TrackKind.ARENA,
                 openggf.timeattack.CompetitionRoomSettings.Mode.COMPETITION,
-                com.openggf.mods.run.MonitorRule.COMPETITION_ITEMS, new int[]{1,2,3,4,5});
+                com.openggf.game.arena.MonitorRule.COMPETITION_ITEMS, new int[]{1,2,3,4,5});
         Path path = dir.resolve("arena.ggfghost");
         GhostFileCodec.write(new GhostRecording(h, new byte[7]), path);
         assertEquals(h, GhostFileCodec.read(path).header());

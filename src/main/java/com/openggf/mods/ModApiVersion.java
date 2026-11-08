@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Objects;
 
 public final class ModApiVersion {
+    // Candidate 0.7: race observations/events/monitor policy are game.arena-owned.
+    // Rebuild matching creator artifacts after this intentional package migration.
     /**
      * Current unpublished compiled-mod API candidate, including the grouped landing animation rule,
      * saved rewind budget scope,

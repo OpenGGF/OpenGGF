@@ -2,7 +2,7 @@ package com.openggf.game.sonic3k.competition;
 
 import com.openggf.control.PlayerInputState;
 import com.openggf.game.arena.HostedArenaRequest;
-import com.openggf.mods.run.RaceClock;
+import com.openggf.game.arena.RaceClock;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;

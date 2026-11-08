@@ -1,7 +1,7 @@
 package com.openggf.game.arena;
 
 import com.openggf.control.PlayerInputState;
-import com.openggf.mods.run.TrackGeometry;
+import com.openggf.game.arena.TrackGeometry;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /** Engine-owned native arena, with no cartridge-save authority. */

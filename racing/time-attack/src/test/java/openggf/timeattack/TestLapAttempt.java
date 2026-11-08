@@ -1,6 +1,6 @@
 package openggf.timeattack;
 
-import com.openggf.mods.run.RaceClock;
+import com.openggf.game.arena.RaceClock;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

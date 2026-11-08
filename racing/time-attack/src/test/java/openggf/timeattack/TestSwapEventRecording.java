@@ -1,5 +1,6 @@
 package openggf.timeattack;
 import com.openggf.mods.run.*;
+import com.openggf.game.arena.*;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 class TestSwapEventRecording {

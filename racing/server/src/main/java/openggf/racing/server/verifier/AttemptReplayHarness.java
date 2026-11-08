@@ -40,16 +40,16 @@ public final class AttemptReplayHarness {
                          int finalTimeFrames, String ghostStreamHashHex,
                          int framesSimulated, String failureReason,
                          java.util.List<Integer> lapFrames, java.util.List<Integer> splitFrames,
-                         com.openggf.mods.run.RaceClock.Failure outcome, java.util.List<Integer> swapRequestFrames) {
+                         com.openggf.game.arena.RaceClock.Failure outcome, java.util.List<Integer> swapRequestFrames) {
         public Result(boolean finished,int firstInputFrame,int finishFrame,int finalTimeFrames,String hash,
                 int frames,String failure,java.util.List<Integer> laps,java.util.List<Integer> splits,
-                com.openggf.mods.run.RaceClock.Failure outcome) {
+                com.openggf.game.arena.RaceClock.Failure outcome) {
             this(finished,firstInputFrame,finishFrame,finalTimeFrames,hash,frames,failure,laps,splits,outcome,java.util.List.of());
         }
         public Result(boolean finished, int firstInputFrame, int finishFrame, int finalTimeFrames,
                 String hash, int frames, String failure) {
             this(finished,firstInputFrame,finishFrame,finalTimeFrames,hash,frames,failure,
-                    java.util.List.of(),java.util.List.of(),com.openggf.mods.run.RaceClock.Failure.NONE);
+                    java.util.List.of(),java.util.List.of(),com.openggf.game.arena.RaceClock.Failure.NONE);
         }
     }
 
@@ -162,13 +162,13 @@ public final class AttemptReplayHarness {
                 int checkpointIndex = checkpoint == null ? -1
                         : checkpoint.getLastCheckpointIndex();
                 var failure = recording.start().deathRestart() != com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT
-                        ? com.openggf.mods.run.RaceClock.Failure.NONE
-                        : GameServices.gameState().getLives() == 0 ? com.openggf.mods.run.RaceClock.Failure.GAME_OVER
-                        : GameServices.level().getLevelGamestate().isTimeOver() ? com.openggf.mods.run.RaceClock.Failure.TIME_OVER
-                        : com.openggf.mods.run.RaceClock.Failure.NONE;
-                attempt.onFrame(mask, endOfLevel, checkpointIndex,new com.openggf.mods.run.RaceClock(true,0,0,failure));
+                        ? com.openggf.game.arena.RaceClock.Failure.NONE
+                        : GameServices.gameState().getLives() == 0 ? com.openggf.game.arena.RaceClock.Failure.GAME_OVER
+                        : GameServices.level().getLevelGamestate().isTimeOver() ? com.openggf.game.arena.RaceClock.Failure.TIME_OVER
+                        : com.openggf.game.arena.RaceClock.Failure.NONE;
+                attempt.onFrame(mask, endOfLevel, checkpointIndex,new com.openggf.game.arena.RaceClock(true,0,0,failure));
                 if (swaps != null) {
-                    if(swaps.consumeSignal()==com.openggf.mods.run.RaceSignal.SWAP_REQUEST)requests.add(simulated);
+                    if(swaps.consumeSignal()==com.openggf.game.arena.RaceSignal.SWAP_REQUEST)requests.add(simulated);
                     checkApplied(recording,simulated,swaps.consumeApplied());
                 }
                 GhostFrame ghostFrame = withRespawn(com.openggf.mods.run.NativePlayerPose.capture(player)
@@ -209,16 +209,16 @@ public final class AttemptReplayHarness {
         }
     }
 
-    private static com.openggf.mods.run.RaceEvent replayEvent(com.openggf.mods.run.RaceEvent event,
+    private static com.openggf.game.arena.RaceEvent replayEvent(com.openggf.game.arena.RaceEvent event,
             java.util.List<openggf.racing.server.master.VerificationJobQueue.SwapReceipt> receipts) {
         // A rejected original target must be re-admitted against replay terrain, not replaced
         // by an unconditional fallback command. No-partner receipts have no target.
-        if (event instanceof com.openggf.mods.run.RaceEvent.SwapFallback fallback) {
+        if (event instanceof com.openggf.game.arena.RaceEvent.SwapFallback fallback) {
             var receipt = receipts.stream().filter(r -> r.swapId() == fallback.swapId()).findFirst();
             if (receipt.isPresent() && !"EXPIRED".equals(receipt.get().outcome()) && receipt.get().target() != null) {
                 var t = receipt.get().target();
-                return new com.openggf.mods.run.RaceEvent.SwapApply(fallback.swapId(),
-                        new com.openggf.mods.run.SwapTarget(t.centreX(),t.centreY(),t.xVel(),t.yVel(),
+                return new com.openggf.game.arena.RaceEvent.SwapApply(fallback.swapId(),
+                        new com.openggf.game.arena.SwapTarget(t.centreX(),t.centreY(),t.xVel(),t.yVel(),
                                 t.facingLeft(),t.secondaryPath(),t.priorityBucket(),t.highPriority(),
                                 t.shoeKind(),t.shoeTimer(),t.progress()));
             }
@@ -227,13 +227,13 @@ public final class AttemptReplayHarness {
     }
 
     private static void checkApplied(AttemptInputRecording recording,int frame,
-            com.openggf.mods.run.RaceEventResult result) {
+            com.openggf.game.arena.RaceEventResult result) {
         var expected = recording.events().stream().filter(e -> e.step() == frame).findFirst();
         if (expected.isEmpty()) {
-            if (result.outcome() != com.openggf.mods.run.RaceEventResult.Outcome.NONE)
+            if (result.outcome() != com.openggf.game.arena.RaceEventResult.Outcome.NONE)
                 throw new IllegalArgumentException("race event diverged");
         } else if (!expected.get().event().equals(result.event())
-                || result.outcome() == com.openggf.mods.run.RaceEventResult.Outcome.NONE) {
+                || result.outcome() == com.openggf.game.arena.RaceEventResult.Outcome.NONE) {
             throw new IllegalArgumentException("race event diverged");
         }
     }
@@ -271,7 +271,7 @@ public final class AttemptReplayHarness {
                 new com.openggf.control.InputHandler(), ignored -> {});
         try (var arena = provider.open(new com.openggf.game.arena.HostedArenaRequest(
                 recording.start().zone(),recording.start().character(),
-                recording.start().monitors() != com.openggf.mods.run.MonitorRule.OFF),context)) {
+                recording.start().monitors() != com.openggf.game.arena.MonitorRule.OFF),context)) {
             var mode = SessionManager.getCurrentGameplayMode();
             mode.beginGameplayRun(policy(recording.start()),recording.start().zone(),0);
             var swaps = arena.raceSwaps();
@@ -300,10 +300,10 @@ public final class AttemptReplayHarness {
                 var step = output[0];
                 attempt.onFrame(mask,arena.trackFinished(),-1,step.race());
                 if (swaps != null) {
-                    if(swaps.consumeSignal()==com.openggf.mods.run.RaceSignal.SWAP_REQUEST)requests.add(simulated);
+                    if(swaps.consumeSignal()==com.openggf.game.arena.RaceSignal.SWAP_REQUEST)requests.add(simulated);
                     checkApplied(recording,simulated,swaps.consumeApplied());
                 }
-                var ghost = withRespawn(step.pose().toGhostFrame(false,
+                var ghost = withRespawn(com.openggf.mods.run.NativePlayerPose.fromArena(step.pose()).toGhostFrame(false,
                         Math.clamp(step.race().currentLap(),0,15)),arena.respawned());
                 GhostFrameCodec.encode(ghost,bytes,0); hash.update(bytes); frames.accept(ghost);
                 simulated++; previous = mask;

@@ -6,13 +6,13 @@ public record GhostHeader(int formatVersion, String gameId, int zone, int act, S
                           int[] splitFrames, byte[] inputRecordingHash,
                           com.openggf.mods.run.TrackKind trackKind,
                           openggf.timeattack.CompetitionRoomSettings.Mode mode,
-                          com.openggf.mods.run.MonitorRule monitors, int[] lapFrames) {
+                          com.openggf.game.arena.MonitorRule monitors, int[] lapFrames) {
     public GhostHeader(int formatVersion, String gameId, int zone, int act, String character,
             String displayName, int firstInputFrame, int finishFrame, int[] splitFrames, byte[] inputRecordingHash) {
         this(formatVersion, gameId, zone, act, character, displayName, firstInputFrame, finishFrame,
                 splitFrames, inputRecordingHash, com.openggf.mods.run.TrackKind.ACT,
                 openggf.timeattack.CompetitionRoomSettings.Mode.TIME_ATTACK,
-                com.openggf.mods.run.MonitorRule.NORMAL, new int[0]);
+                com.openggf.game.arena.MonitorRule.NORMAL, new int[0]);
     }
     @Override public int[] lapFrames() { return lapFrames.clone(); }
 

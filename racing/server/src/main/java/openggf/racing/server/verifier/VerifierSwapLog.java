@@ -2,8 +2,8 @@ package openggf.racing.server.verifier;
 
 import openggf.timeattack.AttemptInputRecording;
 import openggf.racing.server.master.VerificationJobQueue.SwapReceipt;
-import com.openggf.mods.run.RaceEvent;
-import com.openggf.mods.run.SwapTarget;
+import com.openggf.game.arena.RaceEvent;
+import com.openggf.game.arena.SwapTarget;
 import java.util.List;
 
 /** Compares recorded external inputs with host receipts; an absent receipt never grants a swap. */

@@ -1,6 +1,6 @@
 package openggf.timeattack;
 
-import com.openggf.mods.run.MonitorRule;
+import com.openggf.game.arena.MonitorRule;
 import com.openggf.mods.run.TrackKind;
 import java.util.List;
 import java.util.Objects;

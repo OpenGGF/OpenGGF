@@ -130,12 +130,12 @@ class TestRaceClientLoopback {
             assertEquals(1,log.size()); assertEquals(2,log.getFirst().outcomes().size());
             for(var client:java.util.List.of(a,b)) {
                 var t = ca.slotA()==client.playerSlot()?ca.targetB():ca.targetA();
-                var event = new com.openggf.mods.run.RaceEvent.SwapApply(ca.swapId(),new com.openggf.mods.run.SwapTarget(
+                var event = new com.openggf.game.arena.RaceEvent.SwapApply(ca.swapId(),new com.openggf.game.arena.SwapTarget(
                         t.centreX(),t.centreY(),t.xVel(),t.yVel(),t.facingLeft(),t.secondaryPath(),t.priorityBucket(),
                         t.highPriority(),t.shoeKind(),t.shoeTimer(),t.progress()));
                 var recording = new openggf.timeattack.AttemptInputRecording(new openggf.timeattack.AttemptStartDescriptor(
                         "s2",0,0,"sonic",FP,com.openggf.mods.run.TrackKind.ACT,
-                        openggf.timeattack.CompetitionRoomSettings.Mode.COMPETITION,com.openggf.mods.run.MonitorRule.COMPETITION_ITEMS,
+                        openggf.timeattack.CompetitionRoomSettings.Mode.COMPETITION,com.openggf.game.arena.MonitorRule.COMPETITION_ITEMS,
                         com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT,true));
                 recording.appendEvent(3,event);
                 for(int i=0;i<4;i++)recording.appendFrame(8,false);
@@ -164,7 +164,7 @@ class TestRaceClientLoopback {
                 int step=frame;
                 var event=input.events().stream().filter(e->e.step()==step).findFirst();
                 if(event.isPresent()) {
-                    var t=((com.openggf.mods.run.RaceEvent.SwapApply)event.get().event()).target();
+                    var t=((com.openggf.game.arena.RaceEvent.SwapApply)event.get().event()).target();
                     x=t.centreX();y=t.centreY();priority=t.priorityBucket();progress=t.progress();
                     shoes=t.shoeKind();facing=t.facingLeft();path=t.secondaryPath();high=t.highPriority();
                 } else {
@@ -177,7 +177,7 @@ class TestRaceClientLoopback {
             int finish=input.frameCount()-1;
             return new openggf.racing.server.verifier.AttemptReplayHarness.Result(true,0,finish,finish,
                     java.util.HexFormat.of().formatHex(hash.digest()),input.frameCount(),null,java.util.List.of(),java.util.List.of(),
-                    com.openggf.mods.run.RaceClock.Failure.NONE,slot==requester?java.util.List.of(2):java.util.List.of());
+                    com.openggf.game.arena.RaceClock.Failure.NONE,slot==requester?java.util.List.of(2):java.util.List.of());
         } catch(Exception e){throw new IllegalStateException(e);}
     }
 
@@ -188,9 +188,9 @@ class TestRaceClientLoopback {
         var expected=syntheticReplay(recording,slot,requester);
         for(int variant=0;variant<3;variant++) {
             var submitted=new openggf.timeattack.AttemptInputRecording(recording.start());
-            var original=(com.openggf.mods.run.RaceEvent.SwapApply)recording.events().getFirst().event();
+            var original=(com.openggf.game.arena.RaceEvent.SwapApply)recording.events().getFirst().event();
             var t=original.target();
-            var event=variant==1?new com.openggf.mods.run.RaceEvent.SwapApply(original.swapId(),new com.openggf.mods.run.SwapTarget(
+            var event=variant==1?new com.openggf.game.arena.RaceEvent.SwapApply(original.swapId(),new com.openggf.game.arena.SwapTarget(
                     t.centreX()+1,t.centreY(),t.xVel(),t.yVel(),t.facingLeft(),t.secondaryPath(),t.priorityBucket(),
                     t.highPriority(),t.shoeKind(),t.shoeTimer(),t.progress())):original;
             submitted.appendEvent(3,event);
