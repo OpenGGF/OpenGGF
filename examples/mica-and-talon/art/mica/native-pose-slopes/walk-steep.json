@@ -7,8 +7,8 @@
       "id": "walk-steep-00",
       "mapping": 31,
       "label": "Map_Sonic_052A",
-      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-00: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
-      "raw_sha256": "d9dd96c6572c5d1d3a13f45ebbc5853d5e29763c33558a34b5fec0437855f386",
+      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-00: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.\n\nHead correction prompt:\nEdit this ORIGINAL MICA pangolin pixel sprite to match its native pose reference. Input 1 is MICA drawing; input 2 is the native 8x pose guide; input 3 MICA concept; input 4 approved flat pixel style. Change only the head orientation and neck join. MICA's muzzle, nose and gaze must point UPPER RIGHT, toward 1 o'clock, exactly as the native reference's face. Current face points left/down incorrectly. Keep head on the left of the hips, and keep the legs and boots on the right in their exact current stride/rotation, including coral speed arcs if present. Preserve the full body orientation, framing, silhouette size, tail, glove positions, palette/style, overlapping round jade pangolin scales, white gloves, coral hiking boots, small round ears. Only turn the head within its existing place to look upward/right toward travel direction. Do not rotate or stand the body upright. No hedgehog spines, no Sonic face or shoes. Transparent background; one sprite; no ground, labels or added elements. Frame walk-steep-00.",
+      "raw_sha256": "51d6efa97522cb1ed0795515dc1765871cc39bbae4596b4d4c3618084f9c0e14",
       "size": [
         40,
         40
@@ -17,7 +17,7 @@
         21,
         16
       ],
-      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
     },
     {
       "id": "walk-steep-01",
@@ -33,7 +33,7 @@
         21,
         14
       ],
-      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
     },
     {
       "id": "walk-steep-02",
@@ -49,7 +49,7 @@
         21,
         14
       ],
-      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
     },
     {
       "id": "walk-steep-03",
@@ -65,14 +65,14 @@
         21,
         18
       ],
-      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
     },
     {
       "id": "walk-steep-04",
       "mapping": 35,
       "label": "Map_Sonic_058A",
-      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-04: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
-      "raw_sha256": "7dd506787c307528ded972520ffb147b157a0783aad4b6300f61644c55d11f46",
+      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame walk-steep-04: 90-degree wall run, head left and feet right. Keep the native rotated pose, do NOT turn upright. Keep the native support/lift legs distinct and match the extended boot angles precisely. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.\n\nHead correction prompt:\nEdit this ORIGINAL MICA pangolin pixel sprite to match its native pose reference. Input 1 is MICA drawing; input 2 is the native 8x pose guide; input 3 MICA concept; input 4 approved flat pixel style. Change only the head orientation and neck join. MICA's muzzle, nose and gaze must point UPPER RIGHT, toward 1 o'clock, exactly as the native reference's face. Current face points left/down incorrectly. Keep head on the left of the hips, and keep the legs and boots on the right in their exact current stride/rotation, including coral speed arcs if present. Preserve the full body orientation, framing, silhouette size, tail, glove positions, palette/style, overlapping round jade pangolin scales, white gloves, coral hiking boots, small round ears. Only turn the head within its existing place to look upward/right toward travel direction. Do not rotate or stand the body upright. No hedgehog spines, no Sonic face or shoes. Transparent background; one sprite; no ground, labels or added elements. Frame walk-steep-04.",
+      "raw_sha256": "607a7e3860a4bbdd2855f5b2a99c1f2f42ce0dffbf47b7084d7172fa0be0486d",
       "size": [
         40,
         38
@@ -81,7 +81,7 @@
         21,
         16
       ],
-      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
     },
     {
       "id": "walk-steep-05",
@@ -97,7 +97,7 @@
         21,
         14
       ],
-      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
     },
     {
       "id": "walk-steep-06",
@@ -113,7 +113,7 @@
         21,
         14
       ],
-      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
     },
     {
       "id": "walk-steep-07",
@@ -129,7 +129,7 @@
         21,
         18
       ],
-      "reduction": "largest alpha component; Lanczos to unchanged handoff box; fixed palette indices; inside outline"
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)"
     }
   ]
 }
