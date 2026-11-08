@@ -2383,6 +2383,1046 @@
         "mapping_mask_clipped_pixels": 0,
         "shared_tile_pixels_reconciled": 0
       }
+    },
+    "s3k-team-idle-00.png": {
+      "rows": [
+        "000000000000000000000000",
+        "000000000000000000000000",
+        "000000000000000000000000",
+        "000000000000000001111000",
+        "000000000000011116651000",
+        "000000001111155655521000",
+        "000000115544245553210000",
+        "000101642345532234211000",
+        "001712325555542435537100",
+        "017e9342666522455322e100",
+        "018935532332455555243100",
+        "001356642332466655355100",
+        "000155325555235552145510",
+        "000112255555522222312100",
+        "000125346665422445524100",
+        "001725523333155555245510",
+        "000112222222225542145100",
+        "000001332454442222311000",
+        "000000154135532445410000",
+        "000000121322221353100000",
+        "000011522354432213510000",
+        "000155115324325511551000",
+        "001551001222223100155100",
+        "000143111435542101241000",
+        "00019dc9451222521cd91000",
+        "001cdddd21555422ddddd100",
+        "001ccccd34356443dcccc100",
+        "0001dcd3452222543dcd1000",
+        "000011122256552211110000",
+        "000000143535544241000000",
+        "000000152432244251000000",
+        "000001551156531251000000",
+        "000001321015410123100000",
+        "00001eeaa124331aaee10000",
+        "00012bbbb114511babb21000",
+        "00123bbb10011001bbb33100",
+        "01ab1aeea101101aaea11a10",
+        "19abaaaaa100001aaaaaba91",
+        "189989888100001798989981",
+        "011111111100001111111110"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Standing with BACK TO VIEWER, head looking away slightly left as native. Show layered rounded scales on back of head, NO face visible. White gloves at hips, planted coral boots, tapered scaly tail pointing down. Exact native back-facing idle pose. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 24x40 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "034a5a43ac6764ce816a9b98a0773bc883ae8212cefb6161359aada669fb237c",
+      "native_reference": {
+        "label": "word_5CC5A",
+        "dimensions": [
+          24,
+          40
+        ],
+        "hotspot": [
+          12,
+          20
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          0,
+          3,
+          24,
+          40
+        ],
+        "mapping_mask_clipped_pixels": 0,
+        "shared_tile_pixels_reconciled": 0
+      }
+    },
+    "s3k-team-idle-01.png": {
+      "rows": [
+        "000000000000000000000000",
+        "000000000000000000000000",
+        "000000000000000000000000",
+        "000000000000000001111000",
+        "000000000000011116651000",
+        "000000001111155655521000",
+        "000000115544245553210000",
+        "000101642345532234211000",
+        "001712325555542435537100",
+        "017e9342666522455322e100",
+        "018935532332455555243100",
+        "001356642332466655355100",
+        "000155325555235552145510",
+        "000112255555522222312100",
+        "000125346665422445524100",
+        "001725523333155555245510",
+        "000112222222225542145100",
+        "000001332454442222311000",
+        "000000154135532445410000",
+        "000000121322221353100000",
+        "000011522354432213510000",
+        "000155115324325511551000",
+        "001551001222223100155100",
+        "000143111435542101241000",
+        "0001d9dd354132121cd91000",
+        "00001dcd12242322ddddd100",
+        "0001dcd222455424dcccc100",
+        "00001122452332423dcd1000",
+        "000000124532235311110000",
+        "000000121155552241000000",
+        "000001541335533151000000",
+        "000001511422234151000000",
+        "00001bbbf155551f23100000",
+        "0001aaaa11344311aee10000",
+        "00142fb100122100abb21000",
+        "00131aab10155101bbb33100",
+        "01b2aaaa10123101aea11a10",
+        "1baaaabb10011001aaaaba91",
+        "188989889101101998989981",
+        "111111111000000111111110"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Standing with BACK TO VIEWER, head looking away slightly left as native. Show layered rounded scales on back of head, NO face visible. White gloves at hips, planted coral boots, tapered scaly tail pointing down. Exact native back-facing idle pose. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 24x40 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "0e31f9b9fadef4ab7d362ed730b5ec50dc7b2a8a04f415f2ad85f7f27da03973",
+      "native_reference": {
+        "label": "word_5CC6E",
+        "dimensions": [
+          24,
+          40
+        ],
+        "hotspot": [
+          12,
+          20
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          0,
+          3,
+          24,
+          40
+        ],
+        "mapping_mask_clipped_pixels": 0,
+        "shared_tile_pixels_reconciled": 348
+      }
+    },
+    "s3k-icon-00.png": {
+      "rows": [
+        "000000000000000000000000",
+        "000000000000000000000000",
+        "000000011111000000000000",
+        "000000134455100000000000",
+        "000001529935311000000000",
+        "00001322e943541000000000",
+        "000015442499341000000000",
+        "000012224219951000000000",
+        "000013533299991000000000",
+        "0001534259d9979100000000",
+        "000122432187971100000000",
+        "000014522329910000000000",
+        "000013123429100000000000",
+        "000001425249710000000000",
+        "000000122238910000000000",
+        "0000001d92979d1000000000",
+        "0000119cd1789d1000000000",
+        "001142dcd2129c1000000000",
+        "014434133101310000000000",
+        "014311bb9f1b100000000000",
+        "14110011f11b110000000000",
+        "110001b1101b211000000000",
+        "000001aaa1b9aaa100000000",
+        "000001111111111100000000"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Tiny full-body walking mini icon facing right, native boot stride exactly. Arms down close to body, NO thumbs-up. Simplify to native 24x24. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 24x24 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "6094a426edef0fab1522bb59f8201984c4fb056cfb1f1dbee9463a33ab7c1c98",
+      "native_reference": {
+        "label": "word_5CD12",
+        "dimensions": [
+          24,
+          24
+        ],
+        "hotspot": [
+          12,
+          12
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          0,
+          2,
+          16,
+          24
+        ],
+        "mapping_mask_clipped_pixels": 0,
+        "shared_tile_pixels_reconciled": 0
+      }
+    },
+    "s3k-icon-01.png": {
+      "rows": [
+        "000000000000000000000000",
+        "000000000000000000000000",
+        "000000011111000000000000",
+        "000000134455100000000000",
+        "000001529935311000000000",
+        "00001322e943541000000000",
+        "000015442499341000000000",
+        "000012224219951000000000",
+        "000013533299991000000000",
+        "0001534259d9979100000000",
+        "000122432187971100000000",
+        "000014522329910000000000",
+        "000013123429100000000000",
+        "000001425249710000000000",
+        "000000122238910000000000",
+        "0000001d92979d1000000000",
+        "000011dd23979d1000000000",
+        "000153cc93799cc100000000",
+        "011453994113211000000000",
+        "014311111013100000000000",
+        "14110019101b100000000000",
+        "110001b2101b310000000000",
+        "000001aaa199aa1000000000",
+        "000001111111111000000000"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Tiny full-body walking mini icon facing right, native boot stride exactly. Arms down close to body, NO thumbs-up. Simplify to native 24x24. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 24x24 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "8b543f0b7350d8a2dfe5f5495470942bed4341293590af03e1eb3c3e03edc878",
+      "native_reference": {
+        "label": "word_5CD20",
+        "dimensions": [
+          24,
+          24
+        ],
+        "hotspot": [
+          12,
+          12
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          0,
+          2,
+          16,
+          24
+        ],
+        "mapping_mask_clipped_pixels": 0,
+        "shared_tile_pixels_reconciled": 94
+      }
+    },
+    "s3k-player-5a.png": {
+      "rows": [
+        "00000000000000000001111110000000",
+        "00000000000000001115566651100000",
+        "00000000000010113355545455511110",
+        "000000000011e1232255215555551e81",
+        "00000000001ee9345422431355521e71",
+        "00000000001eb5554355554121244191",
+        "00000000001912322544454244555310",
+        "00000000001353222565651555545610",
+        "00000000015552452245411256556521",
+        "00000000016532555421234212363141",
+        "00000000015215545523555542121351",
+        "00000000001222666225555562242231",
+        "00000000001552222124555631555210",
+        "00000000001655122422233215555510",
+        "00000000001651155552222222555110",
+        "00000000000112125552344433111000",
+        "00000000000015421412555554221000",
+        "00000000000001211222355521110000",
+        "00000000000001924452112310000000",
+        "00000000000017935531331971000000",
+        "00000000001117112215555171100000",
+        "0000000001dd1b242224553199c10000",
+        "00000000199dc92554222122dc931000",
+        "000000001cd2991232354412d99cc100",
+        "00000011ccdd91431555652199dcc100",
+        "0000001dccccd154125522529cdcd100",
+        "000000011dd911325322442219dd1000",
+        "00000000011101156335562111110000",
+        "00000000000001322223532100000000",
+        "00000000000001523553214510000000",
+        "00000000000001515564423510000000",
+        "00000000000012213332421211000000",
+        "000000000011aaab22453faaaa100000",
+        "00000000001bbbbb12541fbbbb100000",
+        "000000000001bbbf142231bbbb100000",
+        "00000000011baaabf2551bbaaaf11000",
+        "000000001aaaaaabb1111bbaaaaaa100",
+        "000000001aabbbbb10001bbbbbaaa100",
+        "00000000199999899100189899999100",
+        "00000000111111111100111111111100"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Standing with BACK TO VIEWER, head looking away slightly left as native. Show layered rounded scales on back of head, NO face visible. White gloves at hips, planted coral boots, tapered scaly tail pointing down. Exact native back-facing idle pose. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 32x40 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "60db47bd563ed2c40c85df203d73ae57a18a16fdcf4559baec89002c04bce1e6",
+      "native_reference": {
+        "label": "word_1470F6",
+        "dimensions": [
+          32,
+          40
+        ],
+        "hotspot": [
+          18,
+          20
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          6,
+          0,
+          32,
+          40
+        ],
+        "mapping_mask_clipped_pixels": 5,
+        "shared_tile_pixels_reconciled": 0
+      }
+    },
+    "s3k-player-59.png": {
+      "rows": [
+        "00000000000000000000000000000000",
+        "00000000000000000011111110000000",
+        "00000000000000011123555541000000",
+        "00000000000011152555325542110000",
+        "00000000000155529935541224551000",
+        "0000000001155429ee93532553333100",
+        "000000000132333beee1125555223410",
+        "00000000152359933992434444255551",
+        "00000001533989994325553122235551",
+        "00000001249b11192455553455432441",
+        "000000014592c9199234312555552210",
+        "000000001919c9f93541232245424510",
+        "000000001919c9993534555311255551",
+        "00000011891dc9732125555223245510",
+        "00000197789d7d783432332355512210",
+        "00000011777777794541212555422100",
+        "00000000111999f11223341243245100",
+        "00000000000119143135532221455100",
+        "00000000001179455442122221141100",
+        "00000000112889322554222310010000",
+        "00000000121779311125511100000000",
+        "00000000131891419945100000000000",
+        "000000001d977839dd31000000000000",
+        "000000001d9999ccddcd100000000000",
+        "00000001dc9889ccd992410000000000",
+        "00000001cc9189dcdd13551110000000",
+        "00000000112297139123222451100000",
+        "00000000001519714425245424510000",
+        "00000000000142114532235523321000",
+        "00000000001441001351221155435100",
+        "00000000001421001432122222353210",
+        "0000000001ab9a10191ba11122232510",
+        "0000000012bba1001aaaa10011122231",
+        "00000001222221001222210000011231",
+        "0000000012221a113312210000000110",
+        "000000119b11aa101111210000000000",
+        "000001aaaaabb9f1aaaaaa1000000000",
+        "0000019bbb9989f1bbbbab1000000000",
+        "000001199991111f9999991000000000",
+        "00000001111000011111110000000000"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Standing turning head LEFT in profile, head left and back scales trailing right. White gloves at hips, boots planted, exact native turn pose. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 32x40 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "40f4de5bae1759296c2b50c95d7b77f157343a9631e72cc18da431ed93f474fe",
+      "native_reference": {
+        "label": "word_1470DC",
+        "dimensions": [
+          32,
+          40
+        ],
+        "hotspot": [
+          17,
+          20
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          5,
+          1,
+          32,
+          40
+        ],
+        "mapping_mask_clipped_pixels": 5,
+        "shared_tile_pixels_reconciled": 0
+      }
+    },
+    "s3k-player-55.png": {
+      "rows": [
+        "00000000000000000000000000000000",
+        "00000000000001111000000000000000",
+        "00000000011116553111000000000000",
+        "00000000155243324555100000000000",
+        "00000000153431115554311100000000",
+        "00000011425537e92324539100000000",
+        "00000016525517e92214552100000000",
+        "00000155322318925993342100000000",
+        "000001222543413599f9355100000000",
+        "00000152555534521991955110000000",
+        "00001655244225421cd9993910000000",
+        "00001555212225439dd1199100000000",
+        "000015314555121879d11d7910000000",
+        "00000121555245297778877771000000",
+        "00000153221145219779997711000000",
+        "00001552223411121f98e91100000000",
+        "000001213554122552b9110000000000",
+        "00000015322121553297100000000000",
+        "00000011511123222529910000000000",
+        "00000000113213541338710000000000",
+        "00000000011122414418891000000000",
+        "00000000000135325398993100000000",
+        "00000000000124322287792410000000",
+        "000000000001d9dd2419919d11000000",
+        "000000000019dd996177799100000000",
+        "00000000115199dcc998919100000000",
+        "000000116529ccccdd9719c100000000",
+        "000011422239cccc9179339100000000",
+        "0001553553519ddd1112521100000000",
+        "00142245531242110015310000000000",
+        "01525522221253100015210000000000",
+        "0111111121b1231001122b1000000000",
+        "000000001faabaa101aaaa1000000000",
+        "0000000001b22b1001bb122110000000",
+        "000000000122221001b1322210000000",
+        "000000001ab2f11001aab2f111100000",
+        "000000001a9baa9101babbaaae100000",
+        "000000001bbaabab19899bbbbbb10000",
+        "00000000189999981119989899810000",
+        "00000000111111111001111111110000"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Standing profile facing RIGHT, white gloved arms lowered, boots planted as native. NO thumbs-up. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 32x40 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "a7e0673c729fc96ed38d1d674b06bd40acd59324a33a16733c3da6bebdebf471",
+      "native_reference": {
+        "label": "word_147092",
+        "dimensions": [
+          32,
+          40
+        ],
+        "hotspot": [
+          16,
+          20
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          0,
+          1,
+          28,
+          40
+        ],
+        "mapping_mask_clipped_pixels": 39,
+        "shared_tile_pixels_reconciled": 0
+      }
+    },
+    "s3k-player-56.png": {
+      "rows": [
+        "00000000000000000000000000000000",
+        "00000000000011110000000000000000",
+        "00000000011155541111000000000000",
+        "00000001155552455552100000000000",
+        "00000015544421345445511000000000",
+        "00000145323187e82355555100000000",
+        "0000001225527aaa1224544100000000",
+        "00001152555299b35543255100000000",
+        "00015554255521355395345511100000",
+        "00015543222222523899943442100000",
+        "00012212543335421199993552100000",
+        "000014355555255511cc199449100000",
+        "000155355542123481dc19952d100000",
+        "000155512224321879dc919711000000",
+        "0001541222555527777cd19779110000",
+        "00011124245552119779977777710000",
+        "00000144412212321b88977111100000",
+        "000001542223222342f9991000000000",
+        "00000141254211555429991011100000",
+        "000000101421155212dccd11dcc11000",
+        "000000001114332199cccc99dddc1000",
+        "000000000015539cddcccd999cccd100",
+        "00000000001152ddddcccc139ddcd100",
+        "00000000000011dcdddcd9f1dccd1000",
+        "000000000011323d9299998111110000",
+        "00000000115345212419871000000000",
+        "00000000154211255397881000000000",
+        "00000000122342555287910000000000",
+        "0000000015233135118f210000000000",
+        "00000000122214410011410000000000",
+        "00000000122125510001521000000000",
+        "0000000011fab1fb101b1ba100000000",
+        "00000000001bbaa1001aaaaf10000000",
+        "0000000000133211001f132331000000",
+        "0000000001233231001a124f22100000",
+        "000000001ab3fb21001aa22bbba11000",
+        "000000001abbaaab11fbbbaaaaaa1000",
+        "000000001bbbbbbbb19999bbbbbb9100",
+        "00000000189989999ff99b8999989100",
+        "00000000111111111111111111111000"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Standing facing RIGHT, both white gloved hands clenched close together in front of chest, ready determined pose. Match native glove height and boot phase exactly. NO thumbs-up. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 32x40 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "c402e9d6be185f4a3222103aa4802d25c49f7ed882f6f5f284b07c5fc674a90e",
+      "native_reference": {
+        "label": "word_1470AC",
+        "dimensions": [
+          32,
+          40
+        ],
+        "hotspot": [
+          17,
+          20
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          0,
+          1,
+          30,
+          40
+        ],
+        "mapping_mask_clipped_pixels": 53,
+        "shared_tile_pixels_reconciled": 0
+      }
+    },
+    "s3k-player-57.png": {
+      "rows": [
+        "00000000000000000000000000000000",
+        "00000000000111110000000000000000",
+        "00000000111555431100000000000000",
+        "00000001553443556510000000000000",
+        "00000015544422555541111000000000",
+        "0000013225459924443429e100000000",
+        "000015544549eab2235552a100000000",
+        "000015531329e9455435441000000000",
+        "00000122422135455442441000000000",
+        "000013255543442f9944554100000000",
+        "0001554455255311d9b5453100000000",
+        "0001553222144219c919542100000000",
+        "0001322323312399c919721100000000",
+        "0000124555345488dd11771100000000",
+        "00001424422552777c99777100000000",
+        "00001521212222287777777100000000",
+        "00001113333122211998111000000000",
+        "00000122432125542991000000000000",
+        "00000012122244444991001100000000",
+        "00000011132444421ddd11d100000000",
+        "0000000001113222dccdd99100000000",
+        "000000000000143ddccd99d100000000",
+        "000000000000155c9ccc999100000000",
+        "0000000001112229d999111100000000",
+        "00000001135542221997810100000000",
+        "00000114532225541777910000000000",
+        "00011543245422428788310000000000",
+        "00153245355322339783100000000000",
+        "00134534222144437913100000000000",
+        "01425321231124411124100000000000",
+        "14321221121014100134110000000000",
+        "1411111001a1bb101abbaa1000000000",
+        "1110000001aaaa101baaa10000000000",
+        "100000000112111001f2221100000000",
+        "00000000112223101ab2222100000000",
+        "000000001a21b2101aa11bf111000000",
+        "00000001aabaaa101bbbaaaaa1000000",
+        "00000001bbabaab19999bbbbb9100000",
+        "00000001899999811118898998100000",
+        "00000001111111110001111111100000"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Standing facing RIGHT, both white gloved hands clenched close together in front of chest, ready determined pose. Match native glove height and boot phase exactly. NO thumbs-up. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 32x40 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "f590f4ada81b096578c1cbde87605663a545a47578af99f314a8ca3c2b9737f4",
+      "native_reference": {
+        "label": "word_1470C0",
+        "dimensions": [
+          32,
+          40
+        ],
+        "hotspot": [
+          16,
+          20
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          0,
+          1,
+          27,
+          40
+        ],
+        "mapping_mask_clipped_pixels": 16,
+        "shared_tile_pixels_reconciled": 0
+      }
+    },
+    "s3k-player-bd.png": {
+      "rows": [
+        "00000000000000000000000000000000",
+        "00000000000001111111100000000000",
+        "00000000001115435566311000000000",
+        "00000000015433112454332100000000",
+        "00000000153553992222554100000000",
+        "000000015235497e8232355100000000",
+        "00000016551329ee9245422100000000",
+        "00000155534321e93544553100000000",
+        "00000122255553135399954211100000",
+        "00000153255554352111199245211000",
+        "0000016532442254211d919935211000",
+        "0000155532222255211c919f94310000",
+        "000015422544522318fdd11982210000",
+        "00001111455542321789c91dc8910000",
+        "00000132255415551777dddd77891100",
+        "000001443122134219777797777d1100",
+        "0000015312324211211978bb97110000",
+        "00000011124432125531f99911000000",
+        "00000001222235544553879100000000",
+        "00000000131454441123387910011100",
+        "000000001115453111253987911c9d11",
+        "0000000000012549d112277791c99dd1",
+        "00000000000193dc9935499991d9ddd1",
+        "000000000001ddd99cd2377711111110",
+        "0000000000012399ccd1977100000000",
+        "00000000111529cccd19798100000000",
+        "00000111532222999219777100000000",
+        "00011533354243113537891100000000",
+        "00152354355232352211112100000000",
+        "01552554122211444100013100000000",
+        "012342221221f2423100122100000000",
+        "11111111111bab91b1001a9100000000",
+        "000000000001baaaa1001aab11100000",
+        "000000000001222111001b1322210000",
+        "00000000001123123101aa1121111000",
+        "0000000001ab21f12101aaaa2baae100",
+        "0000000001babaae9101bbbbaaaaaa10",
+        "00000000019baaaaab188899bbbbb910",
+        "00000000019999999911111989898910",
+        "00000000011111111100000111111100"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Standing facing RIGHT, one gloved hand at hip, forward gloved hand loosely held in front, exact native idle foot phase. NO thumbs-up. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 32x40 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "acfb255529c7da1b4f52ea194dd307f67a9866b49cd0852d79484da3e829c2b2",
+      "native_reference": {
+        "label": "word_147870",
+        "dimensions": [
+          32,
+          40
+        ],
+        "hotspot": [
+          18,
+          20
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          0,
+          1,
+          32,
+          40
+        ],
+        "mapping_mask_clipped_pixels": 46,
+        "shared_tile_pixels_reconciled": 0
+      }
+    },
+    "s3k-player-be.png": {
+      "rows": [
+        "00000000000000000000000000000000",
+        "00000000000011111111000000000000",
+        "00000000000154255552111000000000",
+        "00000000011554123215553100000000",
+        "00000000014421924524543100000000",
+        "00000001154217ee9342225100000000",
+        "00000014555297eb1313534100000000",
+        "00000015541318945599442100000000",
+        "00000001214541253989991511110000",
+        "00000015525555333111199255110000",
+        "0000015554234233211c199943110000",
+        "000001554132125421991cd932100000",
+        "000000111355535529911cc981100000",
+        "000000142355311187d19cc779110000",
+        "00000015512225528777798777781000",
+        "000000152222244219777bbf77110000",
+        "00000001145521112119989911000000",
+        "0000000015521222552b991100000000",
+        "00000000111223452542979100000000",
+        "00000000001253211125297910011110",
+        "000000000001552391243777111ddcd1",
+        "000000000000145cd114398811d9ddc1",
+        "0000000000001dcd9c93487712cdccd1",
+        "000000000000199dccd1877711111110",
+        "000000000011319dcd18898100000000",
+        "00000001115241ddd318777100000000",
+        "00000115443244211451781100000000",
+        "00011522255255323421812100000000",
+        "00014255334221155210135100000000",
+        "00133345322121223100154100000000",
+        "01525521111111253100135100000000",
+        "0111111110001b131101b22100000000",
+        "0000000000001baaa101aaaa11000000",
+        "000000000000122211001f2323100000",
+        "000000000001b2223101bb2232210000",
+        "00000000001af2bb3101aaa21fba1000",
+        "00000000001abbaab101bbabbaaaa100",
+        "000000000199aaaaab19889aabab9100",
+        "0000000001989898981111f898989100",
+        "00000000001111111100001111111000"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Standing facing RIGHT, one gloved hand at hip, forward gloved hand loosely held in front, exact native idle foot phase. NO thumbs-up. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 32x40 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "91789d8a15c6eea59d3895c5ce3b0bea7280fa7c8425b1243c3d799f00d4f48a",
+      "native_reference": {
+        "label": "word_14788A",
+        "dimensions": [
+          32,
+          40
+        ],
+        "hotspot": [
+          18,
+          20
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          0,
+          1,
+          32,
+          40
+        ],
+        "mapping_mask_clipped_pixels": 28,
+        "shared_tile_pixels_reconciled": 0
+      }
+    },
+    "s3k-player-ba.png": {
+      "rows": [
+        "00000000000000000000000000000000",
+        "00000000000011111100000000000000",
+        "00000000001132555311100000000000",
+        "00000000016555322555610000000000",
+        "00000000124322333455551000000000",
+        "0000000154319ee92422435100000000",
+        "0000001655497aaf2455255100000000",
+        "0000015555317a155325524100000000",
+        "00000155522293555999423211000000",
+        "00000012153325521919935541100000",
+        "000001535555334211d9993531110000",
+        "000001543553234311cd199439100000",
+        "000015551221552181cd999911000000",
+        "00000132154255529dcd119d11000000",
+        "000000132555211977dc918d71100000",
+        "0000014543521229777777777d910000",
+        "0000016531213441f977777811100000",
+        "00000011133323321219999100000000",
+        "00000001145412554231991000000000",
+        "0000000012111552211dd91111110000",
+        "000000001101422342dcdd91cdc10000",
+        "00000000001655229ddccd99dddc1000",
+        "0000000000154229c9cccc919dcc1000",
+        "0000000000011419c9dccd999dc10000",
+        "00000000000115529d93991111100000",
+        "00000000001543421198871000000000",
+        "00000000114532225297711000000000",
+        "00000000152223355287824100000000",
+        "00000000125551253978141000000000",
+        "00000000143413521111221000000000",
+        "00000000142215521001310000000000",
+        "00000000122115310001441000000000",
+        "00000000111abbba101abba100000000",
+        "00000000001baaa1001aabf110000000",
+        "0000000001f22221001f132310000000",
+        "0000000001b2311101baa13121100000",
+        "000000001aabfa9a11baaa1baee10000",
+        "000000001fbaaaaaf19999aaaab10000",
+        "00000000199999999119f99999991000",
+        "00000000011111111001111111110000"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Standing facing RIGHT, both white gloved hands clenched close together in front of chest, ready determined pose. Match native glove height and boot phase exactly. NO thumbs-up. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 32x40 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "c05624d9fa5871b83e8d37ce61053ccc5328e7a2de1f79410fc56c52cb0814f5",
+      "native_reference": {
+        "label": "word_147828",
+        "dimensions": [
+          32,
+          40
+        ],
+        "hotspot": [
+          16,
+          20
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          0,
+          1,
+          29,
+          40
+        ],
+        "mapping_mask_clipped_pixels": 53,
+        "shared_tile_pixels_reconciled": 0
+      }
+    },
+    "s3k-player-21.png": {
+      "rows": [
+        "00000000000000000000000000000000",
+        "00000000000000000000000000000000",
+        "00000000000000000000000000000000",
+        "00000000000000000000000000000000",
+        "00000000000000000111100000000000",
+        "00000000000000011366511100000000",
+        "00000000000011155233355510000000",
+        "00000000000014533554355541100000",
+        "00000000000001255539423366511100",
+        "0000000000111536538e93533554b100",
+        "0000000001555523528e953333445100",
+        "00000000016553422299559955235100",
+        "00000000012212555523538995456110",
+        "00000000012332555335321919555310",
+        "00000000015552122225419c11945310",
+        "00000000165533323512299c11993100",
+        "00000000113115555343179d91d89100",
+        "000000000013225521539777d9dd7910",
+        "00000000001521112211187779987771",
+        "0000000011239921246552977ab99110",
+        "000000115529d9245354552111991000",
+        "00001165355d9dd555113381001d1000",
+        "0011633422399ccd3234187911ddd100",
+        "015323225319dccc925377812d9dc100",
+        "143321212219ccdd323987111c9dc100",
+        "1511101112529d115397710001111000",
+        "110011ba235521124878110000000000",
+        "001189aa441111111111451011110000",
+        "01ab91ba1210000000132bb1ba910000",
+        "0199932bb10000000001aa12a9810000",
+        "1a99b9231000000000019322a9910000",
+        "1a99a91100000000001a112b98f10000",
+        "1edf9ae100000000001bbaba99100000",
+        "01d9fba1000000000001aaab9f100000",
+        "01ad9ffb1000000000001aa991100000",
+        "001edd9bb110000000001bb8f1000000",
+        "0001a7de9ae110000000019811000000",
+        "000011eeceaaa1110000001110000000",
+        "000000111eeaba100100000000000000",
+        "00000000011111111000000000000000"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Running fast facing RIGHT, body forward, legs in the exact native circular boot streak phase, redraw circular streak with coral hiking boots and tan soles. Preserve exact native hand positions. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 32x40 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "51eebd77e70a0c8997d31764606f6208cd6aafe8e47bdcf0c2c21b1cba69c08d",
+      "native_reference": {
+        "label": "word_146CDC",
+        "dimensions": [
+          32,
+          40
+        ],
+        "hotspot": [
+          16,
+          20
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          0,
+          4,
+          32,
+          40
+        ],
+        "mapping_mask_clipped_pixels": 0,
+        "shared_tile_pixels_reconciled": 0
+      }
+    },
+    "s3k-player-22.png": {
+      "rows": [
+        "00000000000000000000000000000000",
+        "00000000000000000000000000000000",
+        "00000000000000000000000000000000",
+        "00000000000000000000000000000000",
+        "00000000000000001111000000000000",
+        "00000000000000113553111000000000",
+        "00000000000011452552355111000000",
+        "00000000000155212439934244100000",
+        "00000000000132354297e92543511100",
+        "0000000000001255539e122454239100",
+        "00000000000012442331555332452100",
+        "00000000001154122552532398344100",
+        "00000000015443353452441199825410",
+        "000000001453225551245419cd194310",
+        "000000001222532324235419cd392510",
+        "000000001115552135521989cd119100",
+        "0000000000011122245218d8dc9f7810",
+        "00000000000000122112227777977771",
+        "000000000111113225322117779f8110",
+        "0000000119dcc9453454521118e11000",
+        "000001149dcddd242122391011100000",
+        "000113529ddc991134119711dd100000",
+        "0015522529c912353397719d9c100000",
+        "0152254322125234977799d9dc100000",
+        "1532211ff114444177811119d1000000",
+        "1111faaa111225343110000110000100",
+        "1001aa11000121351000000000000110",
+        "001aa100000011224100000000100110",
+        "01aa1000000001525100000000101100",
+        "01a10000000113421000000001101100",
+        "01a10000011aabf1000000001ba1a100",
+        "01a100001baf1ba1000000001aaa1000",
+        "01a10001baa3221000000001aaaa1000",
+        "01a100019b91b2100000001aaaa10000",
+        "001a100189ba9fa1100001aaaa100000",
+        "00011000199baaaa10001aaaa1000000",
+        "0000110001999b999111aaa110000000",
+        "00000011101997999baaa11000000000",
+        "00000000111bfbfbaaa1100000000000",
+        "00000000000111111110000000000000"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Running fast facing RIGHT, body forward, legs in the exact native circular boot streak phase, redraw circular streak with coral hiking boots and tan soles. Preserve exact native hand positions. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 32x40 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "ee68b770a915ef2a03c264826501518831da692fae38038aee9629b715c20ae2",
+      "native_reference": {
+        "label": "word_146CEA",
+        "dimensions": [
+          32,
+          40
+        ],
+        "hotspot": [
+          16,
+          20
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          0,
+          4,
+          32,
+          40
+        ],
+        "mapping_mask_clipped_pixels": 0,
+        "shared_tile_pixels_reconciled": 0
+      }
+    },
+    "s3k-player-23.png": {
+      "rows": [
+        "00000000000000000000000000000000",
+        "00000000000000000000000000000000",
+        "00000000000000000000000000000000",
+        "00000000000000000000000000000000",
+        "00000000000000000011111100000000",
+        "00000000000000001124544511000000",
+        "00000000000000015223325555100000",
+        "00000000000000133454992444411000",
+        "00000000000001543549ee9224549100",
+        "00000000000015552218e93353342100",
+        "00000000000015434319945434254100",
+        "00000000000012245541442989354100",
+        "00000000000155325524521119934110",
+        "000000000015542222255211d1994210",
+        "00000000001221554532227111c94510",
+        "00000000000122555245437911c81100",
+        "000000000015532221454987f9cd8100",
+        "00000000001522123212177778777711",
+        "00000000001112223222297779b97711",
+        "0000000111d9d9124553231977911100",
+        "000000019dccdd354245445911100000",
+        "000000011ddcdd312124339710010000",
+        "0000111319dc691012213498111d1000",
+        "0001433449d911013354297729ddc100",
+        "0015354242122214532978811d9dc100",
+        "01311233223225532218771001dcd100",
+        "01100112222124111288912100111000",
+        "000001bbff2441000111115510000000",
+        "000017baaa3410000000001410000000",
+        "000019aabab100000000001441000000",
+        "00017baf211000000000001bba110000",
+        "00019bb331000000000001b1bb981000",
+        "00018ba211000000000014222b810000",
+        "00018ba1000000000000013bbb810000",
+        "00001bba10000000000012baa9100000",
+        "000001bba11000000001aaab98100000",
+        "0000001bbaa110000001aab891000000",
+        "00000001bbbab111001b998110000000",
+        "00000000111bbbbb1111111000000000",
+        "00000000000111111100000000000000"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Running fast facing RIGHT, body forward, legs in the exact native circular boot streak phase, redraw circular streak with coral hiking boots and tan soles. Preserve exact native hand positions. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 32x40 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "824b6223a82d996a80a8f134f68ad9a7d3d023e6c17135253a8def9fc8342b7e",
+      "native_reference": {
+        "label": "word_146CF8",
+        "dimensions": [
+          32,
+          40
+        ],
+        "hotspot": [
+          16,
+          20
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          1,
+          4,
+          32,
+          40
+        ],
+        "mapping_mask_clipped_pixels": 0,
+        "shared_tile_pixels_reconciled": 0
+      }
+    },
+    "s3k-player-24.png": {
+      "rows": [
+        "00000000000000000000000000000000",
+        "00000000000000000000000000000000",
+        "00000000000000000000000000000000",
+        "00000000000000000000000000000000",
+        "00000000000000001111110000000000",
+        "00000000000001114215551100000000",
+        "00000000000013542554224511000000",
+        "00000000000153135433325554110000",
+        "00000000000123213988532333321000",
+        "000000000000125417eef23255538100",
+        "0000000000013455287933333553f100",
+        "00000000001542222194553993332100",
+        "00000000013222333424429998355100",
+        "00000000154224555521211191933310",
+        "00000000012553444354291dc9192510",
+        "000000000015412214554119cd995310",
+        "000000000121133342222989c9118100",
+        "000000000011135442233779dd19d100",
+        "00000001119121231353f7777d877711",
+        "0000001dccd129ddd222219777777110",
+        "00000199939d9cd9d91553f111111000",
+        "000112353399dcccc912337100000000",
+        "00133343459d9cddc923889910000000",
+        "0014452124311ddc9129779dd1000000",
+        "0142111221222213229791dc10000000",
+        "0111baab11123125397111dd10000000",
+        "11faaa11001112453110001100000000",
+        "001aa100000135221000000000001100",
+        "01aa1000000013210000000000001100",
+        "1aa10000000143100000000001101100",
+        "1aa10000001441000000000001101100",
+        "1a10000001abbb10000000001bb1b100",
+        "0110000001bb131000000001fbbb1000",
+        "011000001eab22100000001bbbab1000",
+        "001100019baab211110011bbbbb10000",
+        "00000001899babaedb11bbbbab100000",
+        "00000001ff99abb99bfbbbbb11000000",
+        "0000000011ff989999bbbb1100000000",
+        "0000000000111bffbba1110000000000",
+        "00000000000001111110000000000000"
+      ],
+      "prompt": "Redraw image 1 as MICA, ORIGINAL female jade pangolin from concept image 2. Images 3/4 are approved pixel-art style anchors ONLY. Running fast facing RIGHT, body forward, legs in the exact native circular boot streak phase, redraw circular streak with coral hiking boots and tan soles. Preserve exact native hand positions. Native image 1 determines POSE AND FACING; concept/anchors determine identity only. ONE sprite on transparent background, no text/ground/shadow. New drawing, NEVER recolour Sonic. Preserve exact native silhouette and limb placement/framing, target 32x40 pixels. MICA: rounded overlapping jade scale plates, tapered scaly tail, cream long pangolin muzzle/belly where visible, round coral-inner ears, expressive dark eyes/lashes where visible, white mitten gloves, coral hiking boots/tan lug soles/jade laces. No hedgehog spikes, Sonic features, blue or Sonic shoes. Crisp economical pixel clusters, strong ink like pilots. Fit tail inside original box, no oversized head.",
+      "raw_sha256": "a2edacd1a352412c407600336af4ef05fdbe0ad0725bf1d1c4dcff8e0120fe35",
+      "native_reference": {
+        "label": "word_146D06",
+        "dimensions": [
+          32,
+          40
+        ],
+        "hotspot": [
+          16,
+          20
+        ]
+      },
+      "cleanup": {
+        "target_box": [
+          0,
+          4,
+          32,
+          40
+        ],
+        "mapping_mask_clipped_pixels": 0,
+        "shared_tile_pixels_reconciled": 0
+      }
     }
   },
   "tool": "Built-in GPT Image, latest exposed; exact model/version not returned",
