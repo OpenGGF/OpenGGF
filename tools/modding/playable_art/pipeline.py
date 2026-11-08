@@ -102,7 +102,18 @@ def build(recipe_path, review=None):
     records, images = [], {}
     for frame in recipe['frames']:
         source = frame.get('source')
-        if source:
+        if 'native_pixels' in frame:
+            # Final handoff pixels are authoritative; do not rotate/re-filter them.
+            native=frame['native_pixels'];rows=native['rows']
+            if not rows or len(set(map(len,rows)))!=1:
+                raise ValueError('Native pixel rows must form a nonempty rectangle')
+            cut=Image.new('P',(len(rows[0]),len(rows)))
+            cut.putpalette(sum(colors,[])+[0]*(768-48))
+            cut.putdata([int(v,16) for row in rows for v in row])
+            anchor=native['anchor']
+            canvas=Image.new('P',(80,80));canvas.putpalette(cut.getpalette())
+            canvas.paste(cut,(40-anchor[0],40-anchor[1]))
+        elif source:
             if source not in atlases:
                 atlases[source] = Image.open(root/source).convert('RGBA')
             atlas = atlases[source]

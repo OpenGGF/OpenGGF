@@ -224,6 +224,48 @@ Slope frames are rigid native-pixel rotations; W2 still owns slope-stride and
 runtime contact validation. `HOMING_DIVE` is an explicit custom handoff key,
 not a new canonical enum member. No final GGFP or runtime certification yet.
 
+W7 art-lane round 2 handoff (2026-11-08, `feature/ai-mica-art2`):
+`art/mica/presentation/presentation.yaml` now describes 18 native-size indexed
+images: three 16×16 HUD faces, three 16×16 monitor faces, S1 supplementary M/A
+HUD glyphs (8×8 / 6×8), three 48×32 sign faces, six 32×32 angled spin faces,
+and the optional 48×32 S2 alternate face. Native mapping/art labels, piece layouts
+and palette lines are recorded per surface. Sign images are character overlays;
+retain native border/backing/pole and the edge-on frame. The S1 font keeps native
+yellow/shadow indices; all character images retain the unchanged shared palette.
+The [presentation pipeline](../../../tools/modding/playable_art/README.md#mica-presentation-round-2)
+rebuilds them without Java; optional review decodes pinned native art using the
+Nemesis oracle under isolated Python. `gilded.yaml` supplies full index tables,
+six fade frames, and dry Super loops: S2 nine frames at 8 ticks, S3K three at
+7 ticks, following the shipped final-frame-skip branches. Only jade slots 2–6
+change. Palette/alpha/dimensions and deterministic rebuild checks pass, and the
+presentation comparisons and gold WAIT cycle were inspected at 1× and 4×.
+No GGFP or runtime binding is claimed. Underwater/Hyper and transform poses remain.
+This lane takes the permitted presentation-first stop: **all 36 slope frames are
+unchanged**, still needing hand-drawn stride/contact correction rather than rigid
+rotation. Temporary review material is under `/tmp/mica-art2-review-20261108/`,
+including a slope before/after sheet explicitly marked unchanged. The 16px face
+is simplified and spin dithering still needs native-background gameplay review.
+
+W7 art-lane round 3 handoff (2026-11-08, `feature/ai-mica-art3`):
+six head portraits now fill a 14×15 silhouette with cream facial planes, large
+white/ink eyes, pink ears and light-over-dark crest rows. Four signs are large
+three-quarter busts with grins and peace gloves; six spin frames project the
+same face without dither. Separate original framed backing planes supply native
+S1 yellow, S2/S3K orange and alternate S2 blue. Their native palette line is 0
+(indices 15, 15, 9 and 2 respectively). MICA's palette is unchanged; backing
+composition requires a separate available runtime palette line, recorded in
+`presentation.yaml`. No GGFP/runtime binding is supplied. Native-side-by-side
+1×/4× reviews are in `/tmp/mica-art3-review-20261108/`. Python generation and
+palette/dimension checks pass without a Java build. All 36 WALK/RUN `up45`, `steep` and `inverted` frames now use explicit native pixel rows in
+`recipe.json`, with redrawn broad-scale heads, eyes, bent legs and coral boots;
+flat-cycle stride order is retained. The final pass repairs cut-off gloves, inverted eye placement and sole contact.
+The torso/tail seeds are retained; the new crest/eyes, gloves, bent limbs and
+boots use native contours. Six side-by-side slope GIFs accompany 1×/4× sheets.
+Python palette/alpha/outline/geometry/coverage and byte-for-byte frame rebuild
+checks pass. The broader crest scales are simpler than the flat art, arm swing
+is restrained, and runtime foot contact remains unverified. The 16px far eye is necessarily
+narrow; the small crest has fewer scale separations than the playable head.
+
 ### W8 — Example, tutorial and evidence (M)
 
 - `examples/<character>/` with a build script in the Mutator Lab pattern.
