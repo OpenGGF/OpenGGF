@@ -426,6 +426,7 @@ public final class RouteTapeWorkspace {
         NativeFacts facts = loaded.manifest().nativeFacts();
         var content = working().content();
         var lines = new ArrayList<String[]>();
+        if (!facts.exportBlocker().isBlank()) lines.add(fact("PROVISIONAL", facts.exportBlocker()));
         lines.add(fact(UiMessages.text("editor.route_tape.fact_native_entry"), facts.entry()
                 .map(entry -> UiMessages.text("editor.route_tape.native_entry_value",
                         Map.of("movie", entry.movie(), "rows", String.valueOf(entry.prefixRows()))))

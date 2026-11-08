@@ -41,6 +41,8 @@ class TestCompetitionRouteEditor {
                     RouteCodec.formatManifest(route.manifest(), name + ".script"));
             var workspace = new RouteTapeWorkspace(new RouteTapeWorkspace.Host() { });
             workspace.open(Path.of(stem + ".route.json"));
+            assertTrue(workspace.nativeFacts().stream().anyMatch(f -> f[0].equals("PROVISIONAL")));
+            assertThrows(java.io.IOException.class, () -> workspace.exportBk2(dir.resolve(name + ".bk2")));
             assertEquals(route.checks().startRow(), workspace.immutablePrefixRows());
             if (name.endsWith("prefix")) assertTrue(workspace.goalRows().stream().anyMatch(row -> row.player().equals("P1")));
             if (name.endsWith("flip")) {
