@@ -4064,6 +4064,22 @@ class TestS3kDataSelectPresentation {
                         .toList());
     }
 
+    @org.junit.jupiter.api.Test
+    void menuContinueFigureRetainsNativeCrossCell() throws Exception {
+        var method = S3kDataSelectPresentation.class.getDeclaredMethod("menuContinueImage",
+                com.openggf.game.CharacterPresentation.Image.class);
+        method.setAccessible(true);
+        byte[] pixels = new byte[24 * 24];
+        pixels[23 * 24 + 15] = 3;
+        var fitted = (com.openggf.game.CharacterPresentation.Image) method.invoke(null,
+                new com.openggf.game.CharacterPresentation.Image(24, 24, pixels));
+        assertEquals(16, fitted.width());
+        assertEquals(3, fitted.pixels()[23 * 16 + 15]);
+        pixels[16] = 3;
+        assertNull(method.invoke(null, new com.openggf.game.CharacterPresentation.Image(24, 24, pixels)),
+                "A figure that would overwrite the native cross retains the native fallback");
+    }
+
     private static final class RecordingSfxRecorder {
         private final List<Integer> sfxIds = new ArrayList<>();
 

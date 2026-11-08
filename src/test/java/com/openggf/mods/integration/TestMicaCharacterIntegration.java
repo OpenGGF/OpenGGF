@@ -291,6 +291,8 @@ class TestMicaCharacterIntegration {
         var objectState=(com.openggf.game.sonic3k.dataselect.S3kSaveScreenObjectState)stateMethod.invoke(presentation);
         for(int slot=0;slot<2;slot++) {
             var icon=objectState.visualState().slotStates().get(slot).customLifeIcon();
+            assertNotNull(objectState.visualState().slotStates().get(slot).customContinueIcon(),
+                    "MICA save slot uses its continue miniature");
             assertNotNull(icon,"MICA save slot uses its HUD life face");
             assertTrue(icon.pieces().stream().allMatch(piece->piece.tileIndex()>=0x2000));
         }

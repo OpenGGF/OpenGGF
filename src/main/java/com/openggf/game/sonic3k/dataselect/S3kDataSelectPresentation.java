@@ -309,6 +309,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         renderer.reset();
         characterPortraits.clear();
         characterLifeIcons.clear();
+        characterContinueIcons.clear();
         if (sessionController != null) {
             sessionController.reset();
         }
@@ -799,7 +800,8 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
                 continuesCount,
                 getCachedEmeraldFrames(slotIndex, summary),
                 preview,
-                characterLifeIcon(team.mainCharacter()));
+                characterLifeIcon(team.mainCharacter()),
+                characterContinueIcon(team.mainCharacter()));
     }
 
     private List<Integer> getCachedEmeraldFrames(int slotIndex, SaveSlotSummary summary) {
@@ -954,6 +956,46 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
     private final java.util.Map<String, SpriteMappingFrame> characterPortraits = new java.util.HashMap<>();
 
     private final java.util.Map<String, SpriteMappingFrame> characterLifeIcons = new java.util.HashMap<>();
+
+    private final java.util.Map<String, SpriteMappingFrame> characterContinueIcons = new java.util.HashMap<>();
+
+    private SpriteMappingFrame characterContinueIcon(String code) {
+        if (characterContinueIcons.containsKey(code)) return characterContinueIcons.get(code);
+        SpriteMappingFrame frame = null;
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        var definition = world == null ? null : world.getPlayableCharacterRegistry()
+                .find(com.openggf.game.CharacterKey.parsePersisted(code)).orElse(null);
+        if (definition != null && definition.presentationSupplier() != null) {
+            try {
+                var presentation = definition.presentationSupplier().load(code);
+                var art = presentation == null ? null : presentation.art().get(com.openggf.game.CharacterPresentation.Host.S3K);
+                var set = art == null ? null : art.screenFrames();
+                var pose = set == null ? null : set.banks().getOrDefault("continue/icon", java.util.Map.of()).get(0);
+                if (pose != null && pose.image().height() == 24) {
+                    var image = menuContinueImage(pose.image());
+                    if (image != null) frame = renderer.registerCharacterPortrait(
+                            new com.openggf.game.PresentationFrameSet.Pose(image, 0, 0), set);
+                }
+            } catch (java.io.IOException e) {
+                throw new IllegalStateException("Cannot load character continue icon: " + code, e);
+            }
+        }
+        characterContinueIcons.put(code, frame);
+        return frame;
+    }
+
+    // The menu owns a 16x24 figure cell; the adjacent cross must remain native.
+    private static com.openggf.game.CharacterPresentation.Image menuContinueImage(
+            com.openggf.game.CharacterPresentation.Image image) {
+        byte[] source = image.pixels();
+        byte[] pixels = new byte[16 * 24];
+        for (int y = 0; y < 24; y++) for (int x = 0; x < image.width(); x++) {
+            byte pixel = source[y * image.width() + x];
+            if (x < 16) pixels[y * 16 + x] = pixel;
+            else if (pixel != 0) return null;
+        }
+        return new com.openggf.game.CharacterPresentation.Image(16, 24, pixels);
+    }
 
     private SpriteMappingFrame characterLifeIcon(String code) {
         if (characterLifeIcons.containsKey(code)) return characterLifeIcons.get(code);

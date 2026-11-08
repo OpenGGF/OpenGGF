@@ -893,3 +893,31 @@ Status log (times UTC):
   `s2/frame-180.png`: MICA above RINGS, with native stage palette/track retained.
   Frames 120 and 239 plus state.csv are adjacent component-stage witnesses,
   not title-to-special-stage route certification.
+
+- 2026-11-08: W4 sweep surface 4: the capture audit exposed native Sonic in
+  saved-slot miniature continue counters. These now reuse `continue/icon` frame
+  0 and its isolated palette. Only transparent padding may extend beyond the
+  16×24 figure cell; otherwise the consumer keeps native art, preserving the
+  adjacent cross/digits. No public API additions. The expanded 143-test run above
+  includes this production source and its MICA capture assertion. Final menu
+  regression command:
+
+  ```bash
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kDataSelectPresentation,TestS3kCustomTeamPortraitComposer' test
+  ```
+
+  91 passed (76 presentation + 15 composer), zero failures/errors/skips; queue
+  49s, execution 36.677s. This includes the new figure-cell/cross preservation
+  test and existing stock menu regressions. Inspected final saved-slot and both
+  NO SAVE captures: MICA figures/faces, native Tails, crosses and digits visible.
+  S2 frame 120 is the native white transition and is rejected as art evidence;
+  frames 180/239 visibly show MICA's label. Zone preview noise follows the
+  inherited frontend path and remains uncertified, as in the screens lane.
+  The tested source is `18f363717` plus the final continue-counter adapter/test
+  changes committed by this lane; subsequent edits are documentation only.
+  All five validation jobs finished (one initial compilation failure plus four
+  passing runs). Total queue wait 935s; Maven execution about 418s; user wait zero;
+  other work time unmeasured. Citation check: 13 exact, 3 near, 2 unverifiable
+  (include/inherited references), no stale/missing/out-of-range findings;
+  whitespace clean. No merge or push. Lead owns integration and broader smoke;
+  this is focused presentation evidence, not full-suite or route certification.

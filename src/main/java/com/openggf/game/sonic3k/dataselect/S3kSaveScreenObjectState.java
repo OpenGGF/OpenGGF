@@ -82,7 +82,16 @@ public record S3kSaveScreenObjectState(
                                   int continuesCount,
                                   List<Integer> emeraldMappingFrames,
                                   HostSlotPreview hostPreview,
-                                  SpriteMappingFrame customLifeIcon) {
+                                  SpriteMappingFrame customLifeIcon,
+                                  SpriteMappingFrame customContinueIcon) {
+        public SlotVisualState(int slotIndex, SlotVisualKind kind, int objectMappingFrame,
+                SpriteMappingFrame customObjectFrame, int sub2MappingFrame, SlotLabelKind labelKind,
+                int zoneDisplayNumber, int headerStyleIndex, int lives, int continuesCount,
+                List<Integer> emeraldMappingFrames, HostSlotPreview hostPreview, SpriteMappingFrame customLifeIcon) {
+            this(slotIndex, kind, objectMappingFrame, customObjectFrame, sub2MappingFrame, labelKind,
+                    zoneDisplayNumber, headerStyleIndex, lives, continuesCount, emeraldMappingFrames,
+                    hostPreview, customLifeIcon, null);
+        }
         public SlotVisualState(int slotIndex, SlotVisualKind kind, int objectMappingFrame,
                 SpriteMappingFrame customObjectFrame, int sub2MappingFrame, SlotLabelKind labelKind,
                 int zoneDisplayNumber, int headerStyleIndex, int lives, int continuesCount,
