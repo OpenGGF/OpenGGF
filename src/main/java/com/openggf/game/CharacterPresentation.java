@@ -7,7 +7,12 @@ import java.util.Objects;
 @ModApi
 public record CharacterPresentation(String displayName, String hudName,
         Map<Host, Art> art, Map<Font, Map<Character, Image>> supplementaryGlyphs,
-        Map<StageSpriteSet.Surface, StageSpriteSet> stages) {
+        Map<StageSpriteSet.Surface, StageSpriteSet> stages,
+        Map<EndingSpriteSet.Surface, EndingSpriteSet> endings) {
+    public CharacterPresentation(String displayName, String hudName, Map<Host, Art> art,
+            Map<Font, Map<Character, Image>> supplementaryGlyphs, Map<StageSpriteSet.Surface, StageSpriteSet> stages) {
+        this(displayName, hudName, art, supplementaryGlyphs, stages, Map.of());
+    }
     public CharacterPresentation(String displayName, String hudName, Map<Host, Art> art,
             Map<Font, Map<Character, Image>> supplementaryGlyphs) {
         this(displayName, hudName, art, supplementaryGlyphs, Map.of());
@@ -20,7 +25,7 @@ public record CharacterPresentation(String displayName, String hudName,
     /** Indexed pixels use the player's palette line; zero is transparent. */
     @ModApi public record Image(int width, int height, byte[] pixels) {
         public Image {
-            if (width < 1 || height < 1 || width > 256 || height > 64
+            if (width < 1 || height < 1 || width > 256 || height > 256
                     || pixels.length != width * height) throw new IllegalArgumentException("Invalid image dimensions");
             pixels = pixels.clone();
             for (byte pixel : pixels) if (pixel < 0 || pixel > 15)
@@ -71,6 +76,7 @@ public record CharacterPresentation(String displayName, String hudName,
             throw new IllegalArgumentException("HUD name must contain 1..5 characters");
         art = Map.copyOf(art);
         stages = Map.copyOf(stages);
+        endings = Map.copyOf(endings);
         var copy = new java.util.LinkedHashMap<Font, Map<Character, Image>>();
         supplementaryGlyphs.forEach((font, glyphs) -> copy.put(Objects.requireNonNull(font), Map.copyOf(glyphs)));
         supplementaryGlyphs = Map.copyOf(copy);

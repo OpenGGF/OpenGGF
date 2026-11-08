@@ -53,6 +53,14 @@ def main():
             shutil.copy2(frame, stage_assets / frame.name)
     for surface in ("continue", "portrait", "snowboard"):
         shutil.copytree(PROJECT / "art/mica" / surface, classes / "art/mica" / surface, dirs_exist_ok=True)
+    ending_assets = classes / "art/mica/endings/s1"
+    ending_assets.mkdir(parents=True, exist_ok=True)
+    for frame in (PROJECT / "art/mica/endings/s1").glob("*.png"):
+        shutil.copy2(frame, ending_assets / frame.name)
+    ending_assets = classes / "art/mica/endings/s2"
+    ending_assets.mkdir(parents=True, exist_ok=True)
+    for frame in (PROJECT / "art/mica/endings/s2").glob("*.png"):
+        shutil.copy2(frame, ending_assets / frame.name)
     jar = OUTPUT / "mica-and-talon.jar"
     jar.unlink(missing_ok=True)
     cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath,

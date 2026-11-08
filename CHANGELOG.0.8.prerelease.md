@@ -44,6 +44,10 @@ under the matching area heading; see the
   composes MICA’s portrait with stock team portraits using isolated colours.
   Her 13-frame ICZ snowboard set retains the native intro choreography, with
   isolated rider and native board/spray palettes.
+  Her S1 ending actor now
+  uses her eight native-timed poses on a private palette row. S2 adds her solo
+  photos, Float2 and normal/Super ending poses, retaining native choreography,
+  separate Tails roles and her Gilded powered palette cycle.
 
 - Added the maintained MICA character skeleton for all three stock games, with
   character-owned homing (including a forward dash without a target) and Super/Hyper

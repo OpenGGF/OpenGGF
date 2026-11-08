@@ -86,6 +86,17 @@ the S3K water zones.
 
 ### W4 — Character presentation contract (L)
 
+Ending lane `feature/ai-mica-endings-s1s2`: S1 ending actor uses additive native-ID
+frames and private palette ownership; stock emerald/flower/logo art is unchanged.
+S2 uses the existing ending Presentation seam with additive frame/photo hooks;
+normal/Super choreography stays native, while KiS2 retains its patched route.
+Private palette rows retain MICA's indices without recolouring Tails/vehicles.
+Gilded ending flight follows the W6 S2 dry cycle. S1 commit `6f5d7a49f` passed its
+existing ending/API checks and a real rendered capture with all art-pixel and
+palette assertions (zero skips). S2 ending/integration/API checks passed (48 tests, no skips), followed by
+real Engine pixel-owner checks (9 tests) and final denser normal/Super captures
+(2 tests), all with no failures or skips.
+
 Stage lane `feature/ai-mica-stages`: S1 uses the bound canonical playable roll
 sheet; additive `StageSpriteSet` slots supply S2 half-pipe, S3K Blue Sphere and
 slot-machine frames by native frame ID. MICA's wave3 PNGs are packaged by the
@@ -829,3 +840,19 @@ Status log (times UTC):
   divergence and error totals), so they predate this work. Remaining presentation
   surfaces seen in captures: S3K data-select save-slot life icons and NO SAVE slot,
   S2 special-stage HUD "SONIC" label.
+
+- 2026-11-08: W4 S1/S2 ending lane `feature/ai-mica-endings-s1s2` complete.
+  S1 commit `6f5d7a49f` supplies eight native-timed ending poses. S2 supplies all
+  four solo photos, five Float2 frames, eight normal and six powered selectors;
+  native vehicles and separate Tails roles remain ROM-owned. Palette rows are
+  private, with native white fade steps and W6 Gilded cycling. Captures inspected
+  at `/tmp/mica-endings-s1s2-20261108/{s1,s2-normal,s2-super}/` include per-frame CSVs.
+  Validation: queued Maven with `-Dmse=off` and surfaceless EGL; S1 existing ending,
+  rewind and API checks (29 passing plus corrected capture test, no skips), S2
+  ending/KiS2/native-entry/full MICA integration/API checks (48 passing, no skips),
+  Engine draw-boundary checks plus two captures (9 passing), final denser captures
+  (2 passing). The initial generic capture draw showed DEZ rather than the S2
+  ending: rejected as visual evidence. The retained capture uses the real Engine
+  binding/reshape/ending draw and `flushScreenSpace`, following
+  `TestEndingBackgroundDrawBoundary`; blank native camera-pan intervals are not
+  visibility failures. No full-suite or route-completion claim. No live jobs remain.
