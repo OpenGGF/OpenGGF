@@ -4490,6 +4490,11 @@ public final class ObjectSolidContactController {
     private void applyObjectLandingState(PlayableEntity player, ObjectInstance instance) {
         var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
         AbstractPlayableSprite playableSprite = player instanceof AbstractPlayableSprite sprite ? sprite : null;
+        // RideObject_SetRide (s2.asm:36016-36030) calls ResetOnFloor_Part2
+        // only on airborne arrival; ordinary standing maintenance does not.
+        // Object-specific pose retention does not bypass that native word write.
+        if (playableSprite != null && player.getAir())
+            com.openggf.sprites.playable.PlayableNativeFloorReset.resetChain(playableSprite);
         boolean wasHurt = playableSprite != null && playableSprite.isHurt();
         int savedDoubleJumpFlag = player.getDoubleJumpFlag();
 

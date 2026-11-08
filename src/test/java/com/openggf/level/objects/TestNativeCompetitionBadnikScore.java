@@ -25,7 +25,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Real badnik destruction routes the existing actor chain award to its owning progress bank. */
+/** Real badnik destruction shares the S2 word and routes awards to the attacker bank. */
 class TestNativeCompetitionBadnikScore {
     @BeforeEach void setup() { TestEnvironment.resetAll(); }
     @AfterEach void cleanup() { SessionManager.clear(); }
@@ -33,7 +33,6 @@ class TestNativeCompetitionBadnikScore {
     @Test
     void eachNativeHumanCreditsItsOwnBank() {
         // Deliberately isolate the attackers: ROM uses one shared chain word.
-        // Interleaved-chain/reset parity needs the session/physics chain owner.
         for (int slot = 0; slot < 2; slot++) {
             var fixture = new Fixture(true);
             assertSame(fixture.roster, NativeCompetitionRoster.from(fixture.world));
@@ -64,6 +63,15 @@ class TestNativeCompetitionBadnikScore {
         assertEquals(100, fixture.fallback.getScore());
         fixture.kill(ordinaryTails);
         assertEquals(300, fixture.fallback.getScore());
+    }
+
+    @Test
+    void nativeAttackersShareTheChainWhileAwardsFollowTheirOwnBanks() {
+        var fixture=new Fixture(true);
+        fixture.kill(fixture.roster.player(0));
+        fixture.kill(fixture.roster.player(1));
+        fixture.kill(fixture.roster.player(0));
+        assertScores(fixture,600,200,0);
     }
 
     private static void assertScores(Fixture fixture, int first, int second, int fallback) {
@@ -97,6 +105,7 @@ class TestNativeCompetitionBadnikScore {
             var services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return objects; }
                 @Override public WorldSession worldSession() { return world; }
+                @Override public com.openggf.game.GameModule gameModule() { return module; }
                 @Override public GameStateManager gameState() { return fallback; }
                 @Override public Camera camera() { return roster.camera(0); }
                 @Override public List<PlayableEntity> sidekicks() { return List.of(roster.player(1)); }

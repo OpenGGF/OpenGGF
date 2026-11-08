@@ -1,6 +1,6 @@
 package com.openggf.game.sonic2.titlecard;
 
-import com.openggf.game.titlecard.TitleCardElement;
+
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -100,8 +100,12 @@ class TestTitleCardManagerNativeExitTiming {
     @Test
     void rewindRestoresTheFinalLockedPassAndItsSameIterationRelease() throws Exception {
         TitleCardManager manager = new TitleCardManager(() -> null, () -> false);
-        setField(manager, "state", TitleCardState.EXIT_BACKGROUND);
-        setField(manager, "leavePass", 25);
+        manager.beginOmittedPresentationLeave(0, 0);
+        manager.completeLockedIteration();
+        for (int pass = 0; pass < 24; pass++) {
+            manager.update();
+            manager.completeLockedIteration();
+        }
         var before = manager.capture();
         manager.update();
         manager.completeLockedIteration();
@@ -119,15 +123,9 @@ class TestTitleCardManagerNativeExitTiming {
     @Test
     void nativeLeftExitUsesTheRomFivePassHandoffAtEveryViewportMargin() throws Exception {
         TitleCardManager manager = new TitleCardManager(() -> null, () -> false);
-        TitleCardElement swoosh = TitleCardElement.createLeftSwoosh();
-        for (int frame = 0; frame < 1000 && !swoosh.isAtTarget(); frame++) {
-            swoosh.updateSlideIn();
-        }
-        swoosh.setEdgeMargin(208);
-
-        setField(manager, "state", TitleCardState.EXIT_LEFT_SWOOSH);
-        setField(manager, "leftSwooshElement", swoosh);
-        setField(manager, "leavePass", 1);
+        manager.beginOmittedPresentationLeave(0, 0);
+        // Native positions do not depend on viewport margins.
+        assertEquals(0xF0, TitleCardNativeDisplayAccess.read(manager).parts().get(5).x());
 
         for (int pass = 1; pass < 5; pass++) {
             manager.update();

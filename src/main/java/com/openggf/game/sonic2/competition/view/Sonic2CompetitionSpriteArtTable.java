@@ -10,7 +10,13 @@ public final class Sonic2CompetitionSpriteArtTable {
     public record Entry(int mappingsAddress, int artTile1P, int widthPixels,
                         int renderFlagsInit, int yRadius, String expectedArtKey, String initCitation) { }
 
-    // Neither Init writes y_radius. Flags 4 select the approximate Y checks, which never read it:
+    // Obj37_Init (s2.asm:25147-25163); Obj25_MapUnc_12382 (s2.asm:25437-25440).
+    // Ring art belongs to RingManager, not ObjectArtProvider's ordinary object sheets.
+    private static final Entry LOST_RING = new Entry(0x12382, 0x26BC, 8, 0x84, 8, "",
+            "Obj37_Init (s2.asm:25147-25163)");
+    static Entry lostRing() { return LOST_RING; }
+
+    // Neither Obj27_Init nor Obj29_Init writes y_radius. Flags 4 select the approximate Y checks, which never read it:
     // BuildSprites_P1_ApproxYCheck (s2.asm:31075-31082), BuildSprites_P2_ApproxYCheck (s2.asm:31212-31219).
     // Zero here is an unused display input, not a claim about inherited SST contents.
     // Obj27_Init (s2.asm:46722-46732); ArtTile_ArtNem_Explosion (s2.constants.asm:2601).
@@ -19,13 +25,13 @@ public final class Sonic2CompetitionSpriteArtTable {
             0x27, new Entry(Sonic2Constants.MAP_UNC_EXPLOSION_ADDR, 0x05A4, 0x0C, 4, 0,
                     ObjectArtKeys.EXPLOSION, "Obj27_Init (s2.asm:46722-46732)"),
             0x29, new Entry(Sonic2Constants.MAP_UNC_POINTS_ADDR, 0x84AC, 8, 4, 0,
-                    ObjectArtKeys.POINTS, "Obj29_Init (s2.asm:24918-24926)"));
+                    ObjectArtKeys.POINTS, "Obj29_Init (s2.asm:24918-24926)"),
+            0x37, LOST_RING);
 
     public record Pending(String name, String initCitation, String reason) { }
 
     /** Qualification blockers until each actual ordinary draw and native SST projection is certified. */
     public static final Map<Integer,Pending> PENDING_ADOPTION = Map.ofEntries(
-            Map.entry(0x37, new Pending("LostRings", "Obj37_Init (s2.asm:25125)", "Lane C owns this object; display adoption deferred")),
             Map.entry(0x3A, new Pending("Capsule results (conservative)", "loc_140AC (s2.asm:27803-27815)", "Placed Obj3E can call Load_EndOfAct; prove native 2P lifetime exclusion before removing this conservative child obligation")),
             Map.entry(0x44, new Pending("Bumper", "Obj44_Init (s2.asm:45088)", "Lane C owns this object; display adoption deferred")),
             Map.entry(0x76, new Pending("SlidingSpikes", "Obj76_Init (s2.asm:55847)", "Lane C has modified this owner relative to60aa1d658; defer to avoid concurrent edits")),

@@ -522,6 +522,11 @@ final class ObjectTouchResponseController {
         boolean usePreviousCollisionResponseList =
                 usePreUpdateState && objectManager.touchUsesPreviousCollisionResponseList();
 
+        var host = objectManager.services().gameModule();
+        // Preserve existing fixture/default and list-driven behavior when no host is bound.
+        boolean requiresObjectRenderBit = host == null || host.getRules() == null
+                || host.getRules().objectInteraction() == null
+                || host.getRules().objectInteraction().touchScanRequiresObjectRenderBit();
         var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(objectManager.services());
         for (ObjectInstance instance : touchObjects) {
             if (ObjectDirectionAccess.suspended(objectManager, instance)) continue;
@@ -542,31 +547,11 @@ final class ObjectTouchResponseController {
                 continue;
             }
 
-            // ROM parity (S1-specific provenance):
-            // S1's ReactToItem (docs/s1disasm/_incObj/sub ReactToItem.asm:26-27)
-            // gates each iteration on `tst.b obRender(a1) / bpl.s .next`. If
-            // obRender bit 7 is clear (object not yet displayed by
-            // DisplaySprite), the entire object is skipped. This covers:
-            //   (a) First-frame objects whose DisplaySprite hasn't run yet
-            //   (b) Objects that were offscreen on the previous frame
-            //   (c) Objects created by higher-slot makers that haven't run yet
-            //
-            // Note: this gate is NOT universal across games. S2's TouchResponse
-            // (docs/s2disasm/s2.asm Touch_Loop ~line 84537) iterates objects
-            // and only checks `collision_flags(a1)` -- there is no render-flag
-            // gate, so an off-screen object with a non-zero collision_flags is
-            // still considered for touch. S3K does not iterate at all: it
-            // pre-builds Collision_response_list during ExecuteObjects and
-            // walks only objects that opted in, so the equivalent of the bit-7
-            // check happens at list-add time, not at touch time.
-            //
-            // The engine's TouchResponseProvider.requiresRenderFlagForTouch()
-            // defaults to true for portability with the S1 behaviour (the most
-            // restrictive of the three). Per-object opt-out is available if a
-            // future S2/S3K-specific object needs to skip the render-flag gate.
-            // Use isOnScreenForTouch() as the engine's equivalent of obRender
-            // bit 7.
+            // Host-wide scan policy precedes any object-local opt-out. A profile
+            // cannot re-enable a gate absent from the host ROM's touch scan.
+            // Previous collision-response-list admission remains its own mechanism.
             if (!usePreviousCollisionResponseList
+                    && requiresObjectRenderBit
                     && touchProfile.requiresRenderFlagForTouch()
                     && instance instanceof AbstractObjectInstance aoi
                     && !objectCallbacks.call(instance, aoi::isOnScreenForTouch)) {

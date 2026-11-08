@@ -41,7 +41,7 @@ class TestSonic2CompetitionObjectDisplay {
             var owner=new Probe(row.getKey());
             var slot=Sonic2CompetitionObjectDisplay.project(owner,art,()->renderer.drawFrameIndex(0,-2,0x10003,true,true,2));
             assertEquals(row.getKey().intValue(),slot.id());
-            assertEquals(7,slot.renderFlags());
+            assertEquals(row.getValue().renderFlagsInit()|3,slot.renderFlags());
             assertEquals(65534,slot.x()); assertEquals(3,slot.y());
             assertEquals(row.getValue().mappingsAddress(),slot.mapping().address());
             assertEquals(0,slot.mapping().frame());

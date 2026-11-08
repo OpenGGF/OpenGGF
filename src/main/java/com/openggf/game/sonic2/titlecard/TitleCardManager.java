@@ -4,7 +4,7 @@ import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.resources.Sonic2RuntimePlcPublisher;
 import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
-import com.openggf.game.titlecard.TitleCardElement;
+
 import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.titlecard.TitleCardLoopTail;
 import com.openggf.game.GameServices;
@@ -24,9 +24,7 @@ import com.openggf.game.titlecard.TitleCardSpriteRenderer;
 import com.openggf.level.Pattern;
 import com.openggf.util.PatternDecompressor;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -85,56 +83,8 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
      * Level_MainLoop (:5091).
      */
     private static final int LEAVE_PRELOOP_PASSES = 1;
-    private static final int LEAVE_LEFT_PASSES = 5;
-    private static final int LEAVE_BOTTOM_PASSES = 11;
-    private static final int LEAVE_BACKGROUND_PASSES = 9;
-    private static final int LEAVE_LOOP_PASSES =
-            LEAVE_LEFT_PASSES + LEAVE_BOTTOM_PASSES + LEAVE_BACKGROUND_PASSES;
-    private static final int LEAVE_PLAYABLE_PASSES =
-            LEAVE_PRELOOP_PASSES + LEAVE_LOOP_PASSES;
-    /**
-     * Leave-loop iteration on which the background piece runs
-     * {@code Obj34_BackgroundOutInit}. {@code Obj34_BottomPartOut} writes its
-     * routine $12 on the bottom piece's eleventh pass (s2.asm:27542-27547), and
-     * {@code TitleCard_Background} sits in an earlier slot than
-     * {@code TitleCard_Bottom} (s2.constants.asm:1116-1118), so the write is
-     * first executed on the following iteration.
-     */
-    private static final int LEAVE_BACKGROUND_OUT_INIT_PASS =
-            LEAVE_LEFT_PASSES + LEAVE_BOTTOM_PASSES + 1;
     /** The title-card VBlank {@code Level_TtlCard} waits once more after its loop (s2.asm:4914-4926). */
     private static final int POST_ARRIVAL_VBLANKS = 1;
-
-    /**
-     * Text wait duration in frames before sliding out.
-     * From disassembly: $2D = 45 frames (lines 5066-5072 in s2.asm).
-     * This wait starts AFTER the background has fully exited.
-     */
-    private static final int TEXT_WAIT_DURATION = 0x2D;  // 45 frames
-
-    /**
-     * X position the zone-name piece holds while the locked title-card loop is
-     * still running: {@code spriteScreenPositionXCentered(0)} = 128 + 320/2.
-     * docs/s2disasm/s2.asm:27369, docs/s2disasm/s2.macros.asm:276-280
-     */
-    private static final int EXIT_TAIL_ZONE_NAME_X_TARGET = 0x120;
-
-    /**
-     * X position the zone-name piece returns to on the way out:
-     * {@code spriteScreenPositionX(screen_width+128)} = 128 + 320 + 128.
-     * docs/s2disasm/s2.asm:27369
-     */
-    private static final int EXIT_TAIL_ZONE_NAME_X_SOURCE = 0x240;
-
-    /** Obj34_WaitAndGoAway slide speed: {@code moveq #$20,d0}. s2.asm:27615 */
-    private static final int EXIT_TAIL_SLIDE_SPEED = 0x20;
-
-    /**
-     * Far-off-screen cut-off: Obj34_WaitAndGoAway stops trying to display a
-     * piece past {@code #$200} and goes straight to the art load + delete.
-     * docs/s2disasm/s2.asm:27622-27625
-     */
-    private static final int EXIT_TAIL_OFFSCREEN_LIMIT = 0x200;
 
     /** Native game width (320-pixel frame everything is authored for). */
     private static final int SCREEN_WIDTH = 320;
@@ -282,26 +232,13 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
     /** Remaining LoadZoneTiles {@code dbf} iterations, one VBlank each (s2.asm:6519). */
     private int zoneTileUploadFramesLeft = 0;
 
-    /**
-     * Flag to delay TEXT_EXIT -> COMPLETE transition by one frame.
-     * This ensures elements are drawn at their final positions before
-     * the state transitions, matching the original game's behavior where
-     * DisplaySprite is called before DeleteObject.
-     */
-    private boolean textExitTransitionPending = false;
-
     // Current zone/act
     private int currentZone = 0;
     private int currentAct = 0;
 
-    // Elements
-    private final List<TitleCardElement> elements = new ArrayList<>();
-    private TitleCardElement zoneNameElement;
-    private TitleCardElement zoneTextElement;
-    private TitleCardElement actNumberElement;
-    private TitleCardElement bottomBarElement;
-    private TitleCardElement leftSwooshElement;
-    private TitleCardElement blueBackgroundElement;
+    // Sole Obj34 state; projections do not retain animation positions.
+    Obj34 obj34;
+    private boolean presentationOmitted;
 
     // Unified VRAM-aligned pattern array
     // Index = VRAM address - VRAM_BASE
@@ -329,11 +266,6 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
 
     /** Whether the gameplay-phase Obj34_WaitAndGoAway tail is running. */
     private boolean exitTailActive;
-    /** anim_frame_duration of the zone-name piece during that tail. */
-    private int exitTailWaitFrames;
-    /** x_pixel of the zone-name piece during that tail. */
-    private int exitTailZoneNameX;
-
     /** Immutable live-title state used by the gameplay rewind registry. */
     public record Snapshot(
             TitleCardState state,
@@ -342,25 +274,23 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
             int currentZone,
             int currentAct,
             int zoneTileUploadFramesLeft,
-            boolean textExitTransitionPending,
             boolean artLoaded,
             boolean artCached,
             boolean exitPlcsQueued,
             int lastLoadedZone,
             int leavePass,
             boolean exitTailActive,
-            int exitTailWaitFrames,
-            int exitTailZoneNameX,
+            boolean presentationOmitted,
             Pattern[] combinedPatterns,
             Pattern[] titleCard2RawPatterns,
             Pattern[] titleCardBasePatterns,
-            TitleCardElement.Snapshot[] elements) {
+            Obj34.Snapshot obj34) {
         public Snapshot {
             Objects.requireNonNull(state, "state");
             combinedPatterns = copy(combinedPatterns);
             titleCard2RawPatterns = copy(titleCard2RawPatterns);
             titleCardBasePatterns = copy(titleCardBasePatterns);
-            elements = elements == null ? new TitleCardElement.Snapshot[0] : elements.clone();
+
         }
 
         @Override
@@ -376,11 +306,6 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         @Override
         public Pattern[] titleCardBasePatterns() {
             return copy(titleCardBasePatterns);
-        }
-
-        @Override
-        public TitleCardElement.Snapshot[] elements() {
-            return elements.clone();
         }
 
         private static Pattern[] copy(Pattern[] source) {
@@ -409,16 +334,13 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
 
     @Override
     public Snapshot capture() {
-        TitleCardElement.Snapshot[] elementSnapshots = elements.stream()
-                .map(TitleCardElement::capture)
-                .toArray(TitleCardElement.Snapshot[]::new);
         return new Snapshot(
                 state, stateTimer, frameCounter, currentZone, currentAct,
-                zoneTileUploadFramesLeft, textExitTransitionPending,
+                zoneTileUploadFramesLeft,
                 artLoaded, artCached, exitPlcsQueued, lastLoadedZone,
-                leavePass, exitTailActive, exitTailWaitFrames, exitTailZoneNameX,
+                leavePass, exitTailActive, presentationOmitted,
                 combinedPatterns, titleCard2RawPatterns, titleCardBasePatterns,
-                elementSnapshots);
+                obj34 == null ? null : obj34.capture());
     }
 
     @Override
@@ -430,40 +352,19 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         currentZone = snapshot.currentZone();
         currentAct = snapshot.currentAct();
         zoneTileUploadFramesLeft = snapshot.zoneTileUploadFramesLeft();
-        textExitTransitionPending = snapshot.textExitTransitionPending();
         artLoaded = snapshot.artLoaded();
         artCached = snapshot.artCached();
         exitPlcsQueued = snapshot.exitPlcsQueued();
         lastLoadedZone = snapshot.lastLoadedZone();
         leavePass = snapshot.leavePass();
         exitTailActive = snapshot.exitTailActive();
-        exitTailWaitFrames = snapshot.exitTailWaitFrames();
-        exitTailZoneNameX = snapshot.exitTailZoneNameX();
+        presentationOmitted = snapshot.presentationOmitted();
         combinedPatterns = snapshot.combinedPatterns();
         titleCard2RawPatterns = snapshot.titleCard2RawPatterns();
         titleCardBasePatterns = snapshot.titleCardBasePatterns();
 
-        TitleCardElement.Snapshot[] elementSnapshots = snapshot.elements();
-        if (elementSnapshots.length == 0) {
-            elements.clear();
-            zoneNameElement = null;
-            zoneTextElement = null;
-            actNumberElement = null;
-            bottomBarElement = null;
-            leftSwooshElement = null;
-            blueBackgroundElement = null;
-            return;
-        }
-
-        createElements();
-        if (elementSnapshots.length != elements.size()) {
-            throw new IllegalStateException(
-                    "S2 title-card rewind element count mismatch: expected "
-                            + elements.size() + ", actual " + elementSnapshots.length);
-        }
-        for (int i = 0; i < elementSnapshots.length; i++) {
-            elements.get(i).restore(elementSnapshots[i]);
-        }
+        obj34 = snapshot.obj34() == null ? null : new Obj34();
+        if (obj34 != null) obj34.restore(snapshot.obj34());
     }
 
     @Override
@@ -494,10 +395,9 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         this.stateTimer = 0;
         this.frameCounter = 0;
         this.zoneTileUploadFramesLeft = 0;
-        this.textExitTransitionPending = false;
 
         if (isSkippedModZone(zoneIndex)) {
-            elements.clear();
+            obj34 = null;
             state = TitleCardState.COMPLETE;
             LOGGER.info("Skipping unsupported title card for mod zone " + zoneIndex);
             return;
@@ -519,50 +419,30 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         // Reset art cache to ensure fresh GPU upload
         artCached = false;
 
-        // Create elements for this zone/act
+        presentationOmitted = false;
         createElements();
-
-        LOGGER.info("Title card initialized for zone " + zoneIndex + " act " + actIndex);
     }
 
-    /**
-     * Creates the animated elements for the current zone/act.
-     */
     private void createElements() {
-        elements.clear();
-
-        // Create all elements
-        zoneNameElement = TitleCardElement.createZoneName(currentZone);
-        zoneTextElement = TitleCardElement.createZoneText();
-        bottomBarElement = TitleCardElement.createBottomBar();
-        leftSwooshElement = TitleCardElement.createLeftSwoosh();
-        blueBackgroundElement = TitleCardElement.createBlueBackground();
-
-        elements.add(zoneNameElement);
-        elements.add(zoneTextElement);
-        elements.add(bottomBarElement);
-        elements.add(leftSwooshElement);
-        elements.add(blueBackgroundElement);  // Blue background animates with other elements
-
-        // Only add act number for multi-act zones
+        obj34 = new Obj34();
         var session = SessionManager.getCurrentWorldSession();
-        var module = session != null ? session.getGameModule() : null;
-        if (!TitleCardMappings.isSingleActZone(currentZone)
-                && (module == null || module.showsTitleCardActNumber(currentZone, currentAct))) {
-            actNumberElement = TitleCardElement.createActNumber(currentAct);
-            elements.add(actNumberElement);
-        } else {
-            actNumberElement = null;
-        }
+        var module = session == null ? null : session.getGameModule();
+        boolean showAct = !TitleCardMappings.isSingleActZone(currentZone)
+                && (module == null || module.showsTitleCardActNumber(currentZone, currentAct));
+        // The native Competition world owns the two-player lifecycle capability.
+        // Read it only at initialization; rewind retains the mode with Obj34.
+        boolean twoPlayer = module != null && module.getGameService(
+                com.openggf.game.sonic2.competition.lifecycle.Sonic2CompetitionLifecycle.class) != null;
+        obj34.init(nativeZoneFrame(), showAct ? TitleCardMappings.getActFrame(currentAct) : -1, twoPlayer);
+    }
 
-        // Extend each element's off-screen entry/exit endpoint so the composition
-        // slides fully on/off a wider-than-320 viewport. Zero at native 320 -
-        // byte-identical. Without this, the centred (xOffset-shifted) elements and
-        // the red/yellow blocks that follow them never clear the side bands.
-        int edgeMargin = Math.max(0, viewportWidth() - SCREEN_WIDTH);
-        for (TitleCardElement element : elements) {
-            element.setEdgeMargin(edgeMargin);
-        }
+    /** Current_Zone byte, MapUnc_TitleCards zone order (s2.asm:28560-28577). */
+    private int nativeZoneFrame() {
+        return switch (currentZone) {
+            case 1 -> 13; case 2 -> 15; case 3 -> 12; case 4 -> 7;
+            case 5 -> 11; case 6 -> 10; case 7 -> currentAct==2 ? 5 : 4;
+            case 8 -> 16; case 9 -> 6; case 10 -> 14; default -> 0;
+        };
     }
 
     /**
@@ -752,109 +632,42 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
     public void update() {
         frameCounter++;
         stateTimer++;
-
-        if (exitTailActive) {
-            updateOmittedPresentationExitTail();
+        if (obj34 != null) obj34.consumeFills(); // Vint_TitleCard, before RunObjects.
+        if (exitTailActive || state == TitleCardState.TEXT_WAIT || state == TitleCardState.TEXT_EXIT) {
+            if (obj34 != null && obj34.tick()) queueExitPlcs();
+            if (obj34 == null || Arrays.stream(obj34.parts).noneMatch(part -> part.alive)) {
+                exitTailActive=false;state=TitleCardState.COMPLETE;
+            } else if (obj34.parts[Obj34.NAME].duration==0) state=TitleCardState.TEXT_EXIT;
             return;
         }
-
         if (leavePass > 0) {
             leavePass++;
-            if (leavePass > LEAVE_PLAYABLE_PASSES) {
-                // The leave loop's exit condition has been met, so Level:
-                // falls through to :5068-5080 and Level_StartGame.
+            if (obj34 != null && !obj34.parts[Obj34.BACKGROUND].alive) {
                 enterTextWait();
                 return;
             }
         }
-
         switch (state) {
-            case SLIDE_IN -> updateSlideIn();
-            case DISPLAY -> updateDisplay();
+            case SLIDE_IN, DISPLAY -> {
+                if (obj34 != null) obj34.tick();
+                if (obj34 == null || obj34.parts[Obj34.NAME].x==obj34.parts[Obj34.NAME].target) {
+                    if (!plcQueueBusy()) enterZoneTileUpload();
+                    else state=TitleCardState.DISPLAY;
+                }
+            }
             case ZONE_TILE_UPLOAD -> updateZoneTileUpload();
-            case EXIT_LEFT_SWOOSH -> updateExitLeftSwoosh();
-            case EXIT_BOTTOM_BAR -> updateExitBottomBar();
-            case EXIT_BACKGROUND -> updateExitBackground();
-            // The overlay states below animate the pieces for display; the ROM
-            // routine that owns when their art loads fire runs alongside them.
-            case TEXT_WAIT -> {
-                if (advanceZoneNamePieceTail()) {
-                    queueExitPlcs();
+            case EXIT_LEFT_SWOOSH, EXIT_BOTTOM_BAR, EXIT_BACKGROUND -> {
+                if (obj34 != null) {
+                    obj34.tick();
+                    if (!obj34.parts[Obj34.BOTTOM].alive) {
+                        if (state != TitleCardState.EXIT_BACKGROUND) stateTimer = 0;
+                        state = TitleCardState.EXIT_BACKGROUND;
+                    } else if (!obj34.parts[Obj34.LEFT].alive) {
+                        state = TitleCardState.EXIT_BOTTOM_BAR;
+                    }
                 }
-                updateTextWait();
             }
-            case TEXT_EXIT -> {
-                if (advanceZoneNamePieceTail()) {
-                    queueExitPlcs();
-                }
-                updateTextExit();
-            }
-            case COMPLETE -> {}
-        }
-    }
-
-    private void updateSlideIn() {
-        // Update all elements
-        for (TitleCardElement element : elements) {
-            element.updateSlideIn();
-        }
-
-        // Level_TtlCard's re-loop test names one piece and one piece only:
-        // it reads (TitleCard_ZoneName+x_pos) and compares it against that
-        // object's titlecard_x_target (docs/s2disasm/s2.asm:4920-4921). The
-        // other pieces keep moving under RunObjects while the loop spins, and
-        // the loop never waits on them. Testing every element instead held the
-        // card for the LAST piece to arrive: "ZONE" and the act number carry
-        // anim_frame_duration $1C against the zone name's $1B
-        // (Obj34_TitleCardData, :27369-27371), so they land one iteration
-        // later than the piece the ROM actually watches.
-        //
-        // The zone name lands on the same iteration in both models, but by two
-        // offsetting routes worth naming. Obj34_Wait skips the move while the
-        // post-decrement duration is non-zero and moves on the pass that takes
-        // it to zero (:27380-27387), i.e. $1B gives 26 skips, not 27; against
-        // that, Obj34_Init writes the zone-name child over the parent's own
-        // slot (:27328-27346), so RunObjects has already passed it and it
-        // misses the creation pass. 26 skips from the second iteration and the
-        // engine's 27 from the first both put the eighteenth and last 16px
-        // step (Obj34_MoveTowardsTargetPosition, :27493-27499) on iteration 45.
-        if (zoneNameElement != null && zoneNameElement.isAtTarget()) {
-            // Both halves of the re-loop test live in the SAME iteration: the
-            // x_pos compare falls through to tst.l (Plc_Buffer).w and only a
-            // failure of either branches back to Level_TtlCard (:4919-4924).
-            // So an already-drained queue leaves the loop on the very
-            // iteration the zone name arrives -- entering DISPLAY to discover
-            // that on the next iteration spends a frame the ROM does not.
-            // DISPLAY still owns the case the ROM spends real iterations on:
-            // the piece is parked at its target while the cue drains.
-            if (!plcQueueBusy()) {
-                enterZoneTileUpload();
-                return;
-            }
-            state = TitleCardState.DISPLAY;
-            stateTimer = 0;
-            LOGGER.fine("Title card entered DISPLAY state at frame " + frameCounter);
-        }
-    }
-
-    /**
-     * Second half of Level_TtlCard's re-loop test (docs/s2disasm/s2.asm:
-     * 4923-4924): {@code tst.l (Plc_Buffer).w / bne.s Level_TtlCard} keeps the
-     * card locked until the queued pattern load cue has fully drained. Each
-     * iteration of that loop runs one {@code VintID_TitleCard} VBlank, whose
-     * {@code Vint_TitleCard} tail is {@code bra.w ProcessDPLC}
-     * (docs/s2disasm/s2.asm:1071), and {@code ProcessDPLC} decompresses exactly
-     * six patterns per VBlank (docs/s2disasm/s2.asm:2202-2213,
-     * {@code move.w #6,(Plc_FramePatternsLeft).w}). The card's hold is
-     * therefore outstanding patterns divided by six per frame -- a quantity the
-     * PLC queue already tracks -- not a wall-clock constant. Asking the queue
-     * whether it is still busy models the ROM's own test directly and at the
-     * ROM's own rate; the prior {@code DISPLAY_HOLD_DURATION = 60} stand-in for
-     * "hardware decompression time" was a fitted number with no ROM source.
-     */
-    private void updateDisplay() {
-        if (!plcQueueBusy()) {
-            enterZoneTileUpload();
+            default -> { }
         }
     }
 
@@ -932,12 +745,10 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         // RunObjects dispatches the players once, but the leave flags at
         // :5056-5058 are only armed after it, so no leave piece moves yet.
         leavePass = LEAVE_PRELOOP_PASSES;
-        // Initialize left swoosh exit - from disassembly line 5054:
-        // move.w #$A,(TitleCard_Left+titlecard_location).w
-        if (leftSwooshElement != null) {
-            leftSwooshElement.startExit();
-        }
-        LOGGER.fine("Title card entered EXIT_LEFT_SWOOSH state at frame " + frameCounter);
+        if (obj34 == null) { createElements(); obj34.settle(); }
+        // The load's leading object pass finishes arrival before leave is armed.
+        obj34.tick();
+        obj34.armLeave();
     }
 
     /** Models {@code tst.l (Plc_Buffer).w} (docs/s2disasm/s2.asm:4923). */
@@ -950,36 +761,6 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         return plcService != null && plcService.isBusy();
     }
 
-    /**
-     * Exit phase 1: Left swoosh (red stripes) slides out.
-     * From disassembly: Obj34_LeftPartOut (routine $E)
-     * When complete, triggers bottom bar exit.
-     */
-    private void updateExitLeftSwoosh() {
-        if (leftSwooshElement != null) {
-            leftSwooshElement.updateSlideOut();
-        }
-        // Obj34_LeftPartOut hands the bottom piece routine $10 on its fifth
-        // pass, whatever the overlay's own travel has reached
-        // (docs/s2disasm/s2.asm:27518-27540).
-        if (leaveLoopPass() >= LEAVE_LEFT_PASSES) {
-            state = TitleCardState.EXIT_BOTTOM_BAR;
-            stateTimer = 0;
-            if (bottomBarElement != null) {
-                bottomBarElement.startExit();
-            }
-            LOGGER.fine("Title card entered EXIT_BOTTOM_BAR state at frame " + frameCounter);
-        }
-    }
-
-    /**
-     * Iterations of the s2.asm:5060-5066 leave loop completed so far, i.e. the
-     * leave-sequence pass count less the leading s2.asm:5006 pass.
-     */
-    private int leaveLoopPass() {
-        return leavePass - LEAVE_PRELOOP_PASSES;
-    }
-
     private void enterTextWait() {
         state = TitleCardState.TEXT_WAIT;
         stateTimer = 0;
@@ -987,8 +768,7 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         // s2.asm:5066-5080 writes routine $16 and anim_frame_duration $2D to
         // the surviving pieces here, after the leave loop and before
         // Level_MainLoop, whether or not the card was displayed.
-        exitTailWaitFrames = TEXT_WAIT_DURATION;
-        exitTailZoneNameX = EXIT_TAIL_ZONE_NAME_X_TARGET;
+        if (obj34 != null) obj34.armTail();
         LOGGER.fine("Title card entered TEXT_WAIT state at frame " + frameCounter);
     }
 
@@ -998,140 +778,8 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         // RunPLC_RAM, then clears Control_Locked and enters Level_StartGame
         // without another WaitForVint (s2.asm:5060-5080; KiS2:5374-5405).
         // Keep all 26 player/object passes, including this final locked pass.
-        if (leavePass == LEAVE_PLAYABLE_PASSES) {
+        if (leavePass > 0 && obj34 != null && !obj34.parts[Obj34.BACKGROUND].alive) {
             enterTextWait();
-        }
-    }
-
-    /**
-     * Exit phase 2: Bottom bar slides out.
-     * From disassembly: Obj34_BottomPartOut (routine $10)
-     * When complete, triggers background exit.
-     */
-    private void updateExitBottomBar() {
-        if (bottomBarElement != null) {
-            bottomBarElement.updateSlideOut();
-        }
-        // Obj34_BottomPartOut hands the background routine $12 on the pass that
-        // reads titlecard_location $28, its eleventh
-        // (docs/s2disasm/s2.asm:27542-27551).
-        if (leaveLoopPass() >= LEAVE_LEFT_PASSES + LEAVE_BOTTOM_PASSES) {
-            state = TitleCardState.EXIT_BACKGROUND;
-            stateTimer = 0;
-            if (blueBackgroundElement != null) {
-                blueBackgroundElement.startExit();
-            }
-            LOGGER.fine("Title card entered EXIT_BACKGROUND state at frame " + frameCounter);
-        }
-    }
-
-    /**
-     * Exit phase 3: Background scrolls out.
-     * From disassembly: Obj34_BackgroundOut (routine $14)
-     * When complete, starts the text wait period.
-     *
-     * <p>In the original game, the background object is deleted when its internal
-     * location counter reaches -$30. There is <em>no</em> extra V-blank between
-     * that deletion and the loop falling through: the leave loop at
-     * docs/s2disasm/s2.asm:5060-5066 does
-     * {@code move.b #VintID_TitleCard,(Vint_routine).w} / {@code bsr.w WaitForVint}
-     * (:5060-5061), then {@code jsr (RunObjects).l} (:5062) -- which is the pass
-     * that deletes {@code TitleCard_Background} -- and then reads the cleared id
-     * three instructions later, {@code tst.b (TitleCard_Background+id).w} /
-     * {@code bne.s -} (:5065-5066), in the <em>same</em> iteration. The fall-through
-     * at :5068 runs on through {@code Level_StartGame} (:5084) into
-     * {@code Level_MainLoop}, whose own {@code bsr.w WaitForVint} (:5089-5091) is
-     * the next V-blank, so no V-blank is spent between the delete and the
-     * fall-through. The deleting iteration is therefore both the last leave-loop
-     * pass and the fall-through row -- a previous version of this javadoc claimed a
-     * 1-frame delay here, and the disassembly refutes it.
-     *
-     * <p>We also verify the background is completely off-screen (blueBottom <= 0)
-     * before transitioning, to ensure no visual remnant remains.
-     */
-    private void updateExitBackground() {
-        if (blueBackgroundElement != null) {
-            blueBackgroundElement.updateSlideOut();
-        }
-        // Obj34_BackgroundOut deletes itself on the pass that computes -$30,
-        // its ninth (docs/s2disasm/s2.asm:27587-27604). The loop's
-        // tst.b (TitleCard_Background+id).w (:5065) reads the cleared id in the
-        // SAME iteration as the RunObjects call that deleted it (:5062), so that
-        // iteration is both the last pass and the fall-through row -- it is the
-        // 26th and final pass counted by LEAVE_PLAYABLE_PASSES, not a pass
-        // followed by a separate fall-through frame.
-    }
-
-    /**
-     * Exit phase 4: Text waits for 45 frames ($2D) before exiting.
-     * From disassembly: Obj34_WaitAndGoAway (routine $16)
-     * The level is visible behind the text during this phase.
-     *
-     * <p>Original behavior: anim_frame_duration starts at $2D (45), decrements each
-     * frame, and exits when it reaches 0. This means 45 frames of display before
-     * the exit animation starts.
-     *
-     * <p>Our stateTimer is incremented before the check, so we use > instead of >=
-     * to ensure exactly 45 frames of waiting (stateTimer values 1-45, transition
-     * when stateTimer becomes 46).
-     */
-    private void updateTextWait() {
-        if (stateTimer > TEXT_WAIT_DURATION) {
-            state = TitleCardState.TEXT_EXIT;
-            stateTimer = 0;
-            // Start text element exits
-            if (zoneNameElement != null) zoneNameElement.startExit();
-            if (zoneTextElement != null) zoneTextElement.startExit();
-            if (actNumberElement != null) actNumberElement.startExit();
-            LOGGER.fine("Title card entered TEXT_EXIT state at frame " + frameCounter);
-        }
-    }
-
-    /**
-     * Exit phase 5: Text elements slide out.
-     * From disassembly: Obj34_WaitAndGoAway continues after wait expires.
-     *
-     * <p>The original game's behavior is:
-     * <ol>
-     *   <li>Move sprite toward titlecard_x_source at 32 pixels/frame</li>
-     *   <li>Display sprite via DisplaySprite</li>
-     *   <li>Delete object when x == titlecard_x_source OR x > $200</li>
-     * </ol>
-     *
-     * <p>This means the sprite is displayed at its final position BEFORE deletion.
-     * To match this, we delay the COMPLETE transition by one frame after all
-     * elements finish their animation, ensuring they're drawn at their final
-     * (off-screen) positions.
-     */
-    private void updateTextExit() {
-        // Check if we should transition (delayed by one frame)
-        if (textExitTransitionPending) {
-            state = TitleCardState.COMPLETE;
-            stateTimer = 0;
-            textExitTransitionPending = false;
-            LOGGER.fine("Title card COMPLETE at frame " + frameCounter);
-            return;
-        }
-
-        // Update text elements
-        if (zoneNameElement != null) zoneNameElement.updateSlideOut();
-        if (zoneTextElement != null) zoneTextElement.updateSlideOut();
-        if (actNumberElement != null) actNumberElement.updateSlideOut();
-
-        // Check if all text elements have exited
-        boolean zoneNameExited = (zoneNameElement == null || zoneNameElement.hasExited());
-        boolean zoneTextExited = (zoneTextElement == null || zoneTextElement.hasExited());
-        boolean actNumberExited = (actNumberElement == null || actNumberElement.hasExited());
-
-        // The two art loads are owned by advanceZoneNamePieceTail(), which
-        // models Obj34_WaitAndGoAway's own x_pixel test rather than this
-        // overlay element's viewport-relative exit.
-
-        if (zoneNameExited && zoneTextExited && actNumberExited) {
-            // Mark transition as pending - actual transition happens next frame
-            // This ensures elements are drawn at their final positions first
-            textExitTransitionPending = true;
-            LOGGER.fine("Title card text exit complete, transition pending at frame " + frameCounter);
         }
     }
 
@@ -1143,12 +791,15 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         reset();
         currentZone = zoneIndex;
         currentAct = actIndex;
+        presentationOmitted = true;
+        createElements();
+        obj34.settle();
         enterLeftSwooshExit();
     }
 
     /** Obj34_BackgroundOutInit owns one DeformBgLayer call before its first out pass. */
     public boolean isFirstBackgroundLeavePass() {
-        return state == TitleCardState.EXIT_BACKGROUND && stateTimer == 0;
+        return obj34 != null && obj34.parts[Obj34.BACKGROUND].routine == 18;
     }
 
     /**
@@ -1165,7 +816,7 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
      * piece leaves is where the game loads the standard-water and per-zone
      * animal art (s2.asm:27605-27637).
      *
-     * <p>Only the zone-name piece is modelled: {@code
+     * <p>Only the zone-name piece publishes art: {@code
      * Obj34_LoadStandardWaterAndAnimalArt} gates the two {@code LoadPLC} calls
      * on {@code cmpa.w #TitleCard_ZoneName,a0} (s2.asm:27630), so the other
      * pieces only delete themselves.
@@ -1178,72 +829,11 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         currentAct = actIndex;
         exitTailActive = true;
         exitPlcsQueued = false;
-        exitTailWaitFrames = TEXT_WAIT_DURATION;
-        exitTailZoneNameX = EXIT_TAIL_ZONE_NAME_X_TARGET;
-        // The presentation is omitted, so no piece may render; the tail is an
-        // object lifetime, not an overlay.
-        elements.clear();
-        zoneNameElement = null;
-        zoneTextElement = null;
-        actNumberElement = null;
-        bottomBarElement = null;
-        leftSwooshElement = null;
-        blueBackgroundElement = null;
-        textExitTransitionPending = false;
-        stateTimer = 0;
-        // TEXT_WAIT is the phase the native game is in here: control released,
-        // title-card game-mode bit cleared, pieces still alive. It also keeps
-        // the level loop dispatching update() each frame.
-        state = TitleCardState.TEXT_WAIT;
-    }
-
-    /**
-     * One gameplay frame of {@code Obj34_WaitAndGoAway} for the zone-name piece.
-     * docs/s2disasm/s2.asm:27605-27637
-     */
-    private void updateOmittedPresentationExitTail() {
-        if (advanceZoneNamePieceTail()) {
-            finishOmittedPresentationExitTail();
-        }
-    }
-
-    /**
-     * One gameplay pass of {@code Obj34_WaitAndGoAway} for the zone-name piece,
-     * returning true on the pass that reaches {@code
-     * Obj34_LoadStandardWaterAndAnimalArt} (docs/s2disasm/s2.asm:27605-27637).
-     *
-     * <p>This is the single owner of that routine's timing. {@code Level}
-     * arms it identically whether or not the card was displayed: the routine
-     * byte and {@code anim_frame_duration = $2D} are written after the leave
-     * loop and immediately before {@code Level_MainLoop}
-     * (docs/s2disasm/s2.asm:5066-5080), so the count always starts on the
-     * first main-loop iteration. The presentation path previously decided the
-     * same event from its overlay elements' viewport-relative {@code
-     * hasExited()} plus a state-transition pass that consumed a frame without
-     * moving the piece, which fired the two art loads two frames late.
-     */
-    private boolean advanceZoneNamePieceTail() {
-        // tst.w anim_frame_duration(a0) / subq.w #1 / bra DisplaySprite
-        if (exitTailWaitFrames > 0) {
-            exitTailWaitFrames--;
-            return false;
-        }
-        // cmp.w titlecard_x_source(a0),d1 / beq Obj34_LoadStandardWaterAndAnimalArt
-        if (exitTailZoneNameX == EXIT_TAIL_ZONE_NAME_X_SOURCE) {
-            return true;
-        }
-        // sub.w d0,x_pixel(a0) with d0 negated while below the source position
-        exitTailZoneNameX += EXIT_TAIL_SLIDE_SPEED;
-        // cmpi.w #$200,x_pixel(a0) / bhi Obj34_LoadStandardWaterAndAnimalArt
-        return exitTailZoneNameX == EXIT_TAIL_ZONE_NAME_X_SOURCE
-                || exitTailZoneNameX > EXIT_TAIL_OFFSCREEN_LIMIT;
-    }
-
-    private void finishOmittedPresentationExitTail() {
-        queueExitPlcs();
-        exitTailActive = false;
-        state = TitleCardState.COMPLETE;
-        stateTimer = 0;
+        presentationOmitted = true;
+        createElements();
+        obj34.settleAfterLeave();
+        stateTimer=0;
+        state=TitleCardState.TEXT_WAIT;
     }
 
     private void queueExitPlcs() {
@@ -1290,169 +880,53 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
      * Renders the title card.
      * Call this from Engine.draw() when in TITLE_CARD mode.
      */
+    /** Pure projection from the ROM's zone-ordered mapping table to shared art mappings. */
+    private static int overlayNameFrame(int nativeFrame) {
+        return switch (nativeFrame) {
+            case 4, 5 -> TitleCardMappings.FRAME_MTZ;
+            case 6 -> TitleCardMappings.FRAME_WFZ;
+            case 7 -> TitleCardMappings.FRAME_HTZ;
+            case 8 -> TitleCardMappings.FRAME_HPZ;
+            case 10 -> TitleCardMappings.FRAME_OOZ;
+            case 11 -> TitleCardMappings.FRAME_MCZ;
+            case 12 -> TitleCardMappings.FRAME_CNZ;
+            case 13 -> TitleCardMappings.FRAME_CPZ;
+            case 14 -> TitleCardMappings.FRAME_DEZ;
+            case 15 -> TitleCardMappings.FRAME_ARZ;
+            case 16 -> TitleCardMappings.FRAME_SCZ;
+            default -> TitleCardMappings.FRAME_EHZ;
+        };
+    }
+
     public void draw() {
+        if (presentationOmitted || obj34 == null) return;
         ensureArtCached();
-
         GraphicsManager graphicsManager = GameServices.graphics();
-        if (graphicsManager == null) {
-            return;
-        }
-
-        // Draw black background during SLIDE_IN state only.
-        // This covers the level graphics until the title card elements are in place.
-        // Once exit begins (EXIT_LEFT_SWOOSH and beyond), the level becomes visible
-        // behind the remaining title card elements, matching the original behavior.
+        if (graphicsManager == null || combinedPatterns == null) return;
         if (state == TitleCardState.SLIDE_IN) {
-            // Span the full viewport so no level bleeds through on wider screens.
-            // xOffset()==0 at native 320 - byte-identical.
-            graphicsManager.registerCommand(new GLCommand(
-                    GLCommand.CommandType.RECTI,
-                    -1,
-                    0.0f, 0.0f, 0.0f,  // Black
-                    0, 0, viewportWidth(), SCREEN_HEIGHT
-            ));
+            graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.RECTI,
+                    -1, 0f, 0f, 0f, 0, 0, viewportWidth(), SCREEN_HEIGHT));
         }
-
-        // Draw background plane elements (yellow bottom, red left)
-        // These are drawn before sprites, similar to how the VDP draws planes behind sprites
-        drawBackgroundPlanes(graphicsManager);
-
-        // Begin pattern batch for sprite rendering
         graphicsManager.beginPatternBatch();
-
-        // Draw sprites with correct layering:
-        // Red triangles first (lowest priority - behind text)
-        if (leftSwooshElement != null && leftSwooshElement.isVisible()) {
-            renderElement(graphicsManager, leftSwooshElement);
+        for (int y=0;y<28;y++) for(int x=0;x<40;x++) {
+            int word=obj34.planeWord(0,x,y);
+            if(word==0) continue;
+            int id=PATTERN_BASE+(word&0x7ff)-VRAM_BASE;
+            graphicsManager.renderPatternWithId(id,
+                    new com.openggf.level.PatternDesc((word&0xf800)|(id&0x7ff)),
+                    x*8+xOffset(),y*8);
         }
-
-        // Then other elements (zone name, ZONE, act number, bottom bar)
-        for (TitleCardElement element : elements) {
-            if (element != leftSwooshElement && element.isVisible()) {
-                renderElement(graphicsManager, element);
+        // Native sprite priority is slot order: name, ZONE, act, bottom, left.
+        // Reverse submission keeps earlier native sprites in front where they overlap.
+        for(int i=obj34.publishedParts.size()-1;i>=0;i--) {
+            Obj34.PartState part=obj34.publishedParts.get(i);
+            if(i==Obj34.BACKGROUND || !part.alive() || !part.displayed()) continue;
+            for(TitleCardMappings.SpritePiece piece:TitleCardMappings.getFrame(i==Obj34.NAME ? overlayNameFrame(part.frame()) : part.frame())) {
+                TitleCardSpriteRenderer.renderSpritePiece(graphicsManager,piece,
+                        part.x()-128+xOffset(),part.y()-128,VRAM_BASE,PATTERN_BASE,combinedPatterns.length);
             }
         }
-
         graphicsManager.flushPatternBatch();
-    }
-
-    /**
-     * Draws the background plane elements (colored rectangles).
-     *
-     * In the original game, the title card uses plane tiles to draw:
-     * - Blue background (tile $5A) - handled by Engine.java glClearColor
-     * - Yellow bottom block (tile $5C) - from Y=160 to bottom of screen
-     * - Red left block (tile $58) - from X=0 to swoosh position, full height
-     *
-     * The yellow bar slides in from the right and slides out to the right.
-     * The red block follows the left swoosh animation.
-     */
-    private void drawBackgroundPlanes(GraphicsManager graphicsManager) {
-        int vw = viewportWidth();
-        int xOff = xOffset();
-
-        // Draw blue top block - covers Y=0 to Y=152 (above yellow bar).
-        // Spans the full viewport width so no level bleeds through on wider screens.
-        // xOff==0 at native 320 - byte-identical.
-        if (blueBackgroundElement != null && blueBackgroundElement.isVisible()) {
-            int blueY = blueBackgroundElement.getCurrentY();
-            int blueTop = blueY;
-            int blueBottom = blueY + 152;  // Blue box is 152 pixels tall
-
-            // Only draw if visible on screen
-            if (blueBottom > 0) {
-                // Blue color RGB(48, 87, 206) from original title card
-                graphicsManager.registerCommand(new GLCommand(
-                        GLCommand.CommandType.RECTI,
-                        -1,
-                        48.0f/255.0f, 87.0f/255.0f, 206.0f/255.0f,  // Title card blue
-                        0, blueTop, vw, blueBottom
-                ));
-            }
-        }
-
-        // Draw yellow bottom block - extends from Y=152 to bottom of screen (Y=224).
-        // Yellow covers full viewport width when bar is at target, follows bar during exit.
-        // xOff==0 at native 320 - byte-identical.
-        if (bottomBarElement != null && bottomBarElement.isVisible()) {
-            int barX = bottomBarElement.getCurrentX();
-            int targetX = 232;  // Bar's target X position (in 320-space)
-
-            // Yellow left edge:
-            // - When bar is at/past target: left edge at 0 (full width)
-            // - When bar is moving out (past target going right): left edge follows bar.
-            //   barX and targetX are both in 320-space so the delta is viewport-independent.
-            int yellowLeft;
-            if (barX <= targetX) {
-                // Bar is at or approaching target - full yellow coverage
-                yellowLeft = 0;
-            } else {
-                // Bar is moving out to the right - yellow follows
-                yellowLeft = barX - targetX;
-            }
-
-            // Yellow right edge always extends past the viewport
-            int yellowRight = vw + 50;
-            int yellowTop = 152;
-            int yellowBottom = SCREEN_HEIGHT;
-
-            // Only draw if visible (yellowLeft is viewport-independent, compare vs vw)
-            if (yellowLeft < vw) {
-                graphicsManager.registerCommand(new GLCommand(
-                        GLCommand.CommandType.RECTI,
-                        -1,
-                        1.0f, 1.0f, 0.0f,  // Bright yellow
-                        yellowLeft, yellowTop, yellowRight, yellowBottom
-                ));
-            }
-        }
-
-        // Draw red left block - from X=0 to the swoosh's screen position, full height.
-        // The swoosh's screen X = currentX (320-space) + xOff.
-        // At native xOff==0 so redRight = currentX - byte-identical.
-        if (leftSwooshElement != null && leftSwooshElement.isVisible()) {
-            int redRight = leftSwooshElement.getCurrentX() + xOff;
-
-            // Only draw if visible on screen
-            if (redRight > 0) {
-                // Red from palette line 0 index 12 (0x000e): B=0, G=0, R=7
-                // MD format (0-7) to float: R=7/7=1.0, G=0, B=0
-                graphicsManager.registerCommand(new GLCommand(
-                        GLCommand.CommandType.RECTI,
-                        -1,
-                        1.0f, 0.0f, 0.0f,  // Pure red
-                        0, 0, redRight, SCREEN_HEIGHT
-                ));
-            }
-        }
-    }
-
-    /**
-     * Renders a single element using its mapping frame.
-     *
-     * <p>xOffset() centres the 320-wide composition in the viewport.
-     * At native 320 xOffset()==0 - byte-identical.
-     */
-    private void renderElement(GraphicsManager graphicsManager, TitleCardElement element) {
-        if (!artLoaded || combinedPatterns == null) {
-            return;
-        }
-
-        int frameIndex = element.getFrameIndex();
-        // Skip background-only elements (frameIndex == -1)
-        if (frameIndex < 0) {
-            return;
-        }
-        TitleCardMappings.SpritePiece[] pieces = TitleCardMappings.getFrame(frameIndex);
-
-        int centerX = element.getCurrentX() + xOffset();
-        int centerY = element.getY();
-
-        for (TitleCardMappings.SpritePiece piece : pieces) {
-            TitleCardSpriteRenderer.renderSpritePiece(
-                    graphicsManager, piece, centerX, centerY,
-                    VRAM_BASE, PATTERN_BASE, combinedPatterns.length);
-        }
     }
 
     /**
@@ -1502,20 +976,12 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         state = TitleCardState.COMPLETE;
         stateTimer = 0;
         frameCounter = 0;
-        textExitTransitionPending = false;
         zoneTileUploadFramesLeft = 0;
         exitPlcsQueued = false;
         exitTailActive = false;
-        exitTailWaitFrames = 0;
-        exitTailZoneNameX = 0;
         leavePass = 0;
-        elements.clear();
-        zoneNameElement = null;
-        zoneTextElement = null;
-        actNumberElement = null;
-        bottomBarElement = null;
-        leftSwooshElement = null;
-        blueBackgroundElement = null;
+        obj34 = null;
+        presentationOmitted = false;
     }
 
     /**
@@ -1584,7 +1050,9 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
      */
     @Override
     public boolean runsLevelScrollAndEventsThisLockedPass() {
-        return leavePass > 0 && leaveLoopPass() == LEAVE_BACKGROUND_OUT_INIT_PASS;
+        return leavePass > 0 && obj34 != null
+                && obj34.parts[Obj34.BACKGROUND].routine == 0x14
+                && obj34.parts[Obj34.BACKGROUND].location == 0xF0 - 0x20;
     }
 
     /**

@@ -73,6 +73,7 @@ public final class Kis2Rules {
                 interaction.sidekickDespawnUsesInteractCodeWordChange(),
                 interaction.sidekickNormalCpuSkipsHurtRoutine(),
                 interaction.permanentRespawnTableLatch(),
+                interaction.touchScanRequiresObjectRenderBit(),
                 interaction.touchResponseUsesRenderFlagYGate(),
                 interaction.touchResponseUsesPreviousCollisionResponseList(),
                 interaction.animalObjectPreservesObjectMoveXSubpixel(),

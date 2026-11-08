@@ -301,8 +301,14 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         }
         // A failed presentation preparation cannot undo the world body or its
         // completed pause/title continuation. The view owner handles its fault.
-        if (result == LevelFrameResult.GAMEPLAY_FRAME)
+        if (result == LevelFrameResult.GAMEPLAY_FRAME) {
             views.prepare(context(), session, profile, art);
+            // Level_MainLoop (s2.asm:5098-5113): DeformBgLayer, BuildSprites,
+            // THEN ObjectsManager. New placements first execute next RunObjects.
+            // Level_Inactive_flag branches to Level before this tail.
+            if (!context().getLevelManager().isLevelInactiveForTransition())
+                ObjectManagerInternalAccess.completeDeferredPlacement(context().getObjectManager());
+        }
         return result;
     }
 
@@ -411,7 +417,10 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
     private void runNativeEntry() {
         var mode = context();
         var title = module.nativeTitle();
-        LogicalInputSnapshot[] lastWaitSample = {null};
+        // Level_TtlCard (s2.asm:4914-4949) clears both native controller words.
+        // Each represented ReadJoypads then owns a fresh held-to-press edge,
+        // even when the outer logical input spans every synchronous wait.
+        LogicalInputSnapshot[] lastWaitSample = {LogicalInputSnapshot.neutral()};
         title.beginOmittedPresentationLeave(logicalZone(profile.romZone()), profile.act());
         for (int slot = 0; slot < 2; slot++) {
             session.player(slot).setControlLocked(true);
@@ -435,7 +444,7 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
                                 // VintRet (s2.asm:507-508): art service precedes
                                 // the counter increment read by RunObjects.
                                 mode.getObjectManager().advanceVblaCounter();
-                                lastWaitSample[0] = sampleNativeInput();
+                                lastWaitSample[0] = Sonic2NativeControllerSample.poll(lastWaitSample[0], sampleNativeInput());
                                 runNativeEntryObjectPass(true);
                             });
                     title.completeLockedIteration();
@@ -573,7 +582,20 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
             camera.setMinX((short) bounds.minX()); camera.setMaxX((short) bounds.maxX());
             camera.setMinY((short) bounds.minY()); camera.setMaxY((short) bounds.maxY());
             camera.setLevelStarted(true);
-            camera.updatePosition(true);
+            if (slot == 0) {
+                camera.updatePosition(true);
+            } else {
+                // LevelSizeLoad (s2.asm:14796-14813) writes P1's start-derived
+                // camera words to BOTH banks, before InitPlayers. The leading
+                // DeformBgLayer (s2.asm:15097-15175) therefore
+                // scrolls P2 against its cleared SST, not initialized Tails.
+                camera.setX(session.camera(0).getX());
+                camera.setY(session.camera(0).getY());
+                // Reuse the coordinate-record scroll path for that zero-slot
+                // read; never alter the already-assembled human's gameplay state.
+                camera.requestForcedScroll(0, 0);
+                camera.updatePosition();
+            }
             camera.captureRenderCopy();
         }
         // Reset native interest from the actual initial camera, after both actors exist.
@@ -611,6 +633,7 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
                         }
                     }
                     @Override public boolean objectsFrozen() { return session.teleportClock().active(); }
+                    @Override public boolean placementAtWorldTail() { return true; }
                 });
             if (type == NativeCompetitionRoster.class || type == Sonic2CompetitionSession.class) return type.cast(session);
             if (type == Sonic2CompetitionObjectHost.class) return type.cast(Sonic2NativeCompetitionHost.this);

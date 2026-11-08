@@ -21,6 +21,26 @@ class TestSonic2CompetitionDisplayInventory {
         var reader=RomByteReader.fromRom(rom);
         var art=new com.openggf.game.sonic2.Sonic2ObjectArt(rom,reader);
         for(var row:Sonic2CompetitionSpriteArtTable.entries().entrySet()) {
+            if(row.getKey()==0x37) {
+                // Obj37's admitted source is the actual RingManager sheet, not
+                // ObjectArtProvider's explosion/points renderer registry.
+                var sheet=new com.openggf.game.sonic2.Sonic2RingArt(rom,reader).load();
+                assertOrdinarySheetMatchesRom(reader,sheet,row.getValue().mappingsAddress());
+                var rings=new com.openggf.level.rings.RingManager(List.of(),sheet,null,null,null);
+                var services=new com.openggf.level.objects.StubObjectServices() {
+                    @Override public com.openggf.level.rings.RingManager ringManager(){return rings;}
+                };
+                var owner=com.openggf.level.rings.LostRingObjectInstance.spawn(
+                        100,80,0,0,0,255,rings.getSpillAnimationState());
+                owner.setServices(services);
+                var slot=Sonic2CompetitionObjectDisplay.project(owner,null,
+                        ()->fail("Closed ring source must observe its actual renderer"));
+                assertNotNull(slot);assertEquals(0x37,slot.id());
+                assertEquals(row.getValue().mappingsAddress(),slot.mapping().address());
+                assertEquals(0,slot.mapping().frame());assertEquals(100,slot.x());assertEquals(80,slot.y());
+                assertEquals(0x235E,slot.artTile());
+                continue;
+            }
             var sheet=row.getKey()==0x27 ? art.loadExplosionSheet() : art.loadPointsSheet();
             assertNotNull(sheet);
             var graphics=new RecordingGraphics();
@@ -79,7 +99,7 @@ class TestSonic2CompetitionDisplayInventory {
     }
 
     private static void assertOrdinarySheetMatchesRom(RomByteReader rom,
-            com.openggf.level.objects.ObjectSpriteSheet sheet,int root) {
+            com.openggf.level.render.SpriteSheet<? extends com.openggf.level.render.SpriteFrame<? extends com.openggf.level.render.SpriteFramePiece>> sheet,int root) {
         assertNotNull(sheet);
         int declared=Sonic2CompetitionSpriteArtTable.nativeFrameLimit(root);
         int count=declared==256 ? sheet.getFrameCount() : declared;

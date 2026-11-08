@@ -357,6 +357,8 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     /** Object-loop entry: one ring physics step. */
     public void updateMovement() {
+        // Deferred Obj37_Init reaches Obj37_Main in this same owner pass.
+        if (nativeDisplayOwned() && spillAnimation != null) retainedMappingFrame = spillAnimation.frame();
         stepPhysics(0x18 /* GRAVITY */, true);
     }
 
@@ -456,7 +458,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         // movement. ChangeRingFrame runs later, so BuildSprites must retain
         // that scalar through late global animation, paused draws and rewind.
         if (!collected) {
-            if (nativeDisplaySubmissions) {
+            if (nativeDisplaySubmissions || nativeDisplayOwned()) {
                 SpillAnimationState animation = spillAnimation;
                 ObjectServices services = servicesOrNull();
                 if (animation == null && services != null && services.ringManager() != null) {
@@ -582,7 +584,33 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * band; S3K reads height_pixels, which Obj_Bouncing_Ring leaves zero.
      */
     protected boolean hasRomRenderFlagForFloorProbe() {
-        return romRenderFlagForFloorProbe;
+        // Obj37_Main (s2.asm:25215-25217) reads the prior BuildSprites bit.
+        // A native display owner publishes the merged views, rather than the
+        // legacy single-camera approximation retained by ordinary worlds.
+        return nativeDisplayOwned() ? isWithinSolidContactBounds() : romRenderFlagForFloorProbe;
+    }
+
+    private boolean nativeDisplayOwned() {
+        ObjectServices services = servicesOrNull();
+        var module = services == null ? null : services.gameModule();
+        var display = module == null ? null : module.getGameService(
+                com.openggf.level.objects.ObjectDrawInternalAccess.NativeDisplayOwner.class);
+        return display != null && display.owns(this);
+    }
+
+    /** Obj37_Init (s2.asm:25153-25159): bit7 starts set before the first floor probe. */
+    void initializeNativeDisplayState() {
+        if (nativeDisplayOwned()) {
+            retainedMappingFrame = 0;
+            com.openggf.level.objects.ObjectDrawInternalAccess.commitNativeDisplayVisibility(this, true);
+        }
+    }
+
+    /** Read the actual art request before either native camera performs its own culling. */
+    void appendNativeDisplayArt() {
+        ObjectServices services = servicesOrNull();
+        RingManager rings = services == null ? null : services.ringManager();
+        if (!isDestroyed() && rings != null && rings.canRenderRings()) appendRingArt(rings);
     }
 
     /**

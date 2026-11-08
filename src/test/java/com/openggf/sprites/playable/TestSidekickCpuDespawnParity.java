@@ -1518,6 +1518,7 @@ class TestSidekickCpuDespawnParity {
                 objectRules.sidekickDespawnUsesInteractCodeWordChange(),
                 objectRules.sidekickNormalCpuSkipsHurtRoutine(),
                 objectRules.permanentRespawnTableLatch(),
+                objectRules.touchScanRequiresObjectRenderBit(),
                 objectRules.touchResponseUsesRenderFlagYGate(),
                 objectRules.touchResponseUsesPreviousCollisionResponseList(),
                 objectRules.animalObjectPreservesObjectMoveXSubpixel(),
