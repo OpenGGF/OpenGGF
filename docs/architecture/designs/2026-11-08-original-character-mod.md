@@ -86,10 +86,15 @@ the S3K water zones.
 
 ### W4 — Character presentation contract (L)
 
-Status: API foundation delivered; group 1 follow-up in progress on
+Status: S1 HUD icon/name, act-results name, special-stage results name and 1-up
+monitor face are wired and tile/mapping-tested on `feature/ai-mica-s1-surfaces-r2`.
+Native Sonic fallback tiles and mappings remain unchanged. S1 HUD MICA uses native
+I/C and supplementary M/A only; results use native title letters. Monitor changes
+retain the shell mappings and reward animation.
+API foundation delivered; group 1 follow-up in progress on
 `feature/ai-mica-presentation2`. ROM readers now inventory all three small HUD
 fonts and S3K per-zone title/results-name art. S2 stock Tails-alone results select
-Miles/Tails using the native graphics-region flag. Surface wiring, sign spin/backing
+Miles/Tails using the native graphics-region flag. Remaining surface wiring, sign spin/backing
 contract extensions, packaged MICA presentation assets and gameplay captures remain
 pending; group 1 is not complete. The existing owner-bounded supplier, immutable
 indexed images, pixel composer and S1/S2 title readers remain the foundation.
@@ -443,3 +448,20 @@ Status log (times UTC):
   endings inventory and art, MICA ability wiring (homing, Instagib when Super,
   HOMING_DIVE binding, Sonic-equivalent physics), phase 2 (TALON), broad smoke run.
 
+- 2026-11-08: W4c1 S1 resumed on `feature/ai-mica-s1-surfaces-r2`: recovered
+  `290c96d7c`, committed act-results checkpoint `ffbad7a27`, merged integration
+  `d2b8d5fe7` as `7e6935887` without conflicts, then added special-stage results
+  (`ca78ad1f6`) and 1-up monitor art (`6301b46af`). No contract or other-game edits.
+  Name replacement retains the suffix pieces from `M_Got_SonicHas` (docs/s1disasm/_maps/Title Cards.asm:185-195) and
+  `M_SSR_GotAll` (docs/s1disasm/_maps/Title Cards.asm:322-341); the face replaces the four $1C
+  tiles of `.sonic` (docs/s1disasm/_maps/Monitor.asm:37-40).
+  Verification at `6301b46af`: queued Maven `-Dmse=off` compile passed before the
+  merge; final focused run passed 58 tests in 11 classes, no failures/errors/skips:
+  character presentation (5), HUD donation (4), results mappings (4), monitor
+  objects (8+7), results PLC readiness (3), special-stage screen (6), results
+  numbers (2), special-stage PLC readiness (3), API signatures (12), MICA integration
+  (4). Tile/mapping tests use test presentations; no GL pixel capture or broad smoke
+  run is claimed. Final queue wait: 8 seconds; Maven execution: 1m40s; user wait: 0.
+  Earlier attempts stopped at compilation because an edit during compilation left
+  stale main classes; refreshing the two source timestamps forced the successful
+  rebuild. No unresolved S1 surface work; lead owns cross-lane delivery and smoke.

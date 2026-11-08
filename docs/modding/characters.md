@@ -200,16 +200,18 @@ keyed by host and letter style. `Art` has independent HUD life icon (16×16),
 fallback. `Image` uses palette indices 0–15, with zero transparent; it copies pixel
 arrays on construction and access. Presentation maps are immutable snapshots.
 
-This is currently an API foundation: stock surfaces do not yet consume these
-slots. The internal name composer reports native, supplementary and missing glyph
-coverage and extracts pixel crops across tile boundaries. Title-font readers for
+S1 consumes the HUD life icon/name, act-results name, special-stage results name
+and 1-up monitor face slots. Absent slots and names with unsupported glyphs retain
+the native presentation. The S1 1-up face must be 16×16; other sizes retain the
+native face. The internal name composer reports native, supplementary and missing
+glyph coverage and extracts pixel crops across tile boundaries. Title-font readers for
 all three hosts and small HUD-font readers use the ROM pipeline. The S3K reader inventories each zone separately, including shared ZONE
 letters and pixel crops within multi-letter pieces, plus the results-name banks.
 Native glyphs take precedence over supplements: MICA needs supplementary M and A
-only in the S1 HUD font. The HUD/results/monitor/signpost consumers remain to be
-implemented. Stock S2 results now select Miles/Tails for Tails alone using the
-native graphics-region setting; this does not enable custom results names.
-Do not assume supplying this record changes an on-screen name or face yet. GGFP presentation sections are also pending.
+only in the S1 HUD font. Remaining host surfaces and signpost consumers are still
+in progress. Stock S2 results now select Miles/Tails for Tails alone using the native
+graphics-region setting; this does not enable custom results names. Only the listed
+S1 surfaces consume these slots so far. GGFP presentation sections are also pending.
 
 ## Ability and super-form rules
 
