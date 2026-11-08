@@ -111,10 +111,20 @@ class DebugSonic2CompetitionDivergence {
             for(int physical=route.anchor()+1;physical<=comparisonEnd;physical++) {
                 var context=host.context();input.setLogicalOverride(at(movie,physical));
                 LevelFrameStep.updateTimers(LevelFrameContext.from(context));
-                context.plcFrameLifecycle().runLogicalIteration(context::updateFade,frame->{
-                    var result=new LevelFrameResult[1];
-                    NativeCompetitionIterationAccess.runAdmitted(frame,()->result[0]=host.step(input,frame));return result[0];
-                });
+                try {
+                    context.plcFrameLifecycle().runLogicalIteration(context::updateFade,frame->{
+                        var result=new LevelFrameResult[1];
+                        NativeCompetitionIterationAccess.runAdmitted(frame,()->result[0]=host.step(input,frame));return result[0];
+                    });
+                } catch (IllegalStateException failure) {
+                    // A production execution boundary is a diagnostic frontier, never a parity pass.
+                    if (!String.valueOf(failure.getMessage()).startsWith("Native display requires adoption:")) throw failure;
+                    String boundary="frame="+physical+" production display frontier: "+failure;
+                    if (first == null) first=boundary;
+                    else report.append(boundary).append('\n');
+                    report.append("last completed comparison=").append(lastCompared).append('\n');
+                    break;
+                }
                 if (Boolean.getBoolean("s2comp.lifetimes"))
                     for (var object : context.getObjectManager().getActiveObjects())
                         if (object instanceof com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance body)

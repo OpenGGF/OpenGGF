@@ -271,6 +271,7 @@ class TestSonic2NativeCompetitionHost {
                     assertNotSame(ordinaryActor, session.player(0), "native assembly supplies a fresh human body");
                     assertNativeAssembly(host, session, zone[0], 0, zone[2]);
                     verifyIndependentHumansAndTimers(driver);
+                    if (zone[0] == 0) verifyGraceHudRunsBeforePlayers(driver);
                     if (zone[0] == 0) verifyNativePauseAndContinuation(driver, menus, screen, views);
                     assertEquals(savedCharacter, configuration.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
                     if (zone[0] == 0) verifyRegistryRestoreAndForwardReplay(driver);
@@ -1217,6 +1218,28 @@ class TestSonic2NativeCompetitionHost {
                 + " touchSuppressed=" + player.isTouchResponseSuppressedByObjectControl()
                 + " P2camera=" + driver.session.camera(1).getX() + "," + driver.session.camera(1).getY()
                 + " wallProbes=" + wallProbes;
+    }
+
+    private static void verifyGraceHudRunsBeforePlayers(Driver driver) throws Exception {
+        // Do_Updates (s2.asm:805-808) services HUD before objects:
+        // TimeOver2 (s2.asm:88126-88135) calls the kill owner. The same body
+        // then runs Obj02_Dead, ObjectMoveAndFall: -$700 + $38.
+        var registry = driver.host.context().getRewindRegistry();
+        var saved = registry.capture();
+        try {
+            var session = driver.session;
+            assertTrue(session.observeGoal(0, 100, 100));
+            for (int pass = 0; pass < 3659; pass++) session.advanceActFlow();
+            assertEquals(1, session.loserTimeLeft());
+            var actor = session.player(1);
+            position(actor, 200, 128);
+            driver.tick(NEUTRAL);
+            assertTrue(actor.getDead());
+            assertEquals(-0x700 + 0x38, actor.getYSpeed(), "HUD expiry must precede this body's death movement");
+            assertEquals(121, actor.getCentreY());
+        } finally {
+            registry.restore(saved);
+        }
     }
 
     private static void verifyCanonicalTimeOverRequests(Driver driver) throws Exception {
