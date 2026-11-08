@@ -15,7 +15,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 100,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Rest/exhale, planted boots."
     },
     {
       "id": "wait-01",
@@ -24,11 +24,11 @@
       "file": "frames/wait-01.png",
       "hotspot": [
         22,
-        20
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 7,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Inhale: chest/shoulders and crest lift 1px; tail rises."
     },
     {
       "id": "wait-02",
@@ -41,7 +41,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Blink and falling tail."
     },
     {
       "id": "wait-03",
@@ -54,7 +54,33 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 50,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Camera glance."
+    },
+    {
+      "id": "wait-04",
+      "animation": "WAIT",
+      "order": 4,
+      "file": "frames/wait-04.png",
+      "hotspot": [
+        22,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Lift boot for fidget."
+    },
+    {
+      "id": "wait-05",
+      "animation": "WAIT",
+      "order": 5,
+      "file": "frames/wait-05.png",
+      "hotspot": [
+        22,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Toe tap and camera glance."
     },
     {
       "id": "roll-00",
@@ -1252,5 +1278,44 @@
       "duration_ticks": 5,
       "notes": "S1 STOP shares SKID artwork."
     }
-  ]
+  ],
+  "scripts": {
+    "WAIT": {
+      "frames": [
+        "wait-00",
+        "wait-01",
+        "wait-00",
+        "wait-01",
+        "wait-02",
+        "wait-00",
+        "wait-01",
+        "wait-00",
+        "wait-03",
+        "wait-04",
+        "wait-05",
+        "wait-04",
+        "wait-05",
+        "wait-03",
+        "wait-00"
+      ],
+      "durations": [
+        24,
+        24,
+        24,
+        24,
+        6,
+        24,
+        24,
+        36,
+        18,
+        8,
+        8,
+        8,
+        8,
+        18,
+        24
+      ],
+      "end": "loop"
+    }
+  }
 }

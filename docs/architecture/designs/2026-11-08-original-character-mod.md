@@ -248,6 +248,16 @@ Java build, GGFP bake or gameplay certification is claimed.
 SPRING now has two stretched launch poses with an identical head contour, open
 raised gloves, paired downward boots and hanging tail. Glove reach and boot
 extension change in the second beat; the existing 24+24-tick exit to WALK stays.
+WAIT now uses six unique poses: rest, 1px inhale/crest rise, blink/tail fall,
+camera glance, raised boot and toe tap. Its 15-step loop animates the initial
+186 ticks, then fidgets and returns to breathing. Only two mappings were added:
+the reassembled sheet has 98 frames, 17 scripts, unchanged palette order and
+maximum 36 tiles/frame. `scripts.WAIT` in the handoff carries symbolic IDs and
+canonical durations/end actions; no new runtime animation state is needed.
+`mica-custom-frames.json` was regenerated after the mapping shifts. Python
+palette/geometry/deterministic rebuild and assembler roundtrip/script checks pass.
+Review GIFs cover each RUN set, both SPRING phases and the full WAIT script;
+small mouth/eye clusters and runtime presentation remain integration limitations.
 
 W7 art-lane round 2 handoff (2026-11-08, `feature/ai-mica-art2`):
 `art/mica/presentation/presentation.yaml` now describes 18 native-size indexed

@@ -196,7 +196,7 @@ The build reruns assembly before conversion. The atlas uses 8-bit indexed PNG
 (the converter codec requires 8-bit storage), with only the same 16 indices. Replace/rebuild source frames, then
 rerun it; no sheet coordinates are maintained by hand. Assembly preserves indexed
 pixels and hotspots, pads each crop to tiles and cuts pieces at 32 pixels (4 tiles).
-The current 96-frame sheet uses at most 36 tiles per frame. The converter's bank
+The current 98-frame sheet uses at most 36 tiles per frame. The converter's bank
 report is the total resident source bank, not a 36-tile streaming bank: its current
 full-frame runs retain distinct destination offsets. Do not confuse the two costs.
 
@@ -206,8 +206,10 @@ native timer bytes plus one. Host profiles supply WALK/RUN/ROLL/PUSH speed timin
 DUCK/LOOK_UP hold the last pose (the native one-frame repeat); SKID/STOP, SPRING
 and GET_AIR switch to WALK. SPRING's two authored phases divide its native 48-tick
 interval; GET_AIR retains four 12-tick steps with repeated art. Other original
-cycles retain their reference's per-step duration and loop. WAIT condenses the
-long native fidget into four original poses, preserving its 186-tick initial wait.
+cycles retain their reference's per-step duration and loop. WAIT uses six original poses and a 15-step looping script: breathing and a blink
+play immediately for 186 ticks, followed by a glance and boot tap. The optional
+`frames.yaml` `scripts.WAIT` contains symbolic frame IDs, positive tick durations
+and a canonical `loop`/`hold`/`next` end action; assembly resolves IDs after packing.
 These are authored pose adaptations, not an assertion of stock frame identity.
 WALK/RUN slopes are ordered flat/up45/steep/inverted, native selectors 0/2/4/6.
 
@@ -215,3 +217,33 @@ WALK/RUN slopes are ordered flat/up45/steep/inverted, native selectors 0/2/4/6.
 lane. All four frames are in the image and GGFP; no canonical enum member is
 invented, and no native animation selects them yet. This file is a build hook,
 not converter schema. Re-read it after source manifest reordering.
+
+
+## MICA motion feedback pass
+
+```sh
+python3 examples/mica-and-talon/art/mica/motion.py run
+python3 examples/mica-and-talon/art/mica/motion.py spring
+python3 examples/mica-and-talon/art/mica/motion.py wait
+python3 tools/modding/playable_art/pipeline.py examples/mica-and-talon/art/mica/recipe.json
+python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/mica examples/mica-and-talon/src/main/mod
+```
+
+The native contour source replaces all 16 RUN poses, both SPRING poses and six
+WAIT poses, with only two extra unique frames overall (98 total). RUN uses a
+four-phase boot blur; slope contours are drawn in rotated coordinate bases about
+the flat hotspot, without rotating a finished bitmap. SPRING retains one head
+contour across its 24+24-tick launch. WAIT keeps boots planted during the 1px
+crest/chest lift and tail sway; its occasional blink precedes the fidget at tick
+186. The fidget loops back to breathing. The shared palette order and maximum
+36-tile frame bound remain unchanged. The assembled source bank grows by two
+frames; this is not a claim about streaming allocation or in-engine validation.
+
+Disposable motion sheets at 1×/4× and GIFs are in
+`/tmp/mica-art-motion-20261108/`. Native S1 art is comparison-only. RUN comparisons
+use the fastest native one-tick step, rounded to 20ms by GIF's centisecond limit;
+SPRING uses 400ms per phase, WAIT the actual assembled script. The generic
+pipeline's per-pose review GIF is illustrative; `WAIT-script-*.gif` contains the
+complete breathing/delay/fidget sequence. Runtime slope contact, the simpler
+crest clusters and the small spring mouth remain the main visual checks for
+integration. No Java build or GGFP bake was performed for this art-only pass.

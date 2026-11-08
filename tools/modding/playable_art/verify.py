@@ -34,7 +34,8 @@ def verify(root):
                 if im.getpixel((x,y)) and any(not (0<=a<im.width and 0<=b<im.height) or im.getpixel((a,b))==0 for a,b in ((x-1,y),(x+1,y),(x,y-1),(x,y+1))):
                     assert im.getpixel((x,y))==1,(f['id'],x,y)
         if f['animation'] in ('WAIT','WALK') and f['angle_set']=='flat':
-            assert im.height==39 and im.height-f['hotspot'][1]==19,f['id']
+            assert (im.height in ((39,40) if f['animation']=='WAIT' else (39,))
+                    and im.height-f['hotspot'][1]==19),f['id']
         if f['animation']=='ROLL':
             assert im.size==(29,29) and f['hotspot']==[14,14],f['id']
         counts[f['animation']]+=1

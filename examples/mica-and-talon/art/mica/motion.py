@@ -151,8 +151,139 @@ def store(recipe, ident, im, note, **extra):
     rec.clear();rec.update(keep,notes=note,native_pixels=dict(rows=rows,anchor=[40-x,40-y]),**extra)
 
 
+WAIT_SEEDS = {
+    "wait-00": {
+        "rows": [
+            "0000000000000000111111000000000000",
+            "0000000000000011244442111000000000",
+            "0000000000000134554533443100000000",
+            "0000000000011224324213444411000000",
+            "0000000000124441111242244421110000",
+            "0000000001344441779244422441b10000",
+            "00000000014445297ee122343242100000",
+            "00000000012332117eb288924232100000",
+            "0000000012311442b92979992242f10000",
+            "0000000124424444242119919144110000",
+            "000000014432444244211ccf9922910000",
+            "000000124442444244219ccf1d91910000",
+            "000000014421222244299ccf1c79100000",
+            "000000011112212222177cd19c77910000",
+            "0000000144244343219777787777781100",
+            "0000000144244442211977799987771000",
+            "00000001442144211111f878bf97910000",
+            "0000000133121111123211f99911100100",
+            "00000000112221124444299f1100001d10",
+            "000000000132112443334287810001d910",
+            "0000000001111145299142b989111dcdd1",
+            "00000000000011243d99119778125cccc1",
+            "0000000000000129c99cd19777143cccc1",
+            "000000000000019d99ccc189991199dd11",
+            "0000000000111119dccc9f777810111100",
+            "0000000011243119ccc919877910000000",
+            "0000001142432221191119889110000000",
+            "0000114442224422112318781210000000",
+            "0001254324424411233211111210000000",
+            "0012222325432213344111123210000000",
+            "0125325423422111f12100121110000000",
+            "01444233211221aaaa1001ffbab1000000",
+            "0123421222111fbf111001baf221000000",
+            "1441121111001bb4221001ab2221100000",
+            "1421110000001abfbff11faabbbaa10000",
+            "111000000001fbaaaaab1fbbbaaaaf1000",
+            "00000000000019bbbbbb1b999bbb9b1000",
+            "0000000000001b98989911119999991000",
+            "0000000000001111111110001111110000"
+        ],
+        "anchor": [
+            22,
+            20
+        ]
+    },
+    "wait-02": {
+        "rows": [
+            "0000000000000000111111000000000000",
+            "0000000000000011234442111000000000",
+            "0000000000000134554423543100000000",
+            "0000000000011123324313444410100000",
+            "0000000000124441111242234321910000",
+            "0000000001344441779144422441a10000",
+            "000000000144442f7eef22453242100000",
+            "00000000012332117eb288924222100000",
+            "0000000012211442f92979992342f10000",
+            "0000000124424444132119918243110000",
+            "000000014422444244219ccf9922910000",
+            "000000124442454244219ccf1d91910000",
+            "000000013421231144399ccf1c79100000",
+            "000000011112212222178dd19c77910000",
+            "0000000144244343119777787777781100",
+            "000000125424445211197778b987771100",
+            "00000001452144211111f877bf97910000",
+            "0000000132121111123211f99911100100",
+            "000000001122211244442f8f1100001d10",
+            "000000000142112543234297710001d910",
+            "0000000001112145299132f8891119cdd1",
+            "00000000000011343d9d119777139cccc1",
+            "0000000000000129c99cd19777133cccc1",
+            "000000000000001d99ccc189991199dd91",
+            "0000000000111119dccc91777710111110",
+            "0000000011243119ccc919887f10000000",
+            "0000001142432211191118889110000000",
+            "0000114542224421112318791110000000",
+            "000125332352452122221111fb11000000",
+            "001222231443221334411111b121110000",
+            "0125315532421111112101fab1faab1000",
+            "01444234211221baaa10001aababb89100",
+            "12244211121111bf2110001aabb9891000",
+            "1441122111001bb42210001bb989110000",
+            "1431111000001aabbbf100018bf1100000",
+            "1110000000001baaaaab1001b110000000",
+            "00000000000019bbbbbb10001000000000",
+            "0000000000001b98989910000000000000",
+            "0000000000001111111110000000000000"
+        ],
+        "anchor": [
+            22,
+            20
+        ]
+    }
+}
+
+
+def wait(phase):
+    seed = WAIT_SEEDS['wait-02' if phase == 4 else 'wait-00']
+    base = Image.new('P', (80,80))
+    x0, y0 = 40-seed['anchor'][0], 40-seed['anchor'][1]
+    for y,row in enumerate(seed['rows']):
+        for x,v in enumerate(row):base.putpixel((x0+x,y0+y),int(v,16))
+    im=base.copy()
+    d=ImageDraw.Draw(im)
+    if phase == 1:
+        # Raise crest, shoulders and chest one pixel, with boots planted.
+        d.rectangle((x0+9,y0-1,x0+34,y0+28),fill=0)
+        im.paste(base.crop((x0+9,y0,x0+34,y0+30)),(x0+9,y0-1))
+        d.line([(x0+23,y0+22),(x0+24,y0+24)],fill=7)
+    if phase in (1,2):
+        # Tail tip rises/falls independently of the fixed pelvis and boots.
+        d.rectangle((x0,y0+26,x0+10,y0+36),fill=0)
+        im.paste(base.crop((x0,y0+26,x0+11,y0+36)),(x0,y0+25 if phase==1 else y0+27))
+    if phase == 2:
+        d.rectangle((x0+22,y0+10,x0+26,y0+13),fill=7)
+        d.line([(x0+22,y0+11),(x0+24,y0+12),(x0+26,y0+11)],fill=1)
+    if phase in (3,5):
+        # Slow glance toward the camera, a wider nearer eye and inner pupil.
+        d.rectangle((x0+21,y0+10,x0+25,y0+13),fill=12)
+        d.line([(x0+22,y0+10),(x0+22,y0+13)],fill=15,width=2)
+        d.point((x0+22,y0+10),fill=12)
+        d.line([(x0+21,y0+9),(x0+24,y0+8)],fill=1)
+    if phase == 5:
+        # Toe lifts one pixel; rear foot stays on the shared floor.
+        d.rectangle((x0+25,y0+32,x0+33,y0+38),fill=0)
+        im.paste(base.crop((x0+25,y0+32,x0+34,y0+39)),(x0+25,y0+31))
+    return im
+
+
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('item',choices=['checkpoint','run','spring']);args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('item',choices=['checkpoint','run','spring','wait']);args=parser.parse_args()
     recipe=json.loads((ROOT/'recipe.json').read_text())
     if args.item in ('checkpoint','run'):
         for n in range(4):
@@ -163,6 +294,17 @@ def main():
                     store(recipe,f'run-{s}-{n:02}',run(n,a),'Hand-authored contours rasterized in slope basis about flat hotspot, with matching blur phase; no bitmap rotation. Runtime contact unverified.')
     if args.item in ('checkpoint','spring'):
         for n in range(2):store(recipe,f'spring-{n:02}',spring(n),'Stretched launch: identical delighted head, open raised gloves, paired pointed boots and hanging tail; reach/extension second beat.')
+    if args.item=='wait':
+        for n in range(4,6):
+            if not any(f['id']==f'wait-{n:02}' for f in recipe['frames']):
+                recipe['frames'].insert(n,dict(id=f'wait-{n:02}',animation='WAIT',order=n,ticks=8))
+        for n in range(6):
+            store(recipe,f'wait-{n:02}',wait(n),
+                  ['Rest/exhale, planted boots.','Inhale: chest/shoulders and crest lift 1px; tail rises.',
+                   'Blink and falling tail.','Camera glance.','Lift boot for fidget.','Toe tap and camera glance.'][n])
+        recipe.setdefault('scripts',{})['WAIT']=dict(
+            frames=[f'wait-{n:02}' for n in (0,1,0,1,2,0,1,0,3,4,5,4,5,3,0)],
+            durations=[24,24,24,24,6,24,24,36,18,8,8,8,8,18,24],end='loop')
     (ROOT/'recipe.json').write_text(json.dumps(recipe,indent=2)+'\n')
 
 
