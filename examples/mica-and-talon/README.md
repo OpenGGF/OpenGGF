@@ -1,6 +1,6 @@
 # MICA and TALON — character example
 
-This maintained Mod API 0.7 candidate example currently registers **MICA** in Sonic
+This framework demonstration is not a released mod. The maintained Mod API 0.7 candidate example currently registers **MICA** in Sonic
 1, Sonic 2 and Sonic 3 & Knuckles. TALON and the approved concept art in
 [concept](concept/) are reserved for later work.
 
@@ -42,7 +42,25 @@ The dry palette comes from the playable sheet. With no underwater supplier, the
 renderer derives water colours from the current host zone's normal/water palette
 pair. An optional `CharacterDefinition.underwaterPaletteSupplier` can instead
 supply a complete authored 16-colour line. Both suppliers run through the owner
-fault boundary. Presentation surfaces still use stock fallback art.
+fault boundary. Presentation includes her HUD/name, results, 1-up, signs, special/bonus-stage
+player sets, continue poses, data-select portrait and counters, ICZ snowboard
+rider, and all three games' ending sets. Missing slots retain native fallback art;
+vehicles, companions, choreography and timing remain host-owned.
+
+Gilded Super is available in all three hosts; S3K also supports Hyper. Her jade
+slots cycle to gold while the normal sheet and homing move remain her own.
+Enable **Gilded form settings** in the host overlay to override the per-game form
+switches, S1 emerald requirement, ring requirement and S1 music at the next full
+load. S1's six-emerald/50-ring default is mod-defined and requires no donor ROM.
+S2 and S3K retain their native default emerald gates. Phase 2 will add TALON.
+
+The build copies presentation, wave3 stage, continue, portrait, snowboard and
+ending PNGs into the jar alongside `art/mica.ggfp`. Presentation is currently a
+code-supplied contract; GGFP presentation sections are pending. S2 2P, title art,
+slot-reel symbols and custom Tornado pilots remain open.
+
+Follow the [creator tutorial](../../docs/modding/guides/original-character.md)
+for the concept-to-capture workflow and source map.
 
 ## Acceptance
 

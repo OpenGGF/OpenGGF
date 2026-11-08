@@ -35,59 +35,51 @@ under the matching area heading; see the
 
 ## Modding and tools
 
-- Added the optional character presentation data contract and pixel-level name
-  composition foundation. The HUD life icon/name, act and special-stage results
-  names, 1-up faces and signposts (face, spin and backing) consume it in all three
-  hosts, and MICA packages her indexed presentation art. Continue screens now
-  accept optional native-frame poses with a separate character palette, retaining
-  native timing, departure movement, text and stock Tails. S3K data select
-  composes MICA’s portrait with stock team portraits using isolated colours,
-  and save-slot life counters consume her HUD life icon and miniature continue
-  counters reuse her continue pose. NO SAVE portrait
-  selection refreshes immediately for custom solo and partner teams. The S2
-  half-pipe HUD composes her name from its native SONIC/MILES/TAILS letter art.
-  Her 13-frame ICZ snowboard set retains the native intro choreography, with
-  isolated rider and native board/spray palettes.
-  Her S1 ending actor now
-  uses her eight native-timed poses on a private palette row. S2 adds her solo
-  photos, Float2 and normal/Super ending poses, retaining native choreography,
-  separate Tails roles and her Gilded powered palette cycle.
+- **MICA, an original character framework example:** the maintained
+  `examples/mica-and-talon` demo plays in all three stock games with Sonic's
+  single-player physics, character-owned homing (including an untargeted forward
+  dash), a four-frame HOMING_DIVE pose, and powered Instagib strikes. Its
+  rerunnable original sheet has 98 frames, 18 canonical animations, slope cycles,
+  a shared palette and a breathing/fidget idle. Gilded Super/Hyper forms cycle
+  jade to gold, retain her sheet, and expose host settings for their gates. S1's
+  donor-free six-emerald form is explicitly mod-defined. MICA supplies HUD/name,
+  act and special-stage results (including S2's Super announcement), 1-up faces,
+  semantic sign faces/spins/backings, special/bonus-stage player art, continue
+  poses, data-select solo/team portraits and counters, thirteen ICZ snowboard
+  rider frames, and endings in all three games. S1 uses eight native-timed ending
+  poses; S2 supplies solo photos, Float2 and normal/Super poses; S3K supplies rescue
+  Float2/ride, reunion, transformation, tiny passengers and trio-eyecatch art.
+  Private palettes preserve native stage colours, text, board/spray, companions
+  and vehicles; powered ending poses use her Gilded cycle. Acceptance covers
+  launch/save/rewind/disabled-owner fallback, with three-game headless footage
+  of movement, springs, normal/powered strikes and a GHZ airborne chain. The
+  [tutorial](docs/modding/guides/original-character.md) explains the workflow.
+  TALON is planned for phase 2; this is not a released mod or full-route certification.
 
-- Added the maintained MICA character skeleton for all three stock games, with
-  character-owned homing (including a forward dash without a target) and Super/Hyper
-  Instagib strikes through the supported facade, an optional HOMING_DIVE sheet pose,
-  and stock Sonic physics in every single-player host; S3K retains its transformation
-  press before the character-owned strike. Three-game headless footage covers
-  native movement, springs, normal and powered strikes, and a GHZ airborne chain. Includes
-  headless launch/save/rewind/fallback acceptance and a rerunnable 98-frame original
-  playable sheet with 18 canonical animations, shared palette and slope cycles.
-  Headless native Data Select retains explicitly loaded development characters.
-  Custom team archetypes now use the solo Sonic route without a sidekick.
-  Special stages can use character-owned playable roll art (S1) and indexed
-  stage frames (S2 half-pipe, S3K Blue Sphere and slot machine), with private
-  player palette rows that preserve native stage colours. MICA packages these sets.
-  S1 HUD life icons/names, act/special-stage results names and 1-up monitor faces
-  now consume character presentation slots while retaining native Sonic fallbacks.
-  Presentation font inventories now include the native small HUD letters in all
-  three hosts and S3K per-zone title/results-name letters. Stock S2 Tails-alone results
-  now show the region-selected Miles/Tails name instead of Sonic.
-  S2 HUD icons/names, act and special-stage results names, and 1-up faces now consume character presentations.
-  MICA's Gilded Super/Hyper forms use owner-bound profiles and her jade-to-gold
-  palette cycles; host settings configure the gates. S1's donor-free six-emerald
-  form is a mod-defined rule. Powered-form state and palettes participate in rewind.
-  Optional S3K ending sets supply MICA's rescue Float2/ride, reunion poses,
-  transformation, tiny passengers and trio-eyecatch art. Scene-form operations
-  support authored controllers without changing the stock ending dispatch.
-- Character definitions can supply an authored underwater palette through the
-  owner fault boundary; absent suppliers retain zone-aware host water derivation.
-- Playable mod sheets now declare canonical animation tables shared by Sonic 1,
-  Sonic 2 and Sonic 3 & Knuckles, with native speed timing, slope cycles,
-  explicit end actions and host animation fallbacks.
-- **Character-owned homing:** the 0.7 candidate Mod API now exposes homing and
-  Instagib strikes with per-call modes, an explicitly requested target reticle,
-  and a flight divebomb with a steep forward-down fallback. Runtime and rewind
-  ownership live in every world session; Mutator Lab retains its native-air-move
-  fallback and character selection.
+- **Character API on the 0.7 candidate:** canonical playable animation tables
+  share host speed timing, slope cycles, explicit end actions and fallbacks across
+  S1/S2/S3K. Owner-bound underwater palette suppliers complement zone-aware water
+  derivation. Optional `CharacterPresentation` provides immutable indexed images,
+  per-host names and supplementary glyphs, native-frame stage/screen/ending sets,
+  and bounded PNG loading. Font readers inventory all three small HUD fonts and
+  S3K per-zone title/results letters with pixel-level glyph coverage/composition.
+  GGFP presentation sections remain pending. `SuperFormProfile` supplies per-game
+  tiers, palettes, physics, animations and rewind state; scene-form operations
+  support authored controllers while preserving stock ending dispatch.
+  The world-session `HomingAttack` facade exposes per-call homing/Instagib,
+  target-only admission, requested reticles and flight divebomb with a steep
+  forward-down fallback. Mutator Lab retains its character selection and native
+  air-move fallback; characters need no mutator activation.
+
+- **Character routing and presentation:** explicitly loaded development
+  characters remain available in headless native Data Select. Custom team
+  archetypes use the solo Sonic route without a follower. Stock S2 Tails-alone
+  results now select Miles/Tails with the native graphics-region setting.
+  Data-select save life counters use the character HUD icon; miniature continue
+  counters reuse its continue pose. NO SAVE refreshes custom solo/team portraits
+  immediately, and the S2 half-pipe ring HUD composes names from its native
+  SONIC/MILES/TAILS alphabet with supplements for missing glyphs. Stock fallbacks
+  and native screen/stage/ending choreography remain intact.
 
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the
@@ -128,8 +120,6 @@ under the matching area heading; see the
   `--resume-from` and `--skip-rows`, so a shot's input can be derived from a
   level inside a complete-run movie, with one change and the recording's own
   rows after it.
-
-  frame ranges) beside each reel.
 
 - **Trace coverage and canonical fixtures:** independent strict replay covers all
   163 segments of the Knuckles super-emerald, Mega, Sonic+Tails and KiS2 chains,

@@ -7,7 +7,10 @@ from a supplied base design, then reduced to native Mega Drive constraints. The 
 a framework demonstration: where the Mod API lacks a seam, this work adds the safe
 facade rather than reaching into engine internals.
 
-Status: phase 1 in progress (see [Delivery plan and status](#delivery-plan-and-status)). Mod API line: 0.7 candidate (`mod-api-release-policy.properties`).
+Status: phase 1 code-complete; documentation consolidated. Evidence gaps and
+follow-ons are listed under [Open items](#open-items); see also
+[Delivery plan and status](#delivery-plan-and-status). Mod API line: 0.7 candidate
+(`mod-api-release-policy.properties`).
 
 ## Agreed decisions
 
@@ -56,14 +59,20 @@ run in parallel; W8 integrates them.
 
 ### W1 — One mod, three games (S)
 
-The sample is `baseGame: s2`. Prove `baseGame: any` registration (the Mutator Lab
+Current status: delivered — `baseGame: any` registers MICA in all three hosts; the example
+acceptance covers identity, launch, save retention and disabled-owner fallback.
+
+Original starting point: the sample was `baseGame: s2`. Prove `baseGame: any` registration (the Mutator Lab
 model) publishes the character in the S1, S2 and S3K launch rosters and data select,
 saves and reloads the canonical key, and falls back cleanly when the mod is disabled.
 Deliverable: the skeleton example with a headless acceptance test per game.
 
 ### W2 — Canonical animation sheets (L)
 
-`PlayableArtConverter` emits one `idle` animation, and `PlayableSheetMaterializer`
+Current status: delivered — GGFP v2 canonical animation tables bind to host timing, slopes and
+fallbacks. WAIT is mandatory; HOMING_DIVE is now a canonical enum member.
+
+Original gap: `PlayableArtConverter` emitted one `idle` animation, and `PlayableSheetMaterializer`
 indexes the sheet by the raw native `getAnimationId()`. Native animation numbering
 differs per game, and the trivial profile has no speed-driven walk/run timing and no
 slope-angle frame selection.
@@ -78,7 +87,10 @@ unpublished, so no migration is required.
 
 ### W3 — Underwater palette (S–M)
 
-`LevelPlayableArtInitializer.createCharacterPaletteContext` sets only the dry palette
+Current status: delivered — optional authored water palettes and live host-zone derivation,
+with dry/water palette isolation and real LZ/CPZ/HCZ acceptance inputs.
+
+Original gap: `LevelPlayableArtInitializer.createCharacterPaletteContext` set only the dry palette
 for mod characters. Add an underwater palette to the character contract, either
 authored or derived per zone by applying the host's underwater transform to the
 character's palette line, and set it on the render context. Covers LZ, CPZ/ARZ/HPZ and
@@ -86,22 +98,14 @@ the S3K water zones.
 
 ### W4 — Character presentation contract (L)
 
-Ending lane `feature/ai-mica-endings-s1s2`: S1 ending actor uses additive native-ID
-frames and private palette ownership; stock emerald/flower/logo art is unchanged.
-S2 uses the existing ending Presentation seam with additive frame/photo hooks;
-normal/Super choreography stays native, while KiS2 retains its patched route.
-Private palette rows retain MICA's indices without recolouring Tails/vehicles.
-Gilded ending flight follows the W6 S2 dry cycle. S1 commit `6f5d7a49f` passed its
-existing ending/API checks and a real rendered capture with all art-pixel and
-palette assertions (zero skips). S2 ending/integration/API checks passed (48 tests, no skips), followed by
-real Engine pixel-owner checks (9 tests) and final denser normal/Super captures
-(2 tests), all with no failures or skips.
-
-Stage lane `feature/ai-mica-stages`: S1 uses the bound canonical playable roll
-sheet; additive `StageSpriteSet` slots supply S2 half-pipe, S3K Blue Sphere and
-slot-machine frames by native frame ID. MICA's wave3 PNGs are packaged by the
-example and loaded through bounded `ModAssetRoot` presentation APIs. Verification
-and capture status is recorded in the status log below.
+Current status: delivered through code-supplied `CharacterPresentation` and
+bounded indexed PNG assets. All three hosts consume HUD/name, results, 1-up,
+signs, continue and ending sets. S1 reuses the canonical roll sheet; S2 half-pipe,
+S3K Blue Sphere and slot-machine player sets use native-frame slots. Data select
+uses the portrait, life icon and miniature continue figure, including NO SAVE
+solo/team refresh. ICZ uses thirteen rider frames. Native choreography, poles,
+vehicles, companions and palette ownership remain with their host. Full route
+captures and the excluded surfaces are listed under Open items.
 
 **Stage palette ownership audit.** Preserve all four native stage palette lines;
 only the custom player resolves to a private render-context palette row. This is
@@ -118,38 +122,20 @@ leave every native colour, background, object and stock companion untouched;
 no fixed-native recolouring or quantization is used.
 
 
-Status: S1 HUD icon/name, act-results name, special-stage results name and 1-up
-monitor face are wired and tile/mapping-tested on `feature/ai-mica-s1-surfaces-r2`.
-Native Sonic fallback tiles and mappings remain unchanged. S1 HUD MICA uses native
-I/C and supplementary M/A only; results use native title letters. Monitor changes
-retain the shell mappings and reward animation.
-
-Status S2: all four surfaces wired and tile/mapping-tested on
-`feature/ai-mica-s2-surfaces-r2`. Native Sonic/Tails fallbacks are retained.
-
-Status: API foundation delivered; group 1 follow-up in progress on
-`feature/ai-mica-presentation2`. ROM readers now inventory all three small HUD
-fonts and S3K per-zone title/results-name art. S2 stock Tails-alone results select
-Miles/Tails using the native graphics-region flag. All three hosts wire the HUD
-icon/name, act-results name, special-stage results name, 1-up face and signposts
-(face, spin and backing), and MICA's presentation assets are packaged. Full
-title-route captures of each surface remain pending. The existing owner-bounded supplier, immutable
-indexed images, pixel composer and S1/S2 title readers remain the foundation.
-
-Add a `CharacterPresentation` record carried by `CharacterDefinition` (and stored as
-GGFP v3 sections), modelled on KiS2's internal seams (`Sonic2ArtOverlays`, the S2
+`CharacterPresentation` is carried by `CharacterDefinition` (GGFP presentation
+sections remain pending), modelled on KiS2's internal seams (`Sonic2ArtOverlays`, the S2
 continue `PlayerPresentation`, the S2 ending `Presentation`). Every stock surface asks
 the presentation first and keeps its current Sonic/Tails/Knuckles logic as the
 fallback. Slots:
 
 | Slot | Consumers |
 |---|---|
-| Display name (for ROM-font composition) | HUD name tiles, level results, special-stage results, continue screen |
+| Display name (for ROM-font composition) | HUD name tiles, level results, special-stage results |
 | HUD life icon (2×2 tiles) | S1/S2/S3K HUD |
 | 1-up monitor face | S1/S2/S3K monitors |
 | Signpost faces | S1 signpost, S2 signpost, S3K end-of-act sign |
 | Special-stage sprite sets | S2 half-pipe, S3K Blue Sphere; S1 reuses playable art |
-| Bonus-stage art | S3K slot machine (currently swaps in ROM art by class check) |
+| Bonus-stage art | S3K slot-machine player (reel symbols remain separate) |
 | Continue poses | S1/S2/S3K continue screens |
 | Data select portrait | S3K data select (and engine-added S1/S2 data select) |
 | Cutscene sets | S3K ICZ snowboard, ending and credits sequences per game |
@@ -166,27 +152,30 @@ far:
 
 | Letter set | S1 | S2 | S3K |
 |---|---|---|---|
-| Large title-card/results font | 21 letters: A–I, K–P, R–U, Y, Z. K and U are in the art but no card uses them (checked by decoding `artnem/Title Cards.nem`). No J, Q, V, W, X. | Full A–Z and `.`: `ArtNem_TitleCard2` is decoded to RAM by `LoadTitleCard0` and letters are picked from it. | Per-zone title-card sets plus the results names SONIC, KNUCKLES, MILES and TAILS. Zone names suggest no J, Q, W or X; to be confirmed by decoding. |
+| Large title-card/results font | 21 letters: A–I, K–P, R–U, Y, Z. K and U are in the art but no card uses them (checked by decoding `artnem/Title Cards.nem`). No J, Q, V, W, X. | Full A–Z and `.`: `ArtNem_TitleCard2` is decoded to RAM by `LoadTitleCard0` and letters are picked from it. | Per-zone title-card sets plus the results names SONIC, KNUCKLES, MILES and TAILS. Decoded per-zone inventories and results banks determine coverage; supplement missing letters by host/style. |
 | Small HUD name (fixed 4×2-tile cell) | SONIC | SONIC, TAILS and MILES life counters | SONIC, TAILS, MILES and Knuckles' abbreviated K·T·E life icons; no U (checked by decoding the `HUD Icon` art) |
 | Save-screen font | — | — | A–Z (`S3kSaveTextCodec`) |
 
 The HUD cell fits about five letters. A name of five letters or fewer avoids a separate
 short HUD form.
 
-**Selection audit.** 44 source files compare character codes to `"sonic"`, `"tails"` or
+**Selection audit (original design).** 44 source files compare character codes to `"sonic"`, `"tails"` or
 `"knuckles"`. Classify each as presentation (moves behind the contract) or route/gameplay
-gating (keeps using the `behavesLike` archetype). Today S3K mixes the two: a mod
+gating (keeps using the `behavesLike` archetype). The original S3K presentation mixed the two: a mod
 character behaving like Knuckles would show "SONIC" on the HUD but "KNUCKLES GOT
 THROUGH" on the results screen.
 
-**Parity side effect.** S2's results object always draws "SONIC GOT THROUGH"
+**Parity side effect (delivered).** S2's results object previously always drew "SONIC GOT THROUGH"
 (`ResultsScreenObjectInstance`, frame 0), but the ROM advances the name frame for
-Tails alone and again by the region flag, `loc_14102 (s2.asm:27836-27843)`. Routing stock characters through the
-same name path should reproduce the ROM, with a test.
+Tails alone and again by the region flag, `loc_14102 (s2.asm:27836-27843)`. The shared name path now selects the region-correct Miles/Tails name for Tails alone, with regression coverage.
 
 ### W5 — Homing attack as a character ability (M)
 
-`MutatorPolicy.HomingCharacter` is `{SONIC, TAILS, KNUCKLES}` and the runtime is owned
+Current status: delivered — the world-owned `HomingAttack` facade supports normal/Instagib
+strikes, untargeted dash, target-only admission, requested reticle and flight
+divebomb. MICA uses it directly, with world-owned rewind state.
+
+Original design context: `MutatorPolicy.HomingCharacter` is `{SONIC, TAILS, KNUCKLES}` and the runtime was owned
 by `MutatorWorldState`. Promote the runtime to a capability the world owns whether or
 not the mutator is enabled, with a `@ModApi` facade a character calls from
 `onAbilityActivate`. The facade takes a mode (`HOMING`, `INSTAGIB`) and keeps native hit
@@ -196,9 +185,13 @@ Lab becomes one client of the same facade. Super/Hyper form selects `INSTAGIB`
 
 ### W6 — Super and Hyper form for mod characters (L)
 
-`CharacterDefinition` rejects `supportsSuperForm` for mod keys, and
-`SuperStateController.transformationSupported()` gates on it. Removing the rejection is
-not enough: `Sonic3kSuperStateController` picks the form tier by `instanceof Tails` /
+Current status: delivered — owner-bound `SuperFormProfile`, host controllers, authored palette
+cycles/physics, optional animation/effects, rewind and LOAD-scoped Gilded settings.
+MICA keeps her own sheet, uses WAIT to transform, and opts out of trails/stars.
+
+Original gap: `CharacterDefinition` rejected `supportsSuperForm` for mod keys, and
+`SuperStateController.transformationSupported()` gated on it. Removing the rejection
+was insufficient: `Sonic3kSuperStateController` picked the form tier by `instanceof Tails` /
 `instanceof Knuckles`, so a mod sprite would become Hyper Sonic with Sonic's palettes
 and stars.
 
@@ -219,8 +212,8 @@ Tier selection moves from `instanceof` to the profile. Per game:
 - **S3K:** Super with seven Chaos Emeralds; Hyper with seven Super Emeralds. Any route
   or ending branch that requires Super Sonic must be checked for the character
   (for example the Doomsday sequence on the Sonic route).
-- **S1:** has no native super form; today the engine offers one only through
-  `CrossGameFeatureProvider`, which needs a donor ROM and supplies Sonic's art. The
+- **S1:** has no native super form; the original engine path was
+  `CrossGameFeatureProvider`, which needed a donor ROM and supplied Sonic's art. The
   character instead gets a host-side S1 controller driven entirely by its
   `SuperFormProfile`, so no donor ROM is needed. The default gate is all six emeralds
   (`GameStateManager.hasAllEmeralds()` already counts against the game's emerald total)
@@ -230,18 +223,19 @@ Tier selection moves from `instanceof` to the profile. Per game:
 
 **Configuration.** Super-form options are declared with the existing `MutatorOption`
 model (choices and checkboxes with LIVE/LOAD/LAUNCH scope) and shown on the host
-settings screen, so no new UI is needed. Proposed options: super form on/off per game,
+settings screen, so no new UI is needed. Delivered options: super form on/off per game,
 the S1 emerald requirement (default 6), the ring requirement (default 50) and the S1
 music cue. S2 and S3K defaults reproduce their native rules.
 
 ### W7 — Art pipeline: GPT Image to playable sheets (XL, dominant cost)
 
 Native frame counts for scale: S1 Sonic has 88 mapping frames, S2 214, S3K 251
-(S3K includes super frames); S3K's Blue Sphere set has 24 and the ICZ snowboard set 13.
-With canonical animations (W2) one sheet of about 120–150 normal frames plus the super
-set serves all three games.
+(S3K includes super frames); the ICZ snowboard set has 13.
+The original estimate was 120–150 normal frames plus a Super set. The delivered
+sheet uses 98 frames; Gilded reuses its mappings. Blue Sphere has twelve distinct
+mapping entries (the 24-frame estimate counted reused sequence steps).
 
-Pipeline, as a maintained `ggfmod` preprocessing step:
+Pipeline: maintained Python preprocessing followed by the `ggfmod` converter:
 
 1. **Model sheet.** Generate a turnaround and key poses from the base design with GPT
    Image via Codex. Every later generation is image-to-image against this sheet.
@@ -257,11 +251,596 @@ Pipeline, as a maintained `ggfmod` preprocessing step:
 5. **Cut.** Align hotspots (feet on baseline, roll centred), split into mapping pieces
    of at most 4×4 tiles, and stay within the per-frame DPLC tile budget the converter
    reports.
-6. **Bake.** `ggfmod convert art --playable` into the v3 sheet with presentation
-   sections.
+6. **Bake.** `ggfmod convert art --playable` into the v2 gameplay sheet; package presentation PNGs separately until
+   container presentation sections are implemented.
 
 Art is produced in fallback order: core playable sheet, then HUD/1-up/signpost, then
 special stages, then super set, then continue/portrait, then cutscenes and endings.
+
+Current status: delivered. The assembled core sheet has 98 frames and 18
+canonical animations, including HOMING_DIVE; presentation and ending PNGs are
+packaged separately. Redrawn slope contours and the motion feedback pass replace
+the early rigid rotations. Historical art checkpoints are retained in the status
+log below; their pending statements describe those checkpoints only.
+
+### W8 — Example, tutorial and evidence (M)
+
+Current status: delivered — maintained example and [creator tutorial](../../modding/guides/original-character.md),
+consolidated reference, changelog and backlog. Focused acceptance and surface
+captures exist; full title-to-ending route evidence remains open.
+
+- `examples/<character>/` with a build script in the Mutator Lab pattern.
+- A `docs/modding` walkthrough from base image to playable character, written as a
+  tutorial, plus updates to `characters.md` and the format docs.
+- Short demo clips per game (normal play, homing, Super/Hyper Instagib, special stage,
+  results).
+- Changelog in `CHANGELOG.0.8.prerelease.md`; mark the delivered backlog items in
+  `docs/modding/BACKLOG.md` (GGFP v3 HUD icon, data-select portrait, mod super form).
+
+## Fallback rule
+
+Until a slot has art, the surface uses today's behaviour. Names compose from the display/short name when glyph coverage and layout fit.
+Missing glyphs without supplements, unsupported dimensions and omitted slots
+retain the native presentation. This fallback is intentional and tested.
+
+## Validation
+
+- Per game: headless acceptance covering registration, launch, save/reload, disabled-mod
+  fallback, rewind across the ability and across a super transformation.
+- Animation: a test that one sheet resolves walk/run/roll/spring/hurt/death in all three
+  games with native speed timing.
+- Presentation: pixel tests (shared offscreen context) for the HUD name, results name
+  and signpost face in each game, with a negative control showing the stock fallback.
+- Stock parity: Sonic, Tails and Knuckles presentation unchanged in every game, apart
+  from the S2 Tails results correction.
+- Homing facade: the existing `TestHomingAttackMutator` stays green through the
+  refactor; add a character-driven case and a Super Instagib case.
+- Mod API pin and package tests; S3K guard tests from `AGENTS.md`; change-based smoke
+  run against the pre-task develop SHA.
+
+## Characters
+
+| | MICA | TALON |
+|---|---|---|
+| Species | Pangolin | Peregrine falcon courier |
+| Stands in for | Sonic | Tails |
+| Normal colours | Jade scales, sand-cream face and belly, coral-red boots, white gloves | Slate blue-grey, cream barred chest, amber goggles, red-and-white shoes, courier satchel |
+| Super form | Gilded: gold scales | Solar: white-gold plumage, flame wingtips |
+| Generated name letters | S1 HUD: M, A | S1 HUD: T, A, L |
+
+TALON's wings are drawn into his body frames, so he needs no separate appendage sprite
+(the engine's Tails tail renderer stays Tails-only).
+
+### TALON engine notes (phase 2)
+
+- 49 source files test `instanceof Tails`, some in gameplay (sidekick CPU, touch
+  response, launchers, vacuum tubes, several S3K objects and bosses). Each must move to
+  the archetype or a declared capability so a Tails stand-in behaves natively. MICA
+  needs no such audit: a non-Tails, non-Knuckles sprite already takes the Sonic branch.
+- Tails-only animations: flight, flight carrying, flight tired, swim variants, carry.
+- Player-controlled flight is native only in S3K. In S1 and S2 it is a mod-defined
+  capability and is documented as such.
+- Tails-only presentation: Tails results variants, Tails special-stage sets, the data
+  select team portrait, and Tails' ending roles (for example piloting the S2 Tornado).
+
+## Open items
+
+- S2 competitive 2P presentation.
+- Title/branding art.
+- Slot-reel prize symbols (the bonus-stage player frames are delivered).
+- Custom Tornado pilots (MICA rider/photos retain native Tails/vehicle roles).
+- GGFP presentation sections; current presentation uses bounded sidecar PNGs.
+- Full title-to-ending route captures across all three games; existing positioned,
+  programmatic-entry and short title-first captures are bounded evidence.
+- Phase 2: TALON, including flight/carry, team roles, Solar form and presentation.
+
+## Delivery plan and status
+
+Integration branch: `feature/ai-original-character`, from develop `33c3b8e56`. Lanes
+branch from it as `feature/ai-mica-<lane>` and are merged into it from their reports.
+Per the user's rule, develop receives the work only at a major milestone.
+
+Phase 1 waves:
+
+1. W2 canonical animation sheets; W5 homing ability facade (designed for TALON's
+   divebomb too); W1 three-game skeleton plus W3 underwater palette; W7 art pipeline and
+   MICA's core movement set.
+2. W4 presentation contract (name composer, HUD, results, signpost, 1-up), then W6
+   super form.
+3. Remaining W4 surfaces: special and bonus stages, continue, data select, cutscenes,
+   endings and credits.
+
+Status log (times UTC):
+
+Entries below are historical checkpoints, not current support statements. Pending
+art, binding and certification notes may be superseded by later entries and the
+current workstream summaries above.
+
+- 2026-11-08: documentation lane reconciled API and example sources, consolidated
+  creator reference/changelog/backlog, and added the MICA build-along. This lane
+  changes documentation only; it does not re-certify gameplay or full routes.
+  Owner: documentation lane, `feature/ai-mica-docs`, based on `76fb498b4`.
+  Checked the final documentation tree with:
+
+  ```bash
+  python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestModdingDocumentationLinks,TestModApiReleasePolicy,TestModApiPinPolicy' test
+  python3 tools/disasm/disasm_citations.py check --strict docs/modding/characters.md docs/modding/guides/original-character.md examples/mica-and-talon/README.md CHANGELOG.0.8.prerelease.md docs/architecture/designs/2026-11-08-original-character-mod.md docs/modding/BACKLOG.md docs/modding/index.md docs/guide/index.md
+  git diff --cached --check
+  ```
+
+  Maven passed 20 tests across three classes, zero failures/errors/skips (all
+  ROM paths found, though this selection requires none). Queue wait 194s; Maven
+  execution 1m27s; user wait zero; other work time unmeasured. Citation counts
+  match the base: 16 exact, 3 near, 3 unverifiable, no stale/missing/out-of-range
+  findings. A separate touched-file link/heading check resolved 180 local links;
+  fenced-block and docs-only scope checks passed. Policy pre-commit/commit-message
+  validation passed; skills were untouched. No category run or category VERDICT
+  applies. All jobs finished, no blocker. Next action: lead reviews/integrates
+  this local documentation commit; this lane does not merge or push.
+
+- 2026-11-08: W4 stage lane on `feature/ai-mica-stages`: S1 canonical roll and
+  private player palette committed in `dda7b29aa`; S2 half-pipe now installs the
+  indexed behind-view set in the shared native SAT assembly, retaining stage
+  animation, flips, shadows, admission and painter order. Complete working-tree
+  stage/integration/S3K guard selection: 173 passed, no skips. S1 manager 17/17,
+  S2 manager 16/16, compiler 3/3 and MICA integration 8/8. All four production-session
+  stage captures were inspected; final API/native regression results follow below.
+  S2 is committed in `e6a5ac02e`. Blue Sphere now uses MICA's SStage frames with
+  unchanged native projection/animation. Its isolated palette participates in the
+  native channel-ordered white fade and palette rewind snapshot; snapshot tests
+  passed 11/11 (including private-palette fade/restore), renderer 6/6.
+- 2026-11-08: W4 stage lane complete. Blue Sphere committed in `1c8ce9035`.
+  Slot-machine art now uses MICA's five native-ID roll replacements, with low tile
+  priority so native foreground glass still occludes her. Its private palette
+  follows the native black fade and resident-art rewind state. Stock fallback
+  branches remain unchanged. API/native-rendering selection passed 35/35, no
+  skips; corrected slot capture recheck passed 1/1, no skips. Original attempt
+  failures were implementation-time example/engine compilation errors; both
+  were repaired before the passing checks. No baseline failure is being waived.
+  Four local stage commits; no merge or push. Production `GameplayCaptureSession`
+  boots the packaged mod, then uses `GameLoop.enterSpecialStage()` or
+  `LevelManager.requestBonusStageEntry(SLOT_MACHINE)` and neutral input. This
+  proves stage presentation, not traversal of a physical entry trigger.
+  Inspected captures: `/tmp/mica-stages-20261108/{s1,s2,s3k,s3k-slots}/frame-239.png`,
+  with frame 120/180 stills and per-frame `state.csv` alongside them. Slot frame
+  120 is still the native entry title card; frames 180/239 are the bonus stage.
+  Native stage palette rows stay unchanged by custom binding; private rows take
+  character-supplier colours without native recolouring. The new indexed frame
+  sets reconstruct byte-for-byte from their tile/mapping representation.
+
+  Verification commands (Java 25, verified S1/S2/S3K ROMs found; no skips):
+
+  ```bash
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=Sonic1SpecialStageManagerTest,Sonic2SpecialStageManagerTest,TestSonic3kSpecialStageRenderer,TestSonic3kSpecialStageManagerSnapshot,TestMicaCharacterIntegration,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestStageSpriteCompiler,TestS3kSlotBonusStageRuntime,TestS3kSlotPlayerRuntime,TestS3kSlotBonusPlayer' test
+  # 173 passed; two matching LevelLoading classes and two SlotBonusStageRuntime classes selected.
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestModApiSignatureSurface,TestSonic2SpecialStageSpriteAssembly,TestSonic2SpecialStagePaletteNativeChannels,TestS3kSpecialStageSpritePixels,TestS3kSlotGlassPriority,TestS3kSlotMachineRenderer' test
+  # 35 passed.
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestMicaCharacterIntegration#micaSlotsCapture' -Dmica.stage.captureRoot=/tmp/mica-stages-20261108 test
+  # 1 passed after the custom slot tile-priority correction.
+  python3 tools/disasm/disasm_citations.py check docs/architecture/designs/2026-11-08-original-character-mod.md src/main/java/com/openggf/game/sonic3k/bonusstage/slots/S3kSlotPlayerArt.java
+  # 6 checked, 2 existing unverifiable citations; no stale citations.
+  ```
+
+  These are bounded checks, not a full-suite run. Queue wait and execution are
+  separate: the 173-test run last reported 361s waiting, then executed in 1m45s;
+  the 35-test run last reported 180s waiting, then executed in 1m41s. The slot
+  recheck executed in 43s. Admission timestamps between queue reports are unknown;
+  there was no user-approval wait. No category run was launched, so no category
+  `VERDICT` is applicable.
+
+
+
+- 2026-11-08: design agreed; wave 1 launched.
+- 2026-11-08: merged W7 core art (`391684f4f`), W1+W3 skeleton and water palettes
+  (`5e21ef547`), W2 canonical animation sheets (`59998a446`); MICA placeholder sheet
+  given its required WAIT (`838c9743d`). Lead check of the merged tree: the MICA,
+  sample-character, sheet, converter and signature tests pass;
+  `TestLevelPlayableArtInitializerModArt` has 4 errors (NPE `crossGameFeatures` under
+  `mockStatic(CrossGameFeatureProvider)`) that reproduce identically on develop
+  `33c3b8e56` when the class runs alone, so they predate this work. Art round 2's
+  presentation art was rejected on review (blob-like 16x16 faces, sign faces without
+  native composition, noise spin frames, slopes unchanged); round 3 is redoing it.
+- 2026-11-08: merged art rounds 2–3 (`8a2351954`: redrawn faces, native-composition
+  sign busts, spin frames, all 36 slope frames, Gilded palette), the W4a presentation
+  foundation (`62ff3951d`: contract, ROM name composer, S1/S2 title fonts; on-screen
+  surfaces still pending in W4b) and the W5 homing facade (`13515a986`). Lead check of
+  the merged tree passed: homing (15), name composer, signature pin, Mutator Lab
+  package, character registry and MICA integration tests, all ROMs found.
+
+- 2026-11-08: S3K surface lane resumed: HUD life icon/name adapter restored;
+  results, Blue Sphere and independent 1-up face wiring still pending.
+
+- 2026-11-08: sign lane `feature/ai-mica-signs`: additive semantic sign poses,
+  bounded indexed PNG loader, packaged MICA HUD/monitor/sign/glyph assets and S1
+  sign consumer implemented; S2/S3K wiring and capture verification in progress.
+- 2026-11-08: merged W6 Super/Hyper forms (`e4639065d`; conflict with W4a on
+  `CharacterDefinition` resolved by carrying both suppliers; 174 focused tests
+  passed) and W7c sheet assembly (`e9c8350d8`; MICA plays with her art in S1 GHZ1,
+  S2 EHZ1 and S3K AIZ1). Sheet rebuilt from the round-3 slope frames; 39 focused tests
+  and the assembler test passed. Also merged art round 4 (S2 half-pipe, Blue Sphere,
+  S1 maze audit) and round 5 item 1 (S3K slot stage).
+- 2026-11-08: Sol (`gpt-6.1-sol`) reached its usage limit until 2026-11-14 10:38.
+  Lanes stopped mid-work: W4c0 signs/assets, W4c1 S1 surfaces (one unverified commit
+  `290c96d7c`, not merged), W4c2 S2 surfaces, W4c3 S3K surfaces. Their uncommitted
+  work is saved as patches under `~/scratch/agent-tmp/mica-wip-20261108/<lane>/`
+  with base SHA and worktree path. Not started: continue/portrait/snowboard art,
+  endings inventory and art, MICA ability wiring (homing, Instagib when Super,
+  HOMING_DIVE binding, Sonic-equivalent physics), phase 2 (TALON), broad smoke run.
+
+- 2026-11-08: W4c1 S1 resumed on `feature/ai-mica-s1-surfaces-r2`: recovered
+  `290c96d7c`, committed act-results checkpoint `ffbad7a27`, merged integration
+  `d2b8d5fe7` as `7e6935887` without conflicts, then added special-stage results
+  (`ca78ad1f6`) and 1-up monitor art (`6301b46af`). No contract or other-game edits.
+  Name replacement retains the suffix pieces from `M_Got_SonicHas` (docs/s1disasm/_maps/Title Cards.asm:185-195) and
+  `M_SSR_GotAll` (docs/s1disasm/_maps/Title Cards.asm:322-341); the face replaces the four $1C
+  tiles of `.sonic` (docs/s1disasm/_maps/Monitor.asm:37-40).
+  Verification at `6301b46af`: queued Maven `-Dmse=off` compile passed before the
+  merge; final focused run passed 58 tests in 11 classes, no failures/errors/skips:
+  character presentation (5), HUD donation (4), results mappings (4), monitor
+  objects (8+7), results PLC readiness (3), special-stage screen (6), results
+  numbers (2), special-stage PLC readiness (3), API signatures (12), MICA integration
+  (4). Tile/mapping tests use test presentations; no GL pixel capture or broad smoke
+  run is claimed. Final queue wait: 8 seconds; Maven execution: 1m40s; user wait: 0.
+  Earlier attempts stopped at compilation because an edit during compilation left
+  stale main classes; refreshing the two source timestamps forced the successful
+  rebuild. No unresolved S1 surface work; lead owns cross-lane delivery and smoke.
+
+- 2026-11-08: S2 surface lane resumed from saved WIP, compiled and checkpointed
+  (`a41c16e3e`), then merged the character integration branch (`41277b704`).
+  Merge resolution retained both the S2 and Gilded changelog entries; no contract
+  changes. HUD uses the native small letters, act/results use title-card letters,
+  and the monitor uses its independent 16×16 face slot. Special-stage headings
+  include GOT A, HAS ALL THE, NOW … CAN and SUPER …; native suffixes and timing
+  remain with their existing owners. Initial five-class check: four pass, one
+  Mockito unfinished-stubbing error in the new provider fixture (registry creation
+  nested inside a stub); corrected before expanded verification. Owner: S2 lane.
+
+  Validation selection (all queued with Java 25 and verified ROMs; tile/mapping
+  assertions, no GL fixture):
+
+  ```bash
+  python3 tools/testing/maven_queue.py -Dmse=off -DskipTests compile
+  python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestSonic2CharacterPresentation,TestSonic2OneUpPresentation,TestSonic2PresentationProvider,TestSonic2ResultsPresentation,TestSonic2SpecialStageNamePresentation,TestSonic2LivesHudDonation,TestSonic2ResultsCharacterName,TestSonic2ResultsPlcReadiness,TestSonic2ResultsFixedZeroArt,TestSonic2SpecialStageResultsPlcReadiness,TestSonic2SpecialStageSuperResults,TestSonic2SpecialStageResultsWidescreenCommands,TestSonic2SpecialStageResultsTallyCadence,TestSonic2MonitorIconArt,TestMonitorObjectInstance,TestSonic2MonitorMusicAdmission,TestSonic2RetailRingMonitor,TestSonic2CompetitionMonitorConsumer,TestMicaCharacterIntegration,TestModApiSignatureSurface' test
+  python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestSonic2PresentationProvider test
+  ```
+
+  Expanded run: 79 tests, one new-fixture assertion failure, zero skips; all
+  existing tests and the custom-surface assertions passed. The new stock HUD
+  assertion incorrectly expected Tails tiles in the provider's initial view;
+  `Sonic2ObjectArt.loadForZone` initializes that view from the Sonic bank. Corrected
+  the test to compare with the unchanged native loader output and retained the
+  independent native Tails monitor assertion. No production change followed this
+  run. Expanded queue wait: 378 seconds; Maven execution: 102 seconds. No user wait;
+  other elapsed work time was not separately measured. This is focused evidence,
+  not full-suite or gameplay-capture certification. Packaged presentation assets
+  and the other game/signpost lanes remain outside this lane.
+
+  Final provider rerun: 2 passed, zero failures/errors/skips (35.163 seconds Maven
+  execution). All 79 selected tests are covered by the expanded run plus this
+  fixture-only rerun. Citation validation: 2 citations valid; whitespace check
+  clean. The tested production source is the `41277b704` merged tree plus the
+  S2 snapshot reuse and special-stage name additions committed by this lane.
+  No live jobs or blockers. Next action: lead integrates the lane branch; no
+  destination merge or push was performed here.
+
+
+- 2026-11-08: W4 S3K surface lane complete on
+  `feature/ai-mica-s3k-surfaces-r2`: HUD life icon/name, act-results name,
+  Blue Sphere results name and independent 1-up face. This consolidates the
+  three intermediate adapter reports. Results derive tiles/mappings after native
+  art readiness, including rewind rebuilds; Blue Sphere retains native tile
+  compensation/palette selection. Monitors use their existing life-icon offset.
+  Native names, GOT THROUGH ACT mappings and missing-slot faces retain their
+  stock fallback. No contract, other-host or signpost changes in this lane.
+  Tested source `a67bbed5f` with queued Maven (`-Dmse=off`, surfaceless EGL):
+  310 tests passed, zero failures/errors/skips, including five new tile/mapping
+  surface cases, S3K HUD/results/monitor regressions, MICA integration, signature
+  surface and all four required S3K loading checks. Checkpoint compilation passed.
+  The initial focused attempt failed test compilation because a newly added test
+  ran against main classes compiled before the 1-up method was added; the fresh
+  fixed-tree run above passed. Final validation queued about 5.5 minutes, executed
+  1m50s; user wait zero. No gameplay captures, broad smoke or release suite run.
+  The lead owns remaining asset packaging, other surfaces and integration; this
+  lane has made no push and keeps its worktree/branch for handoff.
+
+
+- 2026-11-08: resumed sign lane on `feature/ai-mica-signs-r2` from saved WIP;
+  checkpoint `5b2be03ac`, integrated character branch at `d2b8d5fe7` in
+  `4e7ed3101`, retaining presentation and Gilded suppliers and the tool-built sheet.
+  All three native sign consumers now support optional face/spin/native-backing
+  poses. MICA packages presentation PNGs through bounded `ModAssetRoot` loading.
+  API signature, packaged-asset/native-sheet tile checks, existing sign tests and
+  the four required S3K bootstrap/loading guards passed: 116 tests, zero skips.
+  S1/S2 coverage checkpoints: `8223e0d62`, `4897515a8`. Inspected EGL captures in
+  `/tmp/mica-signs-20261108/`: S1 GHZ1 (`s1-approach`, face 500/spin 200), S2 EHZ1
+  (`s2-approach`, face 450/spin 300), S3K HCZ1 (`s3k-hcz-arena`, face 2400).
+  These are positioned native-route witnesses, not full title-to-sign certification;
+  HCZ starts at (14080,1110) with declared 500 rings/seven emeralds, uses Gilded to
+  defeat the native miniboss, and reaches the sign/results before later act-2 death.
+  Native reference input replays through the titles did not qualify MICA's routes.
+  Full title-route sign captures remain outstanding; unrelated W4 consumers remain
+  owned by their parallel lanes. No engine physics or native route rules were changed.
+- 2026-11-08 (lead review): the S2 special-stage HUD still prints the native
+  "SONIC" label above the ring count (seen in the W4 stages capture). Not yet in the
+  surface inventory; add it to the next presentation lane.
+
+- 2026-11-08: abilities lane outcome 1 wires MICA’s air hook to `HomingAttack.start`,
+  selecting Instagib when powered. No-target presses dash because the strike is her
+  own move, rather than preserving Sonic’s unrelated native air fallback.
+
+- 2026-11-08: abilities lane outcome 2 adds optional `HOMING_DIVE` canonical
+  sheet binding outside native animation IDs; the world strike phase selects its
+  four two-tick frames. No gameplay or character-local animation latch was added.
+  Validation: 42 focused Java tests passed without skips (MICA, homing,
+  materializer, canonical mapping, API signatures), plus the assembler test.
+  Rejected: publishing the synthetic dive ID as gameplay state failed the real
+  Buzzer kill because native touch requires anim=Roll. The visual script now runs
+  with a temporary ID restored before returning; native contact retains Roll.
+
+- 2026-11-08: abilities lane outcome 3 replaces placeholder tuning with the shared
+  `PhysicsProfile.SONIC_2_SONIC` used by all three stock single-player providers.
+  `CharacterPhysicsSpec` remains instance-owned; host rules/modifiers still apply.
+  Acceptance compares the entire physics record against each host Sonic provider.
+  Validation: the requested queued Maven selection passed 96 tests, zero skips,
+  including all three MICA hosts, homing, API pin, Super-form gate and S3K guards.
+  Capture packaging validates with zero findings. Outcome 4 remains in progress.
+
+- 2026-11-08: abilities capture audit found that the character hook precedes the
+  S3K Super gate. MICA now tries the supported transformation controller first;
+  an input-driven S3K acceptance guards against homing consuming that press.
+  Input-driven transformation regression and all requested checks pass again:
+  96 tests, no failures/errors/skips. Queue wait 400s; execution 45s; user wait 0.
+
+- 2026-11-08: abilities lane outcome 4 records production gameplay evidence under
+  `/tmp/mica-abilities-20261108/`, using `gameplay-capture` and surfaceless EGL.
+  The code is `db3781859` (homing `9d606cda4`, dive `320f6a1d5`, physics
+  `0ae6e7d5b`, S3K input gate `db3781859`). No merge or push by this lane.
+  Title-first clips retain the real launch/input path and owned save roots:
+  `s1-verified-route/capture.mp4` (idle, full-speed run, spring at frame 2392),
+  `s1-verified-chain/capture.mp4` (normal strikes 1364–1367 and 1397–1408, with no
+  intervening grounded row; second native kill awards 200 points),
+  `s2-verified-kill/capture.mp4` (idle, full-speed run, normal Coconuts homing
+  kill at frames 1553–1555; native 100-point defeat at 1560), and
+  `s3k-verified-route/capture.mp4` (idle/run, monkey kill at 1137–1142, native spring
+  launch at 1562 with y velocity -0xA00). `s2-verified-powered/capture.mp4`
+  demonstrates transformation, gold-palette Instagib strikes and the authored
+  spring pose (frame 845). That last clip deliberately uses direct EHZ1 boot
+  with supported capture debug setup `--emeralds 1111111 --rings 80`, not a
+  title-first saved route. No positioned starts or mod gameplay hacks are used.
+  All clips are 640×448, 60 fps; ffprobe frame counts match their state CSVs.
+  Reviewed selected before/strike/defeat/spring pixels as well as input/state rows.
+  Inputs, state CSVs, selected review stills and `evidence.json` remain beside the
+  videos; regenerable PNG frame directories were removed after review because
+  shared `/tmp` filled. Earlier probes are not acceptance clips. The requested
+  actions are demonstrated across the set; an airborne chain is filmed in GHZ1,
+  not separately certified in every host. No broad smoke or full-suite claim:
+  cross-lane validation/integration remain with the delivery lead.
+
+
+- 2026-11-08: W4 screen lane on `feature/ai-mica-screens`: optional indexed
+  continue banks preserve the native frame/timing owners in S1/S2/S3K. MICA
+  packages every authored continue pose; native text and stock Tails retain their
+  original palettes (custom line 2 in S1/S2, line 1 in S3K). Focused tests and
+  captures in progress. Portrait and snowboard consumers remain pending.
+  Continue palette evidence: S1 `.cont_text` and `.cont_Sonic1` share line 0,
+  while the oval uses line 1: Map_ContScr_internal (docs/s1disasm/_maps/Continue Screen.asm:14-56).
+  S2 `ContinueScreen` retains the player lines and loads `PalID_SS1` for its
+  backdrop: ContinueScreen (s2.asm:10350-10368). S3K loads all four
+  native lines and renders text on line 0: loc_5C3BC (sonic3k.asm:122909-122919);
+  the actor/icon mapping bytes use line 0; Knuckles' actor adds line 3.
+  Native screen text/partners therefore keep their ROM palette while MICA
+  binds to an unused screen line. Initial capture images were rejected because
+  GameplayCaptureSession's generic render path draws a level in continue mode;
+  the component fixture now explicitly draws the production continue provider.
+- 2026-11-08: W4 portrait adapter resolves character-owned portrait poses by
+  canonical key before the native Sonic/Tails/Knuckles fallback. Team layouts
+  retain the native Tails frame. A renderer-owned scoped palette bank isolates
+  MICA from every menu palette line; these are derived graphics resources,
+  released on reset and recreated when their context generation retires.
+  Menu/background and character lines load separately:
+  loc_C710 (sonic3k.asm:16118-16132). Portrait and continue pixel checks are
+  in progress; the continue custom bank was moved clear of native allocations.
+  Rejected captures also exposed the fixture retaining a level camera during
+  intermediate frontend batch flushes; frontend capture must set camera (0,0).
+- 2026-11-08: W4 ICZ adapter uses the 13-frame `snowboard` bank while retaining
+  `IczSnowboardIntroInstance`'s native animation, movement and handoff. Both the
+  custom rider and native board/spray have renderer-owned palette banks; deferred
+  sprite commands carry the palette replay, so no live level palette is replaced.
+  Palette-sharing evidence: the rider selects player line 0 at
+  loc_393EE (sonic3k.asm:76793-76804); the board selects line 0 in
+  Obj_LevelIntroICZ1 (sonic3k.asm:77047-77055); spray selects line 0 in
+  sub_39924 (sonic3k.asm:77196-77205). Rider-frame DPLC selection belongs to
+  sub_3968E (sonic3k.asm:76991-77007). Big snow pile terrain/priority and constants remain
+  native owners; neither needs a character-code special case. Capture/checks pending.
+  Capture diagnosis: resetting the camera alone did not restore S3K's missing
+  rows. Instrumentation showed `DisplayedFade[mode=FROM_BLACK, steps=0,
+  lineMask=14, pending=false]`, with no GL errors. The fixture had requested
+  game over immediately after boot, before the initial level reveal. Continue
+  captures now step that reveal first; direct data-select captures explicitly
+  release its predecessor's palette publication. Debug-only probes are removed.
+  ICZ runtime captures at ticks 60/120/180/240/300 show the authored rider;
+  tick 0 was rejected because the native level fade is still black.
+
+- 2026-11-08: W4 screens lane complete, owned by `feature/ai-mica-screens` (adapter details above).
+  Checkpoints: continue `e7d2fb27a`, portrait `9ab76f309`; final snowboard
+  adapter and capture fixture verified together before the final surface commit.
+  All three continues, S3K solo/team portraits and ICZ1 rider art are wired.
+  Native animation/movement/timing and stock fallback remain with their owners.
+  No changes were needed in ICZ events, BigSnowPile or the existing 13-frame constant.
+  Capture witnesses were inspected at 320×224 under surfaceless EGL in
+  `/tmp/mica-screens-20261108/`: `s1-continue-{wait,depart}.png`,
+  `s2-continue-{wait,depart}.png`, `s3k-continue-{wait,depart}.png`,
+  `s3k-data-select-solo-and-tails.png` (both saved-slot variants in one image),
+  and `s3k-icz1-snowboard-{60,120,180,240,300}.png`. The data-select zone-preview
+  images retain the existing native/frontend path; this is portrait certification,
+  not certification of every menu preview. No full-route or release-suite claim.
+
+  Final focused check: 213 tests passed, zero failures/errors/skips; all ROMs found.
+  Production sources are the portrait checkpoint plus the final snowboard adapter;
+  only this status entry follows the successful run. Final queue wait 16s,
+  Maven execution 1m45s, user wait zero; other elapsed work was not separately timed.
+  Earlier focused runs passed 42 continue/API/integration checks and 96 portrait
+  regressions; rejected fixture captures are explained above. The prior expanded
+  181-test run had only the incomplete-fade capture assertion failure, now repaired.
+
+  ```bash
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dmica.captureDir=/tmp/mica-screens-20261108/ '-Dtest=TestSonic1ContinueScreen,TestSonic2ContinueScreen,TestSonic3kContinueScreenProvider,TestSonic3kContinueScreenArt,TestContinueScreenRoundTrip,TestMicaCharacterIntegration,TestIczSnowboardArtLoader,TestRewindFixS3KIczBigSnowPileCodec,TestS3kCustomTeamPortraitComposer,TestS3kDataSelectPresentation,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+  python3 tools/disasm/disasm_citations.py check docs/architecture/designs/2026-11-08-original-character-mod.md
+  git diff --check
+  ```
+
+  Citation check: 8 exact, 3 within owning routines, 1 inherited unanchored citation;
+  no stale/out-of-range/missing findings. Whitespace check clean. All validation
+  jobs finished. No merge or push; lead owns integration, cross-lane contract
+  reconciliation and broad validation. The `Art.screenFrames` component is additive
+  and retains the previous four/five-argument constructors; the other presentation
+  lane may need to combine its added components at integration.
+- 2026-11-08 (lead): merged W5/W6 abilities (`632861a37`), special/bonus stages
+  (`bcdbe781e`) and continue/portrait/snowboard (`c6fa45fdf`). Combined focused run
+  on `4f467117f`: 1,663 tests, 14 failures + 1 error, 2 skipped, all in KiS2 and S3K
+  special/bonus-stage trace replays. The same 15 classes on develop `33c3b8e56` and on
+  pre-stages integration `f9729bc43` fail identically (same identities, first
+  divergence and error totals), so they predate this work. Remaining presentation
+  surfaces seen in captures: S3K data-select save-slot life icons and NO SAVE slot,
+  S2 special-stage HUD "SONIC" label.
+
+- 2026-11-08: W4 S1/S2 ending lane `feature/ai-mica-endings-s1s2` complete.
+  S1 commit `6f5d7a49f` supplies eight native-timed ending poses. S2 supplies all
+  four solo photos, five Float2 frames, eight normal and six powered selectors;
+  native vehicles and separate Tails roles remain ROM-owned. Palette rows are
+  private, with native white fade steps and W6 Gilded cycling. Captures inspected
+  at `/tmp/mica-endings-s1s2-20261108/{s1,s2-normal,s2-super}/` include per-frame CSVs.
+  Validation: queued Maven with `-Dmse=off` and surfaceless EGL; S1 existing ending,
+  rewind and API checks (29 passing plus corrected capture test, no skips), S2
+  ending/KiS2/native-entry/full MICA integration/API checks (48 passing, no skips),
+  Engine draw-boundary checks plus two captures (9 passing), final denser captures
+  (2 passing). The initial generic capture draw showed DEZ rather than the S2
+  ending: rejected as visual evidence. The retained capture uses the real Engine
+  binding/reshape/ending draw and `flushScreenSpace`, following
+  `TestEndingBackgroundDrawBoundary`; blank native camera-pan intervals are not
+  visibility failures. No full-suite or route-completion claim. No live jobs remain.
+
+- 2026-11-08: W4/W6 S3K ending lane `feature/ai-mica-endings-s3k` adds
+  optional native-ID ending sets through the owner-bounded presentation supplier,
+  packaged MICA S3K PNGs and private palette contexts. Rescue/reunion callers use
+  semantic scene-form operations for both native and profile controllers; the
+  profile retains authored palette cycles and no scene ring drain. Native ROM
+  Float2 and transformation scripts drive the added frames. The implementation and verification reports are consolidated here.
+  This remains declared-entry scene verification rather than Doomsday route
+  certification, covering normal/Gilded rescue and reunion, ride, tiny passengers
+  and the Hyper-progress trio child. All three production capture sessions return to the
+  title (15,088 / 15,798 / 15,538 recorded level frames), with screenshots and
+  CSVs under `/tmp/mica-endings-s3k-20261108/`. The final visual review caught and
+  corrected the native hidden-frame-zero / authored WAIT collision; focused
+  regressions preserve ordinary idle outside scene ownership. Long credits also
+  exposed fresh native input callback identities exhausting the owner wrapper
+  cache; stable native identities fix it without relaxing the bound.
+  The original ending/API/S3K run had 402 passes and three capture aborts from
+  that cache issue; the capture rerun passed 4/0/0/0, the remaining MICA/DDZ/API
+  and required S3K checks passed 100/0/0/0, and the corrected final captures plus
+  hidden-frame/input regressions passed 6/0/0/0. No full-suite or campaign claim.
+  New citations pass the focused strict checker; Python build syntax and diff
+  whitespace checks pass. This lane neither merges nor pushes.
+
+  The strengthened production-render assertions also pass 3/0/0/0: every required
+  ending slot reaches the renderer, fixed-palette slots match their packaged
+  colours, and private palette rows stay outside native lines 0–3. Across the
+  five focused test jobs, queue wait was 15m12s and Maven execution was 8m42s;
+  user wait was zero. Other investigation/build wall time was not fully timed.
+
+- 2026-11-08: W4 presentation sweep, surface 1: save-slot life counters now
+  resolve the selected canonical character's HUD icon and palette. The native
+  cross, digits, continues and stock character tilemaps remain owned by the menu.
+  The icon uses the existing renderer-owned palette bank; no public presentation
+  contract changes. Focused verification and inspected captures recorded below.
+  Verification: queued Java 25 Maven `-Dmse=off` with surfaceless EGL, selection
+  `TestS3kDataSelectPresentation,TestS3kCustomTeamPortraitComposer,TestMicaCharacterIntegration#continuePixelsS3k`: 91 passed, zero skips.
+  Inspected `/tmp/mica-sweep-20261108/s3k-data-select-solo-and-tails.png`: both
+  saved MICA slots show the jade HUD face beside lives; native continues icons
+  remain a separate surface. Queue wait 393s, execution 95s, user wait zero.
+  Initial compile raced a newly added S2 helper; the fresh source build passed.
+
+- 2026-11-08: W4 sweep surface 2: NO SAVE already used the portrait composer,
+  but team selection was absent from the object-state cache key. Team changes
+  now rebuild its custom frame immediately, including within an animation tick.
+  The integration fixture selects MICA solo and MICA/Tails through the real
+  controller roster; stock NO SAVE retains its native mapping. Same 91-test
+  selection passed without skips (queue 196s; execution 94s). Inspected
+  `/tmp/mica-sweep-20261108/s3k-no-save-mica.png` and
+  `s3k-no-save-mica-tails.png`: both NO SAVE variants show MICA; Tails remains native.
+
+- 2026-11-08: W4 sweep surface 3 composes the S2 half-pipe HUD name from its
+  own five SONIC tiles, five MILES tiles and overseas TAILS bank. Native M/I/C/A
+  cover MICA without supplements. Only the five name tiles are derived; native
+  ring text, counts, stock partner, palettes and SAT mappings are retained.
+  The inventory is owned by `Obj5E` (s2.asm:9503-9515), its mapping include
+  `Obj5E_MapUnc_7070` (s2.asm:9615) and `ArtNem_SpecialHUD` (s2.asm:91131).
+
+  Sweep search: reviewed canonical `"sonic"` comparisons and SONIC literals,
+  native frame/art selections in HUD, menu/data select, results, continue,
+  sign/monitor, special/bonus stage and title owners across all three hosts.
+  Endings/credits remain owned by other lanes. Native fallback banks and route/
+  physics/trace identifiers remain intentional. No additional unadapted
+  single-player gameplay HUD/results name or face consumer was found.
+  Follow-ups outside this sweep's presentation slots:
+  - S1/S2/S3K title-screen logos and mascots (including S2 Sega giant Sonic)
+    are fixed branding/front-end art, with no title-art slot.
+  - S2 title-card `SONIC THE HEDGEHOG` stripe is native game branding, not the
+    results/HUD name cell; no replacement stripe asset is supplied.
+  - S2 native competition owns fixed Sonic/Tails participants and results/HUD
+    banks; custom 2P characters are outside this single-player lane.
+  - S3K slot reels retain native prize symbols (including Sonic); these are
+    machine props, separate from the already adapted playable slot sprite.
+  - S2 Tornado's native partner/pilot art remains route-owned; MICA's Sonic route
+    uses stock Tails there. Custom companion/pilot content needs its own slot.
+  S2 results' SONIC RINGS debug fallback is diagnostic text; the native mapped
+  row is ring/bonus art, not a further composed SONIC name.
+
+  Expanded check: queued Maven `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl`
+  passed 143 tests, no failures/errors/skips, all ROMs found (queue 229s; execution
+  108s). Selection: `TestSonic2SpecialStageHudPresentation`,
+  `Sonic2SpecialStageHudLayoutTest`, `Sonic2SpecialStageManagerTest`,
+  `Sonic2SpecialStageDataLoaderTest`, `TestSonic2SpecialStageSpriteAssembly`,
+  `TestSonic2SpecialStageNativePresentation`,
+  `TestSonic2SpecialStageNativePlayerPresentation`, `TestMicaCharacterIntegration`,
+  `TestModApiSignatureSurface`, `TestS3kAiz1SkipHeadless`,
+  `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+  `TestSonic3kDecodingUtils`. Capture properties:
+  `-Dmica.captureDir=/tmp/mica-sweep-20261108` and
+  `-Dmica.stage.captureRoot=/tmp/mica-sweep-20261108`. Inspected
+  `s2/frame-180.png`: MICA above RINGS, with native stage palette/track retained.
+  Frames 120 and 239 plus state.csv are adjacent component-stage witnesses,
+  not title-to-special-stage route certification.
+
+- 2026-11-08: W4 sweep surface 4: the capture audit exposed native Sonic in
+  saved-slot miniature continue counters. These now reuse `continue/icon` frame
+  0 and its isolated palette. Only transparent padding may extend beyond the
+  16×24 figure cell; otherwise the consumer keeps native art, preserving the
+  adjacent cross/digits. No public API additions. The expanded 143-test run above
+  includes this production source and its MICA capture assertion. Final menu
+  regression command:
+
+  ```bash
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kDataSelectPresentation,TestS3kCustomTeamPortraitComposer' test
+  ```
+
+  91 passed (76 presentation + 15 composer), zero failures/errors/skips; queue
+  49s, execution 36.677s. This includes the new figure-cell/cross preservation
+  test and existing stock menu regressions. Inspected final saved-slot and both
+  NO SAVE captures: MICA figures/faces, native Tails, crosses and digits visible.
+  S2 frame 120 is the native white transition and is rejected as art evidence;
+  frames 180/239 visibly show MICA's label. Zone preview noise follows the
+  inherited frontend path and remains uncertified, as in the screens lane.
+  The tested source is `18f363717` plus the final continue-counter adapter/test
+  changes committed by this lane; subsequent edits are documentation only.
+  All five validation jobs finished (one initial compilation failure plus four
+  passing runs). Total queue wait 935s; Maven execution about 418s; user wait zero;
+  other work time unmeasured. Citation check: 13 exact, 3 near, 2 unverifiable
+  (include/inherited references), no stale/missing/out-of-range findings;
+  whitespace clean. No merge or push. Lead owns integration and broader smoke;
+  this is focused presentation evidence, not full-suite or route certification.
+
+### Historical W7 art checkpoints (2026-11-08)
 
 W7 art-lane handoff (2026-11-08, `feature/ai-mica-art`): 96 indexed core frames
 and a [repeatable Python/Pillow pipeline](../../../tools/modding/playable_art/README.md).
@@ -430,552 +1009,3 @@ Continue sets, data-select portrait/team composition, snowboard and ending inven
 remain pending at this item-1 checkpoint. Byte-identical regeneration of all five
 PNGs and the manifest passes. The design-document disassembly citation check
 passes. Rebuild instructions are in the playable-art README, round 5 section.
-
-### W8 — Example, tutorial and evidence (M)
-
-- `examples/<character>/` with a build script in the Mutator Lab pattern.
-- A `docs/modding` walkthrough from base image to playable character, written as a
-  tutorial, plus updates to `characters.md` and the format docs.
-- Short demo clips per game (normal play, homing, Super/Hyper Instagib, special stage,
-  results).
-- Changelog in `CHANGELOG.0.8.prerelease.md`; mark the delivered backlog items in
-  `docs/modding/BACKLOG.md` (GGFP v3 HUD icon, data-select portrait, mod super form).
-
-## Fallback rule
-
-Until a slot has art, the surface uses today's behaviour. Name text is never left as
-"SONIC" once W4 lands; it always composes from the display name, falling back to the
-baked name only when the ROM font lacks a glyph.
-
-## Validation
-
-- Per game: headless acceptance covering registration, launch, save/reload, disabled-mod
-  fallback, rewind across the ability and across a super transformation.
-- Animation: a test that one sheet resolves walk/run/roll/spring/hurt/death in all three
-  games with native speed timing.
-- Presentation: pixel tests (shared offscreen context) for the HUD name, results name
-  and signpost face in each game, with a negative control showing the stock fallback.
-- Stock parity: Sonic, Tails and Knuckles presentation unchanged in every game, apart
-  from the S2 Tails results correction.
-- Homing facade: the existing `TestHomingAttackMutator` stays green through the
-  refactor; add a character-driven case and a Super Instagib case.
-- Mod API pin and package tests; S3K guard tests from `AGENTS.md`; change-based smoke
-  run against the pre-task develop SHA.
-
-## Characters
-
-| | MICA | TALON |
-|---|---|---|
-| Species | Pangolin | Peregrine falcon courier |
-| Stands in for | Sonic | Tails |
-| Normal colours | Jade scales, sand-cream face and belly, coral-red boots, white gloves | Slate blue-grey, cream barred chest, amber goggles, red-and-white shoes, courier satchel |
-| Super form | Gilded: gold scales | Solar: white-gold plumage, flame wingtips |
-| Generated name letters | S1 HUD: M, A | S1 HUD: T, A, L |
-
-TALON's wings are drawn into his body frames, so he needs no separate appendage sprite
-(the engine's Tails tail renderer stays Tails-only).
-
-### TALON engine notes (phase 2)
-
-- 49 source files test `instanceof Tails`, some in gameplay (sidekick CPU, touch
-  response, launchers, vacuum tubes, several S3K objects and bosses). Each must move to
-  the archetype or a declared capability so a Tails stand-in behaves natively. MICA
-  needs no such audit: a non-Tails, non-Knuckles sprite already takes the Sonic branch.
-- Tails-only animations: flight, flight carrying, flight tired, swim variants, carry.
-- Player-controlled flight is native only in S3K. In S1 and S2 it is a mod-defined
-  capability and is documented as such.
-- Tails-only presentation: Tails results variants, Tails special-stage sets, the data
-  select team portrait, and Tails' ending roles (for example piloting the S2 Tornado).
-
-## Open questions
-
-1. Confirm the S3K large-font inventory by decoding the per-zone title-card art.
-
-## Delivery plan and status
-
-Integration branch: `feature/ai-original-character`, from develop `33c3b8e56`. Lanes
-branch from it as `feature/ai-mica-<lane>` and are merged into it from their reports.
-Per the user's rule, develop receives the work only at a major milestone.
-
-Phase 1 waves:
-
-1. W2 canonical animation sheets; W5 homing ability facade (designed for TALON's
-   divebomb too); W1 three-game skeleton plus W3 underwater palette; W7 art pipeline and
-   MICA's core movement set.
-2. W4 presentation contract (name composer, HUD, results, signpost, 1-up), then W6
-   super form.
-3. Remaining W4 surfaces: special and bonus stages, continue, data select, cutscenes,
-   endings and credits.
-
-Status log (times UTC):
-
-- 2026-11-08: W4 stage lane on `feature/ai-mica-stages`: S1 canonical roll and
-  private player palette committed in `dda7b29aa`; S2 half-pipe now installs the
-  indexed behind-view set in the shared native SAT assembly, retaining stage
-  animation, flips, shadows, admission and painter order. Complete working-tree
-  stage/integration/S3K guard selection: 173 passed, no skips. S1 manager 17/17,
-  S2 manager 16/16, compiler 3/3 and MICA integration 8/8. All four production-session
-  stage captures were inspected; final API/native regression results follow below.
-  S2 is committed in `e6a5ac02e`. Blue Sphere now uses MICA's SStage frames with
-  unchanged native projection/animation. Its isolated palette participates in the
-  native channel-ordered white fade and palette rewind snapshot; snapshot tests
-  passed 11/11 (including private-palette fade/restore), renderer 6/6.
-- 2026-11-08: W4 stage lane complete. Blue Sphere committed in `1c8ce9035`.
-  Slot-machine art now uses MICA's five native-ID roll replacements, with low tile
-  priority so native foreground glass still occludes her. Its private palette
-  follows the native black fade and resident-art rewind state. Stock fallback
-  branches remain unchanged. API/native-rendering selection passed 35/35, no
-  skips; corrected slot capture recheck passed 1/1, no skips. Original attempt
-  failures were implementation-time example/engine compilation errors; both
-  were repaired before the passing checks. No baseline failure is being waived.
-  Four local stage commits; no merge or push. Production `GameplayCaptureSession`
-  boots the packaged mod, then uses `GameLoop.enterSpecialStage()` or
-  `LevelManager.requestBonusStageEntry(SLOT_MACHINE)` and neutral input. This
-  proves stage presentation, not traversal of a physical entry trigger.
-  Inspected captures: `/tmp/mica-stages-20261108/{s1,s2,s3k,s3k-slots}/frame-239.png`,
-  with frame 120/180 stills and per-frame `state.csv` alongside them. Slot frame
-  120 is still the native entry title card; frames 180/239 are the bonus stage.
-  Native stage palette rows stay unchanged by custom binding; private rows take
-  character-supplier colours without native recolouring. The new indexed frame
-  sets reconstruct byte-for-byte from their tile/mapping representation.
-
-  Verification commands (Java 25, verified S1/S2/S3K ROMs found; no skips):
-
-  ```bash
-  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=Sonic1SpecialStageManagerTest,Sonic2SpecialStageManagerTest,TestSonic3kSpecialStageRenderer,TestSonic3kSpecialStageManagerSnapshot,TestMicaCharacterIntegration,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestStageSpriteCompiler,TestS3kSlotBonusStageRuntime,TestS3kSlotPlayerRuntime,TestS3kSlotBonusPlayer' test
-  # 173 passed; two matching LevelLoading classes and two SlotBonusStageRuntime classes selected.
-  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestModApiSignatureSurface,TestSonic2SpecialStageSpriteAssembly,TestSonic2SpecialStagePaletteNativeChannels,TestS3kSpecialStageSpritePixels,TestS3kSlotGlassPriority,TestS3kSlotMachineRenderer' test
-  # 35 passed.
-  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestMicaCharacterIntegration#micaSlotsCapture' -Dmica.stage.captureRoot=/tmp/mica-stages-20261108 test
-  # 1 passed after the custom slot tile-priority correction.
-  python3 tools/disasm/disasm_citations.py check docs/architecture/designs/2026-11-08-original-character-mod.md src/main/java/com/openggf/game/sonic3k/bonusstage/slots/S3kSlotPlayerArt.java
-  # 6 checked, 2 existing unverifiable citations; no stale citations.
-  ```
-
-  These are bounded checks, not a full-suite run. Queue wait and execution are
-  separate: the 173-test run last reported 361s waiting, then executed in 1m45s;
-  the 35-test run last reported 180s waiting, then executed in 1m41s. The slot
-  recheck executed in 43s. Admission timestamps between queue reports are unknown;
-  there was no user-approval wait. No category run was launched, so no category
-  `VERDICT` is applicable.
-
-
-
-- 2026-11-08: design agreed; wave 1 launched.
-- 2026-11-08: merged W7 core art (`391684f4f`), W1+W3 skeleton and water palettes
-  (`5e21ef547`), W2 canonical animation sheets (`59998a446`); MICA placeholder sheet
-  given its required WAIT (`838c9743d`). Lead check of the merged tree: the MICA,
-  sample-character, sheet, converter and signature tests pass;
-  `TestLevelPlayableArtInitializerModArt` has 4 errors (NPE `crossGameFeatures` under
-  `mockStatic(CrossGameFeatureProvider)`) that reproduce identically on develop
-  `33c3b8e56` when the class runs alone, so they predate this work. Art round 2's
-  presentation art was rejected on review (blob-like 16x16 faces, sign faces without
-  native composition, noise spin frames, slopes unchanged); round 3 is redoing it.
-- 2026-11-08: merged art rounds 2–3 (`8a2351954`: redrawn faces, native-composition
-  sign busts, spin frames, all 36 slope frames, Gilded palette), the W4a presentation
-  foundation (`62ff3951d`: contract, ROM name composer, S1/S2 title fonts; on-screen
-  surfaces still pending in W4b) and the W5 homing facade (`13515a986`). Lead check of
-  the merged tree passed: homing (15), name composer, signature pin, Mutator Lab
-  package, character registry and MICA integration tests, all ROMs found.
-
-- 2026-11-08: S3K surface lane resumed: HUD life icon/name adapter restored;
-  results, Blue Sphere and independent 1-up face wiring still pending.
-
-- 2026-11-08: sign lane `feature/ai-mica-signs`: additive semantic sign poses,
-  bounded indexed PNG loader, packaged MICA HUD/monitor/sign/glyph assets and S1
-  sign consumer implemented; S2/S3K wiring and capture verification in progress.
-- 2026-11-08: merged W6 Super/Hyper forms (`e4639065d`; conflict with W4a on
-  `CharacterDefinition` resolved by carrying both suppliers; 174 focused tests
-  passed) and W7c sheet assembly (`e9c8350d8`; MICA plays with her art in S1 GHZ1,
-  S2 EHZ1 and S3K AIZ1). Sheet rebuilt from the round-3 slope frames; 39 focused tests
-  and the assembler test passed. Also merged art round 4 (S2 half-pipe, Blue Sphere,
-  S1 maze audit) and round 5 item 1 (S3K slot stage).
-- 2026-11-08: Sol (`gpt-6.1-sol`) reached its usage limit until 2026-11-14 10:38.
-  Lanes stopped mid-work: W4c0 signs/assets, W4c1 S1 surfaces (one unverified commit
-  `290c96d7c`, not merged), W4c2 S2 surfaces, W4c3 S3K surfaces. Their uncommitted
-  work is saved as patches under `~/scratch/agent-tmp/mica-wip-20261108/<lane>/`
-  with base SHA and worktree path. Not started: continue/portrait/snowboard art,
-  endings inventory and art, MICA ability wiring (homing, Instagib when Super,
-  HOMING_DIVE binding, Sonic-equivalent physics), phase 2 (TALON), broad smoke run.
-
-- 2026-11-08: W4c1 S1 resumed on `feature/ai-mica-s1-surfaces-r2`: recovered
-  `290c96d7c`, committed act-results checkpoint `ffbad7a27`, merged integration
-  `d2b8d5fe7` as `7e6935887` without conflicts, then added special-stage results
-  (`ca78ad1f6`) and 1-up monitor art (`6301b46af`). No contract or other-game edits.
-  Name replacement retains the suffix pieces from `M_Got_SonicHas` (docs/s1disasm/_maps/Title Cards.asm:185-195) and
-  `M_SSR_GotAll` (docs/s1disasm/_maps/Title Cards.asm:322-341); the face replaces the four $1C
-  tiles of `.sonic` (docs/s1disasm/_maps/Monitor.asm:37-40).
-  Verification at `6301b46af`: queued Maven `-Dmse=off` compile passed before the
-  merge; final focused run passed 58 tests in 11 classes, no failures/errors/skips:
-  character presentation (5), HUD donation (4), results mappings (4), monitor
-  objects (8+7), results PLC readiness (3), special-stage screen (6), results
-  numbers (2), special-stage PLC readiness (3), API signatures (12), MICA integration
-  (4). Tile/mapping tests use test presentations; no GL pixel capture or broad smoke
-  run is claimed. Final queue wait: 8 seconds; Maven execution: 1m40s; user wait: 0.
-  Earlier attempts stopped at compilation because an edit during compilation left
-  stale main classes; refreshing the two source timestamps forced the successful
-  rebuild. No unresolved S1 surface work; lead owns cross-lane delivery and smoke.
-
-- 2026-11-08: S2 surface lane resumed from saved WIP, compiled and checkpointed
-  (`a41c16e3e`), then merged the character integration branch (`41277b704`).
-  Merge resolution retained both the S2 and Gilded changelog entries; no contract
-  changes. HUD uses the native small letters, act/results use title-card letters,
-  and the monitor uses its independent 16×16 face slot. Special-stage headings
-  include GOT A, HAS ALL THE, NOW … CAN and SUPER …; native suffixes and timing
-  remain with their existing owners. Initial five-class check: four pass, one
-  Mockito unfinished-stubbing error in the new provider fixture (registry creation
-  nested inside a stub); corrected before expanded verification. Owner: S2 lane.
-
-  Validation selection (all queued with Java 25 and verified ROMs; tile/mapping
-  assertions, no GL fixture):
-
-  ```bash
-  python3 tools/testing/maven_queue.py -Dmse=off -DskipTests compile
-  python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestSonic2CharacterPresentation,TestSonic2OneUpPresentation,TestSonic2PresentationProvider,TestSonic2ResultsPresentation,TestSonic2SpecialStageNamePresentation,TestSonic2LivesHudDonation,TestSonic2ResultsCharacterName,TestSonic2ResultsPlcReadiness,TestSonic2ResultsFixedZeroArt,TestSonic2SpecialStageResultsPlcReadiness,TestSonic2SpecialStageSuperResults,TestSonic2SpecialStageResultsWidescreenCommands,TestSonic2SpecialStageResultsTallyCadence,TestSonic2MonitorIconArt,TestMonitorObjectInstance,TestSonic2MonitorMusicAdmission,TestSonic2RetailRingMonitor,TestSonic2CompetitionMonitorConsumer,TestMicaCharacterIntegration,TestModApiSignatureSurface' test
-  python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestSonic2PresentationProvider test
-  ```
-
-  Expanded run: 79 tests, one new-fixture assertion failure, zero skips; all
-  existing tests and the custom-surface assertions passed. The new stock HUD
-  assertion incorrectly expected Tails tiles in the provider's initial view;
-  `Sonic2ObjectArt.loadForZone` initializes that view from the Sonic bank. Corrected
-  the test to compare with the unchanged native loader output and retained the
-  independent native Tails monitor assertion. No production change followed this
-  run. Expanded queue wait: 378 seconds; Maven execution: 102 seconds. No user wait;
-  other elapsed work time was not separately measured. This is focused evidence,
-  not full-suite or gameplay-capture certification. Packaged presentation assets
-  and the other game/signpost lanes remain outside this lane.
-
-  Final provider rerun: 2 passed, zero failures/errors/skips (35.163 seconds Maven
-  execution). All 79 selected tests are covered by the expanded run plus this
-  fixture-only rerun. Citation validation: 2 citations valid; whitespace check
-  clean. The tested production source is the `41277b704` merged tree plus the
-  S2 snapshot reuse and special-stage name additions committed by this lane.
-  No live jobs or blockers. Next action: lead integrates the lane branch; no
-  destination merge or push was performed here.
-
-
-- 2026-11-08: W4 S3K act-results adapter composes the presentation name into
-  derived tiles/mappings after native art readiness, including rewind rebuilds.
-  Focused tile checks pending; stock names and GOT THROUGH ACT mappings retained.
-
-- 2026-11-08: W4 S3K Blue Sphere results now use the same composed name bank,
-  preserving the native special-stage tile compensation and palette selection.
-
-- 2026-11-08: W4 S3K 1-up art uses its independent presentation slot at the
-  existing monitor life-icon mapping offset. Missing slots retain the native face.
-
-- 2026-11-08: W4 S3K surface lane complete on
-  `feature/ai-mica-s3k-surfaces-r2`: HUD life icon/name, act-results name,
-  Blue Sphere results name and independent 1-up face. Native slots retain stock
-  tiles/mappings. No contract, other-host or signpost changes in this lane.
-  Tested source `a67bbed5f` with queued Maven (`-Dmse=off`, surfaceless EGL):
-  310 tests passed, zero failures/errors/skips, including five new tile/mapping
-  surface cases, S3K HUD/results/monitor regressions, MICA integration, signature
-  surface and all four required S3K loading checks. Checkpoint compilation passed.
-  The initial focused attempt failed test compilation because a newly added test
-  ran against main classes compiled before the 1-up method was added; the fresh
-  fixed-tree run above passed. Final validation queued about 5.5 minutes, executed
-  1m50s; user wait zero. No gameplay captures, broad smoke or release suite run.
-  The lead owns remaining asset packaging, other surfaces and integration; this
-  lane has made no push and keeps its worktree/branch for handoff.
-
-
-- 2026-11-08: resumed sign lane on `feature/ai-mica-signs-r2` from saved WIP;
-  checkpoint `5b2be03ac`, integrated character branch at `d2b8d5fe7` in
-  `4e7ed3101`, retaining presentation and Gilded suppliers and the tool-built sheet.
-  All three native sign consumers now support optional face/spin/native-backing
-  poses. MICA packages presentation PNGs through bounded `ModAssetRoot` loading.
-  API signature, packaged-asset/native-sheet tile checks, existing sign tests and
-  the four required S3K bootstrap/loading guards passed: 116 tests, zero skips.
-  S1/S2 coverage checkpoints: `8223e0d62`, `4897515a8`. Inspected EGL captures in
-  `/tmp/mica-signs-20261108/`: S1 GHZ1 (`s1-approach`, face 500/spin 200), S2 EHZ1
-  (`s2-approach`, face 450/spin 300), S3K HCZ1 (`s3k-hcz-arena`, face 2400).
-  These are positioned native-route witnesses, not full title-to-sign certification;
-  HCZ starts at (14080,1110) with declared 500 rings/seven emeralds, uses Gilded to
-  defeat the native miniboss, and reaches the sign/results before later act-2 death.
-  Native reference input replays through the titles did not qualify MICA's routes.
-  Full title-route sign captures remain outstanding; unrelated W4 consumers remain
-  owned by their parallel lanes. No engine physics or native route rules were changed.
-- 2026-11-08 (lead review): the S2 special-stage HUD still prints the native
-  "SONIC" label above the ring count (seen in the W4 stages capture). Not yet in the
-  surface inventory; add it to the next presentation lane.
-
-- 2026-11-08: abilities lane outcome 1 wires MICA’s air hook to `HomingAttack.start`,
-  selecting Instagib when powered. No-target presses dash because the strike is her
-  own move, rather than preserving Sonic’s unrelated native air fallback.
-
-- 2026-11-08: abilities lane outcome 2 adds optional `HOMING_DIVE` canonical
-  sheet binding outside native animation IDs; the world strike phase selects its
-  four two-tick frames. No gameplay or character-local animation latch was added.
-  Validation: 42 focused Java tests passed without skips (MICA, homing,
-  materializer, canonical mapping, API signatures), plus the assembler test.
-  Rejected: publishing the synthetic dive ID as gameplay state failed the real
-  Buzzer kill because native touch requires anim=Roll. The visual script now runs
-  with a temporary ID restored before returning; native contact retains Roll.
-
-- 2026-11-08: abilities lane outcome 3 replaces placeholder tuning with the shared
-  `PhysicsProfile.SONIC_2_SONIC` used by all three stock single-player providers.
-  `CharacterPhysicsSpec` remains instance-owned; host rules/modifiers still apply.
-  Acceptance compares the entire physics record against each host Sonic provider.
-  Validation: the requested queued Maven selection passed 96 tests, zero skips,
-  including all three MICA hosts, homing, API pin, Super-form gate and S3K guards.
-  Capture packaging validates with zero findings. Outcome 4 remains in progress.
-
-- 2026-11-08: abilities capture audit found that the character hook precedes the
-  S3K Super gate. MICA now tries the supported transformation controller first;
-  an input-driven S3K acceptance guards against homing consuming that press.
-  Input-driven transformation regression and all requested checks pass again:
-  96 tests, no failures/errors/skips. Queue wait 400s; execution 45s; user wait 0.
-
-- 2026-11-08: abilities lane outcome 4 records production gameplay evidence under
-  `/tmp/mica-abilities-20261108/`, using `gameplay-capture` and surfaceless EGL.
-  The code is `db3781859` (homing `9d606cda4`, dive `320f6a1d5`, physics
-  `0ae6e7d5b`, S3K input gate `db3781859`). No merge or push by this lane.
-  Title-first clips retain the real launch/input path and owned save roots:
-  `s1-verified-route/capture.mp4` (idle, full-speed run, spring at frame 2392),
-  `s1-verified-chain/capture.mp4` (normal strikes 1364–1367 and 1397–1408, with no
-  intervening grounded row; second native kill awards 200 points),
-  `s2-verified-kill/capture.mp4` (idle, full-speed run, normal Coconuts homing
-  kill at frames 1553–1555; native 100-point defeat at 1560), and
-  `s3k-verified-route/capture.mp4` (idle/run, monkey kill at 1137–1142, native spring
-  launch at 1562 with y velocity -0xA00). `s2-verified-powered/capture.mp4`
-  demonstrates transformation, gold-palette Instagib strikes and the authored
-  spring pose (frame 845). That last clip deliberately uses direct EHZ1 boot
-  with supported capture debug setup `--emeralds 1111111 --rings 80`, not a
-  title-first saved route. No positioned starts or mod gameplay hacks are used.
-  All clips are 640×448, 60 fps; ffprobe frame counts match their state CSVs.
-  Reviewed selected before/strike/defeat/spring pixels as well as input/state rows.
-  Inputs, state CSVs, selected review stills and `evidence.json` remain beside the
-  videos; regenerable PNG frame directories were removed after review because
-  shared `/tmp` filled. Earlier probes are not acceptance clips. The requested
-  actions are demonstrated across the set; an airborne chain is filmed in GHZ1,
-  not separately certified in every host. No broad smoke or full-suite claim:
-  cross-lane validation/integration remain with the delivery lead.
-
-
-- 2026-11-08: W4 screen lane on `feature/ai-mica-screens`: optional indexed
-  continue banks preserve the native frame/timing owners in S1/S2/S3K. MICA
-  packages every authored continue pose; native text and stock Tails retain their
-  original palettes (custom line 2 in S1/S2, line 1 in S3K). Focused tests and
-  captures in progress. Portrait and snowboard consumers remain pending.
-  Continue palette evidence: S1 `.cont_text` and `.cont_Sonic1` share line 0,
-  while the oval uses line 1: Map_ContScr_internal (docs/s1disasm/_maps/Continue Screen.asm:14-56).
-  S2 `ContinueScreen` retains the player lines and loads `PalID_SS1` for its
-  backdrop: ContinueScreen (s2.asm:10350-10368). S3K loads all four
-  native lines and renders text on line 0: loc_5C3BC (sonic3k.asm:122909-122919);
-  the actor/icon mapping bytes use line 0; Knuckles' actor adds line 3.
-  Native screen text/partners therefore keep their ROM palette while MICA
-  binds to an unused screen line. Initial capture images were rejected because
-  GameplayCaptureSession's generic render path draws a level in continue mode;
-  the component fixture now explicitly draws the production continue provider.
-- 2026-11-08: W4 portrait adapter resolves character-owned portrait poses by
-  canonical key before the native Sonic/Tails/Knuckles fallback. Team layouts
-  retain the native Tails frame. A renderer-owned scoped palette bank isolates
-  MICA from every menu palette line; these are derived graphics resources,
-  released on reset and recreated when their context generation retires.
-  Menu/background and character lines load separately:
-  loc_C710 (sonic3k.asm:16118-16132). Portrait and continue pixel checks are
-  in progress; the continue custom bank was moved clear of native allocations.
-  Rejected captures also exposed the fixture retaining a level camera during
-  intermediate frontend batch flushes; frontend capture must set camera (0,0).
-- 2026-11-08: W4 ICZ adapter uses the 13-frame `snowboard` bank while retaining
-  `IczSnowboardIntroInstance`'s native animation, movement and handoff. Both the
-  custom rider and native board/spray have renderer-owned palette banks; deferred
-  sprite commands carry the palette replay, so no live level palette is replaced.
-  Palette-sharing evidence: the rider selects player line 0 at
-  loc_393EE (sonic3k.asm:76793-76804); the board selects line 0 in
-  Obj_LevelIntroICZ1 (sonic3k.asm:77047-77055); spray selects line 0 in
-  sub_39924 (sonic3k.asm:77196-77205). Rider-frame DPLC selection belongs to
-  sub_3968E (sonic3k.asm:76991-77007). Big snow pile terrain/priority and constants remain
-  native owners; neither needs a character-code special case. Capture/checks pending.
-  Capture diagnosis: resetting the camera alone did not restore S3K's missing
-  rows. Instrumentation showed `DisplayedFade[mode=FROM_BLACK, steps=0,
-  lineMask=14, pending=false]`, with no GL errors. The fixture had requested
-  game over immediately after boot, before the initial level reveal. Continue
-  captures now step that reveal first; direct data-select captures explicitly
-  release its predecessor's palette publication. Debug-only probes are removed.
-  ICZ runtime captures at ticks 60/120/180/240/300 show the authored rider;
-  tick 0 was rejected because the native level fade is still black.
-
-- 2026-11-08: W4 screens lane complete, owned by `feature/ai-mica-screens`.
-  Checkpoints: continue `e7d2fb27a`, portrait `9ab76f309`; final snowboard
-  adapter and capture fixture verified together before the final surface commit.
-  All three continues, S3K solo/team portraits and ICZ1 rider art are wired.
-  Native animation/movement/timing and stock fallback remain with their owners.
-  No changes were needed in ICZ events, BigSnowPile or the existing 13-frame constant.
-  Capture witnesses were inspected at 320×224 under surfaceless EGL in
-  `/tmp/mica-screens-20261108/`: `s1-continue-{wait,depart}.png`,
-  `s2-continue-{wait,depart}.png`, `s3k-continue-{wait,depart}.png`,
-  `s3k-data-select-solo-and-tails.png` (both saved-slot variants in one image),
-  and `s3k-icz1-snowboard-{60,120,180,240,300}.png`. The data-select zone-preview
-  images retain the existing native/frontend path; this is portrait certification,
-  not certification of every menu preview. No full-route or release-suite claim.
-
-  Final focused check: 213 tests passed, zero failures/errors/skips; all ROMs found.
-  Production sources are the portrait checkpoint plus the final snowboard adapter;
-  only this status entry follows the successful run. Final queue wait 16s,
-  Maven execution 1m45s, user wait zero; other elapsed work was not separately timed.
-  Earlier focused runs passed 42 continue/API/integration checks and 96 portrait
-  regressions; rejected fixture captures are explained above. The prior expanded
-  181-test run had only the incomplete-fade capture assertion failure, now repaired.
-
-  ```bash
-  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dmica.captureDir=/tmp/mica-screens-20261108/ '-Dtest=TestSonic1ContinueScreen,TestSonic2ContinueScreen,TestSonic3kContinueScreenProvider,TestSonic3kContinueScreenArt,TestContinueScreenRoundTrip,TestMicaCharacterIntegration,TestIczSnowboardArtLoader,TestRewindFixS3KIczBigSnowPileCodec,TestS3kCustomTeamPortraitComposer,TestS3kDataSelectPresentation,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
-  python3 tools/disasm/disasm_citations.py check docs/architecture/designs/2026-11-08-original-character-mod.md
-  git diff --check
-  ```
-
-  Citation check: 8 exact, 3 within owning routines, 1 inherited unanchored citation;
-  no stale/out-of-range/missing findings. Whitespace check clean. All validation
-  jobs finished. No merge or push; lead owns integration, cross-lane contract
-  reconciliation and broad validation. The `Art.screenFrames` component is additive
-  and retains the previous four/five-argument constructors; the other presentation
-  lane may need to combine its added components at integration.
-- 2026-11-08 (lead): merged W5/W6 abilities (`632861a37`), special/bonus stages
-  (`bcdbe781e`) and continue/portrait/snowboard (`c6fa45fdf`). Combined focused run
-  on `4f467117f`: 1,663 tests, 14 failures + 1 error, 2 skipped, all in KiS2 and S3K
-  special/bonus-stage trace replays. The same 15 classes on develop `33c3b8e56` and on
-  pre-stages integration `f9729bc43` fail identically (same identities, first
-  divergence and error totals), so they predate this work. Remaining presentation
-  surfaces seen in captures: S3K data-select save-slot life icons and NO SAVE slot,
-  S2 special-stage HUD "SONIC" label.
-
-- 2026-11-08: W4 S1/S2 ending lane `feature/ai-mica-endings-s1s2` complete.
-  S1 commit `6f5d7a49f` supplies eight native-timed ending poses. S2 supplies all
-  four solo photos, five Float2 frames, eight normal and six powered selectors;
-  native vehicles and separate Tails roles remain ROM-owned. Palette rows are
-  private, with native white fade steps and W6 Gilded cycling. Captures inspected
-  at `/tmp/mica-endings-s1s2-20261108/{s1,s2-normal,s2-super}/` include per-frame CSVs.
-  Validation: queued Maven with `-Dmse=off` and surfaceless EGL; S1 existing ending,
-  rewind and API checks (29 passing plus corrected capture test, no skips), S2
-  ending/KiS2/native-entry/full MICA integration/API checks (48 passing, no skips),
-  Engine draw-boundary checks plus two captures (9 passing), final denser captures
-  (2 passing). The initial generic capture draw showed DEZ rather than the S2
-  ending: rejected as visual evidence. The retained capture uses the real Engine
-  binding/reshape/ending draw and `flushScreenSpace`, following
-  `TestEndingBackgroundDrawBoundary`; blank native camera-pan intervals are not
-  visibility failures. No full-suite or route-completion claim. No live jobs remain.
-
-- 2026-11-08: W4/W6 S3K ending lane `feature/ai-mica-endings-s3k` adds
-  optional native-ID ending sets through the owner-bounded presentation supplier,
-  packaged MICA S3K PNGs and private palette contexts. Rescue/reunion callers use
-  semantic scene-form operations for both native and profile controllers; the
-  profile retains authored palette cycles and no scene ring drain. Native ROM
-  Float2 and transformation scripts drive the added frames. Verification and
-  capture results are recorded in the follow-up below; this remains declared-entry
-  scene verification rather than Doomsday route certification.
-
-- 2026-11-08: W4 S3K ending verification on the same lane covers normal and
-  Gilded rescue/reunion poses, Float2, ride, transform, tiny passengers and the
-  Hyper-progress trio child. All three production capture sessions return to the
-  title (15,088 / 15,798 / 15,538 recorded level frames), with screenshots and
-  CSVs under `/tmp/mica-endings-s3k-20261108/`. The final visual review caught and
-  corrected the native hidden-frame-zero / authored WAIT collision; focused
-  regressions preserve ordinary idle outside scene ownership. Long credits also
-  exposed fresh native input callback identities exhausting the owner wrapper
-  cache; stable native identities fix it without relaxing the bound.
-  The original ending/API/S3K run had 402 passes and three capture aborts from
-  that cache issue; the capture rerun passed 4/0/0/0, the remaining MICA/DDZ/API
-  and required S3K checks passed 100/0/0/0, and the corrected final captures plus
-  hidden-frame/input regressions passed 6/0/0/0. No full-suite or campaign claim.
-  New citations pass the focused strict checker; Python build syntax and diff
-  whitespace checks pass. This lane neither merges nor pushes.
-
-  The strengthened production-render assertions also pass 3/0/0/0: every required
-  ending slot reaches the renderer, fixed-palette slots match their packaged
-  colours, and private palette rows stay outside native lines 0–3. Across the
-  five focused test jobs, queue wait was 15m12s and Maven execution was 8m42s;
-  user wait was zero. Other investigation/build wall time was not fully timed.
-
-- 2026-11-08: W4 presentation sweep, surface 1: save-slot life counters now
-  resolve the selected canonical character's HUD icon and palette. The native
-  cross, digits, continues and stock character tilemaps remain owned by the menu.
-  The icon uses the existing renderer-owned palette bank; no public presentation
-  contract changes. Focused verification and inspected captures recorded below.
-  Verification: queued Java 25 Maven `-Dmse=off` with surfaceless EGL, selection
-  `TestS3kDataSelectPresentation,TestS3kCustomTeamPortraitComposer,TestMicaCharacterIntegration#continuePixelsS3k`: 91 passed, zero skips.
-  Inspected `/tmp/mica-sweep-20261108/s3k-data-select-solo-and-tails.png`: both
-  saved MICA slots show the jade HUD face beside lives; native continues icons
-  remain a separate surface. Queue wait 393s, execution 95s, user wait zero.
-  Initial compile raced a newly added S2 helper; the fresh source build passed.
-
-- 2026-11-08: W4 sweep surface 2: NO SAVE already used the portrait composer,
-  but team selection was absent from the object-state cache key. Team changes
-  now rebuild its custom frame immediately, including within an animation tick.
-  The integration fixture selects MICA solo and MICA/Tails through the real
-  controller roster; stock NO SAVE retains its native mapping. Same 91-test
-  selection passed without skips (queue 196s; execution 94s). Inspected
-  `/tmp/mica-sweep-20261108/s3k-no-save-mica.png` and
-  `s3k-no-save-mica-tails.png`: both NO SAVE variants show MICA; Tails remains native.
-
-- 2026-11-08: W4 sweep surface 3 composes the S2 half-pipe HUD name from its
-  own five SONIC tiles, five MILES tiles and overseas TAILS bank. Native M/I/C/A
-  cover MICA without supplements. Only the five name tiles are derived; native
-  ring text, counts, stock partner, palettes and SAT mappings are retained.
-  The inventory is owned by `Obj5E` (s2.asm:9503-9515), its mapping include
-  `Obj5E_MapUnc_7070` (s2.asm:9615) and `ArtNem_SpecialHUD` (s2.asm:91131).
-
-  Sweep search: reviewed canonical `"sonic"` comparisons and SONIC literals,
-  native frame/art selections in HUD, menu/data select, results, continue,
-  sign/monitor, special/bonus stage and title owners across all three hosts.
-  Endings/credits remain owned by other lanes. Native fallback banks and route/
-  physics/trace identifiers remain intentional. No additional unadapted
-  single-player gameplay HUD/results name or face consumer was found.
-  Follow-ups outside this sweep's presentation slots:
-  - S1/S2/S3K title-screen logos and mascots (including S2 Sega giant Sonic)
-    are fixed branding/front-end art, with no title-art slot.
-  - S2 title-card `SONIC THE HEDGEHOG` stripe is native game branding, not the
-    results/HUD name cell; no replacement stripe asset is supplied.
-  - S2 native competition owns fixed Sonic/Tails participants and results/HUD
-    banks; custom 2P characters are outside this single-player lane.
-  - S3K slot reels retain native prize symbols (including Sonic); these are
-    machine props, separate from the already adapted playable slot sprite.
-  - S2 Tornado's native partner/pilot art remains route-owned; MICA's Sonic route
-    uses stock Tails there. Custom companion/pilot content needs its own slot.
-  S2 results' SONIC RINGS debug fallback is diagnostic text; the native mapped
-  row is ring/bonus art, not a further composed SONIC name.
-
-  Expanded check: queued Maven `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl`
-  passed 143 tests, no failures/errors/skips, all ROMs found (queue 229s; execution
-  108s). Selection: `TestSonic2SpecialStageHudPresentation`,
-  `Sonic2SpecialStageHudLayoutTest`, `Sonic2SpecialStageManagerTest`,
-  `Sonic2SpecialStageDataLoaderTest`, `TestSonic2SpecialStageSpriteAssembly`,
-  `TestSonic2SpecialStageNativePresentation`,
-  `TestSonic2SpecialStageNativePlayerPresentation`, `TestMicaCharacterIntegration`,
-  `TestModApiSignatureSurface`, `TestS3kAiz1SkipHeadless`,
-  `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
-  `TestSonic3kDecodingUtils`. Capture properties:
-  `-Dmica.captureDir=/tmp/mica-sweep-20261108` and
-  `-Dmica.stage.captureRoot=/tmp/mica-sweep-20261108`. Inspected
-  `s2/frame-180.png`: MICA above RINGS, with native stage palette/track retained.
-  Frames 120 and 239 plus state.csv are adjacent component-stage witnesses,
-  not title-to-special-stage route certification.
-
-- 2026-11-08: W4 sweep surface 4: the capture audit exposed native Sonic in
-  saved-slot miniature continue counters. These now reuse `continue/icon` frame
-  0 and its isolated palette. Only transparent padding may extend beyond the
-  16×24 figure cell; otherwise the consumer keeps native art, preserving the
-  adjacent cross/digits. No public API additions. The expanded 143-test run above
-  includes this production source and its MICA capture assertion. Final menu
-  regression command:
-
-  ```bash
-  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kDataSelectPresentation,TestS3kCustomTeamPortraitComposer' test
-  ```
-
-  91 passed (76 presentation + 15 composer), zero failures/errors/skips; queue
-  49s, execution 36.677s. This includes the new figure-cell/cross preservation
-  test and existing stock menu regressions. Inspected final saved-slot and both
-  NO SAVE captures: MICA figures/faces, native Tails, crosses and digits visible.
-  S2 frame 120 is the native white transition and is rejected as art evidence;
-  frames 180/239 visibly show MICA's label. Zone preview noise follows the
-  inherited frontend path and remains uncertified, as in the screens lane.
-  The tested source is `18f363717` plus the final continue-counter adapter/test
-  changes committed by this lane; subsequent edits are documentation only.
-  All five validation jobs finished (one initial compilation failure plus four
-  passing runs). Total queue wait 935s; Maven execution about 418s; user wait zero;
-  other work time unmeasured. Citation check: 13 exact, 3 near, 2 unverifiable
-  (include/inherited references), no stale/missing/out-of-range findings;
-  whitespace clean. No merge or push. Lead owns integration and broader smoke;
-  this is focused presentation evidence, not full-suite or route certification.
