@@ -505,6 +505,10 @@ Status log (times UTC):
   stage/integration/S3K guard selection: 173 passed, no skips. S1 manager 17/17,
   S2 manager 16/16, compiler 3/3 and MICA integration 8/8. All four production-session
   stage captures were inspected; API pin and native-rendering regressions pending.
+  S2 is committed in `e6a5ac02e`. Blue Sphere now uses MICA's SStage frames with
+  unchanged native projection/animation. Its isolated palette participates in the
+  native channel-ordered white fade and palette rewind snapshot; snapshot tests
+  passed 11/11 (including private-palette fade/restore), renderer 6/6.
 
 
 - 2026-11-08: design agreed; wave 1 launched.

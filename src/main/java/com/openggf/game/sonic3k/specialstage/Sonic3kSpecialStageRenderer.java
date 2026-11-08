@@ -42,6 +42,14 @@ public class Sonic3kSpecialStageRenderer {
     private int digitsPatternBase;
     private int iconsPatternBase;
     private int playerPatternBase;
+    private com.openggf.sprites.render.PlayerSpriteRenderer characterStageRenderer;
+    com.openggf.graphics.RenderContext characterPaletteContext() {
+        return characterStageRenderer == null ? null : characterStageRenderer.getRenderContext();
+    }
+    void loadCharacterStageArt() throws java.io.IOException {
+        characterStageRenderer = com.openggf.game.presentation.StageCharacterPresentation.renderer(
+                com.openggf.game.StageSpriteSet.Surface.S3K_BLUE_SPHERE);
+    }
     private int emeraldPatternBase;
     private int tailsPatternBase;
     private int tailsTailsPatternBase;
@@ -1273,6 +1281,10 @@ public class Sonic3kSpecialStageRenderer {
                                     int centerX) {
         if (!artLoaded || playerPatternBase <= 0 || sonicMappingData == null) return;
         int centerY = projectedPlayerY(player.getJumpHeight(), 0);
+        if (characterStageRenderer != null) {
+            characterStageRenderer.drawFrame(player.getMappingFrame(),centerX,centerY,false,false);
+            return;
+        }
         int paletteIndex = playerCharacter == PlayerCharacter.TAILS_ALONE ? 1 : 0;
         renderCharacterSprite(sonicMappingData, sonicMappingFrameCount,
                 playerPatternBase, paletteIndex, player.getMappingFrame(), centerX, centerY);
