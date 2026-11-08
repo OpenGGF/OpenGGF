@@ -74,7 +74,7 @@ persist `CharacterKey.persisted()`.
   strategy appropriate to the character;
 - `behavesLike` — the existing ROM routing bucket used by events and level logic;
 - `secondaryAbility` — one built-in double-jump ability or `NONE`;
-- `supportsSuperForm` — must be `false` for mod characters in playable format v2;
+- `supportsSuperForm` — enables the authored `SuperFormProfile` supplied by `superFormSupplier`;
 - `artSupplier` — the full `SpriteArtSet` from a baked playable sheet; and
 - optional `paletteSupplier` — the character palette, or `null` to retain the host
   game's palette fallback;
@@ -259,9 +259,40 @@ hooks run through the character's owner fault boundary during simulation. Drawin
 must not change gameplay state. Rewind restores captured state without emitting
 landing/reset events, so an ability latch must still be captured explicitly.
 
-Mod characters cannot opt into stock super forms in the current 0.7 contract: set
-`supportsSuperForm` to `false`. This prevents a custom sprite from transforming with
-Sonic's art merely because the stock ring and emerald requirements are met.
+Opt in with `supportsSuperForm = true` and the final `SuperFormSupplier` constructor
+argument (after the optional underwater supplier). The supplier runs through the
+registered owner fault boundary. It returns an immutable `SuperFormProfile` mapping
+host `GameId` to supported `SUPER` and optional S3K `HYPER` tiers. Existing constructors
+remain available and default to no profile. Enabling a mod form without a profile
+is rejected.
+
+Each tier supplies six or other bounded fade rows, a dry cycle, optional underwater
+cycle, positive ticks per frame, a physics profile, a canonical transformation
+animation and optional canonical animation overrides. Rows are sixteen packed
+Mega Drive colour words. Missing overrides preserve the normal sheet; Gilded is a
+palette transformation. Missing water rows use the live W3 host-zone derivation.
+Hyper trails use the character's own renderer and rewind-captured position history;
+stars are opt-in. Neither Sonic's palette nor his alternate mappings are installed.
+
+S2 defaults to seven emeralds and 50 rings, its jump-apex trigger and native drain.
+S3K uses the explicit air-ability trigger, seven Chaos Emeralds before conversion
+for Super, and seven Super Emeralds for Hyper, retaining the native shield and
+invincibility gates. S1's six-emerald, 50-ring form is **mod-defined**, borrowing S2's
+trigger and drain with S1 invincibility music. S1 has no native Super form; this
+path needs no donor ROM. Stock character controllers are unchanged.
+
+The MICA example registers `GildedSettings`: enable its settings override in the
+host settings overlay to edit per-game form switches, S1 emerald requirement,
+ring requirement and S1 music. These existing `MutatorOption` widgets admit at
+LOAD. The small `CharacterSuperFormPolicy` extension is necessary because existing
+policies cannot address a character's authored form. The host accepts a policy
+only for a matching owner and local character; inactive overrides retain profile
+defaults. No creator callback receives world mutation authority.
+
+An ability can read `isSuperSonic()` (including the transformation) and
+`getSuperStateController().isHyperFormActive()`. MICA's homing lane should select
+`INSTAGIB` when `isSuperSonic()` is true. The controller captures palette cursor,
+phase, display frame, tier and ring drain for whole-player rewind.
 
 ## Failure, rewind, and acceptance checklist
 

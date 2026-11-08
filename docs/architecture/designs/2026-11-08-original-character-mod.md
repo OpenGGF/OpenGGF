@@ -319,6 +319,24 @@ native blues. Original shared-palette files remain unchanged in colour.
 sets and data-select/team portrait are not delivered. No stage integration,
 Java build, merge or push was performed.
 
+W7 art-lane round 5 handoff (2026-11-08, `feature/ai-mica-art5`):
+slot-machine replacements now cover all five normal Sonic mappings $96–$9A,
+with their native piece layouts, hotspots and PLC budgets in `wave3.yaml`.
+`Obj_Sonic_RotatingSlotBonus`, `loc_4B97C`, `sub_4B99E` and `off_4B9C2`
+select ordinary host art, not a separate slot-stage sheet. `AniSonic02`/03
+repeat $96 between the other four phases; `loc_12A2A` owns speed-driven timing.
+Original jade scale rows, tucked cream faces, gloves and coral boots retain the
+unchanged shared palette. No fixed-palette variants are generated this round.
+Engine lane must load MICA's palette into the player line and bind these native
+frame IDs when replacing the host-art swap. Native side-by-side 1×/4× sheets
+and a roll GIF are under `/tmp/mica-art5-review-20261108/`. Python layout,
+palette, tile-alias and DPLC budget checks pass; no Java build or runtime claim.
+Scale motion is restrained and the tuck silhouettes deliberately remain rounded.
+Continue sets, data-select portrait/team composition, snowboard and ending inventory
+remain pending at this item-1 checkpoint. Byte-identical regeneration of all five
+PNGs and the manifest passes. The design-document disassembly citation check
+passes. Rebuild instructions are in the playable-art README, round 5 section.
+
 ### W8 — Example, tutorial and evidence (M)
 
 - `examples/<character>/` with a build script in the Mutator Lab pattern.
@@ -413,3 +431,17 @@ Status log (times UTC):
   surfaces still pending in W4b) and the W5 homing facade (`13515a986`). Lead check of
   the merged tree passed: homing (15), name composer, signature pin, Mutator Lab
   package, character registry and MICA integration tests, all ROMs found.
+- 2026-11-08: merged W6 Super/Hyper forms (`e4639065d`; conflict with W4a on
+  `CharacterDefinition` resolved by carrying both suppliers; 174 focused tests
+  passed) and W7c sheet assembly (`e9c8350d8`; MICA plays with her art in S1 GHZ1,
+  S2 EHZ1 and S3K AIZ1). Sheet rebuilt from the round-3 slope frames; 39 focused tests
+  and the assembler test passed. Also merged art round 4 (S2 half-pipe, Blue Sphere,
+  S1 maze audit) and round 5 item 1 (S3K slot stage).
+- 2026-11-08: Sol (`gpt-6.1-sol`) reached its usage limit until 2026-11-14 10:38.
+  Lanes stopped mid-work: W4c0 signs/assets, W4c1 S1 surfaces (one unverified commit
+  `290c96d7c`, not merged), W4c2 S2 surfaces, W4c3 S3K surfaces. Their uncommitted
+  work is saved as patches under `~/scratch/agent-tmp/mica-wip-20261108/<lane>/`
+  with base SHA and worktree path. Not started: continue/portrait/snowboard art,
+  endings inventory and art, MICA ability wiring (homing, Instagib when Super,
+  HOMING_DIVE binding, Sonic-equivalent physics), phase 2 (TALON), broad smoke run.
+
