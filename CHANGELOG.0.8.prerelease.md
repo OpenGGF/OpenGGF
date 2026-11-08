@@ -45,7 +45,8 @@ under the matching area heading; see the
   and save-slot life counters consume her HUD life icon and miniature continue
   counters reuse her continue pose. NO SAVE portrait
   selection refreshes immediately for custom solo and partner teams. The S2
-  half-pipe HUD composes her name from its native SONIC/MILES/TAILS letter art.
+  half-pipe HUD composes her name from its native SONIC/MILES/TAILS letter art,
+  using native letter bounds and spacing without neighbouring shadow pixels.
   Her 13-frame ICZ snowboard set retains the native intro choreography, with
   isolated rider and native board/spray palettes.
   Her S1 ending actor now

@@ -10,6 +10,34 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_2)
 class TestSonic2SpecialStageHudPresentation {
+    @Test void micaUsesNativeGlyphCellsWithoutNeighbourPixels() throws Exception {
+        var loader = new Sonic2SpecialStageDataLoader(TestEnvironment.currentRom());
+        var font = Sonic2SpecialStageHudPresentation.font(loader.getHudArtPatterns(), loader.getTailsTextArtPatterns());
+        // Independent decoded ROM cells: leading space, ink and shadow; no neighbouring letter.
+        String[][] cells = {
+            {"067100671", "044614461", "044464461", "044444451", "044141451", "044110451", "044100451", "011100111"},
+            {"0671", "0571", "0561", "0571", "0561", "0561", "0561", "0111"},
+            {"00676710", "05555561", "05511551", "05500111", "05500671", "05555561", "01555511", "00111110"},
+            {"00557710", "04444471", "04411451", "04444451", "04444451", "04411451", "04410451", "01110111"}
+        };
+        int[] advances = {9, 4, 8, 8};
+        var composed = CharacterNameComposer.compose("MICA", font, Map.of(), 0);
+        assertTrue(composed.complete());
+        assertEquals(29, composed.image().width());
+        int offset = 0;
+        for (int i = 0; i < advances.length; i++) {
+            var glyph = font.get("MICA".charAt(i));
+            assertEquals(advances[i], glyph.width());
+            assertEquals(8, glyph.height());
+            for (int y = 0; y < 8; y++) for (int x = 0; x < advances[i]; x++) {
+                int pixel = Character.digit(cells[i][y].charAt(x), 16);
+                assertEquals(pixel, glyph.pixels()[y * advances[i] + x], "glyph " + i + " at " + x + "," + y);
+                assertEquals(pixel, composed.image().pixels()[y * 29 + offset + x]);
+            }
+            offset += advances[i];
+        }
+    }
+
     @Test void micaUsesOnlyStageLettersAndPreservesEveryOtherTile() throws Exception {
         var loader = new Sonic2SpecialStageDataLoader(TestEnvironment.currentRom());
         var hud = loader.getHudArtPatterns();
@@ -32,7 +60,7 @@ class TestSonic2SpecialStageHudPresentation {
         var hud = loader.getHudArtPatterns();
         var tails = loader.getTailsTextArtPatterns();
         assertSame(hud,Sonic2SpecialStageHudPresentation.apply(hud,tails,null));
-        for (String name : new String[]{"Q", "MMMMMM"})
+        for (String name : new String[]{"SONIC", "TAILS", "MILES", "Q", "MMMMMM"})
             assertSame(hud,Sonic2SpecialStageHudPresentation.apply(hud,tails,new CharacterPresentation(name)));
         var sonic = Sonic2SpecialStageHudPresentation.apply(hud,tails,new CharacterPresentation("SONIC"));
         for(int i=0;i<hud.length;i++) for(int y=0;y<8;y++) for(int x=0;x<8;x++)
