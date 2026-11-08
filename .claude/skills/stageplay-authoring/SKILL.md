@@ -193,3 +193,18 @@ A required edit first tries one native-button seam change with the original suff
 then broader existing candidates. Goal-bearing suffix candidates must pass the
 stored goal programme and fresh linear qualification; a budget failure proves no
 impossibility. References are prior engine observations only, never native CSV.
+
+Native goal stamps may include additive `qualification[].coverage` names. A
+BIZHAWK goal pass states only the listed read-only observations; an accepted
+native lag boundary ends state comparison without inventing filler inputs.
+Record that boundary and any unmet authoring-only waypoints explicitly. Empty
+coverage retains legacy unspecified scope. `passedChecks` requires named coverage.
+Use the read-only S2 goal observer documented in tools/bizhawk/README.md for native
+slot/cell proof, generated from verified ROM templates. Never treat an animation
+counter alone or an engine image as native goal evidence.
+
+Goal expansion can request the existing native-state-gated charge and moving
+Down/roll policies on either targeted human pad. Those remain bounded candidates
+in the same search. Native physics owns admission/speed; saved routes replay rows
+only. An object instance-ID checkpoint mismatch is a host frontier: retain strict
+identity equality and report it instead of normalizing IDs or removing objects.
