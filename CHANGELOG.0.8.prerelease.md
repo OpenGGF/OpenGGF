@@ -46,7 +46,9 @@ under the matching area heading; see the
   with their own music; a tied zone goes to a special-stage tiebreaker. The
   screen splits at line 108 through the shared Competition renderer, and each
   half draws its player's planes, sprites and HUD from the ROM's two-player art.
-  Title cards run in both halves. Teleport monitors swap the players' positions,
+  Title cards run in both halves. Signposts publish their native two-player pole
+  and animated face art; act timers spend the interrupt before a finish crossing.
+  Teleport monitors swap the players' positions,
   speeds, cameras and backgrounds. Badnik, bumper, bonus-block and cage
   scores go to the player who earned them, and the Casino Night slot machines
   and cages serve both players. Enemies whose ROM routine ends in

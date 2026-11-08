@@ -85,6 +85,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements Sonic2N
 
     private int routineState = STATE_IDLE;
     private int mappingFrame = FRAME_EGGMAN;
+    private int competitionPreviousFrame = -1;
     private ObjectAnimationState animationState;
     private int currentAnimId = ANIM_IDLE;
     private int finalAnimId = ANIM_FINAL_SONIC;
@@ -120,6 +121,8 @@ public class SignpostObjectInstance extends BoxObjectInstance implements Sonic2N
         if (competition != null) {
             // Obj0D_Init's native branch bypasses ordinary act-two suppression.
             competition.initializeSignpost();
+            var art = services().gameService(com.openggf.game.sonic2.competition.view.Sonic2CompetitionArtResidency.class);
+            if (art != null) art.initializeSignpostPole();
         }
 
         // ROM: loc_19208 (s2.asm:34650-34656)
@@ -226,6 +229,12 @@ public class SignpostObjectInstance extends BoxObjectInstance implements Sonic2N
         if (animationState != null) {
             animationState.update();
             mappingFrame = animationState.getMappingFrame();
+        }
+        // PLCLoad_Signpost follows AnimateSprite, once per changed frame.
+        if (mappingFrame != competitionPreviousFrame) {
+            competitionPreviousFrame = mappingFrame;
+            var art = services().gameService(com.openggf.game.sonic2.competition.view.Sonic2CompetitionArtResidency.class);
+            if (art != null) art.loadSignpostFrame(mappingFrame);
         }
     }
 

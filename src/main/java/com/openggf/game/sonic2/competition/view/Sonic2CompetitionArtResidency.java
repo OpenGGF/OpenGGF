@@ -144,6 +144,17 @@ public final class Sonic2CompetitionArtResidency implements RuntimeArtCoordinato
         pending.add(upload);
         return true;
     }
+    /** Obj0D_Init (s2.asm:34636-34648); loc_19564 (s2.asm:34940-34952): pole at tile $7FC. */
+    public void initializeSignpostPole() {
+        var upload = romUpload(0x7A18A + 0x20 * 32, 0x7FC, 2);
+        queueUpload(upload.firstSlot(), upload.patterns());
+    }
+
+    /** PLCLoad_Signpost (s2.asm:34920-34952): ROM DPLCs replace only the face bank. */
+    public void loadSignpostFrame(int frame) {
+        submitFrame(frame, -1, 0x196EE, 0x7A18A, 0x5E8 * 32);
+    }
+
     private Upload romUpload(int source, int firstSlot, int count) {
         byte[] bytes = new byte[Math.multiplyExact(count, 32)];
         var reader = reader();
