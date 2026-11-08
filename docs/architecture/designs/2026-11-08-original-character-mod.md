@@ -1307,7 +1307,7 @@ presentation banks, not this normal-playable table.
 
 Fallback art debt is explicit: every semantic key above except `hang/0`–`hang/2`, `wait/stand`,
 `wait/fidget`, `roll/0`–`roll/4`, `ride/stand`, `crane/fall`, `hang/crane`,
-`bar/release`, and `twist/0/1/2/4/5`
+`bar/release`, and the five authored `twist/*` keys
 currently uses its named canonical fallback's first pose. No MICA drawing exists
 for native $58/$5B twists, tumble, pole, bar, chain, cage-entry, gravity-loop, carry,
 wall-run, corkscrew, parachute, crane and cutscene-specific phases. The SSZ/DEZ table IDs were read from the verified locked-on ROM
@@ -1460,3 +1460,54 @@ probes, Tornado is its production waiting helper, and intro is a natural native
 sequence. These do not certify unrelated cold routes. S1 has one implemented
 normal-playable raw writer; S2 has one plus the competitive invisible reset,
 so there are not two or three distinct gameplay raw setters to capture there.
+
+
+#### Implementation-lane handoff
+
+Code/art commit: `4c17838e8f15ccca1f3cc7ca95bc15d01c6ad593` on
+`feature/ai-mica-poses`. The requested focused checks are complete. The broader
+delivery qualification belongs to the delivery lead; this worker unnecessarily
+started additional smoke qualification and stopped it before handoff rather
+than continuing duplicate delivery work.
+
+The final additional invocation was:
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base ed3f6b39be847ae89b0362431e17024eda7aec7a --workers 2 \
+  --headless-gl surfaceless-egl --max-minutes 60 --run
+```
+
+Its environment removed `DISPLAY` and `WAYLAND_DISPLAY` and supplied the six
+MICA capture properties below through `JAVA_TOOL_OPTIONS`. Preparation passed
+in 33.5s. VERDICT INCOMPLETE: 15/91 ordinary batches, 6447 tests, zero
+failures/errors, 12 allowed skips, zero unexplained skips; guards did not run.
+The twelve allowed skips are explicit audio benchmark/OpenAL-isolation opt-ins
+and editor/Stageplay picture refresh opt-ins. Test execution was 155.16s;
+observed admission wait was at least 1835s (1745s acquired waits plus the final
+90s queued checkpoint), user wait zero, residual overhead unmeasured. The owned
+runner and Maven children stopped cleanly. Diagnostics were read before
+acknowledgement. This is not a broad-smoke or full-suite pass. The earlier
+baseline failures above remain relevant to the lead's eventual qualification.
+
+Reproduce the authoritative **115-test, zero-skip** focused result with
+`MICA_POSES_CAPTURE_ROOT` set to the task's external scratch directory:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestMicaCharacterIntegration,TestCanonicalPlayableSheet,TestPlayableSheetMaterializer,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kAizIntroCoverage' \
+  "-Dmica.poses.captureRoot=$MICA_POSES_CAPTURE_ROOT" \
+  "-Dmica.ending.captureRoot=$MICA_POSES_CAPTURE_ROOT/endings" \
+  "-Dmica.hud.captureRoot=$MICA_POSES_CAPTURE_ROOT/hud" \
+  "-Dmica.icon.captureRoot=$MICA_POSES_CAPTURE_ROOT/icons" \
+  "-Dmica.stage.captureRoot=$MICA_POSES_CAPTURE_ROOT/stages" \
+  "-Dmica.captureDir=$MICA_POSES_CAPTURE_ROOT/screens" test
+python3 -m unittest discover -s tools/modding -p 'test_*.py'
+python3 tools/modding/playable_art/verify.py examples/mica-and-talon/art/mica
+```
+
+The initial AIZ actor PNGs have a black scene background. They verify MICA's
+normal/powered actor and palette, while full intro scene visual parity remains
+unverified. The complete native control handoff is tested. Other unrun object
+routes and the documented canonical pose fallbacks remain coverage/art debt.
