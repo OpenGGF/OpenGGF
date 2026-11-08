@@ -2438,3 +2438,70 @@ Matching EHZ1 and HCZ1/HCZ2 baseline replays were requested only after the exist
 33c smoke job terminates, with its current sole owner. Candidate HCZ and fresh
 final-source smoke/guards remain to run. No baseline job was duplicated, no queue
 policy was changed and no source was edited during a category run.
+
+### Placed retirement witness and loader route — 2026-11-08
+
+Sol traced the proposed equal-spawn history hazard through the ordinary gameplay
+schedule. The inline frame begins before loading/execution. Counter placement
+advances at the separate post-camera boundary; non-counter exec-then-load with a
+two-axis layout loads before execution, whereas the other exec-then-load branch
+loads afterward. Post-camera admission does not itself run a solid checkpoint.
+Existing immediate solid corrections run inside object execution. No ordinary
+consumer was found that reads a post-execution replacement's old frame history
+before the next frame clears it. This rejects the proposed normal-schedule leak
+as unproven; it does not certify external/out-of-band callers or justify making
+all retirement paths clear the same state. Placed and dynamic equal-key survivor
+policies remain different. The blind b63 scores remain recorded judgments, with
+no manual adjustment or claim of a new score from this investigation.
+
+Added `placedRangeUnloadExpiresBitsBeforeEqualSpawnReentry` to
+`TestDynamicSolidContactRetirement`. Real landing and pushing establish the old
+bits. Counter pre-routine range retirement then clears the live bits without
+changing either player's position, velocities, animation, status or retained
+ride. Both execution and post-camera placement drive readmission. The replacement
+has a new actor identity, the same canonical spawn and a reused slot, without
+inherited bits. Bringing it into view and renewing both approaches permits fresh
+contacts through its normal automatic checkpoint. This is a ROM-free manager
+boundary witness, not a two-axis reload, full level route or same-frame-history
+policy witness. Runtime Java is unchanged from reviewed 42243358f.
+
+Three prototype outcomes were fixture errors, not production RED evidence. The
+first jumped back without invoking the counter loader and dereferenced an absent
+replacement (15 cases: 14 passed, one error). The next added camera cursor steps
+but still omitted `postCameraPlacementUpdate`, so readmission failed (one
+assertion). With that boundary added, all retirement/admission assertions passed;
+the final new-contact assertion correctly failed while the replacement at X100
+remained outside camera X128's full-solid contact window. Returning the camera to
+zero corrected that precondition. No runtime predicate or policy was relaxed.
+Their queue/Maven times were respectively 409s/32.055s, 516s/34.015s and
+54s/34.116s. Wall and user wait were not separately measured.
+
+Final check, on 423556901 plus this test (and contributor prose):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dopenggf.surefire.reports=target/code-climb/contact-placed-reentry-visible-surefire '-Dtest=TestDynamicSolidContactRetirement' test
+```
+
+Fresh XML: 15 passed, zero failures/errors/skips; queue 56s, Maven 36.137s,
+testcase aggregate 0.392s. Log: target/code-climb/contact-placed-reentry-visible.log.
+The three prototypes remain distinguishable by contact-placed-reentry,
+contact-placed-reentry-green and contact-placed-reentry-complete-frame log/report
+names. No new probe or tool was needed. The testing guide now gives separate
+contact-retirement, ordinary-family and event-owned exact-SST entry choices;
+the architecture guide names the actual loader boundary and preserves the live
+bits/history/ride distinctions. All 13 named test classes exist and Markdown
+fences balance. No new usability grade is claimed.
+
+The existing independent 33c baseline completed under its original sole owner:
+4484/4484 classes, 91/91 ordinary batches, 37065 ordinary tests with 30 failures,
+zero errors and 49 allowed skips; all 836 guards passed. Its final verdict remains
+FAILED. No skipped outcome is unexplained, and all exported omission/cap counters
+are zero. Matched baseline EHZ1 passes all 5852 rows; baseline HCZ1 passes
+3519 comparisons over 3574 planned rows, while HCZ2 retains 26 errors over
+14149 comparisons/14208 planned rows. Both reached their prescribed gates.
+These are baseline observations, not candidate comparisons. Complete commands,
+identities, assertions, skip dictionaries and report owners are retained in the
+owned baseline's target/code-climb/422-baseline-handoff.json and accompanying
+category evidence/light export. No baseline artifacts have been acknowledged or
+removed. Candidate HCZ, final-source smoke/guards and exact comparisons remain
+required before push.

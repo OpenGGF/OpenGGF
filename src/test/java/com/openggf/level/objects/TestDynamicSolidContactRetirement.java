@@ -9,6 +9,7 @@ import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -18,10 +19,11 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** ROM-free witnesses for contact-key lifetime at the production dynamic-retirement boundary. */
+/** ROM-free witnesses for contact-key lifetime at production object-retirement boundaries. */
 class TestDynamicSolidContactRetirement {
     @BeforeEach
     void openGameplayServices() {
@@ -31,6 +33,82 @@ class TestDynamicSolidContactRetirement {
     @AfterEach
     void closeGameplayServices() {
         SessionManager.clear();
+    }
+
+    @Test
+    void placedRangeUnloadExpiresBitsBeforeEqualSpawnReentry() {
+        var source = spawn();
+        var registry = new ObjectRegistry() {
+            @Override public ObjectInstance create(ObjectSpawn spawn) { return new SpawnSolid(spawn); }
+            @Override public void reportCoverage(List<ObjectSpawn> ignored) { }
+            @Override public String getPrimaryName(int id) { return "contact-retirement-solid"; }
+            @Override public ObjectSlotLayout objectSlotLayout() { return ObjectSlotLayout.SONIC_2; }
+        };
+        var manager = new ObjectManager(List.of(source), registry, 0, null, null);
+        manager.enableCounterBasedRespawn();
+        manager.reset(0);
+        var original = (SpawnSolid) manager.getActiveObjectForRewind(source);
+        var contacts = contactPair(manager, original, "placed-range");
+        var riderState = PlayerState.capture(contacts.rider());
+        var pusherState = PlayerState.capture(contacts.pusher());
+        int originalSlot = original.getSlotIndex();
+        var camera = com.openggf.game.GameServices.camera();
+
+        // Counter execution retires this object before its routine. Its loader
+        // runs separately at the post-camera boundary, after these observations.
+        camera.setX((short) 0x0400);
+        manager.update(0x0400, contacts.rider(), List.of(contacts.pusher()), 1, false, true, false);
+
+        var retired = manager.solidContacts().captureRewindState();
+        assertAll(
+                () -> assertTrue(manager.objectQuery().identityOf(original).isEmpty()),
+                () -> assertTrue(retired.standingBits().isEmpty()),
+                () -> assertTrue(retired.pushingBits().isEmpty()),
+                () -> assertSame(original, manager.getRidingObject(contacts.rider())),
+                () -> assertEquals(riderState, PlayerState.capture(contacts.rider())),
+                () -> assertEquals(pusherState, PlayerState.capture(contacts.pusher())));
+
+        // The initial jump uses the engine's counter-window catch-up. Each
+        // subsequent ordinary frame needs both execution and post-camera loading.
+        manager.postCameraPlacementUpdate(0x0400);
+        int frame = 2;
+        for (int cameraX = 0x0380; cameraX >= 0; cameraX -= 0x0080) {
+            camera.setX((short) cameraX);
+            manager.update(cameraX, contacts.rider(), List.of(contacts.pusher()), frame++, false, true, false);
+            manager.postCameraPlacementUpdate(cameraX);
+            if (manager.getActiveObjectForRewind(source) != null) {
+                break;
+            }
+        }
+
+        var replacement = (SpawnSolid) manager.getActiveObjectForRewind(source);
+        assertNotNull(replacement, "ordinary backward cursor passes must readmit the placement");
+        assertNotSame(original, replacement);
+        assertEquals(original.getSpawn(), replacement.getSpawn());
+        assertEquals(originalSlot, replacement.getSlotIndex());
+        assertAll(
+                () -> assertFalse(manager.hasObjectStandingBit(contacts.rider(), replacement)),
+                () -> assertFalse(manager.hasObjectPushingBit(contacts.pusher())),
+                () -> assertSame(original, manager.getRidingObject(contacts.rider())),
+                () -> assertEquals(riderState, PlayerState.capture(contacts.rider())),
+                () -> assertEquals(pusherState, PlayerState.capture(contacts.pusher())));
+
+        // New post-execution placements first run on the next ordinary frame.
+        // Bring this left-edge admission into view: the full-solid on-screen
+        // gate correctly rejects new contact while it remains offscreen.
+        camera.setX((short) 0);
+        // Renew both approaches used by contactPair for fresh, normal contacts.
+        contacts.rider().setCentreX((short) replacement.getX());
+        int maxTop = replacement.getSolidParams().groundHalfHeight() + contacts.rider().getYRadius();
+        contacts.rider().setCentreY((short) (replacement.getY() - 4 - maxTop + 8));
+        contacts.rider().setAir(true);
+        contacts.rider().setYSpeed((short) 0x100);
+        contacts.pusher().setCentreX((short) (replacement.getX() - 15));
+        contacts.pusher().setXSpeed((short) 0x100);
+        manager.update(camera.getX(), contacts.rider(), List.of(contacts.pusher()), frame, false, true, false);
+        assertSame(replacement, manager.getRidingObject(contacts.rider()));
+        assertTrue(manager.hasObjectStandingBit(contacts.rider(), replacement));
+        assertTrue(manager.hasObjectPushingBit(contacts.pusher()));
     }
 
     @ParameterizedTest

@@ -142,6 +142,17 @@ can retain a fresh bit when its collision rules or provider permit it; the same
 bit is stale on the next frame. Start at `retainsFreshStandingContact` for that
 policy, then follow only the relevant entry, continued-ride or multipart caller.
 
+Ordinary gameplay clears frame observations in `beginInlineFrame` before object
+loading or execution. Placement order then depends on the selected mode:
+counter placement advances at the separate post-camera call; non-counter
+exec-then-load places after execution unless the slot layout selects two-axis
+placement, which loads before execution. Post-camera admission does not itself
+run a solid helper. A newly admitted post-execution replacement first executes
+after the next frame's observation clear. Do not infer a same-frame history leak
+from an equal spawn key alone, or describe all S3K placement as exec-then-load.
+`LevelManager` selects counter mode from the collision model independently of
+the slot layout; follow its setup when diagnosing a production route.
+
 Reconstruction has one ordinary order: create/adopt actors and register their
 identities, restore their fields/references, then settle derived state. Deferred
 player effects are an explicit exception. Their recreation hook queues a
@@ -448,9 +459,10 @@ routine or the manager's lifetime policy can still retire them off camera.
 Dynamic retirement resolves the solid's contact key and expires its bits/history
 only when no surviving solid owns that same resolved spawn key. Non-solid children
 with a borrowed spawn do not own it; instance and occurrence owners remain separate.
-This surviving-owner check applies to dynamic retirement. Placed unload/latched
-destruction still uses its older unconditional spawn-key expiry; shared keys across
-those placed/dynamic boundaries remain a separate limitation. Player ride/status
+This surviving-owner check applies to dynamic retirement. Placed range-unload
+releases live bits; latched destruction also evicts the key's frame observations.
+Those placed paths do not apply the dynamic surviving-owner check, so aliases
+across placed/dynamic boundaries remain a separate limitation. Player ride/status
 survives object-side expiry. Start at
 `ObjectSolidContactController.evictRetiredDynamic`, then `ObjectPopulation` for the
 explicit-removal versus destroyed-cleanup ordering. Focused witnesses:

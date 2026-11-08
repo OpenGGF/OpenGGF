@@ -183,8 +183,22 @@ The rewind system has both ordinary regression tests and an opt-in benchmark. Se
 
 ### Object population and contact boundaries
 
-For contact lifetime or object reconstruction changes, start with these production
-boundary checks rather than selecting every rewind test:
+For contact retirement, start with the real landing/pushing, equal-key survivor,
+occurrence and removal-callback boundaries:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestDynamicSolidContactRetirement,TestSolidContactState,TestObjectSolidContactController,TestTasS3kOrtExhaustion,TestObjectRemovalCallbackOwnership' test
+```
+
+`TestDynamicSolidContactRetirement` covers explicit/destroyed dynamic retirement
+and a placed range-unload/reentry. Its placed case calls both object execution
+and post-camera placement: counter-mode `update()` alone does not advance the
+loader. It checks retired live bits, unchanged player state, fresh identity/slot
+reuse and subsequent ordinary contact. This sole-owner case does not establish a
+new policy for frame history or aliases across placed and dynamic owners.
+
+For retained-SST transfer, snapshot round trips or late player effects, use:
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off \
@@ -203,13 +217,18 @@ effects, follow reverse player-refresh/identity and retry in
 `TestShieldRewindPendingRestore`. Snapshot piece-key restoration is a separate
 boundary from live-manager transfer.
 
-For identity publication, construction-child adoption or field-order changes,
-also run the exact-adoption and forward-reference boundaries:
+For ordinary graph reconstruction, constructor-child families and forward
+references, use:
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off \
-  '-Dtest=TestObjectRewindExactAdoption,TestTwoPhaseRestoreOrdering' test
+  '-Dtest=TestConstructorChildFamilyRewind,TestObjectManagerDynamicChainRewindRestore,TestTwoPhaseRestoreOrdering,TestObjectManagerRewindSnapshot,TestModOwnedDynamicObjectRewind' test
 ```
+
+`TestConstructorChildFamilyRewind` distinguishes interleaved same-class families,
+moving children and deferred/absent parents. `TestObjectRewindExactAdoption`
+instead exercises event-owned exact SST-slot adoption and rollback; add it when
+changing that separate surface. It is not the ordinary constructor-child witness.
 
 The late-effect witness calls actual player refresh hooks in reverse order and
 compares captured identities and the complete object snapshot. It covers the
