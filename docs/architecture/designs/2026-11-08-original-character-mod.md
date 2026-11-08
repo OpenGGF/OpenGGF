@@ -540,3 +540,9 @@ Status log (times UTC):
   Validation: the requested queued Maven selection passed 96 tests, zero skips,
   including all three MICA hosts, homing, API pin, Super-form gate and S3K guards.
   Capture packaging validates with zero findings. Outcome 4 remains in progress.
+
+- 2026-11-08: abilities capture audit found that the character hook precedes the
+  S3K Super gate. MICA now tries the supported transformation controller first;
+  an input-driven S3K acceptance guards against homing consuming that press.
+  Input-driven transformation regression and all requested checks pass again:
+  96 tests, no failures/errors/skips. Queue wait 400s; execution 45s; user wait 0.

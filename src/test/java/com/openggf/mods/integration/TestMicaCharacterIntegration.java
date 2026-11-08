@@ -104,6 +104,7 @@ class TestMicaCharacterIntegration {
                     com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(config));
             config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
             if (game.equals("s2")) verifyHoming(fixtureWorld, false);
+            if (game.equals("s3k")) verifyTransformationHook(fixtureWorld);
             verifyGilded(playable, resolved, game);
             if (game.equals("s2")) verifyHoming(fixtureWorld, true);
             var sprites = GameServices.sprites();
@@ -164,6 +165,21 @@ class TestMicaCharacterIntegration {
             assertArrayEquals(saved, Files.readAllBytes(temp.resolve("saves").resolve(game).resolve("slot1.json")));
             assertTrue(fixture.runtime().runtimeDisabledOwners().isEmpty());
         }
+    }
+
+    private void verifyTransformationHook(com.openggf.tests.HeadlessTestFixture fixture) {
+        var registry = com.openggf.game.session.SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        var player = fixture.sprite();
+        fixture.stepIdleFrames(60);
+        player.currentLevelState().resumeTimer();
+        for (int i = 0; i < 7; i++) player.currentGameState().markEmeraldCollected(i);
+        player.addRings(50 - player.getRingCount());
+        fixture.stepFrame(false, false, false, false, true);
+        fixture.stepIdleFrames(6);
+        fixture.stepFrame(false, false, false, false, true);
+        assertTrue(player.isSuperSonic(), "MICA's hook must preserve the S3K transformation press");
+        registry.restore(before);
     }
 
     /** Execute MICA's actual air hook against native touch/defeat, then replay the strike. */

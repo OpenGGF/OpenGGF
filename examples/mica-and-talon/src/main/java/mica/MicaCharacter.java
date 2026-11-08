@@ -24,6 +24,8 @@ public final class MicaCharacter extends AbstractPlayableSprite {
         return new CharacterPhysicsSpec(PhysicsProfile.SONIC_2_SONIC);
     }
     @Override protected boolean onAbilityActivate(boolean up, boolean down, boolean left, boolean right) {
+        // The S3K form gate owns an eligible transformation press before her strike.
+        if (getSuperStateController() != null && getSuperStateController().activateFromAirAbility()) return true;
         // Homing is MICA's own move: an empty target set still gives the forward dash.
         return HomingAttack.start(this, isSuperSonic()
                 ? HomingAttack.Mode.INSTAGIB : HomingAttack.Mode.HOMING);

@@ -448,7 +448,7 @@ ROM-free standalone modules have no native ID vocabulary; their default presenta
 retains the authored `WAIT` cycle. Native profile binding applies to stock hosts.
 
 `HOMING_DIVE` is an optional fixed-duration canonical sheet animation for a
-character-owned `HomingAttack` strike (targeted or forward dash). The host binds it
+character-owned targeted `HomingAttack` strike. The host binds it
 to a reserved creator script ID outside stock animation bytes and selects it only
 while that character's world-owned strike is active. Without it the native roll
 remains. Landing, hurt, control takeover and strike completion return selection to
