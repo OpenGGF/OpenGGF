@@ -1843,6 +1843,102 @@
       ],
       "tile_budget": 13,
       "file": "rescue_float-cf.png"
+    },
+    {
+      "id": "ride-ba",
+      "group": "ride",
+      "frame_set": "s3k_ride",
+      "index": 186,
+      "native_source_label": "word_147828",
+      "native_art_label": "ArtUnc_Sonic",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dimensions": [
+        32,
+        40
+      ],
+      "hotspot": [
+        16,
+        20
+      ],
+      "bounds_px": [
+        -16,
+        -20,
+        32,
+        40
+      ],
+      "pieces": [
+        [
+          -8,
+          -4,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -16,
+          -20,
+          3,
+          1,
+          9,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -16,
+          -12,
+          4,
+          1,
+          12,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -16,
+          -4,
+          1,
+          1,
+          16,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "normal",
+      "dplc_label": "word_148B1A",
+      "dplc_entries": [
+        [
+          9,
+          3585
+        ],
+        [
+          3,
+          2065
+        ],
+        [
+          4,
+          3594
+        ],
+        [
+          1,
+          2069
+        ]
+      ],
+      "tile_budget": 17,
+      "file": "ride-ba.png"
     }
   ]
 }
