@@ -271,6 +271,49 @@ checks pass. The broader crest scales are simpler than the flat art, arm swing
 is restrained, and runtime foot contact remains unverified. The 16px far eye is necessarily
 narrow; the small crest has fewer scale separations than the playable head.
 
+W7 art-lane round 4 handoff (2026-11-08, `feature/ai-mica-art4`):
+`art/mica/wave3/wave3.yaml` and its hand-authored `build.py` now supply the
+18 S2 half-pipe frames, with native per-frame piece layouts and DPLC budgets.
+Owning references: `Obj09_MapUnc_34212`, `Obj09_MapRUnc_345FA`, `off_341E4`,
+`SSHurt_Animation` and `dword_33AA2` in `docs/s2disasm/s2.asm`.
+The sequence is 4 upright, 8 diagonal, 4 horizontal, 2 ball; hurt reuses run
+frames with native flips. Run entries last 4 ticks, ball entries 2 ticks.
+Character originals retain every shared palette index; optional `-fixed.png`
+files quantize to native `Pal_SS` line 1. That fixed line has no jade and cannot
+preserve MICA's colours. Binding a character palette remains integration work.
+The 1×/4× native comparisons and five sequence GIFs are disposable files in
+`/tmp/mica-art4-review-20261108/`. Pixel/palette/layout/aliased-tile/budget and
+byte-for-byte rebuild checks pass without Java. Leaning heads were repositioned
+after the first review clipped their crests; balls were redrawn inside their
+native oval. Scales on the ball are simplified; torso motion is restrained.
+No GGFP, stage palette binding or gameplay certification is claimed.
+Blue Sphere now supplies every native `Map_SStageSonic_` mapping entry and
+`PLC_SStageSonic_` layout from `General/Sprites/Sonic/Map - SStage Sonic.asm`:
+12 entries, including transparent frame 0, standing frame 1, seven running
+frames 2–8 and three curl frames 9–11. The earlier 24-frame estimate counts
+sequence steps, not distinct mapping entries: `byte_91E8` and `byte_91F6` each
+select twelve steps with reuse. Turning rotates the stage in `sub_9580`, with
+no extra player turning set. Native `Pal_SStage_Main` line 0 quantizations
+accompany shared-palette originals. `loc_907E` derives phase from velocity;
+GIF timings are illustrative. Three native-side-by-side GIFs and both-size
+sheets join the S2 reviews. Lower limbs were redrawn for the narrow mapping
+pieces; stride remains restrained and boots are blockier than the core sheet.
+The S1 reuse audit confirms `SonicSS_Main` installs `Map_Sonic` and `id_Roll`,
+then uses `Sonic_Animate` and `Sonic_LoadGfx`. No dedicated maze set is missing.
+`SonAni_Roll` / `SonAni_Roll2` select five normal roll mappings; existing MICA
+canonical ROLL has four images. The S1 comparison repeats phase 0 for the fifth
+native mapping, explicitly a size/readability comparison rather than certified
+native-phase remapping. Two GIFs show the slow/fast native sequence selections.
+No new S1 pixels are committed. Native source labels and reuse paths are in the
+wave-3 manifest. Runtime W2 binding remains responsible for canonical phases.
+Fixed-palette reviews were also added for both special stages. RGB-nearest
+quantization was rejected after it turned red boots tan and erased scale values;
+the final explicit semantic LUTs retain red boots/white gloves and map jade to
+native blues. Original shared-palette files remain unchanged in colour.
+**Partial stopping point after item 3:** slot-machine bonus, S1/S2/S3K continue
+sets and data-select/team portrait are not delivered. No stage integration,
+Java build, merge or push was performed.
+
 ### W8 — Example, tutorial and evidence (M)
 
 - `examples/<character>/` with a build script in the Mutator Lab pattern.
