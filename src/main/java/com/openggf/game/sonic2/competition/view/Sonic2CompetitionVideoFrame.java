@@ -33,6 +33,10 @@ public final class Sonic2CompetitionVideoFrame {
     private Sonic2CompetitionDisplayState displayState = Sonic2CompetitionDisplayState.INACTIVE;
     private java.util.function.Consumer<Boolean> cameraCopies = title -> { };
     public void bindCameraCopies(java.util.function.Consumer<Boolean> copies) { cameraCopies = Objects.requireNonNull(copies); }
+    private Supplier<List<Sonic2CompetitionDisplayInputs.Admission>> titleCardSprites = List::of;
+    public void setTitleCardSprites(Supplier<List<Sonic2CompetitionDisplayInputs.Admission>> sprites) {
+        titleCardSprites = Objects.requireNonNull(sprites);
+    }
     private Runnable titleCardPlanes = () -> { };
     private Runnable hudPatterns = () -> { };
 
@@ -54,8 +58,9 @@ public final class Sonic2CompetitionVideoFrame {
     public void prepareSprites(com.openggf.game.session.GameplayModeContext context,
             com.openggf.game.sonic2.competition.Sonic2CompetitionSession session,
             com.openggf.game.sonic2.competition.Sonic2CompetitionLevelProfile profile) {
-        var objects=Sonic2CompetitionObjectDisplay.admissions(context.getObjectManager(),
-                context.getWorldSession().getGameModule().getObjectArtProvider());
+        var objects = new java.util.ArrayList<>(titleCardSprites.get());
+        objects.addAll(Sonic2CompetitionObjectDisplay.admissions(context.getObjectManager(),
+                context.getWorldSession().getGameModule().getObjectArtProvider()));
         spritePages.prepare(Objects.requireNonNull(spriteSource, "Native sprite inputs").current(
                 context, session, profile, objects, displayState));
         // BuildSprites_2P merges P1/P2 visibility. Replace the generic primary-
