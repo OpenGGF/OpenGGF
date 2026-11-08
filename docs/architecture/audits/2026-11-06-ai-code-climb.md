@@ -3409,3 +3409,179 @@ class mapping. Trace-driver controls are outside ordinary smoke; the ccf focused
 candidate smoke/guards and matched new-source EHZ/HCZ checks remain pending here.
 The durable launcher requires an exact-source review-clearance receipt before it
 can start. No destination branch was changed or pushed.
+
+
+### c4/c9 qualification and catalogue attribution
+
+Completed on 2026-11-08, with root as the sole validation/delivery owner.
+The pinned develop baseline is `c4ca46472e75a0df6f23dfd410e347ab8ed52a70`;
+the tested, clean candidate is `c9f8e75679671dde068db25893f1f0a9bf1fa6cb`.
+Its executable source includes the ccf reconciliation, 4086 contact boundary
+and c9 guard repair described above. Subsequent delivery edits are this audit
+and the testing README only; their source-equivalence proof is retained with
+the delivery receipt. No new cleanup implementation is included.
+
+#### Complete smoke and guards
+
+Each immutable tree ran the following command with Java 25, Lua 5.4 and displays
+unset. Each selected 4,625 smoke source classes, 94 ordinary batches with two
+workers, and one complete guards batch. The execution cap was 40 minutes,
+excluding queue admission. This is bounded smoke, not full-suite or route
+certification.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --category all --workers 2 --headless-gl surfaceless-egl --keep-diagnostics --run
+```
+
+| Tree | Ordinary cases | Failures | Errors | Allowed skips | Guards |
+| --- | ---: | ---: | ---: | ---: | --- |
+| c4 baseline | 37,650 | 28 | 0 | 49 | 843 passed, no errors/skips |
+| c9 candidate | 37,691 | 29 | 0 | 49 | 843 passed, no errors/skips |
+
+The original final lines remain unchanged:
+
+```text
+VERDICT FAILED: head=c4ca46472e75 source=752f90728b9e focused 4625/4625 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38493 failures=28 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+VERDICT FAILED: head=c9f8e7567967 source=87fdb14ab8fa focused 4625/4625 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38534 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+All 49 complete skip dictionaries match, with no unexplained/required skips,
+omitted records or capped causal assertions. Actual selection retains every
+class modulo the previously recorded 11-case contact class move. POM, category,
+runner, comparator and skip-policy inputs are unchanged. Both source/config
+fingerprints match their launch identities after execution. Complete passed-case
+XML is not retained: the category runner removes it after each batch.
+
+The original strict negative comparison is **different**, and remains so.
+Of the candidate's 29 failures, 22 have literal baseline assertions. Three MHZ
+Sonic/Tails/widescreen assertions differ only in printed Set iteration order:
+the complete expected and observed member sets match, the test blobs are
+unchanged, and the assertions compare `Set.of(...)` with `HashSet`.
+Four Three Islands outcomes require the matched-input attribution below.
+`TestEngineSuspensionRendering#capturesSceneBeforeOverlaysAndResumesAfterPublishedZoom`
+is absent from the candidate negatives; no intentional fix or reproducible
+improvement is claimed. No blanket normalization or revised category verdict
+was used.
+
+#### Runtime catalogue control
+
+The verified test properties select the active fixture ROM through
+`RomTestUtils`. Optional scene games follow a separate path:
+`ExampleModHarness` → `SceneRomLibrary` → `RomManager.catalogue()` →
+`RomLocationResolver`. That catalogue uses configuration defaults and
+`user.dir`; `@RequiresRom` resets loaded YAML/session configuration before
+methods. The original baseline had no root `.gen` entries, while the task
+worktree had ten pre-existing links. Equal property lists/config hashes alone
+therefore did not establish equal optional scene-ROM availability. Directory
+counts alone were not treated as causal proof.
+
+Root ran `TestThreeIslandsScene` once per source in each common-directory mode.
+Only the fork's discovery directory changed between modes. Each invocation used
+Java 25, Lua 5.4, MSE off, surfaceless EGL, normal memory, `-Psmoke`,
+`-Ptest-concurrent`, one fork, alphabetical class order, and fresh absolute
+report/temp paths in its own worktree. The fork-only control was one argument:
+
+```text
+-Dtest.cds.argLine=-Xshare:off -Duser.dir=<COMMON_DIRECTORY>
+```
+
+The two common directories were resolved absolutely from the checkout root:
+`.worktrees/ai-code-climb-c4-baseline-20261108` and
+`.worktrees/ai-code-climb-followup`.
+The Three Islands project, harness and tests are identical across c4/c9.
+Fresh XML proves the effective fork property, own-tree classpaths, all twelve
+method identities, zero errors/skips and unchanged source/config in all four
+invocations. No ROM was copied, linked, removed or renamed; build trees were
+not shared. Java-relative fixture lookups also follow the controlled directory,
+so their input equivalence was checked explicitly.
+
+| Common runtime directory | c4 failures / 12 cases | c9 failures / 12 cases |
+| --- | ---: | ---: |
+| BASE | 6 | 6 |
+| Task | 8 | 8 |
+
+At each directory, every case outcome, exception type and assertion message
+matches literally between source heads. The BASE controls reproduce the old
+S3K-only assertion boundaries; the task-directory controls reproduce the newly
+exposed optional chapter boundaries:
+
+- `aSonic1ZonePlaysItsOwnRomSongWithoutPlaceholderSwitches`: line 290,
+  expected `DUNGEON`, actual `STORY`; the unavailable chapter returns at 265.
+- `tailsJoinsInTheFieldAndTheTravellingShopReturnsToTheSameSpot`: line 547,
+  expected true, actual false; the unavailable chapter returns at 538.
+- `allStoryLandmarksHavePlayableInteriorsWithIndependentGatesSavesAndRewards`:
+  the first available zone changes AIZ → GHZ at the same dungeon assertion,
+  line 682.
+- `physicalTrailsConnectFieldsAndBattleUsesTheEncounterField`: the optional
+  GHZ branch fails at 485; without it, the later assertion fails at 500.
+  Between broad and focused task-directory runs, only the printed
+  `FieldScreen`/`StoryScreen` identity hashes differ at 485.
+
+This attributes the four candidate Three Islands outcomes to existing c4
+behavior under matched discovery inputs. Early-returned optional paths are
+not certified by the twelve-case total or by the absence of JUnit skips.
+The source investigation and all complete before/after texts are retained;
+no test or runtime implementation was changed to obtain this attribution.
+
+#### Matched trace evidence
+
+Each source then ran the queued normal-memory wrapper with one fork,
+alphabetical order, MSE off, surfaceless EGL and `trace.print.summary=true`:
+`-Ptrace-replay -Dtest=TestS2Ehz1TraceReplay`, followed by
+`-Ptrace-segments -Dtest=TestS3kSonicTailsHczSegmentTraceReplay,TestS3kSonicTailsHcz2SegmentTraceReplay`.
+Each used fresh own-tree `target/code-climb/c4-domain/` report directories.
+
+All three full report payloads, bytes, owner sidecars and contexts are identical
+across c4/c9. Fresh Surefire class/method identities, complete owner hashes,
+physical paths and gates were verified independently; canonical report
+validation passed. Both HCZ reports have logical key `s3k_hcz1`, so they were
+paired by concrete class and owner, never that shared prefix.
+
+| Replay | Compared / planned rows | Gameplay errors / warnings | Bootstrap errors / warnings | Gate |
+| --- | --- | --- | --- | --- |
+| EHZ1 | 5,852 / 5,852 | 0 / 0 | 0 / 0 | reached, ALL |
+| First HCZ | 3,519 / 3,574 | 0 / 0 | 0 / 0 | reached, ALL |
+| HCZ2 | 14,149 / 14,208 | 26 / 0 | 0 / 0 | reached, ALL |
+
+HCZ2 retains two physics and 24 animation errors: first animation mismatch at
+6640, first camera-Y span at 6784–6792. Each HCZ report retains eight unavailable
+advertised aux schemas. These are coverage limits, not counted trace warnings.
+Logs separately retain FAST-without-manifest and SMPS presentation warnings.
+Neither this pair nor a loading test certifies a whole route.
+
+#### Cost and retained evidence
+
+Times below are seconds per invocation. Queue values are rounded reported
+admissions; execution includes Maven preparation/build where stated. User-input
+wait was zero throughout. Investigation time was not independently instrumented;
+concurrent tree wall times must not be summed as user latency.
+
+| Invocation | Queue | Execution/preparation | Wall | Unseparated overhead |
+| --- | ---: | ---: | ---: | ---: |
+| c4 smoke + guards, 95 admissions | 6,086 | 1,899.260 | 8,007.666 | 22.406 |
+| c9 smoke + guards, 95 admissions | 5,756 | 1,902.390 | 7,673.065 | 14.675 |
+| Task-directory control, c4 | 7 | 38.310 | 46.516 | 1.206 |
+| Task-directory control, c9 | 11 | 34.657 | 46.247 | 0.590 |
+| BASE-directory control, c4 | 2 | 34.717 | 37.933 | 1.216 |
+| BASE-directory control, c9 | 15 | 35.082 | 50.973 | 0.891 |
+| c4 EHZ1 | 39 | 42.806 | 82.555 | 0.749 |
+| c4 HCZ pair | 10 | 46.536 | 57.367 | 0.831 |
+| c9 EHZ1 | 17 | 35.087 | 52.568 | 0.481 |
+| c9 HCZ pair | 10 | 40.483 | 51.115 | 0.632 |
+
+The provenance-bearing delivery receipt is
+`target/code-climb/combined-4086-category/delivery-evidence.json`.
+It indexes both original terminal exports, exact command arrays, full negative
+and skip records, unchanged strict comparison, all 29 case dispositions, the
+four complete directory controls, trace payload/context comparison, source
+proofs, timings, acknowledgement and retention status. The original negative
+comparison remains false; qualification uses the explicit matched-input and
+display evidence above. No replacement category VERDICT is invented.
+
+The executable change remains covered by the independent Opus review and the
+root P3 repair's RED/GREEN evidence. The original C/F scores at 4086 remain
+71.25 and 62.5; A/B/D/E were not regraded, and later routing prose receives no
+automatic score credit. The goal target remains unmet. All owned validation
+jobs are terminal. Task/older worktrees and ignored saves/configuration remain
+retained pending complete ownership accounting; only consumed category
+outputs may be acknowledged through the runner's official command.
