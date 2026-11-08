@@ -37,7 +37,8 @@ public final class EndingNativePlayerBinding {
     public void ensure(ObjectServices services){
         if(!(services.playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite player))return;
         if(active&&bound==player)return;
-        if(player.getSuperStateController() instanceof Sonic3kSuperStateController)return;
+        if(player.getSuperStateController() instanceof Sonic3kSuperStateController
+                || player.getSuperStateController() instanceof com.openggf.sprites.playable.ProfileSuperStateController)return;
         prepare(services,player);active=true;bindNormal();
         // The controller is a cached resource while unbound, not an inactive RAM owner.
         // A fresh entry must not inherit mutable state from a later restored scene.

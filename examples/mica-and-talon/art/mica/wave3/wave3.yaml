@@ -2592,6 +2592,221 @@
         "ticks": "1 + (max(0, 0x400 - abs(inertia)) >> 8), with native word arithmetic; consult owning routine for state"
       },
       "audit": "No dedicated maze art: normal mapping, DPLC loader and id_Roll. No additional MICA drawing needed. Existing four canonical ROLL frames reused. Native has five distinct roll mappings; GIF repeats MICA phase 0 for the fifth comparison and does not certify W2 native/canonical remapping. Stage rotates, not the playable image. Shared MICA palette must bind to player line; fixed native palette colour conversion remains W4 if the stage does not admit a custom player line."
+    },
+    {
+      "surface": "slot_machine",
+      "game": "s3k",
+      "native_source_label": "Obj_Sonic_RotatingSlotBonus / loc_4B97C / sub_4B99E / off_4B9C2 / loc_4B9E8",
+      "source": "docs/skdisasm/sonic3k.asm",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dplc_source": "docs/skdisasm/General/Sprites/Sonic/DPLC - Sonic.asm",
+      "native_art_label": "ArtUnc_Sonic",
+      "palette": "../palette.yaml",
+      "palette_line": 0,
+      "palette_binding": "Load MICA palette into player line 0; never quantize jade to native blue. Stage-sharing audit remains engine lane.",
+      "audit": "No dedicated slot-stage Sonic artwork: native swaps in the normal host Map_Sonic + PLC_Sonic. It forces animation 2 each update. These five native roll mappings are explicit replacements, not the four-frame canonical ROLL remap.",
+      "timing": {
+        "source": "AniSonic02 / AniSonic03 / loc_12A2A / loc_12A4C / loc_12A5E / loc_12A68",
+        "frames": [
+          150,
+          151,
+          150,
+          152,
+          150,
+          153,
+          150,
+          154
+        ],
+        "ticks": "1 + (max(0, 0x400 - abs(ground_vel)) >> 8), native word arithmetic",
+        "preview_ticks": 5
+      },
+      "sequences": [
+        {
+          "name": "roll",
+          "frames": [
+            150,
+            151,
+            150,
+            152,
+            150,
+            153,
+            150,
+            154
+          ]
+        }
+      ],
+      "frames": [
+        {
+          "id": 150,
+          "file": "s3k-slot-96.png",
+          "dimensions": [
+            32,
+            32
+          ],
+          "hotspot": [
+            16,
+            16
+          ],
+          "native_source_label": "word_14756A",
+          "pieces": [
+            [
+              -16,
+              -16,
+              4,
+              4,
+              0,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "word_148A00",
+          "dplc_entries": [
+            [
+              16,
+              2978
+            ]
+          ],
+          "tile_budget": 16
+        },
+        {
+          "id": 151,
+          "file": "s3k-slot-97.png",
+          "dimensions": [
+            32,
+            32
+          ],
+          "hotspot": [
+            16,
+            16
+          ],
+          "native_source_label": "word_147572",
+          "pieces": [
+            [
+              -16,
+              -16,
+              4,
+              4,
+              0,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "word_148A04",
+          "dplc_entries": [
+            [
+              16,
+              2994
+            ]
+          ],
+          "tile_budget": 16
+        },
+        {
+          "id": 152,
+          "file": "s3k-slot-98.png",
+          "dimensions": [
+            32,
+            32
+          ],
+          "hotspot": [
+            16,
+            16
+          ],
+          "native_source_label": "word_14757A",
+          "pieces": [
+            [
+              -16,
+              -16,
+              4,
+              4,
+              0,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "word_148A08",
+          "dplc_entries": [
+            [
+              16,
+              3010
+            ]
+          ],
+          "tile_budget": 16
+        },
+        {
+          "id": 153,
+          "file": "s3k-slot-99.png",
+          "dimensions": [
+            32,
+            32
+          ],
+          "hotspot": [
+            16,
+            16
+          ],
+          "native_source_label": "word_147582",
+          "pieces": [
+            [
+              -16,
+              -16,
+              4,
+              4,
+              0,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "word_148A0C",
+          "dplc_entries": [
+            [
+              16,
+              3026
+            ]
+          ],
+          "tile_budget": 16
+        },
+        {
+          "id": 154,
+          "file": "s3k-slot-9a.png",
+          "dimensions": [
+            32,
+            32
+          ],
+          "hotspot": [
+            16,
+            16
+          ],
+          "native_source_label": "word_14758A",
+          "pieces": [
+            [
+              -16,
+              -16,
+              4,
+              4,
+              0,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "dplc_label": "word_148A10",
+          "dplc_entries": [
+            [
+              16,
+              3042
+            ]
+          ],
+          "tile_budget": 16
+        }
+      ]
     }
   ]
 }

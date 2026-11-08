@@ -48,9 +48,9 @@ direction contract and runtime ground contact before materializing the sheet.
 `HOMING_DIVE` is a **custom handoff key**, not an existing `CanonicalAnimation`
 enum member. The ability lane must bind the four scale-first poses explicitly.
 STOP intentionally shares SKID artwork. Preview timings are illustrative; W2
-supplies native speed-driven walk/run timing. HOLD/loop policy belongs to that
-lane, particularly DEATH, HURT, SPRING, DUCK and LOOK_UP. No final GGFP, mapping
-piece split, DPLC budget certification or gameplay integration is produced here.
+supplies native speed-driven walk/run timing. The assembler supplies the fixed
+script timing and end actions. The reducer stops at indexed frames; the assembler below supplies mapping pieces
+and converter input.
 
 Review generation writes 1×/4× contact sheets (nearest-neighbour hard pixels) and
 4× GIFs for every animation and slope set. They are disposable, outside Git.
@@ -71,7 +71,7 @@ ROLL is 29×29. Crouch, sprint and airborne poses vary in bounds with their pose
 Weakest areas: slope rotations need engine contact validation; the first two RUN
 phases are similar; SPRING has a small hood-shape shift between phases; very small
 jade laces and scale lines merge at 1×. These are usable core art handoff frames,
-not in-engine certification. Additional polish may follow runtime inspection.
+not a claim that every native route or presentation state is certified.
 Remaining W7 presentation/super/cutscene art is outside this core-set handoff.
 
 ## MICA presentation round 2
@@ -156,3 +156,62 @@ All 36 revised slopes retain the unchanged shared palette. Their floor support
 is authored at local centre+18 (last occupied row), before orientation. Runtime
 contact remains an integration check. Arm motion is restrained and the simpler
 head/crest may need another art pass beside the more detailed flat cycles.
+
+## MICA native surfaces round 5
+
+```bash
+python3 -I examples/mica-and-talon/art/mica/wave3/round5.py --review /tmp/mica-art5-review-20261108
+```
+
+This item-1 checkpoint supplies five original 32×32 slot-stage curl frames,
+normal Sonic mappings $96–$9A. `Obj_Sonic_RotatingSlotBonus` forces animation 2;
+`AniSonic02`/03 repeat $96 between each of the other four mappings. There is no
+separate native Sonic slot-stage art bank. Every frame retains the shared MICA
+palette and its original indices; the engine must install that palette on the
+player line. No fixed-palette variants are emitted.
+
+`round5.py` reads the pinned S3K mapping/DPLC tables, draws original pixels and
+checks palette identity, tile aliases and native DPLC capacity. Reference art
+is decoded only for disposable side-by-side 1×/4× sheets and the eight-step GIF.
+The preview uses five ticks per step (zero ground velocity); gameplay timing
+remains native and speed-driven. GIF durations round to 10ms units.
+The generator updates its surface while preserving earlier manifest entries.
+The older `wave3/build.py` rebuilds the round-4 manifest from scratch: run it
+**before** `round5.py` when regenerating both rounds. No Java build is needed.
+
+The round-5 checkpoint stops after slot art. Continue screens, data-select solo/
+team composition, ICZ snowboard and `endings-inventory.yaml` remain undelivered.
+Curl scale travel is restrained, and the small eye/mitten clusters simplify at
+1×. This is native-layout art handoff, without GGFP or in-engine certification.
+
+## Assemble and bake the core sheet
+
+```sh
+python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/mica examples/mica-and-talon/src/main/mod
+python3 examples/mica-and-talon/build.py
+python3 -m unittest discover -s tools/modding -p test_playable_art_assemble.py
+```
+
+The build reruns assembly before conversion. The atlas uses 8-bit indexed PNG
+(the converter codec requires 8-bit storage), with only the same 16 indices. Replace/rebuild source frames, then
+rerun it; no sheet coordinates are maintained by hand. Assembly preserves indexed
+pixels and hotspots, pads each crop to tiles and cuts pieces at 32 pixels (4 tiles).
+The current 96-frame sheet uses at most 36 tiles per frame. The converter's bank
+report is the total resident source bank, not a 36-tile streaming bank: its current
+full-frame runs retain distinct destination offsets. Do not confuse the two costs.
+
+The 17 canonical animations use S2 Sonic as their authored script reference:
+`SonAni_Walk` through `SonAni_Hurt` (s2.asm:38692-38754). Positive durations are
+native timer bytes plus one. Host profiles supply WALK/RUN/ROLL/PUSH speed timing.
+DUCK/LOOK_UP hold the last pose (the native one-frame repeat); SKID/STOP, SPRING
+and GET_AIR switch to WALK. SPRING's two authored phases divide its native 48-tick
+interval; GET_AIR retains four 12-tick steps with repeated art. Other original
+cycles retain their reference's per-step duration and loop. WAIT condenses the
+long native fidget into four original poses, preserving its 186-tick initial wait.
+These are authored pose adaptations, not an assertion of stock frame identity.
+WALK/RUN slopes are ordered flat/up45/steep/inverted, native selectors 0/2/4/6.
+
+`mica-custom-frames.json` records HOMING_DIVE mapping indices for the ability
+lane. All four frames are in the image and GGFP; no canonical enum member is
+invented, and no native animation selects them yet. This file is a build hook,
+not converter schema. Re-read it after source manifest reordering.
