@@ -201,6 +201,13 @@ def gilded():
 def main(review=None):
     OUT.mkdir(exist_ok=True); records=[]; images={}
     def emit(key,im,surface,game,label,source,pieces,line=0,**extra):
+        # Owner-approved GPT native-pose redraws retain lossless indexed rows.
+        recipe = OUT/'native-pose.json'
+        if recipe.exists():
+            pixels = json.loads(recipe.read_text())['images'].get(key)
+            if pixels:
+                im = indexed(tuple(pixels['native_dimensions']))
+                im.putdata([int(c,16) for row in pixels['rows'] for c in row])
         path=OUT/(key+'.png'); im.save(path,transparency=0,bits=4,optimize=True);images[key]=im
         records.append(dict(surface=surface,game=game,native_source_label=label,source=source,
             dimensions=list(im.size),file=path.name,palette_line=line,pieces=pieces,**extra))

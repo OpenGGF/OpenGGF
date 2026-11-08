@@ -43,6 +43,13 @@ def kos(path):
  return bytes(out)
 
 def portrait():
+ # Lossless native-pose redraw, placed back on the mapping-origin canvas.
+ recipe=HERE/'native-pose.json'
+ if recipe.exists():
+  pixels=json.loads(recipe.read_text())['images']['portrait']
+  cut=b.indexed(tuple(pixels['native_dimensions']))
+  cut.putdata([int(c,16) for row in pixels['rows'] for c in row])
+  im=b.indexed((96,96));im.paste(cut,(30,8));return im
  # Native bounds (-18,-40)..(14,0), engine centre at 48,48.
  im=b.indexed((96,96));d=ImageDraw.Draw(im)
  d.polygon([(31,36),(30,30),(35,26),(40,28),(43,37),(38,40)],fill=3,outline=1)

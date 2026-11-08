@@ -1,0 +1,64 @@
+{
+  "method": "Owner-approved native 8x reference + concept + approved pilot; built-in GPT Image latest exposed; native-size fixed-palette reduction. Raw/reference images in /tmp only.",
+  "palette": "../palette.yaml",
+  "images": {
+    "portrait": {
+      "prompt": "Use case: style-transfer. Redraw FIRST native 8x pose reference as MICA the original female pangolin from SECOND concept sheet; THIRD and FOURTH approved pixel-art style anchors. New drawing, no recolour, no Sonic quills or blue hedgehog features. Rounded overlapping jade leaf-scale hood, long cream snout, small round coral inner ears, bright brown eyes/lashes, white gloves, coral hiking boots. Clean chunky 16-bit pixel clusters with strong dark ink and jade highlights. Transparent canvas, no padding, no checkerboard, no text. Final native 32x40 S3K data-select full-body portrait. Face LEFT, raised index-finger glove on LEFT as native pose, other hand on hip at RIGHT. Keep body posture, feet positions and full-body framing exactly. Rounded scaled tail behind, not projecting beyond native bounds. Match pose composition first reference precisely, character identity second reference.",
+      "raw_sha256": "f7e0911ba7a8af798ac03c01dc56633ff5e44f11a7be42da238623930ca31375",
+      "native_dimensions": [
+        32,
+        40
+      ],
+      "reduction": "alpha>=128 bounding box; Lanczos to native composition rectangle; nearest fixed palette; inside one-pixel outline; portrait lower strip compressed into mapped 24px piece",
+      "rectangle": [
+        0,
+        0,
+        32,
+        40
+      ],
+      "cleanup": "inside outline only",
+      "rows": [
+        "00000000000000000011111000000000",
+        "00000000000000011154455111000000",
+        "00000000000001156554145556100000",
+        "00000000001115524421934555311000",
+        "0000000001e966541297e71222565100",
+        "00000000011555455539ee1424555510",
+        "000000000135435545439e2563455510",
+        "000000001652344994251b4555123100",
+        "00000001255339999125125554343100",
+        "00000001253299199124222433556100",
+        "0000000015289d99c253452113554610",
+        "0000000013789919c133552342355510",
+        "00000011977d9f1cd225533555122100",
+        "11100177d77cdf9c9541125563443100",
+        "1cd100117778977d8322322423556100",
+        "01cd10001199a7d83224532222555100",
+        "001d9100001998922135222242211000",
+        "01cddc10000199355422113432100000",
+        "1ddd9d91001988344456521113100000",
+        "01cd9cdd113777921133353101000000",
+        "0019d9dc221779451013241000000000",
+        "00011dc331988734219d341000000000",
+        "00000111101cdd923cddd10000000000",
+        "0000000001111114dccdd91100000000",
+        "000000000000000177739cd111110000",
+        "000000000000000197743dd925531000",
+        "00000000000000012985521442246100",
+        "000000000000000011b1542235524410",
+        "00000000000000001310145124532410",
+        "00000000000000001410015bf2255241",
+        "00000000000000001bb1011ab2222431",
+        "00000000000000001aa101ab11122541",
+        "000000000000000121f1011310012231",
+        "00000000000000012221001231001221",
+        "000000000000001232f1012311000110",
+        "00000000000001d9abab101bee100010",
+        "00000000000001eaab99101a7e100000",
+        "00000000000001999998101bbb910000",
+        "00000000000001999111001998100000",
+        "00000000000000111000001111100000"
+      ]
+    }
+  }
+}
