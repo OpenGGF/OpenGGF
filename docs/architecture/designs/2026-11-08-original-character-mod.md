@@ -887,3 +887,95 @@ Status log (times UTC):
   colours, and private palette rows stay outside native lines 0–3. Across the
   five focused test jobs, queue wait was 15m12s and Maven execution was 8m42s;
   user wait was zero. Other investigation/build wall time was not fully timed.
+
+- 2026-11-08: W4 presentation sweep, surface 1: save-slot life counters now
+  resolve the selected canonical character's HUD icon and palette. The native
+  cross, digits, continues and stock character tilemaps remain owned by the menu.
+  The icon uses the existing renderer-owned palette bank; no public presentation
+  contract changes. Focused verification and inspected captures recorded below.
+  Verification: queued Java 25 Maven `-Dmse=off` with surfaceless EGL, selection
+  `TestS3kDataSelectPresentation,TestS3kCustomTeamPortraitComposer,TestMicaCharacterIntegration#continuePixelsS3k`: 91 passed, zero skips.
+  Inspected `/tmp/mica-sweep-20261108/s3k-data-select-solo-and-tails.png`: both
+  saved MICA slots show the jade HUD face beside lives; native continues icons
+  remain a separate surface. Queue wait 393s, execution 95s, user wait zero.
+  Initial compile raced a newly added S2 helper; the fresh source build passed.
+
+- 2026-11-08: W4 sweep surface 2: NO SAVE already used the portrait composer,
+  but team selection was absent from the object-state cache key. Team changes
+  now rebuild its custom frame immediately, including within an animation tick.
+  The integration fixture selects MICA solo and MICA/Tails through the real
+  controller roster; stock NO SAVE retains its native mapping. Same 91-test
+  selection passed without skips (queue 196s; execution 94s). Inspected
+  `/tmp/mica-sweep-20261108/s3k-no-save-mica.png` and
+  `s3k-no-save-mica-tails.png`: both NO SAVE variants show MICA; Tails remains native.
+
+- 2026-11-08: W4 sweep surface 3 composes the S2 half-pipe HUD name from its
+  own five SONIC tiles, five MILES tiles and overseas TAILS bank. Native M/I/C/A
+  cover MICA without supplements. Only the five name tiles are derived; native
+  ring text, counts, stock partner, palettes and SAT mappings are retained.
+  The inventory is owned by `Obj5E` (s2.asm:9503-9515), its mapping include
+  `Obj5E_MapUnc_7070` (s2.asm:9615) and `ArtNem_SpecialHUD` (s2.asm:91131).
+
+  Sweep search: reviewed canonical `"sonic"` comparisons and SONIC literals,
+  native frame/art selections in HUD, menu/data select, results, continue,
+  sign/monitor, special/bonus stage and title owners across all three hosts.
+  Endings/credits remain owned by other lanes. Native fallback banks and route/
+  physics/trace identifiers remain intentional. No additional unadapted
+  single-player gameplay HUD/results name or face consumer was found.
+  Follow-ups outside this sweep's presentation slots:
+  - S1/S2/S3K title-screen logos and mascots (including S2 Sega giant Sonic)
+    are fixed branding/front-end art, with no title-art slot.
+  - S2 title-card `SONIC THE HEDGEHOG` stripe is native game branding, not the
+    results/HUD name cell; no replacement stripe asset is supplied.
+  - S2 native competition owns fixed Sonic/Tails participants and results/HUD
+    banks; custom 2P characters are outside this single-player lane.
+  - S3K slot reels retain native prize symbols (including Sonic); these are
+    machine props, separate from the already adapted playable slot sprite.
+  - S2 Tornado's native partner/pilot art remains route-owned; MICA's Sonic route
+    uses stock Tails there. Custom companion/pilot content needs its own slot.
+  S2 results' SONIC RINGS debug fallback is diagnostic text; the native mapped
+  row is ring/bonus art, not a further composed SONIC name.
+
+  Expanded check: queued Maven `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl`
+  passed 143 tests, no failures/errors/skips, all ROMs found (queue 229s; execution
+  108s). Selection: `TestSonic2SpecialStageHudPresentation`,
+  `Sonic2SpecialStageHudLayoutTest`, `Sonic2SpecialStageManagerTest`,
+  `Sonic2SpecialStageDataLoaderTest`, `TestSonic2SpecialStageSpriteAssembly`,
+  `TestSonic2SpecialStageNativePresentation`,
+  `TestSonic2SpecialStageNativePlayerPresentation`, `TestMicaCharacterIntegration`,
+  `TestModApiSignatureSurface`, `TestS3kAiz1SkipHeadless`,
+  `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+  `TestSonic3kDecodingUtils`. Capture properties:
+  `-Dmica.captureDir=/tmp/mica-sweep-20261108` and
+  `-Dmica.stage.captureRoot=/tmp/mica-sweep-20261108`. Inspected
+  `s2/frame-180.png`: MICA above RINGS, with native stage palette/track retained.
+  Frames 120 and 239 plus state.csv are adjacent component-stage witnesses,
+  not title-to-special-stage route certification.
+
+- 2026-11-08: W4 sweep surface 4: the capture audit exposed native Sonic in
+  saved-slot miniature continue counters. These now reuse `continue/icon` frame
+  0 and its isolated palette. Only transparent padding may extend beyond the
+  16×24 figure cell; otherwise the consumer keeps native art, preserving the
+  adjacent cross/digits. No public API additions. The expanded 143-test run above
+  includes this production source and its MICA capture assertion. Final menu
+  regression command:
+
+  ```bash
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kDataSelectPresentation,TestS3kCustomTeamPortraitComposer' test
+  ```
+
+  91 passed (76 presentation + 15 composer), zero failures/errors/skips; queue
+  49s, execution 36.677s. This includes the new figure-cell/cross preservation
+  test and existing stock menu regressions. Inspected final saved-slot and both
+  NO SAVE captures: MICA figures/faces, native Tails, crosses and digits visible.
+  S2 frame 120 is the native white transition and is rejected as art evidence;
+  frames 180/239 visibly show MICA's label. Zone preview noise follows the
+  inherited frontend path and remains uncertified, as in the screens lane.
+  The tested source is `18f363717` plus the final continue-counter adapter/test
+  changes committed by this lane; subsequent edits are documentation only.
+  All five validation jobs finished (one initial compilation failure plus four
+  passing runs). Total queue wait 935s; Maven execution about 418s; user wait zero;
+  other work time unmeasured. Citation check: 13 exact, 3 near, 2 unverifiable
+  (include/inherited references), no stale/missing/out-of-range findings;
+  whitespace clean. No merge or push. Lead owns integration and broader smoke;
+  this is focused presentation evidence, not full-suite or route certification.

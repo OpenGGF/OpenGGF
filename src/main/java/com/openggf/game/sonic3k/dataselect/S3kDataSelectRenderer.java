@@ -708,8 +708,30 @@ public class S3kDataSelectRenderer {
         }
 
         int livesOffset = SAVE_SLOT_LIVES_OFFSET + (slotIndex * SAVE_SLOT_PLANE_STEP);
-        renderPlaneOverlayTilemap(graphics, livesContinueHeaderWords(slotState.headerStyleIndex()),
+        int[] header = livesContinueHeaderWords(slotState.headerStyleIndex());
+        if (slotState.customLifeIcon() != null && slotState.headerStyleIndex() != 0) {
+            header = header.clone();
+            // First two columns of the first two rows are the native life face.
+            header[0] = header[1] = header[3] = header[4] = blankPriorityWord();
+        }
+        if (slotState.customContinueIcon() != null && slotState.headerStyleIndex() != 0) {
+            header = header.clone();
+            header[6] = header[7] = header[9] = header[10] = header[12] = header[13] = blankPriorityWord();
+        }
+        renderPlaneOverlayTilemap(graphics, header,
                 3, 5, livesOffset, cameraX, highPriority);
+        if (highPriority && slotState.headerStyleIndex() != 0 && slotState.customLifeIcon() != null) {
+            int tile = livesOffset / 2;
+            renderMappingFrame(graphics, slotState.customLifeIcon(),
+                    tile % PLANE_WIDTH_TILES * 8 - cameraX, tile / PLANE_WIDTH_TILES * 8,
+                    DATA_SELECT_PATTERN_BASE + Sonic3kConstants.ARTTILE_SAVE_MISC, 0x8000);
+        }
+        if (highPriority && slotState.headerStyleIndex() != 0 && slotState.customContinueIcon() != null) {
+            int tile = livesOffset / 2;
+            renderMappingFrame(graphics, slotState.customContinueIcon(),
+                    tile % PLANE_WIDTH_TILES * 8 - cameraX, tile / PLANE_WIDTH_TILES * 8 + 16,
+                    DATA_SELECT_PATTERN_BASE + Sonic3kConstants.ARTTILE_SAVE_MISC, 0x8000);
+        }
         if (slotState.headerStyleIndex() == 0) {
             renderPlaneOverlayTilemap(graphics, blankStatWords(), 2, 5, livesOffset + 6, cameraX, highPriority);
         } else {
@@ -1057,11 +1079,16 @@ public class S3kDataSelectRenderer {
 
     SpriteMappingFrame registerCharacterPortrait(com.openggf.game.PresentationFrameSet.Pose pose,
             com.openggf.game.PresentationFrameSet set) {
+        return registerCharacterImage(pose, com.openggf.game.presentation.ScreenFrameRenderer.palette(set));
+    }
+
+    SpriteMappingFrame registerCharacterImage(com.openggf.game.PresentationFrameSet.Pose pose,
+            com.openggf.level.Palette palette) {
         int first = nextCharacterPortraitTile;
         Pattern[] tiles = com.openggf.game.presentation.CharacterNameComposer.tiles(pose.image());
         nextCharacterPortraitTile += tiles.length;
         characterPortraitTiles.put(first, new CharacterPortraitTiles(tiles,
-                new com.openggf.game.presentation.PresentationPaletteBank(com.openggf.game.presentation.ScreenFrameRenderer.palette(set))));
+                new com.openggf.game.presentation.PresentationPaletteBank(palette)));
         return com.openggf.game.presentation.ScreenFrameRenderer.mapping(pose, first, 1);
     }
 

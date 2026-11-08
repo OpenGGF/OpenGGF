@@ -242,6 +242,11 @@ back to ROM art. Existing four/five-argument `Art` constructors remain supported
 The S3K `portrait` bank (frame 5) supplies the data-select bust, composed with
 stock team portraits using its authored hotspot. Its palette is isolated in a
 renderer-owned graphics bank; no native menu line is replaced.
+Data-select saved-slot life counters also use `hudLifeIcon` with the character's
+palette; miniature continue counters reuse S3K `continue/icon` frame 0 when its
+visible pixels fit the 16×24 menu figure cell. Native crosses/digits and every
+stock fallback remain unchanged. NO SAVE uses the same solo/team portrait
+composer and refreshes immediately when the selected team changes.
 The S3K `snowboard` bank supplies the 13 native rider mapping IDs (0–12).
 The host retains intro timing, movement, separate board/spray and snow occlusion;
 private renderer palettes keep rider and native effects independent.
@@ -255,6 +260,10 @@ set carries an indexed palette image; the renderer keeps it on a private palette
 row. Powered player/reunion frames use the live authored form palette. Vehicle,
 companion, banner, choreography and script timing stay native. Existing four- and
 five-argument presentation constructors retain empty ending maps.
+
+S2's half-pipe ring HUD composes the short/display name from its own native
+SONIC/MILES/TAILS letters in a 40×8 cell, with HUD-style supplements only for
+missing letters. Stock and unsupported names retain their native art.
 GGFP presentation sections are pending.
 
 ## Ability and super-form rules

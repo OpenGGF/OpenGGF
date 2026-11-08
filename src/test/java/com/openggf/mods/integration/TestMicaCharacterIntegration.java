@@ -524,6 +524,16 @@ class TestMicaCharacterIntegration {
             assertTrue(frame.pieces().stream().anyMatch(piece->piece.tileIndex()>=0x2000));
             if(!sidekicks.isEmpty()) assertTrue(frame.pieces().stream().anyMatch(piece->piece.tileIndex()<0x2000),"Stock Tails remains in team composition");
         }
+        var stateMethod=presentation.getClass().getDeclaredMethod("buildObjectState");
+        stateMethod.setAccessible(true);
+        var objectState=(com.openggf.game.sonic3k.dataselect.S3kSaveScreenObjectState)stateMethod.invoke(presentation);
+        for(int slot=0;slot<2;slot++) {
+            var icon=objectState.visualState().slotStates().get(slot).customLifeIcon();
+            assertNotNull(objectState.visualState().slotStates().get(slot).customContinueIcon(),
+                    "MICA save slot uses its continue miniature");
+            assertNotNull(icon,"MICA save slot uses its HUD life face");
+            assertTrue(icon.pieces().stream().allMatch(piece->piece.tileIndex()>=0x2000));
+        }
         for(int i=0;i<24;i++) presentation.update(new com.openggf.control.InputHandler());
         GameServices.camera().setX((short)0); GameServices.camera().setY((short)0);
         presentation.setClearColor();
@@ -532,6 +542,29 @@ class TestMicaCharacterIntegration {
         presentation.draw();GameServices.graphics().flushScreenSpace();
         org.lwjgl.opengl.GL11.glFinish();
         writeCapture(com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224),"s3k-data-select-solo-and-tails");
+        var controller=presentation.getSessionController();
+        controller.moveSelection(-controller.menuModel().getSelectedRow());
+        controller.loadAvailableTeams("" );
+        var stock=(com.openggf.game.sonic3k.dataselect.S3kSaveScreenObjectState)stateMethod.invoke(presentation);
+        assertNull(stock.visualState().noSaveCustomFrame(),"Stock NO SAVE portrait retains native mappings");
+        controller.loadAvailableTeams(CODE+";"+CODE+",tails");
+        for(var sidekicks:List.of(List.<String>of(),List.of("tails"))) {
+            var wanted=new com.openggf.game.save.SelectedTeam(CODE,sidekicks);
+            int target=controller.availableTeams().indexOf(wanted);
+            assertTrue(target>=0,"MICA must be selectable in NO SAVE");
+            controller.cycleTeam(target-controller.menuModel().getSelectedTeamIndex());
+            // No animation tick: changing the team must invalidate the cached visual immediately.
+            var selected=(com.openggf.game.sonic3k.dataselect.S3kSaveScreenObjectState)stateMethod.invoke(presentation);
+            assertNotNull(selected.visualState().noSaveCustomFrame());
+            assertTrue(selected.visualState().noSaveCustomFrame().pieces().stream().anyMatch(piece->piece.tileIndex()>=0x2000));
+            if(!sidekicks.isEmpty()) assertTrue(selected.visualState().noSaveCustomFrame().pieces().stream().anyMatch(piece->piece.tileIndex()<0x2000));
+            presentation.setClearColor();
+            org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+            presentation.draw();GameServices.graphics().flushScreenSpace();
+            org.lwjgl.opengl.GL11.glFinish();
+            writeCapture(com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224),
+                    sidekicks.isEmpty()?"s3k-no-save-mica":"s3k-no-save-mica-tails");
+        }
         presentation.reset();
     }
 

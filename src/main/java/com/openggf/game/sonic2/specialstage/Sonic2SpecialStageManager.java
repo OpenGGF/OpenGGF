@@ -971,7 +971,10 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
 
         // Load HUD and START banner art for intro sequence
         hudPatternBase = playerPatternBase + playerPatterns.length;
-        Pattern[] hudPatterns = dataLoader.getHudArtPatterns();
+        Pattern[] hudPatterns = Sonic2SpecialStageHudPresentation.apply(dataLoader.getHudArtPatterns(),
+                dataLoader.getTailsTextArtPatterns(),
+                com.openggf.game.sonic2.Sonic2CharacterPresentation.resolve(
+                        com.openggf.game.GameServices.module(), com.openggf.game.GameServices.configuration()));
         for (int i = 0; i < hudPatterns.length; i++) {
             graphicsManager.cachePatternTexture(hudPatterns[i], hudPatternBase + i);
         }
