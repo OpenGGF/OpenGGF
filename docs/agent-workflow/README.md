@@ -512,6 +512,8 @@ part of what the project preserves, for future contributors and for anyone
 studying how it was done. Keep the record light and put things where they
 already belong; do not create new document types.
 
+- [Playable art preprocessing](../../tools/modding/playable_art/README.md) — generated pose atlases to shared 15-colour indexed frames, explicit native hotspots/pixel patches, deterministic verification and disposable animation reviews (MICA W7, 2026-11-08).
+
 - **Scripts and probes.** A one-off diagnostic stays temporary. A probe,
   oracle, comparator, or sampler that answered a question likely to recur,
   or that took more than an hour to get right, is promoted: engine-facing
