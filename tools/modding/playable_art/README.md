@@ -73,3 +73,51 @@ phases are similar; SPRING has a small hood-shape shift between phases; very sma
 jade laces and scale lines merge at 1×. These are usable core art handoff frames,
 not in-engine certification. Additional polish may follow runtime inspection.
 Remaining W7 presentation/super/cutscene art is outside this core-set handoff.
+
+## MICA presentation round 2
+
+```bash
+python3 -I tools/modding/playable_art/presentation.py --review /tmp/mica-art2-review-20261108
+```
+
+`presentation.py` is the reproducible native-pixel source for 18 original MICA
+presentation images and `presentation/gilded.yaml`. It uses the existing palette
+without reordering any indices. The two S1 supplementary HUD glyphs use the native
+font's black shadow at 1 and yellow at 15; those two PNGs carry that explicit
+palette exception. Their other indices are unused. M is 8×8 with an 8px advance;
+A is 6×8 with a 6px advance. The decoded SONIC name supplies the 6px ink height,
+heavy stems and down/right shadow; M needs a wider cell to keep those stems.
+
+The JSON-subset `presentation.yaml` records mapping/art labels, native piece sizes,
+canvas dimensions, palette line and composition. HUD/monitor faces are 16×16;
+settled signs 48×32; angled spin faces 32×32. The optional S2 alternate face
+replaces the native Tails side. S2/S3K monitors reference the same VRAM life-icon
+tiles; S1 has distinct monitor art. Signs are **character-only overlays**: compose
+with the native border, backing and pole, rather than replacing that hardware.
+Spin3 is already flipped; do not flip it twice. The edge-on 8×32 frame contains
+no readable face and remains native. No border, pole or native character pixels
+are committed with these original overlays.
+
+`--review` requires the pinned disassemblies. It decodes native Nemesis art with
+the reference oracle, compares original and MICA at 1×/4×, and writes a Gilded WAIT
+GIF. The oracle uses a zero lookahead guard after compressed input; the native
+header still bounds output. Run with `-I`, as above. Normal generation uses no
+ROM/disassembly assets. There is no Java build, GGFP bake or gameplay certification.
+
+Gilded changes only jade indices 2–6, keeping ink, skin, gloves and boots stable.
+It includes six fade frames and distinct dry Super cycles: S2 has nine steady
+frames at 8 ticks, fade at 4 ticks; S3K has three at 7 ticks, fade at 2 ticks.
+These follow the shipped `fixBugs = 0` / `FixBugs = 0` reset branches, which skip
+the final source-table frame. S2's owning labels are `PalCycle_SuperSonic.normal`
+and `CyclingPal_SSTransformation`; S3K's are
+`SuperHyper_PalCycle_SuperSonic` and `PalCycle_SuperSonic`. The colours are MICA's
+original moving gold highlight, not copied Sonic colours. Underwater, Hyper,
+transformation poses and controller binding are later work.
+
+Round 2 intentionally takes the presentation-first stopping point. All 36
+WALK/RUN slope frames remain the original rigid rotations. Their remaining work
+is hand-drawn limb/contact deformation with matched stride phases and hotspots;
+outline filtering alone does not solve the tumbling read. The temporary slope
+before/after sheet explicitly labels these frames unchanged. The presentation
+head is intentionally simpler than the playable art at 16px; its scale/eye
+clusters and the dithered spin faces still need in-engine background validation.

@@ -224,6 +224,28 @@ Slope frames are rigid native-pixel rotations; W2 still owns slope-stride and
 runtime contact validation. `HOMING_DIVE` is an explicit custom handoff key,
 not a new canonical enum member. No final GGFP or runtime certification yet.
 
+W7 art-lane round 2 handoff (2026-11-08, `feature/ai-mica-art2`):
+`art/mica/presentation/presentation.yaml` now describes 18 native-size indexed
+images: three 16×16 HUD faces, three 16×16 monitor faces, S1 supplementary M/A
+HUD glyphs (8×8 / 6×8), three 48×32 sign faces, six 32×32 angled spin faces,
+and the optional 48×32 S2 alternate face. Native mapping/art labels, piece layouts
+and palette lines are recorded per surface. Sign images are character overlays;
+retain native border/backing/pole and the edge-on frame. The S1 font keeps native
+yellow/shadow indices; all character images retain the unchanged shared palette.
+The [presentation pipeline](../../../tools/modding/playable_art/README.md#mica-presentation-round-2)
+rebuilds them without Java; optional review decodes pinned native art using the
+Nemesis oracle under isolated Python. `gilded.yaml` supplies full index tables,
+six fade frames, and dry Super loops: S2 nine frames at 8 ticks, S3K three at
+7 ticks, following the shipped final-frame-skip branches. Only jade slots 2–6
+change. Palette/alpha/dimensions and deterministic rebuild checks pass, and the
+presentation comparisons and gold WAIT cycle were inspected at 1× and 4×.
+No GGFP or runtime binding is claimed. Underwater/Hyper and transform poses remain.
+This lane takes the permitted presentation-first stop: **all 36 slope frames are
+unchanged**, still needing hand-drawn stride/contact correction rather than rigid
+rotation. Temporary review material is under `/tmp/mica-art2-review-20261108/`,
+including a slope before/after sheet explicitly marked unchanged. The 16px face
+is simplified and spin dithering still needs native-background gameplay review.
+
 ### W8 — Example, tutorial and evidence (M)
 
 - `examples/<character>/` with a build script in the Mutator Lab pattern.
