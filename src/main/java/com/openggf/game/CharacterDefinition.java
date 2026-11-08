@@ -31,7 +31,17 @@ public record CharacterDefinition(
         SecondaryAbility secondaryAbility,
         boolean supportsSuperForm,
         ArtSupplier artSupplier,
-        PaletteSupplier paletteSupplier, java.util.Set<MovementAbility> movementAbilities) {
+        PaletteSupplier paletteSupplier, java.util.Set<MovementAbility> movementAbilities,
+        PaletteSupplier underwaterPaletteSupplier) {
+
+    /** Null underwater supplier uses the renderer's zone-specific host palette derivation. */
+    public CharacterDefinition(CharacterKey key, String displayName, PlayableFactory spriteFactory,
+            RespawnStrategyFactory respawnStrategyFactory, PlayerCharacter behavesLike,
+            SecondaryAbility secondaryAbility, boolean supportsSuperForm, ArtSupplier artSupplier,
+            PaletteSupplier paletteSupplier, java.util.Set<MovementAbility> movementAbilities) {
+        this(key, displayName, spriteFactory, respawnStrategyFactory, behavesLike, secondaryAbility,
+                supportsSuperForm, artSupplier, paletteSupplier, movementAbilities, null);
+    }
 
     @ModApi public enum MovementAbility { SPINDASH }
 

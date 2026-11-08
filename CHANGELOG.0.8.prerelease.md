@@ -4,6 +4,7 @@ Unreleased. Development since the [0.7.20261105](CHANGELOG.0.7.md) release. Add 
 under the matching area heading; see the
 [documentation policy](docs/guide/contributing/documentation-policy.md#release-note-destination).
 
+
 ## Gameplay and presentation
 
 - **Sonic 1's Sonic on Sonic 3&K tumble objects:** Sonic 1 has no tumble frames,
@@ -33,6 +34,13 @@ under the matching area heading; see the
 
 
 ## Modding and tools
+
+- Added the maintained MICA character skeleton for all three stock games, with
+  headless launch/save/rewind/fallback acceptance and temporary original art.
+  Custom team archetypes now use the solo Sonic route without a sidekick.
+- Character definitions can supply an authored underwater palette through the
+  owner fault boundary; absent suppliers retain zone-aware host water derivation.
+
 
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the

@@ -77,7 +77,21 @@ persist `CharacterKey.persisted()`.
 - `supportsSuperForm` — must be `false` for mod characters in playable format v2;
 - `artSupplier` — the full `SpriteArtSet` from a baked playable sheet; and
 - optional `paletteSupplier` — the character palette, or `null` to retain the host
-  game's palette fallback.
+  game's palette fallback;
+- optional `underwaterPaletteSupplier` — an authored 16-colour water line. The full
+  constructor takes this after `movementAbilities`; existing constructors default
+  it to `null`. Suppliers have the same owner fault boundary as the dry palette.
+
+When absent, water colours are derived at rendering time using the host zone's
+normal and underwater palette pair, including zone changes and palette cycles.
+The native games load authored ROM tables: S1 replaces line zero with LZ/SBZ3
+Sonic water colours; S2 uses CPZ/ARZ water palettes; S3K selects a zone water
+palette and applies character-specific patches. The shared renderer estimates
+their per-channel colour shift for custom rows; this is a creator fallback,
+not a claim that the ROM transforms arbitrary character palettes.
+
+The maintained [MICA skeleton](../../examples/mica-and-talon/README.md) demonstrates
+`baseGame: any` registration and acceptance in all three games.
 
 The archetypes are routing contracts, not cosmetic labels:
 
@@ -90,7 +104,7 @@ The archetypes are routing contracts, not cosmetic labels:
 
 Choose the route whose geometry and events the character can actually complete.
 The engine does not silently remap `SONIC_ALONE` to a team route when sidekicks are
-present.
+present. A `SONIC_AND_TAILS` definition uses `SONIC_ALONE` for a solo launch.
 
 ## Sprite and physics
 
