@@ -72,6 +72,18 @@ class TestOwnedCharacterRegistry {
         assertEquals(Set.of(OWNER,"dependent"),fixture.disabled());
     }
 
+    @Test void presentationSupplierRunsInsideVerifiedOwnerBoundary() {
+        var fixture = fixture();
+        var raw = definition(MOD, (code,x,y) -> new ProbeSprite(MOD));
+        var supplied = new CharacterDefinition(raw.key(), raw.displayName(), raw.spriteFactory(),
+                raw.respawnStrategyFactory(), raw.behavesLike(), raw.secondaryAbility(),
+                raw.supportsSuperForm(), raw.artSupplier(), null, Set.of(), null,
+                code -> { throw new IllegalStateException("presentation"); });
+        var bound = mapped(supplied, fixture);
+        assertOwner(fixture, assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> bound.presentationSupplier().load(MOD.persisted())), "presentation");
+    }
+
     @ParameterizedTest @ValueSource(booleans={false,true})
     void freshModAndSemanticBuiltinReplacementFactoriesUseVerifiedOwner(boolean builtin) {
         CharacterKey key=builtin ? CharacterKey.SONIC : MOD;

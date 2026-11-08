@@ -32,7 +32,22 @@ public record CharacterDefinition(
         boolean supportsSuperForm,
         ArtSupplier artSupplier,
         PaletteSupplier paletteSupplier, java.util.Set<MovementAbility> movementAbilities,
-        PaletteSupplier underwaterPaletteSupplier) {
+        PaletteSupplier underwaterPaletteSupplier, PresentationSupplier presentationSupplier) {
+
+    /** Existing definitions retain all native presentation fallbacks. */
+    public CharacterDefinition(CharacterKey key, String displayName, PlayableFactory spriteFactory,
+            RespawnStrategyFactory respawnStrategyFactory, PlayerCharacter behavesLike,
+            SecondaryAbility secondaryAbility, boolean supportsSuperForm, ArtSupplier artSupplier,
+            PaletteSupplier paletteSupplier, java.util.Set<MovementAbility> movementAbilities,
+            PaletteSupplier underwaterPaletteSupplier) {
+        this(key, displayName, spriteFactory, respawnStrategyFactory, behavesLike, secondaryAbility,
+                supportsSuperForm, artSupplier, paletteSupplier, movementAbilities, underwaterPaletteSupplier, null);
+    }
+
+    @ModApi @FunctionalInterface
+    public interface PresentationSupplier {
+        CharacterPresentation load(String persistedCode) throws IOException;
+    }
 
     /** Null underwater supplier uses the renderer's zone-specific host palette derivation. */
     public CharacterDefinition(CharacterKey key, String displayName, PlayableFactory spriteFactory,

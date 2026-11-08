@@ -186,6 +186,27 @@ Playable v2 has no custom HUD life icon or data-select portrait. Those presentat
 use the host fallback. Mod characters also do not receive Tails' separate tail
 appendage renderer automatically.
 
+## Presentation contract (in progress)
+
+The optional final `CharacterDefinition` constructor argument is a
+`PresentationSupplier`. It receives the canonical persisted character key and
+runs inside the character owner's fault boundary, like the art and palette
+suppliers. Existing constructors default it to `null`.
+
+`CharacterPresentation` carries an optional display name, an optional short HUD
+name (up to five characters), indexed images per host, and supplementary glyphs
+keyed by host and letter style. `Art` has independent HUD life icon (16×16),
+1-up face, signpost face and end-sign face slots. Null names and images mean native
+fallback. `Image` uses palette indices 0–15, with zero transparent; it copies pixel
+arrays on construction and access. Presentation maps are immutable snapshots.
+
+This is currently an API foundation: stock surfaces do not yet consume these
+slots. The internal name composer reports native, supplementary and missing glyph
+coverage and extracts pixel crops across tile boundaries. S1 and S2 title-font
+readers use the ROM pipeline; S3K fonts and the HUD/results/monitor/signpost
+consumers remain to be implemented. Do not assume supplying this record changes
+an on-screen name or face yet. GGFP presentation sections are also pending.
+
 ## Ability and super-form rules
 
 Use `INSTA_SHIELD`, `FLY`, `GLIDE`, or `NONE` when an existing

@@ -35,6 +35,10 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- Added the optional character presentation data contract and pixel-level name
+  composition foundation. Stock HUD/results/monitor/signpost consumption and
+  the S3K font readers remain pending; this does not yet change on-screen art.
+
 - Added the maintained MICA character skeleton for all three stock games, with
   headless launch/save/rewind/fallback acceptance and temporary original art.
   Custom team archetypes now use the solo Sonic route without a sidekick.
