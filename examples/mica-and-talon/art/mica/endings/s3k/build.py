@@ -94,9 +94,9 @@ def reference(f):
   name='Super Sonic' if f['form']=='gilded' else 'Sonic'
   raw=kosm(base/f'Ending/KosinskiM Art/{name} Ending Pose.kosm');colors=b.pal(base/f'Ending/Palettes/{name} End Pose.bin')
  elif 'passenger' in key:
-  raw=kosm(base/'Ending/KosinskiM Art/Sonic Plane Ending.kosm');colors=b.pal(base/'Ending/Palettes/Small Plane.bin')
+  raw=kosm(base/'Ending/KosinskiM Art/Sonic Plane Ending.kosm');colors=b.pal(base/'Sprites/Sonic/Palettes/SonicAndTails.bin')
  elif 'eyecatch' in key:
-  raw=b.nem(base/'Ending/Nemesis Art/S3 Ending Graphics.nem');colors=b.pal(base/'Ending/Palettes/S3 Ending.bin')
+  raw=b.nem(base/'Ending/Nemesis Art/S3 Ending Graphics.nem');colors=b.pal(base/'Sprites/Sonic/Palettes/SonicAndTails.bin')
  else:
   raw=(base/'Sprites/Sonic/Art/Sonic.unc').read_bytes();raw=b''.join(raw[t*32:(t+n)*32] for n,t in f['dplc_entries']);colors=b.pal(base/'Sprites/Sonic/Palettes/SonicAndTails.bin')
  return native(f['pieces'],raw,colors)
@@ -226,8 +226,11 @@ def draw(f):
    poly([(cx+x-2,cy+15),(cx+x+2,cy+15),(cx+x+2,cy+21+dy),(cx+x-2,cy+21+dy)],3)
    boot(cx+x,cy+20+dy,.75)
   glove(cx-7,cy+11,.75)
-  glove(cx+8,cy+(9 if phase<2 else 2),.75,phase>=2)
+  glove(cx+7,cy+9,.75)
   head(cx,cy,.9,1)
+  if f['group']=='trio' and phase>=2:
+   poly([(cx+3,cy+10),(30,23),(30,20),(cx+3,cy+7)],4)
+   glove(30,21,.7,True)
  # Keep only pixels addressable by the native pieces. Re-ink the inside edge
  # after layout clipping so no coloured contour is left open.
  mask=Image.new('1',(w,h));md=ImageDraw.Draw(mask);hx,hy=f['hotspot']

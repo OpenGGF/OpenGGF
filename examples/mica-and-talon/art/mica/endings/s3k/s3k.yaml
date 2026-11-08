@@ -984,6 +984,277 @@
       "palette": "../../palette.yaml",
       "form": "normal",
       "file": "tiny_passenger-17.png"
+    },
+    {
+      "id": "eyecatch_sonic-01",
+      "group": "trio",
+      "frame_set": "s3k_eyecatch_sonic",
+      "index": 1,
+      "native_source_label": "Frame_24180E",
+      "native_art_label": "ArtNem_S3EndingGraphics",
+      "mapping_source": "docs/skdisasm/General/Ending/Map - S3 Ending Graphics.asm",
+      "dimensions": [
+        32,
+        40
+      ],
+      "hotspot": [
+        12,
+        20
+      ],
+      "bounds_px": [
+        -12,
+        -20,
+        32,
+        40
+      ],
+      "pieces": [
+        [
+          -12,
+          -20,
+          3,
+          4,
+          167,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          12,
+          -12,
+          1,
+          2,
+          179,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -4,
+          12,
+          3,
+          1,
+          181,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "normal",
+      "file": "eyecatch_sonic-01.png"
+    },
+    {
+      "id": "eyecatch_sonic-02",
+      "group": "trio",
+      "frame_set": "s3k_eyecatch_sonic",
+      "index": 2,
+      "native_source_label": "Frame_241822",
+      "native_art_label": "ArtNem_S3EndingGraphics",
+      "mapping_source": "docs/skdisasm/General/Ending/Map - S3 Ending Graphics.asm",
+      "dimensions": [
+        32,
+        40
+      ],
+      "hotspot": [
+        12,
+        20
+      ],
+      "bounds_px": [
+        -12,
+        -20,
+        32,
+        40
+      ],
+      "pieces": [
+        [
+          -12,
+          -20,
+          3,
+          4,
+          167,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          12,
+          -12,
+          1,
+          2,
+          179,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -4,
+          12,
+          3,
+          1,
+          184,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "normal",
+      "file": "eyecatch_sonic-02.png"
+    },
+    {
+      "id": "eyecatch_sonic-03",
+      "group": "trio",
+      "frame_set": "s3k_eyecatch_sonic",
+      "index": 3,
+      "native_source_label": "Frame_241836",
+      "native_art_label": "ArtNem_S3EndingGraphics",
+      "mapping_source": "docs/skdisasm/General/Ending/Map - S3 Ending Graphics.asm",
+      "dimensions": [
+        40,
+        40
+      ],
+      "hotspot": [
+        20,
+        20
+      ],
+      "bounds_px": [
+        -20,
+        -20,
+        40,
+        40
+      ],
+      "pieces": [
+        [
+          -20,
+          -12,
+          1,
+          1,
+          187,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -12,
+          -20,
+          3,
+          2,
+          188,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -12,
+          -4,
+          4,
+          2,
+          194,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -4,
+          12,
+          2,
+          1,
+          202,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "normal",
+      "file": "eyecatch_sonic-03.png"
+    },
+    {
+      "id": "eyecatch_sonic-04",
+      "group": "trio",
+      "frame_set": "s3k_eyecatch_sonic",
+      "index": 4,
+      "native_source_label": "Frame_241850",
+      "native_art_label": "ArtNem_S3EndingGraphics",
+      "mapping_source": "docs/skdisasm/General/Ending/Map - S3 Ending Graphics.asm",
+      "dimensions": [
+        40,
+        40
+      ],
+      "hotspot": [
+        20,
+        20
+      ],
+      "bounds_px": [
+        -20,
+        -20,
+        40,
+        40
+      ],
+      "pieces": [
+        [
+          -20,
+          -12,
+          1,
+          1,
+          204,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -12,
+          -20,
+          4,
+          3,
+          205,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -12,
+          4,
+          3,
+          2,
+          217,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "normal",
+      "file": "eyecatch_sonic-04.png"
     }
   ]
 }
