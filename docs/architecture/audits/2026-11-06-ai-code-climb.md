@@ -2556,3 +2556,113 @@ must still inspect all negative assertions and complete skip dictionaries agains
 the retained 33c evidence. Only audit prose changed after the domain run; no
 runtime code differs from reviewed 42243358f. The next beauty/trace cleanup
 patches are being prepared externally and are excluded from this candidate.
+
+
+### Terminal recovery, architectural guard repair and unified publication — 2026-11-08
+
+The original final run `20261108T115155Z-b5371f38` terminated with exit 143
+without a final status/verdict: 72/91 ordinary batches, 30104 cases, 9 failures,
+zero errors and 40 skips; guards never ran. Exact argv/CWD recovery found no
+remaining owned runner or Java process. Its termination cause remains unknown;
+this prefix was not attributed to a source failure or used as complete coverage.
+The code-climb lead explicitly relinquished validation/delivery ownership to the
+implicit-state coordinator. The original receipts remain preserved.
+
+One replacement ran on clean `9ce6bdbc2cf30645e790d6d312184c9d242b07de`,
+fingerprint `c8714dff7f2bd646ec9584d77673d8785e06a83c73c94143b68d468de524856a`.
+The sole receiving owner launched and observed it with durable command/exit
+receipts; no other watcher, worker or reviewer was added. Java 25, Lua 5.4,
+unset DISPLAY/WAYLAND_DISPLAY, verified ROM discovery and surfaceless EGL were
+retained:
+
+```bash
+python3 tools/testing/run_categories.py --base 33c3b8e56c2f2970a09b339f4895b43d484295df --workers 2 --headless-gl surfaceless-egl --max-minutes 40 --keep-diagnostics --run
+```
+
+Run `20261108T125119Z-a8fd6d9a` completed all 4490 selected classes, 91/91
+ordinary batches and 1/1 guard batches. The runner's original final line is:
+
+```text
+VERDICT FAILED: head=9ce6bdbc2cf3 source=c8714dff7f2b change-based 4490/4490 candidate classes; ordinary 91/91 batches; guards 1/1 batches; tests=38027 failures=31 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Ordinary coverage was 37184 cases, 29 failures, zero errors and 49 allowed skips.
+The retained 33c baseline has 37065 ordinary cases, 30 failures, zero errors and
+49 allowed skips. No baseline class was removed; six regression-test classes
+were added. The smoke suite, workers, GL setting, execution budget, ROM discovery and
+declared-skip inputs match. The skip policy, category runner, comparator and
+Maven configuration are unchanged from 33c. All 49 complete skip dictionaries, including projection metadata,
+match literally. Every omission counter is zero; no failure summary reaches
+2048 characters, detail reaches 8192, or skip reason reaches 4096.
+
+All 29 remaining failure identities, kinds and exception types match baseline.
+Twenty-five complete assertion messages match literally. Four differences were
+reviewed against unchanged source, retaining both exact original texts:
+
+- `TestThreeIslandsScene#physicalTrailsConnectFieldsAndBattleUsesTheEncounterField`
+  changes only the default Java identity hashes of the same expected FieldScreen
+  and actual StoryScreen. Those direct Object subclasses have no equals,
+  hashCode or toString overrides; the test and screen sources are unchanged.
+- The Sonic, Tails and wide `TestS3kMhz*AuthoredRoute` completion assertions
+  display the same expected Set elements in a different order. Their actual
+  displays match literally. Each unchanged test compares Set.of with a HashSet;
+  expected and actual element multiplicities were independently checked.
+
+The one absent baseline failure is
+`TestHostMasterLink#hostCloseDiscardsPendingTunnelOpenAndItsCleanupCell`.
+Commit `fe3c58f4f1f9ce3abf382e6eb5aea96df6b0579e` corrects only the fixture's
+completion witness from authority publication to physical I/O retirement,
+retains the exact ledger assertion and adds the deterministic cleanup-interval
+control. No production network change or test exclusion accounts for its absence.
+
+The replacement's two guard failures were genuine delivery blockers, both in
+`TestArchitecturalSourceGuard`. The oscillator-owner assertion still searched
+only the pre-extraction GameLoop/title lifecycle; the actual direct suppression
+calls now live in NativeTitleCardIteration. The strict dispatcher ratchet still
+pinned update to 86 lines after it became a 23-line delegate. The guard repair
+checks both the delegate and the shared oscillator owner, lowers the existing
+update pin to 23, and also pins the shared run method to its exact 76-line span.
+It changes only that guard test, not production code or any ordinary selection.
+The repaired file's tested Git blob is
+`cc8475cb091b0056fb3b16d43fe83598c8c23607`.
+
+The full guard profile was rerun on that repair, with fresh report outputs:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards -Dopenggf.surefire.reports=target/code-climb/9ce6-recovery-validation/guard-repair/surefire test -B
+```
+
+Exit zero: 103 report suites, **843 tests passed, zero failures/errors/skips**.
+Both repaired cases appear and pass in the fresh architectural-guard XML. The
+exact original failed category receipt remains red; it was not overwritten or
+relabelled. Final qualification reuses its complete ordinary lane and combines
+it, with explicit source/command provenance, with this full post-repair guard
+profile. The changed guard class is absent from the ordinary class selection;
+all production code and ordinary tests remain at the tested 9ce source.
+
+The existing comparator rejected the original multiline ratchet assertion as
+requiring explicit review. Against the provenance-bearing composed lanes it
+returns valid comparison differences: the four reviewed display changes and
+one repaired fixture failure, with no new failures, changed/new/missing skips,
+guard failures or guard skips. No generic message normalization, skip-rule change or
+existing budget increase was used. The delivery decision is **no new or worsened
+ordinary failure after complete assertion review, with all repaired guards
+passing**, not a full-suite pass or an unchanged raw comparator exit-zero claim.
+
+Replacement timing: reported queue 6116 seconds across 92 admissions; execution
+including preparation 1818.06 seconds; wall 7948.297 seconds; user wait zero;
+14.237 seconds unseparated. Guard repair: queue 91 seconds; Maven printed
+03:02 minutes including compilation; wall 274.322 seconds; user wait zero;
+1.322 seconds unseparated. Investigation time was not measured separately.
+Queue/Maven seconds are rounded observations. No baseline or domain run was
+repeated for routing; the source-specific byte-equal EHZ/HCZ evidence above is
+retained, with its inherited errors and coverage limits.
+
+Complete plans, negative assertions, full skip dictionaries, source proofs,
+original red receipts, post-repair XML, composed comparison and timing are in
+`target/code-climb/9ce6-recovery-validation/delivery-evidence.json` and its
+referenced bounded artifacts. Original diagnostic directories, the 33c baseline,
+lifecycle branch/worktree and PR269 are retained for unified delivery accounting.
+Only ai-code-climb is authorized for publication to existing draft PR266; no
+destination branch merge/push, new PR, additional review or future-sweep patch
+belongs to this batch. The wider contributor-score goal remains unmet.
