@@ -124831,3 +124831,35 @@ capture choice is opt-in; default compatibility and stock replay are unchanged.
 No second broad smoke or profile sweep is claimed. Final targeted source/row
 qualification, integration, remote verification and accounted cleanup remain
 pending; their result must precede a delivery claim.
+
+
+Final targeted qualification on committed `bd417678a` completes two fixed
+`-Ptrace-replay-r7` invocations selecting the 14 concrete standalone owners and
+all three `TestS3kMegaRunChain` methods: each 17 cases, 2 PASS/15 inherited strict
+FAILURE/0 ERROR/0 SKIP. Every whole outcome and all 74 report/context/owner files
+are literally equal between unobserved and comparison-only observed runs. No
+new baseline run or broad sweep is substituted. Source/bytecode restoration
+succeeds with original hashes and no observer markers.
+
+Against the real pure `60aa1d658` row streams, 187,494 common observations retain
+all baseline row IDs. There are zero additions on 21,987 baseline ERROR-free
+rows, including 21,985 all-MATCH rows, with nonzero clean coverage in every
+fixture. All common-row gameplay fields are unchanged. The 669 added/88,947
+removed ERROR tuples are queue/hardware diagnostics on already-red rows;
+shared expected values and verification groups are unchanged. All four LRZ
+component report bodies and complete actual row/field inventories reproduce
+exactly. Target common raw errors fall 47,413→18,027; the 2,869 unpaired suffix
+rows contain 55,643 errors, and 120 planned rows are still unobserved. Conditional
+pending-submission fields at Knuckles AIZ row 3991, Knuckles LRZ row 3322 and standalone
+Mega AIZ row 3611 are absent, so their coverage is unknown. The late Sonic/Tails LRZ
+pending producer's exact identity remains unresolved. These limits are retained,
+not treated as matches or unrestricted native parity.
+
+Both Mega prefixes pass. All ten full-chain report bodies and the whole
+throwable equal the art-only component: the valid ownership frontier remains
+25811 and the missing EggRobo-head producer remains open. AIZ3's complete report
+still has zero errors/warnings/bootstrap errors and matches its 7,430-row
+component witness; no fresh final Mega raw stream was exported, so this is the
+explicit unchanged-source/report coverage bridge. The held 27561 result is not a
+delivered frontier. Integration, postintegration checks and remote verification
+follow this bounded gate; no final whole-profile or full-suite pass is inferred.

@@ -1629,3 +1629,29 @@ in the wave's `mega-native-owners` handoff. No fixture, tolerance, timing
 readiness, queue capacity or harness assertion changed. The head producer,
 new suffix, broader route/preset/donor/team/pixel certification and combined
 wave integration remain open.
+
+## Final art-only qualification — 2026-11-08
+
+Committed source `bd417678a` holds out `60b2e6137` and restores the destination's
+original rules, touch implementation/tests and SOZ controller. All six maintained
+SOZ representative teams pass again within 348 focused passes, zero skips.
+The private AIZ rewind fixture explicitly selects the full Sonic art branch;
+all eight queue/rewind cases pass. No route assertion, threshold or input constant
+is weakened. Racing's test-only event-retention correction passes a deterministic
+coalesced-batch discriminator and both real host implementations.
+
+The final fixed 17-case replay pair has two passing prefixes, 15 retained strict
+failures and no errors/skips, with all 74 complete report/context/owner files and
+whole outcomes literally equal across observation. All ten Mega payloads and the
+whole throwable match the original art-only component; the strict ownership
+frontier remains cursor 25811. Segment 2 AIZ3's complete zero-error/warning/bootstrap
+report remains exact to its 7,430-row component witness. No new final Mega raw
+stream was captured, so this is the named unchanged-source/report bridge, not a
+fresh raw-row certificate. The local glide-on 27561 result above remains held.
+
+All 14 standalone current-source row pairs retain 21,987 baseline ERROR-free
+observations without any added ERROR; common-row gameplay fields are unchanged.
+AIZ's remaining additions are queue diagnostics on already-red rows after removal
+of the wrong ship archive exposes the missing head submission. Conditional fields
+and later producer/native-route coverage remain unknown as recorded in the final
+[LRZ/current-source audit](../../audits/2026-11-07-lrz-enemy-art-submission.md#final-art-only-source-qualification--2026-11-08).

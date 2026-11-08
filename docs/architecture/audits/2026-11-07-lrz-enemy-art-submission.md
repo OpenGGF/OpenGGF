@@ -145,3 +145,54 @@ prose-only completion.
 All broader character, donor, viewport, continuous-chain and physical-residency
 gaps in the LRZ matrices remain inherited; a segment pass would certify only
 its actual compared rows and fields.
+
+## Final art-only source qualification — 2026-11-08
+
+The final source `bd417678a` excludes the unqualified boss-glide component and
+retains the exact LRZ provider from `05ead7021`. Two fixed 17-case targeted runs
+(each 2 pass, 15 strict replay failures, zero errors/skips) reproduce all whole
+outcomes and 74 complete report/owner/context files literally. All four LRZ
+component report bodies and every captured actual comparison field match the
+final current-source streams exactly. Thus the component tables above remain
+applicable; the later glide-on combined variants are historical only.
+
+The actual pure `60aa1d658` baseline and final source share 187,494 observations across
+14 fixtures, without losing a baseline row. All 21,987 baseline ERROR-free rows
+remain error-free; no common-row gameplay field changes. For the target, common
+raw errors are 47,413 versus 18,027. Its 2,869 unpaired rows contain 55,643 errors
+(total 73,670), and 120 planned rows remain unobserved. Conditional pending-field
+loss and the late Sonic/Tails LRZ stalled producer remain unknown, with complete
+first-addition snapshots retained. Smaller common counts are not a native route
+certificate; no missing row or field is called agreement.
+
+The exact scoped selectors are the following plus all three existing methods of
+`com.openggf.tests.trace.runs.TestS3kMegaRunChain`. Both commands use the own queued
+wrapper with `--normal -Dmse=off -B -Ptrace-replay-r7`, one alphabetical fork,
+`-Dtest` containing this fixed comma-separated selection, the same seven original
+ROM properties stated above, and `test`. Arm 2 adds only the tested late Jackson
+gzip comparison export; all source/bytecode is then restored and rebuilt without
+running more tests. Complete commands, source/input hashes, both XML inventories,
+raw streams and pair comparisons are retained in the dated task evidence.
+
+```text
+com.openggf.tests.trace.s3k.TestS3kLrzCompleteRunTraceReplay#replayMatchesTrace
+com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperAiz5SegmentTraceReplay#replayMatchesTrace
+com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperCnz2SegmentTraceReplay#replayMatchesTrace
+com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperHcz7SegmentTraceReplay#replayMatchesTrace
+com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperHpzSegmentTraceReplay#replayMatchesTrace
+com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperLrz2SegmentTraceReplay#replayMatchesTrace
+com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperLrz3SegmentTraceReplay#replayMatchesTrace
+com.openggf.tests.trace.s3k.knucklessuper.TestS3kKnucklesSuperLrzSegmentTraceReplay#replayMatchesTrace
+com.openggf.tests.trace.s3k.megarun.TestS3kMegaAiz5SegmentTraceReplay#replayMatchesTrace
+com.openggf.tests.trace.s3k.megarun.TestS3kMegaHcz2SegmentTraceReplay#replayMatchesTrace
+com.openggf.tests.trace.s3k.megarun.TestS3kMegaHcz6SegmentTraceReplay#replayMatchesTrace
+com.openggf.tests.trace.s3k.sonictails.TestS3kSonicTailsLrzSegmentTraceReplay#replayMatchesTrace
+com.openggf.tests.trace.s3k.tailsfullchain.TestS3kTailsFullChainLrz2SegmentTraceReplay#replayMatchesTrace
+com.openggf.tests.trace.s3k.tailsfullchain.TestS3kTailsFullChainLrz3SegmentTraceReplay#replayMatchesTrace
+```
+
+The final Mega chain retains its valid ownership failure at cursor 25811;
+there is no delivered 27561 advance. Its ten report bodies/whole throwable match
+the art-only component, both prefixes pass, and AIZ3's complete zero-error report
+matches the earlier 7,430-row witness. No fresh final full-Mega row export was
+made; the unchanged-source/report bridge and suffix limitations stay explicit.
