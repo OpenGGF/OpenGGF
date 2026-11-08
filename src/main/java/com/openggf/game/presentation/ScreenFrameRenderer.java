@@ -14,7 +14,7 @@ public final class ScreenFrameRenderer {
     private final Map<String, Map<Integer, Integer>> indices = new HashMap<>();
     private final PatternSpriteRenderer renderer;
     public static PresentationFrameSet active(CharacterPresentation.Host host) throws IOException {
-        var presentation = com.openggf.game.sonic3k.Sonic3kCharacterPresentation.active();
+        var presentation = StageCharacterPresentation.active();
         var art = presentation == null ? null : presentation.art().get(host);
         return art == null ? null : art.screenFrames();
     }

@@ -297,7 +297,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
 
         // === Results screen (separate namespace) ===
         var characterPresentation = Sonic2CharacterPresentation.resolve(
-                GameServices.currentOrBootstrapGameModule(), GameServices.configuration());
+                GameServices.module(), GameServices.configuration());
         resultsSheet = Sonic2ResultsName.apply(GameServices.rom().getRom(),
                 java.util.Objects.requireNonNull(resultsSheetOverlay.apply(artData.resultsSheet())),
                 characterPresentation);
