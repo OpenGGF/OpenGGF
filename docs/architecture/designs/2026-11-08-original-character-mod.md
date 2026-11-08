@@ -519,3 +519,7 @@ Status log (times UTC):
   Earlier attempts stopped at compilation because an edit during compilation left
   stale main classes; refreshing the two source timestamps forced the successful
   rebuild. No unresolved S1 surface work; lead owns cross-lane delivery and smoke.
+
+- 2026-11-08: abilities lane outcome 1 wires MICA’s air hook to `HomingAttack.start`,
+  selecting Instagib when powered. No-target presses dash because the strike is her
+  own move, rather than preserving Sonic’s unrelated native air fallback.

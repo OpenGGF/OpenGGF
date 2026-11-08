@@ -23,6 +23,11 @@ public final class MicaCharacter extends AbstractPlayableSprite {
                 .movement(0x10, 0x80, 0x10, 0x500, 0x640)
                 .rolling(0x20, 0x80, 0x80, 0xE00).build());
     }
+    @Override protected boolean onAbilityActivate(boolean up, boolean down, boolean left, boolean right) {
+        // Homing is MICA's own move: an empty target set still gives the forward dash.
+        return HomingAttack.start(this, isSuperSonic()
+                ? HomingAttack.Mode.INSTAGIB : HomingAttack.Mode.HOMING);
+    }
     @Override public SecondaryAbility getSecondaryAbility() { return SecondaryAbility.NONE; }
     @Override public void draw() {
         drawStandardArt();
