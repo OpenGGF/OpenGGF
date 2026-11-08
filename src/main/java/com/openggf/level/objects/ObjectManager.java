@@ -915,7 +915,8 @@ public class ObjectManager {
             if (!execThenLoad || !slotLayout.twoAxisCursorPlacement()) {
                 if (!competitionStreaming.active()) placement.update(cameraX);
             }
-            if (execThenLoad && !slotLayout.twoAxisCursorPlacement()) {
+            if (execThenLoad && !slotLayout.twoAxisCursorPlacement()
+                    && !ObjectManagerInternalAccess.placementAtWorldTail(this)) {
                 cleanupDestroyedDynamicObjects();
                 syncActiveSpawnsLoad(true);
             }
@@ -3746,6 +3747,14 @@ public class ObjectManager {
             bucketsDirty = true;
             markActiveObjectCachesDirty();
         }
+    }
+
+    /** An opted-in world owns this sole post-camera/display placement boundary. */
+    void completeDeferredPlacement() {
+        if (!competitionStreaming.active() || !ObjectManagerInternalAccess.placementAtWorldTail(this))
+            throw new IllegalStateException("This world does not own deferred placement");
+        cleanupDestroyedDynamicObjects();
+        syncActiveSpawnsLoad(true);
     }
 
     ObjectManagerInternalAccess.Streaming nativeCompetitionStreaming() {

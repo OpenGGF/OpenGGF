@@ -1110,6 +1110,7 @@ class TestSonic2TriggerParticipation {
         CNZConveyorBeltObjectInstance conveyor = new CNZConveyorBeltObjectInstance(
                 new ObjectSpawn(0x1DFA, 0x0620, 0x72, 0x90, 0, false, 0),
                 "CNZConveyorBelt");
+        conveyor.setServices(new QueryOnlyPlayerServices(player, List.of()));
 
         conveyor.update(0, player);
 
@@ -1124,6 +1125,7 @@ class TestSonic2TriggerParticipation {
         CNZConveyorBeltObjectInstance conveyor = new CNZConveyorBeltObjectInstance(
                 new ObjectSpawn(0x1000, 0x1000, 0x72, 0x01, 0, false, 0),
                 "CNZConveyorBelt");
+        conveyor.setServices(new QueryOnlyPlayerServices(player, List.of()));
 
         conveyor.update(0, player);
 

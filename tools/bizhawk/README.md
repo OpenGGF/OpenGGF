@@ -177,3 +177,31 @@ directory. Inspect exact events/counts and unmet assertions. `completed` require
 the asserted paths and complete window; missing installation/retirement is
 `incomplete`, not evidence that the behavior is absent. Output is reference
 research only, with no canonical fixture publication or engine hydration.
+
+### Read-only execution and RAM observations
+
+[`capture_execution_observations.lua`](capture_execution_observations.lua) records
+actual Genesis execution callbacks, CPU registers and explicitly selected MainRAM
+regions through the host above. It writes observation files and optional owned
+savestates only. It never writes RAM or controllers and is not a canonical fixture
+exporter. Origin: S2 Competition ring, camera and placement diagnosis, 2026-11-08.
+
+The plan supplies `last`, optional `windows={{first,last},...}`, optional
+`save_frame`, and `state_fields` / `event_fields` arrays. Each field has a CSV-safe
+`name`, a byte `length`, and either fixed `address` or callback `register` plus
+optional `offset`. RAM values are fixed-width hexadecimal bytes; frame/register
+columns are decimal. Register pointers wrap into Genesis MainRAM's 64KiB domain.
+`callbacks={{name="pickup",pc=0x121DA,min_hits=1}}` selects explicit verified ROM
+execution addresses; each callback defaults to at least one required hit. No
+address is discovered or supplied by the exporter. It logs the trigger address
+separately from the observed PC, which BizHawk may report after an instruction.
+
+First capture from the original movie with `save_frame` near the window and no
+callbacks. Later passes use that **same movie's** owned state with
+`--fixture-state` and matching `state_frame`. Require `done.txt`, `state.csv`, and
+`counts.csv`; callback passes also require `events.csv`. Check counts and the host
+receipt, not just exit status. A missing required callback fails before the done
+marker. Compare cold/warm completed samples before accepting a warm observation.
+NLua callable methods are userdata, so the exporter tests API presence and actual
+registration rather than Lua's `function` type. All output stays in the external
+capture root; observations never supply engine gameplay or timing authority.
