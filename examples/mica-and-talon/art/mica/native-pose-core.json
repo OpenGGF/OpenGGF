@@ -25,7 +25,6 @@
         "label": "Map_Sonic_01AE"
       },
       "geometry_reference": {
-        "id": "wait-00",
         "size": [
           27,
           39
@@ -33,16 +32,7 @@
         "hotspot": [
           16,
           19
-        ],
-        "bbox_relative_to_hotspot": [
-          -16,
-          -19,
-          11,
-          20
-        ],
-        "game": "S2",
-        "mapping": 1,
-        "label": "Map_Sonic_01AE"
+        ]
       },
       "native_size": [
         27,
@@ -62,7 +52,8 @@
       ],
       "source": "approved pilot adoption",
       "cleanup": "shared generated head/hood; blink eye ink",
-      "material_box_change": true
+      "material_box_change": true,
+      "owner_fix": "Shared unscaled native hood raster; integer 1px breathing lift, eye blink; original lower fidget retained."
     },
     "wait-01": {
       "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: wait-01 Preserve the native expression/boot fidget.",
@@ -88,28 +79,18 @@
         "label": "Map_Sonic_01D0"
       },
       "geometry_reference": {
-        "id": "wait-01",
         "size": [
           26,
-          39
+          40
         ],
         "hotspot": [
           15,
-          19
-        ],
-        "bbox_relative_to_hotspot": [
-          -15,
-          -19,
-          11,
           20
-        ],
-        "game": "S2",
-        "mapping": 2,
-        "label": "Map_Sonic_01D0"
+        ]
       },
       "native_size": [
         26,
-        39
+        40
       ],
       "previous_size": [
         34,
@@ -121,11 +102,12 @@
       ],
       "hotspot": [
         15,
-        19
+        20
       ],
       "source": "approved pilot adoption",
       "cleanup": "shared generated head/hood; blink eye ink",
-      "material_box_change": true
+      "material_box_change": true,
+      "owner_fix": "Shared unscaled native hood raster; integer 1px breathing lift, eye blink; original lower fidget retained."
     },
     "wait-02": {
       "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: wait-02 Preserve the native expression/boot fidget.",
@@ -151,28 +133,18 @@
         "label": "Map_Sonic_01E2"
       },
       "geometry_reference": {
-        "id": "wait-02",
         "size": [
           28,
-          38
+          39
         ],
         "hotspot": [
           14,
-          18
-        ],
-        "bbox_relative_to_hotspot": [
-          -14,
-          -18,
-          14,
-          20
-        ],
-        "game": "S2",
-        "mapping": 3,
-        "label": "Map_Sonic_01E2"
+          19
+        ]
       },
       "native_size": [
         28,
-        38
+        39
       ],
       "previous_size": [
         34,
@@ -184,11 +156,12 @@
       ],
       "hotspot": [
         14,
-        18
+        19
       ],
       "source": "approved pilot adoption",
       "cleanup": "shared generated head/hood; blink eye ink",
-      "material_box_change": true
+      "material_box_change": true,
+      "owner_fix": "Shared unscaled native hood raster; integer 1px breathing lift, eye blink; original lower fidget retained."
     },
     "wait-03": {
       "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: wait-03 Preserve the native expression/boot fidget.",
@@ -214,28 +187,18 @@
         "label": "Map_Sonic_0204"
       },
       "geometry_reference": {
-        "id": "wait-03",
         "size": [
           28,
-          38
+          39
         ],
         "hotspot": [
           14,
-          18
-        ],
-        "bbox_relative_to_hotspot": [
-          -14,
-          -18,
-          14,
-          20
-        ],
-        "game": "S2",
-        "mapping": 4,
-        "label": "Map_Sonic_0204"
+          19
+        ]
       },
       "native_size": [
         28,
-        38
+        39
       ],
       "previous_size": [
         34,
@@ -247,11 +210,12 @@
       ],
       "hotspot": [
         14,
-        18
+        19
       ],
       "source": "approved pilot adoption",
       "cleanup": "shared generated head/hood; blink eye ink",
-      "material_box_change": true
+      "material_box_change": true,
+      "owner_fix": "Shared unscaled native hood raster; integer 1px breathing lift, eye blink; original lower fidget retained."
     },
     "wait-04": {
       "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: wait-04 Preserve the native expression/boot fidget.",
@@ -277,28 +241,18 @@
         "label": "Map_Sonic_0226"
       },
       "geometry_reference": {
-        "id": "wait-04",
         "size": [
           29,
-          38
+          39
         ],
         "hotspot": [
           14,
-          18
-        ],
-        "bbox_relative_to_hotspot": [
-          -14,
-          -18,
-          15,
-          20
-        ],
-        "game": "S2",
-        "mapping": 5,
-        "label": "Map_Sonic_0226"
+          19
+        ]
       },
       "native_size": [
         29,
-        38
+        39
       ],
       "previous_size": [
         34,
@@ -310,11 +264,12 @@
       ],
       "hotspot": [
         14,
-        18
+        19
       ],
       "source": "approved pilot adoption",
       "cleanup": "shared generated head/hood; blink eye ink",
-      "material_box_change": true
+      "material_box_change": true,
+      "owner_fix": "Shared unscaled native hood raster; integer 1px breathing lift, eye blink; original lower fidget retained."
     },
     "wait-05": {
       "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: wait-05 Preserve the native expression/boot fidget.",
@@ -340,28 +295,18 @@
         "label": "Map_Sonic_0250"
       },
       "geometry_reference": {
-        "id": "wait-05",
         "size": [
           28,
-          38
+          39
         ],
         "hotspot": [
           14,
-          18
-        ],
-        "bbox_relative_to_hotspot": [
-          -14,
-          -18,
-          14,
-          20
-        ],
-        "game": "S2",
-        "mapping": 6,
-        "label": "Map_Sonic_0250"
+          19
+        ]
       },
       "native_size": [
         28,
-        38
+        39
       ],
       "previous_size": [
         34,
@@ -373,11 +318,12 @@
       ],
       "hotspot": [
         14,
-        18
+        19
       ],
       "source": "approved pilot adoption",
       "cleanup": "shared generated head/hood; blink eye ink",
-      "material_box_change": true
+      "material_box_change": true,
+      "owner_fix": "Shared unscaled native hood raster; integer 1px breathing lift, eye blink; original lower fidget retained."
     },
     "walk-00": {
       "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: walk-00 Match the native stride and hand positions exactly.",
