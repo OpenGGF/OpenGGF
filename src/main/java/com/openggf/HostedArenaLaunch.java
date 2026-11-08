@@ -16,6 +16,13 @@ final class HostedArenaLaunch implements NativeMenuScreen {
     private final HostedArenaProvider provider;
     private final NativeMenuHostContext context;
     private HostedArenaSession session;
+    /**
+     * The native arena has run a frame. Competition loc_665A (sonic3k.asm:8012-8016) clears the
+     * palette with Pal_FillBlack before the level loop's first frame, so a held arena is black
+     * until its release; its loaded state (load palette, background not yet deformed) is never
+     * on screen.
+     */
+    private boolean presented;
 
     private HostedArenaLaunch(GameLoop loop,RunSpec spec,HostedArenaProvider provider,NativeMenuHostContext context) {
         this.loop=loop; this.spec=spec; this.provider=provider; this.context=context;
@@ -47,13 +54,18 @@ final class HostedArenaLaunch implements NativeMenuScreen {
         if (session.resultsRequested()) return;
         PlayerInputState admitted = loop.hostedRuns.beforeArenaStep(input);
         var step = session.step(admitted);
+        presented = true;
         loop.hostedRuns.afterArenaStep(step,session.trackFinished());
     }
     @Override public void draw() {
         // Presentation remains a capability of the native session, not a gameplay update.
-        session.draw();
+        if (presented) session.draw();
     }
-    @Override public void setClearColor() { }
+    /** Whether draw presents the native arena: only after its first executed step. */
+    boolean presentsNativeFrame() { return presented; }
+    @Override public void setClearColor() {
+        if (!presented) org.lwjgl.opengl.GL11.glClearColor(0, 0, 0, 1);
+    }
     @Override public Exit consumeExit() { return Exit.NONE; }
     @Override public void reset() { if (session!=null) { session.close(); session=null; } }
 }

@@ -17,6 +17,12 @@ under the matching area heading; see the
   ring slots' link to the object pass. The link now survives resets. This
   regressed in 0.7.
 
+- **Keyboard in the Create Room form:** the room-access form claimed the
+  keyboard for typing whenever it was open, which hid the arrow keys from its
+  own rows, so a keyboard player could not reach CREATE ROOM. It now takes
+  typed text only while the room password is being edited. This shipped in
+  0.7.
+
 - **S3K support notice says beta:** starting Sonic 3 & Knuckles from the hub
   now shows the beta notice, matching the 0.7 release notes. 0.7 shipped with
   the alpha notice. Players who hid the alpha notice see the beta one once.
@@ -116,6 +122,16 @@ under the matching area heading; see the
   - Rooms without a verifier show the finish order labelled UNVERIFIED.
   - Solo arena runs now swap shoe state with the empty second slot, as the
     ROM does, instead of ignoring the swap item.
+  - While the mass start holds an arena, a start card shows the track, its
+    laps, the field, the racers and the live time to GO, then fades to black
+    as the arena is released and its own fade brings in the 3-2-1-GO. The
+    held arena is never drawn before it has run a frame: as in the original
+    game, it is black until then, instead of a frozen frame with garbage
+    tiles in its background.
+  - After your finish, your final frame stays on screen while the other
+    racers keep moving and the standings and cutoff keep counting. When the
+    host ends the round, you return to the lobby: an arena has no results
+    tally to end the run, so a finisher used to stay on the finish screen.
 
 ## Modding and tools
 

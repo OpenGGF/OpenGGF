@@ -193,7 +193,7 @@ These are semantic tokens with no game names in `net`. The full message list is 
 | S3K impl | new `game/sonic3k/competition/hosted/*` | Builds an `S3kCompetitionNativeHost`. Production uses the shared-loop constructor (`S3kCompetitionNativeHost.java:124-128`); the verifier uses the explicit-PLC-token constructor (`:131-146`). Both get a scratch ROM-default `S3kCompetitionRecords`, a no-op save consumer and the solo `Views` (§4.6). The helper calls `openArena(new Launch(new Config(MATCH_RACE, arena, items, 1), [character]))` (`:190-224`) after the outer frame, as `S3kCompetitionScreen.afterFrame` does. It steps through `stepArena` (`:366-395`). |
 | Step hook | `HostedRunController` | New `admitArenaStep`, `beforeArenaStep` and `afterArenaStep(ArenaStep)`. These reuse the hold, cover and control-hold logic of `admitStep`/`beforeStep`/`afterStep` (`HostedRunController.java:291-386`), but take the pose and race clock from `ArenaStep` instead of `RecordingMainPlayerResolver`. The arena screen calls them, so the hosted hooks for competition never enter GameLoop's LEVEL branch (`GameLoop.java:1754-1785`). GameLoop's existing native-screen dispatch (`GameLoop.java:1376-1380`) already admits the PLC token. GameLoop and Engine.draw changes are limited to delegate calls; both are size-ratcheted under `-Pguards`. |
 | Input | arena screen | P1 logical input with **Start cleared** and released per `holdsPlayerInput`. The host owns Start, as in LEVEL (`HostedRunController.java:129-131`). The native pause planner therefore never pauses a hosted race, and the recording and the verifier feed the same masked input. The competition player uses up, down, left, right and jump only (`JUMP=0x70`, `S3kCompetitionPlayer.java:15`), so the 5-bit `RunStep.heldMask` is lossless. |
-| End | arena screen | `resultsRequested()` ends the live phase: the run holds on its last frame behind the race overlay until the host leaves. Retry is refused for arenas. |
+| End | arena screen | `resultsRequested()` ends the live phase: the run holds on its last frame behind the race overlay until the host closes the round, and the finisher then leaves (an arena has no results tally to end the run). The room's ghosts and hurt flashes advance one display frame on each admitted frame that takes no step, so the other racers keep moving over the held frame. Retry is refused for arenas. |
 | Lock-outs | unchanged | Live rewind is off in COMPETITION (`LiveRewindManager.isRewindableMode`). `isolatedAct()` keeps the editor and debug lock-outs. Debug use marks the step `debugAssisted`, which taints the attempt. `armForLaunch` keeps refusing trace, test and playback modes. |
 
 `AttemptReplayHarness` (`AttemptReplayHarness.java:83-160`) branches on the recording's kind:
@@ -244,8 +244,12 @@ For `RELEASE` and `RACE_CLOCK` the attempt **survives level reloads**: `onLevelR
    - On acts the release is at S, and the mod draws the 3-2-1 countdown (`CountdownCues`).
    - On arenas the release is at S − L/60 s, where L is the native lead from the first step to GO,
      derived from the neon script (`loc_3713A (sonic3k.asm:74391-74436)`: 60 blank frames, then
-     3, 2, 1, GO at 60 frames each). The mod draws only "START" until release, and the ROM's own
-     neon countdown is the visible 3-2-1-GO.
+     3, 2, 1, GO at 60 frames each). Until release the mod covers the screen with a start card
+     (track, laps, field, racers and the live time to S, `ArenaStartCard`) that fades to black over
+     the native fade length, $16 frames (`loc_665A (sonic3k.asm:8012-8016)`); the ROM's own fade
+     from black and neon countdown are then the visible 3-2-1-GO. `HostedArenaLaunch` draws the
+     arena only after its first step: loc_665A's `Pal_FillBlack` leaves the screen black until the
+     level loop runs, so the loaded but unstepped state is never presented.
 3. **Start check.** `AttemptStart(attemptId)` is sent at the release step, not at GO, so a native
    false start (which delays GO by about 6 s) is not mistaken for a late start. A start arriving
    after S plus the tolerance is DNS.
