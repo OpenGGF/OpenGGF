@@ -266,6 +266,8 @@ CF-ANNOTATION TYPE com.openggf.game.PlayableEntity visible @com.openggf.game.Mod
 CF-ANNOTATION TYPE com.openggf.game.PlayerCharacter visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.PowerUpObject visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.PowerUpSpawner visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.PresentationFrameSet visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.PresentationFrameSet$Pose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.PresentationImages visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.RespawnState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ResultsScreen visible @com.openggf.game.ModApi
@@ -1491,6 +1493,7 @@ CONSTRUCTOR com.openggf.game.CharacterPresentation public  <init>(java.lang.Stri
 CONSTRUCTOR com.openggf.game.CharacterPresentation public  <init>(java.lang.String,java.lang.String,java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$Art>,java.util.Map<com.openggf.game.CharacterPresentation$Font,java.util.Map<java.lang.Character,com.openggf.game.CharacterPresentation$Image>>)
 CONSTRUCTOR com.openggf.game.CharacterPresentation$Art public  <init>(com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image)
 CONSTRUCTOR com.openggf.game.CharacterPresentation$Art public  <init>(com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Sign)
+CONSTRUCTOR com.openggf.game.CharacterPresentation$Art public  <init>(com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Sign,com.openggf.game.PresentationFrameSet)
 CONSTRUCTOR com.openggf.game.CharacterPresentation$Backing public  <init>(com.openggf.game.CharacterPresentation$Image,int,int[])
 CONSTRUCTOR com.openggf.game.CharacterPresentation$Font public  <init>(com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$Style)
 CONSTRUCTOR com.openggf.game.CharacterPresentation$Image public  <init>(int,int,byte[])
@@ -1518,6 +1521,8 @@ CONSTRUCTOR com.openggf.game.MusicReference$Stock public  <init>(int)
 CONSTRUCTOR com.openggf.game.PhysicsModifiers public  <init>(float,float,float,float,short,short,short,float,float,float,float)
 CONSTRUCTOR com.openggf.game.PhysicsProfile public  <init>(short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,boolean,short)
 CONSTRUCTOR com.openggf.game.PlayableCharacterRegistry$Resolution public  <init>(com.openggf.game.CharacterKey,com.openggf.game.CharacterKey,java.util.Optional<com.openggf.game.CharacterDefinition>,com.openggf.game.PlayableCharacterRegistry$FallbackReason)
+CONSTRUCTOR com.openggf.game.PresentationFrameSet public  <init>(java.util.Map<java.lang.String,java.util.Map<java.lang.Integer,com.openggf.game.PresentationFrameSet$Pose>>,int[])
+CONSTRUCTOR com.openggf.game.PresentationFrameSet$Pose public  <init>(com.openggf.game.CharacterPresentation$Image,int,int)
 CONSTRUCTOR com.openggf.game.RomDataSource public  <init>(com.openggf.data.Rom,java.lang.String)
 CONSTRUCTOR com.openggf.game.SidekickSpawnOffset public  <init>(int,int)
 CONSTRUCTOR com.openggf.game.SpecialStageEntryRequest public  <init>(java.lang.Integer,com.openggf.game.EmeraldRewardKind)
@@ -5954,6 +5959,7 @@ METHOD com.openggf.game.CharacterPresentation$Art public  com.openggf.game.Chara
 METHOD com.openggf.game.CharacterPresentation$Art public  com.openggf.game.CharacterPresentation$Image oneUpFace()
 METHOD com.openggf.game.CharacterPresentation$Art public  com.openggf.game.CharacterPresentation$Image signpostFace()
 METHOD com.openggf.game.CharacterPresentation$Art public  com.openggf.game.CharacterPresentation$Sign sign()
+METHOD com.openggf.game.CharacterPresentation$Art public  com.openggf.game.PresentationFrameSet screenFrames()
 METHOD com.openggf.game.CharacterPresentation$Art public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.CharacterPresentation$Art public,final  int hashCode()
 METHOD com.openggf.game.CharacterPresentation$Art public,final  java.lang.String toString()
@@ -6840,6 +6846,17 @@ METHOD com.openggf.game.PowerUpSpawner public,abstract  com.openggf.game.PowerUp
 METHOD com.openggf.game.PowerUpSpawner public,abstract  com.openggf.game.PowerUpObject spawnShield(com.openggf.game.PlayableEntity,com.openggf.game.ShieldType)
 METHOD com.openggf.game.PowerUpSpawner public,abstract  void registerObject(com.openggf.game.PowerUpObject)
 METHOD com.openggf.game.PowerUpSpawner public,abstract  void spawnSplash(com.openggf.game.PlayableEntity)
+METHOD com.openggf.game.PresentationFrameSet public  int[] rgb()
+METHOD com.openggf.game.PresentationFrameSet public  java.util.Map<java.lang.String,java.util.Map<java.lang.Integer,com.openggf.game.PresentationFrameSet$Pose>> banks()
+METHOD com.openggf.game.PresentationFrameSet public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.PresentationFrameSet public,final  int hashCode()
+METHOD com.openggf.game.PresentationFrameSet public,final  java.lang.String toString()
+METHOD com.openggf.game.PresentationFrameSet$Pose public  com.openggf.game.CharacterPresentation$Image image()
+METHOD com.openggf.game.PresentationFrameSet$Pose public  int hotspotX()
+METHOD com.openggf.game.PresentationFrameSet$Pose public  int hotspotY()
+METHOD com.openggf.game.PresentationFrameSet$Pose public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.PresentationFrameSet$Pose public,final  int hashCode()
+METHOD com.openggf.game.PresentationFrameSet$Pose public,final  java.lang.String toString()
 METHOD com.openggf.game.PresentationImages public,static  com.openggf.game.CharacterPresentation$Backing backing(com.openggf.io.ModAssetRoot,java.lang.String,int) THROWS java.io.IOException
 METHOD com.openggf.game.PresentationImages public,static  com.openggf.game.CharacterPresentation$Image read(com.openggf.io.ModAssetRoot,java.lang.String) THROWS java.io.IOException
 METHOD com.openggf.game.RespawnState public  int getStarPostActivationMark()
@@ -16971,6 +16988,7 @@ NESTED com.openggf.game.MusicReference com.openggf.game.MusicReference$Stock
 NESTED com.openggf.game.PhysicsProfile com.openggf.game.PhysicsProfile$Builder
 NESTED com.openggf.game.PlayableCharacterRegistry com.openggf.game.PlayableCharacterRegistry$FallbackReason
 NESTED com.openggf.game.PlayableCharacterRegistry com.openggf.game.PlayableCharacterRegistry$Resolution
+NESTED com.openggf.game.PresentationFrameSet com.openggf.game.PresentationFrameSet$Pose
 NESTED com.openggf.game.ScrollHandlerProvider com.openggf.game.ScrollHandlerProvider$ZoneConstants
 NESTED com.openggf.game.SpecialStageViewport com.openggf.game.SpecialStageViewport$Region
 NESTED com.openggf.game.StandaloneGameSpec com.openggf.game.StandaloneGameSpec$Act
@@ -17893,6 +17911,7 @@ RECORD-COMPONENT com.openggf.game.CharacterPresentation supplementaryGlyphs java
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$Art endSignFace com.openggf.game.CharacterPresentation$Image
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$Art hudLifeIcon com.openggf.game.CharacterPresentation$Image
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$Art oneUpFace com.openggf.game.CharacterPresentation$Image
+RECORD-COMPONENT com.openggf.game.CharacterPresentation$Art screenFrames com.openggf.game.PresentationFrameSet
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$Art sign com.openggf.game.CharacterPresentation$Sign
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$Art signpostFace com.openggf.game.CharacterPresentation$Image
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$Backing image com.openggf.game.CharacterPresentation$Image
@@ -18023,6 +18042,11 @@ RECORD-COMPONENT com.openggf.game.PlayableCharacterRegistry$Resolution definitio
 RECORD-COMPONENT com.openggf.game.PlayableCharacterRegistry$Resolution fallbackReason com.openggf.game.PlayableCharacterRegistry$FallbackReason
 RECORD-COMPONENT com.openggf.game.PlayableCharacterRegistry$Resolution requestedKey com.openggf.game.CharacterKey
 RECORD-COMPONENT com.openggf.game.PlayableCharacterRegistry$Resolution resolvedKey com.openggf.game.CharacterKey
+RECORD-COMPONENT com.openggf.game.PresentationFrameSet banks java.util.Map<java.lang.String,java.util.Map<java.lang.Integer,com.openggf.game.PresentationFrameSet$Pose>>
+RECORD-COMPONENT com.openggf.game.PresentationFrameSet rgb int[]
+RECORD-COMPONENT com.openggf.game.PresentationFrameSet$Pose hotspotX int
+RECORD-COMPONENT com.openggf.game.PresentationFrameSet$Pose hotspotY int
+RECORD-COMPONENT com.openggf.game.PresentationFrameSet$Pose image com.openggf.game.CharacterPresentation$Image
 RECORD-COMPONENT com.openggf.game.SidekickSpawnOffset xOffset int
 RECORD-COMPONENT com.openggf.game.SidekickSpawnOffset yOffset int
 RECORD-COMPONENT com.openggf.game.SpecialStageEntryRequest forcedStageIndex java.lang.Integer
@@ -21636,6 +21660,7 @@ TYPE record public,final com.openggf.game.InitStep SUPER java.lang.Record
 TYPE record public,final com.openggf.game.JoypadPressSnapshot SUPER java.lang.Record
 TYPE record public,final com.openggf.game.PhysicsModifiers SUPER java.lang.Record
 TYPE record public,final com.openggf.game.PhysicsProfile SUPER java.lang.Record
+TYPE record public,final com.openggf.game.PresentationFrameSet SUPER java.lang.Record
 TYPE record public,final com.openggf.game.SidekickSpawnOffset SUPER java.lang.Record
 TYPE record public,final com.openggf.game.SpecialStageEntryRequest SUPER java.lang.Record
 TYPE record public,final com.openggf.game.StaticFixup SUPER java.lang.Record
@@ -21862,6 +21887,7 @@ TYPE record public,static,final com.openggf.game.GameplayObservation$Player SUPE
 TYPE record public,static,final com.openggf.game.MusicReference$Namespaced SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.MusicReference$Stock SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.PlayableCharacterRegistry$Resolution SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.PresentationFrameSet$Pose SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.SpecialStageViewport$Region SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.StandaloneGameSpec$Act SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.SuperFormProfile$Form SUPER java.lang.Record
@@ -22440,6 +22466,8 @@ TYPE-ANNOTATION com.openggf.game.PlayableEntity @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.PlayerCharacter @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.PowerUpObject @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.PowerUpSpawner @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.PresentationFrameSet @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.PresentationFrameSet$Pose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.PresentationImages @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.RespawnState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ResultsScreen @com.openggf.game.ModApi

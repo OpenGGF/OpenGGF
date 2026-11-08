@@ -38,7 +38,9 @@ under the matching area heading; see the
 - Added the optional character presentation data contract and pixel-level name
   composition foundation. The HUD life icon/name, act and special-stage results
   names, 1-up faces and signposts (face, spin and backing) consume it in all three
-  hosts, and MICA packages her indexed presentation art.
+  hosts, and MICA packages her indexed presentation art. Continue screens now
+  accept optional native-frame poses with a separate character palette, retaining
+  native timing, departure movement, text and stock Tails.
 
 - Added the maintained MICA character skeleton for all three stock games, with
   headless launch/save/rewind/fallback acceptance and a rerunnable 96-frame original

@@ -223,6 +223,12 @@ precedence over supplements: MICA needs supplementary M and A only in the S1 HUD
 font. Stock S2 results select Miles/Tails for Tails alone using the native
 graphics-region setting. Sign objects in all three hosts consume the optional
 face, spin and backing poses, retaining native poles, timing and fallback frames.
+`Art.screenFrames` optionally supplies immutable indexed poses with hotspots and
+sixteen RGB colours. Continue consumers use `continue/player`, `continue/icon`
+and the S1 `continue/floor` / S3K `continue/team-idle` banks, keyed by native
+mapping frame. They retain the native animation and movement owners. Separate
+screen palette lines preserve native text and Tails; omitted banks/frames fall
+back to ROM art. Existing four/five-argument `Art` constructors remain supported.
 GGFP presentation sections are pending.
 
 ## Ability and super-form rules

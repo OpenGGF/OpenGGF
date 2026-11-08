@@ -46,6 +46,8 @@ def main():
     run([*cli, "convert", "art", "--playable", "--image", str(PROJECT / "src/main/mod/mica.png"),
          "--sheet", str(PROJECT / "src/main/mod/mica-sheet.yaml"), "--out", str(classes / "art/mica.ggfp")])
     shutil.copytree(PROJECT / "art/mica/presentation", classes / "art/mica/presentation", dirs_exist_ok=True)
+    for surface in ("continue", "portrait", "snowboard"):
+        shutil.copytree(PROJECT / "art/mica" / surface, classes / "art/mica" / surface, dirs_exist_ok=True)
     jar = OUTPUT / "mica-and-talon.jar"
     jar.unlink(missing_ok=True)
     cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath,

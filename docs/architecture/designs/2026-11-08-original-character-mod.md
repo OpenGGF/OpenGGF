@@ -613,3 +613,19 @@ Status log (times UTC):
   Native reference input replays through the titles did not qualify MICA's routes.
   Full title-route sign captures remain outstanding; unrelated W4 consumers remain
   owned by their parallel lanes. No engine physics or native route rules were changed.
+
+- 2026-11-08: W4 screen lane on `feature/ai-mica-screens`: optional indexed
+  continue banks preserve the native frame/timing owners in S1/S2/S3K. MICA
+  packages every authored continue pose; native text and stock Tails retain their
+  original palettes (custom line 2 in S1/S2, line 1 in S3K). Focused tests and
+  captures in progress. Portrait and snowboard consumers remain pending.
+  Continue palette evidence: S1 `.cont_text` and `.cont_Sonic1` share line 0,
+  while `.cont_oval` uses line 1 (docs/s1disasm/_maps/Continue Screen.asm:14-56).
+  S2 `ContinueScreen` retains the player lines and loads `PalID_SS1` for its
+  backdrop (docs/s2disasm/s2.asm:10350-10368). S3K `loc_5C3BC` loads all four
+  native lines and renders text on line 0 (docs/skdisasm/sonic3k.asm:122909-122919);
+  the actor/icon mapping bytes use line 0; Knuckles' actor adds line 3.
+  Native screen text/partners therefore keep their ROM palette while MICA
+  binds to an unused screen line. Initial capture images were rejected because
+  GameplayCaptureSession's generic render path draws a level in continue mode;
+  the component fixture now explicitly draws the production continue provider.

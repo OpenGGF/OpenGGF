@@ -72,6 +72,56 @@ class TestMicaCharacterIntegration {
         }
     }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
+    void continuePixelsS1() throws Exception { captureContinue("s1", "sonic1.rom.path"); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void continuePixelsS2() throws Exception { captureContinue("s2", "sonic2.rom.path"); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void continuePixelsS3k() throws Exception { captureContinue("s3k", "s3k.rom.path"); }
+
+    private void captureContinue(String game, String romProperty) throws Exception {
+        Path jar=buildSample();
+        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"tails","off",null,null,null);
+        try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(jar);
+            session.boot(Path.of(System.getProperty(romProperty)),0,0,settings);
+            var state=GameServices.gameState();
+            while(state.getLives()>0) state.loseLife();
+            state.addContinue(); state.addContinue(); state.addContinue();
+            GameServices.level().requestGameOverExit(GameOverExit.CONTINUE_SCREEN);
+            for(int i=0;i<120 && session.loop().getCurrentGameMode()!=GameMode.CONTINUE_SCREEN;i++) session.step(null);
+            assertEquals(GameMode.CONTINUE_SCREEN,session.loop().getCurrentGameMode());
+            for(int i=0;i<140;i++) session.step(null);
+            writeCapture(drawContinue(session),game+"-continue-wait");
+            var screen=session.loop().getContinueScreenProvider();
+            screen.update(true,false);
+            for(int i=0;i<25;i++) screen.update(false,false);
+            writeCapture(drawContinue(session),game+"-continue-depart");
+            assertTrue(screen.isAccepted());
+        }
+    }
+
+    private static com.openggf.graphics.RgbaImage drawContinue(com.openggf.tools.GameplayCaptureSession session) {
+        var graphics=GameServices.graphics();
+        org.lwjgl.opengl.GL11.glClearColor(0,0,0,1);
+        org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+        graphics.resetForFixedFunction();
+        session.loop().getContinueScreenProvider().draw();
+        graphics.flushScreenSpace();
+        org.lwjgl.opengl.GL11.glFinish();
+        return com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224);
+    }
+
+    private static void writeCapture(com.openggf.graphics.RgbaImage image,String name) throws Exception {
+        Path root=Path.of(System.getProperty("mica.captureDir","target/mica-screen-captures"));
+        Files.createDirectories(root);
+        var png=new java.awt.image.BufferedImage(image.width(),image.height(),java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        png.setRGB(0,0,image.width(),image.height(),image.pixels(),0,image.width());
+        javax.imageio.ImageIO.write(png,"PNG",root.resolve(name+".png").toFile());
+        long visible=java.util.Arrays.stream(image.pixels()).filter(pixel->(pixel&0xffffff)!=0).count();
+        assertTrue(visible>100,"Capture must contain rendered art");
+    }
+
     private void acceptance(GameModule base, String game, int waterZone, int waterAct) throws Exception {
         try (CatalogFixture fixture = load(buildSample())) {
             var config = SonicConfigurationService.getInstance();
@@ -97,6 +147,7 @@ class TestMicaCharacterIntegration {
             assertNotNull(GameServices.level().getCurrentLevel());
             assertNotNull(playable.getSpriteRenderer());
             verifySignTiles(resolved, game);
+            verifyContinuePresentation(resolved, game);
             config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
             assertEquals(PlayerCharacter.SONIC_AND_TAILS,
                     com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(config));
@@ -274,6 +325,28 @@ class TestMicaCharacterIntegration {
         }
     }
 
+    private void verifyContinuePresentation(GameModule module, String game) throws Exception {
+        var host=CharacterPresentation.Host.valueOf(game.toUpperCase(Locale.ROOT));
+        var definition=module.getPlayableCharacterRegistry().find(CharacterKey.parsePersisted(CODE)).orElseThrow();
+        var set=definition.presentationSupplier().load(CODE).art().get(host).screenFrames();
+        assertNotNull(set);
+        assertFalse(set.banks().get("continue/player").isEmpty());
+        var palette=com.openggf.game.presentation.ScreenFrameRenderer.palette(set);
+        assertTrue(palette.dataEquals(definition.paletteSupplier().load(CODE)), "Screen art uses MICA's unchanged palette");
+        ContinueScreenProvider screen=switch(host) {
+            case S1 -> new com.openggf.game.sonic1.continuescreen.Sonic1ContinueScreenProvider();
+            case S2 -> new com.openggf.game.sonic2.continuescreen.Sonic2ContinueScreenProvider();
+            case S3K -> new com.openggf.game.sonic3k.continuescreen.Sonic3kContinueScreenProvider();
+        };
+        screen.initialize(3);
+        for(int i=0;i<100;i++) { screen.update(false,false); screen.draw(); }
+        screen.update(true,false);
+        for(int i=0;i<150 && !screen.isFinished();i++) { screen.update(false,false); screen.draw(); }
+        assertTrue(screen.isAccepted());
+        assertTrue(screen.isFinished());
+        screen.reset();
+    }
+
     private static boolean paletteMatches(com.openggf.level.Palette palette, List<Integer> words) {
         var expected = new com.openggf.level.Palette();
         for (int i = 0; i < 16; i++) expected.getColor(i).fromSegaFormat(words.get(i));
@@ -332,6 +405,14 @@ class TestMicaCharacterIntegration {
                 "--image",project.resolve("src/main/mod/mica.png").toString(),
                 "--sheet",project.resolve("src/main/mod/mica-sheet.yaml").toString(),
                 "--out",classes.resolve("art/mica.ggfp").toString()},System.out));
+        for (String surface : List.of("continue", "portrait", "snowboard")) {
+            Path source = project.resolve("art/mica/" + surface);
+            Path destination = classes.resolve("art/mica/" + surface);
+            Files.createDirectories(destination);
+            try (var files = Files.list(source)) {
+                for (var file : files.toList()) Files.copy(file, destination.resolve(file.getFileName()));
+            }
+        }
         Path presentation = project.resolve("art/mica/presentation");
         Files.createDirectories(classes.resolve("art/mica/presentation"));
         try(var files=Files.list(presentation)) {
