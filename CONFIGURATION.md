@@ -816,6 +816,7 @@ CLI flags (all optional except `--trace`; unspecified flags fall back to the `CA
 | `--fps <n>` | `CAPTURE_FPS` | Output frame rate. |
 | `--codec <name>` | `CAPTURE_CODEC` | Capture video codec. |
 | `--no-ghosts` / `--ghosts` | `TRACE_SHOW_DESYNC_GHOSTS` | Hide / show the desync ghost(s) in the captured video (overrides the config flag for this run). |
+| `--no-sprite-limits` | Native limits on | Render without native sprite dropout (`DISPLAY_SPRITE_SCANLINE_LIMIT=false`, the normal-play default). Captures otherwise enforce the native per-line limits so frames compare with ROM images. |
 
 Desync-ghost / game-HUD / debug-HUD visibility during capture is governed by the `TRACE_SHOW_*` keys in the Debug section; `--no-ghosts`/`--ghosts` is a per-run override for the ghost flag. Game-HUD and debug-HUD visibility are set via those config keys (no CLI flag yet).
 

@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.solid.SolidCall;
 import com.openggf.level.objects.BoxObjectInstance;
 
 import com.openggf.audio.GameSound;
@@ -209,6 +210,16 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
 
         applyVerticalExactEdgeRollHandoff(player, contact);
 
+        captureFromContact(player, ps, contact.standing(), contact.pushing());
+    }
+
+    private void captureFromContact(AbstractPlayableSprite player, PlayerState ps,
+                                    boolean standing, boolean pushing) {
+        // Keep the inherited capture cooldown on admission, not on the solid
+        // helper itself: the head still resolves top/side contact while it runs.
+        if (ps.launchCooldown > 0) {
+            return;
+        }
         // Compatibility images retain the former admission. In both verified
         // retail programs loc_2AD2A/loc_2AF32 first captures routine 4; the
         // REV01 routine >=4 guard exists only on the already-held path.
@@ -225,11 +236,11 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
             // 1. Check standing bit - if standing, capture player
             // 2. For diagonal springs: if not standing, check pushing bit
             // 3. If pushing into diagonal spring from side, convert to standing (capture)
-            boolean shouldCapture = contact.standing() && player.getYSpeed() >= 0;
+            boolean shouldCapture = standing && player.getYSpeed() >= 0;
 
             // Diagonal springs can also capture players who push into them from the side
             // ROM: btst pushing_bit / bset standing_bit - converts side push to standing
-            if (!shouldCapture && isDiagonal() && contact.pushing()) {
+            if (!shouldCapture && isDiagonal() && pushing) {
                 shouldCapture = true;
             }
 
@@ -647,6 +658,16 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // ROM: move.b #0,obj_control(a1) clears all control bits
         player.setControlLocked(false);
         ObjectControlState.none().applyTo(player);
+        if (isDiagonal()) {
+            // loc_2AF7A/loc_2B018 clear the spring's standing bit and OnObject
+            // on release (s2.asm:58326-58334, 58375-58398). Manual dispatch has
+            // no automatic tail checkpoint to retire the folded ride record.
+            player.setOnObject(false);
+            var objectManager = services().objectManager();
+            if (objectManager != null) {
+                objectManager.releaseRidingObject(player, this);
+            }
+        }
         if (!isDiagonal() && isTails(player)) {
             // Vertical Obj85 leaves the player curled after loc_2AE0C launch
             // without making the airborne CPU path behave like Obj84 pinball
@@ -697,6 +718,14 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         } catch (Exception e) {
             // Prevent audio failure from breaking game logic
         }
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        // Obj85_Diagonal calls loc_2AF06 for P1 and P2 before its shared release
+        // decision or empty-spring decompression (s2.asm:58242-58285). A tail
+        // checkpoint captures too late and can decay compression before P2 lands.
+        return isDiagonal() ? SolidExecutionMode.MANUAL_CHECKPOINT : SolidExecutionMode.AUTO_AFTER_UPDATE;
     }
 
     @Override
@@ -966,8 +995,17 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
             ps.launchCooldown--;
         }
 
-        // Skip processing if player is not on spring
         if (ps.state == STATE_EMPTY) {
+            if (isDiagonal() && !player.isDebugMode() && player.getYSpeed() >= 0) {
+                // loc_2AF06's fresh branch calls the single-character solid
+                // helper with the already-computed head as d4, then returns
+                // after capture without running held compression this pass
+                // (s2.asm:58286-58321). Keep P1/capture/P2/capture ordered before
+                // checkForLaunchTransition, including a fresh P2's held input.
+                var contact = services().solidExecution().solidFor(player,
+                        new SolidCall(0x23, 8, 5, currentSpriteX));
+                captureFromContact(player, ps, contact.standingNow(), contact.pushingNow());
+            }
             return;
         }
 

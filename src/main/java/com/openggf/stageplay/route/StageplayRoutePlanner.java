@@ -44,6 +44,18 @@ public final class StageplayRoutePlanner {
 
     private StageplayRoutePlanner() {}
 
+    /**
+     * Native multi-actor programme, using the same bounded search and linear frozen-row replay
+     * as scene routes. A host adapter supplies the production inlet and copied observations.
+     * Prefix rows are immutable: continuation never reauthors already tracking inputs.
+     */
+    public static PlanResult planNative(com.openggf.route.RouteWorldFactory hosts, LaunchContract launch,
+            com.openggf.route.InputTape prefix, GoalProgram goals, SearchBudget budget,
+            BooleanSupplier cancelled, PlanProgress.Listener progress) {
+        return new RoutePlanner(hosts).plan(new RouteTask.Author(launch, prefix, goals, budget),
+                cancelled::getAsBoolean, progress);
+    }
+
     public static StageplayRouteResult plan(
             StageplayResources resources,
             SceneRomLibrary library,

@@ -15,7 +15,8 @@ import java.nio.file.Path;
 import java.util.*;
 
 /**
- * Isolated logic-only collision-route attempt for editors and the user CLI; no graphics/device boot.
+ * Isolated route author/replay CLI. Scene attempts are logic-only; native programmes use an
+ * explicitly offscreen production host. Both share the bounded planner and frozen-row qualifier.
  * Inputs: canonical Stageplay scene, typed bounded request, exact logical ROM windows and confined
  * content-snapshotted project/image/voice assets. Outputs: typed diagnostics and a command-only patch.
  * Origin: 2026-10-22 Stageplay complete-cast task.
@@ -34,6 +35,8 @@ public final class StageplayRouteTool {
                 output.println(StageplayRouteProtocol.encodeResult(result)); output.flush();
                 return 0;
             }
+            if(args.length>0 && args[0].equals("--replay-native-route")) return replayNative(args,output);
+            if (args.length > 0 && (args[0].equals("--native-route") || args[0].equals("--competition-entry"))) return nativeRoute(args, output);
             var flags = flags(args);
             Path destination=Path.of(required(flags,"out")).toAbsolutePath().normalize();
             if(java.nio.file.Files.exists(destination,java.nio.file.LinkOption.NOFOLLOW_LINKS)) throw new IOException("Choose a new route output; existing files are never overwritten");
@@ -108,6 +111,108 @@ public final class StageplayRouteTool {
             return 2;
         }
     }
+    /** Evidence and tests replay frozen rows; this command never invokes the planner. */
+    private static int replayNative(String[] args, PrintStream output) throws IOException {
+        var flags=new LinkedHashMap<String,String>();
+        for(int i=0;i<args.length;i+=2) {
+            if(i+1>=args.length || !Set.of("--replay-native-route","--s2-rom","--out","--publish","--native-witness","--native-anchor-rows").contains(args[i])
+                    || flags.put(args[i].substring(2),args[i+1])!=null) throw new IOException("Expected unique replay flags");
+        }
+        var route=com.openggf.route.RouteFiles.read(Path.of(required(flags,"replay-native-route")));
+        Path out=Path.of(required(flags,"out"));java.nio.file.Files.createDirectory(out);
+        var hosts=new StageplayCompetitionRouteHosts(Path.of(required(flags,"s2-rom")));
+        var witnesses=new LinkedHashMap<String,Object>();
+        var flipLocations=new java.util.ArrayList<com.openggf.route.Region>();
+        var maxFlipFacts=new LinkedHashMap<String,Integer>();
+        var timeline=new StringBuilder("rowsOffered,lfc,phase,paused,engineAnchorRows,p1x,p1y,p2x,p2y\n");
+        var result=new com.openggf.route.RouteReplay(hosts).replay(route,com.openggf.route.Cancellation.NONE,(row,sample)->{
+            timeline.append(sample.rowsOffered()).append(',').append(sample.clocks().levelFrameCounter()).append(',')
+                    .append(sample.facts().getOrDefault("competition.phase",-1)).append(',')
+                    .append(sample.facts().getOrDefault("competition.paused",-1)).append(',')
+                    .append(sample.facts().getOrDefault("input.gameplayAnchorRows",-1)).append(',')
+                    .append(sample.p1().centreX()).append(',').append(sample.p1().centreY()).append(',')
+                    .append(sample.p2().map(com.openggf.route.PlayerView::centreX).orElse(0)).append(',')
+                    .append(sample.p2().map(com.openggf.route.PlayerView::centreY).orElse(0)).append('\n');
+            if(row==route.tape().size()-1) flipLocations.addAll(hosts.flipTileLocations());
+            sample.facts().forEach((key,value)->{if(key.startsWith("competition.flip."))maxFlipFacts.merge(key,value,Math::max);});
+            for(String key:List.of("competition.slot.inUse","competition.flip.visible","competition.flip.planeVisible")) {
+                if(sample.facts().getOrDefault(key,0)!=1 || witnesses.containsKey(key)) continue;
+                try {
+                    String name=key.equals("competition.flip.visible")?"flip":key.equals("competition.flip.planeVisible")?"flip-plane":"slot";
+                    com.openggf.graphics.ScreenshotCapture.savePNG(hosts.renderCurrent(),out.resolve(name+"-"+row+".png"));
+                    witnesses.put(key,Map.of("row",row,"sample",sample.toString(),"facts",sample.facts()));
+                } catch(IOException e) { throw new UncheckedIOException(e); }
+            }
+        });
+        if(flags.containsKey("publish") && result instanceof com.openggf.route.ReplayResult.Passed passed)
+            com.openggf.route.RouteFiles.writeNew(Path.of(flags.get("publish")),withNativeEntry(route,passed.end(),flags),passed.evidence());
+        var report=Map.of("passed",result.passed(),"content",route.content().sha256(),"witnesses",witnesses,"maxFlipFacts",maxFlipFacts,"flipLocations",flipLocations,"result",result.toString());
+        String json=new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(report);
+        java.nio.file.Files.writeString(out.resolve("report.json"),json);
+        java.nio.file.Files.writeString(out.resolve("state.csv"),timeline);output.println(json);
+        return result.passed()?0:2;
+    }
+
+    /** Native routes use the existing manifest vocabulary, including both-player goal clauses. */
+    private static int nativeRoute(String[] args, PrintStream output) throws IOException {
+        var flags = new LinkedHashMap<String,String>();
+        var allowed = Set.of("native-route", "out", "s2-rom", "prefix-rows", "nodes", "ticks", "bk2", "competition-entry", "goals", "native-witness", "native-anchor-rows");
+        for (int i=0;i<args.length;i+=2) {
+            if(i+1>=args.length || !args[i].startsWith("--") || !allowed.contains(args[i].substring(2))
+                    || flags.put(args[i].substring(2),args[i+1])!=null) throw new IOException("Expected unique native route flags");
+        }
+        if(flags.containsKey("native-route")==flags.containsKey("competition-entry"))
+            throw new IOException("Choose exactly one native route or competition menu entry");
+        Path destination=Path.of(required(flags,"out"));
+        if(java.nio.file.Files.exists(Path.of(destination+".route.json")) || java.nio.file.Files.exists(Path.of(destination+".script"))
+                || flags.containsKey("bk2") && java.nio.file.Files.exists(Path.of(flags.get("bk2"))))
+            throw new IOException("Choose new output paths; existing route/movie files are never overwritten");
+        var source = flags.containsKey("native-route")
+                ? com.openggf.route.RouteFiles.readDraft(Path.of(required(flags,"native-route")))
+                : com.openggf.route.RouteArtifact.of(StageplayCompetitionRouteHosts.launch(),
+                    com.openggf.route.RouteCodec.parseGoals(java.nio.file.Files.readString(Path.of(required(flags,"goals")))),
+                    StageplayCompetitionRouteHosts.menuPrefix(integer(flags,"competition-entry",0)),
+                    new com.openggf.route.Provenance("StageplayRoutePlanner","S2 competition", "native menu programme",List.of()));
+        if(flags.containsKey("native-route") && flags.containsKey("goals"))
+            source=com.openggf.route.RouteArtifact.of(source.launch(),com.openggf.route.RouteCodec.parseGoals(
+                    java.nio.file.Files.readString(Path.of(flags.get("goals")))),source.tape(),source.manifest().provenance());
+        var lastObserved=new com.openggf.route.RouteSample[1];
+        var hosts=new StageplayCompetitionRouteHosts(Path.of(required(flags,"s2-rom")),sample->lastObserved[0]=sample);
+        var result = StageplayRoutePlanner.planNative(hosts,
+                source.launch(), source.tape().slice(0,integer(flags,"prefix-rows",source.tape().size())),
+                source.checks(), new com.openggf.route.SearchBudget(integer(flags,"nodes",1024),
+                        integer(flags,"ticks",120000),256,64), Thread.currentThread()::isInterrupted,
+                progress -> System.err.println(progress));
+        if(result instanceof com.openggf.route.PlanResult.Solved solved) {
+            var anchored=withNativeEntry(solved.route(),solved.replayEnd(),flags);
+            var files = com.openggf.route.RouteFiles.writeNew(Path.of(required(flags,"out")),anchored,solved.engineEvidence());
+            if(flags.containsKey("bk2")) com.openggf.route.RouteFiles.exportBk2(anchored,Path.of(flags.get("bk2")));
+            output.println(new ObjectMapper().writeValueAsString(Map.of("ok",true,"manifest",files.manifest().toString(),
+                    "rows",solved.route().tape().size(),"content",solved.route().content().sha256())));
+            return 0;
+        }
+        var stopped = (com.openggf.route.PlanResult.Stopped) result;
+        output.println(new ObjectMapper().writeValueAsString(Map.of("ok",false,"reason",stopped.reason(),"detail",stopped.detail(),"lastObserved",Objects.toString(lastObserved[0],"none"))));
+        return 2;
+    }
+
+    /** Attach observed row-count anchors; no native samples enter the engine or search. */
+    private static com.openggf.route.RouteArtifact withNativeEntry(com.openggf.route.RouteArtifact route,
+            com.openggf.route.RouteSample end, Map<String,String> flags) throws IOException {
+        if(flags.containsKey("native-witness")!=flags.containsKey("native-anchor-rows"))
+            throw new IOException("native-witness and native-anchor-rows must be supplied together");
+        if(!flags.containsKey("native-witness")) return route;
+        Integer engine=end.facts().get("input.gameplayAnchorRows");
+        if(engine==null) throw new IOException("no observed first ordinary Level frame with LFC zero");
+        int nativeRows=integer(flags,"native-anchor-rows",-1);
+        var input=com.openggf.route.RouteFiles.inputPrefix(Path.of(flags.get("native-witness")),nativeRows);
+        var entry=new com.openggf.route.NativeFacts.NativeEntry(flags.get("native-witness"),nativeRows,
+                input.hash(),engine,"first-ordinary-level-lfc-zero");
+        var facts=route.manifest().nativeFacts();
+        return new com.openggf.route.RouteArtifact(route.manifest().withNativeFacts(
+                new com.openggf.route.NativeFacts(Optional.of(entry),facts.lag(),facts.exportBlocker())),route.tape());
+    }
+
     private static StageplayRouteResult worker() throws IOException {
         try (var input = new StageplayProcessInput(new InputStreamReader(System.in,StandardCharsets.UTF_8))) {
             String roms = input.readLine(StageplayRomTransport.MAX_DESCRIPTOR_CHARS);
