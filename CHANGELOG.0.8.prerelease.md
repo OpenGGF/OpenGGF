@@ -73,6 +73,14 @@ under the matching area heading; see the
   players, as the ROM does, so a CPU sidekick rides the belts too, in Sonic 2
   and Knuckles in Sonic 2.
 
+- **S2 Casino Night horizontal flippers accept the full landing width:**
+  horizontal `Obj86` uses the ROM's `$18` landing half-width instead of 8, so
+  players land on the flipper's whole top. Vertical flippers are unchanged.
+
+- **Freed animals keep their points popup across rewind:** a destructive
+  rewind restore now keeps how an animal spawns its points child, so the popup
+  appears and later objects keep their identities after restore and replay.
+
 - **S2 title cards follow Obj34:** the card's parts enter, wait and leave in the
   ROM's slot order and timing. Native Emerald Hill 1 recordings match its part
   positions on every frame and its pixels at seven sampled frames.

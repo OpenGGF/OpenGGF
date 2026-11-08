@@ -686,7 +686,14 @@ These are state-prefix checks, not complete act, results or pixel
 certification. The headless diagnostic enters at the Competition menu, so its
 raw V-int counter starts far below native (EHZ 80 against 1094); that origin
 is reported separately and never offset into gameplay. Production entry
-through the title carries the real counter.
+through the title counts V-ints from power-on, but it still cannot equal the
+console's count, because engine loads do not take the console's frame-exact
+frontend and decompression time (see
+[S2 Whole-Run V-int Clock Cannot Be Made Exact](#s2-whole-run-v-int-clock-cannot-be-made-exact)).
+Anything the ROM seeds from `V_int_run_count` can therefore differ from a
+native run: the CNZ slot machine's reels, rewards and payout timing differ
+from CNZ physical frame 2228 in the planner route, even though reaching the
+slot and spinning it match native.
 
 Pixel evidence is fixed-field-0 comparisons of engine views with BizHawk
 references: 1.1-1.4% normalised differences on four cold EHZ gameplay pairs,
