@@ -581,6 +581,11 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
         return true;
     }
 
+    // Stable callback identities: owner-bounded module decorators cache service wrappers.
+    // Allocating a bound method reference per query exhausts that bounded cache in long credits scenes.
+    private final com.openggf.game.internal.NativeLevelInputOwner nativeLevelInputOwner = this::handleNativeLevelInput;
+    private final com.openggf.game.LevelInputOverlay nativeLevelInputOverlay = this::handleNativeLevelInput;
+
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
@@ -638,9 +643,9 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
                 || type == com.openggf.game.resources.PlcLifecycleService.class)
             return null;
         if (type == com.openggf.game.internal.NativeLevelInputOwner.class)
-            return type.cast((com.openggf.game.internal.NativeLevelInputOwner) this::handleNativeLevelInput);
+            return type.cast(nativeLevelInputOwner);
         if (type == com.openggf.game.LevelInputOverlay.class)
-            return type.cast((com.openggf.game.LevelInputOverlay) this::handleNativeLevelInput);
+            return type.cast(nativeLevelInputOverlay);
         if (type == com.openggf.game.internal.LevelEntryPresentation.class) {
             // Level loc_5FFC selects PaletteWhiteOut for the ending scene.
             return (T) (com.openggf.game.internal.LevelEntryPresentation)

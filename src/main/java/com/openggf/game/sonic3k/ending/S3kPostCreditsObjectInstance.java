@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.ending;
 
+import com.openggf.game.internal.EndingFormController;
+
 import com.openggf.game.GameOverExit;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
@@ -128,7 +130,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
     private void initializeBanner() {
         // Obj_5EF68 (044fa46 sonic3k.asm:125563-125566): clr.b (Super_palette_status).w before the dispatch.
         if (services().playerQuery().mainPlayerOrNull() instanceof com.openggf.sprites.playable.AbstractPlayableSprite player
-                && player.getSuperStateController() instanceof com.openggf.game.sonic3k.Sonic3kSuperStateController powered)
+                && player.getSuperStateController() instanceof EndingFormController powered)
             powered.clearEndingPaletteStatus();
         try {
             var rom=services().romReader();
@@ -445,6 +447,10 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
                 key.equals(S3kEndingArt.AND_KNUCKLES)&&mappingFrame==1?6:
                 key.equals(S3kEndingArt.EGGMAN)||key.equals(S3kEndingArt.EGG_ROBO)||key.equals(Sonic3kObjectArtKeys.MECHA_SONIC)?4:3;
         services().graphicsManager().setCurrentSpriteSatBucket(bucket);
+        if (key.equals(S3kEndingArt.S3_GRAPHICS) && mappingFrame >= 1 && mappingFrame <= 4
+                && EndingCharacterPresentation.draw(services(), com.openggf.game.EndingSpriteSet.Surface.S3K_EYECATCH,
+                    mappingFrame, EndingScreenProjection.worldX(camera,x), EndingScreenProjection.worldY(camera,y),
+                    flip,false,false,bucket)) return;
         renderer.drawFrameIndex(mappingFrame,EndingScreenProjection.worldX(camera,x),EndingScreenProjection.worldY(camera,y),flip,false,palette);
     }
 }

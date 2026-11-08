@@ -245,6 +245,16 @@ renderer-owned graphics bank; no native menu line is replaced.
 The S3K `snowboard` bank supplies the 13 native rider mapping IDs (0–12).
 The host retains intro timing, movement, separate board/spray and snow occlusion;
 private renderer palettes keep rider and native effects independent.
+
+`CharacterPresentation.endings` adds optional `EndingSpriteSet` entries. S3K
+supports normal/powered reunion poses, tiny passengers, the Sonic trio-eyecatch
+child, and normal/powered player ending frames. Frames retain native mapping IDs
+and hotspots; missing entries fall back to the native host renderer. Indexed
+images are bounded to 256×256 pixels to include the enlarged reunion art. Each
+set carries an indexed palette image; the renderer keeps it on a private palette
+row. Powered player/reunion frames use the live authored form palette. Vehicle,
+companion, banner, choreography and script timing stay native. Existing four- and
+five-argument presentation constructors retain empty ending maps.
 GGFP presentation sections are pending.
 
 ## Ability and super-form rules

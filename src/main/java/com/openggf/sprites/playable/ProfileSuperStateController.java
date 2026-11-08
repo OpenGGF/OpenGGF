@@ -14,7 +14,7 @@ import java.util.List;
  * SuperHyper_PalCycle_SuperSonic (sonic3k.asm:4752-4773).
  * S1 is explicitly a creator rule, borrowing S2's trigger and drain without a donor ROM.
  */
-public final class ProfileSuperStateController extends SuperStateController implements com.openggf.game.internal.RuntimeArtRefreshParticipant {
+public final class ProfileSuperStateController extends SuperStateController implements com.openggf.game.internal.RuntimeArtRefreshParticipant, com.openggf.game.internal.EndingFormController {
     private final SuperFormProfile profile;
     private final GameId host;
     private final com.openggf.game.internal.ProfileSuperHostRules rules;
@@ -28,6 +28,13 @@ public final class ProfileSuperStateController extends SuperStateController impl
     private int phase, frame, timer;
     private int displayFrame = -1;
     private boolean doomsday;
+    private boolean endingScene, endingReunion;
+    private SpriteAnimationSet endingAnimations;
+
+    public boolean isEndingSceneActive() { return endingScene; }
+    public void bindEndingAnimations(SpriteAnimationSet animations) {
+        endingAnimations = animations; player.setAnimationSet(animations);
+    }
 
     public ProfileSuperStateController(AbstractPlayableSprite player, SuperFormProfile profile, GameId host) {
         super(player);
@@ -62,7 +69,7 @@ public final class ProfileSuperStateController extends SuperStateController impl
 
     @Override public void reset() {
         super.reset();
-        phase = 0; frame = 0; timer = 0; displayFrame = -1; doomsday = false;
+        phase = 0; frame = 0; timer = 0; displayFrame = -1; doomsday = false; endingScene = endingReunion = false;
         if (normalPalette != null) {
             applyPalette(normalPalette, null);
             player.setAnimationSet(normalAnimations);
@@ -177,14 +184,16 @@ public final class ProfileSuperStateController extends SuperStateController impl
     }
     @Override public boolean isHyperFormActive() { return isSuper() && tier == SuperFormProfile.Tier.HYPER; }
     @Override public RewindState captureRewindState() {
-        return createRewindState(phase, frame, timer, displayFrame, tier.ordinal() | (doomsday ? 2 : 0));
+        return createRewindState(phase, frame, timer, displayFrame, tier.ordinal() | (doomsday ? 2 : 0) | (endingScene ? 4 : 0) | (endingReunion ? 8 : 0));
     }
     @Override public void restoreRewindState(RewindState state) {
         restoreCoreRewindState(state); phase = state.paletteState(); frame = state.paletteFrame();
         timer = state.paletteTimer(); tier = SuperFormProfile.Tier.values()[state.presentationTier() & 1];
         doomsday = (state.presentationTier() & 2) != 0;
-        reconcileRewindPhysicsAndAnimationProfile(isSuper());
-        if (isSuper()) installAnimations(); else player.setAnimationSet(normalAnimations);
+        endingScene = (state.presentationTier() & 4) != 0; endingReunion = (state.presentationTier() & 8) != 0;
+        if (!endingScene) reconcileRewindPhysicsAndAnimationProfile(isSuper());
+        if (endingScene && endingAnimations != null) player.setAnimationSet(endingAnimations);
+        else if (isSuper()) installAnimations(); else player.setAnimationSet(normalAnimations);
         displayFrame = state.transformFramesRemaining();
         if (displayFrame >= 256) {
             int index = displayFrame - 256;
@@ -197,9 +206,65 @@ public final class ProfileSuperStateController extends SuperStateController impl
         if (isHyperFormActive() && form().afterImages() && effects != null) effects.renderTrail(player);
     }
     @Override public void update() {
+        if (endingScene) return; // AnPal owns scene palette/control release, before object dispatch.
         if (player.getDead() && isSuper()) { debugDeactivate(); return; }
         super.update();
         if (isHyperFormActive() && form().stars() && effects != null) effects.updateStars(player);
+    }
+
+    @Override public void advanceEndingPaletteAtAnPal() {
+        if (!endingScene) return;
+        if (getState() == SuperState.TRANSFORMING && updateTransformationAnimation()) {
+            endingCore(SuperState.SUPER);
+            player.setForcedAnimationId(-1);
+            player.setAnimationId(0);
+            ObjectControlState.none().applyTo(player);
+        } else if (isSuper()) updateSuperPalette();
+        else updatePostRevertEffects();
+    }
+
+    private void endingCore(SuperState state) {
+        var saved = captureRewindState();
+        restoreCoreRewindState(new RewindState(state, 0x7FFF, saved.paletteState(), saved.paletteFrame(),
+                saved.paletteTimer(), saved.transformFramesRemaining(), saved.presentationTier(), -1L, -1L));
+    }
+    private void endingForm(SuperFormProfile.Tier requested) {
+        endingScene = true; endingReunion = false; doomsday = false;
+        tier = profile.games().get(host).containsKey(requested) ? requested : SuperFormProfile.Tier.SUPER;
+        phase = -1; frame = 0; timer = 0;
+        player.setSuperSonic(true); endingCore(SuperState.SUPER);
+        updateSuperPalette();
+    }
+    /** sub_5FC8E (sonic3k.asm:126682-126692): activate without gameplay eligibility/music. */
+    @Override public void initializeEndingSuperSonic() {
+        endingForm(SuperFormProfile.Tier.SUPER); player.setForcedAnimationId(-1); player.setAnimationId(0);
+    }
+    @Override public void initializeEndingHyperSonic() { endingForm(SuperFormProfile.Tier.HYPER); }
+    @Override public void initializeEndingSuperTails() { initializeEndingSuperSonic(); }
+    @Override public void holdEndingTailsCompanionPaletteTimer() { }
+    @Override public void holdEndingRingDrain() { endingScene = true; endingCore(getState()); }
+    @Override public void beginEndingRescueRevert() {
+        endingScene = true; endingReunion = false; player.setSuperSonic(false);
+        player.setForcedAnimationId(-1); player.setAnimationId(0xF);
+        phase = 2; frame = form().fade().size() - 1; timer = 3;
+        endingCore(SuperState.NORMAL);
+    }
+    @Override public void completeEndingRescueRevertMappings() { }
+    @Override public void clearEndingPaletteStatus() { phase = 0; }
+    @Override public void startEndingReunionTransformation() {
+        // Ending_Give_SuperSonic forces the highest authored tier independently of eligibility.
+        endingForm(SuperFormProfile.Tier.HYPER); endingReunion = true;
+        phase = 1; frame = 0; timer = 15;
+        // FixBugs=0 forces the Sonic-route Hyper tier even with Chaos Emeralds only;
+        // Ending_Give_SuperSonic (sonic3k.asm:181537-181571). The fixed branch repairs the trail.
+        var levelState = player.currentLevelState();
+        if (levelState != null) com.openggf.game.LevelRingDisplay.writeWithoutRefresh(levelState,
+                (levelState.getRings()+50)&0xFFFF);
+        player.applyExternalPhysicsProfile(getSuperProfile());
+        player.setForcedAnimationId(0x1F); player.setAnimationId(0x1F);
+        player.setInvincibleFrames(0); player.setObjectMappingFrameControl(false);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        endingCore(SuperState.TRANSFORMING);
     }
 
     private void apply(List<Integer> dry, List<Integer> water) { applyPalette(palette(dry), water == null ? null : palette(water)); }
