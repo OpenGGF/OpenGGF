@@ -297,7 +297,12 @@ def verify(frames):
  banks={}
  for f in frames:
   im=Image.open(HERE/f['file']);assert im.mode=='P' and im.info['transparency']==0
-  assert im.getpalette()[:48]==sum(COLORS,[]) and max(im.get_flattened_data())<16
+  colors=GOLD['cycles']['s3k']['frames'][0] if f['form']=='gilded' else COLORS
+  assert im.getpalette()[:48]==sum(colors,[]) and max(im.get_flattened_data())<16
+  if f.get('gilded_file'):
+   powered=Image.open(HERE/f['gilded_file'])
+   assert powered.tobytes()==im.tobytes() and powered.getpalette()[:48]==sum(GOLD['cycles']['s3k']['frames'][0],[])
+   assert powered.info['transparency']==0 and (HERE/f['gilded_file']).read_bytes()[24:26]==bytes([4,3])
   assert list(im.size)==f['dimensions'] and im.getbbox()
   assert (HERE/f['file']).read_bytes()[24:26]==bytes([4,3]),'Expected 4-bit indexed PNG'
   assert draw(f).tobytes()==im.tobytes(),(f['id'],'regeneration drift')
@@ -338,11 +343,17 @@ def main():
   verify(frames);return
  frames=definitions();chosen=[f for f in frames if not a.group or f['group']==a.group]
  for f in chosen:
-  f['file']=f['id']+'.png';draw(f).save(HERE/f['file'],bits=4,transparency=0)
+  f['file']=f['id']+'.png';im=draw(f)
+  if f['form']=='gilded':im.putpalette(sum(GOLD['cycles']['s3k']['frames'][0],[])+[0]*720)
+  im.save(HERE/f['file'],bits=4,transparency=0)
+  if f['group']=='float2':
+   f['gilded_file']='gilded-'+f['file']
+   im.putpalette(sum(GOLD['cycles']['s3k']['frames'][0],[])+[0]*720)
+   im.save(HERE/f['gilded_file'],bits=4,transparency=0)
  if path.exists():
   old=json.loads(path.read_text())['frames'];chosen= [f for f in old if f['id'] not in {x['id'] for x in chosen}]+chosen
  chosen.sort(key=lambda f:list(GROUPS).index(f['group'])*1000+frames.index(next(x for x in frames if x['id']==f['id'])))
- manifest=dict(format='openggf-ending-art-s3k-1',game='s3k_locked_on',tick_rate=60,piece_format=['x_px','y_px','width_tiles','height_tiles','tile_index','xflip','yflip','relative_palette_line','priority'],palette='../../palette.yaml',art_binding='Per-frame art payloads, native piece geometry. Static mapping tile indices overlap across selectors; compile/rebase per-frame tiles in a replacement bank, do not overwrite all selectors at their source offsets. Super slots 0/1 are conservative coverage only: native Super art interpreted through these maps is not a coherent pose.',palette_binding='Preserve all MICA indices. Reunion object base line 2; other player surfaces line 0. Native piece palette bits are relative (0). Reserve/remap companions and plane/shared line users in engine; do not recolor their tiles or quantize MICA into blue.',gilded=dict(palette='../../presentation/gilded.yaml',cycle='cycles.s3k',png_storage='Normal MICA indexed palette; apply Gilded cycle to indices 2..6 at runtime. Review displays first S3K gold cycle. Transformation uses fade_in then steady cycle.',shared_float2_frames=list(range(200,208))),timing=TIMINGS,frames=chosen)
+ manifest=dict(format='openggf-ending-art-s3k-1',game='s3k_locked_on',tick_rate=60,piece_format=['x_px','y_px','width_tiles','height_tiles','tile_index','xflip','yflip','relative_palette_line','priority'],palette='../../palette.yaml',art_binding='Per-frame art payloads, native piece geometry. Static mapping tile indices overlap across selectors; compile/rebase per-frame tiles in a replacement bank, do not overwrite all selectors at their source offsets. Super slots 0/1 are conservative coverage only: native Super art interpreted through these maps is not a coherent pose.',palette_binding='Preserve all MICA indices. Reunion object base line 2; other player surfaces line 0. Native piece palette bits are relative (0). Reserve/remap companions and plane/shared line users in engine; do not recolor their tiles or quantize MICA into blue.',gilded=dict(palette='../../presentation/gilded.yaml',cycle='cycles.s3k',png_storage='Gilded poses and gilded_file Float2 variants embed first S3K gold palette; indices unchanged. Normal Float2 retains jade palette. Apply cycle to indices 2..6 at runtime. Transformation uses fade_in then steady cycle.',shared_float2_frames=list(range(200,208))),timing=TIMINGS,frames=chosen)
  path.write_text(json.dumps(manifest,indent=2)+'\n');verify(chosen)
  if a.review:
   for group in GROUPS:

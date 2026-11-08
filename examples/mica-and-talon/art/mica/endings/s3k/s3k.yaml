@@ -19,7 +19,7 @@
   "gilded": {
     "palette": "../../presentation/gilded.yaml",
     "cycle": "cycles.s3k",
-    "png_storage": "Normal MICA indexed palette; apply Gilded cycle to indices 2..6 at runtime. Review displays first S3K gold cycle. Transformation uses fade_in then steady cycle.",
+    "png_storage": "Gilded poses and gilded_file Float2 variants embed first S3K gold palette; indices unchanged. Normal Float2 retains jade palette. Apply cycle to indices 2..6 at runtime. Transformation uses fade_in then steady cycle.",
     "shared_float2_frames": [
       200,
       201,
@@ -1335,7 +1335,8 @@
         ]
       ],
       "tile_budget": 14,
-      "file": "rescue_float-c8.png"
+      "file": "rescue_float-c8.png",
+      "gilded_file": "gilded-rescue_float-c8.png"
     },
     {
       "id": "rescue_float-c9",
@@ -1416,7 +1417,8 @@
         ]
       ],
       "tile_budget": 11,
-      "file": "rescue_float-c9.png"
+      "file": "rescue_float-c9.png",
+      "gilded_file": "gilded-rescue_float-c9.png"
     },
     {
       "id": "rescue_float-ca",
@@ -1482,7 +1484,8 @@
         ]
       ],
       "tile_budget": 10,
-      "file": "rescue_float-ca.png"
+      "file": "rescue_float-ca.png",
+      "gilded_file": "gilded-rescue_float-ca.png"
     },
     {
       "id": "rescue_float-cb",
@@ -1563,7 +1566,8 @@
         ]
       ],
       "tile_budget": 11,
-      "file": "rescue_float-cb.png"
+      "file": "rescue_float-cb.png",
+      "gilded_file": "gilded-rescue_float-cb.png"
     },
     {
       "id": "rescue_float-cc",
@@ -1644,7 +1648,8 @@
         ]
       ],
       "tile_budget": 14,
-      "file": "rescue_float-cc.png"
+      "file": "rescue_float-cc.png",
+      "gilded_file": "gilded-rescue_float-cc.png"
     },
     {
       "id": "rescue_float-cd",
@@ -1710,7 +1715,8 @@
         ]
       ],
       "tile_budget": 13,
-      "file": "rescue_float-cd.png"
+      "file": "rescue_float-cd.png",
+      "gilded_file": "gilded-rescue_float-cd.png"
     },
     {
       "id": "rescue_float-ce",
@@ -1776,7 +1782,8 @@
         ]
       ],
       "tile_budget": 10,
-      "file": "rescue_float-ce.png"
+      "file": "rescue_float-ce.png",
+      "gilded_file": "gilded-rescue_float-ce.png"
     },
     {
       "id": "rescue_float-cf",
@@ -1842,7 +1849,8 @@
         ]
       ],
       "tile_budget": 13,
-      "file": "rescue_float-cf.png"
+      "file": "rescue_float-cf.png",
+      "gilded_file": "gilded-rescue_float-cf.png"
     },
     {
       "id": "ride-ba",

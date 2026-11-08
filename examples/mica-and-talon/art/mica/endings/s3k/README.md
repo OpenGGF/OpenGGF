@@ -12,8 +12,9 @@ Python 3, Pillow, PyYAML and the pinned disassemblies are required. No Java buil
 `--group` regenerates only one group. The JSON-subset `s3k.yaml` records source
 labels, native indices, piece geometry, canvas bounds, hotspots, palette bindings,
 DPLC capacities and native script timing. PNGs are 4-bit indexed with binary
-transparency and the unchanged shared MICA palette. Gilded art keeps the same
-indices: apply `presentation/gilded.yaml` at runtime. Disposable review sheets
+transparency. Normal art uses the unchanged shared MICA palette. Gilded poses
+embed the first gold cycle; Float2 also supplies `gilded_file` variants alongside
+the shared jade drawings. All retain the same indices: apply `presentation/gilded.yaml` at runtime. Disposable review sheets
 show those powered poses with the first S3K Gilded cycle at 1× and 4×.
 
 Static source tile addresses overlap between frames. Pack/rebase replacement
