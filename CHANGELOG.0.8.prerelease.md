@@ -43,7 +43,8 @@ under the matching area heading; see the
   a shared palette and a breathing/fidget idle. Native object mapping bytes can
   bind semantic sheet poses; MICA supplies three native-reference hang poses for
   vines and grapples, with explicit canonical fallbacks for other raw poses. The 36 rotated WALK/RUN poses
-  use native phase coordinates and pixel-edited contact edges; S3K transformation
+  use native phase coordinates and pixel-edited contact edges; all 12 steep
+  WALK/RUN hood contours are completed without changing sole support. S3K transformation
   art uses clustered gold scales and a clearer face, and the second dive shell
   has rounded scale rows. Gilded Super/Hyper forms cycle
   jade to gold, retain her sheet, and expose host settings for their gates. S1's

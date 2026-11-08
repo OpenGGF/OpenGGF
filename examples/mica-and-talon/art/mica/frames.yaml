@@ -868,8 +868,8 @@
       "order": 16,
       "file": "frames/walk-steep-00.png",
       "hotspot": [
-        19,
-        13
+        22,
+        16
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -881,7 +881,7 @@
       "order": 17,
       "file": "frames/walk-steep-01.png",
       "hotspot": [
-        20,
+        23,
         14
       ],
       "angle_set": "steep",
@@ -894,7 +894,7 @@
       "order": 18,
       "file": "frames/walk-steep-02.png",
       "hotspot": [
-        21,
+        24,
         16
       ],
       "angle_set": "steep",
@@ -907,7 +907,7 @@
       "order": 19,
       "file": "frames/walk-steep-03.png",
       "hotspot": [
-        20,
+        23,
         20
       ],
       "angle_set": "steep",
@@ -920,8 +920,8 @@
       "order": 20,
       "file": "frames/walk-steep-04.png",
       "hotspot": [
-        19,
-        13
+        22,
+        16
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -934,7 +934,7 @@
       "file": "frames/walk-steep-05.png",
       "hotspot": [
         20,
-        14
+        17
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -946,8 +946,8 @@
       "order": 22,
       "file": "frames/walk-steep-06.png",
       "hotspot": [
-        21,
-        15
+        24,
+        18
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -959,7 +959,7 @@
       "order": 23,
       "file": "frames/walk-steep-07.png",
       "hotspot": [
-        20,
+        23,
         20
       ],
       "angle_set": "steep",
@@ -1128,8 +1128,8 @@
       "order": 8,
       "file": "frames/run-steep-00.png",
       "hotspot": [
-        15,
-        16
+        18,
+        19
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
@@ -1141,8 +1141,8 @@
       "order": 9,
       "file": "frames/run-steep-01.png",
       "hotspot": [
-        16,
-        16
+        19,
+        19
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
@@ -1154,8 +1154,8 @@
       "order": 10,
       "file": "frames/run-steep-02.png",
       "hotspot": [
-        15,
-        16
+        18,
+        19
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
@@ -1167,8 +1167,8 @@
       "order": 11,
       "file": "frames/run-steep-03.png",
       "hotspot": [
-        16,
-        16
+        19,
+        19
       ],
       "angle_set": "steep",
       "duration_ticks": 4,

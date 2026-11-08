@@ -1318,3 +1318,17 @@ frame. The capture is positioned at a spawned production handle; it is not a
 cold route certification. All 108 selected Java tests pass, zero skips after the vocabulary
 expansion and new art adoption. Required
 additional raw-object route captures and the ROM-table audit remain outstanding.
+
+W2 contour follow-up: twelve steep WALK/RUN frames have their hood/back contours
+completed in native indexed rows. Original reference metadata remains intact;
+authored geometry expands above/behind the sprite with the corresponding
+hotspot adjustment. Native sole support is unchanged (Python regression).
+The scratch `steep-before.png` / `steep-after.png` sheets were visually inspected.
+
+Final focused verification after contour adoption: queued Java selection
+`TestMicaCharacterIntegration,TestCanonicalPlayableSheet,TestPlayableSheetMaterializer,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+passes 108 tests, zero failures/errors/skips, with verified ROMs and surfaceless
+EGL. Python modding discovery passes 44 tests; indexed-art verification passes.
+Broad smoke preflight requires `LUA_BIN=/usr/bin/lua5.4` on this host (the default
+Lua version fails); the explicit 5.4 preflight passes. Broad smoke is additional
+qualification and does not replace the outstanding object-capture obligations.

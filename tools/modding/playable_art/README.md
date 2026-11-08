@@ -362,3 +362,13 @@ The original rows are in `recipe.json`; regeneration needs no reference art or
 raw generation. The assembler's `nativeFrames` table binds semantic `hang/0`–
 `hang/2`; host vocabulary translation and canonical fallbacks are documented in
 `docs/modding/characters.md` and the W2 follow-up inventory in the design.
+
+## Steep contour completion
+
+All twelve steep WALK/RUN recipes complete the previously clipped hood crown
+and left/back attachment with original indexed pixel rows. The authored canvas
+expands above/behind the character and the hotspot moves with it; the engine
+centre and sole support remain fixed. This is contour drawing, without scaling
+or rotating the finished frame. `native-pose-core.json` retains the original
+native reference alongside the expanded authored geometry. Palette, inside ink,
+regeneration, tile bounds and native support regression checks pass.

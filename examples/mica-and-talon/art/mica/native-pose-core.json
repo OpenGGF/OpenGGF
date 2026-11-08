@@ -3995,17 +3995,17 @@
       },
       "geometry_reference": {
         "size": [
-          39,
-          26
+          42,
+          29
         ],
         "hotspot": [
-          19,
-          13
+          22,
+          16
         ]
       },
       "native_size": [
-        39,
-        26
+        42,
+        29
       ],
       "previous_size": [
         40,
@@ -4016,10 +4016,10 @@
         16
       ],
       "hotspot": [
-        19,
-        13
+        22,
+        16
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
       "native_support": 19.0
     },
     "walk-steep-01": {
@@ -4039,16 +4039,16 @@
       },
       "geometry_reference": {
         "size": [
-          40,
+          43,
           29
         ],
         "hotspot": [
-          20,
+          23,
           14
         ]
       },
       "native_size": [
-        40,
+        43,
         29
       ],
       "previous_size": [
@@ -4060,10 +4060,10 @@
         14
       ],
       "hotspot": [
-        20,
+        23,
         14
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
       "native_support": 19.0
     },
     "walk-steep-02": {
@@ -4083,16 +4083,16 @@
       },
       "geometry_reference": {
         "size": [
-          40,
+          43,
           30
         ],
         "hotspot": [
-          21,
+          24,
           16
         ]
       },
       "native_size": [
-        40,
+        43,
         30
       ],
       "previous_size": [
@@ -4104,10 +4104,10 @@
         14
       ],
       "hotspot": [
-        21,
+        24,
         16
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
       "native_support": 18.0
     },
     "walk-steep-03": {
@@ -4127,16 +4127,16 @@
       },
       "geometry_reference": {
         "size": [
-          39,
+          42,
           39
         ],
         "hotspot": [
-          20,
+          23,
           20
         ]
       },
       "native_size": [
-        39,
+        42,
         39
       ],
       "previous_size": [
@@ -4148,10 +4148,10 @@
         18
       ],
       "hotspot": [
-        20,
+        23,
         20
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
       "native_support": 18.0
     },
     "walk-steep-04": {
@@ -4171,17 +4171,17 @@
       },
       "geometry_reference": {
         "size": [
-          39,
-          26
+          42,
+          29
         ],
         "hotspot": [
-          19,
-          13
+          22,
+          16
         ]
       },
       "native_size": [
-        39,
-        26
+        42,
+        29
       ],
       "previous_size": [
         40,
@@ -4192,10 +4192,10 @@
         16
       ],
       "hotspot": [
-        19,
-        13
+        22,
+        16
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
       "native_support": 19.0
     },
     "walk-steep-05": {
@@ -4216,16 +4216,16 @@
       "geometry_reference": {
         "size": [
           40,
-          28
+          31
         ],
         "hotspot": [
           20,
-          14
+          17
         ]
       },
       "native_size": [
         40,
-        28
+        31
       ],
       "previous_size": [
         40,
@@ -4237,9 +4237,9 @@
       ],
       "hotspot": [
         20,
-        14
+        17
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
       "native_support": 19.0
     },
     "walk-steep-06": {
@@ -4259,17 +4259,17 @@
       },
       "geometry_reference": {
         "size": [
-          38,
-          30
+          41,
+          33
         ],
         "hotspot": [
-          21,
-          15
+          24,
+          18
         ]
       },
       "native_size": [
-        38,
-        30
+        41,
+        33
       ],
       "previous_size": [
         40,
@@ -4280,10 +4280,10 @@
         14
       ],
       "hotspot": [
-        21,
-        15
+        24,
+        18
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
       "native_support": 16.0
     },
     "walk-steep-07": {
@@ -4303,16 +4303,16 @@
       },
       "geometry_reference": {
         "size": [
-          39,
+          42,
           39
         ],
         "hotspot": [
-          20,
+          23,
           20
         ]
       },
       "native_size": [
-        39,
+        42,
         39
       ],
       "previous_size": [
@@ -4324,10 +4324,10 @@
         18
       ],
       "hotspot": [
-        20,
+        23,
         20
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
       "native_support": 18.0
     },
     "walk-inverted-00": {
@@ -4875,17 +4875,17 @@
       },
       "geometry_reference": {
         "size": [
-          35,
-          31
+          38,
+          34
         ],
         "hotspot": [
-          15,
-          16
+          18,
+          19
         ]
       },
       "native_size": [
-        35,
-        31
+        38,
+        34
       ],
       "previous_size": [
         39,
@@ -4896,10 +4896,10 @@
         17
       ],
       "hotspot": [
-        15,
-        16
+        18,
+        19
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
       "native_support": 19.0
     },
     "run-steep-01": {
@@ -4919,17 +4919,17 @@
       },
       "geometry_reference": {
         "size": [
-          36,
-          31
+          39,
+          34
         ],
         "hotspot": [
-          16,
-          16
+          19,
+          19
         ]
       },
       "native_size": [
-        36,
-        31
+        39,
+        34
       ],
       "previous_size": [
         39,
@@ -4940,10 +4940,10 @@
         17
       ],
       "hotspot": [
-        16,
-        16
+        19,
+        19
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
       "native_support": 19.0
     },
     "run-steep-02": {
@@ -4963,17 +4963,17 @@
       },
       "geometry_reference": {
         "size": [
-          35,
-          30
+          38,
+          33
         ],
         "hotspot": [
-          15,
-          16
+          18,
+          19
         ]
       },
       "native_size": [
-        35,
-        30
+        38,
+        33
       ],
       "previous_size": [
         39,
@@ -4984,10 +4984,10 @@
         17
       ],
       "hotspot": [
-        15,
-        16
+        18,
+        19
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
       "native_support": 19.0
     },
     "run-steep-03": {
@@ -5007,17 +5007,17 @@
       },
       "geometry_reference": {
         "size": [
-          36,
-          31
+          39,
+          34
         ],
         "hotspot": [
-          16,
-          16
+          19,
+          19
         ]
       },
       "native_size": [
-        36,
-        31
+        39,
+        34
       ],
       "previous_size": [
         39,
@@ -5028,10 +5028,10 @@
         17
       ],
       "hotspot": [
-        16,
-        16
+        19,
+        19
       ],
-      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+      "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact. Follow-up: redraw cropped hood crown and back attachment on an expanded native canvas; no scale/rotation; original reference and native support retained.",
       "native_support": 19.0
     },
     "run-inverted-00": {
