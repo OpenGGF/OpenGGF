@@ -26,6 +26,7 @@ final class CdProgrammeReader {
     private final Map<Object,CdAssetBytes[]> inputs=new IdentityHashMap<>();
     private final Map<Object,CdNemesisAsset.Decoded> products=new IdentityHashMap<>();
     private final Optional<CdSonicVisualAssets> sonic;
+    private CdObjectPlacements placements;
     private CdStageTerrain terrain;
     private CdProgrammeLoadTables loadTables;
 
@@ -152,10 +153,17 @@ final class CdProgrammeReader {
     }
     int ordinaryZoneActWord() { return r3().ordinaryZoneActWord(); }
     CdStageTerrain.Shape terrainShape() { return r3().shape(); }
-    CdAssetBytes role(Role role) { return view(r3().roles().get(Objects.requireNonNull(role))); }
+    CdAssetBytes role(Role role) {
+        var data=definition.terrain();
+        if(data.isPresent()) {
+            var key=data.orElseThrow().roles().get(Objects.requireNonNull(role));
+            if(key!=null)return view(key);
+        }
+        return view(r3().roles().get(Objects.requireNonNull(role)));
+    }
     synchronized CdStageTerrain terrain()throws IOException {
-        var binding=r3();
-        if(terrain==null)terrain=CdStageTerrain.decode(binding.shape(),decoded(binding.blocks()).bytes().copy(),decoded(binding.graphics()).bytes().copy(),
+        var binding=definition.terrain().orElseThrow(()->new UnsupportedOperationException(name()+" has no reviewed terrain DATA binding"));
+        if(terrain==null)terrain=CdStageTerrain.decodeData(binding.profile(),binding.legacyShape(),decoded(binding.blocks()).bytes().copy(),decoded(binding.graphics()).bytes().copy(),
             role(Role.CHUNKS).copy(),role(Role.FG).copy(),role(Role.BG).copy(),role(Role.COLLISION).copy(),role(Role.ANGLE).copy(),role(Role.HEIGHT).copy(),role(Role.WIDTH).copy());
         return terrain;
     }
@@ -177,6 +185,10 @@ final class CdProgrammeReader {
         return key;
     }
     int loadOutputBytes(Object key) { return source(key).definition().output(); }
+    synchronized CdObjectPlacements placements() {
+        if(placements==null)placements=CdObjectPlacements.decodeProgramme(this);
+        return placements;
+    }
     synchronized CdProgrammeLoadTables loadTables() {
         if(loadTables==null)loadTables=CdProgrammeLoadTables.decode(this);
         return loadTables;

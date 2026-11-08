@@ -26,7 +26,8 @@ class TestCdStageTerrain {
         assertEquals(legacy, publicMethods(CdR11aTerrain.class));
         Set<String> common = new HashSet<>(legacy);
         common.remove("decode(" + "byte[],".repeat(8) + "byte[]):CdR11aTerrain");
-        common.add("decode(Shape," + "byte[],".repeat(8) + "byte[]):CdStageTerrain"); common.add("shape():Shape");
+        common.add("decode(Shape," + "byte[],".repeat(8) + "byte[]):CdStageTerrain"); common.add("shape():Shape"); common.add("profile():Profile");
+        common.add("fromProgramme(CdProgramAssets,CdStageKey):CdStageTerrain");
         assertEquals(common, publicMethods(CdStageTerrain.class));
         assertEquals(CdR11aTerrain.Layout.class, CdR11aTerrain.class.getMethod("layout").getReturnType());
         assertEquals(CdR11aTerrain.Collision.class, CdR11aTerrain.class.getMethod("collision").getReturnType());

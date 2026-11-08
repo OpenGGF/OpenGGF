@@ -45,6 +45,45 @@ public final class CdStageTerrain {
         }
     }
 
+    /** Source geometry/read semantics, never a programme identity or gameplay capability. */
+    public enum LayoutEncoding { EVEN_PADDED_INCLUDE, EXACT_READ_VIEW }
+    public enum ReferencePolicy { EAGER_VALIDATED, SELECTED_KNOWN_SOURCE }
+    public record Profile(int blockBytes,int patternBytes,int chunkBytes,int foregroundColumns,int foregroundRows,
+                          int backgroundColumns,int backgroundRows,int collisionIndexBytes,
+                          LayoutEncoding layoutEncoding,ReferencePolicy referencePolicy) {
+        public Profile {
+            Objects.requireNonNull(layoutEncoding);Objects.requireNonNull(referencePolicy);
+            if(blockBytes<=0 || blockBytes%8!=0 || patternBytes<=0 || patternBytes%32!=0
+                    || chunkBytes<=0 || chunkBytes%512!=0 || collisionIndexBytes<=0
+                    || foregroundColumns<1 || foregroundColumns>64 || backgroundColumns<1 || backgroundColumns>64
+                    || foregroundRows<1 || foregroundRows>16 || backgroundRows<1 || backgroundRows>16)
+                throw new IllegalArgumentException("Terrain DATA profile extent differs");
+        }
+    }
+    static Profile profileFor(Shape shape) {
+        Objects.requireNonNull(shape);
+        return new Profile(shape.blockBytes,shape.patternBytes,shape.chunkBytes,shape.foregroundColumns,shape.foregroundRows,
+            shape.backgroundColumns,shape.backgroundRows,shape.collisionIds,LayoutEncoding.EVEN_PADDED_INCLUDE,ReferencePolicy.EAGER_VALIDATED);
+    }
+    public enum ReadOwner { BLOCK_STAGING, PATTERN_SOURCE, CHUNK_SOURCE, COLLISION_SOURCE }
+    /** A selected DATA read lacks backing; this is not a fabricated resident/staging value. */
+    public static final class UnavailableRead extends UnsupportedOperationException {
+        private final ReadOwner owner;
+        private final int index,availableCount;
+        private UnavailableRead(ReadOwner owner,int index,int count) {
+            super("Terrain "+owner+" read "+index+" exceeds known DATA prefix "+count+"; additional source/staging knowledge is unowned");
+            this.owner=owner;this.index=index;availableCount=count;
+        }
+        public ReadOwner owner() { return owner; }
+        public int index() { return index; }
+        public int availableCount() { return availableCount; }
+    }
+    /** Authenticated immutable DATA ingress only; no Body/source-family/Frame/World admission. */
+    public static CdStageTerrain fromProgramme(com.openggf.game.soniccd.media.CdProgramAssets actual,
+                                               com.openggf.game.soniccd.CdStageKey stage)throws java.io.IOException {
+        return CdProgrammeReader.open(actual,stage).terrain();
+    }
+
     public enum Plane { FOREGROUND, BACKGROUND }
 
     public record PatternReference(int rawWord) {
@@ -80,24 +119,24 @@ public final class CdStageTerrain {
     }
 
     public static final class Layout {
-        private final Shape shape;
+        private final Profile profile;
         private final CdAssetBytes ram;
 
-        private Layout(Shape shape, byte[] foreground, byte[] background) {
-            this.shape = shape;
+        private Layout(Profile profile, String label, byte[] foreground, byte[] background) {
+            this.profile = profile;
             byte[] bytes = new byte[0x800];
-            copyPlane(foreground, shape.foregroundColumns, shape.foregroundRows, 0, bytes, shape);
-            copyPlane(background, shape.backgroundColumns, shape.backgroundRows, 0x40, bytes, shape);
+            copyPlane(foreground, profile.foregroundColumns, profile.foregroundRows, 0, bytes, profile, label);
+            copyPlane(background, profile.backgroundColumns, profile.backgroundRows, 0x40, bytes, profile, label);
             ram = CdAssetBytes.copyOf(bytes);
         }
 
         // Native clear $800; minus-one dimensions; FG+$00/BG+$40; row stride $80. Never repeat rows.
-        private static void copyPlane(byte[] source, int width, int height, int base, byte[] ram, Shape shape) {
+        private static void copyPlane(byte[] source, int width, int height, int base, byte[] ram, Profile profile, String label) {
             // Layout includes retain native EVEN padding. Only width*height cells are copied;
             // the one unread byte on odd-sized layouts is not a row or runtime default.
-            if (source.length != ((2 + width * height + 1) & ~1) || Byte.toUnsignedInt(source[0]) + 1 != width
+            if (source.length != (profile.layoutEncoding()==LayoutEncoding.EVEN_PADDED_INCLUDE ? ((2 + width * height + 1) & ~1) : 2 + width * height) || Byte.toUnsignedInt(source[0]) + 1 != width
                     || Byte.toUnsignedInt(source[1]) + 1 != height) {
-                throw new IllegalArgumentException("Unsupported " + shape.label + " layout dimensions or extent");
+                throw new IllegalArgumentException("Unsupported " + label + " layout dimensions or extent");
             }
             for (int row = 0; row < height; row++) {
                 System.arraycopy(source, 2 + row * width, ram, base + row * 0x80, width);
@@ -105,10 +144,10 @@ public final class CdStageTerrain {
         }
 
         public int columns(Plane plane) {
-            return Objects.requireNonNull(plane) == Plane.FOREGROUND ? shape.foregroundColumns : shape.backgroundColumns;
+            return Objects.requireNonNull(plane) == Plane.FOREGROUND ? profile.foregroundColumns : profile.backgroundColumns;
         }
         public int rows(Plane plane) {
-            return Objects.requireNonNull(plane) == Plane.FOREGROUND ? shape.foregroundRows : shape.backgroundRows;
+            return Objects.requireNonNull(plane) == Plane.FOREGROUND ? profile.foregroundRows : profile.backgroundRows;
         }
         public CdAssetBytes ram() { return ram; }
         public LayoutCell cell(Plane plane, int x, int y) {
@@ -131,13 +170,19 @@ public final class CdStageTerrain {
         private final CdAssetBytes heights;
         private final CdAssetBytes widths;
 
-        private Collision(Shape shape, byte[] ids, byte[] angles, byte[] heights, byte[] widths) {
-            this.ids = exact(ids, shape.collisionIds, "collision IDs", shape);
-            this.angles = exact(angles, 256, "collision angles", shape);
-            this.heights = exact(heights, 4096, "height samples", shape);
-            this.widths = exact(widths, 4096, "width samples", shape);
+        private final ReferencePolicy referencePolicy;
+
+        private Collision(Profile profile, String label, byte[] ids, byte[] angles, byte[] heights, byte[] widths) {
+            referencePolicy=profile.referencePolicy();
+            this.ids = exact(ids, profile.collisionIndexBytes, "collision IDs", label);
+            this.angles = exact(angles, 256, "collision angles", label);
+            this.heights = exact(heights, 4096, "height samples", label);
+            this.widths = exact(widths, 4096, "width samples", label);
         }
-        public int idForBlock(int blockIndex) { return ids.unsignedByte(blockIndex); }
+        public int idForBlock(int blockIndex) {
+            if(referencePolicy==ReferencePolicy.SELECTED_KNOWN_SOURCE)knownIndex(blockIndex,ids.length(),referencePolicy,ReadOwner.COLLISION_SOURCE);
+            return ids.unsignedByte(blockIndex);
+        }
         public int angle(int collisionId) { return angles.unsignedByte(collisionId); }
         public int height(int collisionId, int sample) { return sample(heights, collisionId, sample); }
         public int width(int collisionId, int sample) { return sample(widths, collisionId, sample); }
@@ -152,28 +197,36 @@ public final class CdStageTerrain {
         public CdAssetBytes widths() { return widths; }
     }
 
-    private final Shape shape;
+    private final Profile profile;
     private final CdAssetBytes blocks;
     private final CdAssetBytes patterns;
     private final CdAssetBytes chunks;
     private final Layout layout;
     private final Collision collision;
 
-    private CdStageTerrain(Shape shape, byte[] blocks, byte[] patterns, byte[] chunks, byte[] fg, byte[] bg,
-                           byte[] ids, byte[] angles, byte[] heights, byte[] widths) {
-        this.shape = Objects.requireNonNull(shape, "explicit terrain source shape");
-        this.blocks = exact(blocks, shape.blockBytes, "decoded blocks", shape);
-        this.patterns = exact(patterns, shape.patternBytes, "decoded level patterns", shape);
-        this.chunks = exact(chunks, shape.chunkBytes, "raw chunks", shape);
-        this.layout = new Layout(shape, fg, bg);
-        this.collision = new Collision(shape, ids, angles, heights, widths);
-        validateReferences();
+    private final java.util.Optional<Shape> legacyShape;
+    private CdStageTerrain(Profile profile,java.util.Optional<Shape> legacyShape,byte[] blocks,byte[] patterns,
+                           byte[] chunks,byte[] fg,byte[] bg,byte[] ids,byte[] angles,byte[] heights,byte[] widths) {
+        this.profile=Objects.requireNonNull(profile);this.legacyShape=Objects.requireNonNull(legacyShape);
+        if(legacyShape.isPresent() && !profile.equals(profileFor(legacyShape.orElseThrow())))
+            throw new IllegalArgumentException("Legacy terrain profile differs");
+        String label=legacyShape.map(shape->shape.label).orElse("source");
+        this.blocks=exact(blocks,profile.blockBytes,"decoded blocks",label);
+        this.patterns=exact(patterns,profile.patternBytes,"decoded level patterns",label);
+        this.chunks=exact(chunks,profile.chunkBytes,"raw chunks",label);
+        this.layout=new Layout(profile,label,fg,bg);
+        this.collision=new Collision(profile,label,ids,angles,heights,widths);
+        if(profile.referencePolicy()==ReferencePolicy.EAGER_VALIDATED)validateReferences();
+    }
+    static CdStageTerrain decodeData(Profile profile,java.util.Optional<Shape> legacyShape,byte[] blocks,byte[] patterns,
+                                     byte[] chunks,byte[] fg,byte[] bg,byte[] ids,byte[] angles,byte[] heights,byte[] widths) {
+        return new CdStageTerrain(profile,legacyShape,blocks,patterns,chunks,fg,bg,ids,angles,heights,widths);
     }
 
     /** Pure component decoder; a shape is not a media/release or gameplay capability. */
     public static CdStageTerrain decode(Shape shape, byte[] blocks, byte[] patterns, byte[] chunks, byte[] foreground,
                                         byte[] background, byte[] ids, byte[] angles, byte[] heights, byte[] widths) {
-        return new CdStageTerrain(shape, blocks, patterns, chunks, foreground, background, ids, angles, heights, widths);
+        return decodeData(profileFor(shape),java.util.Optional.of(shape),blocks,patterns,chunks,foreground,background,ids,angles,heights,widths);
     }
 
     private void validateReferences() {
@@ -193,7 +246,7 @@ public final class CdStageTerrain {
                     for (int cy = 0; cy < 16; cy++) {
                         for (int cx = 0; cx < 16; cx++) {
                             BlockReference word = chunkWord(id, cx, cy);
-                            if (word.renderBlockIndex() >= blockCount() || word.collisionBlockIndex() >= shape.collisionIds) {
+                            if (word.renderBlockIndex() >= blockCount() || word.collisionBlockIndex() >= profile.collisionIndexBytes) {
                                 throw new IllegalArgumentException("Referenced chunk requires unloaded block/collision data");
                             }
                         }
@@ -203,22 +256,25 @@ public final class CdStageTerrain {
         }
     }
 
-    public Shape shape() { return shape; }
-    public int blockCount() { return shape.blockBytes / 8; }
-    public int patternCount() { return shape.patternBytes / 32; }
-    public int chunkCount() { return shape.chunkBytes / 512; }
+    public Shape shape() { return legacyShape.orElseThrow(()->new UnsupportedOperationException("Terrain DATA has no legacy stage shape/admission")); }
+    public Profile profile() { return profile; }
+    public int blockCount() { return profile.blockBytes / 8; }
+    public int patternCount() { return profile.patternBytes / 32; }
+    public int chunkCount() { return profile.chunkBytes / 512; }
     public CdAssetBytes blocks() { return blocks; }
     public CdAssetBytes patterns() { return patterns; }
     public CdAssetBytes chunks() { return chunks; }
     public Layout layout() { return layout; }
     public Collision collision() { return collision; }
     public PatternReference blockWord(int zeroBasedBlockId, int x, int y) {
-        Objects.checkIndex(zeroBasedBlockId, blockCount());
+        knownIndex(zeroBasedBlockId,blockCount(),profile.referencePolicy(),ReadOwner.BLOCK_STAGING);
         Objects.checkIndex(x, 2);
         Objects.checkIndex(y, 2);
         return new PatternReference(blocks.unsignedWord(zeroBasedBlockId * 8 + (y * 2 + x) * 2));
     }
     public BlockReference chunkWord(int oneBasedChunkId, int x, int y) {
+        if(oneBasedChunkId>chunkCount() && profile.referencePolicy()==ReferencePolicy.SELECTED_KNOWN_SOURCE)
+            throw new UnavailableRead(ReadOwner.CHUNK_SOURCE,oneBasedChunkId,chunkCount());
         if (oneBasedChunkId < 1 || oneBasedChunkId > chunkCount()) {
             throw new IndexOutOfBoundsException("Chunk ID must be 1.." + chunkCount() + "; 0 is a blank layout cell");
         }
@@ -227,16 +283,20 @@ public final class CdStageTerrain {
         return new BlockReference(chunks.unsignedWord((oneBasedChunkId - 1) * 512 + (y * 16 + x) * 2));
     }
     public int pixel(int patternIndex, int x, int y) {
-        Objects.checkIndex(patternIndex, patternCount());
+        knownIndex(patternIndex,patternCount(),profile.referencePolicy(),ReadOwner.PATTERN_SOURCE);
         Objects.checkIndex(x, 8);
         Objects.checkIndex(y, 8);
         int packed = patterns.unsignedByte(patternIndex * 32 + y * 4 + x / 2);
         return (x & 1) == 0 ? packed >>> 4 : packed & 15;
     }
 
-    private static CdAssetBytes exact(byte[] input, int size, String name, Shape shape) {
-        if (input.length != size) { throw new IllegalArgumentException("Wrong " + shape.label + " " + name + " extent"); }
+    private static CdAssetBytes exact(byte[] input, int size, String name, String label) {
+        if (input.length != size) { throw new IllegalArgumentException("Wrong " + label + " " + name + " extent"); }
         return CdAssetBytes.copyOf(input);
+    }
+    private static void knownIndex(int index,int count,ReferencePolicy policy,ReadOwner owner) {
+        if(index>=count && policy==ReferencePolicy.SELECTED_KNOWN_SOURCE)throw new UnavailableRead(owner,index,count);
+        Objects.checkIndex(index,count);
     }
     private static void checkWord(int value) {
         if ((value & ~0xFFFF) != 0) { throw new IllegalArgumentException("Not a native word"); }

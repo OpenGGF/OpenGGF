@@ -46,7 +46,9 @@ class TestCdR5DataLayout {
             assertArrayEquals(image.readFile(key.fileOffset(),key.length()),view.copy());
         }
         for(var op:p.operands())assertEquals(op.hex(),HexFormat.of().formatHex(image.readFile(op.fileOffset(),op.hex().length()/2)),op.target());
-        assertThrows(UnsupportedOperationException.class,r::terrain);assertThrows(UnsupportedOperationException.class,r::ordinaryZoneActWord);
+        if(p==CdR5DataLayout.Programme.R51A || p==CdR5DataLayout.Programme.R51B)assertNotNull(r.terrain());
+        else assertThrows(UnsupportedOperationException.class,r::terrain);
+        assertThrows(UnsupportedOperationException.class,r::ordinaryZoneActWord);
         if(p.rawTimeZone()!=2)assertTrue(p.goodFutureConstraint().isEmpty());
     }
     @ParameterizedTest @EnumSource(CdR5DataLayout.Programme.class)
@@ -142,9 +144,11 @@ class TestCdR5DataLayout {
         var p=CdR5DataLayout.Programme.R51A;assertEquals(178,p.range("StageMapFg").length());assertEquals(222,p.range("StageMaps0Read").length());
         assertEquals(800,p.range("StageCollision").length());assertTrue(CdR5DataLayout.Programme.R53C.range("Map0Collision").length()>800);
         for(var programme:CdR5DataLayout.Programme.values()) {
-            var r=actual().readers().get(programme);assertThrows(UnsupportedOperationException.class,r::terrain);
+            var r=actual().readers().get(programme);boolean bound=programme==CdR5DataLayout.Programme.R51A || programme==CdR5DataLayout.Programme.R51B;
+            if(bound)assertNotNull(r.terrain());else assertThrows(UnsupportedOperationException.class,r::terrain);
             var key=programme.range("StageGfx");assertThrows(IllegalArgumentException.class,()->r.nativeInput(programme.range("PlayerGfx")));
-            assertThrows(UnsupportedOperationException.class,()->r.role(CdProgrammeReader.Role.FG));assertNotNull(r.decoded(key));
+            if(bound)assertEquals(222,r.role(CdProgrammeReader.Role.FG).length());
+            else assertThrows(UnsupportedOperationException.class,()->r.role(CdProgrammeReader.Role.FG));assertNotNull(r.decoded(key));
         }
     }
     @Test void everyProgrammeRejectsForeignRegionCatalogueAndOriginalDomainBeforeAdoption()throws Exception {

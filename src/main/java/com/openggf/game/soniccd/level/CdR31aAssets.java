@@ -121,7 +121,7 @@ public final class CdR31aAssets {
         var size=view(Asset.CAM_BOUNDS);bounds=new CdR11bLoadPlan.Bounds(size.unsignedWord(0),size.unsignedWord(2),size.unsignedWord(4),size.unsignedWord(6),size.unsignedWord(8),size.unsignedWord(10));
         var start=view(Asset.LEVEL_START_LOC);initialCentre=new CdR11bLoadPlan.InitialCentre(start.unsignedWord(0),start.unsignedWord(2));
         sonic=reader.sonic();
-        placementRows=readPlacementRows();placements=CdObjectPlacements.decodeR31NativeOrder(this);loadMetadata=CdR31aLoadMetadata.fromAssets(this);
+        placements=CdObjectPlacements.decodeR31NativeOrder(this);placementRows=placements.rawRows();loadMetadata=CdR31aLoadMetadata.fromAssets(this);
     }
     public static CdR31aAssets fromPrograms(CdProgramAssets programs,CdStageKey stage)throws IOException {
         Objects.requireNonNull(programs,"actual complete-disc data source");Objects.requireNonNull(stage,"explicit selected stage");
@@ -200,14 +200,5 @@ public final class CdR31aAssets {
         reader.requireRetained();
         if(identity.file()!=reader.file() || !identity.stage().equals(reader.stage())
                 || identity.variant()!=CdReleaseVariant.USA || identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM)throw new IllegalStateException("Retained R31A owner differs");
-    }
-    private List<CdAssetBytes> readPlacementRows() {
-        var raw=view(Asset.OBJECT_LAYOUTS);int end=raw.unsignedWord(2);
-        if(raw.unsignedWord(0)!=12 || end!=4156 || raw.unsignedWord(4)!=65535 || raw.unsignedLong(6)!=0 || raw.unsignedWord(10)!=0
-                || raw.unsignedWord(end)!=65535 || raw.unsignedLong(end+2)!=0 || raw.unsignedWord(end-8)!=65535 || raw.unsignedLong(end-6)!=0 || raw.unsignedWord(end-2)!=0)throw new IllegalArgumentException("R31A original placement directory/sentinels differ");
-        var list=new ArrayList<CdAssetBytes>();int previous=-1;
-        for(int at=12;at<end-8;at+=8){var row=raw.slice(at,8);int x=row.unsignedWord(0),id=row.unsignedByte(4)&127,mask=row.unsignedByte(6);
-            if(x<previous || x==65535 || id<1 || id>60 || mask==0 || (mask&~0xE0)!=0)throw new IllegalArgumentException("R31A native raw placement fields/order differ");list.add(row);previous=x;}
-        if(list.size()!=517)throw new IllegalArgumentException("R31A source row count");return List.copyOf(list);
     }
 }

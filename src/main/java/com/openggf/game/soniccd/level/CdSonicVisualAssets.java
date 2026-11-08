@@ -19,6 +19,9 @@ public final class CdSonicVisualAssets {
         public DplcFrame { pieces = List.copyOf(pieces); }
     }
 
+    /** A format may prove each mapping against this frame's upload, or require retained staging knowledge. */
+    private enum MappingTiles { FORMAT_ONLY, SELECTED_DPLC_OUTPUT }
+
     /** Fixed native source layouts, not a caller-defined frame count or inferred padding policy. */
     public enum SourceFormat {
         FRAMES_198_WITH_EVEN_BYTE(198, 3004, 1636, 69471, 1, 69472),
@@ -28,11 +31,21 @@ public final class CdSonicVisualAssets {
         // Full DPLC reads retain following mapping/DPLC/Points/Capsule bytes, not invented padding.
         // .GfxScript29 (src/sprites/r4/player_gfx.asm:1195-1210),
         // .GfxScriptAd (src/sprites/r4/player_gfx.asm:1248-1286).
-        FRAMES_188(188, 3493, 1862, 76928, 0, 82944);
+        FRAMES_188(188, 3493, 1862, 76928, 0, 82944),
+        // N1ecc5f3: sprites/r8/player.asm / player_gfx.asm, objects/player.asm:2890-2928.
+        // Same WORD directories, BYTE mapping counts/five-byte pieces and WORD DPLCs; independent extents.
+        // All selected pieces are inside canonical art; no adjacent bytes or retained staging needed.
+        FRAMES_188_COMPACT_ART(188, 2639, 1454, 59232, 0, 59232, MappingTiles.SELECTED_DPLC_OUTPUT);
 
         private final int frameCount, mappingMaximum, dplcMaximum, rawArtBytes, alignmentBytes, artReadBytes;
+        private final MappingTiles mappingTiles;
 
         SourceFormat(int frameCount, int mappingMaximum, int dplcMaximum, int rawArtBytes, int alignmentBytes, int artReadBytes) {
+            this(frameCount, mappingMaximum, dplcMaximum, rawArtBytes, alignmentBytes, artReadBytes, MappingTiles.FORMAT_ONLY);
+        }
+        SourceFormat(int frameCount, int mappingMaximum, int dplcMaximum, int rawArtBytes, int alignmentBytes, int artReadBytes,
+                     MappingTiles mappingTiles) {
+            this.mappingTiles = mappingTiles;
             this.frameCount = frameCount;
             this.mappingMaximum = mappingMaximum;
             this.dplcMaximum = dplcMaximum;
@@ -66,7 +79,9 @@ public final class CdSonicVisualAssets {
         } else if (art.length != format.artReadBytes) {
             throw new IllegalArgumentException(format == SourceFormat.FRAMES_167
                     ? "Sonic 167-frame art requires the actual 57120 bytes without padding"
-                    : "Sonic 188-frame art requires the actual 82944-byte file-backed read view (76928 raw bytes)");
+                    : format == SourceFormat.FRAMES_188
+                    ? "Sonic 188-frame art requires the actual 82944-byte file-backed read view (76928 raw bytes)"
+                    : "Sonic art requires the actual " + format.artReadBytes + "-byte file-backed read view (" + format.rawArtBytes + " raw bytes)");
         }
         this.art = CdAssetBytes.copyOf(art);
         List<MappingFrame> maps = new ArrayList<>();
@@ -102,6 +117,9 @@ public final class CdSonicVisualAssets {
                 outputBytes += entry.byteLength();
             }
             if (outputBytes > 0x300) { throw new IllegalArgumentException("DPLC frame exceeds native Sonic art buffer"); }
+            if (format.mappingTiles == MappingTiles.SELECTED_DPLC_OUTPUT) {
+                validateSelectedMapping(mapBody, count, outputBytes / 32);
+            }
             frames.add(new DplcFrame(dplcOffset, entries, outputBytes, dplcBody));
         }
         mappingFrames = List.copyOf(maps);
@@ -131,6 +149,20 @@ public final class CdSonicVisualAssets {
     public CdAssetBytes artPiece(int frame, int piece) {
         ArtPiece entry = dplcFrames.get(frame).pieces().get(piece);
         return art.slice(entry.artByteOffset(), entry.byteLength());
+    }
+
+    private static void validateSelectedMapping(CdAssetBytes body, int count, int selectedTiles) {
+        if (count > 128) { throw new IllegalArgumentException("Unsupported native Sonic mapping count"); }
+        for (int piece = 0; piece < count; piece++) {
+            int at = 1 + piece * 5;
+            int size = body.unsignedByte(at + 1);
+            if ((size & ~15) != 0) { throw new IllegalArgumentException("Sonic mapping size exceeds native piece format"); }
+            int tileEnd = (body.unsignedWord(at + 2) & 0x7FF) + ((size >>> 2) + 1) * ((size & 3) + 1);
+            if (tileEnd > 0x300 / 32) { throw new IllegalArgumentException("Sonic mapping exceeds native art buffer"); }
+            if (tileEnd > selectedTiles) {
+                throw new UnsupportedOperationException("Sonic mapping requires unqualified retained staging tiles");
+            }
+        }
     }
 
     private static CdAssetBytes boundedTable(byte[] input, int minimum, int maximum, String name) {

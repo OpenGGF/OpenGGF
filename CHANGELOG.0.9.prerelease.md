@@ -54,6 +54,12 @@ matching area heading; see the
   R13 and R31 now share death-camera stores and lifecycle preparation. The combined
   1,460 checks pass without failures, errors or skips, including315 direct Body cases;
   no completed Game Over/reload, natural CCZ transition or regional parity is claimed.
+  QQZ1 Present/Past terrain and physical R6/R7 placement DATA now use the same
+  shared readers and decoders. Metallic Madness's compact188-frame visual DATA
+  uses the existing Sonic decoder without padding or a second format algorithm.
+  The combined1,100 checks pass without failures, errors or skips; the existing
+  sky-colour regression and selected CCZ replay remain qualified. These DATA
+  bindings do not admit later-zone gameplay or complete a CCZ reload.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

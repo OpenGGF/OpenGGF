@@ -43,6 +43,7 @@ final class CdR7ProgrammeProfiles {
             b.sources.add(new Compressed(r,new Span(r,r.fileOffset(),r.length(),r.sha256()),OptionalInt.of(v.header()),
                     (v.header()&32767)*32,v.capacity(),Optional.of(v.javaProduct()),Optional.of(v.nativeInput()),v.plc()));
         }
+        CdProgrammePlacementProfiles.configure(b,p.payload());
         b.visual=new Visual(p.sonicFormat(),p.range("PlayerSprites"),p.range("PlayerGfxScript"),p.range("PlayerGfx"));
         b.loadRole(CdProgrammeReader.LoadRole.PLC,p.range("PlcRead"));
         b.loadRole(CdProgrammeReader.LoadRole.PALETTE,p.range("PaletteDirectory"));

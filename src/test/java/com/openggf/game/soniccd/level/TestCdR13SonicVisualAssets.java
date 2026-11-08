@@ -145,7 +145,7 @@ class TestCdR13SonicVisualAssets {
     }
 
     @Test void sourceFormatSelectionIsExplicitAndCannotInventOrGuessPadding() throws Exception {
-        assertArrayEquals(new CdSonicVisualAssets.SourceFormat[]{FRAMES_198_WITH_EVEN_BYTE, FRAMES_167, CdSonicVisualAssets.SourceFormat.FRAMES_188}, CdSonicVisualAssets.SourceFormat.values());
+        assertArrayEquals(new CdSonicVisualAssets.SourceFormat[]{FRAMES_198_WITH_EVEN_BYTE, FRAMES_167, CdSonicVisualAssets.SourceFormat.FRAMES_188, CdSonicVisualAssets.SourceFormat.FRAMES_188_COMPACT_ART}, CdSonicVisualAssets.SourceFormat.values());
         for (var a : actual()) {
             byte[] maps = a.visual().mappings().copy(), dplcs = a.visual().dplcs().copy(), art = a.visual().rawArt().copy();
             assertThrows(IllegalArgumentException.class, () -> CdSonicVisualAssets.decode(maps, dplcs, art));

@@ -29,7 +29,8 @@ final class CdR8ProgrammeProfiles {
         for(var r:p.ranges())b.raw(r,r.fileOffset(),r.length(),r.sha256());
         for(var op:p.operands())b.operand(op.fileOffset(),op.encodedHex());
         b.dataOnly=true;
-        b.visual=new UnsupportedVisual("R8 188-frame player format is DATA-only: 2639 mapping / 1454 DPLC / 59232 raw art bytes");
+        b.visual=new Visual(CdSonicVisualAssets.SourceFormat.FRAMES_188_COMPACT_ART,
+            p.range("PlayerSprites"),p.range("PlayerGfxScript"),p.range("PlayerGfx"));
         switch(p) {
             case R81A -> {
                 products(b,p,"""

@@ -6,6 +6,10 @@ import java.util.*;
 
 /** Closed source-definition contract. Only select() supplies a reader definition, never caller metadata. */
 final class CdProgrammeDefinition {
+    record PlacementBinding(Object key,CdObjectPlacements.Layout layout,int rows) {
+        PlacementBinding { Objects.requireNonNull(key);Objects.requireNonNull(layout);
+            if(rows<0 || rows>layout.rows)throw new IllegalArgumentException("Finite placement count differs"); }
+    }
     record Span(Object key, int offset, int length, String sha) { }
     record Operand(int offset, String hex) { }
     record ReadExtent(int length, String sha) { }
@@ -20,6 +24,17 @@ final class CdProgrammeDefinition {
     enum UnavailablePaletteSource { ZERO_ADDRESS }
     record R3(int ordinaryZoneActWord, CdStageTerrain.Shape shape, Map<CdProgrammeReader.Role,Object> roles,
               Object blocks, Object graphics) { R3 { roles = Map.copyOf(roles); } }
+    /** Immutable terrain DATA is independent of R3 player/source-family admission. */
+    record Terrain(CdStageTerrain.Profile profile,Optional<CdStageTerrain.Shape> legacyShape,
+                   Map<CdProgrammeReader.Role,Object> roles,Object blocks,Object graphics) {
+        Terrain {
+            Objects.requireNonNull(profile);Objects.requireNonNull(legacyShape);roles=Map.copyOf(roles);
+            Objects.requireNonNull(blocks);Objects.requireNonNull(graphics);
+            for(var role:List.of(CdProgrammeReader.Role.CHUNKS,CdProgrammeReader.Role.FG,CdProgrammeReader.Role.BG,
+                    CdProgrammeReader.Role.COLLISION,CdProgrammeReader.Role.ANGLE,CdProgrammeReader.Role.HEIGHT,CdProgrammeReader.Role.WIDTH))
+                if(!roles.containsKey(role))throw new IllegalArgumentException("Missing terrain DATA role: "+role);
+        }
+    }
     record Slice(Object key, int offset, int length) { }
     record Palette(Object key, int destination, int counter) { }
     enum CycleKind { STANDARD, UPPER, BYTE_HEADER_4 }
@@ -87,8 +102,10 @@ final class CdProgrammeDefinition {
     private final Map<CdProgrammeReader.LoadRole,Object> loadRoles;
     private final VisualBinding visual;
     private final Optional<R3> r3;
+    private final Optional<Terrain> terrain;
     private final Optional<CdR4DataLayout.Programme> tt;
     private final Optional<Load> load;
+    private final Optional<PlacementBinding> placements;
     private final boolean dataOnly;
     private final String loadBoundary;
 
@@ -99,7 +116,9 @@ final class CdProgrammeDefinition {
         raw=List.copyOf(b.raw); borrowed=Collections.unmodifiableMap(new IdentityHashMap<>(b.borrowed));
         operands=List.copyOf(b.operands); sources=List.copyOf(b.sources);
         loadRoles=Map.copyOf(b.loadRoles); visual=Objects.requireNonNull(b.visual);
+        terrain=Optional.ofNullable(b.terrain);
         r3=Optional.ofNullable(b.r3); tt=Optional.ofNullable(b.tt); load=Optional.ofNullable(b.load);
+        placements=Optional.ofNullable(b.placements);
         dataOnly=b.dataOnly;loadBoundary=b.loadBoundary;
         if((r3.isPresent()?1:0)+(tt.isPresent()?1:0)+(dataOnly?1:0)!=1)
             throw new IllegalArgumentException("Selected data binding differs");
@@ -129,8 +148,10 @@ final class CdProgrammeDefinition {
     List<Compressed> sources() { return sources; }
     VisualBinding visual() { return visual; }
     Load load() { return load.orElseThrow(()->new UnsupportedOperationException(loadBoundary)); }
+    Optional<PlacementBinding> placements() { return placements; }
     boolean dataOnly() { return dataOnly; }
     Optional<R3> r3() { return r3; }
+    Optional<Terrain> terrain() { return terrain; }
     Optional<CdR4DataLayout.Programme> tt() { return tt; }
     Object loadKey(CdProgrammeReader.LoadRole role) {
         var key=loadRoles.get(Objects.requireNonNull(role));
@@ -159,9 +180,11 @@ final class CdProgrammeDefinition {
         final Map<CdProgrammeReader.LoadRole,Object> loadRoles=new EnumMap<>(CdProgrammeReader.LoadRole.class);
         VisualBinding visual;
         R3 r3;
+        Terrain terrain;
         CdR4DataLayout.Programme tt;
         boolean dataOnly; // Generic source-only data, not live terrain/player/World admission.
         Load load;
+        PlacementBinding placements;
         String loadBoundary;
         private Builder(CdStagePayload payload,CdNativeFile file,int fileBytes,String sha,CdMmdHeader header) {
             this.payload=payload;this.file=file;this.fileBytes=fileBytes;this.sha=sha;this.header=header;
@@ -266,6 +289,7 @@ final class CdProgrammeDefinition {
         r3Bindings(b,0x100,CdStageTerrain.Shape.CCZ1_PRESENT,CdProgrammeReader.Blocks.R31,CdR31aLoadMetadata.SourceId.STAGE_GFX,
             new Object[]{CdR31aAssets.Asset.ANI_SONIC,CdR31aAssets.Asset.MINI_ANIMATIONS,CdR31aAssets.Asset.SPEC_CHUNKS,CdR31aAssets.Asset.SINE_TABLE,CdR31aAssets.Asset.ARC_TAN_TABLE,CdR31aAssets.Asset.MAP_SPR_SONIC,CdR31aAssets.Asset.DPLC_SONIC,CdR31aAssets.Asset.ART_SONIC,CdR31aAssets.Asset.LEVEL_CHUNKS,CdR31aAssets.Asset.LAYOUT_FG,CdR31aAssets.Asset.LAYOUT_BG,CdR31aAssets.Asset.LEVEL_COLLISION,CdR31aAssets.Asset.COL_ANGLE_MAP,CdR31aAssets.Asset.COL_HEIGHT_MAP,CdR31aAssets.Asset.COL_WIDTH_MAP,CdR31aAssets.Asset.OBJECT_LAYOUTS},
             new Object[]{CdR31aAssets.Asset.PLC_LISTS,CdR31aAssets.Asset.PALETTE_TABLE,CdR31aAssets.Asset.PALETTE_CYCLES,CdR31aAssets.Asset.SECTIONS,CdR31aAssets.Asset.BG_POINTERS,CdR31aAssets.Asset.PAL_S1_TITLE,CdR31aAssets.Asset.PAL_S1_LEVEL_SELECT,CdR31aAssets.Asset.PAL_SONIC,CdR31aAssets.Asset.PAL_LEVEL,CdR31aAssets.Asset.PAL_LEVEL_END});
+        b.placements=new PlacementBinding(CdR31aAssets.Asset.OBJECT_LAYOUTS,CdObjectPlacements.Layout.R31A_517,517);
         b.load=r3Load(b,List.of(0xFAF6,0xFB04,0xFB60,0xFAF6,0xFB74,0xFBBE,0xFC02,0xFC4C,0xFC54,        0xFC9E,0xFCA6,0xFCB4,0xFCC2,0xFB60,0xFB60,0xFB60,0xFCCA,0xFB60,0xFCD2),14,
             List.of(CdR31aLoadMetadata.SourceId.values()),List.of(
                 new SectionRow(0x4A0,2,7),new SectionRow(0x1000,4,8),new SectionRow(0x1800,5,9),new SectionRow(0xFFFF,6,10)));
@@ -282,6 +306,7 @@ final class CdProgrammeDefinition {
         r3Bindings(b,0x101,CdStageTerrain.Shape.CCZ2_PRESENT,CdR32aLoadLayout.SourceId.STAGE_BLOCKS,CdR32aLoadLayout.SourceId.STAGE_GFX,
             new Object[]{CdR32aDataLayout.Asset.ANI_SONIC,CdR32aDataLayout.Asset.MINI_ANIMATIONS,CdR32aDataLayout.Asset.SPEC_CHUNKS,CdR32aDataLayout.Asset.SINE_TABLE,CdR32aDataLayout.Asset.ARC_TAN_TABLE,CdR32aDataLayout.Asset.MAP_SPR_SONIC,CdR32aDataLayout.Asset.DPLC_SONIC,CdR32aDataLayout.Asset.ART_SONIC,CdR32aDataLayout.Asset.LEVEL_CHUNKS,CdR32aDataLayout.Asset.LAYOUT_FG,CdR32aDataLayout.Asset.LAYOUT_BG,CdR32aDataLayout.Asset.LEVEL_COLLISION,CdR32aDataLayout.Asset.COL_ANGLE_MAP,CdR32aDataLayout.Asset.COL_HEIGHT_MAP,CdR32aDataLayout.Asset.COL_WIDTH_MAP,CdR32aDataLayout.Asset.OBJECT_LAYOUTS},
             new Object[]{CdR32aDataLayout.Asset.PLC_LISTS,CdR32aDataLayout.Asset.PALETTE_TABLE,CdR32aDataLayout.Asset.PALETTE_CYCLES,CdR32aDataLayout.Asset.SECTIONS,CdR32aDataLayout.Asset.BG_POINTERS,CdR32aDataLayout.Asset.PAL_S1_TITLE,CdR32aDataLayout.Asset.PAL_S1_LEVEL_SELECT,CdR32aDataLayout.Asset.PAL_SONIC,CdR32aDataLayout.Asset.PAL_LEVEL,CdR32aDataLayout.Asset.PAL_LEVEL_END});
+        b.placements=new PlacementBinding(CdR32aDataLayout.Asset.OBJECT_LAYOUTS,CdObjectPlacements.Layout.LEGACY_497,454);
         var encountered=new LinkedHashSet<Object>();
         for(var list:CdR32aLoadLayout.PLC_LISTS)for(var e:list.entries())encountered.add(e.source());
         b.load=r3Load(b,CdR32aLoadLayout.PLC_LISTS.stream().map(CdR32aLoadLayout.PlcList::fileOffset).toList(),8,
@@ -293,6 +318,7 @@ final class CdProgrammeDefinition {
         for(var r:CdProgrammeReader.Role.values())roleMap.put(r,roles[r.ordinal()]);
         for(var r:CdProgrammeReader.LoadRole.values())b.loadRole(r,loads[r.ordinal()]);
         b.r3=new R3(word,shape,roleMap,blocks,graphics);
+        b.terrain=new Terrain(CdStageTerrain.profileFor(shape),Optional.of(shape),roleMap,blocks,graphics);
         b.visual=new Visual(CdSonicVisualAssets.SourceFormat.FRAMES_167,roleMap.get(CdProgrammeReader.Role.MAP),roleMap.get(CdProgrammeReader.Role.DPLC),roleMap.get(CdProgrammeReader.Role.ART));
     }
     private static Load r3Load(Builder b,List<Integer> roots,int bodies,List<?> encountered,List<SectionRow> sections) {

@@ -58,10 +58,28 @@ final class CdR5ProgrammeProfiles {
                 new SectionWords(new Slice(p.range("SectionGfxUpdateListsRead"),0,6),List.of(5,6,5))));
             default -> new CameraSections(f.sections());
         };
+        // Native stage_data_load_1a/1b LoadStageMapLayer reads the real counter-sized
+        // views, not the shorter FG include. common/block_collide indexes collision
+        // bytes by the full low11 block ID; R51B's initial FG read hull is830 bytes.
+        switch(p) {
+            case R51A -> b.terrain=terrain(p,6240,22912,57344,55,3,800,"StageCollision");
+            case R51B -> b.terrain=terrain(p,6688,22080,55296,2,2,830,"Map0Collision");
+            default -> { } // Other programmes retain explicit unsupported terrain DATA admission.
+        }
         b.load=new Load(19,f.maximumCount(),f.roots(),f.bodies(),f.encountered().stream().map(k->(Object)p.range(k)).toList(),
             palettes,cycles,f.cycleProgramme(),sections,
             new PointerTables(List.of(new Pointers(PointerKind.LIVE,p.range("BackgroundPointers"),
                 List.of(0xFFF708,0xFFF708,0xFFF710,0xFFF718))),Optional.of(p.range("BackgroundRows"))));
+    }
+    private static Terrain terrain(CdR5DataLayout.Programme p,int blocks,int patterns,int chunks,
+                                   int bgColumns,int bgRows,int collisionBytes,String collision) {
+        var profile=new CdStageTerrain.Profile(blocks,patterns,chunks,44,5,bgColumns,bgRows,collisionBytes,
+            CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE);
+        return new Terrain(profile,Optional.empty(),Map.of(
+            CdProgrammeReader.Role.CHUNKS,p.range("StageChunks"),CdProgrammeReader.Role.FG,p.range("StageMaps0Read"),
+            CdProgrammeReader.Role.BG,p.range("StageMaps1Read"),CdProgrammeReader.Role.COLLISION,p.range(collision),
+            CdProgrammeReader.Role.ANGLE,p.range("StageCollisionAngles"),CdProgrammeReader.Role.HEIGHT,p.range("StageCollisionColumns"),
+            CdProgrammeReader.Role.WIDTH,p.range("StageCollisionRows")),p.range("StageBlocks"),p.range("StageGfx"));
     }
     static Facts facts(CdR5DataLayout.Programme p) { return switch(Objects.requireNonNull(p)) {
         case R51A -> factsR51A();

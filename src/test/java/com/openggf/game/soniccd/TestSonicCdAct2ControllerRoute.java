@@ -2531,6 +2531,8 @@ class TestSonicCdAct2ControllerRoute {
         var binding=actualField(host,"render");assertNotNull(binding);
         var renderer=assertInstanceOf(RetainedPlaneSceneRenderer.class,actualField(binding,"renderer"));
         assertSame(h.mode().getWorldSession(),actualField(binding,"world"));assertEquals(owners.generation(),actualField(binding,"generation"));
+        // Fixed fixture observation only: prove the already-correct sky against actual source bytes.
+        if(completedCall==13955)assertNaturalR12bSourceBackdrop(h,owners,scene,renderer,actual);
         var camera=h.mode().getCamera();boolean sonicSelected=false,sonicVisible=false,wallSelected=false,wallVisible=false;
         for(int whole:new int[]{0,69}) {
             boolean present=cpu.provenance().stream().anyMatch(p->p.slotRef().wholeIndex()==whole);
@@ -2557,6 +2559,47 @@ class TestSonicCdAct2ControllerRoute {
         assertSame(binding,actualField(host,"render"));assertSame(renderer,actualField(binding,"renderer"));
         assertNaturalR12bRenderOwners(h,owners);assertNativeCapture(before,h);
         return new R12bNaturalPixels(actual,sonicSelected,sonicVisible,wallSelected,wallVisible);
+    }
+
+    /**
+     * Actual natural-route display; only the entry-zero comparison is a constructed renderer control.
+     * Native LevelStart (Level/Main.asm:225-243) selects entry $20. Pal_Level
+     * (Palmtree Panic/Palette Data (Act 1 Past).asm:27-29,52-54) loads 96 bytes at palette+$20;
+     * its byte offset $20 supplies full-palette entry $20. These bytes come from original media.
+     */
+    private static void assertNaturalR12bSourceBackdrop(Harness h,R12bNaturalOwners owners,
+            RetainedPlaneSceneRenderer.Scene scene,RetainedPlaneSceneRenderer renderer,byte[] actual) throws Exception {
+        var terrain=assertInstanceOf(com.openggf.game.soniccd.level.CdR12bTerrainAssets.class,actualField(owners.host(),"terrain"));
+        int sourceWord=terrain.view(com.openggf.game.soniccd.level.CdR12bProfile.Asset.PAL_LEVEL).unsignedWord(0x20);
+        assertEquals(0x08A4,sourceWord,"Pinned native Past palette operand, not a fitted screenshot RGB");
+        assertEquals(0x20,scene.selectedBackdropPaletteIndex());
+        var palette=scene.selectedPalette128();
+        assertEquals(sourceWord,((palette[0x40]&255)<<8)|(palette[0x41]&255),"Actual selected bank retains the source sky word");
+        assertEquals(0,((palette[0]&255)<<8)|(palette[1]&255),"The historical wrong entry differs from the native sky operand");
+        var graphics=GameServices.graphics();
+        assertEquals(com.openggf.graphics.color.DisplayColorProfile.RAW_RGB,graphics.getDisplayColorProfile());
+        assertEquals(com.openggf.graphics.color.DisplayColorExpansion.FULL,graphics.getDisplayColorExpansion());
+        // Independent integer decoding of 0000 BBB0 GGG0 RRR0 for this explicitly selected output profile.
+        int rgb=((((sourceWord>>>1)&7)*255+3)/7)<<16
+                |((((sourceWord>>>5)&7)*255+3)/7)<<8|((((sourceWord>>>9)&7)*255+3)/7);
+        var entryZeroControl=new RetainedPlaneSceneRenderer.Scene(scene.foreground(),scene.background(),scene.packedHscroll256(),
+                scene.vscrollLongBits(),palette,scene.displayEnabled(),scene.sprites(),scene.nativePatterns(),0);
+        var camera=h.mode().getCamera();var before=captureNative(h);
+        clearPixels();renderer.draw(entryZeroControl,camera.getX(),camera.getY(),h.module()::validateAct2PastLoadingCut);
+        var wrong=pixels();int changed=0;
+        for(int at=0;at<actual.length;at+=4) {
+            assertEquals(255,actual[at+3]&255);assertEquals(255,wrong[at+3]&255);
+            int goodRgb=((actual[at]&255)<<16)|((actual[at+1]&255)<<8)|(actual[at+2]&255);
+            int wrongRgb=((wrong[at]&255)<<16)|((wrong[at+1]&255)<<8)|(wrong[at+2]&255);
+            if(goodRgb==wrongRgb)continue;
+            assertEquals(0,wrongRgb,"Only transparent-plane/sprite backdrop pixels may differ");
+            assertEquals(rgb,goodRgb,"Actual engine sky must decode the selected native word");changed++;
+        }
+        assertTrue(changed>0,"Entry-zero adversary must expose real sky pixels on the genuine route");
+        assertNativeCapture(before,h);assertArrayEquals(actual,drawNaturalR12bImage(h));assertNativeCapture(before,h);
+        assertNaturalR12bRenderOwners(h,owners);
+        System.out.println("ENGINE natural R12B sky: sourceWord="+Integer.toHexString(sourceWord)+", selectedEntry=32, entryZeroControlChangedPixels="+changed+
+                "; only comparison is constructed; production selection and all gameplay values unchanged");
     }
 
     /** Both complete rewind scopes are captured BEFORE pixels and before the one forward edge. */

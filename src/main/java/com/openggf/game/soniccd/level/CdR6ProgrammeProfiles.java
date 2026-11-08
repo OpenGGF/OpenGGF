@@ -40,6 +40,7 @@ final class CdR6ProgrammeProfiles {
                     OptionalInt.of(v.header()),(v.header()&32767)*32,v.capacity(),
                     Optional.of(v.javaProduct()),Optional.of(v.nativeInput()),v.plc()));
         }
+        CdProgrammePlacementProfiles.configure(b,p.payload());
         b.visual=new Visual(CdSonicVisualAssets.SourceFormat.FRAMES_167,
                 p.range("PlayerMapRead"),p.range("DataDplc"),p.range("DataArt"));
         b.loadRole(CdProgrammeReader.LoadRole.PLC,p.range("PlcRead"));

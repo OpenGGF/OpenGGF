@@ -1,5 +1,36 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — shared terrain, placement and compact visual DATA
+
+R111 qualifies20 installed Java payloads on saved30a64eeea with1,100 passing
+invocations across50 classes, zero failures, errors or skips. The source-bound
+receipt retains identical before/after fingerprint
+`ad28f0d5eef9975291039247dbe68a87d71298bcfe07ef87ce206b9f59dc0de4`.
+The run uses Java25, original-USA media and configured surfaceless EGL.
+
+R51A/B terrain consumes the existing shared decoder; unsupported terrain reads
+remain explicit. R6/R7 original placements retain physical order, raw period
+masks and sentinels through one parser. Compact188-frame R8 visual DATA uses
+the existing Sonic decoder and cache with authenticated native endpoints;
+legacy visual formats remain unchanged. This is DATA admission, without later
+zone World, player, route or current-pixel qualification. The sky test protects
+the existing backdrop correction; it introduces no production colour change.
+
+R110's earlier1,121 passes and one failed R5 negative remain a separate failed
+receipt. Its empty media mock was invalid after Root registered R6: public
+ingress now authenticates that source before querying unsupported terrain.
+Only the fixture precondition changed to genuine authenticated media, retaining
+the assertion that no terrain role or decoded product is read. R111 passes
+that unchanged test identity. No production authentication-order workaround
+was introduced, and unchanged Renderer46 was omitted from this affected cohort.
+
+The protected selected CCZ historical-save recipe still returns434 services and
+stops before Game Over ownership on attempted435. New Game Over and R7 load
+closure handoffs remain separate, uninstalled work at this checkpoint. Natural
+R13-to-CCZ continuation, completed reload, full-USA and regional parity remain
+unfinished. External source-bound evidence and exact case identities are retained
+under Downloads/Sonic-CD/research; no main-checkout or remote delivery occurred.
+
 ## 7 November 2026 — original intro data uses the common reader
 
 Qualified CCZ enemy, intro and ecology component packets are joined privately
