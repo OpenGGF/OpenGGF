@@ -1,0 +1,112 @@
+{
+  "format": "openggf-ending-art-handoff-1",
+  "game": "s2",
+  "native_source_label": "ArtNem_EndingPics / ArtNem_EndingSonic / ArtNem_EndingSuperSonic / SonAni_Float2",
+  "palette": "../../palette.yaml",
+  "gilded": "../../presentation/gilded.yaml",
+  "tick_rate": 60,
+  "palette_binding": "Keep all MICA indices: photos/normal leap/Float2 on line 0; Tornado rider line 1 shared with native Tails pilot requires engine palette arbitration or per-piece reassignment. Plane line 0 remains ROM-owned; PNGs for 7..11 are character-only transparent overlays. Super stores unchanged indices; install Gilded s2 cycle on line 0. Photo backgrounds/companions redrawn in shared MICA palette; reserve entire panel line 0 and rewrite native tile palette attributes.",
+  "layout": "Native piece coordinates, dimensions, flips and priorities. Reallocate original tiles into per-frame banks; do not retain inter-frame source aliases. Full composite bounds include blank plane area in character overlays.",
+  "timing": {
+    "s2-photo-1": "Static 96x72 panel; native fade loop waits $180 NTSC/$100 PAL then $80; fourth panel shares same loop.",
+    "s2-photo-2": "Static 96x72 panel; native fade loop waits $180 NTSC/$100 PAL then $80; fourth panel shares same loop.",
+    "s2-photo-3": "Static 96x72 panel; native fade loop waits $180 NTSC/$100 PAL then $80; fourth panel shares same loop.",
+    "s2-photo-4": "Static 96x72 panel; native fade loop waits $180 NTSC/$100 PAL then $80; fourth panel shares same loop.",
+    "s2-normal-sky-fall": "Float2 $54..$58 at 8 ticks each; 64-tick appear, 192-tick camera scroll.",
+    "s2-super-sky-fall": "Native walking animation; engine cycles frames0..5 every4 ticks (explicit approximation).",
+    "s2-normal-tornado-turn": "WAIT frame1 during plane hold $480 NTSC/$3D0 PAL; rotation byte_A602 has28 steps at3 ticks.",
+    "s2-super-tornado-and-flight": "Rotation uses plane-only0..4 while real Super player is separate; departure byte_A748 uses $12..$16 then0, 3-tick path cadence.",
+    "s2-normal-final-leap": "Initial12, then13 and14 at native timer reload4 with negative expiry (5 ticks); final enlarged14 held.",
+    "s2-super-final-flight-closeup": "Frame23 held; eight position steps at3 ticks; no separate frame cycle."
+  },
+  "groups": {
+    "photos": [
+      "photo-1",
+      "photo-2",
+      "photo-3",
+      "photo-4"
+    ]
+  },
+  "frames": [
+    {
+      "id": "photo-1",
+      "file": "photo-1.png",
+      "native_source_label": "MapEng_Ending1",
+      "native_art_label": "ArtNem_EndingPics",
+      "dimensions": [
+        96,
+        72
+      ],
+      "bounds_px": [
+        0,
+        0,
+        96,
+        72
+      ],
+      "palette_line": 0,
+      "timing": "Static; fade wait $180 NTSC/$100 PAL, then $80.",
+      "composition": "fist bump; MICA left, Tails right",
+      "scene_policy": "Entire original illustration; unchanged MICA palette for character and scene. Replaces 12x9 tile panel, no reference pixels."
+    },
+    {
+      "id": "photo-2",
+      "file": "photo-2.png",
+      "native_source_label": "MapEng_Ending2",
+      "native_art_label": "ArtNem_EndingPics",
+      "dimensions": [
+        96,
+        72
+      ],
+      "bounds_px": [
+        0,
+        0,
+        96,
+        72
+      ],
+      "palette_line": 0,
+      "timing": "Static; fade wait $180 NTSC/$100 PAL, then $80.",
+      "composition": "Tails closeup; tiny MICA lower-left wing rider",
+      "scene_policy": "Entire original illustration; unchanged MICA palette for character and scene. Replaces 12x9 tile panel, no reference pixels."
+    },
+    {
+      "id": "photo-3",
+      "file": "photo-3.png",
+      "native_source_label": "MapEng_Ending3",
+      "native_art_label": "ArtNem_EndingPics",
+      "dimensions": [
+        96,
+        72
+      ],
+      "bounds_px": [
+        0,
+        0,
+        96,
+        72
+      ],
+      "palette_line": 0,
+      "timing": "Static; fade wait $180 NTSC/$100 PAL, then $80.",
+      "composition": "MICA left cockpit, Tails right; native framing diagonals",
+      "scene_policy": "Entire original illustration; unchanged MICA palette for character and scene. Replaces 12x9 tile panel, no reference pixels."
+    },
+    {
+      "id": "photo-4",
+      "file": "photo-4.png",
+      "native_source_label": "MapEng_Ending4",
+      "native_art_label": "ArtNem_EndingPics",
+      "dimensions": [
+        96,
+        72
+      ],
+      "bounds_px": [
+        0,
+        0,
+        96,
+        72
+      ],
+      "palette_line": 0,
+      "timing": "Static; fade wait $180 NTSC/$100 PAL, then $80.",
+      "composition": "banked distant biplane; tiny MICA wing rider",
+      "scene_policy": "Entire original illustration; unchanged MICA palette for character and scene. Replaces 12x9 tile panel, no reference pixels."
+    }
+  ]
+}
