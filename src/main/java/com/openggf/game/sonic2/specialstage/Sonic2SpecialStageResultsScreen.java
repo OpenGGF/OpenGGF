@@ -573,9 +573,7 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
         }
 
         // Lazy load art if not yet loaded
-        if (!artLoaded) {
-            loadArt();
-        }
+        if (!artLoaded) return;
 
         if (combinedPatterns == null) {
             LOGGER.warning("ensureArtCached: combinedPatterns is null after loadArt, artLoaded=" + artLoaded);
@@ -850,6 +848,7 @@ public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
 
     @Override
     public void update(int frameCounter, Object context) {
+        if (!artLoaded) loadArt();
         this.frameCounter = frameCounter;
         resolvePresentation();
         if (!plcReadinessPassed) {
