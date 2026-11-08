@@ -188,19 +188,40 @@ def draw(f):
    head(cx,cy,s,1,2 if f['form']=='gilded' else 0)
  elif f['group']=='float2':
   phase=f['index']-200
-  # Rescue float is a rolling eight-direction tumble. Draw coordinates afresh
-  # around the centre; never rotate/resample a finished bitmap.
-  import math
-  angle=phase*math.pi/4;c=math.cos(angle);s=math.sin(angle)
-  def tr(x,y):return (w/2+x*c*1.0-y*s,12+(x*s+y*c)*.48)
-  tail([tr(-5,2),tr(-15,2),tr(-20,6),tr(-13,6),tr(-3,5)])
-  poly([tr(-7,-6),tr(6,-6),tr(10,0),tr(5,7),tr(-7,6)],4)
-  poly([tr(0,-4),tr(7,-3),tr(8,3),tr(1,5),tr(-3,2)],7)
-  for side in (-1,1):
-   x,y=tr(-10,side*8);boot(x,y,.65)
-  hx,hy=tr(8,-3);head(hx,hy,.62,1 if phase<4 else -1)
-  gx,gy=tr(12,5);glove(gx,gy,.65)
-  gx,gy=tr(0,-9);glove(gx,gy,.6)
+  # Native Float2 turns in depth (yaw), rather than tumbling in screen space.
+  # Independent side, front and back clusters retain full-size head/mitten mass.
+  cx=[34,22,20,18,14,22,20,18][phase];cy=12
+  if phase in (0,1,3,4):
+   face=1 if phase<2 else -1
+   rear=cx-face*14
+   tail([(cx-face*4,15),(rear,11),(rear-face*6,17),(rear,17),(cx,20)])
+   poly([(cx-face*9,12),(cx+face*2,13),(cx+face*3,20),(cx-face*11,20)],4)
+   boot(rear,18,.65);boot(rear+face*7,14 if phase in (0,4) else 18,.65)
+   head(cx,cy,.78,face)
+   glove(cx+face*5,20,.65);glove(cx-face*3,19,.6)
+  else:
+   back=phase>=5
+   for x in (cx-7,cx+6):boot(x,18,.65)
+   poly([(cx-6,12),(cx+6,12),(cx+8,20),(cx-8,20)],3)
+   ellipse((cx-9,1,cx+9,18),3)
+   for row,y in enumerate((4,9,14)):
+    for x in ((cx-6,cx) if row%2==0 else (cx-3,cx+3)):
+     poly([(x-2,y),(x,y-2),(x+4,y-1),(x+5,y+2),(x+1,y+4),(x-2,y+2)],4,2)
+     line([(x,y-1),(x+2,y-1)],6)
+   if not back:
+    poly([(cx-6,9),(cx,7),(cx+6,9),(cx+7,15),(cx,19),(cx-7,15)],7)
+    for x in (cx-4,cx+3):
+     ellipse((x-2,7,x+2,13),12)
+     line([(x,8),(x,11)],15);d.point((x,8),fill=12)
+    poly([(cx-2,15),(cx+3,15),(cx+1,17)],1)
+    d.point((cx+1,17),fill=14)
+   elif phase!=6:
+    side=-1 if phase==5 else 1
+    poly([(cx+side*6,8),(cx+side*10,11),(cx+side*9,15),(cx+side*6,16)],7)
+   if back:
+    glove(cx-11,16,.5);glove(cx+11,16,.5)
+   else:
+    glove(cx-9,20,.65);glove(cx+9,20,.65)
  elif f['group']=='transformation':
   phase=f['index']-210;cx=w/2;cy=14 if phase else 12
   tail([(cx-3,cy+10),(cx-11,cy+13),(cx-13,cy+20),(cx-7,cy+18),(cx+2,cy+14)])

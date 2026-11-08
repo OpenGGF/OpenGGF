@@ -1255,6 +1255,594 @@
       "palette": "../../palette.yaml",
       "form": "normal",
       "file": "eyecatch_sonic-04.png"
+    },
+    {
+      "id": "rescue_float-c8",
+      "group": "float2",
+      "frame_set": "s3k_rescue_float",
+      "index": 200,
+      "native_source_label": "word_14797C",
+      "native_art_label": "ArtUnc_Sonic",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dimensions": [
+        48,
+        24
+      ],
+      "hotspot": [
+        29,
+        12
+      ],
+      "bounds_px": [
+        -29,
+        -12,
+        48,
+        24
+      ],
+      "pieces": [
+        [
+          -5,
+          -12,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -21,
+          -4,
+          2,
+          1,
+          9,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -29,
+          4,
+          3,
+          1,
+          11,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "normal",
+      "dplc_label": "word_148B9E",
+      "dplc_entries": [
+        [
+          9,
+          3760
+        ],
+        [
+          2,
+          3769
+        ],
+        [
+          3,
+          3771
+        ]
+      ],
+      "tile_budget": 14,
+      "file": "rescue_float-c8.png"
+    },
+    {
+      "id": "rescue_float-c9",
+      "group": "float2",
+      "frame_set": "s3k_rescue_float",
+      "index": 201,
+      "native_source_label": "word_147990",
+      "native_art_label": "ArtUnc_Sonic",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dimensions": [
+        40,
+        24
+      ],
+      "hotspot": [
+        20,
+        12
+      ],
+      "bounds_px": [
+        -20,
+        -12,
+        40,
+        24
+      ],
+      "pieces": [
+        [
+          -12,
+          -12,
+          3,
+          2,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -20,
+          4,
+          4,
+          1,
+          6,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          12,
+          4,
+          1,
+          1,
+          10,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "normal",
+      "dplc_label": "word_148BA6",
+      "dplc_entries": [
+        [
+          6,
+          3774
+        ],
+        [
+          4,
+          3780
+        ],
+        [
+          1,
+          3784
+        ]
+      ],
+      "tile_budget": 11,
+      "file": "rescue_float-c9.png"
+    },
+    {
+      "id": "rescue_float-ca",
+      "group": "float2",
+      "frame_set": "s3k_rescue_float",
+      "index": 202,
+      "native_source_label": "word_1479A4",
+      "native_art_label": "ArtUnc_Sonic",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dimensions": [
+        32,
+        24
+      ],
+      "hotspot": [
+        17,
+        12
+      ],
+      "bounds_px": [
+        -17,
+        -12,
+        32,
+        24
+      ],
+      "pieces": [
+        [
+          -9,
+          -12,
+          3,
+          2,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -17,
+          4,
+          4,
+          1,
+          6,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "normal",
+      "dplc_label": "word_148BAE",
+      "dplc_entries": [
+        [
+          6,
+          3785
+        ],
+        [
+          4,
+          3791
+        ]
+      ],
+      "tile_budget": 10,
+      "file": "rescue_float-ca.png"
+    },
+    {
+      "id": "rescue_float-cb",
+      "group": "float2",
+      "frame_set": "s3k_rescue_float",
+      "index": 203,
+      "native_source_label": "word_1479B2",
+      "native_art_label": "ArtUnc_Sonic",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dimensions": [
+        40,
+        24
+      ],
+      "hotspot": [
+        21,
+        12
+      ],
+      "bounds_px": [
+        -21,
+        -12,
+        40,
+        24
+      ],
+      "pieces": [
+        [
+          -13,
+          -12,
+          3,
+          2,
+          0,
+          1,
+          0,
+          0,
+          1
+        ],
+        [
+          -13,
+          4,
+          4,
+          1,
+          6,
+          1,
+          0,
+          0,
+          1
+        ],
+        [
+          -21,
+          4,
+          1,
+          1,
+          10,
+          1,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "normal",
+      "dplc_label": "word_148BA6",
+      "dplc_entries": [
+        [
+          6,
+          3774
+        ],
+        [
+          4,
+          3780
+        ],
+        [
+          1,
+          3784
+        ]
+      ],
+      "tile_budget": 11,
+      "file": "rescue_float-cb.png"
+    },
+    {
+      "id": "rescue_float-cc",
+      "group": "float2",
+      "frame_set": "s3k_rescue_float",
+      "index": 204,
+      "native_source_label": "word_1479C6",
+      "native_art_label": "ArtUnc_Sonic",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dimensions": [
+        48,
+        24
+      ],
+      "hotspot": [
+        18,
+        12
+      ],
+      "bounds_px": [
+        -18,
+        -12,
+        48,
+        24
+      ],
+      "pieces": [
+        [
+          -18,
+          -12,
+          3,
+          3,
+          0,
+          1,
+          0,
+          0,
+          1
+        ],
+        [
+          6,
+          -4,
+          2,
+          1,
+          9,
+          1,
+          0,
+          0,
+          1
+        ],
+        [
+          6,
+          4,
+          3,
+          1,
+          11,
+          1,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "normal",
+      "dplc_label": "word_148B9E",
+      "dplc_entries": [
+        [
+          9,
+          3760
+        ],
+        [
+          2,
+          3769
+        ],
+        [
+          3,
+          3771
+        ]
+      ],
+      "tile_budget": 14,
+      "file": "rescue_float-cc.png"
+    },
+    {
+      "id": "rescue_float-cd",
+      "group": "float2",
+      "frame_set": "s3k_rescue_float",
+      "index": 205,
+      "native_source_label": "word_1479DA",
+      "native_art_label": "ArtUnc_Sonic",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dimensions": [
+        40,
+        24
+      ],
+      "hotspot": [
+        22,
+        12
+      ],
+      "bounds_px": [
+        -22,
+        -12,
+        40,
+        24
+      ],
+      "pieces": [
+        [
+          -14,
+          -12,
+          4,
+          3,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -22,
+          4,
+          1,
+          1,
+          12,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "normal",
+      "dplc_label": "word_148BB4",
+      "dplc_entries": [
+        [
+          12,
+          3795
+        ],
+        [
+          1,
+          3807
+        ]
+      ],
+      "tile_budget": 13,
+      "file": "rescue_float-cd.png"
+    },
+    {
+      "id": "rescue_float-ce",
+      "group": "float2",
+      "frame_set": "s3k_rescue_float",
+      "index": 206,
+      "native_source_label": "word_1479E8",
+      "native_art_label": "ArtUnc_Sonic",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dimensions": [
+        32,
+        24
+      ],
+      "hotspot": [
+        17,
+        12
+      ],
+      "bounds_px": [
+        -17,
+        -12,
+        32,
+        24
+      ],
+      "pieces": [
+        [
+          -9,
+          -12,
+          3,
+          2,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -17,
+          4,
+          4,
+          1,
+          6,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "normal",
+      "dplc_label": "word_148BBA",
+      "dplc_entries": [
+        [
+          6,
+          3808
+        ],
+        [
+          4,
+          3814
+        ]
+      ],
+      "tile_budget": 10,
+      "file": "rescue_float-ce.png"
+    },
+    {
+      "id": "rescue_float-cf",
+      "group": "float2",
+      "frame_set": "s3k_rescue_float",
+      "index": 207,
+      "native_source_label": "word_1479F6",
+      "native_art_label": "ArtUnc_Sonic",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dimensions": [
+        40,
+        24
+      ],
+      "hotspot": [
+        17,
+        12
+      ],
+      "bounds_px": [
+        -17,
+        -12,
+        40,
+        24
+      ],
+      "pieces": [
+        [
+          -17,
+          -12,
+          4,
+          3,
+          0,
+          1,
+          0,
+          0,
+          1
+        ],
+        [
+          15,
+          4,
+          1,
+          1,
+          12,
+          1,
+          0,
+          0,
+          1
+        ]
+      ],
+      "palette_line": 0,
+      "relative_piece_palette_lines": [
+        0
+      ],
+      "palette": "../../palette.yaml",
+      "form": "normal",
+      "dplc_label": "word_148BB4",
+      "dplc_entries": [
+        [
+          12,
+          3795
+        ],
+        [
+          1,
+          3807
+        ]
+      ],
+      "tile_budget": 13,
+      "file": "rescue_float-cf.png"
     }
   ]
 }
