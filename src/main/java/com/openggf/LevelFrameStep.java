@@ -189,8 +189,8 @@ public final class LevelFrameStep {
         // A repeated or losing claim must not spend their clock tick again.
         if (claimed && (phase == PlcLifecyclePhase.NORMAL_PAUSE
                 || phase == PlcLifecyclePhase.SPECIAL_STAGE_PAUSE)) {
-            var nativeExecution = com.openggf.level.objects.ObjectManagerInternalAccess.nativeExecution(context);
-            if (nativeExecution != null) nativeExecution.afterNativeWait();
+            // Pause_Loop (s2.asm:1571-1597) does not run level objects;
+            // Vint_Level also holds Teleport_timer while Game_paused is set.
             advancePauseClock.run();
         }
     }

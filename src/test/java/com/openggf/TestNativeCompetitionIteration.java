@@ -116,10 +116,9 @@ class TestNativeCompetitionIteration {
                         assertEquals(LevelFrameResult.PAUSED, world.pauseVBlank(frame)));
                 frame.finish();
             }
-            // Vint_Level can consult the world's native wait owner during a paused wait.
-            // The lookup must not execute a level or sprite body.
-            verify(level, times(2)).getWorldSession();
-            verifyNoMoreInteractions(level);
+            // Pause_Loop (s2.asm:1571-1597) never consults level objects;
+            // Vint_Level (s2.asm:702-713) holds Teleport_timer while paused.
+            verifyNoInteractions(level);
             verifyNoInteractions(sprites);
             verify(objects, times(2)).advanceVblaCounter();
             verifyNoMoreInteractions(objects);
