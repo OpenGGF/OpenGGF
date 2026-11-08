@@ -1,5 +1,41 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — R81A/B initial terrain through existing shared owners
+
+R113 qualifies three exact owned R8 Java files against saved1d2e064e3:
+271 invocations across16 classes passed, zero failures, errors or skips.
+The source-bound before/after fingerprint is identical:
+`cc1707418972038dcf0c286c5aad37b81b64972e93d28270dda291f4d2e016eb`.
+Queue waiting last reported572 seconds; the execution callback interval is
+128.046558 seconds. Maven-only wall time was not separately measured.
+
+The finite R81A/B role/product/profile bindings use the existing shared terrain
+decoder, layout clear/copy, cache and raw-word/nibble/signed-sample queries.
+All four older generic dependency files are omitted from the import because
+the current Root already contains their required semantics. The only fixture
+adaptation retains Root's existing cycle enum ordinal10. All420 compressed
+product rows, compact188 visual DATA and earlier programme contracts remain.
+
+Initial terrain retains actual blocks484/480, patterns545/544 and chunks111,
+the proven native plane clear and collision600-byte prefix. Unused raw block550
+remains a typed staging boundary; its independently available collision byte29
+is retained. No padding, fabricated zero output, loop/mini-player coordinate
+policy or actor admission follows from immutable DATA access.
+
+The cohort includes all13 new terrain invocations, complete current R8 DATA,
+compact/legacy visual, shared reader/terrain/query/constraint, original placement
+and selected boot/World guards. It is a fresh Root result, separate from the
+author's13 final cases plus273 unchanged regressions after two assertion fixes.
+The first source review established no scoped P1/P2 issues; execution establishes
+only this bounded selection. Other eight R8 terrain profiles remain unsupported
+in this packet. Live R8 player, Frame/World/Ready, route, current pixels, native
+and regional qualification remain separate.
+
+The protected selected CCZ continuation remains494 returned / first495 reload
+ownership. Genuine reload, R6 initial terrain and the remaining R8 initial terrain
+profiles continue independently. Main checkout, coordinator and remotes remain
+unchanged; full-USA then JP/EU implementation is unfinished.
+
 ## 8 November 2026 — original Game Over and complete R7 load DATA
 
 R112 qualifies18 exact Java payloads against saved2ca2117c7:1,008 invocations

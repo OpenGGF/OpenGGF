@@ -25,12 +25,41 @@ final class CdR8ProgrammeProfiles {
                 Optional.of(new ReadExtent(Integer.parseInt(w[7]),w[10])),true));
         }
     }
+    /** Initial directory slots 0/1 only. Native LoadStageMap clears $800, then copies
+     * minus-one byte dimensions at FG+$00/BG+$40 with row stride $80.
+     * N1ecc5f3: r8/stage_data_load_1a.asm:40-76 (1b has the same read contract).
+     * Known source prefixes are not claims about later/actor-specific staging.
+     */
+    private static void initialTerrain(Builder b,CdR8DataLayout.Programme p) {
+        int blocks,patterns,collisionPointers;
+        switch(p) {
+            case R81A -> { blocks=3872;patterns=17440;collisionPointers=0x1A82; }
+            case R81B -> { blocks=3840;patterns=17408;collisionPointers=0x1A0A; }
+            default -> { return; }
+        }
+        b.terrain=new Terrain(new CdStageTerrain.Profile(blocks,patterns,56832,32,8,24,3,600,
+            CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE),
+            Optional.empty(),Map.of(CdProgrammeReader.Role.CHUNKS,p.range("StageChunks"),
+                CdProgrammeReader.Role.FG,p.range("StageMapFg"),CdProgrammeReader.Role.BG,p.range("StageMapBg"),
+                CdProgrammeReader.Role.COLLISION,p.range("StageCollision"),CdProgrammeReader.Role.ANGLE,p.range("StageCollisionAngles"),
+                CdProgrammeReader.Role.HEIGHT,p.range("StageCollisionColumns"),CdProgrammeReader.Role.WIDTH,p.range("StageCollisionRows")),
+            p.range("StageBlocks"),p.range("StageGfx"));
+        // Literal LoadStageCollision selection/store and eight original source pointers.
+        b.operand(collisionPointers-18,"7000103900ff1506e54821fb0006f7964e75");
+        b.operand(collisionPointers,"0023844a".repeat(8));
+        // Immediate StageChunks operands are distinct from the catalogue's LEA census.
+        int[] draw=p==CdR8DataLayout.Programme.R81A?new int[]{0x3216,0x325C}:new int[]{0x31B8,0x31FE};
+        int[] collide=p==CdR8DataLayout.Programme.R81A?new int[]{0xFD0,0x3CA0}:new int[]{0xF58,0x3C42};
+        for(int at:draw)b.operand(at,"263c00210000");
+        for(int at:collide)b.operand(at,"223c00210000");
+    }
     static void configure(Builder b,CdR8DataLayout.Programme p) {
         for(var r:p.ranges())b.raw(r,r.fileOffset(),r.length(),r.sha256());
         for(var op:p.operands())b.operand(op.fileOffset(),op.encodedHex());
         b.dataOnly=true;
         b.visual=new Visual(CdSonicVisualAssets.SourceFormat.FRAMES_188_COMPACT_ART,
             p.range("PlayerSprites"),p.range("PlayerGfxScript"),p.range("PlayerGfx"));
+        initialTerrain(b,p);
         switch(p) {
             case R81A -> {
                 products(b,p,"""

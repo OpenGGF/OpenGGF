@@ -45,7 +45,9 @@ class TestCdR8DataLayout {
             assertEquals(range.sha256(),CdR11aProfile.sha256(view.copy()));assertArrayEquals(image.readFile(range.fileOffset(),range.length()),view.copy());
         }
         for(var op:p.operands())assertEquals(op.encodedHex(),HexFormat.of().formatHex(image.readFile(op.fileOffset(),op.encodedHex().length()/2)));
-        assertThrows(UnsupportedOperationException.class,r::terrain);assertThrows(UnsupportedOperationException.class,r::ordinaryZoneActWord);
+        if(p==CdR8DataLayout.Programme.R81A || p==CdR8DataLayout.Programme.R81B)assertSame(r.terrain(),r.terrain());
+        else assertThrows(UnsupportedOperationException.class,r::terrain);
+        assertThrows(UnsupportedOperationException.class,r::ordinaryZoneActWord);
         assertEquals(CdSonicVisualAssets.SourceFormat.FRAMES_188_COMPACT_ART,r.sonic().sourceFormat());
         assertSame(r.sonic(),r.sonic());
         assertEquals(p.name().endsWith("C")?OptionalInt.of(1):p.name().endsWith("D")?OptionalInt.of(0):OptionalInt.empty(),p.goodFutureSelectionConstraint());
