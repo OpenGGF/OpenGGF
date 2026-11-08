@@ -308,7 +308,7 @@ poses. Each pose has a character-palette face and optional native-palette backin
 backing RGB colours are matched to its declared host palette line (0–3). Spin
 images are already oriented. Null poses retain native frames and poles remain
 native. The four-argument `Art` constructor remains supported.
-`PresentationImages` reads indexed PNG assets through `ModAssetRoot`, bounded to
+`com.openggf.mods.assets.PresentationImages` reads indexed PNG assets through `ModAssetRoot`, bounded to
 256×256 and at most the smaller of 256 KiB and the root asset-byte limit;
 MICA packages its HUD, monitor, sign and supplementary S1 HUD glyph assets this way.
 

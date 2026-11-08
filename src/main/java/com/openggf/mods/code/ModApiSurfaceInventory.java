@@ -8,7 +8,7 @@ import java.util.List;
 /** Canonical annotated-type inventory shared by signature and Javadoc tooling. */
 public final class ModApiSurfaceInventory {
     private static final List<String> TYPE_NAMES = List.of(
-            "com.openggf.game.PresentationImages",
+            "com.openggf.mods.assets.PresentationImages",
             "com.openggf.sprites.playable.HomingAttack",
             "com.openggf.level.objects.authored.AuthoredObjectProperties",
             "com.openggf.level.objects.authored.AuthoredStageplayService",
