@@ -40,7 +40,9 @@ under the matching area heading; see the
   presentation asset packaging remain pending; this does not yet change on-screen art.
 
 - Added the maintained MICA character skeleton for all three stock games, with
-  headless launch/save/rewind/fallback acceptance and temporary original art.
+  headless launch/save/rewind/fallback acceptance and a rerunnable 96-frame original
+  playable sheet with 17 canonical animations, shared palette and slope cycles.
+  Headless native Data Select retains explicitly loaded development characters.
   Custom team archetypes now use the solo Sonic route without a sidekick.
   Presentation font inventories now include the native small HUD letters in all
   three hosts and S3K per-zone title/results-name letters. Surface wiring and
