@@ -240,7 +240,11 @@ class TestMicaCharacterIntegration {
             var definition = com.openggf.game.presentation.StageCharacterPresentation.activeDefinition();
             assertNotNull(definition);
             var presentation = definition.presentationSupplier().load(CODE);
-            assertEquals(6,presentation.endings().size());
+            // S1/S2 and S3K ending sets share one map; the six S3K surfaces must all be present.
+            assertTrue(presentation.endings().keySet().containsAll(java.util.EnumSet.of(
+                    EndingSpriteSet.Surface.S3K_NORMAL_POSE, EndingSpriteSet.Surface.S3K_POWERED_POSE,
+                    EndingSpriteSet.Surface.S3K_PASSENGER, EndingSpriteSet.Surface.S3K_EYECATCH,
+                    EndingSpriteSet.Surface.S3K_PLAYER, EndingSpriteSet.Surface.S3K_POWERED_PLAYER)));
             for (var entry : presentation.endings().entrySet()) {
                 var compiled = com.openggf.game.presentation.StageSpriteCompiler.compile(entry.getValue().sprites(),null);
                 for (var frame : entry.getValue().sprites().frames().entrySet()) {
