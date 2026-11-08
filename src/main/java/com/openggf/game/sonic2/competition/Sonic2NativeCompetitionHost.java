@@ -635,6 +635,9 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
                     @Override public boolean objectsFrozen() { return session.teleportClock().active(); }
                     @Override public boolean placementAtWorldTail() { return true; }
                 });
+            if (type == com.openggf.level.objects.ObjectRoutineLifetime.class)
+                return type.cast(new com.openggf.game.sonic2.objects.badniks.Sonic2RoutineLifetimes(
+                        slot -> module.scroll().owner().coarseX(slot)));
             if (type == NativeCompetitionRoster.class || type == Sonic2CompetitionSession.class) return type.cast(session);
             if (type == Sonic2CompetitionObjectHost.class) return type.cast(Sonic2NativeCompetitionHost.this);
             if (type == com.openggf.game.sonic2.bumpers.Sonic2NativeCNZBumpers.class)

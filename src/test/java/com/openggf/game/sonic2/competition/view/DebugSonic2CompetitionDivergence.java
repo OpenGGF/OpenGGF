@@ -87,6 +87,8 @@ class DebugSonic2CompetitionDivergence {
         config.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT,true);
         int compared=0,lastCompared=-1;String first=null, firstClock=null;int remaining=-1;
         var window=new ArrayDeque<String>();
+        var lifetimes=new StringBuilder("frame,slot,layout,x,y\n");
+        var flow=new StringBuilder("frame,loserTimeLeft\n");
         try(var gl=PresentationOffscreenTestContext.openConfigured(320,224,PresentationOffscreenTestContext.LegacyProfile.CORE_41);
             AutoCloseable cleanup=()->{try{SessionManager.closeGameplaySession();}finally{services.graphics().cleanup();}};
             var views=new Sonic2CompetitionViews(services.graphics())) {
@@ -113,6 +115,13 @@ class DebugSonic2CompetitionDivergence {
                     var result=new LevelFrameResult[1];
                     NativeCompetitionIterationAccess.runAdmitted(frame,()->result[0]=host.step(input,frame));return result[0];
                 });
+                if (Boolean.getBoolean("s2comp.lifetimes"))
+                    for (var object : context.getObjectManager().getActiveObjects())
+                        if (object instanceof com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance body)
+                            lifetimes.append(physical).append(',').append(body.getSlotIndex()).append(',')
+                                .append(body.getSpawn().layoutIndex()).append(',').append(body.getX()).append(',')
+                                .append(body.getY()).append('\n');
+                if (Boolean.getBoolean("s2comp.lifetimes")) flow.append(physical).append(',').append(session.loserTimeLeft()).append('\n');
                 var expected=nativeRows.get(physical);if(expected==null)continue;
                 if(expected.get("mode")!=12 || expected.get("two_player")!=1) {
                     report.append("native left ordinary gameplay at ").append(physical).append("; suffix requires production frontend transition\n");break;
@@ -142,7 +151,9 @@ class DebugSonic2CompetitionDivergence {
             report.append("compared=").append(compared).append(" first=").append(result)
                 .append("\nfirst raw clock mismatch=").append(firstClock).append("\n");
             window.forEach(report::append);
-        } finally {config.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT,limits);TestEnvironment.resetAll();Files.writeString(out.resolve(route.movie()+".txt"),report);}
+        } finally {config.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT,limits);TestEnvironment.resetAll();Files.writeString(out.resolve(route.movie()+".txt"),report);
+            if(Boolean.getBoolean("s2comp.lifetimes")) { Files.writeString(out.resolve(route.movie()+"-lifetimes.csv"),lifetimes);
+                Files.writeString(out.resolve(route.movie()+"-flow.csv"),flow); }}
         String result=first==null?"exact through "+lastCompared:first;
         if(first==null && nativeLag!=null && lastCompared==comparisonEnd)
             result+="; native lag at "+nativeLag.frame()+" (unsupported: BuildSprites_2P overrun)";
