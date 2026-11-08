@@ -70,7 +70,7 @@ final class Sonic2BreakIntoPieces {
                                IntFunction<? extends AbstractObjectInstance> factory) {
         ObjectManager manager = Objects.requireNonNull(services.objectManager(), "objectManager");
         for (int i = 1; i < count; i++) {
-            int slot = manager.allocateSlotAfter(parentSlot);
+            int slot = ObjectLifetimeOps.reserveFindNextFreeChildSlot(manager, parentSlot);
             if (slot < 0) break;
             int piece = i;
             var fragment = ObjectConstructionContext.with(services, slot, () -> factory.apply(piece));

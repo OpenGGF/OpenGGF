@@ -243,7 +243,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         // AllocateObjectAfterCurrent before BreakObjectToPieces mutates the
         // current object into fragment routine 4 (s2.asm:51040-51062).
         int parentSlot = Sonic2BreakIntoPieces.requireParentSlot(this);
-        int launcherSlot = services().objectManager().allocateSlotAfter(parentSlot);
+        int launcherSlot = com.openggf.level.objects.ObjectLifetimeOps.reserveFindNextFreeChildSlot(services().objectManager(), parentSlot);
         if (launcherSlot >= 0) {
             var invisibleLauncher = ObjectConstructionContext.with(services(), launcherSlot,
                     () -> new OOZLauncherObjectInstance(spawn, "OOZLauncher", true));

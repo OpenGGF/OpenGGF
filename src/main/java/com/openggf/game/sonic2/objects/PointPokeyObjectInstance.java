@@ -940,7 +940,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             // Bombs
             java.util.function.Supplier<BombPrizeObjectInstance> factory = () -> new BombPrizeObjectInstance(
                     startX, startY, spawn.x(), spawn.y(), displayDelay, activePrizeCount, this);
-            if (nativeMode) objectManager.addDynamicObjectAtSlot(
+            if (nativeMode) ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager,
                     ObjectConstructionContext.with(services(), reservedSlot, factory), reservedSlot);
             else spawnFreeChild(factory);
             prizeAngle += BOMB_ANGLE_INCREMENT;
@@ -948,7 +948,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             // Rings
             java.util.function.Supplier<RingPrizeObjectInstance> factory = () -> new RingPrizeObjectInstance(
                     startX, startY, spawn.x(), spawn.y(), displayDelay, activePrizeCount, this);
-            if (nativeMode) objectManager.addDynamicObjectAtSlot(
+            if (nativeMode) ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager,
                     ObjectConstructionContext.with(services(), reservedSlot, factory), reservedSlot);
             else spawnFreeChild(factory);
             prizeAngle += RING_ANGLE_INCREMENT;
