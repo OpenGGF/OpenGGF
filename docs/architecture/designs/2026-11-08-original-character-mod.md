@@ -829,3 +829,15 @@ Status log (times UTC):
   divergence and error totals), so they predate this work. Remaining presentation
   surfaces seen in captures: S3K data-select save-slot life icons and NO SAVE slot,
   S2 special-stage HUD "SONIC" label.
+
+- 2026-11-08: W4 presentation sweep, surface 1: save-slot life counters now
+  resolve the selected canonical character's HUD icon and palette. The native
+  cross, digits, continues and stock character tilemaps remain owned by the menu.
+  The icon uses the existing renderer-owned palette bank; no public presentation
+  contract changes. Focused verification and inspected captures recorded below.
+  Verification: queued Java 25 Maven `-Dmse=off` with surfaceless EGL, selection
+  `TestS3kDataSelectPresentation,TestS3kCustomTeamPortraitComposer,TestMicaCharacterIntegration#continuePixelsS3k`: 91 passed, zero skips.
+  Inspected `/tmp/mica-sweep-20261108/s3k-data-select-solo-and-tails.png`: both
+  saved MICA slots show the jade HUD face beside lives; native continues icons
+  remain a separate surface. Queue wait 393s, execution 95s, user wait zero.
+  Initial compile raced a newly added S2 helper; the fresh source build passed.

@@ -308,6 +308,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         launchErrorMessage = null;
         renderer.reset();
         characterPortraits.clear();
+        characterLifeIcons.clear();
         if (sessionController != null) {
             sessionController.reset();
         }
@@ -794,7 +795,8 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
                 lives,
                 continuesCount,
                 getCachedEmeraldFrames(slotIndex, summary),
-                preview);
+                preview,
+                characterLifeIcon(team.mainCharacter()));
     }
 
     private List<Integer> getCachedEmeraldFrames(int slotIndex, SaveSlotSummary summary) {
@@ -947,6 +949,31 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
     }
 
     private final java.util.Map<String, SpriteMappingFrame> characterPortraits = new java.util.HashMap<>();
+
+    private final java.util.Map<String, SpriteMappingFrame> characterLifeIcons = new java.util.HashMap<>();
+
+    private SpriteMappingFrame characterLifeIcon(String code) {
+        if (characterLifeIcons.containsKey(code)) return characterLifeIcons.get(code);
+        SpriteMappingFrame frame = null;
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        var definition = world == null ? null : world.getPlayableCharacterRegistry()
+                .find(com.openggf.game.CharacterKey.parsePersisted(code)).orElse(null);
+        if (definition != null && definition.presentationSupplier() != null && definition.paletteSupplier() != null) {
+            try {
+                var presentation = definition.presentationSupplier().load(code);
+                var art = presentation == null ? null : presentation.art().get(com.openggf.game.CharacterPresentation.Host.S3K);
+                var palette = definition.paletteSupplier().load(code);
+                if (art != null && art.hudLifeIcon() != null && palette != null) {
+                    frame = renderer.registerCharacterImage(
+                            new com.openggf.game.PresentationFrameSet.Pose(art.hudLifeIcon(), 0, 0), palette);
+                }
+            } catch (java.io.IOException e) {
+                throw new IllegalStateException("Cannot load character life icon: " + code, e);
+            }
+        }
+        characterLifeIcons.put(code, frame);
+        return frame;
+    }
 
     private SpriteMappingFrame characterPortrait(String code) {
         if (characterPortraits.containsKey(code)) return characterPortraits.get(code);

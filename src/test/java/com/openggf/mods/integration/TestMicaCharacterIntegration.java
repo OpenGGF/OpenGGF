@@ -286,6 +286,14 @@ class TestMicaCharacterIntegration {
             assertTrue(frame.pieces().stream().anyMatch(piece->piece.tileIndex()>=0x2000));
             if(!sidekicks.isEmpty()) assertTrue(frame.pieces().stream().anyMatch(piece->piece.tileIndex()<0x2000),"Stock Tails remains in team composition");
         }
+        var stateMethod=presentation.getClass().getDeclaredMethod("buildObjectState");
+        stateMethod.setAccessible(true);
+        var objectState=(com.openggf.game.sonic3k.dataselect.S3kSaveScreenObjectState)stateMethod.invoke(presentation);
+        for(int slot=0;slot<2;slot++) {
+            var icon=objectState.visualState().slotStates().get(slot).customLifeIcon();
+            assertNotNull(icon,"MICA save slot uses its HUD life face");
+            assertTrue(icon.pieces().stream().allMatch(piece->piece.tileIndex()>=0x2000));
+        }
         for(int i=0;i<24;i++) presentation.update(new com.openggf.control.InputHandler());
         GameServices.camera().setX((short)0); GameServices.camera().setY((short)0);
         presentation.setClearColor();
