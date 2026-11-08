@@ -2321,6 +2321,1108 @@
         "icon": "ArtNem_MiniSonic",
         "player": "ArtUnc_Sonic / Map_Sonic"
       }
+    },
+    {
+      "game": "s3k",
+      "palette": "../palette.yaml",
+      "palette_line": 0,
+      "piece_schema": [
+        "x",
+        "y",
+        "width_tiles",
+        "height_tiles",
+        "tile",
+        "flip_x",
+        "flip_y",
+        "palette_line",
+        "priority"
+      ],
+      "sequences": [
+        {
+          "name": "team-wait",
+          "frames": [
+            "team-idle-00",
+            "team-idle-01"
+          ],
+          "ticks": 16,
+          "clock": "V_int_run_count bit 4"
+        },
+        {
+          "name": "team-rise",
+          "frames": [
+            "player-5a",
+            "player-59",
+            "player-55",
+            "player-56",
+            "player-57"
+          ],
+          "ticks": 7,
+          "flips": [
+            false,
+            true,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "solo-wait",
+          "frames": [
+            "player-bd",
+            "player-be"
+          ],
+          "ticks": 12,
+          "initial_index": 1
+        },
+        {
+          "name": "solo-rise",
+          "frames": [
+            "player-ba"
+          ],
+          "ticks": 8
+        },
+        {
+          "name": "run",
+          "frames": [
+            "player-21",
+            "player-22",
+            "player-23",
+            "player-24"
+          ],
+          "ticks": 3
+        },
+        {
+          "name": "icons",
+          "frames": [
+            "icon-00",
+            "icon-01"
+          ],
+          "ticks": 16,
+          "clock": "V_int_run_count bit 4"
+        }
+      ],
+      "native_source_label": "Obj_Continue_SonicWTails / Obj_Continue_SonicAlone / RawAni_5C622 / byte_5CBC5 / byte_5CBB4",
+      "source": "docs/skdisasm/sonic3k.asm",
+      "timing": {
+        "team_rise": "accepted ages 1..35, five seven-tick entries; first $5A flip byte ignored; age36 still $57; run from age37; movement from age53 at 6px/tick",
+        "solo_rise": "solo idle continues until age38; $BA age39..46; $21 age47; raw run from age48, 3 ticks, increment-before-fetch",
+        "solo_idle": "12 ticks, increment-before-fetch selects $BE first",
+        "countdown": "9 initial, 59 timer; decrement until negative; no countdown-specific actor art"
+      },
+      "palette_binding": "Continue palette line 0 also serves Tails, Sonic icons and EggRobo. Retain MICA palette; engine lane must reserve/rebind their colours. Punctuation line 2 and Knuckles line 3 remain native.",
+      "review_notes": "Sheets compare native mapping canvases at common hotspots, 1x and 4x. GIF concatenates each sequence once, not a full screen recording; walk/run preview uses the stated fixed inertia, with native timer+1 duration. GIF times quantize to 10ms. Native fall movement/countdown/departure waits remain engine-owned. Weakest: run cycle is restrained, small scales/laces merge at 1x, and shared-palette background validation remains engine lane.",
+      "scope": "Sonic-role normal continue art, including all normal walk/run departure mappings and mini icons. No Talon/Tails, Knuckles/EggRobo replacement. Retained-super FixBugs=0 invalid-script/mismatched-DPLC artifacts are native bugs, not additional authored poses.",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dplc_source": "docs/skdisasm/General/Sprites/Sonic/DPLC - Sonic.asm",
+      "frames": [
+        {
+          "key": "team-idle-00",
+          "id": 0,
+          "bank": "team-idle",
+          "file": "s3k-team-idle-00.png",
+          "dimensions": [
+            24,
+            40
+          ],
+          "hotspot": [
+            12,
+            20
+          ],
+          "native_source_label": "word_5CC5A",
+          "pieces": [
+            [
+              -12,
+              -20,
+              3,
+              3,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -12,
+              4,
+              2,
+              2,
+              9,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              4,
+              4,
+              1,
+              2,
+              13,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Continue/Map - Player Sprites.asm"
+        },
+        {
+          "key": "team-idle-01",
+          "id": 1,
+          "bank": "team-idle",
+          "file": "s3k-team-idle-01.png",
+          "dimensions": [
+            24,
+            40
+          ],
+          "hotspot": [
+            12,
+            20
+          ],
+          "native_source_label": "word_5CC6E",
+          "pieces": [
+            [
+              -12,
+              -20,
+              3,
+              3,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -12,
+              4,
+              2,
+              2,
+              15,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              4,
+              4,
+              1,
+              2,
+              13,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Continue/Map - Player Sprites.asm"
+        },
+        {
+          "key": "icon-00",
+          "id": 0,
+          "bank": "icon",
+          "file": "s3k-icon-00.png",
+          "dimensions": [
+            24,
+            24
+          ],
+          "hotspot": [
+            12,
+            12
+          ],
+          "native_source_label": "word_5CD12",
+          "pieces": [
+            [
+              -12,
+              -12,
+              2,
+              2,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -12,
+              4,
+              3,
+              1,
+              4,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Continue/Map - Player Icons.asm"
+        },
+        {
+          "key": "icon-01",
+          "id": 1,
+          "bank": "icon",
+          "file": "s3k-icon-01.png",
+          "dimensions": [
+            24,
+            24
+          ],
+          "hotspot": [
+            12,
+            12
+          ],
+          "native_source_label": "word_5CD20",
+          "pieces": [
+            [
+              -12,
+              -12,
+              2,
+              2,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -12,
+              4,
+              3,
+              1,
+              7,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Continue/Map - Player Icons.asm"
+        },
+        {
+          "key": "player-5a",
+          "id": 90,
+          "bank": "player",
+          "file": "s3k-player-5a.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            18,
+            20
+          ],
+          "native_source_label": "word_1470F6",
+          "pieces": [
+            [
+              -10,
+              -20,
+              3,
+              3,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -18,
+              4,
+              4,
+              1,
+              9,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -10,
+              12,
+              3,
+              1,
+              13,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_148834",
+          "dplc_entries": [
+            [
+              9,
+              2131
+            ],
+            [
+              4,
+              2140
+            ],
+            [
+              3,
+              2144
+            ]
+          ],
+          "tile_budget": 16
+        },
+        {
+          "key": "player-59",
+          "id": 89,
+          "bank": "player",
+          "file": "s3k-player-59.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            17,
+            20
+          ],
+          "native_source_label": "word_1470DC",
+          "pieces": [
+            [
+              -9,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -17,
+              -12,
+              4,
+              1,
+              3,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -9,
+              -4,
+              3,
+              1,
+              7,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -17,
+              4,
+              4,
+              2,
+              10,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_14882A",
+          "dplc_entries": [
+            [
+              3,
+              2113
+            ],
+            [
+              4,
+              2116
+            ],
+            [
+              3,
+              2120
+            ],
+            [
+              8,
+              2123
+            ]
+          ],
+          "tile_budget": 18
+        },
+        {
+          "key": "player-55",
+          "id": 85,
+          "bank": "player",
+          "file": "s3k-player-55.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "word_147092",
+          "pieces": [
+            [
+              -16,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -12,
+              4,
+              2,
+              3,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              4,
+              3,
+              1,
+              11,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -8,
+              12,
+              3,
+              1,
+              14,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_14880C",
+          "dplc_entries": [
+            [
+              3,
+              2048
+            ],
+            [
+              8,
+              2051
+            ],
+            [
+              3,
+              2059
+            ],
+            [
+              3,
+              2062
+            ]
+          ],
+          "tile_budget": 17
+        },
+        {
+          "key": "player-56",
+          "id": 86,
+          "bank": "player",
+          "file": "s3k-player-56.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            17,
+            20
+          ],
+          "native_source_label": "word_1470AC",
+          "pieces": [
+            [
+              -17,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -17,
+              -12,
+              4,
+              2,
+              3,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -9,
+              4,
+              3,
+              2,
+              11,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_148816",
+          "dplc_entries": [
+            [
+              3,
+              2065
+            ],
+            [
+              8,
+              2068
+            ],
+            [
+              6,
+              2076
+            ]
+          ],
+          "tile_budget": 17
+        },
+        {
+          "key": "player-57",
+          "id": 87,
+          "bank": "player",
+          "file": "s3k-player-57.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "word_1470C0",
+          "pieces": [
+            [
+              -16,
+              -20,
+              3,
+              4,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              12,
+              4,
+              1,
+              12,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_14881E",
+          "dplc_entries": [
+            [
+              12,
+              2082
+            ],
+            [
+              4,
+              2094
+            ]
+          ],
+          "tile_budget": 16
+        },
+        {
+          "key": "player-bd",
+          "id": 189,
+          "bank": "player",
+          "file": "s3k-player-bd.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            18,
+            20
+          ],
+          "native_source_label": "word_147870",
+          "pieces": [
+            [
+              -18,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -18,
+              -12,
+              4,
+              2,
+              3,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -18,
+              4,
+              3,
+              1,
+              11,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -10,
+              12,
+              3,
+              1,
+              14,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_148B36",
+          "dplc_entries": [
+            [
+              3,
+              3463
+            ],
+            [
+              8,
+              3632
+            ],
+            [
+              3,
+              3626
+            ],
+            [
+              3,
+              3629
+            ]
+          ],
+          "tile_budget": 17
+        },
+        {
+          "key": "player-be",
+          "id": 190,
+          "bank": "player",
+          "file": "s3k-player-be.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            18,
+            20
+          ],
+          "native_source_label": "word_14788A",
+          "pieces": [
+            [
+              -18,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -18,
+              -12,
+              4,
+              2,
+              3,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -18,
+              4,
+              3,
+              1,
+              11,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -10,
+              12,
+              3,
+              1,
+              14,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_148B40",
+          "dplc_entries": [
+            [
+              3,
+              3463
+            ],
+            [
+              8,
+              3632
+            ],
+            [
+              3,
+              3626
+            ],
+            [
+              3,
+              3640
+            ]
+          ],
+          "tile_budget": 17
+        },
+        {
+          "key": "player-ba",
+          "id": 186,
+          "bank": "player",
+          "file": "s3k-player-ba.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "word_147828",
+          "pieces": [
+            [
+              -8,
+              -4,
+              3,
+              3,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -20,
+              3,
+              1,
+              9,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -12,
+              4,
+              1,
+              12,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -4,
+              1,
+              1,
+              16,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_148B1A",
+          "dplc_entries": [
+            [
+              9,
+              3585
+            ],
+            [
+              3,
+              2065
+            ],
+            [
+              4,
+              3594
+            ],
+            [
+              1,
+              2069
+            ]
+          ],
+          "tile_budget": 17
+        },
+        {
+          "key": "player-21",
+          "id": 33,
+          "bank": "player",
+          "file": "s3k-player-21.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "word_146CDC",
+          "pieces": [
+            [
+              -8,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -12,
+              4,
+              4,
+              3,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_14868A",
+          "dplc_entries": [
+            [
+              3,
+              1057
+            ],
+            [
+              16,
+              1060
+            ]
+          ],
+          "tile_budget": 19
+        },
+        {
+          "key": "player-22",
+          "id": 34,
+          "bank": "player",
+          "file": "s3k-player-22.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "word_146CEA",
+          "pieces": [
+            [
+              -8,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -12,
+              4,
+              4,
+              3,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_148690",
+          "dplc_entries": [
+            [
+              3,
+              1076
+            ],
+            [
+              16,
+              1079
+            ]
+          ],
+          "tile_budget": 19
+        },
+        {
+          "key": "player-23",
+          "id": 35,
+          "bank": "player",
+          "file": "s3k-player-23.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "word_146CF8",
+          "pieces": [
+            [
+              -8,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -12,
+              4,
+              4,
+              3,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_148696",
+          "dplc_entries": [
+            [
+              3,
+              1057
+            ],
+            [
+              16,
+              1095
+            ]
+          ],
+          "tile_budget": 19
+        },
+        {
+          "key": "player-24",
+          "id": 36,
+          "bank": "player",
+          "file": "s3k-player-24.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "word_146D06",
+          "pieces": [
+            [
+              -8,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -12,
+              4,
+              4,
+              3,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_14869C",
+          "dplc_entries": [
+            [
+              3,
+              1076
+            ],
+            [
+              16,
+              1111
+            ]
+          ],
+          "tile_budget": 19
+        }
+      ],
+      "native_art_labels": {
+        "team-idle": "ArtNem_ContinueSprites / Map_ContinueSprites",
+        "icon": "ArtNem_ContinueIcons / Map_ContinueIcons",
+        "player": "ArtUnc_Sonic / Map_Sonic"
+      }
     }
   ]
 }
