@@ -275,7 +275,16 @@ per authored phase. Palette/outline/geometry/deterministic rebuild verification
 and the isolated Python assembler unittest pass (98 frames, 17 animations,
 maximum 36 tiles/frame). No Java build or gameplay certification. The head is
 prominent at 1×; open RUN wheel phases remain more alike than crossed phases,
-and small grin/lace details simplify. Slope replacements follow separately.
+and small grin/lace details simplify.
+The twelve RUN slope replacements are now complete: authored contours in
+45°/90°/135° bases, redrawn hood/face clusters, continuous ink outlines and the
+matching flat wheel/arm/tail phases. Each RUN frame has one connected silhouette.
+Support measured along the rotated ground normal is centre+18 for flat/steep
+and centre+18.38 for diagonals (native pixel rounding); all keep the common engine
+hotspot. The diagonal crops reach 43px; flat crops are 39×38 and SPRING 25×48.
+Slope heads/scales are simpler than the detailed flat WALK-derived head; runtime
+slope contact and orientation remain unverified. No changes outside RUN/SPRING
+frames were made, and the approved WAIT script is byte-for-byte unchanged.
 
 W7 art-lane round 2 handoff (2026-11-08, `feature/ai-mica-art2`):
 `art/mica/presentation/presentation.yaml` now describes 18 native-size indexed
