@@ -95,6 +95,74 @@ class TestMicaCharacterIntegration {
         }
     }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void fbzChainUsesMicaHang() throws Exception { captureNativeHangObject(false); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void mhzPulleyUsesMicaHang() throws Exception { captureNativeHangObject(true); }
+
+    private void captureNativeHangObject(boolean pulley) throws Exception {
+        Path output = Path.of(System.getProperty("mica.poses.captureRoot", "target/mica-poses")).resolve(pulley ? "mhz-pulley" : "fbz-chain");
+        Files.createDirectories(output);
+        var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320, CODE, "", "off", null, null, null);
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            GameServices.configuration().setSessionOverride(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
+            session.boot(Path.of(System.getProperty("s3k.rom.path")), pulley ? 7 : 4, pulley ? 1 : 0, settings);
+            for (int i = 0; i < 120; i++) session.step(null);
+            var player = session.player();
+            player.setCentreY((short) (player.getCentreY() - 80));
+            // Declared local airborne encounter: production object in its native host zone.
+            var spawn = new com.openggf.level.objects.ObjectSpawn(player.getCentreX() + (pulley ? 0x32 : 0),
+                    player.getCentreY() - (pulley ? 46 : 4), pulley ? 6 : 0x72, pulley ? 4 : 0x84, 0, false, 0);
+            assertNotNull(GameServices.level().getObjectManager().createDynamicObject(() -> pulley
+                    ? new com.openggf.game.sonic3k.objects.MhzPulleyLiftObjectInstance(spawn)
+                    : new com.openggf.game.sonic3k.objects.FbzChainLinkObjectInstance(spawn)));
+            player.setAir(true); player.setXSpeed((short) 0); player.setYSpeed((short) 0x100);
+            var source = com.openggf.level.objects.PlayableSheetMaterializer.read(Files.readAllBytes(temp.resolve("classes/art/mica.ggfp"))).art();
+            var hang = source.animationSet().getScript(CanonicalAnimation.HANG.ordinal()).frames();
+            var csv = new StringBuilder(com.openggf.tools.GameplayCaptureSession.stateHeader()).append('\n');
+            int seen = 0;
+            for (int i = 0; i < 90; i++) {
+                var input = new com.openggf.debug.playback.Bk2FrameInput(i, pulley && i > 20 ? 2 : 0, 0, false, "positioned native hang");
+                session.step(input);
+                int frame = player.getMappingFrame();
+                if (frame >= 0x90 && frame <= 0x92) {
+                    seen++;
+                    assertEquals(source.dplcFrames().get(hang.get(frame - 0x90)), player.getSpriteRenderer().dplcFrame(frame));
+                    if (i % 15 == 0) com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve("frame-" + i + ".png"));
+                }
+                csv.append(session.stateLine(i, input)).append('\n');
+            }
+            Files.writeString(output.resolve("state.csv"), csv);
+            assertTrue(seen > 30, "native object must sustain an authored MICA hang pose");
+        }
+    }
+
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void tornadoWaitingWriteUsesMicaStand() throws Exception {
+        Path output = Path.of(System.getProperty("mica.poses.captureRoot", "target/mica-poses")).resolve("s2-tornado-wait");
+        Files.createDirectories(output);
+        var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320, CODE, "", "off", null, null, null);
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            GameServices.configuration().setSessionOverride(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
+            session.boot(Path.of(System.getProperty("sonic2.rom.path")), 9, 0, settings);
+            for (int i = 0; i < 30; i++) session.step(null);
+            var plane = GameServices.level().getObjectManager().activeObjectsOfType(
+                    com.openggf.game.sonic2.objects.TornadoObjectInstance.class).stream().findFirst().orElseThrow();
+            // Component pose probe: execute ObjB2's actual waiting helper once.
+            // This proves the raw byte's art binding, not a completed WFZ landing route.
+            var helper = plane.getClass().getDeclaredMethod("applyWaitingAnimation", com.openggf.sprites.playable.AbstractPlayableSprite.class);
+            helper.setAccessible(true); helper.invoke(plane, session.player());
+            assertEquals(1, session.player().getMappingFrame());
+            var source = com.openggf.level.objects.PlayableSheetMaterializer.read(Files.readAllBytes(temp.resolve("classes/art/mica.ggfp"))).art();
+            int wait = source.animationSet().getScript(CanonicalAnimation.WAIT.ordinal()).frames().getFirst();
+            assertEquals(source.dplcFrames().get(wait), session.player().getSpriteRenderer().dplcFrame(1));
+            com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve("native-wait.png"));
+            Files.writeString(output.resolve("state.csv"), com.openggf.tools.GameplayCaptureSession.stateHeader() + "\n" + session.stateLine(30, null) + "\n");
+        }
+    }
+
     private void captureSpindash(String game, String romProperty) throws Exception {
         Path output = Path.of(System.getProperty("mica.poses.captureRoot", "target/mica-poses")).resolve(game + "-spindash");
         Files.createDirectories(output);
@@ -315,7 +383,7 @@ class TestMicaCharacterIntegration {
 
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
     void micaS1EndingCapture() throws Exception {
-        Path output=Path.of("/tmp/mica-endings-s1s2-20261108/s1");
+        Path output=Path.of(System.getProperty("mica.ending.captureRoot", "target/mica-ending-captures")).resolve("s1");
         Files.createDirectories(output);
         var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"","off",null,null,null);
         try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
@@ -360,7 +428,7 @@ class TestMicaCharacterIntegration {
     void micaS2SuperEndingCapture() throws Exception { captureS2Ending(true); }
 
     private void captureS2Ending(boolean powered) throws Exception {
-        Path output=Path.of("/tmp/mica-endings-s1s2-20261108").resolve(powered?"s2-super":"s2-normal");
+        Path output=Path.of(System.getProperty("mica.ending.captureRoot", "target/mica-ending-captures")).resolve(powered?"s2-super":"s2-normal");
         Files.createDirectories(output);
         var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"","off",null,null,null);
         try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {

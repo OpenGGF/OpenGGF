@@ -38,10 +38,12 @@ class TestCanonicalPlayableSheet {
         var aliasKey = host.getNativeFramePoses().entrySet().iterator().next();
         var aliasSource = new SpriteArtSet(source.artTiles(), source.mappingFrames(), source.dplcFrames(),
                 source.paletteIndex(), source.basePatternIndex(), source.frameDelay(), source.bankSize(),
-                new PlayableSheetAnimationBinding.CanonicalProfile(Map.of(), Map.of(aliasKey.getValue().key(), 0)), source.animationSet());
+                new PlayableSheetAnimationBinding.CanonicalProfile(Map.of(), Map.of(aliasKey.getValue().key(), 3)), source.animationSet());
         var aliasBound = PlayableSheetAnimationBinding.bind(aliasSource, host, (ScriptedVelocityAnimationProfile) nativeArt.animationProfile());
-        assertEquals(source.mappingFrames().getFirst(), aliasBound.mappingFrames().get(aliasKey.getKey()));
-        assertEquals(source.dplcFrames().getFirst(), aliasBound.dplcFrames().get(aliasKey.getKey()));
+        assertEquals(source.mappingFrames().get(3), aliasBound.mappingFrames().get(aliasKey.getKey()));
+        assertTrue(aliasBound.mappingFrames().getFirst().pieces().isEmpty(), "native zero stays invisible");
+        assertTrue(aliasBound.dplcFrames().getFirst().requests().isEmpty());
+        assertEquals(source.dplcFrames().get(3), aliasBound.dplcFrames().get(aliasKey.getKey()));
         assertEquals(source.animationSet().getScript(CanonicalAnimation.WAIT.ordinal()).frames().stream().map(f -> f + 256).toList(),
                 aliasBound.animationSet().getScript(host.resolveNativeId(CanonicalAnimation.WAIT)).frames());
 

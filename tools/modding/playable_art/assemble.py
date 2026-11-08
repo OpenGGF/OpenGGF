@@ -101,9 +101,15 @@ def assemble(root, output):
     if custom.get('HOMING_DIVE'):
         animations['HOMING_DIVE'] = dict(frames=custom['HOMING_DIVE'],
                                        durations=[2]*len(custom['HOMING_DIVE']), end='loop')
+    frame_indices = {frame['id']: i for i, frame in enumerate(source)}
+    native_frames = {}
+    for key, frame_id in handoff.get('nativeFrames', {}).items():
+        if frame_id not in frame_indices:
+            raise ValueError('Unknown native pose frame: ' + str(frame_id))
+        native_frames[key] = frame_indices[frame_id]
     manifest = dict(formatVersion=1, paletteLine=0,
                     palette=['#%02X%02X%02X' % tuple(c) for c in colors],
-                    frames=frames, animations=animations, nativeFrames={f"hang/{i}": next(j for j, frame in enumerate(source) if frame["id"] == f"hang-{i:02}") for i in range(3)})
+                    frames=frames, animations=animations, nativeFrames=native_frames)
     output.mkdir(parents=True, exist_ok=True)
     sheet.save(output / 'mica.png', transparency=0, bits=8)
     (output / 'mica-sheet.yaml').write_text(json.dumps(manifest, indent=2)+'\n')

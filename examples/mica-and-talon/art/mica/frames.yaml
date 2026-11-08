@@ -1317,5 +1317,17 @@
       ],
       "end": "loop"
     }
+  },
+  "nativeFrames": {
+    "hang/0": "hang-00",
+    "hang/1": "hang-01",
+    "hang/2": "hang-02",
+    "wait/stand": "wait-00",
+    "wait/fidget": "wait-03",
+    "roll/0": "roll-00",
+    "roll/1": "roll-01",
+    "roll/2": "roll-02",
+    "roll/3": "roll-03",
+    "roll/4": "roll-00"
   }
 }

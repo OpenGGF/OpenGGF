@@ -739,7 +739,7 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
             for (int f = 0x69; f <= 0x77; f++) poses.put(f, new NativeFramePose("tumble/" + (f - 0x69), CanonicalAnimation.ROLL));
             for (int f = 0x78; f <= 0x7F; f++) poses.put(f, new NativeFramePose("swing/" + (f - 0x78), CanonicalAnimation.HANG));
             for (int f = 0x8A; f <= 0x8D; f++) poses.put(f, new NativeFramePose("carry/" + (f - 0x8A), CanonicalAnimation.HANG));
-            for (int f = 0x90; f <= 0x92; f++) poses.put(f, new NativeFramePose("hang/" + (f - 0x90), CanonicalAnimation.HANG));
+            for (int f = 0x90; f <= 0x93; f++) poses.put(f, new NativeFramePose("hang/" + (f - 0x90), CanonicalAnimation.HANG));
             for (int f = 0x96; f <= 0x9A; f++) poses.put(f, new NativeFramePose("roll/" + (f - 0x96), CanonicalAnimation.ROLL));
             for (int f = 0x31; f <= 0x3C; f++) poses.put(f, new NativeFramePose("gravity-loop/" + (f - 0x31), CanonicalAnimation.ROLL));
             for (int f = 0x49; f <= 0x54; f++) poses.put(f, new NativeFramePose("cage-entry/" + (f - 0x49), CanonicalAnimation.RUN));
@@ -749,11 +749,13 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
             for (int f = 0x94; f <= 0x95; f++) poses.put(f, new NativeFramePose("bar-end/" + (f - 0x94), CanonicalAnimation.HANG));
             for (int f = 0xB4; f <= 0xB5; f++) poses.put(f, new NativeFramePose("cutscene-hurt/" + (f - 0xB4), CanonicalAnimation.HURT));
             for (int f = 0xDF; f <= 0xE3; f++) poses.put(f, new NativeFramePose("wall-run/" + (f - 0xDF), CanonicalAnimation.RUN));
-            for (int f = 0xE4; f <= 0xE9; f++) poses.put(f, new NativeFramePose("parachute/" + (f - 0xE4), CanonicalAnimation.HANG));
+            for (int f = 0xE4; f <= 0xEA; f++) poses.put(f, new NativeFramePose("parachute/" + (f - 0xE4), CanonicalAnimation.HANG));
             for (int f = 0xEF; f <= 0xFA; f++) poses.put(f, new NativeFramePose("corkscrew/" + (f - 0xEF), CanonicalAnimation.ROLL));
             poses.put(0x24, new NativeFramePose("bar/release", CanonicalAnimation.WALK));
             poses.put(0xC4, new NativeFramePose("emerald/look", CanonicalAnimation.LOOK_UP));
             poses.put(0xBA, new NativeFramePose("wait/stand", CanonicalAnimation.WAIT));
+            poses.put(0xC0, new NativeFramePose("crane/release", CanonicalAnimation.SPRING));
+            poses.put(0xCA, new NativeFramePose("crane/fall", CanonicalAnimation.HURT));
             poses.put(0xCB, new NativeFramePose("hang/crane", CanonicalAnimation.HANG));
             return java.util.Map.copyOf(poses);
         }

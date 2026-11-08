@@ -1276,8 +1276,8 @@ presentation banks, not this normal-playable table.
 
 | Host | Native mapping writer / object | Native IDs or owner expression | MICA binding |
 | --- | --- | --- | --- |
-| S1 | Sonic1EndingEvents | $03 (post-BuildSprites wait) | WAIT fallback (`wait/fidget`) |
-| S2 | TornadoObjectInstance ride capture | $01 | WAIT fallback (`wait/stand`); separate vehicle/pilot art retained |
+| S1 | Sonic1EndingEvents | $03 (post-BuildSprites wait) | authored WAIT-03 (`wait/fidget`) |
+| S2 | TornadoObjectInstance ride capture | $01 | authored WAIT-00 (`wait/stand`); separate vehicle/pilot art retained |
 | S2 | Sonic2CompetitionSession reset | $00 | invisible; competitive presentation remains outside MICA coverage |
 | S3K | AIZ/MHZ ride vines; LBZ grapple; MHZ pulley | $90–$92 | authored `hang/0`–`hang/2` |
 | S3K | AIZ/MHZ vine swing | $78–$7F | HANG fallback (`swing/0`–`swing/7`) |
@@ -1285,8 +1285,9 @@ presentation banks, not this normal-playable table.
 | S3K | CNZ cylinder; HCZ spinning column; LBZ cup/tube elevators; DEZ teleporter | $55–$5B | ROLL fallback (`twist/*`) |
 | S3K | CNZ cage release; FBZ spinning pole; MHZ vertical bar | $5C–$61; vertical initial $62, release $24 | HANG fallback (`pole/*`), WALK on release |
 | S3K | MHZ horizontal bar; HCZ conveyor; LRZ turbine | $63–$68, $94/$95 | HANG fallback (`bar/*`, `bar-end/*`) |
-| S3K | FBZ chain link | $80–$85, $91; release $96 | HANG fallback (`chain/*`), authored hang/1, ROLL fallback |
+| S3K | FBZ chain link | $80–$85, $91; release $96 | HANG fallback (`chain/*`), authored hang/1, authored ROLL-00 |
 | S3K | FBZ stationary cage entry | $49, $52–$54 | RUN fallback (`cage-entry/*`) |
+| S3K | DEZ tunnel launcher | $96 | authored ROLL-00 (`roll/0`) |
 | S3K | DEZ gravity hub | $31–$3C, $6C–$77 | ROLL fallback (`gravity-loop/*`, `tumble/*`) |
 | S3K | LRZ corkscrew / wall ride | $EF–$FA; $DF–$E3 | ROLL / RUN fallback (`corkscrew/*`, `wall-run/*`) |
 | S3K | MHZ mushroom parachute; SSZ elevator bar | $E4–$E7; $E5/$E9 | HANG fallback (`parachute/*`) |
@@ -1294,21 +1295,22 @@ presentation banks, not this normal-playable table.
 | S3K | MHZ Knuckles cutscene player | $B4/$B5 (Sonic archetype) | HURT fallback (`cutscene-hurt/*`) |
 | S3K | HPZ entry/ceremony/theft; LBZ Robotnik ship | $BA / $C4 (Sonic archetype) | WAIT / LOOK_UP fallback (`wait/stand`, `emerald/look`) |
 | S3K | SSZ crane claw | $CB | HANG fallback (`hang/crane`) |
-| S3K | SOZ rapel wire | HANG / SWING / FLIP tables selected by rope mode | corresponding hang, swing, tumble fallbacks; authored $90–$92 |
+| S3K | SOZ rapel wire | $90–$93 HANG/SWING, $E4–$EA FLIP | authored $90–$92; $93 HANG fallback and `parachute/*` HANG fallback |
 | S3K | DEZ miniboss transport | $55–$5B (verified ROM table $7EF2E, 12 entries) | ROLL fallback (`twist/*`) |
-| S3K | SSZ launch / carried-player / crane release | $EF–$FA (table $587A8); $55–$5B (12 pairs at $468C4); $C0/$CA/$CB release | ROLL fallback (`corkscrew/*`, `twist/*`); release $C0/$CA still WAIT, $CB HANG |
+| S3K | SSZ launch / carried-player / crane release | $EF–$FA (table $587A8); $55–$5B (12 pairs at $468C4); $C0/$CA/$CB release | ROLL fallback (`corkscrew/*`, `twist/*`); release $C0 SPRING / $CA HURT / $CB HANG |
 | S3K | LBZ1 ground launch / cup initial capture | first frame of installed script | already relocated authored script frame |
 | S3K | LBZ final boss 1 player presentation | installed presentation frame | existing presentation owner; no object-local art copied |
 | S3K | AIZ plane, CNZ teleporter, HPZ route/entry, ICZ snowboard intro, SSZ arrival/launch/HPZ teleporter, SS entry ring, Mecha Sonic release | $00 | invisible native frame |
 | S3K | EndingRescueDirector / EndingKnucklesFlight | $BA, $58, $00; ending-bank selection | existing ending presentation bank; zero invisible |
 | S3K | slot runtime / competition miniature | copies current player's mapping | copies the already selected namespace; no second translation |
 
-Fallback art debt is explicit: every semantic key above except `hang/0`–`hang/2`
+Fallback art debt is explicit: every semantic key above except `hang/0`–`hang/2`, `wait/stand`,
+`wait/fidget` and `roll/0`–`roll/4`
 currently uses its named canonical fallback's first pose. No MICA drawing exists
 for the native twist, tumble, pole, bar, chain, cage-entry, gravity-loop, carry,
 wall-run, corkscrew, parachute, crane and cutscene-specific phases. The SSZ/DEZ table IDs were read from the verified locked-on ROM
 (SHA-1 CFBF98C36C776677290A872547AC47C53D2761D6). SSZ crane release $C0/$CA
-remain unspecified WAIT fallbacks and need dedicated poses. Unknown byte slots
+use SPRING/HURT fallbacks and still need dedicated poses. Unknown byte slots
 intentionally use WAIT rather than arbitrary sheet frames. Object route captures
 remain coverage gaps, not certified replacements for those presentations. The source-call scan is in the task's scratch folder.
 
@@ -1332,3 +1334,34 @@ EGL. Python modding discovery passes 44 tests; indexed-art verification passes.
 Broad smoke preflight requires `LUA_BIN=/usr/bin/lua5.4` on this host (the default
 Lua version fails); the explicit 5.4 preflight passes. Broad smoke is additional
 qualification and does not replace the outstanding object-capture obligations.
+
+Smoke attempt on 2293eb371f was interrupted for the capture-root and crane-pose
+corrections. VERDICT INCOMPLETE: 7/91 batches, 3031 tests, zero failures/errors,
+one unexplained GL skip (`TestDisplayShaderPickerPresentation` required explicit
+surfaceless EGL); guards did not run. The replacement run must select
+`--headless-gl surfaceless-egl` as well as explicit Lua 5.4.
+
+The added FBZ horizontal chain and MHZ pulley component captures sustain $91
+and $90–$92 respectively and assert their DPLCs against MICA's HANG source.
+Both encounters are positioned above native terrain in their owning zones, not
+claimed cold routes. Their PNGs were inspected. The two ending tests now honor
+`mica.ending.captureRoot`; their old hard-coded `/tmp` paths were removed.
+
+Native normal-Sonic table ownership: `Map_Sonic_`
+(`docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1-252`), including the
+$90–$92 entries at lines 146–148. Canonical fallbacks are creator presentation
+choices, not alternate ROM behavior. The initial host vocabulary covers Sonic
+archetypes; separate Tails/Knuckles raw vocabularies are future work.
+
+MICA now declares those aliases as symbolic frame IDs in recipe/frames.yaml
+`nativeFrames`; the reducer preserves them and the assembler resolves packed
+indices. Existing WAIT and ROLL art is explicitly bound, with roll/4 repeating
+ROLL-00 for MICA's four-phase cycle. The normal-Sonic S2 Tornado waiting helper
+was executed as a component pose probe in WFZ; native frame $01 selects MICA's
+standing art. This is not a completed WFZ exit/landing route.
+
+Final follow-up verification: the full requested focused selection passed 111
+tests without skips after adding FBZ/MHZ/Tornado captures. After moving alias
+declarations into recipe metadata, the directly affected 15 Java tests passed
+without skips, Python modding discovery passed 44 tests, and palette/geometry/
+regeneration verification passed. The final broad smoke run remains separate.

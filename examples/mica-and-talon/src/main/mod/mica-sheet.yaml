@@ -4246,6 +4246,13 @@
   "nativeFrames": {
     "hang/0": 55,
     "hang/1": 56,
-    "hang/2": 57
+    "hang/2": 57,
+    "wait/stand": 0,
+    "wait/fidget": 3,
+    "roll/0": 6,
+    "roll/1": 7,
+    "roll/2": 8,
+    "roll/3": 9,
+    "roll/4": 6
   }
 }

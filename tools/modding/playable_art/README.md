@@ -372,3 +372,9 @@ centre and sole support remain fixed. This is contour drawing, without scaling
 or rotating the finished frame. `native-pose-core.json` retains the original
 native reference alongside the expanded authored geometry. Palette, inside ink,
 regeneration, tile bounds and native support regression checks pass.
+
+The optional recipe/`frames.yaml` `nativeFrames` map uses semantic keys and
+symbolic frame IDs, e.g. `"hang/0": "hang-00"`. Reduction preserves the map;
+assembly rejects unknown IDs and converts known IDs to packed mapping indices.
+MICA also binds existing WAIT/ROLL art explicitly. A raw phase with no matching
+art uses the host descriptor's documented canonical fallback.
