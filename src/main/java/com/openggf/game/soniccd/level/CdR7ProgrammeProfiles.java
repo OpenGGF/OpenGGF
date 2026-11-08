@@ -44,6 +44,7 @@ final class CdR7ProgrammeProfiles {
                     (v.header()&32767)*32,v.capacity(),Optional.of(v.javaProduct()),Optional.of(v.nativeInput()),v.plc()));
         }
         CdProgrammePlacementProfiles.configure(b,p.payload());
+        b.terrain=initialTerrain(p);
         b.visual=new Visual(p.sonicFormat(),p.range("PlayerSprites"),p.range("PlayerGfxScript"),p.range("PlayerGfx"));
         b.loadRole(CdProgrammeReader.LoadRole.PLC,p.range("PlcRead"));
         b.loadRole(CdProgrammeReader.LoadRole.PALETTE,p.range("PaletteDirectory"));
@@ -55,6 +56,21 @@ final class CdR7ProgrammeProfiles {
         b.load=new Load(f.roots().size(),f.maximumCount(),f.roots(),f.bodies(),f.encountered().stream().map(k->(Object)p.range(k)).toList(),
                 f.palettes().stream().map(v->new Palette(v.key()==UnavailablePaletteSource.ZERO_ADDRESS?v.key():p.range((String)v.key()),v.destination(),v.counter())).toList(),cycles,
                 f.cycleProgramme(),f.sections(),background);
+    }
+    /** Canonical initial DATA only: each original loader/descriptor/PLC/source graph is proven externally.
+     * Source Init clear/copy uses the shared exact-view model. Raw Stage5 actor/layer/priority remapping
+     * and R73C background block680 staging remain unowned; no legacy Shape or live consumer is admitted.
+     */
+    private static Terrain initialTerrain(CdR7DataLayout.Programme p) {
+        var d=p.terrain();
+        var profile=new CdStageTerrain.Profile(d.blockBytes(),d.patternBytes(),d.chunks()*512,
+                d.foregroundColumns(),d.foregroundRows(),d.backgroundColumns(),d.backgroundRows(),d.collisionBytes(),
+                CdStageTerrain.LayoutEncoding.EXACT_READ_VIEW,CdStageTerrain.ReferencePolicy.SELECTED_KNOWN_SOURCE);
+        return new Terrain(profile,Optional.empty(),Map.of(
+                CdProgrammeReader.Role.CHUNKS,p.range("StageChunks"),CdProgrammeReader.Role.FG,p.range("LayoutRead0"),
+                CdProgrammeReader.Role.BG,p.range("LayoutRead1"),CdProgrammeReader.Role.COLLISION,p.range("StageCollision"),
+                CdProgrammeReader.Role.ANGLE,p.range("StageCollisionAngles"),CdProgrammeReader.Role.HEIGHT,p.range("StageCollisionColumns"),
+                CdProgrammeReader.Role.WIDTH,p.range("StageCollisionRows")),p.range("StageBlocks"),p.range("StageGfx"));
     }
     // SOURCE_ACT_GATED retains five fixed script/color pairs then both final alternatives.
     // Canonical table slices are DATA, not qualified native palette read hulls or live cycle operations.

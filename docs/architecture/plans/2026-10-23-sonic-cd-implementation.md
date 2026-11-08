@@ -1,5 +1,28 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — all-ten Stardust Speedway initial terrain DATA
+
+Three exact Java payloads bind the ten R7 canonical initial terrain profiles
+through the unchanged shared Definition/Reader/Profile/decoder/cache/query code.
+Root retains dataOnly/payload/Optional metadata and every previous R6/R7 product,
+load, PLC, raw placement, zero-source palette and RTS section contract. The ten
+old availability expectations migrate; the other old test bodies remain exact.
+
+R117 passes329 focused cases across9 whole classes, zero failures/errors/skips,
+on queued lean execution with identical before/after source/index fingerprint
+`eee240ff76919eee7c43d03623994f890ec6ccecca5a2aba72cbf943a6aeb2a3`.
+All declared suite counts,329 unique literal IDs, fresh XML hashes, Java25/media
+properties and3 installed source pins match. This includes all75 R6 terrain
+cases and current Reader18, rather than the author's selected27/older16. Normal
+compilation precedes the lean test stage; success is not a heap-RSS measurement,
+a blanket small-class registry qualification or a category/full-suite result.
+
+The first source review found no scoped P1/P2. R73C BG selects raw block680
+beyond its680 definitions; typed BLOCK_STAGING remains while collision byte680
+is independently known within800. No padding or rawmax hull is added. Stage5
+actor/layer/priority remaps, scrolling/auto-scroll, legacy projection, current art,
+player/World/Ready/routes and native/regional results remain unimplemented.
+
 ## 8 November 2026 — all-ten TT and QQZ initial terrain DATA
 
 Eight exact Java payloads bind all ten canonical TT and QQZ initial terrain

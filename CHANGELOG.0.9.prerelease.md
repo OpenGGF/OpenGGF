@@ -80,6 +80,9 @@ matching area heading; see the
   profiles also use the same machinery. Their641 focused checks pass without
   failures, errors or skips, preserving typed missing block/source boundaries
   and keeping water service, live projection and World admission separate.
+  All ten Stardust Speedway initial terrain DATA profiles now use those shared
+  owners as well. Their329 focused checks pass on the queued lean lane, retaining
+  the R73C missing block and separate actor/priority/scroll admission boundaries.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

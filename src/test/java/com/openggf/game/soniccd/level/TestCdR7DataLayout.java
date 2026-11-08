@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.AdditionalAnswers.delegatesTo;
 
-/** Actual original-media DATA; no World/player/terrain/current-art admission. */
+/** Actual original-media DATA; no World/player/current-art admission. */
 class TestCdR7DataLayout {
     record Fixture(Path cue,Map<CdR7DataLayout.Programme,CdProgrammeReader> readers,
                    Map<CdR7DataLayout.Programme,CdMmdImage> images) { }
@@ -56,7 +56,8 @@ class TestCdR7DataLayout {
             assertThrows(IllegalArgumentException.class,()->r.view(equal));
         }
         for(var operand:p.operands())assertEquals(operand.hex(),HexFormat.of().formatHex(image.readFile(operand.fileOffset(),operand.hex().length()/2)));
-        assertThrows(UnsupportedOperationException.class,r::terrain);assertThrows(UnsupportedOperationException.class,r::ordinaryZoneActWord);
+        assertEquals(p.terrain().blockBytes()/8,r.terrain().blockCount());assertThrows(UnsupportedOperationException.class,r.terrain()::shape);
+        assertThrows(UnsupportedOperationException.class,r::ordinaryZoneActWord);
         assertThrows(IllegalArgumentException.class,()->CdProgrammeData.fromReader(r));
     }
     @ParameterizedTest @EnumSource(CdR7DataLayout.Programme.class)
