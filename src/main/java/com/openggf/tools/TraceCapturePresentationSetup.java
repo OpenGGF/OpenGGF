@@ -55,7 +55,8 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
         Object previousAspect = callerState.aspect();
         Object previousTestMode = callerState.testMode();
         Object previousScanlineLimit = callerState.scanlineLimit();
-        try {
+        var setup = new TraceCapturePresentationSetup(configuration, previousAspect, previousTestMode, previousScanlineLimit);
+        try (var rollback = new Rollback(setup)) {
             // ROM image comparisons need native dropout even when normal play disables it.
             configuration.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, nativeSpriteLimits);
             if (configuration.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
@@ -69,11 +70,7 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
                 throw new IllegalStateException("capture presentation resolved width "
                         + resolvedWidth + " instead of " + dimensions.logicalWidth());
             }
-            return new TraceCapturePresentationSetup(configuration, previousAspect, previousTestMode, previousScanlineLimit);
-        } catch (Throwable failure) {
-            try { restore(configuration, previousAspect, previousTestMode, previousScanlineLimit); }
-            catch (Throwable cleanup) { failure.addSuppressed(cleanup); }
-            throw rethrow(failure);
+            return rollback.commit();
         }
     }
 
@@ -88,14 +85,20 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
             TraceCaptureDimensions dimensions, CallerState callerState,
             com.openggf.audio.AudioManager audio, int requestedFps, boolean nativeSpriteLimits) {
         var setup = open(configuration, dimensions, callerState, nativeSpriteLimits);
-        try {
+        try (var rollback = new Rollback(setup)) {
             int hz = com.openggf.configuration.FrameRateResolver.simulation(configuration) == 50 ? 50 : requestedFps;
             setup.audioCadence = com.openggf.audio.AudioManagerInternalAccess.offlineServiceCadence(audio, hz);
-            return setup;
-        } catch (Throwable failure) {
-            try { setup.close(); } catch (Throwable cleanup) { failure.addSuppressed(cleanup); }
-            throw rethrow(failure);
+            return rollback.commit();
         }
+    }
+
+    /** Java's resource boundary preserves the original failure and suppresses cleanup failure. */
+    private static final class Rollback implements AutoCloseable {
+        private final TraceCapturePresentationSetup setup;
+        private boolean committed;
+        Rollback(TraceCapturePresentationSetup setup) { this.setup = setup; }
+        TraceCapturePresentationSetup commit() { committed = true; return setup; }
+        @Override public void close() { if (!committed) setup.close(); }
     }
 
     @Override

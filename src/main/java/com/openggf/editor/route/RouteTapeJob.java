@@ -276,6 +276,8 @@ public final class RouteTapeJob implements AutoCloseable {
                 publish(token, new Update(token, Phase.ERROR, request.kind(), 0, 0, 0, rows,
                         Objects.toString(failure.getMessage(), failure.getClass().getSimpleName()), content, -1, null,
                         null));
+                if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
+                throw new IllegalStateException("Route worker failed", failure);
             } finally {
                 synchronized (RouteTapeJob.this) {
                     if (token == generation) {

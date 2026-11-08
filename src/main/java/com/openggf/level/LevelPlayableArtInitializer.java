@@ -503,7 +503,7 @@ final class LevelPlayableArtInitializer {
             }
             initSuperState(sidekick);
         } catch (Exception e) {
-            LOGGER.log(SEVERE, "Failed to load sidekick sprite art for index " + index + ".", e);
+            throw new IllegalStateException("Failed to load sidekick sprite art for index " + index, e);
         }
     }
 
