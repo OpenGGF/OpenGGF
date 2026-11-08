@@ -72,7 +72,7 @@ no discrepancy entry was added or reclassified by the cutover.
 24. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
 25. [Mod Music Uses PCM Presentation Rather Than Mega Drive SMPS](#mod-music-uses-pcm-presentation-rather-than-mega-drive-smps)
 26. [S2 Native Debug Placement Capability Boundary](#s2-native-debug-placement-capability-boundary)
-27. [S2 Native Competition and Human-P2 Capability Unavailable](#s2-native-competition-and-human-p2-capability-unavailable)
+27. [S2 Competition Split Screen, Native Lag and Rewind Scope](#s2-competition-split-screen-native-lag-and-rewind-scope)
 28. [S2 Whole-Run V-int Clock Cannot Be Made Exact](#s2-whole-run-v-int-clock-cannot-be-made-exact)
 29. [S2 Push-Release Animation Restart Fires Once Extra At A Contact-End Frame](#s2-push-release-animation-restart-fires-once-extra-at-a-contact-end-frame)
 30. [S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)](#s2-cpz-boss-truncates-the-object-pass-fixbugs--0)
@@ -591,59 +591,115 @@ accepted.
 
 ---
 
-## S2 Native Competition and Human-P2 Capability Unavailable
+## S2 Competition Split Screen, Native Lag and Rewind Scope
 
-**Location:** S2 title, session, player state, camera/render, object lifetime,
-results, special-stage, and monitor owners
+<!-- LEAD: activation status -->
+**Activation:** pending lead activation. At this revision
+`Sonic2NativeModeProvider.QUALIFIED_ZONES` is empty, so the title does not
+offer 2 PLAYER and the Competition visit runs only under tests.
 
-**ROM Reference:** `docs/s2disasm/s2.asm:4535-4571,10708-11210,14777-15180,32920-33535,85333-85343`
+**Location:** `game/sonic2/competition/` (`Sonic2CompetitionVisit`,
+`Sonic2NativeCompetitionHost`, `specialstage/Sonic2CompetitiveHalfpipe`) and
+`game/sonic2/competition/view/` (`Sonic2CompetitionViews`,
+`Sonic2CompetitionViewRegisters`, `Sonic2CompetitionSatBuilder`,
+`Sonic2CompetitionFieldPatterns`, `Sonic2CompetitionArtResidency`), rendered by
+the shared `NativeCompetitionRenderer`
+
+**ROM Reference:** `H_Int` (s2.asm:1181-1235), `Vint_Lag` / `Vint0_noWater`
+(s2.asm:529-640), interlace setup (s2.asm:4852-4854), `BuildSprites_2P` /
+`BuildSprites_P2` (s2.asm:30987-31143), `SSObjectMove` (s2.asm:69868-69890),
+`Touch_Monitor` (s2.asm:85439-85475)
 
 ### Original Implementation
 
-`Touch_Monitor` allows a monitor break from above for `MainCharacter`, or for a
-second player only when the ROM-global `Two_player_mode` is nonzero; the roll
-animation check follows at `s2.asm:85342-85343`. CPU Tails
-is therefore blocked from that branch in ordinary one-player gameplay, while a
-human P2 can use it in the native competition mode.
+Two-player mode runs the VDP in interlace mode 2: 8x16 cells and 448
+interlaced lines, shown as two alternating 224-line fields. An H-interrupt at
+line 108 switches the lower view to player 2's foreground table, V-scroll words
+and sprite table, and blanks the display while it DMAs that table. The
+shipped `fixBugs = 0` build has no sprite-table page flip: `BuildSprites_P2`
+busy-waits on `Hint_flag` (s2.asm:31140-31141), and on a lag frame either view
+can show a partly built table. A lag frame occurs whenever the main loop has
+not finished before the next V-blank; `Level_frame_counter` then repeats while
+the V-int counter advances. `Touch_Monitor`'s break branch accepts a second
+player only while `Two_player_mode` is set (s2.asm:85463-85470), so CPU Tails
+cannot break monitors in one-player play and human Tails can in Competition.
 
 ### Engine Implementation
 
-S2 has no connected competition world or human-P2 playable slot. The generic
-`TitleActionRoute.TWO_PLAYER` token is not a capability owner: absent a native
-competition provider, the shared title router reinitializes the title and remains
-in `TITLE_SCREEN` without loading an ordinary level. Stock S2 exposes its ROM
-one-player and options rows while that capability remains unavailable. The
-options screen selects the exact campaign team in a fresh no-save world and
-retains emerald progress on its direct level exit. `GameplayTeamBootstrap`
-constructs every configured secondary as a CPU sidekick, controller-2 bindings
-feed that sidekick's manual-input path, and
-`ObjectPlayerQuery.nativeP2OrNull()` names the first sidekick rather than a
-human slot. Score/lives/rings/time, camera, viewport, object/ring placement,
-and results are still single-owner. `MonitorObjectInstance` therefore retains
-the ROM-faithful lead-player/CPU-sidekick behavior; no object-local human-P2
-branch is advertised or fabricated.
+S2 Competition is a native two-human product: Sonic on controller 1, Tails on
+controller 2, the ROM's EHZ/MCZ/CNZ/special-stage menu, per-player state,
+teleport, results and the competitive special stage. The monitor branch
+follows the ROM through the native participant slot; ordinary CPU Tails stays
+blocked. The presentation and timing differences are:
+
+| ID | Engine behaviour |
+| --- | --- |
+| U-1 | Each view shows interlace field 0 (even interlaced lines) on every frame. There is no field alternation or weave; detail present only on odd lines never appears and nothing flickers. Planes are retained 8x16-cell tables presented through field-projected patterns. |
+| U-2 | Each view shows its last completed sprite page, so the lag-frame torn table cannot occur. The `Hint_flag` busy-wait plays no part in timing. |
+| U-3, U-4 | The split is exact at line 108: no blanked band and no sprite carry-over from the upper table. Native pictures differ from the engine on field rows 108-112 at the seam. |
+| U-5 | The art residency holds only patterns the game loads. Cell words that point at VDP table memory show loaded art or zeros, not table bytes; DMA source wrap is not modelled. |
+| U-7 | Sprite pieces past the 80th table entry are dropped instead of overwriting the RAM after the table. |
+| Lag | Every logical iteration completes in its frame. Native CPU-overrun lag frames are not reproduced in levels or in the competitive special stage, which also does not use the one-player special stage's slowdown approximation. |
+| Rewind | Held live rewind is off in `COMPETITION_MENU`, `COMPETITION` and `COMPETITION_RESULTS`, as in S3K Competition. Registry capture and restore of the Competition owners work and are tested. |
+
+Modelled ROM quirks, so not differences: the title-card and fade interrupts
+leave the upper view on player 2's foreground table with player 1's V-scroll;
+the teleport flash spares colour 32; teleport does not swap the foreground
+tables; the title-card leave rows read the live cameras (`Camera_X_pos_P2` in
+`loc_15714`, s2.asm:29125-29149, and `Camera_X_pos` in `loc_15758`,
+s2.asm:29151-29168), while player 2's copied camera bank stays stale during
+title V-ints.
 
 ### Rationale and Verification
 
-The reviewed
-[native competition design](../architecture/designs/2026-08-09-s2-native-competition-human-p2-design.md)
-and [evidence plan](../architecture/plans/2026-08-09-s2-native-competition-human-p2-plan.md)
-narrow the missing product to local competition with forced Sonic P1/Tails P2,
-EHZ/MCZ/CNZ plus the native special-stage entry, two acts per normal zone,
-independent results/state, two views, and two-camera object lifetime. This is
-not shared-screen co-op or arbitrary character pairing.
+Field parity, the interrupt's blanking length, the line-buffered sprite carry,
+the sprite-table race and lag frames all depend on beam position or CPU cycle
+cost. The [reimplementation boundary](../architecture/engine-map.md#reimplementation-boundary)
+excludes CPU and VDP timing, so none is emulated or approximated. The native
+recordings measure how often lag occurs:
 
-The unsupported title token is now rejected on both direct host exits and
-provider callbacks, covered by
-`TestGameLoop#testDoExitTitleScreenRejectsUnsupportedTwoPlayerWithoutStartingLevel`.
-The next safe production work is to migrate ordinary live paths to explicit participant roles, slot-indexed
-state, and a one-view semantic registry before the complete S2 product is
-activated atomically. The monitor branch is a final consumer of active
-competition plus the P2/HUMAN role, never the first slice. Existing monitor
-sidekick tests prove the supported path; the REV01 boundary test pins the
-native `$008E52` order while the ordinary bootstrap test protects CPU Tails.
-Neither test claims the competition route is implemented, and no title default
-is treated as proof of mode absence.
+- EHZ: 15 lag frames in 9,752 act-1 frames on the finish recording (about 1.5
+  per 1,000), first at frame 2895 where `Vint_Lag` interrupts
+  `BuildSprites_2P`; 16 in 21,996 frames over both acts (0.73 per 1,000).
+- MCZ, CNZ and the other EHZ recordings: none in their recorded intervals.
+- Competitive special stage: 305 of 841 active frames (36%), rising to 39%
+  once rings and bombs appear, usually two frames apart. The first, at frame
+  1312, interrupts player 1's `SSObjectMove`.
+
+Comparisons with native recordings therefore stop before the first native lag
+frame and never re-align after it. Within those prefixes, both players'
+positions and velocities, both cameras, rings, lives, score and
+`Level_frame_counter` match native post-frame samples:
+
+- EHZ: from the first gameplay frame (1329) through 2894 on the finish, flow
+  and zone recordings, and to the end of the five shorter recordings (up to
+  frame 3151).
+- MCZ: 827 rows from 1324 through 2151, covering the initial traversal only.
+- CNZ: 4,559 rows through 5896 and 814 rows through 2151. A longer
+  planner-authored route matches through 1852; at 1853 native player 1 lands
+  on a horizontal flipper (Obj86) and the engine falls. That frontier is open.
+- Special stage: the players, track, speed, checkpoints and item slots match
+  from the observed load boundary (1288) through 1310; ring, checkpoint and
+  result progression is not yet certified.
+
+These are state-prefix checks, not complete act, results or pixel
+certification. The headless diagnostic enters at the Competition menu, so its
+raw V-int counter starts far below native (EHZ 80 against 1094); that origin
+is reported separately and never offset into gameplay. Production entry
+through the title carries the real counter.
+
+Pixel evidence is fixed-field-0 comparisons of engine views with BizHawk
+references: 1.1-1.4% normalised differences on four cold EHZ gameplay pairs,
+and the Obj34 title card: every part position from frame 1184 to 1385 and
+every opaque text pixel match in both views, and the full-card and early-leave
+pictures match outside the seam rows.
+`TestSonic2CompetitionViewRegisters` covers the per-interrupt latches,
+`TestSonic2CompetitionViewsPixels` and `TestSonic2CompetitionFieldPixels`
+the field-0 projection, and `TestSonic2CompetitionViewsRestore` registry
+restore. The [Competition parity plan](../architecture/plans/2026-11-07-s2-competition-parity.md)
+records the evidence, rejected approaches and open items; the
+[2026-08-09 design](../architecture/designs/2026-08-09-s2-native-competition-human-p2-design.md)
+is the original product contract.
 
 ---
 
