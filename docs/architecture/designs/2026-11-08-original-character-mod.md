@@ -1,0 +1,294 @@
+# Original playable character mod (2026-11-08)
+
+An example and tutorial mod that adds two brand-new, original playable characters to
+Sonic 1, Sonic 2 and Sonic 3 & Knuckles: MICA, a pangolin who stands in for Sonic, and
+TALON, a falcon courier who stands in for Tails. Art is generated with GPT Image through Codex
+from a supplied base design, then reduced to native Mega Drive constraints. The mod is
+a framework demonstration: where the Mod API lacks a seam, this work adds the safe
+facade rather than reaching into engine internals.
+
+Status: phase 1 in progress (see [Delivery plan and status](#delivery-plan-and-status)). Mod API line: 0.7 candidate (`mod-api-release-policy.properties`).
+
+## Agreed decisions
+
+The user settled these on 2026-11-08:
+
+1. **Full art is the target**, including every ending and credits sequence. Every
+   character presentation surface gets a custom slot. Surfaces may ship on the stock
+   fallback first and gain art later.
+2. **Route archetypes:** MICA uses `SONIC_AND_TAILS` (with `SONIC_ALONE` when launched
+   without a sidekick). TALON uses `TAILS_ALONE` when leading and is the default
+   sidekick. No Knuckles-only route, so no glide requirement.
+3. **MICA's ability:** the Mutator Lab homing attack is her own move. Instagib is not a
+   menu option; it is what the move becomes in Super and Hyper form.
+4. **Name text** ("SONIC" on the HUD, results and special-stage messages) is composed
+   from each game's own ROM letter set, not baked per game. Letters a game's ROM lacks
+   are generated in that game's style and shipped by the mod.
+5. **Super form is implemented**, including Hyper where the host game has it. Sonic 1,
+   which has no native super form, gets one when all six emeralds are collected; the
+   requirement is configurable (see W6).
+
+6. **Two characters, two phases.** Phase 1 delivers MICA with all shared engine work
+   and every presentation surface; a stock sidekick may follow her. Phase 2 adds TALON,
+   after which MICA & TALON is the default team and each is playable solo.
+7. **TALON's ability:** native Tails flight with flapping. Holding down while airborne
+   shows the homing target reticle; jump with down held starts a divebomb onto the
+   target. Without down held, jump flaps as normal.
+8. **Super TALON:** the divebomb becomes the Instagib dive, and each flight flap gives
+   twice the native lift. No Super Flickies.
+
+Both characters must be original designs, not existing Sega characters. The approved
+concept sheets are `examples/mica-and-talon/concept/mica.png` and `talon.png`.
+
+## What already exists
+
+`docs/modding/characters.md` and `src/test/resources/mods/sample-character-src` cover
+owner-tagged identity, factory, physics profile, `.ggfp` playable art and palette, the
+airborne `onAbilityActivate` hook, saves, rewind (`captureSubclassRewindState`) and
+sidekick creation. The homing attack, its target classification and the Instagib
+effects are implemented and audited in all three games
+(`2026-10-31-homing-attack-mutator.md`, `game/mutators/HomingAttackRuntime`).
+
+## Workstreams
+
+Sizes are relative (S, M, L, XL). Engine workstreams W1–W6 and the art pipeline W7 can
+run in parallel; W8 integrates them.
+
+### W1 — One mod, three games (S)
+
+The sample is `baseGame: s2`. Prove `baseGame: any` registration (the Mutator Lab
+model) publishes the character in the S1, S2 and S3K launch rosters and data select,
+saves and reloads the canonical key, and falls back cleanly when the mod is disabled.
+Deliverable: the skeleton example with a headless acceptance test per game.
+
+### W2 — Canonical animation sheets (L)
+
+`PlayableArtConverter` emits one `idle` animation, and `PlayableSheetMaterializer`
+indexes the sheet by the raw native `getAnimationId()`. Native animation numbering
+differs per game, and the trivial profile has no speed-driven walk/run timing and no
+slope-angle frame selection.
+
+Change: playable sheets name animations by `CanonicalAnimation`. The materializer builds
+the host game's `ScriptedVelocityAnimationProfile` through the existing
+`AnimationTranslator` and `DonorCapabilities` fallback map, so one sheet serves all
+three games with native timing, slope frame strides and fallbacks for missing poses.
+The sheet YAML gains an animation table (canonical name, frame list, durations or
+speed-driven marker, loop/hold). This is a GGFP format change; the format is
+unpublished, so no migration is required.
+
+### W3 — Underwater palette (S–M)
+
+`LevelPlayableArtInitializer.createCharacterPaletteContext` sets only the dry palette
+for mod characters. Add an underwater palette to the character contract, either
+authored or derived per zone by applying the host's underwater transform to the
+character's palette line, and set it on the render context. Covers LZ, CPZ/ARZ/HPZ and
+the S3K water zones.
+
+### W4 — Character presentation contract (L)
+
+Add a `CharacterPresentation` record carried by `CharacterDefinition` (and stored as
+GGFP v3 sections), modelled on KiS2's internal seams (`Sonic2ArtOverlays`, the S2
+continue `PlayerPresentation`, the S2 ending `Presentation`). Every stock surface asks
+the presentation first and keeps its current Sonic/Tails/Knuckles logic as the
+fallback. Slots:
+
+| Slot | Consumers |
+|---|---|
+| Display name (for ROM-font composition) | HUD name tiles, level results, special-stage results, continue screen |
+| HUD life icon (2×2 tiles) | S1/S2/S3K HUD |
+| 1-up monitor face | S1/S2/S3K monitors |
+| Signpost faces | S1 signpost, S2 signpost, S3K end-of-act sign |
+| Special-stage sprite sets | S2 half-pipe, S3K Blue Sphere; S1 reuses playable art |
+| Bonus-stage art | S3K slot machine (currently swaps in ROM art by class check) |
+| Continue poses | S1/S2/S3K continue screens |
+| Data select portrait | S3K data select (and engine-added S1/S2 data select) |
+| Cutscene sets | S3K ICZ snowboard, ending and credits sequences per game |
+
+**Cutscenes and endings** replace art frame-for-frame against the native frames of the
+archetype's own sequence, so ROM choreography and timing stay native. The S1, S2 and S3K
+endings and credits are all in scope.
+
+**Name composition.** A per-game composer lays the display name out from that game's ROM
+letters. Each composer reports glyph coverage; a letter the ROM lacks comes from a
+supplementary glyph the mod supplies in that game's style. The engine extracts ROM
+glyphs at pixel level, so a glyph need not be tile-aligned. Letter inventories found so
+far:
+
+| Letter set | S1 | S2 | S3K |
+|---|---|---|---|
+| Large title-card/results font | 21 letters: A–I, K–P, R–U, Y, Z. K and U are in the art but no card uses them (checked by decoding `artnem/Title Cards.nem`). No J, Q, V, W, X. | Full A–Z and `.`: `ArtNem_TitleCard2` is decoded to RAM by `LoadTitleCard0` and letters are picked from it. | Per-zone title-card sets plus the results names SONIC, KNUCKLES, MILES and TAILS. Zone names suggest no J, Q, W or X; to be confirmed by decoding. |
+| Small HUD name (fixed 4×2-tile cell) | SONIC | SONIC, TAILS and MILES life counters | SONIC, TAILS, MILES and Knuckles' abbreviated K·T·E life icons; no U (checked by decoding the `HUD Icon` art) |
+| Save-screen font | — | — | A–Z (`S3kSaveTextCodec`) |
+
+The HUD cell fits about five letters. A name of five letters or fewer avoids a separate
+short HUD form.
+
+**Selection audit.** 44 source files compare character codes to `"sonic"`, `"tails"` or
+`"knuckles"`. Classify each as presentation (moves behind the contract) or route/gameplay
+gating (keeps using the `behavesLike` archetype). Today S3K mixes the two: a mod
+character behaving like Knuckles would show "SONIC" on the HUD but "KNUCKLES GOT
+THROUGH" on the results screen.
+
+**Parity side effect.** S2's results object always draws "SONIC GOT THROUGH"
+(`ResultsScreenObjectInstance`, frame 0), but the ROM advances the name frame for
+Tails alone and again by the region flag, `loc_14102 (s2.asm:27836-27843)`. Routing stock characters through the
+same name path should reproduce the ROM, with a test.
+
+### W5 — Homing attack as a character ability (M)
+
+`MutatorPolicy.HomingCharacter` is `{SONIC, TAILS, KNUCKLES}` and the runtime is owned
+by `MutatorWorldState`. Promote the runtime to a capability the world owns whether or
+not the mutator is enabled, with a `@ModApi` facade a character calls from
+`onAbilityActivate`. The facade takes a mode (`HOMING`, `INSTAGIB`) and keeps native hit
+resolution, target precedence, the forward-dash fallback and the rewind snapshot. Mutator
+Lab becomes one client of the same facade. Super/Hyper form selects `INSTAGIB`
+(see W6). Regenerate the Mod API signature pin.
+
+### W6 — Super and Hyper form for mod characters (L)
+
+`CharacterDefinition` rejects `supportsSuperForm` for mod keys, and
+`SuperStateController.transformationSupported()` gates on it. Removing the rejection is
+not enough: `Sonic3kSuperStateController` picks the form tier by `instanceof Tails` /
+`instanceof Knuckles`, so a mod sprite would become Hyper Sonic with Sonic's palettes
+and stars.
+
+Add a `SuperFormProfile` to the character contract:
+
+- form tiers the character supports (Super; Hyper in S3K with the Super Emeralds);
+- super art: canonical animation sheet for the super poses, including the transform
+  animation;
+- palette cycles per tier, dry and underwater, as frame tables;
+- super physics profile;
+- Hyper extras: after-image and star effects, and the Hyper double-jump. For this
+  character the Super/Hyper ability is the Instagib homing strike.
+
+Tier selection moves from `instanceof` to the profile. Per game:
+
+- **S2:** Super with seven Chaos Emeralds and 50 rings, native ring drain, music and
+  palette timing.
+- **S3K:** Super with seven Chaos Emeralds; Hyper with seven Super Emeralds. Any route
+  or ending branch that requires Super Sonic must be checked for the character
+  (for example the Doomsday sequence on the Sonic route).
+- **S1:** has no native super form; today the engine offers one only through
+  `CrossGameFeatureProvider`, which needs a donor ROM and supplies Sonic's art. The
+  character instead gets a host-side S1 controller driven entirely by its
+  `SuperFormProfile`, so no donor ROM is needed. The default gate is all six emeralds
+  (`GameStateManager.hasAllEmeralds()` already counts against the game's emerald total)
+  plus 50 rings, with S2-style triggering and ring drain. S1 has no super music, so the
+  default cue is S1's invincibility music. This is a mod-defined rule, not ROM behaviour,
+  and is documented as such.
+
+**Configuration.** Super-form options are declared with the existing `MutatorOption`
+model (choices and checkboxes with LIVE/LOAD/LAUNCH scope) and shown on the host
+settings screen, so no new UI is needed. Proposed options: super form on/off per game,
+the S1 emerald requirement (default 6), the ring requirement (default 50) and the S1
+music cue. S2 and S3K defaults reproduce their native rules.
+
+### W7 — Art pipeline: GPT Image to playable sheets (XL, dominant cost)
+
+Native frame counts for scale: S1 Sonic has 88 mapping frames, S2 214, S3K 251
+(S3K includes super frames); S3K's Blue Sphere set has 24 and the ICZ snowboard set 13.
+With canonical animations (W2) one sheet of about 120–150 normal frames plus the super
+set serves all three games.
+
+Pipeline, as a maintained `ggfmod` preprocessing step:
+
+1. **Model sheet.** Generate a turnaround and key poses from the base design with GPT
+   Image via Codex. Every later generation is image-to-image against this sheet.
+2. **Pose list.** Generate from a manifest that names each canonical animation and its
+   frames, including the slope-angle sets for walk and run. Animated output is for
+   previewing cycles only; timing comes from the native animation scripts.
+3. **Reduce.** Downscale to native size (about 32–48 px tall), quantize to Mega Drive
+   colour (3 bits per channel) and one 15-colour palette shared by every frame, the
+   icon, signpost faces, portrait and special-stage sets. Super palette cycles are
+   authored against this base palette.
+4. **Clean up.** Manual pixel cleanup on every frame; consistency across frames is the
+   main risk with generated art.
+5. **Cut.** Align hotspots (feet on baseline, roll centred), split into mapping pieces
+   of at most 4×4 tiles, and stay within the per-frame DPLC tile budget the converter
+   reports.
+6. **Bake.** `ggfmod convert art --playable` into the v3 sheet with presentation
+   sections.
+
+Art is produced in fallback order: core playable sheet, then HUD/1-up/signpost, then
+special stages, then super set, then continue/portrait, then cutscenes and endings.
+
+### W8 — Example, tutorial and evidence (M)
+
+- `examples/<character>/` with a build script in the Mutator Lab pattern.
+- A `docs/modding` walkthrough from base image to playable character, written as a
+  tutorial, plus updates to `characters.md` and the format docs.
+- Short demo clips per game (normal play, homing, Super/Hyper Instagib, special stage,
+  results).
+- Changelog in `CHANGELOG.0.8.prerelease.md`; mark the delivered backlog items in
+  `docs/modding/BACKLOG.md` (GGFP v3 HUD icon, data-select portrait, mod super form).
+
+## Fallback rule
+
+Until a slot has art, the surface uses today's behaviour. Name text is never left as
+"SONIC" once W4 lands; it always composes from the display name, falling back to the
+baked name only when the ROM font lacks a glyph.
+
+## Validation
+
+- Per game: headless acceptance covering registration, launch, save/reload, disabled-mod
+  fallback, rewind across the ability and across a super transformation.
+- Animation: a test that one sheet resolves walk/run/roll/spring/hurt/death in all three
+  games with native speed timing.
+- Presentation: pixel tests (shared offscreen context) for the HUD name, results name
+  and signpost face in each game, with a negative control showing the stock fallback.
+- Stock parity: Sonic, Tails and Knuckles presentation unchanged in every game, apart
+  from the S2 Tails results correction.
+- Homing facade: the existing `TestHomingAttackMutator` stays green through the
+  refactor; add a character-driven case and a Super Instagib case.
+- Mod API pin and package tests; S3K guard tests from `AGENTS.md`; change-based smoke
+  run against the pre-task develop SHA.
+
+## Characters
+
+| | MICA | TALON |
+|---|---|---|
+| Species | Pangolin | Peregrine falcon courier |
+| Stands in for | Sonic | Tails |
+| Normal colours | Jade scales, sand-cream face and belly, coral-red boots, white gloves | Slate blue-grey, cream barred chest, amber goggles, red-and-white shoes, courier satchel |
+| Super form | Gilded: gold scales | Solar: white-gold plumage, flame wingtips |
+| Generated name letters | S1 HUD: M, A | S1 HUD: T, A, L |
+
+TALON's wings are drawn into his body frames, so he needs no separate appendage sprite
+(the engine's Tails tail renderer stays Tails-only).
+
+### TALON engine notes (phase 2)
+
+- 49 source files test `instanceof Tails`, some in gameplay (sidekick CPU, touch
+  response, launchers, vacuum tubes, several S3K objects and bosses). Each must move to
+  the archetype or a declared capability so a Tails stand-in behaves natively. MICA
+  needs no such audit: a non-Tails, non-Knuckles sprite already takes the Sonic branch.
+- Tails-only animations: flight, flight carrying, flight tired, swim variants, carry.
+- Player-controlled flight is native only in S3K. In S1 and S2 it is a mod-defined
+  capability and is documented as such.
+- Tails-only presentation: Tails results variants, Tails special-stage sets, the data
+  select team portrait, and Tails' ending roles (for example piloting the S2 Tornado).
+
+## Open questions
+
+1. Confirm the S3K large-font inventory by decoding the per-zone title-card art.
+
+## Delivery plan and status
+
+Integration branch: `feature/ai-original-character`, from develop `33c3b8e56`. Lanes
+branch from it as `feature/ai-mica-<lane>` and are merged into it from their reports.
+Per the user's rule, develop receives the work only at a major milestone.
+
+Phase 1 waves:
+
+1. W2 canonical animation sheets; W5 homing ability facade (designed for TALON's
+   divebomb too); W1 three-game skeleton plus W3 underwater palette; W7 art pipeline and
+   MICA's core movement set.
+2. W4 presentation contract (name composer, HUD, results, signpost, 1-up), then W6
+   super form.
+3. Remaining W4 surfaces: special and bonus stages, continue, data select, cutscenes,
+   endings and credits.
+
+Status log (times UTC):
+
+- 2026-11-08: design agreed; wave 1 launched.
