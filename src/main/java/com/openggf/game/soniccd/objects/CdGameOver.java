@@ -415,14 +415,20 @@ public final class CdGameOver {
     public static CdGameOver fromAct3FutureAssets(CdObjectPlacementRuntime runtime,CdR13FutureAssets assets,CdR13ObjectAssets owner,
             DrawObjectCall draw,SubCpuPort sound,DispatchObserver observer,ReceiptGuard guard){
         Objects.requireNonNull(runtime);Objects.requireNonNull(assets);if(!runtime.ownsAct3FutureAssets(assets))throw new IllegalArgumentException("Different R13 GameOver placement");
-        var result=new CdGameOver(runtime,Assets.fromAct3FutureAssets(assets,owner),draw);result.subCpu=Objects.requireNonNull(sound);result.observer=Objects.requireNonNull(observer);result.receiptGuard=Objects.requireNonNull(guard);return result;
+        return withOriginalOperations(runtime,Assets.fromAct3FutureAssets(assets,owner),draw,sound,observer,guard);
+    }
+    /** One shared native body. Assets are comparison DATA; only its private current call and the
+     * source-bound caller's guards admit an operation. This factory grants no World authority. */
+    public static CdGameOver withOriginalOperations(CdObjectPlacementRuntime runtime,Assets assets,
+            DrawObjectCall draw,SubCpuPort sound,DispatchObserver observer,ReceiptGuard guard){
+        var result=new CdGameOver(runtime,assets,draw);result.subCpu=Objects.requireNonNull(sound);result.observer=Objects.requireNonNull(observer);result.receiptGuard=Objects.requireNonNull(guard);return result;
     }
     public boolean isCurrentCall(Object call){return running&&call!=null&&pending==call;}
     public boolean isCurrentPrimitive(Object call){return isCurrentCall(call)&&primitive;}
     public long currentOrdinal(Object call){if(!isCurrentCall(call))throw new IllegalStateException("No original GameOver operation");return ordinal;}
     public Object currentResult(Object call){if(!isCurrentCall(call)||!resultReady||primitive)throw new IllegalStateException("No original completed GameOver operation");return operationResult;}
     private CdObjectState source(){return runtime.pool().state(activeWhole);}
-    private static final class Receipt{List<CdObjectState> expected;int deleted=-1;Receipt(CdObjectPlacementRuntime.Snapshot cut){expected=cut.pool().slots();}}
+    private static final class Receipt{List<CdObjectState> expected;Receipt(CdObjectPlacementRuntime.Snapshot cut){expected=cut.pool().slots();}}
     @FunctionalInterface private interface Operation<T>{T run(Receipt receipt);}
     private <T>T observed(Object call,CdObjectPlacementRuntime.Snapshot cut,Operation<T> operation){
         if(pending!=null)throw new IllegalStateException("Nested GameOver operation");pending=call;ordinal++;resultReady=false;var receipt=new Receipt(cut);
@@ -434,7 +440,7 @@ public final class CdGameOver {
     }
     private void verify(CdObjectPlacementRuntime.Snapshot cut,Receipt receipt){
         runtime.validateRestore(cut);var actual=runtime.capture();if(!actual.status().equals(cut.status())||!java.util.Arrays.equals(actual.savedFlags().copy(),cut.savedFlags().copy()))throw new IllegalStateException("GameOver changed placement/saved nonwrites");
-        for(int n=0;n<96;n++){byte[] expected=n+32==receipt.deleted?new byte[64]:receipt.expected.get(n).copyBytes();if(!java.util.Arrays.equals(expected,actual.pool().slots().get(n).copyBytes()))throw new IllegalStateException("GameOver changed unowned full96 bytes at "+(n+32));}
+        for(int n=0;n<96;n++){byte[] expected=receipt.expected.get(n).copyBytes();if(!java.util.Arrays.equals(expected,actual.pool().slots().get(n).copyBytes()))throw new IllegalStateException("GameOver changed unowned full96 bytes at "+(n+32));}
     }
     private static void suppress(Throwable original,Runnable check){try{check.run();}catch(RuntimeException|Error failure){if(failure!=original)original.addSuppressed(failure);}}
     private void write(CdObjectState output){
@@ -442,7 +448,11 @@ public final class CdGameOver {
         observed(new Publication(cut,source(),before,output),cut,r->{runtime.pool().write(output);r.expected=next.slots();return null;});
     }
     private void deleteStore(int whole){
-        if(observer==null){runtime.pool().deleteObject(whole);return;}var cut=runtime.capture();observed(new Publication(cut,source(),source(),null),cut,r->{runtime.pool().deleteObject(whole);r.deleted=whole;return null;});
+        if(observer==null){runtime.pool().deleteObject(whole);return;}var cut=runtime.capture();
+        // Prepare the existing pool owner's native sixteen-longword clear before any adoption.
+        var staging=CdObjectPool.stagingCopy(cut.pool());staging.deleteObject(whole);var cleared=staging.state(whole);
+        var next=CdObjectPool.overlay(cut.pool(),List.of(cleared));
+        observed(new Publication(cut,source(),source(),null),cut,r->{runtime.pool().write(cleared);r.expected=next.slots();return null;});
     }
     private void writePowerup(GlobalsPort globals,int value){
         if(observer==null){globals.writePowerup(value);return;}var cut=runtime.capture();observed(new ScalarCall(cut,source(),Scalar.POWERUP,value),cut,r->{globals.writePowerup(value);return null;});

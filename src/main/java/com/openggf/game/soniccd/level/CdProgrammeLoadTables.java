@@ -17,7 +17,7 @@ final class CdProgrammeLoadTables {
             this(nativeId,source,address,destination,counter,Optional.of(bytes));
         }
         Palette { Objects.requireNonNull(sourceBytes); }
-        CdAssetBytes bytes() { return sourceBytes.orElseThrow(()->new UnsupportedOperationException("Native zero-address palette read is unavailable")); }
+        public CdAssetBytes bytes() { return sourceBytes.orElseThrow(()->new UnsupportedOperationException("Native zero-address palette read is unavailable")); }
     }
     record Cycle(CdAssetBytes script,CdAssetBytes colors,CycleKind kind) { }
     sealed interface BackgroundData permits DirectCameraData,BackgroundTables { }

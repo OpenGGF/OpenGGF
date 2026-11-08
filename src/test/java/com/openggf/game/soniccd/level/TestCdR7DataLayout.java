@@ -103,21 +103,23 @@ class TestCdR7DataLayout {
     }
     @ParameterizedTest @EnumSource(CdR7DataLayout.Programme.class)
     void commonLoadParserAdmitsSixExactFormatsAndRejectsFourNamedBoundaries(CdR7DataLayout.Programme p)throws Exception {
-        var r=actual().readers().get(p);var boundary=CdR7ProgrammeProfiles.loadBoundary(p);
-        if(boundary.isPresent()) {
-            for(int i=0;i<2;i++)assertEquals(boundary.orElseThrow(),assertThrows(UnsupportedOperationException.class,r::loadTables).getMessage());
-            return;
-        }
+        // Historical selector retained: the four named gates now parse immutable DATA.
+        var r=actual().readers().get(p);assertTrue(CdR7ProgrammeProfiles.loadBoundary(p).isEmpty());
         var tables=r.loadTables();assertEquals(p.palettes().size(),tables.palettes().size());
-        for(var palette:tables.palettes())assertEquals((palette.longwordCounter()+1L)*4,palette.bytes().length());
-        boolean mirror=List.of(CdR7DataLayout.Programme.R71A,CdR7DataLayout.Programme.R72A).contains(p);
-        assertEquals(mirror?CdProgrammeDefinition.CycleProgramme.THREE_MIRRORED:CdProgrammeDefinition.CycleProgramme.SOURCE_RTS,tables.cycleProgramme());
-        assertEquals(mirror?3:0,tables.cycles().size());
+        for(var palette:tables.palettes()) {
+            if(palette.sourceBytes().isPresent())assertEquals((palette.longwordCounter()+1L)*4,palette.bytes().length());
+            else assertThrows(UnsupportedOperationException.class,palette::bytes);
+        }
+        boolean mirror=List.of(CdR7DataLayout.Programme.R71A,CdR7DataLayout.Programme.R72A).contains(p),gated=p.name().endsWith("D");
+        assertEquals(gated?CdProgrammeDefinition.CycleProgramme.SOURCE_ACT_GATED:mirror?CdProgrammeDefinition.CycleProgramme.THREE_MIRRORED:CdProgrammeDefinition.CycleProgramme.SOURCE_RTS,tables.cycleProgramme());
+        assertEquals(gated?7:mirror?3:0,tables.cycles().size());
         for(var cycle:tables.cycles()) {
-            int count=cycle.script().unsignedByte(1);assertEquals(2+count*2,cycle.script().length());assertEquals(count*4,cycle.colors().length());
+            int count=cycle.script().unsignedByte(1);assertEquals(2+count*2,cycle.script().length());
+            if(mirror)assertEquals(count*4,cycle.colors().length()); // D retains canonical DATA, not a live read-hull promise.
         }
         boolean camera=List.of(CdR7DataLayout.Programme.R71A,CdR7DataLayout.Programme.R71B,CdR7DataLayout.Programme.R72A,CdR7DataLayout.Programme.R72B).contains(p);
         if(camera)assertEquals(2,((CdProgrammeDefinition.CameraSections)tables.sectionProgramme()).rows().size());
+        else if(p.name().startsWith("R73"))assertSame(CdProgrammeDefinition.NoSections.INSTANCE,tables.sectionProgramme());
         else assertEquals(new CdProgrammeDefinition.InitQueueUpdateRts(2),tables.sectionProgramme());
         var bg=(CdProgrammeLoadTables.BackgroundTables)tables.backgroundProgramme();assertEquals(2,bg.tables().size());assertTrue(bg.rowSelectors().isPresent());
         assertThrows(UnsupportedOperationException.class,tables::sections);assertThrows(UnsupportedOperationException.class,tables::backgroundPointers);
@@ -130,7 +132,8 @@ class TestCdR7DataLayout {
             assertEquals((row.counter()+1L)*4,row.declaredReadBytes());
             if(row.unmapped()) {
                 assertEquals(5,row.slot());assertEquals(0,row.sourceAddress());assertEquals(0,row.destination());assertEquals(65535,row.counter());assertEquals(262144,row.declaredReadBytes());
-                assertThrows(IllegalArgumentException.class,()->p.range("PaletteRead5"));assertTrue(CdR7ProgrammeProfiles.loadBoundary(p).isPresent());
+                assertThrows(IllegalArgumentException.class,()->p.range("PaletteRead5"));assertTrue(CdR7ProgrammeProfiles.loadBoundary(p).isEmpty());
+                var parsed=r.loadTables().palettes().get(5);assertEquals(5,parsed.nativeId());assertTrue(parsed.sourceBytes().isEmpty());assertThrows(UnsupportedOperationException.class,parsed::bytes);
             } else assertEquals(row.declaredReadBytes(),r.view(p.range("PaletteRead"+row.slot())).length());
         }
     }

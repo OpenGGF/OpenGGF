@@ -18,9 +18,9 @@ matching area heading; see the
   their native callback and fault prefixes;1,155 focused checks pass without skips.
   One source-bound World now replaces the R13-only coordinator and drives both
   R13 and R31 through their existing ordinary owners. Selected original-USA CCZ
-  entry now completes434 controller services through Ring, the intro family,
-  guarded Solid publication and the shared native primary death lifecycle,
-  stopping before Game Over ownership on attempted435.
+  entry now completes494 controller services through Ring, the intro family,
+  guarded Solid publication, the shared native primary death lifecycle and
+  original Game Over, stopping before LevelStart reload on attempted495.
   Full/course restore retains
   selected closed state and pixels. Compound Solid preparation faults preserve
   the original native exception; available prefixes publish after preparation;
@@ -53,13 +53,19 @@ matching area heading; see the
   boundaries; real no-section and unavailable-palette metadata does not invent work.
   R13 and R31 now share death-camera stores and lifecycle preparation. The combined
   1,460 checks pass without failures, errors or skips, including315 direct Body cases;
-  no completed Game Over/reload, natural CCZ transition or regional parity is claimed.
+  no completed reload, natural CCZ transition or regional parity is claimed.
   QQZ1 Present/Past terrain and physical R6/R7 placement DATA now use the same
   shared readers and decoders. Metallic Madness's compact188-frame visual DATA
   uses the existing Sonic decoder without padding or a second format algorithm.
   The combined1,100 checks pass without failures, errors or skips; the existing
   sky-colour regression and selected CCZ replay remain qualified. These DATA
   bindings do not admit later-zone gameplay or complete a CCZ reload.
+  Stardust Speedway's ten DATA profiles now parse all authenticated load formats,
+  retaining the genuine unavailable palette slot, real RTS section alternatives
+  and canonical act-gated cycle data. One cached shared Game Over component uses
+  original R31/R13 publications and dirty-slot allocation semantics. The combined
+  1,008 World, component and DATA checks pass without failures, errors or skips;
+  reload and live later-zone palette/section service remain separate.
   CCZ ordinary scheduling now preserves native VBlank/Main order, the old
   selected sprite list and full-word time-stop gating. Private HUD adoption
   retains the real prefix across typed callback failures;175 focused checks

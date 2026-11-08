@@ -8,19 +8,19 @@ import static com.openggf.game.soniccd.level.CdProgrammeDefinition.*;
  * LoadStageData (src/r7/stage_data_load_1a.asm:3-36),
  * CyclePalette (src/r7/palette_cycle_b.asm:3-4),
  * InitSectionGfx (src/r7/section_gfx_3c.asm:3-10).
- * Null palettes and the all-RTS section initializer remain unadmitted table formats.
+ * Zero-address palette DATA and true Init+Update RTS use explicit shared semantic alternatives.
  * All products/ranges remain actual original-media DATA, never live operations.
  */
 final class CdR7ProgrammeProfiles {
     private CdR7ProgrammeProfiles() { }
     record Product(JavaProduct javaProduct,ReadExtent nativeInput,int nativePrepared,int nativeConsumed,
                    int header,int capacity,boolean plc,int catalogueLogical,int catalogueLookahead) { }
-    private record PaletteFact(String key,int destination,int counter) { }
+    private record PaletteFact(Object key,int destination,int counter) { }
     private record BackgroundFact(String key,PointerKind kind,List<Integer> values) { }
     private record CycleFact(String script,String colors) { }
     private record Facts(String products,List<Integer> roots,int bodies,int maximumCount,List<String> encountered,
                          List<PaletteFact> palettes,List<BackgroundFact> background,String rows,
-                         List<CycleFact> cycles,boolean cycleRts,List<SectionRow> sections,
+                         List<CycleFact> cycles,CycleProgramme cycleProgramme,Sections sections,
                          Optional<String> sectionKey,Optional<String> boundary) { }
     private static Product product(String[] w) {
         return new Product(new JavaProduct(new ReadExtent(Integer.parseInt(w[2]),w[5]),Integer.parseInt(w[3]),Integer.parseInt(w[4]),w[6]),
@@ -48,18 +48,16 @@ final class CdR7ProgrammeProfiles {
         b.loadRole(CdProgrammeReader.LoadRole.PLC,p.range("PlcRead"));
         b.loadRole(CdProgrammeReader.LoadRole.PALETTE,p.range("PaletteDirectory"));
         if(f.boundary().isPresent()) { b.loadBoundary=f.boundary().orElseThrow();return; }
-        Sections sections;
-        if(f.sectionKey().isPresent()) {
-            b.loadRole(CdProgrammeReader.LoadRole.SECTIONS,p.range(f.sectionKey().orElseThrow()));
-            sections=new CameraSections(f.sections());
-        } else sections=new InitQueueUpdateRts(2);
+        if(f.sectionKey().isPresent())b.loadRole(CdProgrammeReader.LoadRole.SECTIONS,p.range(f.sectionKey().orElseThrow()));
         var cycles=f.cycles().stream().map(v->{var script=p.range(v.script());var colors=p.range(v.colors());
             return new Cycle(CycleKind.STANDARD,new Slice(script,0,script.length()),new Slice(colors,0,colors.length()));}).toList();
         var background=new PointerTables(f.background().stream().map(v->new Pointers(v.kind(),p.range(v.key()),v.values())).toList(),Optional.of(p.range(f.rows())));
         b.load=new Load(f.roots().size(),f.maximumCount(),f.roots(),f.bodies(),f.encountered().stream().map(k->(Object)p.range(k)).toList(),
-                f.palettes().stream().map(v->new Palette(p.range(v.key()),v.destination(),v.counter())).toList(),cycles,
-                f.cycleRts()?CycleProgramme.SOURCE_RTS:CycleProgramme.THREE_MIRRORED,sections,background);
+                f.palettes().stream().map(v->new Palette(v.key()==UnavailablePaletteSource.ZERO_ADDRESS?v.key():p.range((String)v.key()),v.destination(),v.counter())).toList(),cycles,
+                f.cycleProgramme(),f.sections(),background);
     }
+    // SOURCE_ACT_GATED retains five fixed script/color pairs then both final alternatives.
+    // Canonical table slices are DATA, not qualified native palette read hulls or live cycle operations.
     private static Facts facts(CdR7DataLayout.Programme p) {
         return switch(p) {
             case R71A -> new Facts("""
@@ -112,7 +110,7 @@ final class CdR7ProgrammeProfiles {
                 """,List.of(63668,63682,63762,63668,63836,63910,63918,63762,63762,63762,63762,63762,63762,63762,63762,63762,63926,63762,63934),8,13,List.of("StageGfx","CheckpointGfx","LightsGfxA","MeshGfxA","LightEdgesGfx","TitleCardGfx","TitleCardTextGfx","Spring45Gfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","LaunchGfx","SparksGfx","PathSwapGfx","SwingGfx","BlockGfxA","SpikeBallGfx","SpikeLaunchGfx","AnimalsGfx","RobotTransportGfxA","KabasiraGfx","KanabunGfx","DangoGfx","GoalGfx","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx"),
                 List.of(new PaletteFact("PaletteRead0",64256,31),new PaletteFact("PaletteRead1",64256,31),new PaletteFact("PaletteRead2",64256,31),new PaletteFact("PaletteRead3",64256,7),new PaletteFact("PaletteRead4",64288,23),new PaletteFact("PaletteRead5",64288,23)),
                 List.of(new BackgroundFact("CopiedPlanePointers",PointerKind.COPIED,List.of(16718126,16718126,16718134,16718142)),new BackgroundFact("LivePlanePointers",PointerKind.LIVE,List.of(16774920,16774920,16774928,16774936))),"Scalar21",
-                List.of(new CycleFact("Scalar0","Scalar1"),new CycleFact("Scalar2","Scalar3"),new CycleFact("Scalar4","Scalar5")),false,List.of(new SectionRow(6400,2,5),new SectionRow(65535,4,6)),Optional.of("Sections"),Optional.empty());
+                List.of(new CycleFact("Scalar0","Scalar1"),new CycleFact("Scalar2","Scalar3"),new CycleFact("Scalar4","Scalar5")),CycleProgramme.THREE_MIRRORED,new CameraSections(List.of(new SectionRow(6400,2,5),new SectionRow(65535,4,6))),Optional.of("Sections"),Optional.empty());
             case R71B -> new Facts("""
                 BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b 65536 true 384 384
                 PointsGfx 5 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 65536 true 100 101
@@ -163,7 +161,7 @@ final class CdR7ProgrammeProfiles {
                 """,List.of(63722,63730,63798,63722,63982,63990,63878,63958,63966,63798,63798,63798,63798,63798,63798,63798,63974,63798,63998),10,13,List.of("StageGfx","MeshGfxB","TitleCardGfx","TitleCardTextGfx","Spring45Gfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","LaunchGfx","SparksGfx","PathSwapGfx","SwingGfx","BlockGfxB","SpikeBallGfx","SpikeLaunchGfx","AnimalsGfx","RobotTransportGfxB","KabasiraGfx","DangoGfx","HotaruGfx","HologramGfx","HologramAnimalsGfx","GoalGfx","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx"),
                 List.of(new PaletteFact("PaletteRead0",64256,31),new PaletteFact("PaletteRead1",64256,31),new PaletteFact("PaletteRead2",64256,31),new PaletteFact("PaletteRead3",64256,7),new PaletteFact("PaletteRead4",64288,23),new PaletteFact("PaletteRead5",64288,23)),
                 List.of(new BackgroundFact("CopiedPlanePointers",PointerKind.COPIED,List.of(16718126,16718126,16718134,16718142)),new BackgroundFact("LivePlanePointers",PointerKind.LIVE,List.of(16774920,16774920,16774928,16774936))),"Scalar22",
-                List.of(),true,List.of(new SectionRow(8704,2,7),new SectionRow(65535,6,8)),Optional.of("Sections"),Optional.empty());
+                List.of(),CycleProgramme.SOURCE_RTS,new CameraSections(List.of(new SectionRow(8704,2,7),new SectionRow(65535,6,8))),Optional.of("Sections"),Optional.empty());
             case R71C -> new Facts("""
                 BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b 65536 true 384 384
                 PointsGfx 5 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 65536 true 100 101
@@ -213,7 +211,7 @@ final class CdR7ProgrammeProfiles {
                 """,List.of(63778,63786,63860,63778,63860,63860,63860,63860,63860,63860,63860,63860,63860,63860,63860,63860,63934,63860,63942),5,12,List.of("StageGfx","LightsGfxC","MeshGfxC","TitleCardGfx","TitleCardTextGfx","Spring45Gfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","LaunchGfx","SparksGfx","PathSwapGfx","SwingGfx","BlockGfxC","SpikeBallGfx","SpikeLaunchGfx","AnimalsGfx","GoalGfx","KabasiraGfx","KanabunGfx","HotaruGfx","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx"),
                 List.of(new PaletteFact("PaletteRead0",64256,31),new PaletteFact("PaletteRead1",64256,31),new PaletteFact("PaletteRead2",64256,31),new PaletteFact("PaletteRead3",64256,7),new PaletteFact("PaletteRead4",64288,23),new PaletteFact("PaletteRead5",64288,23),new PaletteFact("PaletteRead6",64288,2)),
                 List.of(new BackgroundFact("CopiedPlanePointers",PointerKind.COPIED,List.of(16718126,16718126,16718134,16718142)),new BackgroundFact("LivePlanePointers",PointerKind.LIVE,List.of(16774920,16774920,16774928,16774936))),"Scalar23",
-                List.of(),true,List.of(),Optional.empty(),Optional.empty());
+                List.of(),CycleProgramme.SOURCE_RTS,new InitQueueUpdateRts(2),Optional.empty(),Optional.empty());
             case R71D -> new Facts("""
                 BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b 65536 true 384 384
                 PointsGfx 5 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 65536 true 100 101
@@ -261,9 +259,9 @@ final class CdR7ProgrammeProfiles {
                 HotaruGfx 8052 1242 86 1241 ad3f4b3f55b15185d49495748f392ab1e5bb786fc6aaebc97d51c85d08965607 0c0d38e11321324ff9c84796ffe7dd2cbc198891ba3b8b6ad11017a9547fa263 1242 88 1242 ad3f4b3f55b15185d49495748f392ab1e5bb786fc6aaebc97d51c85d08965607 65536 true 1240 1241
                 KabasiraGfx 8023 468 59 468 c661df055191141a2f5cf19ef7bc25e23d66c48776c5d4cddb73591b3ec7adae d778c65f3342e294ff83fd247c774ba59e4200dec89dc7a578a7fbfcfbe185a7 468 61 468 c661df055191141a2f5cf19ef7bc25e23d66c48776c5d4cddb73591b3ec7adae 65536 true 467 468
                 """,List.of(63762,63770,63844,63762,63844,63844,63844,63844,63844,63844,63844,63844,63844,63844,63844,63844,63918,63844,63926),5,12,List.of("StageGfx","LightsGfxD","MeshGfxD","TitleCardGfx","TitleCardTextGfx","Spring45Gfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","LaunchGfx","SparksGfx","PathSwapGfx","SwingGfx","BlockGfxD","SpikeBallGfx","SpikeLaunchGfx","AnimalsGfx","GoalGfx","KabasiraGfx","KanabunGfx","HotaruGfx","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx"),
-                List.of(new PaletteFact("PaletteRead0",64256,31),new PaletteFact("PaletteRead1",64256,31),new PaletteFact("PaletteRead2",64256,31),new PaletteFact("PaletteRead3",64256,7),new PaletteFact("PaletteRead4",64288,23),new PaletteFact("PaletteRead6",64288,2)),
+                List.of(new PaletteFact("PaletteRead0",64256,31),new PaletteFact("PaletteRead1",64256,31),new PaletteFact("PaletteRead2",64256,31),new PaletteFact("PaletteRead3",64256,7),new PaletteFact("PaletteRead4",64288,23),new PaletteFact(UnavailablePaletteSource.ZERO_ADDRESS,0,65535),new PaletteFact("PaletteRead6",64288,2)),
                 List.of(new BackgroundFact("CopiedPlanePointers",PointerKind.COPIED,List.of(16718126,16718126,16718134,16718142)),new BackgroundFact("LivePlanePointers",PointerKind.LIVE,List.of(16774920,16774920,16774928,16774936))),"Scalar30",
-                List.of(),false,List.of(),Optional.empty(),Optional.of("R71D palette slot5 null source/destination0/countFFFF; mapped-palette parser has no safe record"));
+                List.of(new CycleFact("Scalar0","Scalar1"),new CycleFact("Scalar2","Scalar3"),new CycleFact("Scalar4","Scalar5"),new CycleFact("Scalar6","Scalar7"),new CycleFact("Scalar10","Scalar11"),new CycleFact("Scalar12","Scalar13"),new CycleFact("Scalar14","Scalar13")),CycleProgramme.SOURCE_ACT_GATED,new InitQueueUpdateRts(2),Optional.empty(),Optional.empty());
             case R72A -> new Facts("""
                 BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b 65536 true 384 384
                 PointsGfx 5 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 65536 true 100 101
@@ -313,7 +311,7 @@ final class CdR7ProgrammeProfiles {
                 """,List.of(65124,65138,65212,65124,65286,65360,65368,65212,65212,65212,65212,65212,65212,65212,65212,65212,65376,65212,65384),8,12,List.of("StageGfx","CheckpointGfx","LightsGfxA","MeshGfxA","TitleCardGfx","TitleCardTextGfx","Spring45Gfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","LaunchGfx","SparksGfx","PathSwapGfx","SwingGfx","BlockGfxA","SpikeBallGfx","SpikeLaunchGfx","AnimalsGfx","RobotTransportGfxA","KabasiraGfx","KanabunGfx","HotaruGfx","GoalGfx","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx"),
                 List.of(new PaletteFact("PaletteRead0",64256,31),new PaletteFact("PaletteRead1",64256,31),new PaletteFact("PaletteRead2",64256,31),new PaletteFact("PaletteRead3",64256,7),new PaletteFact("PaletteRead4",64288,23),new PaletteFact("PaletteRead5",64288,23)),
                 List.of(new BackgroundFact("CopiedPlanePointers",PointerKind.COPIED,List.of(16718126,16718126,16718134,16718142)),new BackgroundFact("LivePlanePointers",PointerKind.LIVE,List.of(16774920,16774920,16774928,16774936))),"Scalar21",
-                List.of(new CycleFact("Scalar0","Scalar1"),new CycleFact("Scalar2","Scalar3"),new CycleFact("Scalar4","Scalar5")),false,List.of(new SectionRow(7936,2,5),new SectionRow(65535,4,6)),Optional.of("Sections"),Optional.empty());
+                List.of(new CycleFact("Scalar0","Scalar1"),new CycleFact("Scalar2","Scalar3"),new CycleFact("Scalar4","Scalar5")),CycleProgramme.THREE_MIRRORED,new CameraSections(List.of(new SectionRow(7936,2,5),new SectionRow(65535,4,6))),Optional.of("Sections"),Optional.empty());
             case R72B -> new Facts("""
                 BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b 65536 true 384 384
                 PointsGfx 5 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 65536 true 100 101
@@ -363,7 +361,7 @@ final class CdR7ProgrammeProfiles {
                 """,List.of(65178,65186,65254,65178,65438,65446,65334,65414,65422,65254,65254,65254,65254,65254,65254,65254,65430,65254,65454),10,13,List.of("StageGfx","MeshGfxB","TitleCardGfx","TitleCardTextGfx","Spring45Gfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","LaunchGfx","SparksGfx","PathSwapGfx","SwingGfx","BlockGfxB","SpikeBallGfx","SpikeLaunchGfx","AnimalsGfx","RobotTransportGfxB","KabasiraGfx","KanabunGfx","HotaruGfx","HologramGfx","HologramAnimalsGfx","GoalGfx","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx"),
                 List.of(new PaletteFact("PaletteRead0",64256,31),new PaletteFact("PaletteRead1",64256,31),new PaletteFact("PaletteRead2",64256,31),new PaletteFact("PaletteRead3",64256,7),new PaletteFact("PaletteRead4",64288,23),new PaletteFact("PaletteRead5",64288,23)),
                 List.of(new BackgroundFact("CopiedPlanePointers",PointerKind.COPIED,List.of(16718126,16718126,16718134,16718142)),new BackgroundFact("LivePlanePointers",PointerKind.LIVE,List.of(16774920,16774920,16774928,16774936))),"Scalar22",
-                List.of(),true,List.of(new SectionRow(8192,2,7),new SectionRow(65535,6,8)),Optional.of("Sections"),Optional.empty());
+                List.of(),CycleProgramme.SOURCE_RTS,new CameraSections(List.of(new SectionRow(8192,2,7),new SectionRow(65535,6,8))),Optional.of("Sections"),Optional.empty());
             case R72C -> new Facts("""
                 BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b 65536 true 384 384
                 PointsGfx 5 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 65536 true 100 101
@@ -413,7 +411,7 @@ final class CdR7ProgrammeProfiles {
                 """,List.of(65234,65242,65316,65234,65316,65316,65316,65316,65316,65316,65316,65316,65316,65316,65316,65316,65390,65316,65398),5,12,List.of("StageGfx","LightsGfxC","MeshGfxC","TitleCardGfx","TitleCardTextGfx","Spring45Gfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","LaunchGfx","SparksGfx","PathSwapGfx","SwingGfx","BlockGfxC","SpikeBallGfx","SpikeLaunchGfx","AnimalsGfx","GoalGfx","KabasiraGfx","KanabunGfx","HotaruGfx","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx"),
                 List.of(new PaletteFact("PaletteRead0",64256,31),new PaletteFact("PaletteRead1",64256,31),new PaletteFact("PaletteRead2",64256,31),new PaletteFact("PaletteRead3",64256,7),new PaletteFact("PaletteRead4",64288,23),new PaletteFact("PaletteRead5",64288,23),new PaletteFact("PaletteRead6",64288,2)),
                 List.of(new BackgroundFact("CopiedPlanePointers",PointerKind.COPIED,List.of(16718126,16718126,16718134,16718142)),new BackgroundFact("LivePlanePointers",PointerKind.LIVE,List.of(16774920,16774920,16774928,16774936))),"Scalar23",
-                List.of(),true,List.of(),Optional.empty(),Optional.empty());
+                List.of(),CycleProgramme.SOURCE_RTS,new InitQueueUpdateRts(2),Optional.empty(),Optional.empty());
             case R72D -> new Facts("""
                 BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b 65536 true 384 384
                 PointsGfx 5 101 29 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db 101 31 101 9c01f8d17db4a5a30267f66d3c1e13d17223af14c6312963b69ab36fb9356176 65536 true 100 101
@@ -461,9 +459,9 @@ final class CdR7ProgrammeProfiles {
                 HotaruGfx 8052 1242 86 1241 ad3f4b3f55b15185d49495748f392ab1e5bb786fc6aaebc97d51c85d08965607 0c0d38e11321324ff9c84796ffe7dd2cbc198891ba3b8b6ad11017a9547fa263 1242 88 1242 ad3f4b3f55b15185d49495748f392ab1e5bb786fc6aaebc97d51c85d08965607 65536 true 1240 1241
                 KabasiraGfx 8023 468 59 468 c661df055191141a2f5cf19ef7bc25e23d66c48776c5d4cddb73591b3ec7adae d778c65f3342e294ff83fd247c774ba59e4200dec89dc7a578a7fbfcfbe185a7 468 61 468 c661df055191141a2f5cf19ef7bc25e23d66c48776c5d4cddb73591b3ec7adae 65536 true 467 468
                 """,List.of(65218,65226,65300,65218,65300,65300,65300,65300,65300,65300,65300,65300,65300,65300,65300,65300,65374,65300,65382),5,12,List.of("StageGfx","LightsGfxD","MeshGfxD","TitleCardGfx","TitleCardTextGfx","Spring45Gfx","SpringGfx","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","LaunchGfx","SparksGfx","PathSwapGfx","SwingGfx","BlockGfxD","SpikeBallGfx","SpikeLaunchGfx","AnimalsGfx","GoalGfx","KabasiraGfx","KanabunGfx","HotaruGfx","ResultsGfx","SignpostGfx","BigRingGfx","BigRingFlashGfx"),
-                List.of(new PaletteFact("PaletteRead0",64256,31),new PaletteFact("PaletteRead1",64256,31),new PaletteFact("PaletteRead2",64256,31),new PaletteFact("PaletteRead3",64256,7),new PaletteFact("PaletteRead4",64288,23),new PaletteFact("PaletteRead6",64288,2)),
+                List.of(new PaletteFact("PaletteRead0",64256,31),new PaletteFact("PaletteRead1",64256,31),new PaletteFact("PaletteRead2",64256,31),new PaletteFact("PaletteRead3",64256,7),new PaletteFact("PaletteRead4",64288,23),new PaletteFact(UnavailablePaletteSource.ZERO_ADDRESS,0,65535),new PaletteFact("PaletteRead6",64288,2)),
                 List.of(new BackgroundFact("CopiedPlanePointers",PointerKind.COPIED,List.of(16718126,16718126,16718134,16718142)),new BackgroundFact("LivePlanePointers",PointerKind.LIVE,List.of(16774920,16774920,16774928,16774936))),"Scalar30",
-                List.of(),false,List.of(),Optional.empty(),Optional.of("R72D palette slot5 null source/destination0/countFFFF; mapped-palette parser has no safe record"));
+                List.of(new CycleFact("Scalar0","Scalar1"),new CycleFact("Scalar2","Scalar3"),new CycleFact("Scalar4","Scalar5"),new CycleFact("Scalar6","Scalar7"),new CycleFact("Scalar10","Scalar11"),new CycleFact("Scalar12","Scalar13"),new CycleFact("Scalar14","Scalar13")),CycleProgramme.SOURCE_ACT_GATED,new InitQueueUpdateRts(2),Optional.empty(),Optional.empty());
             case R73C -> new Facts("""
                 BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b 65536 false 384 384
                 AmyRoseGfx B5 3192 119 3192 00b9182c5b66715c9e285c30442e42905e3d832fbf18386bf9dfb5f9373fed0f a613d5d2f89251a036a05036d143819babe44bd497e64779c1c90a41775c63a9 3193 121 3193 6a6e3a5243ae448e7ac16837f289ea80f11a962b2bd4cd47e34af1c5b78d239a 65536 true 3191 3192
@@ -520,7 +518,7 @@ final class CdR7ProgrammeProfiles {
                 """,List.of(62704,62712,62792,62704,62822,62830,62792,62792,62792,62792,62792,62792,62792,62792,62792,62792,62806,62792,62814),7,13,List.of("StageGfx","MeshGfxC","TitleCardGfx","TitleCardTextGfx","Spring45Gfx","SpikesV4Gfx","BlockGfxC","LampGfxC","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","EggmanGfx","MetalSonicGfx","AmyRoseGfx","ResultsGfx","CapsuleGfx"),
                 List.of(new PaletteFact("PaletteRead0",64256,31),new PaletteFact("PaletteRead1",64256,31),new PaletteFact("PaletteRead2",64256,31),new PaletteFact("PaletteRead3",64256,7),new PaletteFact("PaletteRead4",64288,23),new PaletteFact("PaletteRead5",64288,23),new PaletteFact("PaletteRead6",64288,2)),
                 List.of(new BackgroundFact("CopiedPlanePointers",PointerKind.COPIED,List.of(16718126,16718126,16718134,16718142)),new BackgroundFact("LivePlanePointers",PointerKind.LIVE,List.of(16774920,16774920,16774928,16774936))),"Scalar23",
-                List.of(),true,List.of(),Optional.empty(),Optional.of("R73C InitSectionGfx/UpdateSectionGfx true RTS; no initial queue operation in existing Sections alternatives"));
+                List.of(),CycleProgramme.SOURCE_RTS,NoSections.INSTANCE,Optional.empty(),Optional.empty());
             case R73D -> new Facts("""
                 BigRingFlashGfx 804D 384 36 384 6106d2692b34f73a6d928e651c9547e5dfe2dc00bdb0b4136dc42e603ce0efa7 39e7bb895c1492e9847de7a67ddc61108dc553b9443ad17d61ea5c8b47fdf8b6 385 38 385 e59af60b6dd221ca0b6c993894db9e69567814126686e9f2270bba02e2adf25b 65536 false 384 384
                 AmyRoseGfx B5 3192 119 3192 00b9182c5b66715c9e285c30442e42905e3d832fbf18386bf9dfb5f9373fed0f a613d5d2f89251a036a05036d143819babe44bd497e64779c1c90a41775c63a9 3193 121 3193 6a6e3a5243ae448e7ac16837f289ea80f11a962b2bd4cd47e34af1c5b78d239a 65536 true 3191 3192
@@ -575,9 +573,9 @@ final class CdR7ProgrammeProfiles {
                 MetalSonicGfx 8180 6456 95 6455 3515e157fcc1e433ddedc37b259e848b171e7f96e5ab7338ce35400101391a39 80dccd5b276799fb415366e5a8d5f600f625c79010313437c2035592ac38bd5c 6456 97 6456 3515e157fcc1e433ddedc37b259e848b171e7f96e5ab7338ce35400101391a39 65536 true 6455 6455
                 SpikesV4Gfx 8010 154 38 153 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72 72665dcfa02abb8b558d854148ee7c1d4422316ce3a3caf9a86619ef18ec334b 154 40 154 bbc5f9665364f85c4068ad62d12d2aec7f78b603bca0704534b92c4f82298a72 65536 true 153 153
                 """,List.of(62718,62726,62806,62718,62836,62844,62806,62806,62806,62806,62806,62806,62806,62806,62806,62806,62820,62806,62828),7,13,List.of("StageGfx","MeshGfxD","TitleCardGfx","TitleCardTextGfx","Spring45Gfx","SpikesV4Gfx","BlockGfxD","LampGfxD","HudGfx","MonitorTimeGfx","ExplosionGfx","PointsGfx","FlowerGfx","RingGfx","EggmanGfx","MetalSonicGfx","AmyRoseGfx","ResultsGfx","CapsuleGfx"),
-                List.of(new PaletteFact("PaletteRead0",64256,31),new PaletteFact("PaletteRead1",64256,31),new PaletteFact("PaletteRead2",64256,31),new PaletteFact("PaletteRead3",64256,7),new PaletteFact("PaletteRead4",64288,23),new PaletteFact("PaletteRead6",64288,2)),
+                List.of(new PaletteFact("PaletteRead0",64256,31),new PaletteFact("PaletteRead1",64256,31),new PaletteFact("PaletteRead2",64256,31),new PaletteFact("PaletteRead3",64256,7),new PaletteFact("PaletteRead4",64288,23),new PaletteFact(UnavailablePaletteSource.ZERO_ADDRESS,0,65535),new PaletteFact("PaletteRead6",64288,2)),
                 List.of(new BackgroundFact("CopiedPlanePointers",PointerKind.COPIED,List.of(16718126,16718126,16718134,16718142)),new BackgroundFact("LivePlanePointers",PointerKind.LIVE,List.of(16774920,16774920,16774928,16774936))),"Scalar30",
-                List.of(),false,List.of(),Optional.empty(),Optional.of("R73D palette slot5 null source/destination0/countFFFF; mapped-palette parser has no safe record; InitSectionGfx/UpdateSectionGfx true RTS; no initial queue operation in existing Sections alternatives"));
+                List.of(new CycleFact("Scalar0","Scalar1"),new CycleFact("Scalar2","Scalar3"),new CycleFact("Scalar4","Scalar5"),new CycleFact("Scalar6","Scalar7"),new CycleFact("Scalar10","Scalar11"),new CycleFact("Scalar12","Scalar13"),new CycleFact("Scalar14","Scalar13")),CycleProgramme.SOURCE_ACT_GATED,NoSections.INSTANCE,Optional.empty(),Optional.empty());
         };
     }
 }

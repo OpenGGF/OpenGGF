@@ -102,7 +102,7 @@ class TestSonicCdAct3FutureDeathCameraWorld {
             f.core.service(0); // The newly admitted native lives-remain Init consumes its actual ID3B visit and deletes it.
             assertArrayEquals(new byte[64],pool.state(32).copyBytes());
             assertEquals(8,f.core.state().level().powerup());assertEquals(0,f.core.state().level().timeOver());
-            assertEquals(new SonicCdGameModule.PastR13GameOverSubCpu(CdGameOver.SubCpuCommand.SCMD_FADEPCM),f.host.sounds().getLast());
+            assertEquals(new SonicCdGameModule.PastGameOverSubCpu(CdGameOver.SubCpuCommand.SCMD_FADEPCM),f.host.sounds().getLast());
             for(int i=1;i<96;i++)assertEquals(before.slots().get(i),pool.capture().slots().get(i));
             assertEquals(ring.lives()-1,rawGlobals(f.host).ring().lives());assertEquals((ring.updateHudLives()+1)&255,rawGlobals(f.host).ring().updateHudLives());
             assertEquals(0,f.core.state().level().updateHudTime());assertEquals(8,f.frame.state().motion().routine());

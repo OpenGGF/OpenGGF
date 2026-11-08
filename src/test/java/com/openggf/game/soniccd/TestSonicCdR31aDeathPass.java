@@ -24,11 +24,11 @@ class TestSonicCdR31aDeathPass {
     // Harness bottom=$1000: $1101 is the first WORD strictly beyond bottom+$100.
     private static void full(TestSonicCdR31aObjectPass.Harness h){for(int w=32;w<128;w++)h.placement.pool().write(h.placement.pool().state(w).moveByte(ID,3).moveWord(X_FRACTION,w*257));}
     private static boolean suppressed(Throwable root,Throwable expected){return Arrays.stream(root.getSuppressed()).anyMatch(e->e==expected);}
-    @Test void actualGonePublishesDirtyFirstFreeAndStopsAtItsPhysicalGameOverVisit()throws Exception{
+    @Test void actualGonePublishesDirtyFirstFreeAndItsPhysicalGameOverDeletesWhenLivesRemain()throws Exception{
         try(var h=h(6,0x1101,0)){
             h.placement.pool().write(h.placement.pool().state(32).moveWord(X_FRACTION,0xCAFE).moveByte(SUBTYPE,0xA5));var before=h.placement.capture();h.service();
-            var stop=assertThrows(SonicCdR31aObjectPass.Unowned.class,h::walk);assertEquals(SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY,stop.boundary());assertEquals(32,stop.wholeIndex());assertEquals(0x3B,stop.value());
-            assertEquals(before.pool().slots().getFirst().moveByte(ID,0x3B),h.placement.pool().state(32));for(int n=1;n<96;n++)assertEquals(before.pool().slots().get(n),h.placement.pool().capture().slots().get(n));
+            h.walk();
+            assertArrayEquals(new byte[64],h.placement.pool().state(32).copyBytes());assertEquals(8,h.cut.core().level().powerup());assertEquals(List.of(new SonicCdGameModule.PastGameOverSubCpu(CdGameOver.SubCpuCommand.SCMD_FADEPCM)),h.cut.sounds());for(int n=1;n<96;n++)assertEquals(before.pool().slots().get(n),h.placement.pool().capture().slots().get(n));
             assertEquals(8,h.frame.state().motion().routine());assertEquals(60,h.frame.state().timers().reset());assertEquals(2,h.cut.ring().lives());assertEquals(1,h.cut.ring().updateHudLives());assertEquals(1,h.primaryPublications);
             assertThrows(IllegalStateException.class,h.lastPrimary::applyNative);assertThrows(IllegalStateException.class,h::walk);
         }

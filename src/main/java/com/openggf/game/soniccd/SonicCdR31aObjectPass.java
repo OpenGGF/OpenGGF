@@ -55,11 +55,11 @@ final class SonicCdR31aObjectPass {
         Boundary boundary(){return boundary;}int wholeIndex(){return wholeIndex;}int value(){return value;}
     }
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL,CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM }
+    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL,CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM,GAME_OVER }
     private static final class Dispatch {
         final Kind kind;final int whole,routine;final Object body;final Thread thread=Thread.currentThread();
         final Set<Object> calls=Collections.newSetFromMap(new IdentityHashMap<>());
-        ReadFrame frame;Cut cut;boolean drawn,fm;int titleOrder;CdMonitor.PrefixSolidCut solidCut;
+        ReadFrame frame;Cut cut;boolean drawn,fm;int titleOrder;long gameOverOrdinal;CdGameOver.Result gameOverResult;CdMonitor.PrefixSolidCut solidCut;
         Dispatch(Kind k,int w,int r,Object b){kind=k;whole=w;routine=r;body=b;}
     }
     private record ReadFrame(CdPlayerBody.State state,CdPlayerBody.Environment environment,
@@ -73,6 +73,8 @@ final class SonicCdR31aObjectPass {
         private final CdObjectPool.Snapshot poolOutput;
         private final CdPlayerFrameRuntime.ObjectSolidPublication frameOutput;
         private final boolean introPalette=intro!=null&&intro.op==IntroOp.PALETTE;
+        private final GameOverOperation gameOverOwner=gameOverOperation;
+        private final CdGameOver.ScalarCall gameOverScalar=gameOverOwner!=null&&gameOverOwner.call instanceof CdGameOver.ScalarCall c?c:null;
         private final Thread thread=Thread.currentThread();private boolean applied;
         // BEGIN original primary drain flag publication 20261107.
         private Boolean nativeScreenFlag;private ReadFrame screenReady;
@@ -88,7 +90,13 @@ final class SonicCdR31aObjectPass {
             if(p!=null)placement.pool().validateRestore(p);if(f!=null)frame.validatePreparedObjectSolidPublication(f);
         }
         SonicCdR31aObjectPass owner(){return SonicCdR31aObjectPass.this;}Cut expected(){return expected;}Cut next(){return next;}boolean introPalette(){return introPalette;}
-        void validateBefore(){currentAdoption(this);requireCut(expected);requireFrame(before);requirePlacement(placed);
+        CdGameOver.ScalarCall gameOverScalar(){
+            if(gameOverScalar!=null){requireGameOverOperation(gameOverOwner);if(!gameOver.isCurrentPrimitive(gameOverScalar)||!gameOverOwner.used)throw new IllegalStateException("No original Game Over scalar adoption");}
+            return gameOverScalar;
+        }
+        void validateBefore(){currentAdoption(this);
+            if(gameOverOwner!=null){requireGameOverOperation(gameOverOwner);if(!gameOverOwner.prepared||!gameOverOwner.used||!gameOver.isCurrentPrimitive(gameOverOwner.call))throw new IllegalStateException("Expired Game Over primitive adoption");}
+            requireCut(expected);requireFrame(before);requirePlacement(placed);
             if(poolOutput!=null)placement.pool().validateRestore(poolOutput);
             if(frameOutput!=null)frame.validatePreparedObjectSolidPublication(frameOutput);}
         void applyNative(){validateBefore();
@@ -105,6 +113,7 @@ final class SonicCdR31aObjectPass {
             }
             // END original primary drain flag application 20261107.
             applied=true;
+            if(gameOverOwner!=null){gameOverOwner.current=next;if(poolOutput!=null)gameOverOwner.reached=poolOutput;}
         }
     }
     /** Only the original Frame producer can create this synchronous handoff. */
@@ -255,6 +264,8 @@ final class SonicCdR31aObjectPass {
     private final CdR31IntroAssets introAssets;private final CdIntroSpikes spikes;private final CdAmyRose amy;private final CdMetalSonic metal;private final CdRollTunnel roll;private final CdSpinTunnelTag despawn;
     private final CdR31aSolidsSource solidsSource;private final CdR31SolidHazardAssets solidsData;
     private final CdCcSpikes ccSpikes;private final CdBlock block;private final CdHiddenBlock hidden;private final CdMetalPlatform metalPlatform;private final CdDoor door;private final CdFireShooter fire;private final CdDrumPlatform drum;
+    private final CdR31aGameOverSource gameOverSource;private final CdGameOver gameOver;
+    private GameOverOperation gameOverOperation;
     private P2Invocation p2;
     private IntroInvocation intro;private IntroPlcSubmission introPlc;
     private Phase phase=Phase.READY;private CdObjectDrawQueue queue;private Dispatch dispatch;
@@ -270,6 +281,16 @@ final class SonicCdR31aObjectPass {
             throw new IllegalArgumentException("Exact retained original R31 assets/Frame/placement/common metadata required");
         mappings=CdObjectMappings.fromR31aAssets(assets,common);
         ring=CdRing.fromR31aAssets(placement,assets,common);
+        gameOverSource=CdR31aGameOverSource.fromAssets(assets);
+        gameOver=CdGameOver.withOriginalOperations(placement,gameOverSource.data(),this::gameOverDraw,this::gameOverSound,
+            new CdGameOver.DispatchObserver(){
+                public void beforeOperation(Object call){beforeGameOver(call);}
+                public void afterOperation(Object call){afterGameOver(call);}
+                public void failedOperation(Object call,Throwable original){failedGameOver(call);}
+            },new CdGameOver.ReceiptGuard(){
+                public void prepared(Object call){var op=currentGameOver(call);verifyGameOver(op,false);op.prepared=true;}
+                public void completed(Object call){var op=currentGameOver(call);verifyGameOver(op,true);if(!op.after)throw new IllegalStateException("Missing original Game Over result");checkpoint();gameOverOperation=null;}
+            });
         introAssets=CdR31IntroAssets.fromAssets(assets);spikes=new CdIntroSpikes(introAssets);amy=new CdAmyRose(introAssets);metal=new CdMetalSonic(introAssets);roll=new CdRollTunnel(CdRollTunnel.Assets.fromAssets(introAssets));despawn=new CdSpinTunnelTag(new CdSpinTunnelTag.Assets(introAssets.rollMappings()));
         solidsSource=CdR31aSolidsSource.fromAssets(assets);solidsData=solidsSource.data();ccSpikes=new CdCcSpikes(solidsData);block=new CdBlock(solidsData);hidden=new CdHiddenBlock(solidsData);metalPlatform=new CdMetalPlatform(solidsData);door=new CdDoor(solidsData);fire=new CdFireShooter(solidsData);drum=new CdDrumPlatform(solidsData);
         originalTerrain=assets.terrain();terrain=CdPlayerTerrain.fromStageTerrain(originalTerrain);solid=new CdSolidObject(CdPlayerMovement.fromStageSource(frame.stageSource()));
@@ -310,7 +331,7 @@ final class SonicCdR31aObjectPass {
                 finally{dispatch=null;}
             }phase=Phase.WALKED;
         }catch(RuntimeException|Error original){phase=Phase.FAILED;queue.close();throw original;}
-        finally{walkingThread=null;dispatch=null;primaryPending=null;pending=null;plcPending=null;primaryDraw=null;intro=null;introPlc=null;}
+        finally{walkingThread=null;dispatch=null;primaryPending=null;pending=null;plcPending=null;primaryDraw=null;intro=null;introPlc=null;gameOverOperation=null;}
     }
     CdObjectDrawQueue.CpuSat finishDraw(CdObjectDrawQueue.DrawCameras cameras){
         if(phase!=Phase.WALKED||busy()||dispatch!=null)throw new IllegalStateException("No complete R31 walk to drain");
@@ -322,10 +343,15 @@ final class SonicCdR31aObjectPass {
         }catch(RuntimeException|Error original){phase=Phase.FAILED;queue.close();throw original;}finally{walkingThread=null;}
     }
     void discard(){if(busy()||phase==Phase.WALKING||phase==Phase.DRAINING||dispatch!=null)throw new IllegalStateException("Active R31 pass");if(queue!=null)queue.close();queue=null;phase=Phase.DISCARDED;}
-    private boolean busy(){return p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
-    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;};}
+    private boolean busy(){return gameOverOperation!=null||p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
+    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;case GAME_OVER->gameOver;};}
     private void execute(Kind kind,int w,int levelFrames){var c=read();var e=frame.environment();var g=e.movement().gates();switch(kind){
         case PRIMARY->runPrimary(levelFrames);
+        case GAME_OVER->{var result=gameOver.run(w,new CdGameOver.GlobalsPort(){
+            public CdGameOver.Globals read(){var op=gameOverPrimitive(CdGameOver.ReadCall.class);var current=op.current;return new CdGameOver.Globals(current.ring().lives(),current.core().level().powerup(),current.core().level().timeOver());}
+            public void writePowerup(int value){gameOverStore(CdGameOver.Scalar.POWERUP,value);}
+            public void writeTimeOver(int value){gameOverStore(CdGameOver.Scalar.TIME_OVER,value);}
+        });if(result!=dispatch.gameOverResult||!result.state().equals(placement.pool().state(w))||gameOverOperation!=null)throw new IllegalStateException("No original Game Over completion");}
         case CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM->runP2(kind,w);
         case INTRO,METAL,AMY,HEART,EXHAUST,ROLL->runIntro(kind,w);
         case HUD->hud.runLive(w,new CdReservedHud.LiveGlobals(e.globals().debugCheat(),c.ring().rings(),e.globals().timeAttackMode(),g.timeWarpDirection(),e.globals().timeWarpTimer(),levelFrames,this::vIntLow));
@@ -344,6 +370,75 @@ final class SonicCdR31aObjectPass {
         case MONITOR->{var result=monitor.runPast(w,monitorReads(),new CdMonitor.SolidInputs(primary(),gates(),solidGlobals()));
             if(!result.state().equals(placement.pool().state(w))||!result.finalPlayer().equals(primary())||!result.finalGlobals().equals(solidGlobals()))throw new IllegalStateException("Incomplete genuine Monitor return");}
     }}
+    /** Private producer/cursor scope. Public DTO equality never admits an operation. Pool values
+     * compare complete96/status/saved; Frame compares the complete pair plus display/art/clock.
+     * Same-value/change-and-restore interference is outside this synchronous value-CAS contract. */
+    private final class GameOverOperation {
+        final Object call;final long ordinal;final Thread thread=Thread.currentThread();
+        final CdObjectPlacementRuntime.Snapshot placed;final ReadFrame frameBefore;
+        final CdObjectPool.Snapshot output;Cut current;CdObjectPool.Snapshot reached;
+        boolean prepared,used,after;
+        GameOverOperation(Object call,CdObjectPlacementRuntime.Snapshot placed){
+            this.call=call;this.placed=placed;ordinal=gameOver.currentOrdinal(call);frameBefore=readFrame();current=read();reached=placed.pool();
+            if(call instanceof CdGameOver.Publication c){
+                if(c.before()!=placement.pool().state(c.before().identity().wholeIndex()))throw new IllegalArgumentException("Stale original Game Over store");
+                if(c.output()==null){var staging=CdObjectPool.stagingCopy(placed.pool());staging.deleteObject(dispatch.whole);output=staging.capture();}
+                else output=CdObjectPool.overlay(placed.pool(),List.of(c.output()));
+            }else output=null;
+        }
+    }
+    private void requireGameOverOperation(GameOverOperation op){
+        if(op==null||op!=gameOverOperation||op.thread!=Thread.currentThread()||walkingThread!=Thread.currentThread()
+                ||phase!=Phase.WALKING||dispatch==null||dispatch.kind!=Kind.GAME_OVER||dispatch.body!=gameOver
+                ||!gameOverSource.owns(assets)||!gameOver.isCurrentCall(op.call)||gameOver.currentOrdinal(op.call)!=op.ordinal
+                ||dispatch.gameOverOrdinal!=op.ordinal)throw new IllegalStateException("No private original Game Over operation");
+        guard();
+    }
+    private GameOverOperation currentGameOver(Object call){var op=gameOverOperation;requireGameOverOperation(op);if(op.call!=call)throw new IllegalArgumentException("Foreign Game Over operation");return op;}
+    private void verifyGameOver(GameOverOperation op,boolean returned){
+        requireGameOverOperation(op);requireFrame(op.frameBefore);requireCut(op.current);
+        requirePlacementOutput(op.placed,returned&&op.output!=null?op.output:op.reached);
+    }
+    private void beforeGameOver(Object call){
+        requireKind(Kind.GAME_OVER);if(gameOverOperation!=null||!gameOver.isCurrentCall(call)
+                ||gameOver.currentOrdinal(call)!=dispatch.gameOverOrdinal+1)throw new IllegalStateException("Game Over operation reentry/cursor");
+        CdObjectPlacementRuntime.Snapshot cut;CdObjectState source;
+        if(call instanceof CdGameOver.Publication c){cut=c.cut();source=c.source();}
+        else if(call instanceof CdGameOver.ReadCall c){cut=c.cut();source=c.source();}
+        else if(call instanceof CdGameOver.ScalarCall c){cut=c.cut();source=c.source();}
+        else if(call instanceof CdGameOver.SoundCall c){cut=c.cut();source=c.source();}
+        else if(call instanceof CdGameOver.DrawCall c){cut=c.cut();source=c.source();}
+        else if(call instanceof CdGameOver.CompletionCall c){cut=c.cut();source=c.source();}
+        else throw new IllegalArgumentException("Unknown Game Over native site");
+        requirePlacement(cut);if(source!=placement.pool().state(dispatch.whole))throw new IllegalArgumentException("Foreign original Game Over source64");
+        claim(call);var ready=new GameOverOperation(call,cut);dispatch.gameOverOrdinal=ready.ordinal;gameOverOperation=ready;verifyGameOver(ready,false);
+    }
+    private <T>GameOverOperation gameOverPrimitive(Class<T> type){
+        var op=gameOverOperation;requireGameOverOperation(op);if(!type.isInstance(op.call)||!op.prepared||op.used||!gameOver.isCurrentPrimitive(op.call))throw new IllegalStateException("Wrong/repeated original Game Over primitive");
+        verifyGameOver(op,false);op.used=true;return op;
+    }
+    private void gameOverStore(CdGameOver.Scalar field,int value){
+        var op=gameOverPrimitive(CdGameOver.ScalarCall.class);var call=(CdGameOver.ScalarCall)op.call;
+        if(call.field()!=field||call.value()!=value)throw new IllegalArgumentException("Different original Game Over scalar");
+        var c=op.current;publish(c,copy(c,c.core().level(gameOverLevel(c.core().level(),call)),c.scrollLockWord(),c.cpuSat(),c.completedCpu(),c.sounds()),null,null);
+    }
+    static CdLevelGlobals gameOverLevel(CdLevelGlobals g,CdGameOver.ScalarCall call){
+        return new CdLevelGlobals(g.levelRestart(),g.updateHudTime(),g.checkpoint(),g.spawnMode(),g.plcLoadFlags(),g.flowerCount(),g.fadeEnableDisplay(),call.field()==CdGameOver.Scalar.POWERUP?call.value():g.powerup(),call.field()==CdGameOver.Scalar.TIME_OVER?call.value():g.timeOver());
+    }
+    private void gameOverSound(CdGameOver.SubCpuCommand command){var op=gameOverPrimitive(CdGameOver.SoundCall.class);if(((CdGameOver.SoundCall)op.call).command()!=command)throw new IllegalArgumentException("Different original Game Over command");sound(new SonicCdGameModule.PastGameOverSubCpu(command));}
+    private void gameOverDraw(CdObjectPool pool,CdObjectState.Identity identity){var op=gameOverPrimitive(CdGameOver.DrawCall.class);if(((CdGameOver.DrawCall)op.call).source().identity()!=identity)throw new IllegalArgumentException("Foreign original Game Over Draw identity");drawDynamic(Kind.GAME_OVER,pool,identity);}
+    private void afterGameOver(Object call){var op=currentGameOver(call);verifyGameOver(op,true);
+        if(call instanceof CdGameOver.Publication){op.reached=op.output;op.used=true;}
+        else if(call instanceof CdGameOver.CompletionCall){dispatch.gameOverResult=(CdGameOver.Result)gameOver.currentResult(call);op.used=true;}
+        if(!op.prepared||!op.used||op.after)throw new IllegalStateException("Missing/repeated Game Over primitive return");op.after=true;
+    }
+    private void failedGameOver(Object call){var op=gameOverOperation;if(op==null)return;
+        try{currentGameOver(call);requireFrame(op.frameBefore);requireCut(op.current);
+            // The original pool primitive may have returned before a subsequent observer fault.
+            var actual=placement.pool().capture();if(op.output!=null&&actual.slots().equals(op.output.slots()))requirePlacementOutput(op.placed,op.output);
+            else requirePlacementOutput(op.placed,op.reached);
+        }finally{gameOverOperation=null;}
+    }
     private void runPrimary(int levelFrames){
         requireKind(Kind.PRIMARY);int routine=frame.state().motion().routine();
         if(routine==0){var before=read();var placed=placement.capture();var original=frame.runBody(levelFrames);
@@ -722,6 +817,7 @@ final class SonicCdR31aObjectPass {
         if(w==0){if(id!=1)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.PRIMARY;}
         if(w>=32){var selected=switch(id){case 0x20->Kind.CC_SPIKES;case 0x21->Kind.BLOCK;case 0x22->Kind.HIDDEN;case 0x23->Kind.METAL_PLATFORM;case 0x26->Kind.DOOR;case 0x27->Kind.FIRE;case 0x28->Kind.DRUM;default->null;};if(selected!=null)return selected;if(id==0x0A)throw stop(Boundary.SPRING_CHILD_OWNER,w,id);}
         if(w>=32&&id>=0x30&&id<=0x35)return switch(id){case 0x30->Kind.INTRO;case 0x31->Kind.METAL;case 0x32->Kind.AMY;case 0x33->Kind.HEART;case 0x34->Kind.EXHAUST;default->Kind.ROLL;};
+        if(id==0x3B){if(w<32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.GAME_OVER;}
         if(id==0x3C)return Kind.TITLE;
         if(id==0x10){if(w<32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.RING;}
         if(id==0x1C){if(w>=32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.HUD;}

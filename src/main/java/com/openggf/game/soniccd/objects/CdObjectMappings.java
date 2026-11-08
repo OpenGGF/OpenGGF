@@ -22,6 +22,7 @@ import com.openggf.game.soniccd.level.CdR31aAssets;
 import com.openggf.game.soniccd.level.CdR31aObjectAssets;
 import com.openggf.game.soniccd.level.CdR31IntroAssets;
 import com.openggf.game.soniccd.level.CdR31aSolidsSource;
+import com.openggf.game.soniccd.level.CdR31aGameOverSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -442,9 +443,12 @@ public final class CdObjectMappings implements CdDrawMappings {
      * Existing catalogue factories remain exact; this supplies no selected/current art. */
     public static CdObjectMappings withAct3FutureGameOver(CdObjectMappings base,CdR13FutureAssets assets,CdR13ObjectAssets owner){
         Objects.requireNonNull(base,"existing mapping catalogue");var data=CdGameOver.Assets.fromAct3FutureAssets(assets,owner);
-        var tables=new ArrayList<>(base.tables.values());tables.add(new DeclaredTable(data.gameOverMappingsAddress(),data.mappings(),0,GAME_OVER_FRAMES));
-        tables.add(new DeclaredTable(data.gameOverMappingsAddress(),data.mappings(),CdGameOver.Assets.TIME_OVER_TABLE_OFFSET,GAME_OVER_FRAMES));
+        var tables=new ArrayList<>(base.tables.values());appendGameOver(tables,data);
         return declaredSourceViews(tables,new ArrayList<>(base.staticPieces.values()));
+    }
+    private static void appendGameOver(List<DeclaredTable> tables,CdGameOver.Assets data){
+        tables.add(new DeclaredTable(data.gameOverMappingsAddress(),data.mappings(),0,GAME_OVER_FRAMES));
+        tables.add(new DeclaredTable(data.gameOverMappingsAddress(),data.mappings(),CdGameOver.Assets.TIME_OVER_TABLE_OFFSET,GAME_OVER_FRAMES));
     }
     // END R13 GAME OVER MAPPING JOIN 20261107
 
@@ -492,6 +496,7 @@ public final class CdObjectMappings implements CdDrawMappings {
         tables.add(new DeclaredTable(intro.amyMappings(),intro.amyMappingBytes(),0,14));
         tables.add(new DeclaredTable(intro.rollMappings(),intro.rollMappingBytes(),0,13));
         tables.addAll(CdR31aSolidsSource.fromAssets(assets).mappings());
+        appendGameOver(tables,CdR31aGameOverSource.fromAssets(assets).data());
         return declaredSourceViews(tables, List.of());
     }
     // END R31 COMMON COUNTED METADATA JOIN 20261107

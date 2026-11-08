@@ -1,5 +1,44 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — original Game Over and complete R7 load DATA
+
+R112 qualifies18 exact Java payloads against saved2ca2117c7:1,008 invocations
+across50 classes passed, zero failures, errors or skips. Source before and after
+execution is identical at fingerprint
+`baa3382960a0e4e8659dbddc0e2b2fff9983e0e520ee76cba86c5d3513b65249`.
+The original queue reported813 seconds waiting; the execution callback interval
+is225.084115 seconds. No separately measured Maven-only duration is inferred.
+
+One cached shared CdGameOver now binds R31 as well as R13 through genuine private
+original-operation receipts. Two finite CODE/MAPPINGS views use the current
+closed reader; no older compatibility reader or duplicate algorithm is imported.
+The Root introSolid original-exception guard remains unchanged. Native dirty
+96-slot allocation, reached prefix preservation and full-pair checks remain;
+completed-effect values confer no replay authority.
+
+Fresh selected historical-save CCZ continuation returns494 services, with Game
+Over Init435 returned. Attempt495 stops at genuine LEVEL_FLOW before original
+LevelStart/reload, retaining routine8 and reset0. FULL/course state and selected
+pixel regressions pass. This is the explicit historical-save recipe, not the
+natural R13-to-CCZ transition or an actual completed reload. Original full-route
+21931/first21932 and full-USA then JP/EU obligations remain separate.
+
+All ten R7 immutable DATA profiles now parse their authentic load alternatives.
+Palette slot5 remains address0/destination0/counterFFFF with unavailable bytes;
+the real next slot keeps ID6. R73C/D use genuine NoSections RTS alternatives,
+while the other D profiles retain their queue-2 initializer metadata. Seven
+canonical D-cycle pairs retain both act alternatives and shared source identity;
+these are metadata, without live palette, section or cycle service admission.
+The older public Palette.bytes record accessor contract is restored explicitly.
+Root's newer enum prefix/ordinal10, Definition/Reader, all466 compressed products,
+terrain, physical placement and compact188 contracts remain.
+
+Both first source reviews found no concrete P1/P2 issues within their static
+scope. Author968 distinct Game Over qualification and196 R7 passes remain
+separate provenance; the actual Root1,008-case result establishes this join.
+The next reload and additional R8/R6 terrain work remains isolated, without
+main-checkout mutation, remote publication or broader gameplay certification.
+
 ## 8 November 2026 — shared terrain, placement and compact visual DATA
 
 R111 qualifies20 installed Java payloads on saved30a64eeea with1,100 passing

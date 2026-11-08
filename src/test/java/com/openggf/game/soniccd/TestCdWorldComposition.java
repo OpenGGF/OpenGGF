@@ -120,7 +120,7 @@ import static org.junit.jupiter.api.Assertions.*;
    var lastClosedCore=core.state();var lastClosedActor=frame.state();var lastClosedEnvironment=frame.environment();var lastClosedBank=placement.capture();var lastClosedCpu=host.video().completedCpu();var lastClosedScroll=host.scroll();
    var p2registry=b.mode.getRewindRegistry();var p2full=p2registry.capture();var p2course=p2registry.captureCourse();
    TestSonicCdR31aSelectedProfileLoading.Values p2before=null;byte[] p2pixels=null;int p2replayNext=-1;boolean p2replayed=false;
-   int deathCut=-1;boolean deathReplayed=false;
+   int deathCut=-1;boolean deathReplayed=false,gameOverReplayed=false;
    java.util.Optional<com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat> ringCpu=java.util.Optional.empty();
    for(int n=1;n<=1200;n++){
     try{
@@ -135,6 +135,15 @@ import static org.junit.jupiter.api.Assertions.*;
       for(boolean useCourse:new boolean[]{false,true}){if(useCourse)registry.restoreCourse(course);else registry.restore(full);assertEquals(before,TestSonicCdR31aSelectedProfileLoading.values(b));assertArrayEquals(pixels,TestSonicCdR31aSelectedProfileLoading.draw(b));TestSonicCdR31aSelectedProfileLoading.step(b,8);assertEquals(after,TestSonicCdR31aSelectedProfileLoading.values(b));assertArrayEquals(nextPixels,TestSonicCdR31aSelectedProfileLoading.draw(b));}
       registry.restore(full);deathReplayed=true;exportClosedPicture(b,pixels,"death-first-body-service"+n);
      }
+    }
+    if(!gameOverReplayed&&host.sounds().stream().anyMatch(s->s instanceof SonicCdGameModule.PastGameOverSubCpu command&&command.command()==com.openggf.game.soniccd.objects.CdGameOver.SubCpuCommand.SCMD_FADEPCM)){
+     assertEquals(8,core.state().level().powerup());assertEquals(8,frame.state().motion().routine());assertEquals(60,frame.state().timers().reset());
+     assertEquals(1,host.sounds().stream().filter(SonicCdGameModule.PastGameOverSubCpu.class::isInstance).count());
+     var registry=b.mode.getRewindRegistry();var full=registry.capture();var course=registry.captureCourse();var before=TestSonicCdR31aSelectedProfileLoading.values(b);var pixels=TestSonicCdR31aSelectedProfileLoading.draw(b);
+     TestSonicCdR31aSelectedProfileLoading.step(b,8);var after=TestSonicCdR31aSelectedProfileLoading.values(b);var nextPixels=TestSonicCdR31aSelectedProfileLoading.draw(b);assertEquals(59,frame.state().timers().reset());
+     for(boolean courseScope:new boolean[]{false,true}){if(courseScope)registry.restoreCourse(course);else registry.restore(full);assertEquals(before,TestSonicCdR31aSelectedProfileLoading.values(b));assertArrayEquals(pixels,TestSonicCdR31aSelectedProfileLoading.draw(b));TestSonicCdR31aSelectedProfileLoading.step(b,8);assertEquals(after,TestSonicCdR31aSelectedProfileLoading.values(b));assertArrayEquals(nextPixels,TestSonicCdR31aSelectedProfileLoading.draw(b));}
+     exportClosedPicture(b,nextPixels,"game-over-next-return-service"+(n+1));registry.restore(full);gameOverReplayed=true;exportClosedPicture(b,pixels,"game-over-init-return-service"+n);
+     System.out.println("R31_GAME_OVER_INIT_RETURN service="+n+" level="+core.state().level()+" GameOver_commands="+host.sounds().stream().filter(SonicCdGameModule.PastGameOverSubCpu.class::isInstance).toList()+" CPU="+host.video().completedCpu());
     }
     boolean firstP2=false;
     for(var row:placement.capture().pool().slots())if(row.id()!=0&&row.routine()!=0){boolean added=firstClosedFamilies.putIfAbsent(row.id(),"service="+n+",whole="+row.identity().wholeIndex()+",routine="+row.routine())==null;if(added&&Set.of(0x20,0x21,0x22,0x23,0x26,0x27,0x28).contains(row.id()))firstP2=true;}
@@ -163,23 +172,23 @@ import static org.junit.jupiter.api.Assertions.*;
    }
    // The original failure retires the live Module/Host pair. Read retained Frame/pool
    // comparison metadata only; never re-enter its closed authority merely to report it.
-   System.out.println("R31_DEATH_CONTINUATION completed="+completed+" frontier="+frontier+" PARTIAL_actor="+frame.state()+" PARTIAL_environment="+frame.environment());
-   System.out.println("R31_DEATH_LAST_CLOSED coreLevel="+lastClosedCore.level()+" actor="+lastClosedActor+" environment="+lastClosedEnvironment+" camera="+lastClosedScroll+" CPU="+lastClosedCpu+" bank="+lastClosedBank);
-   System.out.println("R31_DEATH_OBSERVED_RETURNED_FAMILIES "+firstClosedFamilies);
+   System.out.println("R31_GAME_OVER_CONTINUATION completed="+completed+" frontier="+frontier+" PARTIAL_actor="+frame.state()+" PARTIAL_environment="+frame.environment());
+   System.out.println("R31_GAME_OVER_LAST_CLOSED coreLevel="+lastClosedCore.level()+" actor="+lastClosedActor+" environment="+lastClosedEnvironment+" camera="+lastClosedScroll+" CPU="+lastClosedCpu+" bank="+lastClosedBank);
+   System.out.println("R31_GAME_OVER_OBSERVED_RETURNED_FAMILIES "+firstClosedFamilies);
    String captureDir=System.getProperty("soniccd.r31.capture.dir");
    if(captureDir!=null){var text=new StringBuilder("ENGINE observed continuation; completed="+completed+"; attempted="+(completed+1)+"; frontier="+frontier+"\nLAST_CLOSED_actor="+lastClosedActor+"\nLAST_CLOSED_environment="+lastClosedEnvironment+"\nLAST_CLOSED_camera="+lastClosedScroll+"\nLAST_CLOSED_CPU="+lastClosedCpu.map(c->HexFormat.of().formatHex(c.bytes()))+"\nObserved returned dynamic family states="+firstClosedFamilies+"\nPARTIAL_actor="+frame.state()+"\nPARTIAL_environment="+frame.environment()+"\n");
     for(var bank:List.of(lastClosedBank,placement.capture())){text.append(bank==lastClosedBank?"LAST_CLOSED_BANK\n":"PARTIAL_BANK\n");text.append(bank.status()).append("\nSaved=").append(HexFormat.of().formatHex(bank.savedFlags().copy())).append("\n");for(var row:bank.pool().slots())text.append("whole").append(row.identity().wholeIndex()).append('=').append(HexFormat.of().formatHex(row.copyBytes())).append('\n');}
     java.nio.file.Files.writeString(Path.of(captureDir).resolve("continuation-evidence.txt"),text,java.nio.file.StandardOpenOption.CREATE_NEW);
    }
    var ring=placement.pool().state(33);
-   System.out.println("R31_DEATH_PARTIAL whole33="+java.util.HexFormat.of().formatHex(ring.copyBytes())+" status="+placement.status()+" saved="+java.util.HexFormat.of().formatHex(placement.capture().savedFlags().copy()));
+   System.out.println("R31_GAME_OVER_PARTIAL whole33="+java.util.HexFormat.of().formatHex(ring.copyBytes())+" status="+placement.status()+" saved="+java.util.HexFormat.of().formatHex(placement.capture().savedFlags().copy()));
    assertEquals(0,frame.environment().controls().controlLocked());assertEquals(1,core.state().calls().stream().filter(c->c==SonicCdR31aLoadingVisit.Call.TITLE_PLC_APPEND).count());
    assertTrue(p2replayed,"Post-P2 FULL/course next-return and pixels were genuinely replayed");
-   assertTrue(completed>350,"The old death-camera frontier must now return");assertTrue(deathReplayed,"Actual death FULL/course and next-state/pixels replayed");
+   assertTrue(completed>434,"Original Game Over Init must now return");assertTrue(gameOverReplayed,"Actual Game Over FULL/course and next-state/pixels replayed");assertTrue(deathReplayed,"Actual death FULL/course and next-state/pixels replayed");
    if(frontier!=null){
     if(frontier instanceof SonicCdR31aObjectPass.Unowned objectFrontier){
     assertTrue(EnumSet.of(SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY,SonicCdR31aObjectPass.Boundary.SPRING_CHILD_OWNER,SonicCdR31aObjectPass.Boundary.P2_ANIMATION_OWNER,SonicCdR31aObjectPass.Boundary.P2_ART_CLOCK_OWNER,SonicCdR31aObjectPass.Boundary.P2_PARENT_OWNER,SonicCdR31aObjectPass.Boundary.CURRENT_TERRAIN_OWNER).contains(objectFrontier.boundary()),"Only explicit first missing native owner may stop the controller");
-    assertNotEquals(0x10,objectFrontier.value(),"Ring is now owned");if(objectFrontier.boundary()==SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY){assertFalse(objectFrontier.value()>=0x30&&objectFrontier.value()<=0x35,"The complete P5 graph is owned");assertFalse(Set.of(0x20,0x21,0x22,0x23,0x26,0x27,0x28).contains(objectFrontier.value()),"The complete P2 dispatch graph is owned");}if(objectFrontier.boundary()==SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY||objectFrontier.boundary()==SonicCdR31aObjectPass.Boundary.SPRING_CHILD_OWNER)assertEquals(objectFrontier.value(),placement.pool().state(objectFrontier.wholeIndex()).id());
+    assertNotEquals(0x3B,objectFrontier.value(),"Original Game Over is now owned");assertNotEquals(0x10,objectFrontier.value(),"Ring is now owned");if(objectFrontier.boundary()==SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY){assertFalse(objectFrontier.value()>=0x30&&objectFrontier.value()<=0x35,"The complete P5 graph is owned");assertFalse(Set.of(0x20,0x21,0x22,0x23,0x26,0x27,0x28).contains(objectFrontier.value()),"The complete P2 dispatch graph is owned");}if(objectFrontier.boundary()==SonicCdR31aObjectPass.Boundary.OBJECT_FAMILY||objectFrontier.boundary()==SonicCdR31aObjectPass.Boundary.SPRING_CHILD_OWNER)assertEquals(objectFrontier.value(),placement.pool().state(objectFrontier.wholeIndex()).id());
     }else assertEquals(CdWorld.Boundary.LEVEL_FLOW,assertInstanceOf(CdWorld.Unowned.class,frontier).boundary());
     assertEquals(completed+1,frame.environment().globals().levelFrames());assertTrue(frame.closed());
     var beforeState=frame.state();var beforeEnvironment=frame.environment();var beforeClock=frame.vIntClock();var beforePool=placement.capture();
