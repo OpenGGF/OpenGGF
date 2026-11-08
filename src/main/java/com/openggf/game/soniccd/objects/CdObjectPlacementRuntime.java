@@ -176,13 +176,13 @@ public final class CdObjectPlacementRuntime {
     }
 
     /**
-     * Restart ingress for the in-module LevelStart path, used only by the runtime's restart factory: the exact
+     * Explicit original clear/carry ingress for LevelStart; caller owns that native history: the exact
      * carried savedObjFlags bank (2+OBJFLAGSCNT bytes, Main CPU Variables.inc:47-48), every byte including both
      * header IDs. Routine 8's ResetSavedObjFlags already ran (Sonic/Main.asm:2465) and .NormalLoad has no writer;
      * the next SpawnObjects_Init rewrites only the header (Object Spawner.asm:54-55,74,92). The bank is checked
      * before the asset gate; everything else is the cold factory above. Never a restore of another owner's capture.
      */
-    static CdObjectPlacementRuntime fromAssets(CdR11aAssets assets, CdAssetBytes exactSavedBank) {
+    public static CdObjectPlacementRuntime fromAssets(CdR11aAssets assets, CdAssetBytes exactSavedBank) {
         Objects.requireNonNull(exactSavedBank, "exact carried saved-object bank");
         if (exactSavedBank.length() != SAVED_BANK_BYTES) {
             throw new IllegalArgumentException("Carried saved-object bank must be 2+$2FC bytes, was " + exactSavedBank.length());

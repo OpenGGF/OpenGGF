@@ -273,6 +273,21 @@ public final class CdR11aSectionArt {
                 CLEARED, 0, 0, 0, 0, resident, false);
     }
 
+    /** Explicit inactive native values, e.g. the actual original BRAM/MAINVARS clear products.
+     * No DEV preload/clear, source execution, active decoder, or World authority is inferred.
+     * The source-bound caller owns the provenance of every supplied field and current byte. */
+    public State fromInactiveValues(CdR11aCameraArtResidency.State resident,CdAssetBytes table512,
+            int rawSectionWord,CdR11aPlcBuffer.State queue,SavedDecoder saved,
+            int remainingTilesWord,int processBudgetWord,int hintWord,int padWord){
+        Objects.requireNonNull(resident);Objects.requireNonNull(table512);Objects.requireNonNull(queue);Objects.requireNonNull(saved);
+        word(rawSectionWord);word(remainingTilesWord);word(processBudgetWord);word(hintWord);word(padWord);
+        if(remainingTilesWord!=0)throw new IllegalArgumentException("Inactive ingress cannot replace an active typed decoder");
+        if(table512.length()!=512)throw new IllegalArgumentException("Explicit512-byte code table required");
+        return new State(this,rawSectionWord,queue,table512,null,saved,0,processBudgetWord,hintWord,padWord,resident,false);
+    }
+    /** Pure owner/retirement validation, no PLC operation or state repair. */
+    public void validateState(State state){checked(state);}
+
     /** UpdateSectionArt stores the addressed HIGH byte before InitPLC. */
     public State updateSection(State state, int cameraXword) {
         return kernel.updateSection(state, cameraXword);

@@ -1,5 +1,53 @@
 # Implement Sonic CD with complete regional parity
 
+## 8 November 2026 — one original R11/R31 LevelStart sequence
+
+The original selected R11 continuation now consumes the shared semantic
+CdLevelStart entry and normal-load CPU palette operation. The actual R31 caller
+uses the same owners and deletes its displaced inline entry and white-palette
+loop. Existing placement and section-art algorithms own the saved-bank reset,
+inactive clear-product ingress and ClearPLCs. No per-act World, scheduler, Host,
+loader or hardware model is added. R11 reaches NormalLoad before the first
+selector-C store/VSync at LevelStart.WaitPLC (src/Level/Main.asm:148-149,
+native1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff). Selected display/current-art,
+remaining loading, Ready and ordinary service are still unfinished.
+
+The reached immutable prefix and placement snapshot extend the existing actual
+FULL/course pair. The earlier source/World/thread/context/current Frame and
+observed nullable-manager/load guards remain; no manager, generation or clock is
+fabricated. CPU normal/fade palettes remain distinct from displayed colours.
+Original slot0/routine0 and unknown absolute VInt/delta0 do not grant LoadPlayer,
+an actor, a loaded level, Ready or ordinary authority. DEV, R31 World/Frame,
+Spring/Flower, IPX and the measured CCZ observer remain otherwise unchanged.
+
+Independent source review found an unqualified ArrayList call and a NewGame
+lives read before the native reset. Root qualifies the call before Maven. R151b
+then compiles and executes335 cases:320 pass,15 fail with NoSuchElementException,
+zero errors/skips, unchanged source. The correction retains the actually cleared
+ring lives when the selected NewGame path made no lives write; a real selected
+lives write still takes precedence. LevelStart performs its original3/conditional1
+reset only after ResetSavedObjFlags (Main.asm:46-53). No early default3 is inserted.
+The WaitPLC citation is corrected to148-149; frozen author/source reports remain.
+
+The matching R152 normal Maven queue request executes the same335 identities over
+16 whole-class roots/17 physical reports:335 pass, zero failures/errors/skips.
+All15 prior failures now pass. This includes238 loading/entry/lifetime cases and
+97 section-art/placement cases; Boot retains its declared empty outer/12-case
+ActualUsa physical report. No method filtering or test-count relaxation is used.
+Source fingerprint7b6a1cea4b928981f59358d4db53d540a59d9829643d231fcbc91423b0d126dc
+matches before/after. Exact installed Java matches the frozen R152 spec. No
+compiled-class custody, native execution, new pixels, category/full-suite or
+regional completion is claimed.
+
+Both requests use integration_packet.py run with exact external R151b/R152
+handoffs, normal lane, Java25, -Dmse=off, verified media and surfaceless EGL;
+all test execution goes through Maven queue. Queue waits are25s and37s. Callback
+intervals are127.486s and128.708s; separate Maven-only/user/unknown time is not
+established by concise output. Evidence remains under Downloads/Sonic-CD/research;
+no raw evidence or media is committed. MAIN remains untouched, next38c69fae is
+already an ancestor, and no push/merge/PR occurs. Full USA then JP/EU is active.
+
+
 ## 8 November 2026 — measured after-Spring CCZ boundary and healthy engine image
 
 One appended diagnostic observer retains both old LowerRoute cases/imports/helpers

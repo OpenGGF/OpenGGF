@@ -90,16 +90,18 @@ matching area heading; see the
   All ten Stardust Speedway initial terrain DATA profiles now use those shared
   owners as well. Their329 focused checks pass on the queued lean lane, retaining
   the R73C missing block and separate actor/priority/scroll admission boundaries.
-  Original selected R11 entry now consumes its real save/slot/Boot continuation,
-  runs the shared programme Start sequence and constructs only its cleared
-  pre-LevelStart Frame. R31 uses that same Start sequence without a duplicate.
-  The first opened World consumes its preparation even when cancelled before
-  entry; full/course capture and restore require the actual closed Frame,
-  source, thread, context and observed manager/load cut. Actual manager absence
-  stays absent, without a fabricated manager or generation. Across the focused
-  cohort and corrected23-case recheck,228 distinct cases qualify without errors
-  or skips; original failed receipts remain explicit. Genuine R11 LevelStart,
-  loading, Ready, ordinary service and retail gameplay remain separate.
+  Original selected R11 entry consumes its real save/slot/Boot continuation,
+  runs shared Start and LevelStart sequences, and retains its actual cleared
+  Frame, saved-flag reset and CPU palette prefix through NormalLoad. R31 uses
+  those same sequences and palette operation; their displaced duplicate code
+  is removed. Full/course restore retains the reached loading cut and its real
+  Frame, source, thread, context and observed manager/load ownership. Actual
+  manager absence stays absent. NewGame retains the original cleared lives
+  until the native reset writes them. One335-case focused cohort passes with
+  zero failures, errors or skips after reproducing and correcting that early
+  lives read; all15 prior failures now pass. Original failed receipts remain.
+  R11 stops before the first selector-C selected-display/current-art service;
+  completing loading, Ready, ordinary service and retail gameplay remains next.
   The remaining eight CCZ programme DATA profiles now reuse the same reader and
   parser, preserving both original Present producers. Native null-placement
   ranges stop at their six-byte sentinel;295 affected checks pass after an

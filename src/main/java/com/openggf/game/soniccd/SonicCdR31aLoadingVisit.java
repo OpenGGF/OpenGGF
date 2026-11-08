@@ -335,11 +335,19 @@ final class SonicCdR31aLoadingVisit {
     private void levelStart(){
         // Progress is continuation metadata. Live native fields/display/owners survive entry.
         values=values.progress(0,0,values.displayEnabled()).returnKind(ReturnKind.NONE);
-        var p=values.program();values=values.program(p.entry(p.timeStonesByte()==0x7F&&frame.environment().globals().timeAttackMode()==0));frame.beginLevelStart();act(Action.ENTRY_STORES);
-        var l=values.level();boolean fresh=(l.plcLoadFlags()&1)==0;
-        values=values.level(level(l,l.levelRestart(),l.updateHudTime(),fresh?0:l.checkpoint(),l.spawnMode(),l.plcLoadFlags()|1,l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()));
-        if(fresh){values=values.program(values.program().fade(0));act(Action.FRESH_RESET_PREFIX);act(Action.RESET_SAVED_OBJECT_FLAGS);l=values.level();values=values.level(level(l,l.levelRestart(),l.updateHudTime(),l.checkpoint(),0,l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()));act(Action.FRESH_RESET_SUFFIX);}
-        values=values.program(values.program().gameMode(values.program().gameModeByte()|128));artOp(art::clearPlcs);call(Call.CLEAR_PLCS);
+        CdLevelStart.enter(new CdLevelStart.Port(){
+            public void clearDemo(){var p=values.program();values=values.program(new Program(0,p.timeStonesByte(),p.goodFutureByte(),p.usePlayer2Byte(),p.specialStageByte(),p.palFadeFlagsByte(),p.gameModeByte(),p.levelStartedByte(),p.demoDataIndexWord()));}
+            public int timeStones(){return values.program().timeStonesByte();}
+            public int timeAttack(){return frame.environment().globals().timeAttackMode();}
+            public void forceGoodFuture(){var p=values.program();values=values.program(new Program(p.demoModeWord(),p.timeStonesByte(),1,p.usePlayer2Byte(),p.specialStageByte(),p.palFadeFlagsByte(),p.gameModeByte(),p.levelStartedByte(),p.demoDataIndexWord()));}
+            public void entryStores(){values=values.program(values.program().entry(false));frame.beginLevelStart();act(Action.ENTRY_STORES);}
+            public boolean setPlcLoaded(){var l=values.level();boolean loaded=(l.plcLoadFlags()&1)!=0;values=values.level(level(l,l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags()|1,l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()));return loaded;}
+            public void freshPrefix(){values=values.program(values.program().fade(0));var l=values.level();values=values.level(level(l,l.levelRestart(),l.updateHudTime(),0,l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()));act(Action.FRESH_RESET_PREFIX);}
+            public void resetSavedFlags(){act(Action.RESET_SAVED_OBJECT_FLAGS);}
+            public void freshSuffix(){var l=values.level();values=values.level(level(l,l.levelRestart(),l.updateHudTime(),l.checkpoint(),0,l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()));act(Action.FRESH_RESET_SUFFIX);}
+            public void markInitializing(){values=values.program(values.program().gameMode(values.program().gameModeByte()|128));}
+            public void clearPlcs(){artOp(art::clearPlcs);call(Call.CLEAR_PLCS);}
+        });
         boolean white=values.program().specialStageByte()!=0||(frame.environment().movement().gates().timeZone()&128)!=0;
         boolean fade=values.program().specialStageByte()!=0||(values.program().palFadeFlagsByte()&1)!=0;
         if(values.program().specialStageByte()==0)values=values.program(values.program().fade(values.program().palFadeFlagsByte()|1));
@@ -353,7 +361,7 @@ final class SonicCdR31aLoadingVisit {
         else{int lives=observe(host::livesByte);octet(lives);if(lives==0){values=values.level(level(l,l.levelRestart(),l.updateHudTime(),0,0,0,l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver())).program(values.program().fade(0));clearReturn(ReturnKind.NO_LIVES);return;}}
         if(values.program().demoDataIndexWord()==0x800){values=values.program(values.program().demoIndex(0).entry(false).fade(0));returned(ReturnKind.DEMO);return;}
         boolean fill=CdProgramInitialization.requirePalClearFlagBit0(values.initialization())||(frame.environment().movement().gates().timeZone()&128)!=0;
-        values=values.colours(fill?white():zero(128),values.fadePalette(),values.waterPalette(),values.displayedPalette()).phase(Phase.FIRST_PLC);act(Action.NORMAL_LOAD_PALETTE);
+        values=values.colours(CdLevelStart.normalLoadPalette(fill),values.fadePalette(),values.waterPalette(),values.displayedPalette()).phase(Phase.FIRST_PLC);act(Action.NORMAL_LOAD_PALETTE);
     }
     private void clearReturn(ReturnKind kind){values=values.colours(zero(128),values.fadePalette(),values.waterPalette(),values.displayedPalette()).returnKind(kind).phase(Phase.CLEAR_RETURN_WAIT);act(Action.RETURN_CLEAR);}
     private void returned(ReturnKind kind){values=values.returnKind(kind).phase(Phase.RETURNED);call(Call.NATIVE_RTS);}
@@ -441,7 +449,7 @@ final class SonicCdR31aLoadingVisit {
         if(frame.environment().movement().gates().timeZone()!=1)stop(Boundary.ENTRY);
         boolean white=marked;if(!marked){white=CdProgramInitialization.requirePalClearFlagBit0(values.initialization());var i=values.initialization();values=values.initialization(new CdProgramInitialization.State(i.controllerSetupBit(),i.initMarker(),i.versionCache(),CdProgramInitialization.KnownBit.CLEAR));}
         act(Action.ENABLE_FADE_AND_CLEAR_MARKER);if(white)act(Action.FROM_WHITE_INFO);
-        byte[] normal=values.normalPalette().copy();if(white)normal=white().copy();else Arrays.fill(normal,32,128,(byte)0);
+        byte[] normal=values.normalPalette().copy();if(white)normal=CdLevelStart.normalLoadPalette(true).copy();else Arrays.fill(normal,32,128,(byte)0);
         values=values.colours(CdAssetBytes.copyOf(normal),values.fadePalette(),values.waterPalette(),values.displayedPalette()).phase(white?Phase.FROM_WHITE:Phase.FROM_BLACK);
     }
     private void paletteCopy(CdAssetBytes source,int offset,boolean normal){byte[] bytes=(normal?values.normalPalette():values.fadePalette()).copy();System.arraycopy(source.copy(),0,bytes,offset,source.length());values=values.colours(normal?CdAssetBytes.copyOf(bytes):values.normalPalette(),normal?values.fadePalette():CdAssetBytes.copyOf(bytes),values.waterPalette(),values.displayedPalette());}
@@ -480,6 +488,5 @@ final class SonicCdR31aLoadingVisit {
     private static void extent(CdAssetBytes b,int n){if(Objects.requireNonNull(b).length()!=n)throw new IllegalArgumentException("Complete explicit native value required");}
     private static void palette(CdAssetBytes b){extent(b,128);}
     private static CdAssetBytes zero(int n){return CdAssetBytes.copyOf(new byte[n]);}
-    private static CdAssetBytes white(){byte[] b=new byte[128];for(int i=0;i<128;i+=2){b[i]=14;b[i+1]=(byte)238;}return CdAssetBytes.copyOf(b);}
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

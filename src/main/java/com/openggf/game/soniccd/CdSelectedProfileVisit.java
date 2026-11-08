@@ -56,7 +56,7 @@ final class CdSelectedProfileVisit {
     static final class Unowned extends UnsupportedOperationException {
         private final Programme programme;private final Boundary boundary;
         private Unowned(Programme programme){this(programme,Boundary.PROGRAMME_ENTRY);}
-        private Unowned(Programme programme,Boundary boundary){super(boundary==Boundary.R11_LEVEL_START_LOADING?"ORIGINAL_R11_LEVELSTART_LOADING_OWNER":programme==Programme.LATER_ZONE?"SELECTED_LATER_ZONE_RUN_RX_SAVE_OWNER":"SELECTED_"+programme+"_PROGRAMME_ENTRY_OWNER: native cold-clock/level continuation unavailable");this.programme=programme;this.boundary=boundary;}
+        private Unowned(Programme programme,Boundary boundary){super(boundary==Boundary.R11_LEVEL_START_LOADING?"ORIGINAL_R11_FIRST_SELECTOR_C_SELECTED_DISPLAY_AND_CURRENT_ART_OWNER (Main.WaitPLC:148-149); LevelStart prefix retained, not Ready":programme==Programme.LATER_ZONE?"SELECTED_LATER_ZONE_RUN_RX_SAVE_OWNER":"SELECTED_"+programme+"_PROGRAMME_ENTRY_OWNER: native cold-clock/level continuation unavailable");this.programme=programme;this.boundary=boundary;}
         Programme programme(){return programme;}Boundary boundary(){return boundary;}
     }
 
