@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.debug.DebugRenderContext;
@@ -60,7 +62,7 @@ import java.util.logging.Logger;
  * the parent's first phase load).
  */
 public class MCZRotPformsObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements Sonic2NativeDisplaySource, SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj6A owns orbiting platform copies; clockwise/anticlockwise travel is not horizontal facing.
 
     private static final Logger LOGGER = Logger.getLogger(MCZRotPformsObjectInstance.class.getName());
@@ -529,6 +531,19 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     @Override
     public int getPriorityBucket() {
         return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public ObjectSlot nativeDisplaySlot() {
+        ensureInitialized();
+        if (isMtz) throw new IllegalStateException("Native competition crate projection requires MCZ");
+        if (isDestroyed()) return null;
+        // Obj6A_InitSubObject (s2.asm:54213-54220) copies status, not render_flags.
+        // Children run Obj6A_Init (s2.asm:54165-54190), ORing level_fg into cleared
+        // render flags. Their copied status still selects their movement table.
+        int flags=4 | (owner==null ? spawn.renderFlags() & 3 : 0);
+        return new ObjectSlot(0x6A,flags,x & 0xFFFF,y & 0xFFFF,32,32,
+                new Mapping(0x27D30,0),0x61EA,null);
     }
 
     @Override

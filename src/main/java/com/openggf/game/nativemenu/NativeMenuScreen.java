@@ -19,7 +19,7 @@ public interface NativeMenuScreen {
     void reset();
     Exit consumeExit();
 
-    enum Destination { NONE, LEVEL, COMPETITION, TITLE_SCREEN }
+    enum Destination { NONE, LEVEL, COMPETITION, TITLE_SCREEN, SEGA_SCREEN }
 
     /** A launch team applies to this launch only; native options retain emerald progress. */
     record Exit(Destination destination, GameplayLaunchTeam team, boolean resetProgress, int zone, int act) {

@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -37,7 +40,7 @@ import java.util.logging.Logger;
  * - ARZ: 8 fragments, uses level art tiles (0x55, 0x59, 0xA3, 0xA7)
  */
 public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements Sonic2NativeDisplaySource, SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj1F owns a slab and its falling pieces; slope/placement mirroring stays native geometry.
 
     private static final Logger LOGGER = Logger.getLogger(CollapsingPlatformObjectInstance.class.getName());
@@ -522,8 +525,13 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
      * single sprite piece. The piece's x/y offsets provide visual displacement.
      */
     public static class CollapsingPlatformFragmentInstance extends AbstractFallingFragment
-            implements RewindRecreatable {
+            implements Sonic2NativeDisplaySource, RewindRecreatable {
 
+        @Override public ObjectSlot nativeDisplaySlot() {
+            if(isDestroyed()) return null;
+            return new ObjectSlot(0x1F,0x24|(hFlip?1:0)|(vFlip?2:0),getX()&0xFFFF,getY()&0xFFFF,
+                    32,0,new Mapping(fragmentMappingPointer(services(),0x11106,fragmentIndex),0),0x61FA,null);
+        }
         private static final int FRAGMENT_INDEX_MASK = 0x07;
         private static final int CONFIG_SHIFT = 3;
         private static final int CONFIG_MASK = 0x03;
@@ -729,4 +737,18 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
                     r, g, b, left, top, 0, 0));
         }
     }
+
+    // Obj1F_Init (s2.asm:23768-23804); Obj1F_CreateFragments (s2.asm:23868-23912).
+    @Override public ObjectSlot nativeDisplaySlot() {
+        if(isDestroyed()) return null;
+        int address=0x11106;
+        if(inFragmentPhase) address=fragmentMappingPointer(services(),address,0);
+        return new ObjectSlot(0x1F,(inFragmentPhase ? 0x24 : 4)|(hFlip?1:0)|(vFlip?2:0),
+                spawn.x()&0xFFFF,getY()&0xFFFF,32,0,new Mapping(address,inFragmentPhase?0:mappingFrame),0x61FA,null);
+    }
+    private static int fragmentMappingPointer(com.openggf.level.objects.ObjectServices services,int root,int piece) {
+        try { return root+services.romReader().readS16BE(root+2)+2+piece*8; }
+        catch(java.io.IOException e) { throw new java.io.UncheckedIOException(e); }
+    }
+
 }

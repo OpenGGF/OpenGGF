@@ -29,8 +29,7 @@ import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.bumpers.CNZBumperDataLoader;
 import com.openggf.game.sonic2.bumpers.CNZBumperType;
 import com.openggf.game.sonic2.bumpers.CNZNativeBumperTable;
-import com.openggf.game.sonic2.competition.interlace.Sonic2InterlaceVram;
-import com.openggf.game.sonic2.competition.interlace.Sonic2InterlaceVramService;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionArtResidency;
 import com.openggf.game.sonic2.competition.lifecycle.Sonic2CompetitionLifecycle;
 import com.openggf.game.sonic2.objects.Sonic2GameOverCardObjectInstance;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
@@ -186,7 +185,13 @@ class TestSonic2NativeCompetitionHost {
                             PlayerInputState.of(AbstractPlayableSprite.INPUT_DOWN | AbstractPlayableSprite.INPUT_LEFT,
                                     AbstractPlayableSprite.INPUT_LEFT, 0, 0, false, false));
                     input.setLogicalOverride(entrySample);
+                    int incomingVint = com.openggf.game.session.EngineTiming.vIntRunCounter(services).objectClockSeed();
                     host.loadAct(session, zone[0], 0);
+                    assertTrue(host.initialVintRunCount() - incomingVint > 0,
+                            "actual initial PLC/title waits must advance the inherited V-int before initial deformation");
+                    assertEquals(host.initialVintRunCount() + 25, host.context().getObjectManager().getVblaCounter(),
+                            "outer load completion must retain initial waits plus the25 title leave waits");
+                    assertEquals(26, views.preparations, "one leading BuildSprites plus 25 leave iterations");
                     assertEquals(25, driver.nativeSamples, "each real title wait must sample the shared input once");
                     assertEquals(0, input.updates, "the native wait sample port never advances outer input");
                     assertEquals(Sonic2CompetitionPause.convertLogical(entrySample.player1()),
@@ -408,11 +413,11 @@ class TestSonic2NativeCompetitionHost {
         nativeVramOwner(host, session);
     }
 
-    private static Sonic2InterlaceVramService nativeVramOwner(Sonic2NativeCompetitionHost host,
+    private static Sonic2CompetitionArtResidency nativeVramOwner(Sonic2NativeCompetitionHost host,
                                                             Sonic2CompetitionSession session) {
         var mode = host.context();
         var module = mode.getWorldSession().getGameModule();
-        var owner = module.getGameService(Sonic2InterlaceVramService.class);
+        var owner = module.getGameService(Sonic2CompetitionArtResidency.class);
         assertNotNull(owner, "the runtime module must expose its selected physical VRAM owner");
         assertInstanceOf(PlayerDplcDmaSink.class, mode.runtimeArtCoordinator());
         assertNotSame(owner, mode.runtimeArtCoordinator(), "the context needs a stable forwarder across act owners");
@@ -421,7 +426,11 @@ class TestSonic2NativeCompetitionHost {
         var snapshot = owner.capture();
         assertSame(session.player(0), snapshot.sonic(), "Sonic DMA must bind the actual current P1");
         assertSame(session.player(1), snapshot.tails(), "Tails DMA must bind the actual current human P2");
-        assertSame(owner.current(), snapshot.vram());
+        var currentSlots = owner.capture().slots();
+        var snapshotSlots = snapshot.slots();
+        assertEquals(currentSlots.length, snapshotSlots.length);
+        for (int index = 0; index < currentSlots.length; index++)
+            assertSame(currentSlots[index], snapshotSlots[index], "native snapshot shares slot " + index);
         assertEquals(owner.plcService().capture(), snapshot.plc());
         return owner;
     }
@@ -1371,8 +1380,8 @@ class TestSonic2NativeCompetitionHost {
     private record Bank(Sonic2CompetitionResults.Metrics metrics, int lives, int continues,
             int nextLife, Sonic2CompetitionPlayerState.Checkpoint checkpoint, boolean paused, boolean timeOver) { }
 
-    private record NativeArtState(Sonic2InterlaceVramService owner, Sonic2InterlaceVram vram,
-            NemesisPlcQueueSnapshot plc, List<Sonic2InterlaceVramService.DmaTransfer> pending,
+    private record NativeArtState(Sonic2CompetitionArtResidency owner, List<Sonic2CompetitionArtResidency.Slot> slots,
+            NemesisPlcQueueSnapshot plc, List<Sonic2CompetitionArtResidency.Upload> pending,
             int sonicLast, int tailsLast, int tailLast) { }
 
     private static WorldState state(Driver driver) throws Exception {
@@ -1385,11 +1394,11 @@ class TestSonic2NativeCompetitionHost {
         Object bumperState = snapshot.get(NATIVE_BUMPERS);
         if (driver.host.profile().romZone() == 12) assertNotNull(bumperState);
         else assertNull(bumperState, "other native zones do not own CNZ bumper state");
-        assertNotNull(snapshot.get(Sonic2InterlaceVramService.REWIND_KEY),
+        assertNotNull(snapshot.get(Sonic2CompetitionArtResidency.REWIND_KEY),
                 "the stable early art binding must participate in actual registry capture");
         var owner = nativeVramOwner(driver.host, session);
         var art = owner.capture();
-        var nativeArt = new NativeArtState(owner, art.vram(), art.plc(), art.pending(),
+        var nativeArt = new NativeArtState(owner, List.of(art.slots()), art.plc(), art.pending(),
                 art.sonicLast(), art.tailsLast(), art.tailLast());
         var pause = snapshot.get(driver.host.nativePause().key());
         assertNotNull(pause, "the actual pause continuation and consumable exit must be captured");
@@ -1517,18 +1526,11 @@ class TestSonic2NativeCompetitionHost {
             var objects = context.getObjectManager();
             var lifecycle = context.getWorldSession().getGameModule().getGameService(Sonic2CompetitionLifecycle.class);
             assertNotNull(lifecycle);
-            if (objects.getFrameCounter() == 0) {
-                entryVInt = objects.getVblaCounter();
-                lastEntryPass = 0;
-                for (int slot = 0; slot < 2; slot++) {
-                    assertEquals(0, lifecycle.nativeRoutineByte(slot), "the initial view observes actual native Init");
-                    var player = session.player(slot);
-                    assertEquals(0, player.getXSpeed());
-                    assertEquals(0, player.getYSpeed());
-                    assertEquals(0, player.getGSpeed());
-                    assertEquals(0, player.getAngle());
+            if (context.getLevelManager().getFrameCounter() == 0) {
+                if (objects.getFrameCounter() == 1) {
+                    entryVInt = objects.getVblaCounter();
+                    lastEntryPass = 0;
                 }
-            } else if (context.getLevelManager().getFrameCounter() == 0) {
                 if (objects.getFrameCounter() != lastEntryPass) {
                     assertEquals(lastEntryPass + 1, objects.getFrameCounter(),
                             "the actual view must observe the leading pass and each of the 25 native waits");

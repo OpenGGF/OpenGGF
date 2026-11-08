@@ -147,6 +147,7 @@ public class ObjectManager {
         return objectLoopBudget.reaches(slotLayout.lastProcessSlotExclusive());
     }
     private final boolean skipVerticalSpawnLoadFilterForGame;
+    private final ObjectSlotLayout allocationLayout;
 
     final ObjectServices objectServices;
     StageplayObjectDirection stageplayDirection;
@@ -301,6 +302,8 @@ public class ObjectManager {
         this.placementAdmission = new ObjectPlacementAdmission(registry, objectServices);
         this.objectCallbacks = new ObjectCallbackRouter(registry, initialDispatch);
         this.slotLayout = registry != null ? registry.objectSlotLayout() : ObjectSlotLayout.SONIC_1;
+        this.allocationLayout = registry instanceof ObjectManagerInternalAccess.AllocationSemantics semantics
+                ? semantics.allocationLayout() : slotLayout;
         this.nativeSstWord2C = new ObjectNativeSstWord2C(slotLayout.lastProcessSlotExclusive(), this::currentNativeSstOwner, objectCallbacks, () -> rewindReconstructionChildCapture);
         this.windowingStrategy = registry != null
                 ? registry.objectWindowingStrategy()
@@ -344,7 +347,7 @@ public class ObjectManager {
         this.touchResponses = touchResponseTable != null
                 ? new ObjectTouchResponseController(this, touchResponseTable)
                 : null;
-        this.skipVerticalSpawnLoadFilterForGame = slotLayout == ObjectSlotLayout.SONIC_2;
+        this.skipVerticalSpawnLoadFilterForGame = allocationLayout == ObjectSlotLayout.SONIC_2;
         // Initialize bucket arrays
         for (int i = 0; i < BUCKET_COUNT; i++) {
             lowPriorityBuckets[i] = new ArrayList<>();
@@ -982,7 +985,7 @@ public class ObjectManager {
     }
 
     void runNativeCompetitionTitleObjectPass() {
-        initialDispatch.runNativeCompetitionTitleObjectPass(slotLayout, () -> updating);
+        initialDispatch.runNativeCompetitionTitleObjectPass(allocationLayout, () -> updating);
     }
 
     int firstDynamicSlot() {
@@ -1524,7 +1527,7 @@ public class ObjectManager {
     }
 
     private int objectUnloadCameraX(int cameraX) {
-        if (slotLayout != ObjectSlotLayout.SONIC_2) {
+        if (allocationLayout != ObjectSlotLayout.SONIC_2) {
             return cameraX;
         }
         // S2 RunObjects consumes Camera_X_pos_coarse from the previous
@@ -1565,7 +1568,7 @@ public class ObjectManager {
      */
     public void postCameraPlacementUpdate(int postCameraX) {
         if (competitionStreaming.active() || competitionStreaming.upfrontActive()) return;
-        if (slotLayout == ObjectSlotLayout.SONIC_2) {
+        if (allocationLayout == ObjectSlotLayout.SONIC_2) {
             s2LatchedObjectManagerCameraX = postCameraX;
         }
         if (slotLayout.twoAxisCursorPlacement()) {
@@ -1679,6 +1682,8 @@ public class ObjectManager {
         return populationView.hasInlinePlaneSwitcher(spawn);
     }
 
+    ObjectPlaneSwitcherController nativeTeleportPlaneSwitcherState() { return planeSwitchers; }
+
     public int getPlaneSwitcherSideState(ObjectSpawn spawn) {
         if (planeSwitchers == null) {
             return -1;
@@ -1746,6 +1751,10 @@ public class ObjectManager {
      */
     public void drawUnifiedBucketWithPriority(int bucket, GraphicsManager gfx) {
         objectDrawing.drawUnifiedBucketWithPriority(bucket, gfx);
+    }
+
+    ObjectDrawInternalAccess.Drawing nativeDisplayDrawing() {
+        return objectDrawing;
     }
 
     void drawBucketWithSlotEmissions(int bucket, GraphicsManager graphics,
@@ -3445,7 +3454,7 @@ public class ObjectManager {
     private void dispatchDestroyRemoveFromActive(ObjectInstance instance, ObjectSpawn spawn) {
         boolean latchedDestroy = objectCallbacks.call(instance,
                 () -> placement.dispatchDestroyRemoveFromActive(
-                        instance, spawn, slotLayout == ObjectSlotLayout.SONIC_2));
+                        instance, spawn, allocationLayout == ObjectSlotLayout.SONIC_2));
         if (latchedDestroy) {
             if (usesOccurrenceSolidStateKey(instance)) {
                 solidContacts.evictLatchForDestroyedInstance(instance);

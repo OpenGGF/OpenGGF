@@ -16,7 +16,7 @@ import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.WorldSession;
 import com.openggf.game.sonic2.Sonic2GameModule;
-import com.openggf.game.sonic2.competition.interlace.Sonic2InterlaceVramService;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionArtResidency;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.timing.HardwareServiceBoundary;
@@ -61,9 +61,9 @@ class TestSonic2CompetitionArtRuntime {
         runtime.registerRewindAdapters(registry);
         assertEquals(1, delegate.registrations);
         var uninstalled = registry.capture();
-        assertEquals(List.of(Delegate.KEY, Sonic2InterlaceVramService.REWIND_KEY),
+        assertEquals(List.of(Delegate.KEY, Sonic2CompetitionArtResidency.REWIND_KEY),
                 new ArrayList<>(uninstalled.entries().keySet()));
-        assertNotNull(uninstalled.get(Sonic2InterlaceVramService.REWIND_KEY));
+        assertNotNull(uninstalled.get(Sonic2CompetitionArtResidency.REWIND_KEY));
         assertNull(runtime.ownerOrNull());
         assertThrows(IllegalStateException.class, runtime::requireOwner);
         assertThrows(IllegalStateException.class, () -> runtime.playerLoadPlc(null, 1, null));
@@ -108,7 +108,7 @@ class TestSonic2CompetitionArtRuntime {
         retainedSink.playerLoadPlc(firstActors.sonic(), 1, null);
         firstOwner.serviceDmaQueueVBlank();
         assertArrayEquals(rom.readBytes(0x50000, 32),
-                Arrays.copyOfRange(firstOwner.current().bytes(), 0xF000, 0xF020));
+                Arrays.copyOfRange(bytes(firstOwner), 0xF000, 0xF020));
         var retainedFirst = firstOwner.capture();
 
         module.createGame(rom);
@@ -122,7 +122,7 @@ class TestSonic2CompetitionArtRuntime {
         assertNotSame(firstPlc, secondPlc);
         assertSame(secondPlc, secondOwner.plcService());
         assertEquals(secondSubmitted, secondPlc.capture());
-        assertArrayEquals(new byte[65536], secondOwner.current().bytes());
+        assertArrayEquals(inheritedStandardPatterns(rom), bytes(secondOwner));
         assertEquals(0, secondOwner.capture().sonicLast());
         assertEquals(0, secondOwner.capture().tailsLast());
         assertEquals(0, secondOwner.capture().tailLast());
@@ -140,11 +140,11 @@ class TestSonic2CompetitionArtRuntime {
         secondOwner.serviceDmaQueueVBlank();
         // Actual REV01 first cues of Sonic frame 1, Tails frame 1 and tail frame 9.
         assertArrayEquals(rom.readBytes(0x50000, 32),
-                Arrays.copyOfRange(secondOwner.current().bytes(), 0xF000, 0xF020));
+                Arrays.copyOfRange(bytes(secondOwner), 0xF000, 0xF020));
         assertArrayEquals(rom.readBytes(0x64320, 32),
-                Arrays.copyOfRange(secondOwner.current().bytes(), 0xF400, 0xF420));
+                Arrays.copyOfRange(bytes(secondOwner), 0xF400, 0xF420));
         assertArrayEquals(rom.readBytes(0x64C20, 32),
-                Arrays.copyOfRange(secondOwner.current().bytes(), 0xF600, 0xF620));
+                Arrays.copyOfRange(bytes(secondOwner), 0xF600, 0xF620));
         assertEquals(retainedFirst, firstOwner.capture(), "install and retained sink calls cannot mutate an earlier act");
     }
 
@@ -157,7 +157,7 @@ class TestSonic2CompetitionArtRuntime {
         var sprites = new RebindingSprites(runtime);
         registry.register(sprites);
         var uninstalled = registry.capture();
-        assertEquals(List.of(Delegate.KEY, Sonic2InterlaceVramService.REWIND_KEY, sprites.key()),
+        assertEquals(List.of(Delegate.KEY, Sonic2CompetitionArtResidency.REWIND_KEY, sprites.key()),
                 new ArrayList<>(uninstalled.entries().keySet()));
 
         var module = new Sonic2GameModule();
@@ -232,7 +232,7 @@ class TestSonic2CompetitionArtRuntime {
         assertEquals(1, delegate.diagnosticReads);
         assertEquals(QueueDiagnosticSnapshot.Kind.S2_NEMESIS_PLC,
                 owner.plcLifecycle().captureQueueDiagnostics().getFirst().kind());
-        assertEquals(List.of(Delegate.KEY, Sonic2InterlaceVramService.REWIND_KEY),
+        assertEquals(List.of(Delegate.KEY, Sonic2CompetitionArtResidency.REWIND_KEY),
                 new ArrayList<>(registry.capture().entries().keySet()));
         assertFalse(registry.capture().containsKey(Sonic2PlcService.REWIND_KEY));
 
@@ -243,7 +243,7 @@ class TestSonic2CompetitionArtRuntime {
         assertEquals(1, delegate.resets);
         assertFalse(plc.isBusy());
         assertTrue(owner.capture().pending().isEmpty());
-        assertArrayEquals(new byte[65536], owner.current().bytes());
+        assertArrayEquals(new byte[65536], bytes(owner));
         assertEquals(0, owner.capture().sonicLast());
         runtime.deregisterRewindAdapters(registry);
         assertTrue(registry.capture().entries().isEmpty());
@@ -263,7 +263,7 @@ class TestSonic2CompetitionArtRuntime {
         var owner = runtime.requireOwner();
         var module = new DelegatingGameModule(base, "test:native-dma-publication") {
             @Override public <T> T getGameService(Class<T> type) {
-                return type == Sonic2InterlaceVramService.class
+                return type == Sonic2CompetitionArtResidency.class
                         ? type.cast(runtime.ownerOrNull()) : super.getGameService(type);
             }
         };
@@ -280,23 +280,23 @@ class TestSonic2CompetitionArtRuntime {
         owner.prepareAfterLoop(PlcLifecyclePhase.LEVEL_TITLE_CARD);
         assertNotNull(plc.capture().activeEntry());
         // The actual first Sonic frame-one cue is 64 words; its first tile is blank.
-        assertTrue(owner.queueDmaTransfer(0x50000, 0x400, 64));
+        assertTrue(owner.queueUpload(0x400 / 32, rom.readBytes(0x50000, 128)));
         var queued = owner.capture();
         byte[] expected = rom.readBytes(0x50000, 128);
         assertFalse(Arrays.equals(new byte[128], expected), "ROM bytes must distinguish publication from no service");
 
         profile.serviceQueuedPatternDma(PlcLifecyclePhase.LAG, false, runtime, level);
-        assertEquals(queued, owner.capture());
+        assertArtState(queued, owner.capture());
         assertThrows(IllegalArgumentException.class, () -> profile.serviceQueuedPatternDma(
                 PlcLifecyclePhase.LAG, true, RuntimeArtCoordinator.NONE, level));
-        assertEquals(queued, owner.capture());
+        assertArtState(queued, owner.capture());
         var foreignLevel = mock(LevelManager.class);
         assertThrows(IllegalArgumentException.class, () -> profile.serviceQueuedPatternDma(
                 PlcLifecyclePhase.LAG, true, runtime, foreignLevel));
-        assertEquals(queued, owner.capture());
+        assertArtState(queued, owner.capture());
 
         profile.serviceQueuedPatternDma(PlcLifecyclePhase.LAG, true, runtime, level);
-        assertArrayEquals(expected, Arrays.copyOfRange(owner.current().bytes(), 0x400, 0x480));
+        assertArrayEquals(expected, Arrays.copyOfRange(bytes(owner), 0x400, 0x480));
         assertTrue(owner.capture().pending().isEmpty());
         assertEquals(queued.plc(), plc.capture(), "explicit CtrlDMA must not service or prepare the native PLC");
         assertTrue(delegate.calls.isEmpty(), "DMA publication cannot repeat runtime-art loop-tail callbacks");
@@ -308,9 +308,26 @@ class TestSonic2CompetitionArtRuntime {
         runtime.requireOwner().serviceVBlank(PlcLifecyclePhase.LEVEL_TITLE_CARD);
     }
 
-    private static void assertArtState(Sonic2InterlaceVramService.Snapshot expected,
-                                       Sonic2InterlaceVramService.Snapshot actual) {
-        assertEquals(expected.vram(), actual.vram());
+    private static byte[] inheritedStandardPatterns(Rom rom) throws Exception {
+        byte[] expected = new byte[2048 * 32];
+        var entries = com.openggf.level.resources.PlcParser.parse(rom,
+                Sonic2Constants.ART_LOAD_CUES_ADDR, Sonic2Constants.PLC_STD1).entries();
+        for (var entry : entries) {
+            byte[] decoded = com.openggf.level.resources.PlcParser.decompressEntryRaw(rom, entry);
+            System.arraycopy(decoded, 0, expected, entry.tileIndex() * 32, decoded.length);
+        }
+        return expected;
+    }
+
+    private static byte[] bytes(Sonic2CompetitionArtResidency owner) {
+        byte[] result = new byte[65536];
+        for (int i = 0; i < 2048; i++) System.arraycopy(owner.patternBytes(i), 0, result, i * 32, 32);
+        return result;
+    }
+
+    private static void assertArtState(Sonic2CompetitionArtResidency.Snapshot expected,
+                                       Sonic2CompetitionArtResidency.Snapshot actual) {
+        for (int i = 0; i < 2048; i++) assertArrayEquals(expected.slots()[i].bytes(), actual.slots()[i].bytes());
         assertEquals(expected.plc(), actual.plc());
         assertEquals(expected.pending(), actual.pending());
         assertEquals(expected.sonicLast(), actual.sonicLast());
@@ -348,10 +365,10 @@ class TestSonic2CompetitionArtRuntime {
     private static final class RebindingSprites implements RewindSnapshottable<Actors> {
         private final Sonic2CompetitionArtRuntime runtime;
         private Actors actors = Actors.fresh();
-        private Sonic2InterlaceVramService expectedOwner;
-        private Sonic2InterlaceVramService.Snapshot expectedState;
+        private Sonic2CompetitionArtResidency expectedOwner;
+        private Sonic2CompetitionArtResidency.Snapshot expectedState;
         private RebindingSprites(Sonic2CompetitionArtRuntime runtime) { this.runtime = runtime; }
-        void expect(Sonic2InterlaceVramService owner, Sonic2InterlaceVramService.Snapshot snapshot) {
+        void expect(Sonic2CompetitionArtResidency owner, Sonic2CompetitionArtResidency.Snapshot snapshot) {
             expectedOwner = owner;
             expectedState = snapshot;
         }

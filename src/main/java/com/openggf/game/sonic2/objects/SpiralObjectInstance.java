@@ -29,7 +29,7 @@ import java.util.logging.Logger;
  * they traverse it.
  * Effectively creates a "wave" motion and sprite twisting effect.
  */
-public class SpiralObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+public class SpiralObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource {
     // Obj06 is an invisible path/rotation controller; the player owns its own facing.
 
     private static final Logger LOGGER = Logger.getLogger(SpiralObjectInstance.class.getName());
@@ -405,5 +405,9 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Rewi
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         // Invisible object
+    }
+    /** Obj06 (s2.asm:47091-47112): dispatch followed only by its no-draw lifetime check. */
+    @Override public com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.ObjectSlot nativeDisplaySlot() {
+        return null;
     }
 }

@@ -428,8 +428,10 @@ public class DrowningController {
         }
         GameAudioProfile profile = audioManager.getAudioProfile();
         if (profile != null) {
+            Boolean raw = PlayableSpriteInternalAccess.nativeSecondaryInvincibility(player);
             musicId = profile.resolveAirResetMusic(musicId,
-                    player.getInvincibleFrames() > 0,
+                    // ResumeMusic (s2.asm:42306-42313): raw status first, then global Super.
+                    raw != null ? raw : player.getInvincibleFrames() > 0,
                     player.isSuperSonic(),
                     bossOwnsMusic());
         }

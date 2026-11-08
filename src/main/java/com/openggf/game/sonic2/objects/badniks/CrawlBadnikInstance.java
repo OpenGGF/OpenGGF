@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
@@ -75,7 +78,7 @@ import java.util.List;
  *   <li>Frame 3: Impact (player in air)</li>
  * </ul>
  */
-public class CrawlBadnikInstance extends AbstractBadnikInstance implements TouchResponseListener, RewindRecreatable, ObjectVisualFacing.Source {
+public class CrawlBadnikInstance extends AbstractBadnikInstance implements Sonic2NativeDisplaySource, TouchResponseListener, RewindRecreatable, ObjectVisualFacing.Source {
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
     }
@@ -366,7 +369,8 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
             // for the next touch pass; invincibility downgrades it to normal ENEMY flags.
             // loc_3D36C (s2.asm:82573-82581) reads native invincibility,
             // which also covers Super Sonic while his timed power-up is zero.
-            attackingCollisionFlags = player.isSuperSonic() || player.getInvincibleFrames() > 0 ? 0x17 : 0x97;
+            Boolean raw = com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeSecondaryInvincibility(player);
+            attackingCollisionFlags = (raw != null ? raw : player.isSuperSonic() || player.getInvincibleFrames() > 0) ? 0x17 : 0x97;
             animFrame = FRAME_WALK_2;
             return;
         }
@@ -532,4 +536,17 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
         boolean vFlip = false;
         renderer.drawFrameIndex(animFrame, currentX, currentY, hFlip, vFlip);
     }
+
+    // ObjC8_SubObjData (s2.asm:82644-82645): native Init bit15 cannot be represented by this owner's ordinary low-priority pass.
+    @Override public java.util.List<DisplaySlot> nativeDisplaySlots() {
+        var display=nativeDisplaySlot();
+        // ObjC8_SubObjData (s2.asm:82644-82645): native bucket3; leave the legacy
+        // ordinary owner bucket4 unchanged, as with its native art priority.
+        return display==null ? java.util.List.of() : java.util.List.of(new DisplaySlot(getSlotIndex(),3,display));
+    }
+    @Override public ObjectSlot nativeDisplaySlot() {
+        return isDestroyed() ? null : new ObjectSlot(0xC8,4|(!facingLeft ? 1 : 0),
+                currentX&0xFFFF,currentY&0xFFFF,16,0,new Mapping(0x3D450,animFrame),0x81A0,null);
+    }
+
 }
