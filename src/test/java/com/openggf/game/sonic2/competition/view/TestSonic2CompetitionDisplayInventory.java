@@ -21,6 +21,12 @@ class TestSonic2CompetitionDisplayInventory {
         var reader=RomByteReader.fromRom(rom);
         var art=new com.openggf.game.sonic2.Sonic2ObjectArt(rom,reader);
         for(var row:Sonic2CompetitionSpriteArtTable.entries().entrySet()) {
+            if(row.getKey()==0x39) {
+                // Fixed Obj39 death pair uses its explicit screen-space port;
+                // TestSonic2CompetitionGameOverDisplay verifies both native pages.
+                assertOrdinarySheetMatchesRom(reader,art.loadGameOverSheet(),row.getValue().mappingsAddress());
+                continue;
+            }
             if(row.getKey()==0x37) {
                 // Obj37's admitted source is the actual RingManager sheet, not
                 // ObjectArtProvider's explosion/points renderer registry.
@@ -223,7 +229,8 @@ class TestSonic2CompetitionDisplayInventory {
         // loc_2BC86 (s2.asm:59221-59262), loc_2BD4E (s2.asm:59272-59313): slot prize children.
         // Obj0D_Main_State2 (s2.asm:34759-34770) bypasses Obj3A in 2P. Retain the separate
         // capsule path conservatively: loc_3F406 (s2.asm:85128-85139) calls Load_EndOfAct.
-        for(int id:new int[]{0x25,0x27,0x28,0x29,0x2E,0x37,0x3A,0x98,0xD3,0xDC}) {
+        // CheckGameOver (s2.asm:38274-38316) also writes fixed Obj39 slots2/3.
+        for(int id:new int[]{0x25,0x27,0x28,0x29,0x2E,0x37,0x39,0x3A,0x98,0xD3,0xDC}) {
             observed.add(id);
             var childSpawn=new ObjectSpawn(100,80,id,id==0x98?0x20:0,0,false,0);
             // The actual generic explosion and points owners are constructed and compared above.
@@ -235,6 +242,7 @@ class TestSonic2CompetitionDisplayInventory {
                 case 0x2E -> com.openggf.level.objects.ObjectConstructionContext.construct(
                         new com.openggf.level.objects.StubObjectServices(),()->registry.create(childSpawn));
                 case 0x37 -> com.openggf.level.rings.LostRingObjectInstance.create(childSpawn);
+                case 0x39 -> com.openggf.game.sonic2.objects.Sonic2GameOverCardObjectInstance.nativeWrite(null,0,0xB000);
                 case 0x3A -> new com.openggf.game.sonic2.objects.ResultsScreenObjectInstance(0,0,1,false);
                 case 0x98 -> new com.openggf.game.sonic2.objects.badniks.Sonic2CoconutProjectileInstance(
                         childSpawn,
@@ -255,7 +263,7 @@ class TestSonic2CompetitionDisplayInventory {
         classified.addAll(explicit);
         Sonic2CompetitionSpriteArtTable.captureRows().forEach(r->classified.add(r.id()));
         assertEquals(observed,classified,"No silently unclassified IDs or stale pending entries");
-        assertEquals(52,observed.size(),"Native layout plus child ID inventory");
+        assertEquals(53,observed.size(),"Native layout plus child ID inventory");
         Sonic2CompetitionSpriteArtTable.PENDING_ADOPTION.entrySet().stream().sorted(Map.Entry.comparingByKey())
                 .forEach(row->System.out.printf("PENDING_ADOPTION $%02X | %s | %s | %s%n",row.getKey(),
                         row.getValue().name(),row.getValue().initCitation(),row.getValue().reason()));

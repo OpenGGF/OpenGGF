@@ -61,6 +61,10 @@ class DebugSonic2CompetitionDivergence {
         Path refs=Path.of(System.getProperty("s2comp.refs","/tmp/s2comp-analysis-20261107/native-refs"));
         Path csv=refs.resolve(route.csv()+"/state.csv"), bk2=refs.resolve(route.movie()+".bk2");
         org.junit.jupiter.api.Assumptions.assumeTrue(Files.isRegularFile(csv)&&Files.isRegularFile(bk2),"external native references absent");
+        String cardReference=System.getProperty("s2comp.cardRefs");
+        if(cardReference!=null) org.junit.jupiter.api.Assumptions.assumeTrue(Files.isRegularFile(Path.of(cardReference)) && Files.isRegularFile(Path.of(cardReference).resolveSibling("events.csv")),"external native card reference absent");
+        var cardRows=cardReference==null ? null : Sonic2CompetitionCardReference.read(Path.of(cardReference));
+        int comparedCards=0;var cardReport=new StringBuilder("Obj39 comparison-only state and display tails\n");
         var nativeRows=readRows(csv);var movie=new Bk2MovieLoader().load(bk2);
         // ehz-zone extends the identical finish movie through physical14651.
         // Use its independently observed cold prefix only after proving every
@@ -125,6 +129,11 @@ class DebugSonic2CompetitionDivergence {
                     report.append("last completed comparison=").append(lastCompared).append('\n');
                     break;
                 }
+                if(cardRows!=null && cardRows.containsKey(physical)) {
+                    var actualCards=Sonic2CompetitionCardReference.observe(context.getObjectManager());
+                    Sonic2CompetitionCardReference.requireEqual(cardRows.get(physical),actualCards,physical);
+                    comparedCards+=actualCards.size();cardReport.append(physical).append(' ').append(actualCards).append('\n');
+                }
                 if (Boolean.getBoolean("s2comp.lifetimes"))
                     for (var object : context.getObjectManager().getActiveObjects())
                         if (object instanceof com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance body)
@@ -164,6 +173,11 @@ class DebugSonic2CompetitionDivergence {
         } finally {config.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT,limits);TestEnvironment.resetAll();Files.writeString(out.resolve(route.movie()+".txt"),report);
             if(Boolean.getBoolean("s2comp.lifetimes")) { Files.writeString(out.resolve(route.movie()+"-lifetimes.csv"),lifetimes);
                 Files.writeString(out.resolve(route.movie()+"-flow.csv"),flow); }}
+        if(cardRows!=null) {
+            Files.writeString(out.resolve(route.movie()+"-cards.txt"),cardReport);
+            assertEquals(cardRows.values().stream().mapToInt(java.util.List::size).sum(),comparedCards,"native card window coverage");
+            System.out.println("CARD_COMPARISON states="+comparedCards+" exact");
+        }
         String result=first==null?"exact through "+lastCompared:first;
         if(first==null && nativeLag!=null && lastCompared==comparisonEnd)
             result+="; native lag at "+nativeLag.frame()+" (unsupported: BuildSprites_2P overrun)";
