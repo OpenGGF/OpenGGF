@@ -27,15 +27,15 @@ import java.util.logging.Logger;
  * Behavior:
  * - Acts as a solid platform that players can stand on
  * - Normal mode (subtype bit 7 = 0): Only breaks when player rolling AND standing on top
- * - Jump-breakable mode (subtype bit 7 = 1): Breaks when player lands on it from a jump
+ * - Jump-breakable mode (subtype bit 7 = 1): A rolling landing ignores the solidity-plane gate
  * - When broken, spawns fragment objects that fly apart
- * - Player bounces upward when block breaks
+ * - Players are released airborne when the ground breaks
  * - Plays SLOW_SMASH sound effect (0xCB)
- * - Awards points via chain bonus system (10/20/50/100/1000 based on consecutive breaks)
+ * - Awards points via chain bonus system (100/200/500/1000/10000 based on the shared chain)
  * - Uses level patterns (ArtTile_ArtKos_LevelArt), not dedicated object art
  */
 public class SmashableGroundObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj2F owns ground fragments and score popups; breakup velocities do not face a body.
 
     private static final Logger LOGGER = Logger.getLogger(SmashableGroundObjectInstance.class.getName());
@@ -52,17 +52,9 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
     private static final int[] Y_RADIUS_BY_STATE = { 0x24, 0x20, 0x18, 0x10, 0x08 };
     private static final int[] FRAME_BY_STATE = { 0, 2, 4, 6, 8 };
 
-    // Chain bonus scoring from SmashableObject_ScoreBonus:
-    // Counter 0: 10, Counter 2: 20, Counter 4: 50, Counter 6+: 100
-    // Counter 32+: 1000 (max bonus)
-    private static final int[] CHAIN_BONUS_SCORES = { 10, 20, 50, 100 };
     private static final int FRAGMENT_PIECE_MASK = 0x0F;
     private static final int FRAGMENT_FRAME_SHIFT = 4;
     private static final int FRAGMENT_FRAME_MASK = 0x0F;
-
-    // Global chain bonus counter shared across all smashable objects
-    // ROM: Chain_Bonus_counter at $FFFFF7D0
-    private static int globalChainBonusCounter = 0;
 
     private int destructionState;  // 0, 2, 4, 6, or 8
     private int yRadius;
@@ -119,16 +111,45 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (broken) {
             return;
         }
 
         // ROM: move.w (Chain_Bonus_counter).w,objoff_38(a0)
         // Save global chain counter at frame start to restore when breaking
-        savedChainCounter = globalChainBonusCounter;
+        // Obj2F_Main (s2.asm:49161-49164): save before SolidObject can reset it.
+        // KiS2 Obj2F_Main (docs/kis2disasm/s2.asm:52395-52398) also saves before solids.
+        savedChainCounter = Sonic2SmashableChain.policy(services()).word();
+        var players = Sonic2SmashableChain.players(services());
+        var animations = new java.util.IdentityHashMap<PlayableEntity, Integer>();
+        for (var actor : players) animations.put(actor, actor.getAnimationId());
+        // Obj2F_Main (s2.asm:49161-49180) runs both solids before testing
+        // standing_mask. Preserve that boundary around the shared-word restore.
+        var batch = services().solidExecution().resolveSolidNowAll();
+        AbstractPlayableSprite breaker = null;
+        for (var actor : players) {
+            var result = batch.perPlayer().get(actor);
+            if (result == null || !result.standingNow()) continue;
+            if (animations.get(actor) == Sonic2AnimationIds.ROLL.id()
+                    && (jumpBreakable || (((AbstractPlayableSprite) actor).getTopSolidBit() & 0xFF) == 0x0E)) {
+                breaker = (AbstractPlayableSprite) actor; break;
+            }
+            actor.setTopSolidBit((byte) 0x0C); actor.setLrbSolidBit((byte) 0x0D);
+        }
+        if (breaker != null) {
+            for (var actor : players) {
+                var result = batch.perPlayer().get(actor);
+                if (result != null && result.standingNow())
+                    Sonic2SmashableChain.release(services(), (AbstractPlayableSprite) actor,
+                            animations.get(actor) == Sonic2AnimationIds.ROLL.id(), false);
+            }
+            breakOneLayer(breaker, vIntRunCount);
+        }
+
 
     }
+
+    @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
 
     @Override
     public SolidObjectParams getSolidParams() {
@@ -143,50 +164,6 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
         return !broken;
     }
 
-    @Override
-    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (broken || player == null) {
-            return;
-        }
-
-        // Only break when player is standing on top
-        if (!contact.standing()) {
-            return;
-        }
-
-        // Determine if this object can be broken:
-        // - Jump-breakable mode: any landing breaks it
-        // - Normal mode: player must have roll animation AND solid bit = $E (from spin attack)
-        boolean canBreak = false;
-        int preContactAnimationId = services().objectManager() != null
-                ? services().objectManager().getPreContactAnimationId()
-                : player.getAnimationId();
-        boolean wasRollAnimating = preContactAnimationId == Sonic2AnimationIds.ROLL.id();
-
-        if (jumpBreakable) {
-            // Jump-breakable mode: breaks when player lands on it
-            canBreak = true;
-        } else {
-            // Normal mode: check the saved player animation
-            // Original checks: cmpi.b #AniIDSonAni_Roll,objoff_32(a0)
-            // and: cmpi.b #$E,(MainCharacter+top_solid_bit).w
-            if (wasRollAnimating && (player.getTopSolidBit() & 0xFF) == 0x0E) {
-                canBreak = true;
-            }
-        }
-
-        if (canBreak) {
-            breakOneLayer(player, frameCounter);
-        } else {
-            // Obj2F_Main assigns primary solidity when the standing player did
-            // not satisfy the break branch (docs/s2disasm/s2.asm:48729-48741,
-            // 48766-48768, 48805-48807).
-            player.setTopSolidBit((byte) 0x0C);
-            player.setLrbSolidBit((byte) 0x0D);
-        }
-    }
-
     private void breakOneLayer(AbstractPlayableSprite player, int vIntRunCount) {
         if (broken) {
             return;
@@ -197,27 +174,11 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
 
         // ROM: move.w objoff_38(a0),(Chain_Bonus_counter).w
         // Restore saved chain counter before processing break
-        globalChainBonusCounter = savedChainCounter;
+        // loc_234A4 (s2.asm:49277-49292): restore the saved word before breaking.
+        // KiS2 loc_234A4 (docs/kis2disasm/s2.asm:52511-52526) restores before points too.
+        Sonic2SmashableChain.policy(services()).restoreWord(savedChainCounter);
 
-        // Force player into rolling state with proper hitbox
-        // bset #status.player.rolling,status(a1)
-        // move.b #$E,y_radius(a1)
-        // move.b #7,x_radius(a1)
-        short preservedCentreY = player.getCentreY();
-        player.setRolling(true);
-        // ROM writes status/radii/anim directly without moving y_pos.
-        player.setCentreYPreserveSubpixel(preservedCentreY);
-
-        // Set player state to in-air
-        // bset #status.player.in_air
-        // bclr #status.player.on_object
-        player.setAir(true);
-        player.setOnObject(false);
         ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.clearRidingObject(player);
-        }
-
         // Spawn fragments for ALL pieces of the current frame
         // In the ROM, BreakObjectToPieces creates fragments for every piece
         var firstFragment = spawnFragments();
@@ -254,62 +215,7 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
     }
 
     private void awardChainBonus() {
-        // Chain bonus system from SmashableObject_LoadPoints (s2.asm:49444-49467):
-        // ROM: move.w (Chain_Bonus_counter).w,d2
-        //      addq.w #2,(Chain_Bonus_counter).w
-        //      cmpi.w #6,d2 / blo.s + / moveq #6,d2  - cap at 6
-        //      cmpi.w #$20,(Chain_Bonus_counter).w / blo.s + - check for max bonus
-        ObjectManager objectManager = services().objectManager();
-        int popupSlot = objectManager.allocateDynamicSlot();
-        if (popupSlot < 0) return; // SmashableObject_LoadPoints (s2.asm:49465-49487).
-        int d2 = globalChainBonusCounter;
-        globalChainBonusCounter += 2;  // Increment global counter
-
-        // Cap d2 at 6 for score table lookup
-        if (d2 > 6) {
-            d2 = 6;
-        }
-
-        int points;
-        int pointsFrameIndex;
-        if (globalChainBonusCounter >= 0x20) {
-            // Max bonus: 1000 points
-            points = 1000;
-            pointsFrameIndex = 5;  // Frame index for 1000 (d2 = $A, lsr #1 = 5)
-        } else {
-            // Use score table: d2/2 indexes into CHAIN_BONUS_SCORES
-            int scoreIndex = d2 / 2;
-            if (scoreIndex >= CHAIN_BONUS_SCORES.length) {
-                scoreIndex = CHAIN_BONUS_SCORES.length - 1;
-            }
-            points = CHAIN_BONUS_SCORES[scoreIndex];
-            pointsFrameIndex = scoreIndex;  // Frame matches score table index
-        }
-
-        // Add score
-        services().gameState().addScore(points);
-
-        int finalPoints = points;
-        var popup = ObjectConstructionContext.with(services(), popupSlot, () -> new PointsObjectInstance(
-                new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0), services(), finalPoints));
-        ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager, popup, popupSlot);
-    }
-
-    /**
-     * Resets the global chain bonus counter.
-     * Should be called when loading a new level or when the player
-     * stops standing on smashable objects.
-     */
-    public static void resetChainBonusCounter() {
-        globalChainBonusCounter = 0;
-    }
-
-    /**
-     * Resets all global state for SmashableGround objects.
-     * Call on level load to ensure clean state across level transitions.
-     */
-    public static void resetGlobalState() {
-        globalChainBonusCounter = 0;
+        Sonic2SmashableChain.award(services(), spawn.x(), spawn.y());
     }
 
     @Override

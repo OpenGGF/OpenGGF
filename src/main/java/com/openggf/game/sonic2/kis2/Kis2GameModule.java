@@ -203,6 +203,8 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
 
     @Override
     public <T> T getGameService(Class<T> type) {
+        // This inherited scalar rule must not probe the optional chip or initialize special stages.
+        if (type == com.openggf.game.internal.BadnikChainPolicy.class) return base().getGameService(type);
         if (type == com.openggf.game.resources.PlayerArtTransferPlan.class) {
             var basePlan = base().getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class);
             var banks = new java.util.HashMap<>(basePlan.banks());

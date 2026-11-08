@@ -1999,6 +1999,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         /** Knuckles' native floor-reset owner leaves its ability turn byte intact. */
         void landForNativeFloorReset() {
+                // Knuckles_Sliding (docs/kis2disasm/s2.asm:38426-38446) and
+                // Knuckles_Climbing_Wall (docs/kis2disasm/s2.asm:38628-38644)
+                // call Sonic_ResetOnFloor_Part2, whose tail clears the shared word.
+                PlayableNativeFloorReset.resetChain(this);
                 setAir(false, true);
         }
 
@@ -2051,8 +2055,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         // SPG: Angle should gradually return to 0 while airborne,
                         // NOT immediately reset. See returnAngleToZero() called during air updates.
                 } else {
-                        // Reset badnik chain when landing
-                        resetBadnikChain();
+                        // S2 resets its shared word only at explicit ResetOnFloor owners.
+                        // Other hosts retain their existing setter behavior.
+                        if (PlayableNativeFloorReset.chain(this) == null) resetBadnikChain();
+                        else badnikChainCounter = 0;
                 }
                 publishGroundTransition(changed, landed);
         }
@@ -2095,7 +2101,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 this.air = false;
                 updatePushSensorYOffset();
-                resetBadnikChain();
+                if (PlayableNativeFloorReset.chain(this) == null) resetBadnikChain();
+                else badnikChainCounter = 0;
                 publishGroundTransition(landed, landed);
         }
 
@@ -2413,14 +2420,18 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 angle = (byte) currentAngle;
         }
 
-        // Kill count: half the native even word, retained in rewind snapshots.
+        // Actor-local fallback: half the native even word. S2 owns its shared word
+        // through the host policy, captured once independently of actor snapshots.
         private int badnikChainCounter = 0;
 
         public void resetBadnikChain() {
                 badnikChainCounter = 0;
+                PlayableNativeFloorReset.resetChain(this);
         }
 
         public int incrementBadnikChain() {
+                var policy = PlayableNativeFloorReset.chain(this);
+                if (policy != null) return policy.incrementAndAward();
                 // React_BadnikHit (_incObj/Sonic ReactToItem.asm:278-292),
                 // Touch_KillEnemy (s2.asm:85514-85529),
                 // Touch_EnemyNormal (sonic3k.asm:20989-21007) and
@@ -3069,6 +3080,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (dead || drownPreDeathTimer > 0) {
                         return false;
                 }
+                // Obj0A_ReduceAir (s2.asm:42147-42162) calls ResetOnFloor_Part2.
+                PlayableNativeFloorReset.resetChain(this);
                 drowningDeath = true;
                 // AirCountdown_ReduceAir / Obj0A_ReduceAir / Drown_Countdown
                 // write object_control=$81, not Ctrl_1_locked.

@@ -190,8 +190,8 @@ class TestSonic2BreakIntoPieces {
                 new ObjectSpawn(256, 256, 0x32, 0, 0, false, 0), "OffscreenBreak") {
             @Override public boolean isWithinSolidContactBounds() { return false; }
             @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity actor) {
+                f.checkpointParent = this;
                 super.update(vIntRunCount, actor);
-                onSolidContact(actor, new SolidContact(true, false, false, true, false), vIntRunCount);
             }
         }, 0x60);
         BoxObjectInstance[] allocated = new BoxObjectInstance[1];
@@ -237,24 +237,38 @@ class TestSonic2BreakIntoPieces {
 
     static final class Fixture {
         final Level level = mock(Level.class);
+        final com.openggf.game.sonic2.Sonic2GameModule module = new com.openggf.game.sonic2.Sonic2GameModule();
+        final com.openggf.game.solid.ObjectSolidExecutionContext solid = mock(com.openggf.game.solid.ObjectSolidExecutionContext.class);
+        AbstractObjectInstance checkpointParent;
         final TestObjectServices services = new TestObjectServices() {
             @Override public Level currentLevel() { return level; }
+            @Override public com.openggf.game.solid.ObjectSolidExecutionContext solidExecution() { return solid; }
+            @Override public ObjectPlayerQuery playerQuery() { return new ObjectPlayerQuery(() -> player, List::of); }
             @Override public ObjectRenderManager renderManager() { return art; }
         };
         ObjectRenderManager art = mock(ObjectRenderManager.class);
         final ObjectManager objects;
         Sonic2BreakPieceObjectInstance currentPiece;
-        final TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 256, (short) 256);
+        final TestablePlayableSprite player;
 
         Fixture() throws Exception {
+            TestEnvironment.configureGameModuleFixture(module);
+            player = new TestablePlayableSprite("sonic", (short) 256, (short) 256);
+            services.withGameModule(module);
+            when(solid.resolveSolidNowAll()).thenAnswer(call -> {
+                com.openggf.sprites.playable.PlayableNativeFloorReset.resetChain(player);
+                player.setAir(false); player.setYSpeed((short) 0);
+                var result = new com.openggf.game.solid.PlayerSolidContactResult(
+                        com.openggf.game.solid.ContactKind.TOP, true, false, false, false,
+                        com.openggf.game.solid.PreContactState.ZERO,
+                        new com.openggf.game.solid.PostContactState((short)0,(short)0,false,true,false),0);
+                return new com.openggf.game.solid.SolidCheckpointBatch(checkpointParent, java.util.Map.of(player,result));
+            });
             when(level.getZoneIndex()).thenReturn(13); // Obj32_Init's native CPZ mapping branch.
             services.withRomReader(RomByteReader.fromRom(TestEnvironment.currentRom()))
                     .withGameState(new GameStateManager()).withCamera(new Camera());
             objects = new ObjectManager(List.of(), new Sonic2ObjectRegistry(), 0, null, null, null,
                     services.camera(), services) {
-                // Direct contact fixtures supply the animation SolidObject saved
-                // before the callback; allocation remains the real S2 allocator.
-                @Override public int getPreContactAnimationId() { return player.getAnimationId(); }
                 @Override public void addDynamicObjectAtSlot(ObjectInstance object, int slot) {
                     super.addDynamicObjectAtSlot(object, slot);
                     if (slot == 0x60 && object instanceof Sonic2BreakPieceObjectInstance fragment)
@@ -293,9 +307,8 @@ class TestSonic2BreakIntoPieces {
         }
 
         void breakParent(AbstractObjectInstance parent) {
+            checkpointParent = parent;
             parent.update(0, player);
-            ((SolidObjectListener) parent).onSolidContact(player,
-                    new SolidContact(true, false, false, true, false), 0);
         }
 
         AbstractObjectInstance at(int slot) {

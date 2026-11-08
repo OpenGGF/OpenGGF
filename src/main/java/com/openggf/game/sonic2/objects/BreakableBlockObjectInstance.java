@@ -34,7 +34,7 @@ import java.util.logging.Logger;
  * - Plays SLOW_SMASH sound effect (0xCB)
  */
 public class BreakableBlockObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
     // Obj32 owns a block, debris and score popup; debris velocity is not body facing.
 
     private static final Logger LOGGER = Logger.getLogger(BreakableBlockObjectInstance.class.getName());
@@ -46,15 +46,11 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
     private static final int HTZ_HALF_WIDTH = 0x18;  // 24 pixels
     private static final int HALF_HEIGHT = 0x10;     // 16 pixels
 
-    // From disassembly: move.w #-$300,y_vel(a1) for player bounce
-    private static final int PLAYER_BOUNCE_VELOCITY = -0x300;
-
     // Mapping frame indices
     private static final int FRAME_INTACT = 0;
 
     private int halfWidth;
     private boolean broken;
-    private boolean solidForRemainingParticipantsThisFrame;
     private boolean initialized;
 
     public BreakableBlockObjectInstance(ObjectSpawn spawn, String name) {
@@ -67,6 +63,8 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
     public BreakableBlockObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new BreakableBlockObjectInstance(ctx.spawn(), getName());
     }
+
+    private int savedChainCounter; // objoff_38, retained across the solid call and rewind
 
     private void ensureInitialized() {
         if (initialized) {
@@ -85,14 +83,36 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
-        // ROM Obj32_Main (s2.asm:49347-49363) runs SolidObject and then checks the
-        // BLOCK's own standing_mask (status bits 6/7). No special "rolling player
-        // moving up" detection is done here: side/below collisions are handled by
-        // SolidObject's ceiling/push paths and never break the block. The per-player
-        // break decision is made in onSolidContact below, using the SolidContact's
-        // standing flag (set by SolidObject when that player is currently standing
-        // on this object).
+        if (broken) return;
+        // Obj32_Main (s2.asm:49354-49358): save before the solid landing reset.
+        // KiS2 Obj32_Main (docs/kis2disasm/s2.asm:52585-52588) has the same save.
+        savedChainCounter = Sonic2SmashableChain.policy(services()).word();
+        var players = Sonic2SmashableChain.players(services());
+        var animations = new java.util.IdentityHashMap<PlayableEntity, Integer>();
+        for (var actor : players) animations.put(actor, actor.getAnimationId());
+        // Obj32_Main (s2.asm:49354-49368) returns from BOTH character solids
+        // before Obj32_SupportingSomeone chooses a break. A callback during P1
+        // would let P2's later landing reset the newly awarded chain word.
+        var batch = services().solidExecution().resolveSolidNowAll();
+        AbstractPlayableSprite breaker = null;
+        for (var actor : players) {
+            var result = batch.perPlayer().get(actor);
+            if (result != null && result.standingNow()
+                    && animations.get(actor) == Sonic2AnimationIds.ROLL.id()) {
+                breaker = (AbstractPlayableSprite) actor; break;
+            }
+        }
+        if (breaker == null) return;
+        for (var actor : players) {
+            var result = batch.perPlayer().get(actor);
+            if (result != null && result.standingNow())
+                Sonic2SmashableChain.release(services(), (AbstractPlayableSprite) actor,
+                        animations.get(actor) == Sonic2AnimationIds.ROLL.id(), true);
+        }
+        destroyBlock(vIntRunCount);
     }
+
+    @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
 
     @Override
     public SolidObjectParams getSolidParams() {
@@ -116,80 +136,21 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
         // Block is not solid once broken. ROM keeps the block fully solid before it
         // breaks (Obj32_Main always invokes SolidObject); a rolling player moving
         // upward hits the underside as a ceiling collision, not a break.
-        return !broken || solidForRemainingParticipantsThisFrame;
+        return !broken;
     }
 
-    @Override
-    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (broken || player == null) {
-            return;
-        }
-
-        // ROM Obj32_Main snapshots player anim before SolidObject, then checks
-        // standing bits after SolidObject (docs/s2disasm/s2.asm:49295-49350).
-        int preContactAnimationId = services().objectManager() != null
-                ? services().objectManager().getPreContactAnimationId()
-                : player.getAnimationId();
-        boolean wasRollAnimating = preContactAnimationId == Sonic2AnimationIds.ROLL.id();
-        //   andi.b #standing_mask,d0         ; only break if a player is STANDING on the block
-        //   bne.s  Obj32_SupportingSomeone
-        //   ; ... checks each standing player's saved anim individually:
-        //   ; - MainCharacter standing && saved anim==Roll  -> Obj32_BouncePlayer(MainCharacter)
-        //   ; - Sidekick standing      && saved anim==Roll  -> Obj32_BouncePlayer(Sidekick)
-        // Side and below contacts NEVER break the block in ROM. Each player's own
-        // saved animation determines if THIS player triggers the break (the engine's
-        // previous player cache leaked Sonic's roll signal into Tails'
-        // onSolidContact call, knocking Tails airborne via the side-touch path).
-        if (contact.standing() && wasRollAnimating) {
-            breakBlock(player, contact, frameCounter);
-        }
-    }
-
-    private void breakBlock(AbstractPlayableSprite player, SolidContact contact, int vIntRunCount) {
+    private void destroyBlock(int vIntRunCount) {
         if (broken) {
             return;
         }
 
         broken = true;
-        // ROM Obj32_Main runs one SolidObject pass for both players before it
-        // branches on the block standing bits and destroys itself. The engine
-        // receives per-player callbacks; keep the block solid for later
-        // participants in this same callback batch so the first breaker does not
-        // erase the other player's pre-destroy support one frame early.
-        solidForRemainingParticipantsThisFrame = true;
-
+        // Obj32_Destroy (s2.asm:49426-49431) restores before fragments/points.
+        // KiS2 Obj32_Destroy (docs/kis2disasm/s2.asm:52657-52662) has the same restore.
+        Sonic2SmashableChain.policy(services()).restoreWord(savedChainCounter);
         // Mark as broken in persistence table (stays broken on respawn/revisit)
         ObjectManager objectManager = services().objectManager();
         ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
-
-        short preservedCentreY = player.getCentreY();
-        // Force player into rolling state with proper hitbox (disassembly lines 48916-48919)
-        // bset #status.player.rolling,status(a1)
-        // move.b #$E,y_radius(a1)
-        // move.b #7,x_radius(a1)
-        // move.b #AniIDSonAni_Roll,anim(a1)
-        // setRolling(true) handles radius change and animation internally, but
-        // ROM writes y_radius/x_radius/status without changing y_pos.
-        player.setRolling(true);
-        player.setCentreYPreserveSubpixel(preservedCentreY);
-
-        // Handle velocity based on contact direction:
-        // - Standing on top: bounce upward
-        // - Hitting from below: continue through (don't change velocity)
-        // - Hitting from side: continue through (don't change velocity)
-        if (contact.standing()) {
-            // Bounce player upward only when breaking from above
-            // From disassembly: move.w #-$300,y_vel(a1)
-            player.setYSpeed((short) PLAYER_BOUNCE_VELOCITY);
-        }
-        // When hitting from below or side, player maintains their momentum
-
-        // Set player state to in-air
-        // Obj32_BouncePlayer: bset #status.player.in_air, bclr #status.player.on_object
-        // (s2.asm:49405-49416). The block clears the rider's bit itself.
-        player.setAir(true);
-        player.setOnObject(false);
 
         // Spawn fragment objects
         var firstFragment = spawnFragments();
@@ -197,19 +158,11 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
         // Play slow smash sound effect
         services().playSfx(GameSound.SLOW_SMASH);
 
-        // AllocateObject is unrestricted and happens after the fragment loop.
-        // Only its success reaches the award (SmashableObject_LoadPoints,
-        // s2.asm:49465-49487).
-        int popupSlot = objectManager.allocateDynamicSlot();
-        if (popupSlot >= 0) {
-            services().gameState().addScore(100);
-            var popup = ObjectConstructionContext.with(services(), popupSlot, () -> new PointsObjectInstance(
-                    new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0), services(), 100));
-            ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager, popup, popupSlot);
-        }
+        Sonic2SmashableChain.award(services(), spawn.x(), spawn.y());
+
         // Obj32_Destroy falls through into the current-slot fragment
         // after its popup attempt (s2.asm:49426-49439).
-        Sonic2BreakIntoPieces.runFirstFragment(services(), firstFragment, vIntRunCount, player);
+        Sonic2BreakIntoPieces.runFirstFragment(services(), firstFragment, vIntRunCount, null);
 
         // Mark this object as destroyed so it stops rendering/updating
         setDestroyed(true);

@@ -2017,6 +2017,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int adjustedAngle = (hexAngle + 0x20) & 0xC0;
 
 		if (adjustedAngle != 0) {
+			// Knuckles_BeginSlide (docs/kis2disasm/s2.asm:38217-38231) branches
+			// to Sonic_ResetOnFloor_Part2 only on this non-flat arrival.
+			com.openggf.sprites.playable.PlayableNativeFloorReset.resetChain(sprite);
 			// Non-flat surface: land normally
 			sprite.setXSpeed((short) sprite.getGSpeed());
 			sprite.setYSpeed((short) 0);
@@ -2167,8 +2170,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// zero.
 		// (This build is FixBugs = 0; the site carries no bug-fix conditional.)
 		// double_jump_flag is cleared; native keeps double_jump_property.
-		// Status_RollJump, Chain_bonus_counter and scroll_delay_counter have no
-		// modelled engine state at this site; flip_type and flips_remaining do.
+		// Status_RollJump and scroll_delay_counter have no modelled engine state
+		// here. The floor-reset funnel delegates chain state to the host.
 		com.openggf.sprites.playable.PlayableSpriteInternalAccess.landForNativeFloorReset(sprite);
 		sprite.setPushing(false);
 		sprite.setJumping(false);
@@ -2575,6 +2578,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			if (sprite.getDirection() == Direction.LEFT) {
 				NativePositionOps.addXPosPreserveSubpixel(sprite, -1);
 			}
+			// Knuckles_Climbing_Onto_Ledge (docs/kis2disasm/s2.asm:38848-38864)
+			// calls Sonic_ResetOnFloor_Part2 on the final frame.
+			com.openggf.sprites.playable.PlayableNativeFloorReset.resetChain(sprite);
 			exitWallClimbToGround();
 			sprite.setPushing(false);
 			sprite.setRollingJump(false);
@@ -4316,6 +4322,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return false;
 		}
 
+		// Sonic_ResetOnFloor_Part3 (s2.asm:38142-38147), Tails_ResetOnFloor_Part3 (s2.asm:41033-41044).
+		com.openggf.sprites.playable.PlayableNativeFloorReset.resetChain(sprite);
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		boolean preservePinballRoll = movementRules != null
 				&& movementRules.landing().pinballLandingPreservesRoll();
