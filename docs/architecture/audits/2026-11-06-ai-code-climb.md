@@ -4818,3 +4818,127 @@ smoke plus guards and exact negative/skip comparison remain required before
 pushing the task branch to draft PR271. No new contributor score is inferred.
 The external ordinary-plan preservation prototype remains unapplied for the
 next structural increment after this publication.
+
+## 2026-11-09 — frozen scope, native hints and required-reading qualification
+
+Source: `2dd029ebbd7c20b4698426438d5f88dcf757e7c7`, clean task branch
+`feature/ai-code-climb-followup`. Published PR271 remains at `c42764c8a5`;
+this batch is unpublished. This section is a prepared draft, not delivery clearance.
+
+The batch resolves verification scope once per replay invocation, supplies
+game-specific native search hints, and routes required measurement reading by
+condition. The Opus review of `c427..6c599` found no runtime blocker and one
+medium navigation finding plus three low findings. Root's `2dd` repairs close
+the dated-note heading spans, distinguish the two Surefire empty-selection
+switches, refine the pinned label vocabulary, and restore all three caller
+properties in the dynamic-art fixture. No additional review of those bounded
+repairs is claimed.
+
+Focused repair evidence: 209 unique cases in 12 fresh suites passed, with no
+failures, errors or skips. The property-restoration witnesses first produced six
+intended failures and one unset-property control. These are bounded focused
+results, not a broad or full-suite pass.
+
+### Complete category result and exact comparison
+
+One complete change-based run, `20261109T084137Z-634ccab5`, selected all 4,627
+candidate classes and finished 94/94 ordinary batches plus 1/1 guards batches.
+Ordinary: 37,785 cases, 30 failures, zero errors, 49 allowed skips. Guards:
+843 passed, zero failures/errors/skips. Source fingerprint remained
+`8f066f4d9e428111f0b8ac424dcd24862ea084d0af7ee44d0890ca95e6d08310`.
+The original final verdict is retained unchanged:
+
+```text
+VERDICT FAILED: head=2dd029ebbd7c source=8f066f4d9e42 change-based 4627/4627 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38628 failures=30 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Compared with the retained qualified `4da` invocation, no selected class or
+run-input field changed. All 49 complete skip dictionaries, including projection
+metadata, are equal to both that invocation and the pinned C4 baseline. The
+contact-test rename and two added tool classes relative to C4 remain explicitly
+accounted for. No failed/skip records were omitted and no causal text was cut
+at the configured caps.
+
+Twenty-five inherited failure messages matched literally. Four changed messages
+have narrow, source-backed dispositions, retained with both full records:
+
+- The Three Islands trail assertion changes only the two `Object.toString`
+  identity-hash suffixes on the unchanged final `FieldScreen` and `StoryScreen`
+  classes. The test source, all other fields, and the full remaining stack agree.
+- Three MHZ assertions change only expected `Set` iteration display order.
+  Expected membership is identical, actual display is literal, and the rest of
+  each complete record agrees.
+
+The strict comparator still reports DIFFERENT. No global hash stripping,
+set sorting, baseline rewriting or comparator/skip-policy change was applied.
+
+### Unmatched competition pixel assertion: publication blocked
+
+The new identity is
+`TestSonic2CompetitionFieldPixels#retainedPlaneAndWholeSpriteProjectionMatchIndependentNativeRowOracle`.
+It reports the first opaque sample of `SatEntry[rawY=265, size=9, link=1,
+word=9, rawX=144]` at local `(3,0)`: expected `-3407821`, actual `-16777216`.
+The original record does not identify the batching iteration. Its full
+assertion and stack are retained; it is not qualified as an inherited failure.
+
+The reconstructed 50-class cohort passed preliminary paired arms, but the first
+six omitted category TMPDIR/TMP/TEMP forwarding. They are retained with that
+limitation. A corrected baseline/candidate pair passed 293 cases on each side,
+with those variables forwarded. These passing controls do not attribute the
+original failed fork, whose exact predecessor assignment was not preserved.
+Current retained bytecode for 70 classes across the inspected rendering/test
+owners is identical between C4 and candidate; this does not prove which bytes
+the original fork loaded or establish baseline flakiness.
+
+A bounded independent Sol source investigation established that the passing
+plane oracle reads even-bank art while this sprite reads live odd-bank pattern
+1033. It found no demonstrated cause and proposed a passive observer at the
+publication/draw boundary. One observer-assisted C4 run passed all 293 cases, with no observer errors.
+The odd-bank CPU/GPU value remained 12 through every plane pass and sprite
+draw; palette and resulting pixel matched. All 591 comparable initial loaded
+class byte hashes matched the retained C4 files. It does not reproduce the
+original failure or establish harmlessness of observer scheduling changes.
+The field-pattern ownership fixture ran in the other fork. A subsequent
+uninstrumented C4 isolation probe forced that fixture and FieldPixels into one
+reused JVM: all three cases passed (queue 71s, Maven 3.446s, wall 74.966s,
+user wait 0s, residual 0.520s). Thus the simple predecessor hypothesis also
+remains unsupported. Both probes are terminal; no further rerun is active.
+Neither passing result supplies publication clearance.
+No oracle, renderer, skip, tolerance or source modification has been made to
+address the unmatched outcome.
+
+### Domain evidence and current contributor assessment
+
+The actual matched EHZ1/HCZ domain invocation tested `6c599`, not `2dd`. Its
+reports and context files are byte-identical to the retained qualification:
+EHZ1 compared all 5,852 planned rows without counted errors/warnings; HCZ1
+compared 3,519 of 3,574 planned rows with its gate reached and no counted
+errors/warnings; HCZ2 compared 14,149 of 14,208 planned rows with its gate
+reached and retained 26 errors (2 physics, 24 animation). The eight advertised
+missing auxiliary schemas and separate FAST/SMPS log limitations remain. Both
+actual printed HCZ triage commands executed on POSIX paths containing spaces.
+This is no Windows or run-chain certification.
+
+A source-specific reuse proof accounts for root's later vocabulary/test/docs
+repairs: runtime, selected drivers, selected domain tests, fixtures and report
+serialization are unchanged; the changed hints are covered by the focused run.
+No fresh `2dd` domain invocation is claimed.
+
+Fresh blind Opus assessment of the original Trial F at clean `2dd` is
+`[3,2,2,3,1,3,3,2]` = **60/100**. It was static only and did not use runtime
+results, audits or prior grades. Other five trials were not regraded. The wider
+85-per-trial goal remains unmet; passing checks and file movement earn no
+automatic usability credit. The reported unsupported S3K object-near opt-in
+requires separate design: its current comparator truncates full code pointers,
+so simply enabling that call would not repair the contract. No such change was
+made in this batch.
+
+Timing for the complete category invocation: reported shared queue wait 192s
+across 95 admissions; execution including preparation 1,803.68s; wall
+2,008.679s; user wait 0s; 12.999s overhead/unknown. Queue figures are printed
+whole-second values and the residual is not separately measured. Original
+diagnostics and exact export/comparison/timing receipts remain unacknowledged
+under `target/code-climb/scope-hints-reading-category/` while attribution is
+open. The external observer handoff and all 150 retained artifact hashes were
+verified before ownership returned to root. No source change is proposed as
+a pixel repair; no root or delegate job remains live. The broader result is a bounded smoke selection, never a full-suite pass.
