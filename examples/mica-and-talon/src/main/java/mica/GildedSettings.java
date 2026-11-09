@@ -35,6 +35,7 @@ final class GildedSettings {
         public GameModule apply(GameModule base, PatchContext context) { return new Module(base, id()); }
     }
     private static final class Module extends DelegatingGameModule {
+        @Override public boolean supportsSidekick() { return true; }
         private MutatorConfigurationScreen screen;
         Module(GameModule base, String id) { super(base,id); }
         private MutatorConfigurationScreen screen() {

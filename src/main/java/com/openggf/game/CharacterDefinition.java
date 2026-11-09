@@ -33,7 +33,19 @@ public record CharacterDefinition(
         ArtSupplier artSupplier,
         PaletteSupplier paletteSupplier, java.util.Set<MovementAbility> movementAbilities,
         PaletteSupplier underwaterPaletteSupplier, PresentationSupplier presentationSupplier,
-        SuperFormSupplier superFormSupplier) {
+        SuperFormSupplier superFormSupplier, CharacterKey defaultSidekick) {
+
+    /** Compatibility constructor: selecting this character defaults to solo. */
+    public CharacterDefinition(CharacterKey key, String displayName, PlayableFactory spriteFactory,
+            RespawnStrategyFactory respawnStrategyFactory, PlayerCharacter behavesLike,
+            SecondaryAbility secondaryAbility, boolean supportsSuperForm, ArtSupplier artSupplier,
+            PaletteSupplier paletteSupplier, java.util.Set<MovementAbility> movementAbilities,
+            PaletteSupplier underwaterPaletteSupplier, PresentationSupplier presentationSupplier,
+            SuperFormSupplier superFormSupplier) {
+        this(key, displayName, spriteFactory, respawnStrategyFactory, behavesLike, secondaryAbility,
+                supportsSuperForm, artSupplier, paletteSupplier, movementAbilities, underwaterPaletteSupplier,
+                presentationSupplier, superFormSupplier, null);
+    }
 
     /** Existing definitions retain all native presentation fallbacks and have no super profile. */
     public CharacterDefinition(CharacterKey key, String displayName, PlayableFactory spriteFactory,
@@ -63,7 +75,13 @@ public record CharacterDefinition(
                 supportsSuperForm, artSupplier, paletteSupplier, movementAbilities, null);
     }
 
-    @ModApi public enum MovementAbility { SPINDASH }
+    @ModApi public enum MovementAbility {
+        SPINDASH,
+        /** Mod-defined S3K flight in hosts that do not natively enable it. */
+        CROSS_GAME_FLIGHT,
+        /** Twice the native flap acceleration while the authored super form is active. */
+        SUPER_FLIGHT_LIFT
+    }
 
     public CharacterDefinition(CharacterKey key, String displayName, PlayableFactory spriteFactory,
             RespawnStrategyFactory respawnStrategyFactory, PlayerCharacter behavesLike,
@@ -94,6 +112,10 @@ public record CharacterDefinition(
         respawnStrategyFactory = respawnStrategyFactory == null ? SonicRespawnStrategy::new : respawnStrategyFactory;
         Objects.requireNonNull(behavesLike, "behavesLike");
         Objects.requireNonNull(secondaryAbility, "secondaryAbility");
+        if (defaultSidekick != null && (behavesLike == PlayerCharacter.SONIC_ALONE
+                || !defaultSidekick.ownerModId().equals(key.ownerModId()))) {
+            throw new IllegalArgumentException("Default sidekick must share the character owner and team route");
+        }
         Objects.requireNonNull(artSupplier, "artSupplier");
         if (!key.isBuiltin() && supportsSuperForm && superFormSupplier == null) {
             throw new IllegalArgumentException("Mod super forms require an authored profile");

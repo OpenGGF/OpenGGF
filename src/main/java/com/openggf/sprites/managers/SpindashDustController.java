@@ -1,8 +1,9 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 /**
@@ -175,7 +176,7 @@ public class SpindashDustController {
         boolean reverseGravity = gameState != null && gameState.isReverseGravityActive();
         // S3K loc_18C20 mirrors the dust and negates d1 before Tails's
         // centre adjustment. Compose at draw time, without accumulating flips.
-        if (sprite instanceof Tails) {
+        if (PlayableArchetype.isTails(sprite)) {
             originY += reverseGravity ? -TAILS_Y_OFFSET : TAILS_Y_OFFSET;
         }
         boolean hFlip = Direction.LEFT.equals(sprite.getDirection());

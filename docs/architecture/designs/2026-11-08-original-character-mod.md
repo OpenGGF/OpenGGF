@@ -7,7 +7,8 @@ from a supplied base design, then reduced to native Mega Drive constraints. The 
 a framework demonstration: where the Mod API lacks a seam, this work adds the safe
 facade rather than reaching into engine internals.
 
-Status: phase 1 code-complete; documentation consolidated. Evidence gaps and
+Status: phase 1 code-complete; phase 2 TALON engine skeleton implemented with
+placeholder assets. Reticle/divebomb and final TALON art remain deferred. Evidence gaps and
 follow-ons are listed under [Open items](#open-items); see also
 [Delivery plan and status](#delivery-plan-and-status). Mod API line: 0.7 candidate
 (`mod-api-release-policy.properties`).
@@ -1762,3 +1763,214 @@ The focused MICA rerun passes all 34 tests without skips after that correction;
 together with the unchanged five other classes, all 97 selected tests pass.
 Python assembly and native-method discovery each pass seven tests; indexed
 palette/geometry/regeneration verification and the example jar build pass.
+
+
+### Phase 2 TALON engine audit
+
+At base `c88c34cd61` the Tails body-type inventory (including fully qualified names) has 29 files and
+53 checks (the earlier 49-file estimate was historical). The additional
+`instanceof TailsRespawnStrategy` in SidekickCpuController remains a strategy
+capability check: TALON registers that exact engine strategy. 21 gameplay checks
+move to `PlayableArchetype.isTails`, resolving the registered `TAILS_ALONE`
+archetype. 32 checks remain native identity/presentation decisions.
+
+| File | Checks | Decision |
+|---|---:|---|
+| `src/main/java/com/openggf/level/LevelPlayableArtInitializer.java` | 2 | kept |
+| `src/main/java/com/openggf/stageplay/runtime/StageplayNativeCast.java` | 1 | kept |
+| `src/main/java/com/openggf/sprites/managers/NativePlayerArtBindings.java` | 1 | kept |
+| `src/main/java/com/openggf/sprites/managers/SpindashDustController.java` | 1 | moved |
+| `src/main/java/com/openggf/sprites/playable/PlayableCharacterIdentity.java` | 1 | kept |
+| `src/main/java/com/openggf/sprites/playable/PlayableHurtRadiusTransition.java` | 1 | moved |
+| `src/main/java/com/openggf/sprites/playable/PlayablePuppet.java` | 1 | kept |
+| `src/main/java/com/openggf/level/objects/ObjectTouchResponseController.java` | 1 | moved |
+| `src/main/java/com/openggf/level/objects/SkidDustObjectInstance.java` | 1 | moved |
+| `src/main/java/com/openggf/game/sonic3k/Sonic3kSuperStateController.java` | 22 | kept |
+| `src/main/java/com/openggf/game/sonic3k/events/Sonic3kMGZEvents.java` | 2 | moved |
+| `src/main/java/com/openggf/game/sonic3k/objects/HpzEmeraldTheftPlayerControlObjectInstance.java` | 1 | kept |
+| `src/main/java/com/openggf/game/sonic3k/objects/Mgz2EndEggCapsuleInstance.java` | 1 | moved |
+| `src/main/java/com/openggf/game/sonic3k/objects/S3kDezTeleporterObjectInstance.java` | 1 | moved |
+| `src/main/java/com/openggf/game/sonic3k/objects/CnzVacuumTubeInstance.java` | 1 | moved |
+| `src/main/java/com/openggf/game/sonic3k/objects/SozFallingIntroInstance.java` | 1 | moved |
+| `src/main/java/com/openggf/game/sonic3k/objects/SozHyudoroBodyObjectInstance.java` | 1 | moved |
+| `src/main/java/com/openggf/game/sonic3k/objects/SozMinibossChild.java` | 1 | moved |
+| `src/main/java/com/openggf/game/sonic3k/objects/FbzMagneticPendulumObjectInstance.java` | 2 | moved |
+| `src/main/java/com/openggf/game/sonic3k/objects/HCZHandLauncherObjectInstance.java` | 1 | moved |
+| `src/main/java/com/openggf/game/sonic3k/objects/badniks/BlastoidBadnikInstance.java` | 1 | moved |
+| `src/main/java/com/openggf/game/sonic3k/objects/badniks/JawzBadnikInstance.java` | 1 | moved |
+| `src/main/java/com/openggf/game/sonic3k/objects/badniks/RocknBadnikInstance.java` | 1 | moved |
+| `src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossOrbChild.java` | 1 | moved |
+| `src/main/java/com/openggf/game/sonic2/objects/LauncherSpringObjectInstance.java` | 1 | moved |
+| `src/main/java/com/openggf/game/sonic2/Sonic2SuperStateController.java` | 1 | moved |
+| `src/main/java/com/openggf/game/sonic3k/bonusstage/slots/S3kSlotPlayerArt.java` | 1 | kept |
+| `src/main/java/com/openggf/game/sonic3k/resources/S3kRuntimeArtCoordinator.java` | 1 | kept |
+| `src/main/java/com/openggf/game/sonic3k/ending/EndingNativePlayerBinding.java` | 1 | kept |
+
+Kept: native body identity fallback; native-only Stageplay cast/puppet rig;
+separate appendage art; HPZ's raw native mapping-frame write; and the stock
+super controller's palette, art, Hyper effects and Flicky branches; native slot
+body art, ending appendages and body-PLC bookkeeping. Authored
+super profiles use the separate `ProfileSuperStateController`, which owns their
+physics and gates; the retained stock-only emerald/shield gates and physics
+selectors do not dispatch TALON. TALON declares
+only Solar (Super), with neither stars nor after-images nor Super Flickies.
+
+Moved: launcher/radius geometry, hurt radii, dust origin, flight attacks, CNZ
+flight cancellation, SOZ intro alignment, DEZ transport, MGZ transition/capsule
+participation; and S2 normal-form Tails geometry restoration. Existing native tests exercise the same code after dispatch;
+Tails' builtin key still selects every former Tails branch. The shared rolling
+routine also dispatches by archetype instead of requiring a subclass override.
+
+Flight reuses `Tails_Move_FlySwim (sonic3k.asm:27632-27674)`: the native flap
+subtracts $20 until the native upward-speed gate resets its state. Solar's
+explicit `SUPER_FLIGHT_LIFT` declaration subtracts $40 instead; thresholds,
+duration and fatigue stay native. `CROSS_GAME_FLIGHT` opts into this model in
+S1/S2, where player-controlled flight is a mod rule, not ROM behaviour. Native
+Tails declares neither extension. The shared controller stores all flight state
+in the existing rewind-captured double-jump fields.
+
+MICA declares TALON as her default sidekick. Selecting MICA in the launch panel
+selects that team; the sidekick row remains editable for solo play. TALON is a
+separate selectable solo leader with `TAILS_ALONE`. S1 sidekick support is
+provided by the MICA patch, leaving the stock S1 roster unchanged.
+
+**Temporary assets:** TALON receives MICA's materialized sheet and placeholder
+Gilded colours. The separate art lane replaces these with `talon-sheet.yaml` and
+`talon.png`; no copied art is checked in here. The temporary short HUD name is TAL (TALON exceeds S3K’s 32-pixel cell);
+the display name remains TALON, with native
+presentation fallback for missing surfaces/glyphs. The Solar profile uses Tails'
+super physics and is independent of MICA's Hyper form.
+
+**Deferred:** `TalonCharacter` has a TODO for the down-held tick reticle and
+down+jump divebomb / Solar Instagib dive. Neither is implemented in this phase.
+
+
+Validation ownership: `TestPlayableArchetype` checks that the replacement boolean
+is identical to `instanceof Tails` for all native bodies in all three hosts,
+covering the dispatch substitution at every moved site. Focused object coverage
+includes LauncherSpring, HCZHandLauncher, FbzSpiderCraneAndPendulum,
+S3kBadnikTouchResponseProfiles, S3kBossTouchResponseProfiles, S3kJawzBadnik,
+SozFallingIntro, SozMiniboss, S3kDezTeleporterHeadless and
+Sonic3kMgz2EndBossEvents. Shared native motion/CPU and flight tests cover the
+remaining geometry and flight-state consumers. TALON acceptance exercises real
+host boot, solo flight activation, flap acceleration, Solar doubling, team
+selection and a moving CPU follower in S1/S2/S3K. These are bounded encounters,
+not end-to-end zone route certification.
+
+
+### Phase 2 verification (2026-11-09)
+
+Implementation source was based on `c88c34cd619c62c56d185c163aa38e7551207c54`.
+The complete audit includes fully qualified body checks: 53 original checks in
+29 files, 21 moved and 32 kept. The strategy-type check remains separately.
+
+All commands use Java 25, verified ROM inputs and the queued Maven wrapper.
+The expanded focused selection ran 298 tests: the 37 MICA integration tests
+(including TALON in all three hosts), signature surface, both native flight
+classes, the four required S3K selectors, launchers, pendulum, badnik/boss touch,
+Jawz, SOZ intro/miniboss, DEZ teleporter, MGZ events, manual CPU flight and dust.
+One newly exposed unbound Mockito body was corrected in the archetype helper;
+the final pendulum/archetype rerun passed 8 tests, no skips. Earlier iterations
+also corrected the temporary short HUD name and a removed native rescue-actor
+import. No final source changes followed that correction run.
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestMicaCharacterIntegration,TestModApiSignatureSurface,TestPlayableArchetype,TestTailsFlightController,TestPlayableSpriteMovementTailsFlight,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestLauncherSpringObjectInstance,TestHCZHandLauncherObjectInstance,TestFbzSpiderCraneAndPendulum,TestS3kBadnikTouchResponseProfiles,TestS3kBossTouchResponseProfiles,TestS3kJawzBadnik,TestSozFallingIntro,TestSozMiniboss,TestS3kDezTeleporterHeadless,TestSonic3kMgz2EndBossEvents,TestSidekickCpuManualFlight,TestSpindashDustControllerSplash' test
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestFbzSpiderCraneAndPendulum,TestPlayableArchetype' test
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base c88c34cd61 --workers 2 --headless-gl surfaceless-egl --run
+```
+
+The smoke selection ran all 4,507 candidate classes, 91 ordinary batches and one
+guard batch: 38,006 tests, 38 failures, one error and 50 skips. It spent approximately 8,684
+seconds waiting for admission and 1,838.64 seconds executing test batches,
+plus 34.2 seconds of preparation. These are runner timings, not total task time;
+there was no user-approval wait. Its unchanged source fingerprint was
+`c59f9005bc82`.
+
+```text
+VERDICT FAILED: head=c88c34cd619c source=c59f9005bc82 change-based 4507/4507 candidate classes; ordinary 91/91 batches; guards 1/1 batches; tests=38006 failures=38 errors=1 skipped=50 (allowed=47 unexplained=3); missing ROM properties=none; skip inputs audio_reference_files=false,gl=true,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Baseline attribution uses an isolated cow checkout at the exact base, the same
+ROM properties, EGL backend and ordinary two-fork setting (one fork for guards).
+It compares case identities, exception types and assertion messages; normalization
+is limited to one Three Islands object identity and the three MHZ assertions
+whose source explicitly compares unordered sets. The CNZ five cases match full
+messages, including input frames and native state, exactly. The initial baseline
+runs covered 118 tests, reproducing all 38 ordinary failed/error cases: 34 exact
+messages and four normalized matches, with no unmatched case. This establishes
+inherited gaps, not green route certification.
+
+| Failure class (package shortened) | Cases | Baseline obligation |
+|---|---:|---|
+| Sonic2NativeCompetitionHost | 2 | inherited DISPLAY precondition |
+| Sonic2InterlacePixels | 2 | inherited DISPLAY precondition |
+| CompetitiveHalfpipeEgl | 4 | inherited DISPLAY precondition |
+| ModZoneRuntimeProfile | 1 | same null game-id HUD palette exception |
+| ThreeIslandsScene | 8 | same screen/story assertions |
+| PrivateLobbyScreenRendering | 1 | same full-text pixels assertion |
+| LrzSszCheckpointRoutes | 1 | same death at input 6499 |
+| S3kCnz1MinibossCompletionEdge | 5 | identical solo route frames/state |
+| S3kFreshLevelRngState | 1 | same D01 title-owner assertion |
+| S3kIcz1PhysicalLowerPlatformReplay | 1 | same final-neutral turn assertion |
+| S3kMhzAct2AuthoredRoute | 3 | same absent events/deaths |
+| S3kMhzAct2EntryHeadless | 1 | same camera minimum 872 versus 896 |
+| S3kMhzAuthoredRoute | 1 | same missing event set |
+| S3kMhzTailsAuthoredRoute | 1 | same missing event set |
+| S3kMhzTeamAuthoredRoute | 1 | same death at input 26152 |
+| S3kMhzWideAuthoredRoute | 1 | same missing event set |
+| DezIncomingFinalRouteCapture | 2 | same deaths at 14633/14638 |
+| Icz2ColdCubeBridgeRoute | 1 | same expected six versus five objects |
+| S3kCompleteRunReferenceProducer | 1 | same manifest digest exception mismatch |
+| DrawPathFieldWriteGuard | 1 | AIZ plane creator caches; baseline check recorded below |
+
+The eight DISPLAY precondition failures and three unclassified reel skips came
+from inherited `DISPLAY=:0`, despite the explicit EGL backend. The other 47
+skips are classified optional inputs/opt-ins. The correction command removes
+both display variables and runs every affected class; its result is recorded
+below. No skip-policy allowance was added to hide the environment problem.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -DforkCount=2 \
+  '-Dtest=TestSonic2NativeCompetitionHost,TestSonic2InterlacePixels,TestCompetitiveHalfpipeEgl,TestTestReelExtension' test
+```
+
+
+The baseline draw-write guard ran 3 tests (one failure, no skips) and reproduced
+all seven AIZ creator-cache/write-count differences exactly. Including that
+check, 121 baseline tests reproduce every smoke failed/error case: 35 exact
+assertion messages and four normalized matches; no unmatched identity or
+assertion. Baseline commands used `-DforkCount=2 -Dtest=<failed classes> test`,
+with `-Pguards -DforkCount=1 -Dtest=TestDrawPathFieldWriteGuard test` for the
+single guard. No inherited failure was fixed or admitted as new expected debt.
+
+
+With both display variables removed, the four-class rerun executed 14 tests:
+12 passed, two errored, no failures and no skips. The reel's three formerly
+unclassified cases now execute successfully. The two interlace cases progress
+past their environment assertions and expose a reservation collision:
+`[0x1d8000-0x1d9000]` conflicts with the permanent Character special-stage bank
+`[0x1d8000-0x1e8000]`. The exact two errors are checked separately at the baseline
+with the corrected environment; no pattern-bank contract is changed in this lane.
+
+
+The corrected-environment baseline ran the two interlace tests and reproduced
+both error types and full reservation-collision messages exactly. The corrected
+four-class current-tree run therefore has 12 passes and two inherited errors,
+with no skips. All original smoke failures/errors, plus both errors newly exposed
+by fixing display isolation, are attributed to the base. There is no newly
+observed regression, but the raw broad run remains **FAILED**, not green and not
+a full-suite pass. Inherited route, fixture and AIZ draw-cache obligations remain
+open; interlace pixels remain blocked by the pre-existing bank collision.
+
+The candidate API pin adds six normalized lines: the expanded character
+constructor and `defaultSidekick` component/accessor, two movement declarations,
+and `SidekickRespawnStrategy.tails(...)`. Existing constructors retain their
+source/signature forms. The compiled normalized snapshot matches the pin.
+Disassembly citation and whitespace checks pass. No art assets, API version,
+skip-policy debt or native algorithm constants were substituted to obtain these
+results. Down-held reticle and divebomb remain the explicit `TalonCharacter` TODO.

@@ -1402,6 +1402,82 @@ class TestMicaCharacterIntegration {
         } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
     }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
+    void talonS1() throws Exception { talonAcceptance(new com.openggf.game.sonic1.Sonic1GameModule(), "s1"); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void talonS2() throws Exception { talonAcceptance(new Sonic2GameModule(), "s2"); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void talonS3k() throws Exception { talonAcceptance(new com.openggf.game.sonic3k.Sonic3kGameModule(), "s3k"); }
+
+    private void talonAcceptance(GameModule base, String game) throws Exception {
+        String talonCode = "mica-and-talon:talon";
+        try (CatalogFixture fixture = load(buildSample())) {
+            var config = SonicConfigurationService.getInstance();
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, talonCode);
+            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
+            var resolver = new ModuleResolutionService(List.of(), new EffectiveCatalogPatchEnablement(fixture.effective()),
+                    new LogicalRomResolver(() -> null), config, ignored -> fixture.plan());
+            var prepared = resolver.prepareLaunch(ModuleResolutionService.LaunchPolicy.STANDARD);
+            var store = new LaunchProfileStore(config, resolver, prepared);
+            var entry = game.equals("s1") ? MasterTitleScreen.GameEntry.SONIC_1
+                    : game.equals("s2") ? MasterTitleScreen.GameEntry.SONIC_2 : MasterTitleScreen.GameEntry.SONIC_3K;
+            var selection = LaunchProfile.stockFor(entry);
+            for (int i=0; i<12 && !selection.mainCharacter().equals(CODE); i++)
+                selection = store.withNext(selection, LaunchProfile.Row.MAIN_CHARACTER, entry);
+            assertEquals(CODE, selection.mainCharacter());
+            assertEquals(talonCode, selection.sidekick(), "MICA's declared default team");
+            assertEquals(talonCode, store.sanitize(selection, entry).sidekick());
+            GameModule resolved = resolver.resolveForLaunch(base,
+                    new GameplayLaunchRequest(game, talonCode, List.of()), ModuleResolutionService.LaunchPolicy.STANDARD);
+            GameModuleRegistry.setCurrent(resolved);
+            com.openggf.game.session.SessionManager.clear();
+            TestEnvironment.activeGameplayMode();
+            var world = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
+            var talon = world.sprite();
+            assertEquals(talonCode, talon.characterKey().persisted());
+            assertTrue(com.openggf.sprites.playable.PlayableArchetype.isTails(talon));
+            assertEquals(PlayerCharacter.TAILS_ALONE,
+                    com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(config));
+            assertEquals(SecondaryAbility.FLY, talon.getSecondaryAbility());
+            assertNull(talon.getTailsTailsController(), "wings live in the body sheet");
+            talon.setCentreY((short) 120);
+            talon.setAir(true); talon.setJumping(true); talon.setRolling(true); talon.setRollingJump(true);
+            var movement = new com.openggf.sprites.managers.PlayableSpriteMovement(talon);
+            for (String name : List.of("jumpReleasedSinceJump", "inputJump", "inputJumpPress")) {
+                var field = movement.getClass().getDeclaredField(name); field.setAccessible(true); field.setBoolean(movement, true);
+            }
+            var jump = movement.getClass().getDeclaredMethod("doJumpHeight"); jump.setAccessible(true); jump.invoke(movement);
+            assertTrue(talon.getTailsFlightController().isActive(), "airborne repress must enter flight in " + game);
+            talon.setDoubleJumpFlag(2); talon.setYSpeed((short) 0);
+            talon.getTailsFlightController().updateVertical(false, false, 2);
+            assertEquals(-0x20, talon.getYSpeed());
+            talon.setSuperSonic(true); talon.setDoubleJumpFlag(2); talon.setYSpeed((short) 0);
+            talon.getTailsFlightController().updateVertical(false, false, 2);
+            assertEquals(-0x40, talon.getYSpeed(), "Solar doubles the native flap acceleration");
+            talon.setSuperSonic(false);
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, CODE);
+            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, talonCode);
+            var teamModule = resolver.resolveForLaunch(base, new GameplayLaunchRequest(game, CODE, List.of(talonCode)),
+                    ModuleResolutionService.LaunchPolicy.STANDARD);
+            GameModuleRegistry.setCurrent(teamModule);
+            com.openggf.game.session.SessionManager.clear();
+            var teamWorld = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
+            assertEquals(CODE, teamWorld.sprite().characterKey().persisted());
+            var follower = GameServices.sprites().getSidekicks().getFirst();
+            assertEquals(talonCode, follower.characterKey().persisted());
+            assertTrue(follower.isCpuControlled());
+            assertNotNull(follower.getCpuController());
+            teamWorld.stepIdleFrames(120);
+            int followerX = follower.getCentreX();
+            for (int i=0; i<90; i++) teamWorld.stepFrame(false, false, false, true, false);
+            assertNotEquals(followerX, follower.getCentreX(), "native CPU must follow MICA's movement");
+            assertTrue(teamModule.getPlayableCharacterRegistry().find(follower.characterKey()).orElseThrow()
+                    .respawnStrategyFactory().create(follower.getCpuController()) instanceof com.openggf.sprites.playable.TailsRespawnStrategy);
+        }
+    }
+
     private Path buildSample() throws Exception {
         Path project = Path.of("examples/mica-and-talon"), classes = temp.resolve("classes");
         Files.createDirectories(classes.resolve("art"));

@@ -1,12 +1,13 @@
 package com.openggf.level.objects;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.physics.Direction;
 import com.openggf.game.PlayableEntity;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.util.List;
@@ -219,7 +220,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
         // See s2.asm Obj08_SkidDust: move.w y_pos(a2),y_pos(a1) / addi.w #$10,y_pos(a1).
         // Tails then subtracts 4 because his sprite is shorter.
         int dustX = player.getCentreX();
-        int dustOffset = player instanceof Tails ? 12 : 16;
+        int dustOffset = PlayableArchetype.isTails(player) ? 12 : 16;
         // S3K loc_18D14 negates the complete foot offset after Tails's
         // four-pixel adjustment. The spawned puff stays at that world position;
         // later gravity changes must not move an already detached effect.

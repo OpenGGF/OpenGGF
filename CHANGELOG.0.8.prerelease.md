@@ -35,7 +35,13 @@ under the matching area heading; see the
 
 ## Modding and tools
 
-- **MICA, an original character framework example:** optional directional homing
+- **MICA, an original character framework example:** TALON now joins as her
+  default sidekick and is selectable solo. His Tails archetype uses native S3K
+  flight and explicitly declared S1/S2 flight; Solar doubles flap acceleration
+  without Flickies. Art and Solar colours temporarily reuse MICA's assets;
+  reticle/divebomb follow separately. The candidate API adds default sidekick
+  selection, flight declarations and the native Tails respawn factory.
+  Optional directional homing
   previews airborne homing targets, locks the reticle during strikes, and draws
   native ROM spindash/skid dust for canonical-sheet characters. A fault-bounded
   `onMovementTick()` character hook supports per-tick preview requests. Directional

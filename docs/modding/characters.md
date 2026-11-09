@@ -651,3 +651,27 @@ The AIZ intro actor also binds the custom normal sheet. Its riding and lift-off
 native mappings use aliases; its separate powered bank falls back to canonical
 ROLL with the authored S3K Super palette cycle. The native intro gate follows
 the registered Sonic archetype, including custom Sonic stand-ins.
+
+
+### Tails archetype and flight extensions
+
+A definition with `behavesLike = TAILS_ALONE` receives native Tails gameplay
+branches (including touch attacks, object geometry and rolling rules), without
+receiving the native appendage renderer or Super Flickies. Use
+`SidekickRespawnStrategy::tails` for native fly-in/CPU recovery when following.
+Declare `SecondaryAbility.FLY` for the shared flight model. S3K enables it
+natively; `MovementAbility.CROSS_GAME_FLIGHT` explicitly enables the same model
+in S1/S2 as a mod-defined extension. `SUPER_FLIGHT_LIFT` doubles the native
+flap acceleration only while the authored super form is active. Neither
+extension changes stock Tails.
+
+The full `CharacterDefinition` constructor accepts an optional `defaultSidekick`
+key. It must share the leader's owner and cannot accompany `SONIC_ALONE`.
+Selecting that leader in the launch panel selects its available default
+sidekick; users may still choose none for solo play. Old constructors retain
+solo defaults. Registered mod characters are selectable as sidekicks as well
+as leaders. A host that lacks sidekicks still needs explicit module support.
+The MICA patch supplies that support in S1.
+
+The TALON example currently uses MICA's sheet and palette as temporary assets.
+Its down-held reticle and divebomb are deferred; jump alone flaps normally.

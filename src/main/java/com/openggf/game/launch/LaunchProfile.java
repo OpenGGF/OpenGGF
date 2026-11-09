@@ -113,7 +113,7 @@ public record LaunchProfile(
         Objects.requireNonNull(entry, "entry");
         String sanitizedMainCharacter = sanitize(mainCharacter,
                 mainCharacterValues(entry, patchBackedMainCharacters), SONIC);
-        String sanitizedSidekick = sanitize(sidekick, sidekickValues(entry), stockFor(entry).sidekick());
+        String sanitizedSidekick = sanitize(sidekick, sidekickValues(entry, patchBackedMainCharacters), stockFor(entry).sidekick());
         if (mainCharacter.equals(sanitizedMainCharacter) && sidekick.equals(sanitizedSidekick)) {
             return this;
         }
@@ -225,7 +225,7 @@ public record LaunchProfile(
                 yield new LaunchProfile(rewind, crossGameSource, debugTools, aspect, nextMain, nextSidekick);
             }
             case SIDEKICK -> new LaunchProfile(rewind, crossGameSource, debugTools, aspect, mainCharacter,
-                    cycle(sidekickValues(entry), sidekick, forward));
+                    cycle(sidekickValues(entry, patchCharacters), sidekick, forward));
         };
     }
 
@@ -257,7 +257,7 @@ public record LaunchProfile(
         return List.copyOf(values);
     }
 
-    private List<String> sidekickValues(MasterTitleScreen.GameEntry entry) {
+    private List<String> sidekickValues(MasterTitleScreen.GameEntry entry, List<String> patchCharacters) {
         String donor = effectiveCharacterDonor(entry);
         String stock = stockFor(entry).sidekick();
         List<String> values = new ArrayList<>();
@@ -271,6 +271,9 @@ public record LaunchProfile(
             if (!values.contains(candidate)) {
                 values.add(candidate);
             }
+        }
+        for (String candidate : patchCharacters) {
+            if (candidate.contains(":") && !values.contains(candidate)) values.add(candidate);
         }
         return values;
     }
