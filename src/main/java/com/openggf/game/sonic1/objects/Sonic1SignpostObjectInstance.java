@@ -357,7 +357,7 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
             // animation dispatch can rewrite Flash_Collect's retained
             // id_Null byte. Keep the structural engine sprite aligned with
             // that absent-slot state while the signpost commits v_endcard.
-            player.setAnimationId(Sonic1AnimationIds.NULL.id());
+            player.setAnimationId(Sonic1AnimationIds.NULL);
             player.setForcedAnimationId(Sonic1AnimationIds.NULL.id());
             triggerGotThroughAct(player);
             return;

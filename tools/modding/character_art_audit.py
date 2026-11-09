@@ -54,8 +54,14 @@ def main():
                 matched=[k for k,a in d['sourceAnimations'].items() if [d['packedIndices'].get(str(i),i) for i in frames]==[s['frameIndex'] for s in a['steps']]]
                 # Bound resolution is observed. Name equivalence alone cannot establish Tails pose coverage.
                 native_names=names.get(sid,[]); authored=any(k in native_names for k in matched)
+                family=d.get('familyBindings',{}).get(sid,{})
+                phase_keys=[f"family-{str(family.get('family','')).lower().replace('_','-')}/{phase}" for phase in family.get('phases',[])]
+                family_authored=c=='mica' and bool(phase_keys) and all(key in d['nativeAliases'] for key in phase_keys)
+                if family_authored:
+                    authored=True
+                    matched=['family:'+family['family']]
                 status='authored' if authored else 'fallback'
-                target,ps=sourceinfo([d['packedIndices'].get(str(i),i) for i in frames])
+                target,ps=sourceinfo([d['nativeAliases'][key] for key in phase_keys] if family_authored else [d['packedIndices'].get(str(i),i) for i in frames])
                 rank='normal early-zone play' if set(native_names)&{'WALK','RUN','ROLL','WAIT','PUSH','LOOK_UP','DUCK','SKID','STOP','SPINDASH','BALANCE','BALANCE2','SPRING','HURT','DEATH'} else 'zone-specific / rare; see users inventory'
                 add(c,g,'animation',f'{int(sid):02X} '+('/'.join(native_names) or 'unmapped native ID'),status,
                     ('/'.join(matched) or 'missing bound script')+': '+target,ps,rank,

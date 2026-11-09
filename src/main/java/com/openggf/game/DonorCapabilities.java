@@ -32,6 +32,9 @@ public interface DonorCapabilities {
      */
     Set<PlayerCharacter> getPlayableCharacters();
 
+    /** Module-owned phase correspondence; null family marks N/A, null animation an unnamed native script. */
+    default Map<Integer, AnimationFamilies.Binding> getAnimationFamilies() { return Map.of(); }
+
     /** Object-owned native mapping vocabulary; canonical sheets may override each semantic pose. */
     default Map<Integer, NativeFramePose> getNativeFramePoses() { return Map.of(); }
 

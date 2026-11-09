@@ -4,6 +4,12 @@ import com.openggf.level.objects.ObjectInstance;
 
 /** Engine-only cross-package access to playable controller internals. */
 public final class PlayableSpriteInternalAccess {
+    /** Bind ordinary resources before temporary native presentation or rewind reconciliation. */
+    public static void bindNormalAnimationProfile(AbstractPlayableSprite player) {
+        var controller = player.getSuperStateController();
+        if (controller != null) controller.bindNormalAnimationProfile(player.getAnimationProfile());
+    }
+
     /** Fixed-size private ghost state: no gameplay/controller owners or rewind payloads. */
     public record GhostPresentationState(
             short xPixel, short yPixel, short xSubpixel, short ySubpixel,

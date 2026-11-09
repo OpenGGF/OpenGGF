@@ -60,7 +60,7 @@ public final class StageCharacterPresentation {
         if (com.openggf.level.objects.PlayableSheetAnimationBinding.requiresBinding(art)) {
             art = com.openggf.level.objects.PlayableSheetAnimationBinding.bind(art,
                     GameServices.module().getDonorCapabilities(),
-                    (com.openggf.sprites.animation.ScriptedVelocityAnimationProfile) nativeArt.animationProfile());
+                    nativeArt);
         }
         return art;
     }

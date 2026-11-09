@@ -640,6 +640,13 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
                         PlayerCharacter.SONIC_AND_TAILS,
                         PlayerCharacter.TAILS_ALONE);
 
+        private static final java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> FAMILIES =
+                com.openggf.game.AnimationFamilies.load("/animation-families/s2.json");
+
+        @Override public java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> getAnimationFamilies() {
+            return FAMILIES;
+        }
+
         private static final java.util.Map<CanonicalAnimation, CanonicalAnimation> FALLBACKS =
                 buildFallbacks();
 
@@ -699,11 +706,13 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
 
         @Override
         public java.util.Map<CanonicalAnimation, CanonicalAnimation> getAnimationFallbacks() {
-            return FALLBACKS;
+            return com.openggf.game.AnimationFamilies.fallbacks(FAMILIES, FALLBACKS);
         }
 
         @Override
         public int resolveNativeId(CanonicalAnimation canonical) {
+            int familyId = com.openggf.game.AnimationFamilies.resolve(FAMILIES, canonical);
+            if (familyId >= 0) return familyId;
             return Sonic2AnimationIds.fromCanonical(canonical);
         }
 

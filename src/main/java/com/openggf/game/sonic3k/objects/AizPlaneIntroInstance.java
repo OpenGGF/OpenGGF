@@ -488,7 +488,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
                         || !PlayableSheetAnimationBinding.requiresBinding(source);
                 creatorIntroArt = PlayableSheetAnimationBinding.requiresBinding(source)
                         ? PlayableSheetAnimationBinding.bind(source, module.getDonorCapabilities(),
-                                (ScriptedVelocityAnimationProfile) nativeArt.animationProfile()) : source;
+                                nativeArt) : source;
                 sonicRenderer = new PlayerSpriteRenderer(creatorIntroArt, services().graphicsManager());
                 StageCharacterPresentation.bindPalette(sonicRenderer, definition);
                 superSonicRenderer = sonicRenderer;

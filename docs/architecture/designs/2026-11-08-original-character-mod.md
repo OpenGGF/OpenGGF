@@ -1762,3 +1762,307 @@ The focused MICA rerun passes all 34 tests without skips after that correction;
 together with the unchanged five other classes, all 97 selected tests pass.
 Python assembly and native-method discovery each pass seven tests; indexed
 palette/geometry/regeneration verification and the example jar build pass.
+
+### Shared animation-family implementation (2026-11-09)
+
+Branch `feature/ai-animation-families` starts at `4349476aa1`. The single shared
+vocabulary remains `CanonicalAnimation`; module-owned phase profiles under
+`src/main/resources/animation-families/` map native script slots into those
+families. `AnimationFamilies.Binding` contains animation/family identity and
+ordered phase indices, not art, timer bytes or animation bytecode. Every loaded
+normal Sonic script has an entry; a null family explicitly marks N/A; unnamed native scripts may retain a known family.
+The maintained review generator inventories **101 Sonic scripts and 75 reference
+Tails scripts**, including native frame count/order, timing, terminator and
+script-label citation. Tails metadata is reference-only and does not change
+archetypes, flight or CPU code.
+
+Creator sheets author `family-<name>/<phase>` aliases in the existing NFRM table.
+Complete phase sets bind against actual host ROM scripts: repeated frames,
+LOOP_BACK counts, SWITCH and delay all remain native. Canonical movement/slope
+scripts and sparse-sheet compatibility continue through the existing path.
+There is no format version change, migration or canonical enum renumbering.
+The candidate API adds `DonorCapabilities.getAnimationFamilies()`, the binding
+record, and a default semantic `AnimationId.toCanonical()`; normalized signature
+pins move together. Typed and canonical cross-game animation requests can use
+host-timed scripts in a private namespace; raw integer writes keep their existing
+meaning. Cross-game balance/skid/slide profile selectors use these scripts too.
+
+| Drawing family | Host script vocabulary | Authored phase set |
+| --- | --- | --- |
+| ROLL | ROLL, ROLL2 | Five curl/blur phases; host repetition/order retained |
+| SKID | STOP, SKID | Brake phases; S1 loops, later games switch to WALK |
+| FLOAT2 | FLOAT, FLOAT2, FLOAT3, FLOAT4 | Eight directional tumble phases; explicit host subsets |
+| BALANCE | BALANCE | Toward-edge wobble; S1 two-phase subset |
+| BALANCE2 | BALANCE2 | Toward-edge near-limit wobble; S2 repeats an intermediate phase |
+| BALANCE3 | BALANCE3 | Away-edge wobble |
+| BALANCE4 | BALANCE4 | Away-edge entry and four-phase tail; native LOOP_BACK 4 |
+| LEAP1 | LEAP1, LEAP2 | Ending leap and transition, native LOOP_BACK 1 |
+| BUBBLE | GET_AIR, BUBBLE | Air pickup plus return through walk poses |
+| HURT_FALL | WATER_SLIDE, SLIDE, HURT_FALL | Two recoil/slide phases, host-specific order |
+| HURT | HURT, HURT2 | Shared recoil drawing |
+| BLANK | NULL_ANIM, BLANK | Transparent phase; native loop or finite switch |
+| HANG / HANG2 / TAILS_CARRIED | Same keys | Separate hanging/carry families and hand positions |
+| BLINK / GET_UP | Same keys | Shared blink phases; distinct recovery phases when needed |
+| VICTORY | VICTORY | Entry and partial-loop celebration phases |
+| WARP1–4 / SURF / BURNT / SHRINK | Same keys | Distinct native silhouette/scale phases retained |
+
+The full inventory and **94 lossless full-frame GIF comparisons** are generated
+at the task's external review path `index.html` (reported at handoff), beside
+`family-inventory.csv`. GIF timing uses cumulative 60 Hz-to-centisecond rounding;
+speed-driven roll is shown at an illustrative one-tick interval. Native decoded
+pixels remain external. Source art, indexed palette and hotspot dimensions are
+unchanged. MICA drops **226 → 208 frames**, removing 18 redundant drawings and
+adding 106 semantic phase aliases; representative script count remains 52.
+Both `recipe.json` and `frames.yaml` carry the change. The recipe's previously
+stale full-loop WAIT now matches the already-correct handoff's six-step tail.
+
+Retained source drawings whose filenames name a host:
+
+| Sources | Reason |
+| --- | --- |
+| `variant-s1-33`, `-rot52`, `-rot53`, `-rot54` | Four warp orientations; later games supply no equivalent family |
+| `variant-s1-43`, `variant-s1-44` | Ending leap/transition silhouette, distinct from spring |
+| `variant-s1-49` | Surf stance, distinct from idle and balance |
+| `variant-s1-4b` | Burnt family source; reused where the same family is available |
+| `variant-s1-4e`, `-scale79` through `-scale82` | Shrinking body scales, not another host's death pose |
+| `variant-s2-0a` | S2 crouched recovery; S3K recovery has a different pose |
+| `variant-s2-6c` | Second overhead hand phase absent from S3K's single HANG2 pose |
+
+Host prefixes in source filenames are provenance, not runtime selection. These
+are phases within the shared families, not parallel complete per-host sheets.
+
+New donation equivalences resolve STOP→SKID, FLOAT3/FLOAT4→FLOAT2,
+GET_AIR→BUBBLE, WATER_SLIDE/SLIDE→HURT_FALL, NULL_ANIM→BLANK and HURT2→HURT;
+BURNT uses the native burned-death slot. Same-named balance/float families can
+also retain the earlier host's step order and timing. A donor without a required
+phase keeps its existing compatibility script. S1 warp/leap/surf/shrink have no
+complete later-game family; their approximate fallbacks remain explicit.
+
+Rejected approach: treating unused legacy dash script numbers as S1 leap poses.
+SonAni_Dash2 (s2.asm:38740) and AniSonic12
+(General/Sprites/Sonic/Anim - Sonic.asm:63) retain old slot numbers but do not
+establish matching modern mapping geometry. They are N/A in the Sonic profile.
+Also, finite GET_UP is not universal: SonAni_GetUp (s2.asm:38726) switches to
+WALK, whereas AniSonic0B (General/Sprites/Sonic/Anim - Sonic.asm:56) loops. The
+shared table preserves that shipped difference; forcing a finite S3K ending
+would violate native timing/control flow.
+
+TALON's remaining character art should be budgeted by phases, not per-host
+script count: one set each for PUSH, roll/blur, toward/away edge wobble and
+near-edge entry, tumble directions, hanging hand positions, air pickup and
+slide/recoil. Keep Tails' carry/ascend/tired/swim phases as separate functional
+families; integrated wings still make detached tail art N/A. Reuse common phases
+across S2/S3K rather than commission two complete sets. The previous 20–35-pose
+estimate remains an upper planning range; the actual decrement depends on his
+approved poses, not Sonic phase counts. TALON's measured coverage is unchanged
+until the archetype lane installs his own phase correspondence and aliases.
+
+Production audit fallback obligations, compared with a baseline report generated
+using `4349476aa1` sources: MICA S1 **0 → 0**, S2 **40 → 38**, S3K
+**106 → 102**. TALON S1/S2/S3K remains **2 / 61 / 96**. These are binding
+obligations, not drawing counts or route certification. Family coverage is
+recognized only when every required phase alias is supplied; incidental native
+script-frame equality is insufficient.
+
+For the existing Sonic-host diagnostic specifically, TALON's 23 missing canonical
+slot names reduce to **18 new drawing families**: ROLL2 and HURT2 reuse his
+existing ROLL/HURT; FLOAT/FLOAT2, SLIDE/HURT_FALL and NULL_ANIM/BLANK each
+collapse to one new set. This removes five independently budgeted script sets,
+without pretending Sonic phase counts define Tails' remaining flight/swim art.
+The reference Tails rows in the CSV enumerate the actual ordered phases for
+that lane to adopt. Required sets are PUSH; four edge-balance families;
+FLOAT2 directional tumble; HANG/HANG2; BUBBLE pickup/return; HURT_FALL recoil;
+BLINK and recovery; blank; drown/burnt; victory; and powered transformation.
+Existing flight/tired-flight and movement art remains approved; carry, ascend,
+swim and tired-swim need their distinct Tails reference phases.
+
+Validation checkpoint: the requested 14-class focused selection passes 163 tests
+with zero failures/errors/skips, including all four required S3K test names.
+The Python assembly selection passes five tests; palette/geometry and deterministic
+208-frame recipe regeneration pass. Initial local failures exposed invalid alias
+key syntax, old 226-frame assertions and the stale recipe WAIT terminator; those
+were corrected. Scoped citation validation reports no stale citations (three near
+and eight unverifiable pre-existing references remain). Donation changes after
+this checkpoint receive a focused rerun before the final smoke run.
+
+Final correspondence audit corrects two legacy-index traps: S3K's roll blur is
+its first phase ($96), while S1/S2 place the blur last in their unique phase set;
+Sonic's $20 script is the lying idle pose despite the legacy FLY enum spelling.
+The Sonic profile assigns that slot to WAIT phases 7/8, leaving Tails' flight
+meaning untouched. S3K carried scripts $22/$23 share the same phases; $23 is
+an unnamed native exit script with SWITCH rather than a second drawn set.
+The initial smoke attempt was stopped after two passing batches (762 tests,
+zero skips) to correct these metadata errors; its incomplete verdict is not a
+validation pass. The final run uses the corrected frozen source.
+
+The final stationary/movement pass supplies 106 phase aliases. WALK/RUN keep
+materialized contiguous slope-bank addresses while their phase selection follows
+the host ROM script (S1's six-step walk uses a subset of the common eight-phase
+set). MICA's bound WAIT tails are now exactly **2 / 6 / 53** for S1/S2/S3K;
+DUCK/LOOK_UP retain native one-step partial loops rather than flattened HOLD.
+The corrected focused selection passes **163 tests, zero failures/errors/skips**.
+The stale recipe WAIT issue is independently reproduced on `4349476aa1`:
+`verify.py` passes but rewrites WAIT to LOOP, after which the existing assembly
+selection fails `test_authored_finite_scripts_and_invalid_rewind` and
+`test_roundtrip_pixels_hotspots_slopes_and_custom_hook`. The baseline handoff was
+restored after this probe. Both recipe/handoff and the five assembly tests now
+agree on this branch.
+
+### Final donation, anchor and validation evidence
+
+Built-in Sonic's canonical and typed native requests resolve against the loaded
+donor namespace: prefer a host-timed family projection, then donor-native or
+compatibility resolution. Creator sheets, Tails and Knuckles retain their owners.
+Explicit donation checks cover STOP, FLOAT3/4, GET_AIR, BURNT, WATER_SLIDE/SLIDE,
+NULL_ANIM, HURT2, TAILS_CARRIED, HANG2, BLINK, GET_UP and WAIT in S1/S2.
+Host WAIT timing and frame indices travel with the projection. Only a host whose
+native profile owns the finite idle interrupt enables BLINK/GET_UP selectors;
+Obj01_MdNormal_Checks (s2.asm:36444-36468) retains its native gate. S1/S3K do not
+gain the S2 gate. Movement speed handlers retain their existing owners.
+
+The expanded tests rejected exact-name FLOAT lookup: S3K's one-frame FLOAT slot
+cannot supply a whole float family. Projection selects the complete FLOAT2 bank
+before applying the host's ordered phases. A missing donor drawing phase repeats
+the first compatible family pose while preserving the host's timing and finite
+terminator; absent families retain their declared compatibility fallback. This
+keeps S2 HANG2 and GET_UP control flow valid without generating new art. MICA
+retains the genuinely distinct S2 recovery/grip drawings.
+
+The live, formerly unclassified S3K `$19` script also belongs to HURT_FALL.
+Its `$D7/$D8` RGBA pixels equal `$8C/$8D`, but hotspots differ by `(4,-4)`.
+loc_726E (sonic3k.asm:9120-9124) selects it for ice slides, and loc_7402 (sonic3k.asm:9278-9283) selects the same variant.
+The binding records `offsetX=-4, offsetY=4`; other bindings default to zero.
+word_147A2C (General/Sprites/Sonic/Map - Sonic.asm:1334-1337) and word_147A40 (General/Sprites/Sonic/Map - Sonic.asm:1338-1341)
+corroborate the shifted mappings, compared with word_147484 (General/Sprites/Sonic/Map - Sonic.asm:1046-1049) and word_147498 (General/Sprites/Sonic/Map - Sonic.asm:1050-1053).
+The binder creates two mapping views sharing art and DPLC, preserving every
+piece's palette, flip, priority and tile fields. The candidate binding record
+adds integer offsets, and the normalized API pin updates with it. Audit output
+separates the fixed 256-slot native prefix from generated mapping views.
+
+Final focused verification passes **192 tests, zero failures/errors/skips**,
+including all requested names, the four required S3K names, Super profile refresh
+and all 21 HPZ sanctuary cases. Python assembly
+passes five tests; palette/geometry and deterministic regeneration pass. The
+final audit has MICA fallback obligations **0 / 38 / 102**, against baseline
+**0 / 40 / 106**; TALON remains **2 / 61 / 96**. There are **208 source drawings,
+106 family aliases, two generated mapping views and 94 lossless review GIFs**.
+The inventory contains 101 Sonic and 75 reference Tails scripts. No new art or
+Tails archetype/CPU code is introduced.
+
+Two exploratory smoke runs were interrupted to correct metadata and donation
+caller omissions, rather than reported as passing validation. A later attempt
+stopped before Maven because the shared filesystem was full (zero tests run).
+The truncated design and handoff were recovered from the prior staged Git blob
+and the authoritative recipe. This task's disposable baseline build output was
+removed; the baseline source and recorded 154-test pass were retained. Final
+smoke verification runs only after source recovery and regeneration checks.
+
+### Smoke failure attribution and corrected headless environment
+
+The first broad diagnostic completed 37 batches (14,862 tests) before stopping:
+two failures were Mockito assertions expecting the old integer NULL overload,
+and eight were native EGL cases rejecting inherited `DISPLAY=:0`. On the exact
+baseline, `TestSonic1PlcProducerCoverage` passes 19 tests and
+`TestSonic1GiantRingObjectInstance` passes five; their assertions now verify the
+new typed NULL request without changing forced-blank behavior. The baseline
+reproduces all eight display failures. Clearing only DISPLAY reveals the same
+WAYLAND_DISPLAY requirement, so final commands unset both desktop variables.
+
+With both unset, `TestSonic2NativeCompetitionHost` and `TestCompetitiveHalfpipeEgl`
+pass on both trees (six tests). `TestSonic2InterlacePixels` has two identical
+pre-existing errors on both trees: private windows `[0x1d8000-0x1d9000]` overlap
+permanently reserved character special-stage art `[0x1d8000-0x1e8000]`. This task
+does not alter that unrelated reservation or turn the errors into skips. The
+corrected focused selection exercises 195 tests: the original 163 and the 32
+attribution cases; the eight display-sensitive cases are also rerun separately
+with the fully headless environment. Baseline identity, assertion and skip
+comparison—not totals alone—governs final smoke attribution.
+
+### Broad-smoke native borrowing regression
+
+The corrected smoke attempt reached 79 ordinary batches / 33,317 tests before
+stopping for two new HPZ sanctuary rewind failures. It recorded 27 assertion
+failures, three errors and 41 allowed skips. Same-class runs at `4349476aa1`
+reproduce the other 28 failure/error cases: interlace reservation collisions,
+the mock mod-zone game ID, Three Islands/lobby assertions, SSZ/CNZ/ICZ routes,
+fresh-level RNG/title ownership and MHZ entry/authored routes. Compare unordered
+expected-set diagnostics as sets; their display order varies between JVMs.
+The baseline HPZ class passes all 21 cases; this tree reproduced two failures
+both in broad smoke and a focused diagnostic run.
+
+The first HPZ rewind occurred while literal host art was borrowed. The Super
+controller lazily cached that temporary native profile as its normal profile.
+After ordinary donation returned, subsequent rewind restored native WAIT ID 5
+instead of the host-timed family ID 517. Boundary instrumentation identified the
+profile change outside the native-art binding owner. Ordinary art initialization
+now explicitly binds the Super controller's normal profile on creation and art
+refresh, before scenes can borrow resources. The existing native borrowing and
+post-restore owners retain their ordering. A focused regression covers borrowed
+art followed by ordinary release and a second ordinary-art refresh. Temporary
+instrumentation is removed; no Tails archetype or CPU code is changed.
+
+The correction passes all 21 HPZ sanctuary cases and 54 focused tests in total
+(`TestSuperStateController`, `TestS3kHpzSanctuaryLifecycleProduction`,
+`TestCrossGameFeatureProviderRefactor`, `TestModApiSignatureSurface`), with zero
+failures/errors/skips. The same-class baseline comparisons preserve the exact
+assertions and input/frame boundaries; no route fixture or skip policy changes.
+
+The review now groups playback by family and shows a compact S1/S2/S3K table
+with explicit absent-host cells. Tails references use local phase indices,
+classify their blink and reserved slots independently of Sonic, and do not
+inherit Sonic mapping offsets. All 94 GIF hashes remain byte-identical after
+this inventory-only refinement; all 176 rows retain native script citations.
+
+
+### Final delivery verification (animation families)
+
+The corrected Java/art/script tree passes the requested focused selection plus
+Super-profile/HPZ coverage: **192 tests, zero failures/errors/skips**. Assembly
+passes five Python tests and deterministic 208-frame regeneration. The refreshed
+audit still reports MICA fallback obligations **0 / 38 / 102**, against baseline
+**0 / 40 / 106**; TALON remains **2 / 61 / 96**.
+
+The required change-based command completed all 4,508 candidate classes,
+91 ordinary batches and one guard batch:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 4349476aa1 --workers 2 --headless-gl surfaceless-egl --run
+```
+
+```text
+VERDICT FAILED: head=4349476aa187 source=6f21149b677f change-based 4508/4508 candidate classes; ordinary 91/91 batches; guards 1/1 batches; tests=38012 failures=31 errors=3 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+All **33 inherited failure/error cases** were rerun by class at `4349476aa1`
+and compared by test identity, assertion/exception and skips. In addition to the
+previously recorded cases, these include DEZ incoming-final deaths at inputs
+14633/14638, ICZ2 cube-bridge expected 6/actual 5, the audio reference producer's
+exception mismatch, and the unchanged AIZ draw-cache inventory mismatch. No
+fixture, draw-debt inventory or skip-policy rule was relaxed.
+
+One new packaging failure in that full run identified missing native-image
+resource includes for the family profiles. The only subsequent production edits
+are native-image JSON metadata: include `animation-families/*.json`, and register
+the Binding record and canonical enum for Jackson reflection. No gameplay Java,
+ROM correspondence, art or script input changed after the ordinary lane. That
+37,176-test lane remains applicable. The complete guard lane was rerun on the
+packaging correction:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards test -B
+```
+
+The rerun executes **836 tests, one failure, zero errors/skips**: the sole failure
+is the exact inherited AIZ draw-cache inventory assertion. Native-image resource
+reachability passes; ArchUnit's 34 cases pass. JSON syntax, all three include
+matches and reflected class names also pass. No native-image binary build or
+full-suite pass is claimed. All 49 smoke skips are allowed; required/unclassified
+skips and missing ROM properties are zero.
+
+The full smoke measured 1,789.44 seconds of Maven execution plus 39.92 seconds
+preparation, and approximately 1,893 seconds of queue wait (rounded admissions).
+User-input wait is zero; other investigation/baseline wall time is unmeasured.
+The review directory retains `verification.json`, exact logs and same-class
+baseline attribution. Failed category diagnostics were inspected and acknowledged;
+only this task's owned detached baseline checkout is removed after preserving
+its results. The implementation branch and review assets remain for integration.
