@@ -5170,3 +5170,98 @@ terminal and their units retired. Diagnostics, original pixel evidence and retai
 baseline/worker trees remain preserved; unknown work is not discarded. The task
 branch/worktree stays for draft PR271. No destination merge/push or new PR is
 part of this increment. The following publication commit changes audit prose only.
+
+## Updated develop qualification and owned fixtures — 2026-11-09
+
+The reconciled runtime was frozen at `6752c370c5c61d9a7d0787218ea4a0c518e8f1f5`
+against updated develop `d314e7f2e35dde7b9ee603a9969beab4d49e0c29`.
+Both full source selections completed: baseline 4,632 classes, candidate 4,635;
+94/94 ordinary batches and 1/1 full guard batch each. The raw final lines remain:
+
+```text
+VERDICT FAILED: head=d314e7f2e35d source=c2a9c482f5f6 focused 4632/4632 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38561 failures=28 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+VERDICT FAILED: head=6752c370c5c6 source=2387479368e5 change-based 4635/4635 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38723 failures=29 errors=1 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+The selection has four added source paths and one removed contact-state path.
+The eleven-case contact class moves to its package-private-memory counterpart;
+method identities map exactly.
+All declared ROM properties, configuration hash, worker/GL/budget/skip inputs,
+and the full 49 skip dictionaries match. Omission and truncation-cap counters are
+zero. The baseline has no root ROM files/links while the existing candidate has
+ten; both layouts were preserved. No identical-ambient-filesystem claim is made.
+
+The one OOZ rewind error reproduced on unchanged d314 in a fresh class fork:
+`TestOOZPoppingPlatformMultiSidekick#capturedRiseRestoresAndReplaysEveryUpdateThroughExactApex`
+requires the gameplay timer owner. Primary type/message and complete causal stack
+are literal matches. The original baseline cohort's successful result remains
+unchanged; no specific preceding provider or flakiness cause was established.
+The existing ROM-free Sonic 2 game-module fixture now opens before each test and
+`resetEngineOnly` retires it afterward. All eleven original bodies, identities and
+assertions are byte-preserved after removing only the setup/import additions.
+The single-class control passed 11/11; the resulting task commit is
+`a45c0110935727d0ba4d880151cbed321f7ee61a` (source patch from local `f34d133d6f`).
+No production file changed after the source-frozen category/domain checks.
+
+One post-repair job ran the exact candidate batch-32 fifty-class cohort under
+`-Psmoke -Ptest-concurrent` and normal/EGL, then `-Pguards`: 307/307 and 843/843
+fresh cases respectively, zero failures/errors/skips. The immutable includes file
+was independently re-derived from the sealed selection and runner partition.
+Class membership is established; Surefire execution order and a leaking
+predecessor are not inferred. The eleven OOZ identities are individually green.
+Original raw results/verdicts remain intact; the qualification is an explicitly
+provenance-bearing composition, with no invented category VERDICT.
+
+The optional-ROM scene fixture was separately copied onto unchanged d314 production
+and run under the same smoke/concurrent profiles: fourteen cases, eight failures,
+zero errors/skips. All eight identities/types reproduce the candidate. Seven full
+messages and causal details are literal; the remaining full message differs only
+in its two Java identity hashes and has identical remaining stack text. This
+accounts for the newly reached scene assertions rather than treating old early
+returns as successful product checks. The owned test copy was restored after the
+control terminated. The original broad baseline was never modified or rebuilt.
+
+Against that matched-fixture reference, the composed candidate retains 29 failures:
+25 full assertions/causal details are literal and four display changes are reviewed
+individually (one FieldScreen/StoryScreen identity display and three MHZ set orders).
+Both exact texts are retained, and the MHZ test source blobs are unchanged.
+No blanket normalization is applied. The baseline suspension-rendering negative is
+absent from candidate negatives; this establishes no cause or fix. Original/raw,
+matched-fixture and composed comparison views remain distinct.
+
+Fresh matched domain commands selected `TestS2Ehz1TraceReplay` in `trace-replay`
+and both HCZ Sonic/Tails leaves in `trace-segments`, with normal memory, Java25,
+Lua5.4, displays unset, EGL, forkCount1, alphabetical order, summary printing and
+fresh output paths containing spaces. EHZ1 compares 5,852/5,852 and HCZ1 3,519/3,574,
+both clean; HCZ2 compares 14,149/14,208 with the same 26 gameplay errors. All three
+declared gates are reached and no test skips. Removing only the approved final
+carried-entry diagnostic field per report reproduces every baseline report byte;
+context bytes are identical. Each full candidate report also equals its previous
+qualified candidate report. EHZ's unknown-manifest note and the two exact HCZ
+provenance strings are retained. Eight missing advertised HCZ aux schemas and
+separate log warnings remain limits; no route/run-chain or whole-log-clean claim.
+
+Timing is reported separately below; user wait is zero. Category execution includes
+preparation and excludes shared admission wait. Queue totals use reported integer
+waits; residuals include unseparated overhead and rounding. These overlapping jobs
+are not an end-to-end total. Exact arrays, fresh XML, source seals, raw negatives,
+full skip/selection checks and component provenance remain under
+`target/code-climb/reconcile-d314/`, with the d314 baseline control evidence in its
+own tree and the fresh OOZ/scene controls in their owned staging tree.
+
+| Command | Queue s | Execution/preparation or Maven s | Wall s | Unknown/rounding s |
+| --- | ---: | ---: | ---: | ---: |
+| d314 baseline | 4747 | 2028.960 | 6794.990806 | 19.030806 |
+| 6752 candidate | 5727 | 1936.150 | 7680.800511 | 17.650511 |
+| post-fixture cohort | 8 | 37.180 | 46.182634 | 1.002634 |
+| post-fixture guards | 25 | 187.000 | 214.167180 | 2.167180 |
+
+Opus's bounded static reconciliation/ordinary-field review found no blocking or
+medium issue and executed no tests. All owned jobs/supervisors are terminal and
+retired. Draft PR271 is the sole publication destination. The original 2dd
+Competition black-pixel failure remains unattributed and blocks merging; later
+passes do not label it fixed, flaky or inherited. The captured-parent `430d5137`
+staging branch is reviewed and retained, unintegrated. During this freeze develop
+advanced to `c06efe67`; that newer tip is not part of the tested runtime snapshot
+and is reserved for a subsequent reconciliation. Diagnostic/source trees remain
+intentionally retained while this draft and its open attribution need them.
