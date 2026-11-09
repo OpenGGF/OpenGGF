@@ -8,6 +8,7 @@ import com.openggf.level.objects.ObjectInstance;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -980,6 +981,15 @@ final class DefaultObjectRewindPolicies {
     /** Read-only view of the exact-field policy table for guard tests. */
     static Map<FieldKey, RewindFieldPolicy> exactFieldPoliciesForAudit() {
         return EXACT_FIELD_POLICIES;
+    }
+
+    /** Central dispositions and codec exceptions must not duplicate a local declaration. */
+    static Set<FieldKey> centralFieldPolicyKeysForAudit() {
+        Set<FieldKey> keys = new HashSet<>(EXACT_FIELD_POLICIES.keySet());
+        keys.addAll(IN_PLACE_ARRAYS);
+        keys.addAll(CONTEXT_COMPATIBLE_COLLECTORS);
+        keys.addAll(OPTIONAL_OBJECT_REFERENCES);
+        return Set.copyOf(keys);
     }
 
     static boolean restoresArrayInPlace(Field field) {

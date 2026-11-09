@@ -519,7 +519,10 @@ remain compatibility rules for unmarked fields. The declaration uses the existin
 strict object-reference codec and does not supply a constructor or parent lookup.
 
 Static, Java-transient, synthetic, `@RewindTransient` and `@RewindDeferred` fields
-remain excluded. A marked final reference or a non-`ObjectInstance` field is invalid.
+remain excluded before invalid-marker validation. Other marked final references
+and non-`ObjectInstance` fields are invalid when the default policy is resolved.
+The exact-policy guard rejects a field with both a local declaration and a central
+disposition or exceptional codec contract; remove the stale central rule during migration.
 General/manual schemas retain their existing higher-priority registry policies.
 The marker is engine-internal and is not a creator Mod API annotation.
 

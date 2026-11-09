@@ -150,7 +150,7 @@ class TestRewindCapturedReference {
     }
 
     @Test
-    void exclusionsWinAndUnannotatedFinalAndNamedReferencesStayExcluded() {
+    void exclusionsWinAndUnannotatedFinalAndNamedReferencesStayExcluded() throws Exception {
         assertEquals(List.of("tick"), RewindSchemaRegistry.defaultObjectSubclassSchemaFor(Excluded.class)
                 .capturedFields().stream().map(plan -> plan.field().getName()).toList());
         assertEquals(List.of("tick"), RewindSchemaRegistry.defaultObjectSubclassSchemaFor(Unannotated.class)
@@ -158,6 +158,13 @@ class TestRewindCapturedReference {
         assertEquals(RewindFieldPolicy.TRANSIENT,
                 RewindSchemaRegistry.schemaFor(Excluded.class).fields().stream()
                         .filter(plan -> plan.field().getName().equals("javaTransient")).findFirst().orElseThrow().policy());
+        for (String field : List.of("invalidStatic", "invalidTransient", "invalidFinalScratch")) {
+            assertEquals(RewindFieldPolicy.TRANSIENT,
+                    DefaultObjectRewindPolicies.policyFor(Excluded.class.getDeclaredField(field)),
+                    "field-local exclusion must precede invalid-marker validation: " + field);
+        }
+        assertEquals(RewindFieldPolicy.DEFERRED,
+                DefaultObjectRewindPolicies.policyFor(Excluded.class.getDeclaredField("invalidFinalDeferred")));
     }
 
     @Test
@@ -242,6 +249,12 @@ class TestRewindCapturedReference {
         @RewindCapturedReference(reason = "excluded") transient ObjectInstance javaTransient;
         @RewindCapturedReference(reason = "excluded") @RewindTransient(reason = "scratch") ObjectInstance scratch;
         @RewindCapturedReference(reason = "excluded") @RewindDeferred(reason = "separate owner") ObjectInstance deferred;
+        @RewindCapturedReference(reason = "static exclusion wins over type") static String invalidStatic;
+        @RewindCapturedReference(reason = "transient exclusion wins over type") transient String invalidTransient;
+        @RewindCapturedReference(reason = "scratch exclusion wins over final")
+        @RewindTransient(reason = "scratch") final ObjectInstance invalidFinalScratch = null;
+        @RewindCapturedReference(reason = "deferral wins over final and type")
+        @RewindDeferred(reason = "separate owner") final String invalidFinalDeferred = null;
         int tick;
     }
     private static final class Unannotated extends Actor {

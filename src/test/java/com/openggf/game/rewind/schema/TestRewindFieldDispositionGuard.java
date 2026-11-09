@@ -66,7 +66,8 @@ class TestRewindFieldDispositionGuard {
                         + regressions.stream()
                                 .map(key -> key + "  # " + current.get(key))
                                 .collect(Collectors.joining("\n  "))
-                        + "\nGive each field a disposition (central policy entry preferred), make the "
+                        + "\nGive each field an actual disposition through a local reference declaration "
+                        + "or the existing policy catalogue, make the "
                         + "class compact-reachable, or (only if intentional debt) add the key to "
                         + BASELINE + ".");
 

@@ -5505,3 +5505,53 @@ The preceding parent-family section and its history are retained unchanged.
 Root still owns independent review, combined qualification, integration and any
 PR271 publication. This bounded pass does not explain the historical pixel failure
 or grant contributor-score, route or merge clearance.
+
+### Local-reference review repairs and original-D assessment — 2026-11-09
+
+Independent Opus 5.5 source scrutiny of `ec159203541cf14e5a9c3bf06be012e84b463517`
+found no blocker. Its two Low findings and diagnostic nit are addressed here.
+The exact-policy guard now inspects the union of the existing central disposition
+and exceptional-codec keys and rejects any key whose field also carries a local
+capture declaration. A collision control exercises that same census, and a
+class-initialization sentinel checks that metadata inspection does not initialize
+the owner. The policy reader and every catalogue, codec exception, snapshot and
+capture/restore algorithm remain unchanged. No allowance or baseline was added.
+
+The exclusion witness now combines invalid marker types/finality with static,
+transient, scratch and deferred exclusions. Moving invalid-marker validation
+ahead of an exclusion would fail it. The marker contract and contributor guide
+name field-local exclusion precedence, and the disposition failure message gives
+the current local-or-catalogue advice.
+
+One queued normal/EGL `-Pguards` invocation selected the exact seven classes:
+`TestCapturedPolicyCompactReachabilityGuard`, `TestExactRewindPolicyGuard`,
+`TestOrdinaryActorPlanPreservation`, `TestRewindCapturedReference`,
+`TestRewindFieldDispositionGuard`, `TestRewindSchemaRegistry` and
+`TestModApiSignatureSurface`. All seven fresh suites ran: 82 cases, zero failures,
+errors or skips. Java 25, Lua 5.4, displays unset, one fork, alphabetical order;
+source seal `d897d68dafa54a45d39654b85d17d8f94276d339b3c86810e2d5d246ddb148e7`
+matched before and after. Queue wait was 413 seconds; Maven 96 seconds (rounded);
+wrapper wall 510.909751 seconds; user wait zero; unseparated overhead/rounding
+1.909751 seconds. Exact argv, case identities and XML/source hashes remain in
+`target/code-climb/parent-locality-wave/review-repairs`. The owned finite unit is
+terminal and retired. Subsequent edits add only this note and changelog prose.
+
+The separate original constructor-child journey at clean `ec159203` scored
+`[4,3,3,4,2,3,3,3]`, weighted 80.0/100. It was source-only, not runtime
+certification. The reviewer disclosed an incidental broad documentation grep
+that surfaced forbidden audit/plan lines, excluded those lines from scoring and
+rechecked scoring claims against allowed source. The receipt retains this limit;
+the result is not represented as uncontaminated. The stronger target is unmet:
+concept count, retirement/coverage routing and understanding/readability remain
+obstacles. No score is inferred for the review repairs above.
+
+The independent c06 smoke baseline is still running, and the combined candidate
+broad/domain checks have not started. An independent c06 production-source scene
+fixture control completed 14 cases with eight assertion failures and no errors or
+skips; seven full assertions match the earlier d314 control literally, and one
+differs only in a Java object identity display. That is retained control evidence,
+not a candidate comparison or a rewritten baseline. The repeated suspension-pixel
+failure has an onboarding-interception source hypothesis under a separate bounded
+runtime investigation. It does not explain the original Competition black-pixel
+failure, which remains an explicit merge blocker. PR271 is the sole destination;
+this local repair makes no publication or whole-suite claim.

@@ -244,7 +244,8 @@ under the matching area heading; see the
   Compact and scalar subclass fields share hierarchy ownership; diagnostic tools
   check actual capture membership and distinguish structural handles from dropped
   state. Mantis declares its captured parent/child references on their fields;
-  scalar fallback still reports links it omits. Pixel-oracle failures retain the
+  the exact-policy guard rejects duplicate central ownership, and scalar fallback
+  still reports links it omits. Pixel-oracle failures retain the
   rendering mode and captured frame.
   Production badnik and contact witnesses, shared coarse-X arithmetic with
   explicit native/wider bounds, and
