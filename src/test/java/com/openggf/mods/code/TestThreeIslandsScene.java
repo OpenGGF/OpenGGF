@@ -1,6 +1,7 @@
 package com.openggf.mods.code;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -17,6 +18,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.RomGame;
+import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.game.GameServices;
 import com.openggf.tests.RomCatalogueFixture;
 import com.openggf.tests.RomTestUtils;
@@ -27,6 +29,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -70,6 +74,7 @@ class TestThreeIslandsScene {
 
     private ExampleModHarness open() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        bindAvailableRoms();
         ExampleModHarness harness = compiled.open(work.resolve("build/storage"));
         harness.open(harness.apply(GameServices.module()), work.resolve("saves"), 400, 224);
         return harness;
@@ -86,8 +91,18 @@ class TestThreeIslandsScene {
     private void bindRequiredSonic1() {
         var image = RomTestUtils.ensureSonic1RomAvailable();
         assertNotNull(image, "this Three Islands route requires the Sonic 1 ROM");
+        bindAvailableRoms();
+    }
+
+    private void bindAvailableRoms() {
+        if (romCatalogue != null) return;
+        var images = new EnumMap<RomGame, Path>(RomGame.class);
+        var sonic1 = RomTestUtils.ensureSonic1RomAvailable();
+        if (sonic1 != null) images.put(RomGame.S1, sonic1.toPath());
+        var sonic2 = RomTestUtils.ensureSonic2RomAvailable();
+        if (sonic2 != null) images.put(RomGame.S2, sonic2.toPath());
         romCatalogue = RomCatalogueFixture.bind(SonicConfigurationService.getInstance(),
-                GameServices.rom(), Map.of(RomGame.S1, image.toPath()));
+                GameServices.rom(), images);
     }
 
     private static void assertSonic1Destination(ExampleModHarness harness, String zoneName,
@@ -140,6 +155,69 @@ class TestThreeIslandsScene {
     private static void clean(ExampleModHarness harness) {
         assertEquals(Map.of(), harness.findings(), "no faults");
         assertEquals(List.of(), harness.exits(), "the scene never left");
+    }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_1)
+    void configuredOptionalRomsLoadRealFieldsWithoutWorkingDirectoryImages() throws Exception {
+        Path sonic1 = RomTestUtils.ensureSonic1RomAvailable().toPath().toAbsolutePath().normalize();
+        var sonic2Image = RomTestUtils.ensureSonic2RomAvailable();
+        org.junit.jupiter.api.Assumptions.assumeTrue(sonic2Image != null,
+                "the optional-ROM catalogue witness requires the Sonic 2 ROM");
+        Path sonic2 = sonic2Image.toPath().toAbsolutePath().normalize();
+        Path emptyDirectory = Files.createDirectory(work.resolve("empty-catalogue"));
+        var callerProperties = new HashMap<String, String>();
+        for (String key : List.of("user.dir", "sonic1.rom.path", "sonic2.rom.path")) {
+            callerProperties.put(key, System.getProperty(key));
+        }
+        var configuration = SonicConfigurationService.getInstance();
+        Object originalSonic1 = configuration.getConfigValue(RomGame.S1.configurationKey());
+        Object originalSonic2 = configuration.getConfigValue(RomGame.S2.configurationKey());
+        try {
+            // user.dir controls catalogue discovery, while relative NIO project paths still
+            // resolve against the JVM's original cwd; @BeforeAll has already compiled the mod.
+            System.setProperty("user.dir", emptyDirectory.toString());
+            System.setProperty("sonic1.rom.path", sonic1.toString());
+            System.setProperty("sonic2.rom.path", sonic2.toString());
+            try (ExampleModHarness harness = open()) {
+                assertEquals(emptyDirectory.toString(), System.getProperty("user.dir"),
+                        "the primary S3K boot preserves the empty logical discovery directory");
+                Object game = value(harness.scene(), "game");
+                Object art = game.getClass().getField("art").get(game);
+                for (var entry : Map.of("s1", sonic1, "s2", sonic2).entrySet()) {
+                    var rom = (SceneRomArt) art.getClass().getMethod("rom", String.class)
+                            .invoke(art, entry.getKey());
+                    assertNotNull(rom, entry.getKey() + " supplied test image reaches SceneRomLibrary");
+                    // Both verified stock images carry the literal Mega Drive console signature.
+                    assertArrayEquals(new byte[] {0x53, 0x45, 0x47, 0x41}, rom.read(0x100, 4));
+                    RomGame stockGame = entry.getKey().equals("s1") ? RomGame.S1 : RomGame.S2;
+                    assertEquals(entry.getValue(), GameServices.rom().resolveLogicalRom(stockGame.identity())
+                            .orElseThrow().wholeImagePath().orElseThrow());
+                }
+                play(harness, 2);
+                assertTrue(harness.debugJump("field:ghz"), "the supplied Sonic 1 chapter is playable");
+                assertSonic1Destination(harness, "GREEN_HILL", false);
+                assertTrue(harness.debugJump("field:ehz"), "the supplied Sonic 2 chapter is playable");
+                Object destination = value(value(harness.scene(), "game"), "screen");
+                assertEquals("EMERALD_HILL", value(destination, "zone").toString());
+                Object stage = value(destination, "stage");
+                assertNotNull(stage.getClass().getField("kit").get(stage), "the field uses decoded ROM terrain");
+                // Requiring an already bound donor must retain the first restoration snapshot.
+                bindRequiredSonic1();
+                clean(harness);
+            }
+            dispose();
+            assertEquals(originalSonic1, configuration.getConfigValue(RomGame.S1.configurationKey()));
+            assertEquals(originalSonic2, configuration.getConfigValue(RomGame.S2.configurationKey()));
+            assertEquals(sonic1.toString(), System.getProperty("sonic1.rom.path"));
+            assertEquals(sonic2.toString(), System.getProperty("sonic2.rom.path"));
+        } finally {
+            callerProperties.forEach((key, value) -> {
+                if (value == null) System.clearProperty(key);
+                else System.setProperty(key, value);
+            });
+        }
+        callerProperties.forEach((key, value) -> assertEquals(value, System.getProperty(key), key));
     }
 
     @Test
@@ -259,6 +337,7 @@ class TestThreeIslandsScene {
     @Test
     void aSonic1ZonePlaysItsOwnRomSongWithoutPlaceholderSwitches() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        bindAvailableRoms();
         try (ExampleModHarness harness = compiled.open(work.resolve("build/storage"))) {
             harness.open(harness.apply(GameServices.module()), work.resolve("saves"), 400, 224, true);
             play(harness, 3);

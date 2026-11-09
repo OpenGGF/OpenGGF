@@ -3585,3 +3585,72 @@ automatic score credit. The goal target remains unmet. All owned validation
 jobs are terminal. Task/older worktrees and ignored saves/configuration remain
 retained pending complete ownership accounting; only consumed category
 outputs may be acknowledged through the runner's official command.
+
+
+### Three Islands test catalogue binding — 2026-11-09
+
+`TestThreeIslandsScene` now binds the supplied optional S1/S2 images through its
+existing `RomCatalogueFixture` after the primary S3K fixture boots. Both ordinary
+scene entry and the custom audio entry use that binding. Required-S1 entry keeps
+its explicit requirement and reuses the same owned fixture, retaining the first
+resolved-value restoration snapshot. Missing optional images are omitted from the
+binding, leaving the existing catalogue configuration and unavailable-ROM
+behavior in place. Production scene/runtime code, global discovery and shared
+fixture contracts are unchanged. No ROM was copied, linked, renamed or removed.
+
+The new real-runtime witness runs after the class-scoped example compilation,
+sets `user.dir` to an empty temporary directory before boot, and confirms boot
+preserves that logical discovery directory. NIO relative project paths continue
+to use the JVM's original working directory. It supplies absolute optional test
+paths, reads the literal `SEGA` header bytes through the scene's `SceneRomLibrary`
+view, verifies the catalogue's actual source paths, and enters GHZ/EHZ with
+ROM-backed terrain. Requiring S1 again must preserve the original restoration
+snapshot; the witness checks resolved configuration and exact caller JVM-property
+restoration. It makes no private absent-key-presence claim.
+
+The first attempt had a witness reflection setup error (`Game.art()` instead of
+the public field) and is invalid RED evidence. After correcting that test-only
+mistake, the unmodified fixture failed with `AssertionFailedError`:
+`s1 supplied test image reaches SceneRomLibrary ==> expected: not <null>`.
+The repaired fixture passed the witness, existing native-water check, all twelve
+`TestRomCatalogueFixture` cases, three `TestSceneRomLibrary` cases and four backend
+property-isolation cases: **21 tests, zero failures/errors/skips**.
+
+One bounded whole-class characterization retained all twelve original JUnit
+identities and added the passing witness: **13 tests, eight failures, zero errors
+or skips**. The eight identities and failure types match both earlier common
+task-directory controls. Seven messages match literally; the physical-trail
+message differs only in the printed object identity hashes. Every failure is
+`org.opentest4j.AssertionFailedError`:
+
+| Existing method | Observed failure |
+| --- | --- |
+| `tailsJoinsInTheFieldAndTheTravellingShopReturnsToTheSameSpot` | Expected true, got false. |
+| `aSonic1ZonePlaysItsOwnRomSongWithoutPlaceholderSwitches` | Expected `DUNGEON`, got `STORY`. |
+| `startupIsPlayableAndArrivalDialogueAndRestStayInTheField` | Expected `FIELD`, got `STORY`. |
+| `greenHillMysteriesUseRealInteractionsAndPersistThroughContinue` | Expected `FIELD`, got `STORY`. |
+| `physicalTrailsConnectFieldsAndBattleUsesTheEncounterField` | The sealed Star Light trail expected the existing `FieldScreen`, got `StoryScreen`. |
+| `allStoryLandmarksHavePlayableInteriorsWithIndependentGatesSavesAndRewards` | GHZ doorway expected `DUNGEON`, got `MENU_ROOT`. |
+| `travellerDialogueWaitsForTheDiscoveryOrRescueItDescribes` | Expected `STORY`, got `MENU_ROOT`. |
+| `explorationUsesTwoAxesAndStoryDiscoveriesPersistAcrossContinue` | Discovery expected `STORY`, got `FIELD`. |
+
+All invocations used `maven_queue.py --normal`, Java 25, `LUA_BIN=/usr/bin/lua5.4`,
+MSE off, displays unset and surfaceless EGL. Exact argv, source hashes, ROM
+found/missing lines, fresh XML and complete failure texts are retained under
+`target/code-climb/scene-rom-fixture/{red,red-runtime,green,characterization}/`;
+`disposition.json` compares every original identity against both prior controls.
+The initial invalid RED remains separately labelled. Queue/execution costs are
+separated below; user wait was zero in every invocation. Residual time is rounded
+wrapper/startup/teardown overhead, and coding/investigation time is unmeasured.
+
+| Invocation | Queue seconds | Maven seconds | Residual seconds |
+| --- | ---: | ---: | ---: |
+| Invalid witness setup | 16 | 33.320 | 0.809 |
+| Valid missing-binding RED | 15 | 34.094 | 0.438 |
+| Focused GREEN | 62 | 35.614 | 1.130 |
+| Whole-class characterization | 13 | 35.713 | 0.571 |
+
+This is a bounded test-fixture repair, with the inherited gameplay failures
+reported rather than repaired. No category/full-suite run or replacement
+category `VERDICT` was produced; prior raw qualification verdicts are unchanged.
+Root retains review and publication ownership for draft PR271.
