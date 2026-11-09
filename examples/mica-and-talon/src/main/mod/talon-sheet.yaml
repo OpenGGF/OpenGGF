@@ -147,335 +147,7 @@
           "sourceY": 0,
           "widthPixels": 24,
           "heightPixels": 32,
-          "xOffset": -12,
-          "yOffset": -19,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 448,
-          "sourceY": 32,
-          "widthPixels": 24,
-          "heightPixels": 8,
-          "xOffset": -12,
-          "yOffset": 13,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 0,
-          "sourceY": 48,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -15,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 0,
-          "sourceY": 80,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -15,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 64,
-          "sourceY": 48,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -16,
-          "yOffset": -21,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 96,
-          "sourceY": 48,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 16,
-          "yOffset": -21,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 64,
-          "sourceY": 80,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -16,
-          "yOffset": 11,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 96,
-          "sourceY": 80,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 16,
-          "yOffset": 11,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 128,
-          "sourceY": 48,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -16,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 160,
-          "sourceY": 48,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 16,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 128,
-          "sourceY": 80,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -16,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 160,
-          "sourceY": 80,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 16,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 192,
-          "sourceY": 48,
-          "widthPixels": 24,
-          "heightPixels": 32,
-          "xOffset": -12,
-          "yOffset": -19,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 192,
-          "sourceY": 80,
-          "widthPixels": 24,
-          "heightPixels": 8,
-          "xOffset": -12,
-          "yOffset": 13,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 256,
-          "sourceY": 48,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -14,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 256,
-          "sourceY": 80,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -14,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 320,
-          "sourceY": 48,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -17,
-          "yOffset": -21,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 352,
-          "sourceY": 48,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 15,
-          "yOffset": -21,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 320,
-          "sourceY": 80,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -17,
-          "yOffset": 11,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 352,
-          "sourceY": 80,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 15,
-          "yOffset": 11,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 384,
-          "sourceY": 48,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -16,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 416,
-          "sourceY": 48,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 16,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 384,
-          "sourceY": 80,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -16,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 416,
-          "sourceY": 80,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 16,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 448,
-          "sourceY": 48,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -11,
+          "xOffset": -10,
           "yOffset": -11,
           "hFlip": false,
           "vFlip": false,
@@ -489,129 +161,10 @@
       "pieces": [
         {
           "sourceX": 0,
-          "sourceY": 96,
-          "widthPixels": 32,
+          "sourceY": 48,
+          "widthPixels": 24,
           "heightPixels": 32,
-          "xOffset": -15,
-          "yOffset": -11,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 64,
-          "sourceY": 96,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -14,
-          "yOffset": -11,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 128,
-          "sourceY": 96,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -15,
-          "yOffset": -11,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 192,
-          "sourceY": 96,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -14,
-          "yOffset": -14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 256,
-          "sourceY": 96,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -14,
-          "yOffset": -14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 320,
-          "sourceY": 96,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -14,
-          "yOffset": -14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 384,
-          "sourceY": 96,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -14,
-          "yOffset": -14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 448,
-          "sourceY": 96,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -14,
+          "xOffset": -12,
           "yOffset": -12,
           "hFlip": false,
           "vFlip": false,
@@ -624,8 +177,76 @@
       "delay": 1,
       "pieces": [
         {
-          "sourceX": 0,
-          "sourceY": 144,
+          "sourceX": 64,
+          "sourceY": 48,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -13,
+          "yOffset": -13,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 128,
+          "sourceY": 48,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -13,
+          "yOffset": -12,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 192,
+          "sourceY": 48,
+          "widthPixels": 24,
+          "heightPixels": 32,
+          "xOffset": -10,
+          "yOffset": -11,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 256,
+          "sourceY": 48,
+          "widthPixels": 24,
+          "heightPixels": 32,
+          "xOffset": -11,
+          "yOffset": -12,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 320,
+          "sourceY": 48,
           "widthPixels": 32,
           "heightPixels": 32,
           "xOffset": -14,
@@ -641,8 +262,59 @@
       "delay": 1,
       "pieces": [
         {
+          "sourceX": 384,
+          "sourceY": 48,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -13,
+          "yOffset": -12,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 448,
+          "sourceY": 48,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -11,
+          "yOffset": -11,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 0,
+          "sourceY": 96,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -15,
+          "yOffset": -11,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
           "sourceX": 64,
-          "sourceY": 144,
+          "sourceY": 96,
           "widthPixels": 32,
           "heightPixels": 32,
           "xOffset": -14,
@@ -659,6 +331,159 @@
       "pieces": [
         {
           "sourceX": 128,
+          "sourceY": 96,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -15,
+          "yOffset": -11,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 192,
+          "sourceY": 96,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -14,
+          "yOffset": -14,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 256,
+          "sourceY": 96,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -14,
+          "yOffset": -14,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 320,
+          "sourceY": 96,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -14,
+          "yOffset": -14,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 384,
+          "sourceY": 96,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -14,
+          "yOffset": -14,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 448,
+          "sourceY": 96,
+          "widthPixels": 32,
+          "heightPixels": 24,
+          "xOffset": -13,
+          "yOffset": -9,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 0,
+          "sourceY": 144,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -13,
+          "yOffset": -10,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 64,
+          "sourceY": 144,
+          "widthPixels": 32,
+          "heightPixels": 24,
+          "xOffset": -13,
+          "yOffset": -8,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 128,
+          "sourceY": 144,
+          "widthPixels": 32,
+          "heightPixels": 24,
+          "xOffset": -13,
+          "yOffset": -9,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 192,
           "sourceY": 144,
           "widthPixels": 32,
           "heightPixels": 32,
@@ -675,41 +500,12 @@
       "delay": 1,
       "pieces": [
         {
-          "sourceX": 192,
-          "sourceY": 144,
-          "widthPixels": 24,
-          "heightPixels": 32,
-          "xOffset": -11,
-          "yOffset": -23,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 192,
-          "sourceY": 176,
-          "widthPixels": 24,
-          "heightPixels": 16,
-          "xOffset": -11,
-          "yOffset": 9,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
           "sourceX": 256,
           "sourceY": 144,
           "widthPixels": 32,
           "heightPixels": 32,
-          "xOffset": -16,
-          "yOffset": -15,
+          "xOffset": -14,
+          "yOffset": -12,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -742,8 +538,8 @@
           "sourceY": 144,
           "widthPixels": 32,
           "heightPixels": 24,
-          "xOffset": -19,
-          "yOffset": -4,
+          "xOffset": -16,
+          "yOffset": -1,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -776,8 +572,8 @@
           "sourceY": 192,
           "widthPixels": 32,
           "heightPixels": 32,
-          "xOffset": -24,
-          "yOffset": -16,
+          "xOffset": -22,
+          "yOffset": -13,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -788,8 +584,8 @@
           "sourceY": 192,
           "widthPixels": 8,
           "heightPixels": 32,
-          "xOffset": 8,
-          "yOffset": -16,
+          "xOffset": 10,
+          "yOffset": -13,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -805,20 +601,8 @@
           "sourceY": 192,
           "widthPixels": 32,
           "heightPixels": 32,
-          "xOffset": -23,
-          "yOffset": -16,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 96,
-          "sourceY": 192,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 9,
-          "yOffset": -16,
+          "xOffset": -21,
+          "yOffset": -13,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -972,44 +756,8 @@
           "sourceY": 240,
           "widthPixels": 32,
           "heightPixels": 32,
-          "xOffset": -21,
+          "xOffset": -17,
           "yOffset": -15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 32,
-          "sourceY": 240,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 11,
-          "yOffset": -15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 0,
-          "sourceY": 272,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -21,
-          "yOffset": 17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 32,
-          "sourceY": 272,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 11,
-          "yOffset": 17,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -1022,856 +770,10 @@
       "pieces": [
         {
           "sourceX": 64,
-          "sourceY": 240,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -22,
-          "yOffset": -15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 96,
-          "sourceY": 240,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 10,
-          "yOffset": -15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 64,
-          "sourceY": 272,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -22,
-          "yOffset": 17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 96,
-          "sourceY": 272,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 10,
-          "yOffset": 17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 128,
-          "sourceY": 240,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -21,
-          "yOffset": -15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 160,
-          "sourceY": 240,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 11,
-          "yOffset": -15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 128,
-          "sourceY": 272,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -21,
-          "yOffset": 17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 160,
-          "sourceY": 272,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 11,
-          "yOffset": 17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 192,
           "sourceY": 240,
           "widthPixels": 32,
           "heightPixels": 32,
           "xOffset": -18,
-          "yOffset": -15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 192,
-          "sourceY": 272,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -18,
-          "yOffset": 17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 256,
-          "sourceY": 240,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -21,
-          "yOffset": -15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 256,
-          "sourceY": 272,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -21,
-          "yOffset": 17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 320,
-          "sourceY": 240,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -21,
-          "yOffset": -15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 352,
-          "sourceY": 240,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 11,
-          "yOffset": -15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 320,
-          "sourceY": 272,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -21,
-          "yOffset": 17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 352,
-          "sourceY": 272,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 11,
-          "yOffset": 17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 384,
-          "sourceY": 240,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -20,
-          "yOffset": -18,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 416,
-          "sourceY": 240,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 12,
-          "yOffset": -18,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 384,
-          "sourceY": 272,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -20,
-          "yOffset": 14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 416,
-          "sourceY": 272,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 12,
-          "yOffset": 14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 448,
-          "sourceY": 240,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -21,
-          "yOffset": -18,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 480,
-          "sourceY": 240,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 11,
-          "yOffset": -18,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 448,
-          "sourceY": 272,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -21,
-          "yOffset": 14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 480,
-          "sourceY": 272,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 11,
-          "yOffset": 14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 0,
-          "sourceY": 288,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -19,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 32,
-          "sourceY": 288,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 13,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 0,
-          "sourceY": 320,
-          "widthPixels": 32,
-          "heightPixels": 16,
-          "xOffset": -19,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 32,
-          "sourceY": 320,
-          "widthPixels": 8,
-          "heightPixels": 16,
-          "xOffset": 13,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 64,
-          "sourceY": 288,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -18,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 96,
-          "sourceY": 288,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 14,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 64,
-          "sourceY": 320,
-          "widthPixels": 32,
-          "heightPixels": 16,
-          "xOffset": -18,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 96,
-          "sourceY": 320,
-          "widthPixels": 8,
-          "heightPixels": 16,
-          "xOffset": 14,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 128,
-          "sourceY": 288,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -19,
-          "yOffset": -18,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 160,
-          "sourceY": 288,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 13,
-          "yOffset": -18,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 128,
-          "sourceY": 320,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -19,
-          "yOffset": 14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 160,
-          "sourceY": 320,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 13,
-          "yOffset": 14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 192,
-          "sourceY": 288,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -19,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 224,
-          "sourceY": 288,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 13,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 192,
-          "sourceY": 320,
-          "widthPixels": 32,
-          "heightPixels": 16,
-          "xOffset": -19,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 224,
-          "sourceY": 320,
-          "widthPixels": 8,
-          "heightPixels": 16,
-          "xOffset": 13,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 256,
-          "sourceY": 288,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -19,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 288,
-          "sourceY": 288,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 13,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 256,
-          "sourceY": 320,
-          "widthPixels": 32,
-          "heightPixels": 16,
-          "xOffset": -19,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 288,
-          "sourceY": 320,
-          "widthPixels": 8,
-          "heightPixels": 16,
-          "xOffset": 13,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 320,
-          "sourceY": 288,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -19,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 352,
-          "sourceY": 288,
-          "widthPixels": 16,
-          "heightPixels": 32,
-          "xOffset": 13,
-          "yOffset": -20,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 320,
-          "sourceY": 320,
-          "widthPixels": 32,
-          "heightPixels": 16,
-          "xOffset": -19,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 352,
-          "sourceY": 320,
-          "widthPixels": 16,
-          "heightPixels": 16,
-          "xOffset": 13,
-          "yOffset": 12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 384,
-          "sourceY": 288,
-          "widthPixels": 32,
-          "heightPixels": 24,
-          "xOffset": -19,
-          "yOffset": -12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 416,
-          "sourceY": 288,
-          "widthPixels": 8,
-          "heightPixels": 24,
-          "xOffset": 13,
-          "yOffset": -12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 448,
-          "sourceY": 288,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -20,
-          "yOffset": -13,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 480,
-          "sourceY": 288,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 12,
-          "yOffset": -13,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 0,
-          "sourceY": 336,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -21,
-          "yOffset": -18,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 32,
-          "sourceY": 336,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 11,
-          "yOffset": -18,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 0,
-          "sourceY": 368,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -21,
-          "yOffset": 14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 32,
-          "sourceY": 368,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 11,
-          "yOffset": 14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 64,
-          "sourceY": 336,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -20,
-          "yOffset": -17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 96,
-          "sourceY": 336,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 12,
-          "yOffset": -17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 64,
-          "sourceY": 368,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -20,
-          "yOffset": 15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 96,
-          "sourceY": 368,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 12,
-          "yOffset": 15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 128,
-          "sourceY": 336,
-          "widthPixels": 32,
-          "heightPixels": 24,
-          "xOffset": -19,
-          "yOffset": -12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 160,
-          "sourceY": 336,
-          "widthPixels": 8,
-          "heightPixels": 24,
-          "xOffset": 13,
-          "yOffset": -12,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        }
-      ]
-    },
-    {
-      "delay": 1,
-      "pieces": [
-        {
-          "sourceX": 192,
-          "sourceY": 336,
-          "widthPixels": 32,
-          "heightPixels": 32,
-          "xOffset": -20,
-          "yOffset": -14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 224,
-          "sourceY": 336,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 12,
           "yOffset": -14,
           "hFlip": false,
           "vFlip": false,
@@ -1884,48 +786,378 @@
       "delay": 1,
       "pieces": [
         {
+          "sourceX": 128,
+          "sourceY": 240,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -17,
+          "yOffset": -14,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 192,
+          "sourceY": 240,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -16,
+          "yOffset": -15,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        },
+        {
+          "sourceX": 192,
+          "sourceY": 272,
+          "widthPixels": 32,
+          "heightPixels": 8,
+          "xOffset": -16,
+          "yOffset": 17,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 256,
+          "sourceY": 240,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -17,
+          "yOffset": -14,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 320,
+          "sourceY": 240,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -17,
+          "yOffset": -15,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 384,
+          "sourceY": 240,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -13,
+          "yOffset": -11,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 448,
+          "sourceY": 240,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -14,
+          "yOffset": -11,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 0,
+          "sourceY": 288,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -13,
+          "yOffset": -13,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        },
+        {
+          "sourceX": 0,
+          "sourceY": 320,
+          "widthPixels": 32,
+          "heightPixels": 8,
+          "xOffset": -13,
+          "yOffset": 19,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 64,
+          "sourceY": 288,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -12,
+          "yOffset": -13,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        },
+        {
+          "sourceX": 64,
+          "sourceY": 320,
+          "widthPixels": 32,
+          "heightPixels": 8,
+          "xOffset": -12,
+          "yOffset": 19,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 128,
+          "sourceY": 288,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -13,
+          "yOffset": -11,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 192,
+          "sourceY": 288,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -13,
+          "yOffset": -13,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 256,
+          "sourceY": 288,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -13,
+          "yOffset": -13,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        },
+        {
+          "sourceX": 256,
+          "sourceY": 320,
+          "widthPixels": 32,
+          "heightPixels": 8,
+          "xOffset": -13,
+          "yOffset": 19,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 320,
+          "sourceY": 288,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -12,
+          "yOffset": -13,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        },
+        {
+          "sourceX": 320,
+          "sourceY": 320,
+          "widthPixels": 32,
+          "heightPixels": 8,
+          "xOffset": -12,
+          "yOffset": 19,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 384,
+          "sourceY": 288,
+          "widthPixels": 32,
+          "heightPixels": 24,
+          "xOffset": -11,
+          "yOffset": -9,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 448,
+          "sourceY": 288,
+          "widthPixels": 32,
+          "heightPixels": 24,
+          "xOffset": -12,
+          "yOffset": -10,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 0,
+          "sourceY": 336,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -13,
+          "yOffset": -14,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 64,
+          "sourceY": 336,
+          "widthPixels": 32,
+          "heightPixels": 32,
+          "xOffset": -12,
+          "yOffset": -14,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 128,
+          "sourceY": 336,
+          "widthPixels": 32,
+          "heightPixels": 24,
+          "xOffset": -11,
+          "yOffset": -9,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
+          "sourceX": 192,
+          "sourceY": 336,
+          "widthPixels": 32,
+          "heightPixels": 24,
+          "xOffset": -12,
+          "yOffset": -11,
+          "hFlip": false,
+          "vFlip": false,
+          "paletteIndex": 0,
+          "priority": false
+        }
+      ]
+    },
+    {
+      "delay": 1,
+      "pieces": [
+        {
           "sourceX": 256,
           "sourceY": 336,
           "widthPixels": 32,
           "heightPixels": 32,
-          "xOffset": -21,
-          "yOffset": -17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 288,
-          "sourceY": 336,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 11,
-          "yOffset": -17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 256,
-          "sourceY": 368,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -21,
-          "yOffset": 15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 288,
-          "sourceY": 368,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 11,
-          "yOffset": 15,
+          "xOffset": -13,
+          "yOffset": -13,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -1941,44 +1173,8 @@
           "sourceY": 336,
           "widthPixels": 32,
           "heightPixels": 32,
-          "xOffset": -20,
-          "yOffset": -17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 352,
-          "sourceY": 336,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 12,
-          "yOffset": -17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 320,
-          "sourceY": 368,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -20,
-          "yOffset": 15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 352,
-          "sourceY": 368,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 12,
-          "yOffset": 15,
+          "xOffset": -12,
+          "yOffset": -13,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -1994,44 +1190,8 @@
           "sourceY": 336,
           "widthPixels": 32,
           "heightPixels": 32,
-          "xOffset": -20,
-          "yOffset": -18,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 416,
-          "sourceY": 336,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 12,
-          "yOffset": -18,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 384,
-          "sourceY": 368,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -20,
-          "yOffset": 14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 416,
-          "sourceY": 368,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 12,
-          "yOffset": 14,
+          "xOffset": -13,
+          "yOffset": -17,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -2047,44 +1207,8 @@
           "sourceY": 336,
           "widthPixels": 32,
           "heightPixels": 32,
-          "xOffset": -20,
-          "yOffset": -19,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 480,
-          "sourceY": 336,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 12,
-          "yOffset": -19,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 448,
-          "sourceY": 368,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -20,
-          "yOffset": 13,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 480,
-          "sourceY": 368,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 12,
-          "yOffset": 13,
+          "xOffset": -13,
+          "yOffset": -17,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -2100,8 +1224,8 @@
           "sourceY": 384,
           "widthPixels": 32,
           "heightPixels": 32,
-          "xOffset": -21,
-          "yOffset": -17,
+          "xOffset": -14,
+          "yOffset": -16,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -2110,34 +1234,10 @@
         {
           "sourceX": 32,
           "sourceY": 384,
-          "widthPixels": 16,
+          "widthPixels": 8,
           "heightPixels": 32,
-          "xOffset": 11,
-          "yOffset": -17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 0,
-          "sourceY": 416,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -21,
-          "yOffset": 15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 32,
-          "sourceY": 416,
-          "widthPixels": 16,
-          "heightPixels": 8,
-          "xOffset": 11,
-          "yOffset": 15,
+          "xOffset": 18,
+          "yOffset": -16,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -2153,8 +1253,8 @@
           "sourceY": 384,
           "widthPixels": 32,
           "heightPixels": 32,
-          "xOffset": -21,
-          "yOffset": -22,
+          "xOffset": -14,
+          "yOffset": -20,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -2163,34 +1263,10 @@
         {
           "sourceX": 96,
           "sourceY": 384,
-          "widthPixels": 16,
+          "widthPixels": 8,
           "heightPixels": 32,
-          "xOffset": 11,
-          "yOffset": -22,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 64,
-          "sourceY": 416,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -21,
-          "yOffset": 10,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 96,
-          "sourceY": 416,
-          "widthPixels": 16,
-          "heightPixels": 8,
-          "xOffset": 11,
-          "yOffset": 10,
+          "xOffset": 18,
+          "yOffset": -20,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -2206,44 +1282,8 @@
           "sourceY": 384,
           "widthPixels": 32,
           "heightPixels": 32,
-          "xOffset": -20,
-          "yOffset": -18,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 160,
-          "sourceY": 384,
-          "widthPixels": 8,
-          "heightPixels": 32,
-          "xOffset": 12,
-          "yOffset": -18,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 128,
-          "sourceY": 416,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -20,
-          "yOffset": 14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 160,
-          "sourceY": 416,
-          "widthPixels": 8,
-          "heightPixels": 8,
-          "xOffset": 12,
-          "yOffset": 14,
+          "xOffset": -13,
+          "yOffset": -16,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -2259,44 +1299,8 @@
           "sourceY": 384,
           "widthPixels": 32,
           "heightPixels": 32,
-          "xOffset": -22,
-          "yOffset": -18,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 224,
-          "sourceY": 384,
-          "widthPixels": 16,
-          "heightPixels": 32,
-          "xOffset": 10,
-          "yOffset": -18,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 192,
-          "sourceY": 416,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -22,
-          "yOffset": 14,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 224,
-          "sourceY": 416,
-          "widthPixels": 16,
-          "heightPixels": 8,
-          "xOffset": 10,
-          "yOffset": 14,
+          "xOffset": -15,
+          "yOffset": -17,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -2312,8 +1316,8 @@
           "sourceY": 384,
           "widthPixels": 32,
           "heightPixels": 32,
-          "xOffset": -21,
-          "yOffset": -17,
+          "xOffset": -14,
+          "yOffset": -15,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -2322,34 +1326,10 @@
         {
           "sourceX": 288,
           "sourceY": 384,
-          "widthPixels": 16,
+          "widthPixels": 8,
           "heightPixels": 32,
-          "xOffset": 11,
-          "yOffset": -17,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 256,
-          "sourceY": 416,
-          "widthPixels": 32,
-          "heightPixels": 8,
-          "xOffset": -21,
-          "yOffset": 15,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 288,
-          "sourceY": 416,
-          "widthPixels": 16,
-          "heightPixels": 8,
-          "xOffset": 11,
-          "yOffset": 15,
+          "xOffset": 18,
+          "yOffset": -15,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -2365,8 +1345,8 @@
           "sourceY": 384,
           "widthPixels": 32,
           "heightPixels": 32,
-          "xOffset": -21,
-          "yOffset": -22,
+          "xOffset": -14,
+          "yOffset": -20,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
@@ -2375,34 +1355,10 @@
         {
           "sourceX": 352,
           "sourceY": 384,
-          "widthPixels": 16,
+          "widthPixels": 8,
           "heightPixels": 32,
-          "xOffset": 11,
-          "yOffset": -22,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 320,
-          "sourceY": 416,
-          "widthPixels": 32,
-          "heightPixels": 16,
-          "xOffset": -21,
-          "yOffset": 10,
-          "hFlip": false,
-          "vFlip": false,
-          "paletteIndex": 0,
-          "priority": false
-        },
-        {
-          "sourceX": 352,
-          "sourceY": 416,
-          "widthPixels": 16,
-          "heightPixels": 16,
-          "xOffset": 11,
-          "yOffset": 10,
+          "xOffset": 18,
+          "yOffset": -20,
           "hFlip": false,
           "vFlip": false,
           "paletteIndex": 0,
