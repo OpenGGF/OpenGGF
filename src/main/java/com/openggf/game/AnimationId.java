@@ -8,6 +8,9 @@ package com.openggf.game;
 public interface AnimationId {
     int id();
 
+    /** Semantic identity for typed object animation writes. */
+    default CanonicalAnimation toCanonical() { return null; }
+
     /**
      * Resolves a CanonicalAnimation back to the native animation ID for the given
      * set of AnimationId values. Returns -1 if the canonical animation is not

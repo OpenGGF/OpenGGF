@@ -679,7 +679,7 @@ final class LevelPlayableArtInitializer {
                 var nativeArt = hostProvider.loadPlayerSpriteArt(archetype);
                 if (nativeArt == null || !(nativeArt.animationProfile() instanceof com.openggf.sprites.animation.ScriptedVelocityAnimationProfile profile))
                     throw new IOException("Host cannot bind canonical playable animations");
-                art = com.openggf.level.objects.PlayableSheetAnimationBinding.bind(art, host.getDonorCapabilities(), profile);
+                art = com.openggf.level.objects.PlayableSheetAnimationBinding.bind(art, host.getDonorCapabilities(), nativeArt);
             }
             return art;
         }
@@ -987,6 +987,7 @@ final class LevelPlayableArtInitializer {
     private void initSuperState(AbstractPlayableSprite playable) {
         if (runtimeRefresh && playable.getSuperStateController() instanceof
                 com.openggf.game.internal.RuntimeArtRefreshParticipant existing) {
+            com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindNormalAnimationProfile(playable);
             existing.rebindAfterArtRefresh();
             return;
         }
@@ -1008,6 +1009,10 @@ final class LevelPlayableArtInitializer {
             superCtrl = gameModule.createSuperStateController(playable);
         }
         playable.setSuperStateController(superCtrl);
+        // A literal native scene may temporarily replace this profile before
+        // the first rewind restore. The Super controller's normal resource
+        // must come from ordinary art initialization, never that borrowed view.
+        com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindNormalAnimationProfile(playable);
 
         if (superCtrl != null && !superCtrl.isRomDataPreLoaded()) {
             try {

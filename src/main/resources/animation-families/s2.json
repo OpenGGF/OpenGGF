@@ -1,0 +1,497 @@
+{
+  "0": {
+    "animation": "WALK",
+    "family": "WALK",
+    "phases": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  },
+  "1": {
+    "animation": "RUN",
+    "family": "RUN",
+    "phases": [
+      0,
+      1,
+      2,
+      3
+    ]
+  },
+  "2": {
+    "animation": "ROLL",
+    "family": "ROLL",
+    "phases": [
+      1,
+      0,
+      2,
+      0,
+      3,
+      0,
+      4,
+      0
+    ]
+  },
+  "3": {
+    "animation": "ROLL2",
+    "family": "ROLL",
+    "phases": [
+      1,
+      0,
+      2,
+      0,
+      3,
+      0,
+      4,
+      0
+    ]
+  },
+  "4": {
+    "animation": "PUSH",
+    "family": "PUSH",
+    "phases": [
+      0,
+      1,
+      2,
+      3
+    ]
+  },
+  "5": {
+    "animation": "WAIT",
+    "family": "WAIT",
+    "phases": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      6,
+      7,
+      7,
+      7,
+      8,
+      8,
+      8
+    ]
+  },
+  "6": {
+    "animation": "BALANCE",
+    "family": "BALANCE",
+    "phases": [
+      0,
+      1,
+      2,
+      1
+    ]
+  },
+  "7": {
+    "animation": "LOOK_UP",
+    "family": "LOOK_UP",
+    "phases": [
+      0,
+      1
+    ]
+  },
+  "8": {
+    "animation": "DUCK",
+    "family": "DUCK",
+    "phases": [
+      0,
+      1
+    ]
+  },
+  "9": {
+    "animation": "SPINDASH",
+    "family": "SPINDASH",
+    "phases": [
+      0,
+      1,
+      0,
+      2,
+      0,
+      3,
+      0,
+      4,
+      0,
+      5
+    ]
+  },
+  "10": {
+    "animation": "BLINK",
+    "family": "BLINK",
+    "phases": [
+      1
+    ]
+  },
+  "11": {
+    "animation": "GET_UP",
+    "family": "GET_UP",
+    "phases": [
+      1
+    ]
+  },
+  "12": {
+    "animation": "BALANCE2",
+    "family": "BALANCE2",
+    "phases": [
+      0,
+      1,
+      2,
+      1
+    ]
+  },
+  "13": {
+    "animation": "SKID",
+    "family": "SKID",
+    "phases": [
+      0,
+      1,
+      2,
+      3
+    ]
+  },
+  "14": {
+    "animation": "FLOAT",
+    "family": "FLOAT2",
+    "phases": [
+      1,
+      0
+    ]
+  },
+  "15": {
+    "animation": "FLOAT2",
+    "family": "FLOAT2",
+    "phases": [
+      1,
+      2,
+      4,
+      6,
+      7
+    ]
+  },
+  "16": {
+    "animation": "SPRING",
+    "family": "SPRING",
+    "phases": [
+      0
+    ]
+  },
+  "17": {
+    "animation": "HANG",
+    "family": "HANG",
+    "phases": [
+      0,
+      1
+    ]
+  },
+  "18": {
+    "animation": null,
+    "family": null,
+    "phases": [
+      0,
+      0,
+      0
+    ]
+  },
+  "19": {
+    "animation": null,
+    "family": null,
+    "phases": [
+      0,
+      1
+    ]
+  },
+  "20": {
+    "animation": "HANG2",
+    "family": "HANG2",
+    "phases": [
+      0,
+      1
+    ]
+  },
+  "21": {
+    "animation": "BUBBLE",
+    "family": "BUBBLE",
+    "phases": [
+      0,
+      0,
+      1,
+      2
+    ]
+  },
+  "22": {
+    "animation": "BURNT",
+    "family": "BURNT",
+    "phases": [
+      0
+    ]
+  },
+  "23": {
+    "animation": "DROWN",
+    "family": "DROWN",
+    "phases": [
+      0
+    ]
+  },
+  "24": {
+    "animation": "DEATH",
+    "family": "DEATH",
+    "phases": [
+      0
+    ]
+  },
+  "25": {
+    "animation": "HURT2",
+    "family": "HURT",
+    "phases": [
+      0
+    ]
+  },
+  "26": {
+    "animation": "HURT",
+    "family": "HURT",
+    "phases": [
+      0
+    ]
+  },
+  "27": {
+    "animation": "SLIDE",
+    "family": "HURT_FALL",
+    "phases": [
+      1,
+      0
+    ]
+  },
+  "28": {
+    "animation": "NULL_ANIM",
+    "family": "BLANK",
+    "phases": [
+      0
+    ]
+  },
+  "29": {
+    "animation": "BALANCE3",
+    "family": "BALANCE3",
+    "phases": [
+      0,
+      1
+    ]
+  },
+  "30": {
+    "animation": "BALANCE4",
+    "family": "BALANCE4",
+    "phases": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "31": {
+    "animation": "SUPER_TRANSFORM",
+    "family": "SUPER_TRANSFORM",
+    "phases": [
+      0,
+      0,
+      1,
+      1,
+      2,
+      3,
+      4,
+      3,
+      4,
+      3,
+      4,
+      3,
+      4
+    ]
+  },
+  "32": {
+    "animation": "FLY",
+    "family": "WAIT",
+    "phases": [
+      7,
+      8
+    ]
+  },
+  "33": {
+    "animation": null,
+    "family": null,
+    "phases": [
+      0
+    ]
+  }
+}

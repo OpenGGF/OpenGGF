@@ -455,3 +455,42 @@ It retains both attempts, lossless PNG animation at 60Hz, hotspot-aligned scale
 panels and packaged-mod vine/tree/HCZ conveyor MP4s with state CSVs. Tumble scale
 clusters simplify at 1×; twist front/back poses coexist with the older side
 views. This covers the byte slots, not later-zone route certification.
+
+## Shared family phases
+
+Use `nativeFrames` keys `family-<canonical-family-in-lowercase>/<phase>` to author
+a family once. Underscores become hyphens (`family-hurt-fall/0`). Module profiles
+live in `src/main/resources/animation-families/`; a null family explicitly
+marks unused or character-specific Sonic-table entries. An unnamed native script
+may omit its canonical animation while retaining a known family. Profiles carry phase
+correspondence only. Never copy ROM timer bytes into this metadata: the binder
+uses the ROM-loaded script's delay, ordered repetitions and terminator.
+
+MICA's recipe and handoff contain 208 source frames, 52 representative canonical
+scripts and 106 family-phase aliases. Both recipe and handoff must be updated:
+`verify.py` rebuilds the handoff from the recipe. Its WAIT partial loop was already
+correct in the handoff; the formerly stale recipe now reproduces it too.
+
+Use `--export-references` to decode disposable native reference PNGs from the
+pinned development disassemblies when an external reference directory is absent.
+These pixels never enter the runtime or repository.
+
+The maintained review generator inventories all normal Sonic scripts and S2/S3K
+Tails scripts, and optionally builds lossless native/MICA GIFs from external native
+reference PNGs. References and decoded native pixels stay outside Git:
+
+```bash
+python3 tools/modding/animation_family_review.py <audit-json-directory> <review-directory> --references <native-reference-directory>
+```
+
+The CSV includes native frame order/count, delay, terminator, phase correspondence,
+trigger summary and exact script-label citations. GIFs retain every repeated step;
+LOOP_BACK previews show two tail repetitions. Speed-driven roll uses an illustrative
+one-tick interval, not a gameplay speed claim. GIF centiseconds cumulatively round
+60 Hz intervals without dropping frames or changing palette colours.
+
+The review groups hosts under each family and marks absent host families N/A.
+Tails is reference-only: its phase indices are local to each script, its blink
+slots are distinct from Sonic's ending slots, and reserved scripts add no TALON
+drawing obligation. Native Sonic scripts retained without a live selector remain
+in the inventory with that limitation stated.

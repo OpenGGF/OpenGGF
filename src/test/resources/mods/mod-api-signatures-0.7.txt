@@ -158,6 +158,7 @@ CF-ANNOTATION TYPE com.openggf.game.AbstractLevelInitProfile$IORunnable visible 
 CF-ANNOTATION TYPE com.openggf.game.AbstractLevelInitProfile$IORunnable visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.game.AbstractStandaloneGameModule visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ActExit visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.AnimationFamilies$Binding visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.AnimationId visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.BonusStageProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.BonusStageProvider$BonusStageRewards visible @com.openggf.game.ModApi
@@ -1486,6 +1487,8 @@ CONSTRUCTOR com.openggf.editor.persistence.EditorSaveManager$SaveResult public  
 CONSTRUCTOR com.openggf.game.AbstractLevelInitProfile public  <init>()
 CONSTRUCTOR com.openggf.game.AbstractStandaloneGameModule protected  <init>(com.openggf.game.StandaloneGameSpec)
 CONSTRUCTOR com.openggf.game.AbstractStandaloneGameModule public  <init>()
+CONSTRUCTOR com.openggf.game.AnimationFamilies$Binding public  <init>(com.openggf.game.CanonicalAnimation,com.openggf.game.CanonicalAnimation,java.util.List<java.lang.Integer>)
+CONSTRUCTOR com.openggf.game.AnimationFamilies$Binding public  <init>(com.openggf.game.CanonicalAnimation,com.openggf.game.CanonicalAnimation,java.util.List<java.lang.Integer>,int,int)
 CONSTRUCTOR com.openggf.game.BonusStageProvider$BonusStageRewards public  <init>(int,int,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.BonusStageProvider$BootstrapObject public  <init>(com.openggf.level.objects.ObjectSpawn,java.lang.Class<? extends com.openggf.level.objects.ObjectInstance>,java.util.function.Function<com.openggf.level.objects.ObjectSpawn,? extends com.openggf.level.objects.ObjectInstance>)
 CONSTRUCTOR com.openggf.game.BonusStageState public  <init>(int,int,int,int,int,int,int,int,int,int,int,int,byte,byte,int,long)
@@ -5887,6 +5890,16 @@ METHOD com.openggf.game.AbstractStandaloneGameModule public,final  com.openggf.l
 METHOD com.openggf.game.AbstractStandaloneGameModule public,final  java.lang.String getGameCode()
 METHOD com.openggf.game.ActExit public,static  com.openggf.game.ActExit valueOf(java.lang.String)
 METHOD com.openggf.game.ActExit public,static  com.openggf.game.ActExit[] values()
+METHOD com.openggf.game.AnimationFamilies$Binding public  com.openggf.game.CanonicalAnimation animation()
+METHOD com.openggf.game.AnimationFamilies$Binding public  com.openggf.game.CanonicalAnimation family()
+METHOD com.openggf.game.AnimationFamilies$Binding public  int offsetX()
+METHOD com.openggf.game.AnimationFamilies$Binding public  int offsetY()
+METHOD com.openggf.game.AnimationFamilies$Binding public  java.lang.String phaseKey(int)
+METHOD com.openggf.game.AnimationFamilies$Binding public  java.util.List<java.lang.Integer> phases()
+METHOD com.openggf.game.AnimationFamilies$Binding public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.AnimationFamilies$Binding public,final  int hashCode()
+METHOD com.openggf.game.AnimationFamilies$Binding public,final  java.lang.String toString()
+METHOD com.openggf.game.AnimationId public  com.openggf.game.CanonicalAnimation toCanonical()
 METHOD com.openggf.game.AnimationId public,abstract  int id()
 METHOD com.openggf.game.AnimationId public,static <E extends java.lang.Enum<E>&com.openggf.game.AnimationId> int fromCanonical(E[],java.util.function.Function<E,com.openggf.game.CanonicalAnimation>,com.openggf.game.CanonicalAnimation)
 METHOD com.openggf.game.BonusStageProvider public  boolean hasCompletedExitFadeToBlack()
@@ -6193,6 +6206,7 @@ METHOD com.openggf.game.DemoLamppostState public  int waterRoutine()
 METHOD com.openggf.game.DemoLamppostState public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.DemoLamppostState public,final  int hashCode()
 METHOD com.openggf.game.DemoLamppostState public,final  java.lang.String toString()
+METHOD com.openggf.game.DonorCapabilities public  java.util.Map<java.lang.Integer,com.openggf.game.AnimationFamilies$Binding> getAnimationFamilies()
 METHOD com.openggf.game.DonorCapabilities public  java.util.Map<java.lang.Integer,com.openggf.game.DonorCapabilities$NativeFramePose> getNativeFramePoses()
 METHOD com.openggf.game.DonorCapabilities public,abstract  boolean hasElementalShields()
 METHOD com.openggf.game.DonorCapabilities public,abstract  boolean hasHyperTransform()
@@ -17940,6 +17954,11 @@ RECORD-COMPONENT com.openggf.editor.persistence.EditorSaveManager$SaveResult fil
 RECORD-COMPONENT com.openggf.editor.persistence.EditorSaveManager$SaveResult hash java.lang.String
 RECORD-COMPONENT com.openggf.editor.persistence.EditorSaveManager$SaveResult ok boolean
 RECORD-COMPONENT com.openggf.editor.persistence.EditorSaveManager$SaveResult persistenceStatus com.openggf.editor.persistence.EditorSaveManager$ApplyResult
+RECORD-COMPONENT com.openggf.game.AnimationFamilies$Binding animation com.openggf.game.CanonicalAnimation
+RECORD-COMPONENT com.openggf.game.AnimationFamilies$Binding family com.openggf.game.CanonicalAnimation
+RECORD-COMPONENT com.openggf.game.AnimationFamilies$Binding offsetX int
+RECORD-COMPONENT com.openggf.game.AnimationFamilies$Binding offsetY int
+RECORD-COMPONENT com.openggf.game.AnimationFamilies$Binding phases java.util.List<java.lang.Integer>
 RECORD-COMPONENT com.openggf.game.BonusStageProvider$BonusStageRewards bubbleShield boolean
 RECORD-COMPONENT com.openggf.game.BonusStageProvider$BonusStageRewards fireShield boolean
 RECORD-COMPONENT com.openggf.game.BonusStageProvider$BonusStageRewards lightningShield boolean
@@ -21964,6 +21983,7 @@ TYPE record public,static,final com.openggf.debug.DebugRenderContext$DebugTextEn
 TYPE record public,static,final com.openggf.debug.MemoryStats$SectionAllocation SUPER java.lang.Record
 TYPE record public,static,final com.openggf.editor.persistence.EditorSaveManager$EditorApplyFinding SUPER java.lang.Record
 TYPE record public,static,final com.openggf.editor.persistence.EditorSaveManager$SaveResult SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.AnimationFamilies$Binding SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.BonusStageProvider$BonusStageRewards SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.BonusStageProvider$BootstrapObject SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.CharacterPresentation$Art SUPER java.lang.Record
@@ -22452,6 +22472,7 @@ TYPE-ANNOTATION com.openggf.game.AbstractLevelInitProfile$IORunnable @com.opengg
 TYPE-ANNOTATION com.openggf.game.AbstractLevelInitProfile$IORunnable @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.game.AbstractStandaloneGameModule @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ActExit @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.AnimationFamilies$Binding @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.AnimationId @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.BonusStageProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.BonusStageProvider$BonusStageRewards @com.openggf.game.ModApi

@@ -39,6 +39,59 @@ public final class PlayableSheetAnimationBinding {
         return art != null && art.animationProfile() instanceof CanonicalProfile;
     }
 
+    /** Installs family art with the host ROM's exact sequence, delay and terminator. */
+    public static SpriteArtSet bind(SpriteArtSet art, DonorCapabilities host, SpriteArtSet nativeArt) {
+        var bound = bind(art, host, (ScriptedVelocityAnimationProfile) nativeArt.animationProfile());
+        if (!(art.animationProfile() instanceof CanonicalProfile source)) return bound;
+        int relocation = bound.mappingFrames().size() - art.mappingFrames().size();
+        var mappings = new java.util.ArrayList<>(bound.mappingFrames());
+        var dplcs = new java.util.ArrayList<>(bound.dplcFrames());
+        for (var entry : host.getAnimationFamilies().entrySet()) {
+            var binding = entry.getValue();
+            if (binding.family() == null || binding.phases().isEmpty()
+                    || !source.nativeFrames.containsKey(binding.phaseKey(0))) continue;
+            var nativeScript = nativeArt.animationSet().getScript(entry.getKey());
+            if (nativeScript == null) continue;
+            if (nativeScript.frames().size() != binding.phases().size())
+                throw new IllegalArgumentException("Animation family does not match host script " + entry.getKey());
+            var frames = new java.util.ArrayList<Integer>();
+            for (int step = 0; step < binding.phases().size(); step++) {
+                Integer frame = source.nativeFrames.get(binding.phaseKey(step));
+                if (frame == null) { frames.clear(); break; }
+                if (binding.family() == CanonicalAnimation.WALK || binding.family() == CanonicalAnimation.RUN) {
+                    // Movement flat frames live in the materializer's contiguous slope banks.
+                    // Retain those bank addresses while selecting the host's native phase order.
+                    var movement = art.animationSet().getScript(binding.family().ordinal());
+                    Integer bankFrame = null;
+                    if (movement != null) for (int candidate : movement.frames()) {
+                        if (art.mappingFrames().get(candidate) == art.mappingFrames().get(frame)
+                                && art.dplcFrames().get(candidate) == art.dplcFrames().get(frame)) {
+                            bankFrame = candidate; break;
+                        }
+                    }
+                    if (bankFrame == null) throw new IllegalArgumentException("Movement family phase requires its authored flat cycle");
+                    frame = bankFrame;
+                }
+                int selected = frame + relocation;
+                if (binding.offsetX() != 0 || binding.offsetY() != 0) {
+                    var original = bound.mappingFrames().get(selected);
+                    selected = mappings.size();
+                    mappings.add(new com.openggf.level.render.SpriteMappingFrame(original.pieces().stream()
+                            .map(piece -> new com.openggf.level.render.SpriteMappingPiece(
+                                    piece.xOffset() + binding.offsetX(), piece.yOffset() + binding.offsetY(),
+                                    piece.widthTiles(), piece.heightTiles(), piece.tileIndex(), piece.hFlip(),
+                                    piece.vFlip(), piece.paletteIndex(), piece.priority())).toList()));
+                    dplcs.add(bound.dplcFrames().get(frame + relocation));
+                }
+                frames.add(selected);
+            }
+            if (!frames.isEmpty()) bound.animationSet().addScript(entry.getKey(), new SpriteAnimationScript(
+                    nativeScript.delay(), frames, nativeScript.endAction(), nativeScript.endParam()));
+        }
+        return new SpriteArtSet(bound.artTiles(), mappings, dplcs, bound.paletteIndex(), bound.basePatternIndex(),
+                bound.frameDelay(), bound.bankSize(), bound.animationProfile(), bound.animationSet());
+    }
+
     public static SpriteArtSet bind(SpriteArtSet art, DonorCapabilities host,
                                     ScriptedVelocityAnimationProfile nativeProfile) {
         if (!(art.animationProfile() instanceof CanonicalProfile canonicalProfile)) return art;

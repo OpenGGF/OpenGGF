@@ -44,10 +44,12 @@ class TestCharacterArtCoverageAudit {
         var host=module.getDonorCapabilities();
         var nativeArt=host.getPlayerArtProvider(RomByteReader.fromRom(TestEnvironment.currentRom())).loadPlayerSpriteArt(nativeCharacter);
         assertNotNull(nativeArt);
-        var bound=PlayableSheetAnimationBinding.bind(source,host,(ScriptedVelocityAnimationProfile)nativeArt.animationProfile());
-        int relocation=bound.mappingFrames().size()-source.mappingFrames().size();
+        var bound=PlayableSheetAnimationBinding.bind(source,host,nativeArt);
+        int relocation=PlayableSheetAnimationBinding.hasNativeFrameAliases(source) && !host.getNativeFramePoses().isEmpty()?256:0;
+        int generatedMappings=bound.mappingFrames().size()-source.mappingFrames().size()-relocation;
         var result=new LinkedHashMap<String,Object>();
         result.put("game",game); result.put("character",character); result.put("relocation",relocation);
+        result.put("generatedFamilyMappings",generatedMappings);
         result.put("sourceScripts",source.animationSet().getAllScripts());
         var packedIndices=new TreeMap<Integer,Integer>();
         for(int i=0;i<source.mappingFrames().size();i++) for(int j=0;j<sheet.frames().size();j++)
@@ -74,6 +76,7 @@ class TestCharacterArtCoverageAudit {
             if(id>=0) names.computeIfAbsent(id,k->new ArrayList<>()).add(canonical.name());
         }
         result.put("hostNames",names);
+        result.put("familyBindings",host.getAnimationFamilies());
         var resolutions=new TreeMap<Integer,Object>();
         for(var entry:nativeArt.animationSet().getAllScripts().entrySet()) {
             int id=entry.getKey(); var script=bound.animationSet().getScript(id);

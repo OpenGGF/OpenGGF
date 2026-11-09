@@ -656,6 +656,13 @@ public class Sonic1GameModule implements com.openggf.game.internal.RetailRomAwar
         private static final java.util.Set<PlayerCharacter> CHARACTERS =
                 java.util.Set.of(PlayerCharacter.SONIC_ALONE);
 
+        private static final java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> FAMILIES =
+                com.openggf.game.AnimationFamilies.load("/animation-families/s1.json");
+
+        @Override public java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> getAnimationFamilies() {
+            return FAMILIES;
+        }
+
         private static final java.util.Map<CanonicalAnimation, CanonicalAnimation> FALLBACKS =
                 buildFallbacks();
 
@@ -712,11 +719,13 @@ public class Sonic1GameModule implements com.openggf.game.internal.RetailRomAwar
 
         @Override
         public java.util.Map<CanonicalAnimation, CanonicalAnimation> getAnimationFallbacks() {
-            return FALLBACKS;
+            return com.openggf.game.AnimationFamilies.fallbacks(FAMILIES, FALLBACKS);
         }
 
         @Override
         public int resolveNativeId(CanonicalAnimation canonical) {
+            int familyId = com.openggf.game.AnimationFamilies.resolve(FAMILIES, canonical);
+            if (familyId >= 0) return familyId;
             return Sonic1AnimationIds.fromCanonical(canonical);
         }
 

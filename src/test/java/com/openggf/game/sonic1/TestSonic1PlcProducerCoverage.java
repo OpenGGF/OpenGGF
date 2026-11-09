@@ -310,7 +310,7 @@ class TestSonic1PlcProducerCoverage {
 
         signpost.update(1, player);
 
-        verify(player).setAnimationId(Sonic1AnimationIds.NULL.id());
+        verify(player).setAnimationId(Sonic1AnimationIds.NULL);
         verify(player).setForcedAnimationId(Sonic1AnimationIds.NULL.id());
 
         Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);

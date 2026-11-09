@@ -1656,71 +1656,6 @@
       "notes": "Batch2 native-pose generation; no painted pixels."
     },
     {
-      "id": "variant-s1-3c",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s1-3c.png",
-      "hotspot": [
-        15,
-        12
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
-      "id": "variant-s1-3f",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s1-3f.png",
-      "hotspot": [
-        14,
-        11
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
-      "id": "variant-s1-3d",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s1-3d.png",
-      "hotspot": [
-        18,
-        12
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
-      "id": "variant-s1-3e",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s1-3e.png",
-      "hotspot": [
-        27,
-        12
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
-      "id": "variant-s1-53",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s1-53.png",
-      "hotspot": [
-        26,
-        12
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
       "id": "variant-s1-43",
       "animation": "NATIVE_POSE",
       "order": 191,
@@ -1760,19 +1695,6 @@
       "notes": "Batch2 native-pose generation; no painted pixels."
     },
     {
-      "id": "variant-s1-54",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s1-54.png",
-      "hotspot": [
-        10,
-        12
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
       "id": "variant-s1-49",
       "animation": "NATIVE_POSE",
       "order": 191,
@@ -1799,123 +1721,6 @@
       "notes": "Batch2 native-pose generation; no painted pixels."
     },
     {
-      "id": "variant-s2-c8",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s2-c8.png",
-      "hotspot": [
-        15,
-        15
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
-      "id": "variant-s2-c9",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s2-c9.png",
-      "hotspot": [
-        13,
-        14
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
-      "id": "variant-s1-55",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s1-55.png",
-      "hotspot": [
-        18,
-        12
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
-      "id": "variant-s1-57",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s1-57.png",
-      "hotspot": [
-        18,
-        12
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
-      "id": "variant-s2-ca",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s2-ca.png",
-      "hotspot": [
-        13,
-        15
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
-      "id": "variant-s2-cb",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s2-cb.png",
-      "hotspot": [
-        13,
-        16
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
-      "id": "variant-s2-5a",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s2-5a.png",
-      "hotspot": [
-        18,
-        16
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
-      "id": "variant-s2-4f",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s2-4f.png",
-      "hotspot": [
-        20,
-        12
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
-      "id": "variant-s2-6b",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s2-6b.png",
-      "hotspot": [
-        14,
-        24
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
       "id": "variant-s2-6c",
       "animation": "NATIVE_POSE",
       "order": 191,
@@ -1923,45 +1728,6 @@
       "hotspot": [
         12,
         24
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
-      "id": "variant-s2-d0",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s2-d0.png",
-      "hotspot": [
-        12,
-        17
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
-      "id": "variant-s2-d1",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s2-d1.png",
-      "hotspot": [
-        12,
-        17
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
-    },
-    {
-      "id": "variant-s2-cf",
-      "animation": "NATIVE_POSE",
-      "order": 191,
-      "file": "frames/variant-s2-cf.png",
-      "hotspot": [
-        22,
-        17
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -3390,8 +3156,8 @@
     },
     "FLOAT": {
       "frames": [
-        "variant-s1-3c",
-        "variant-s1-3f"
+        "variant-s3k-c9",
+        "variant-s3k-c8"
       ],
       "end": "loop",
       "durations": [
@@ -3401,11 +3167,11 @@
     },
     "FLOAT2": {
       "frames": [
-        "variant-s1-3c",
-        "variant-s1-3d",
-        "variant-s1-53",
-        "variant-s1-3e",
-        "variant-s1-54"
+        "variant-s3k-c9",
+        "variant-s3k-ca",
+        "variant-s3k-cc",
+        "variant-s3k-ce",
+        "variant-s3k-cf"
       ],
       "end": "loop",
       "durations": [
@@ -3422,23 +3188,25 @@
         "variant-s1-43",
         "variant-s1-43"
       ],
-      "end": "hold",
+      "end": "loop-back",
       "durations": [
         16,
         16,
         16
-      ]
+      ],
+      "loopBackSteps": 1
     },
     "LEAP2": {
       "frames": [
         "variant-s1-43",
         "variant-s1-44"
       ],
-      "end": "hold",
+      "end": "loop-back",
       "durations": [
         16,
         16
-      ]
+      ],
+      "loopBackSteps": 1
     },
     "SURF": {
       "frames": [
@@ -3467,7 +3235,7 @@
         "variant-s1-4e-scale82",
         "variant-blank"
       ],
-      "end": "hold",
+      "end": "loop-back",
       "durations": [
         4,
         4,
@@ -3475,12 +3243,13 @@
         4,
         4,
         4
-      ]
+      ],
+      "loopBackSteps": 1
     },
     "WATER_SLIDE": {
       "frames": [
-        "variant-s1-55",
-        "variant-s1-57"
+        "variant-s3k-8d",
+        "variant-s3k-8c"
       ],
       "end": "loop",
       "durations": [
@@ -3500,11 +3269,11 @@
     },
     "FLOAT3": {
       "frames": [
-        "variant-s1-3c",
-        "variant-s1-3d",
-        "variant-s1-53",
-        "variant-s1-3e",
-        "variant-s1-54"
+        "variant-s3k-c9",
+        "variant-s3k-ca",
+        "variant-s3k-cc",
+        "variant-s3k-ce",
+        "variant-s3k-cf"
       ],
       "end": "loop",
       "durations": [
@@ -3517,7 +3286,7 @@
     },
     "FLOAT4": {
       "frames": [
-        "variant-s1-3c"
+        "variant-s3k-c9"
       ],
       "end": "next",
       "durations": [
@@ -3527,7 +3296,7 @@
     },
     "BLINK": {
       "frames": [
-        "wait-01"
+        "wait-00"
       ],
       "end": "next",
       "durations": [
@@ -3547,10 +3316,10 @@
     },
     "BALANCE2": {
       "frames": [
-        "variant-s2-c8",
-        "variant-s2-c9",
-        "variant-s2-ca",
-        "variant-s2-cb"
+        "variant-s3k-c8",
+        "variant-s3k-c9",
+        "variant-s3k-ca",
+        "variant-s3k-cb"
       ],
       "end": "loop",
       "durations": [
@@ -3574,7 +3343,7 @@
         "variant-s3k-b3",
         "variant-s3k-b2"
       ],
-      "end": "loop",
+      "end": "loop-back",
       "durations": [
         8,
         8,
@@ -3587,11 +3356,12 @@
         8,
         8,
         8
-      ]
+      ],
+      "loopBackSteps": 4
     },
     "HANG2": {
       "frames": [
-        "variant-s2-6b",
+        "hang-01",
         "variant-s2-6c"
       ],
       "end": "loop",
@@ -3602,10 +3372,10 @@
     },
     "BUBBLE": {
       "frames": [
-        "variant-s2-5a",
-        "variant-s2-5a",
-        "walk-02",
-        "walk-03"
+        "variant-s3k-ac",
+        "variant-s3k-ac",
+        "variant-s3k-03",
+        "variant-s3k-04"
       ],
       "end": "next",
       "durations": [
@@ -3629,8 +3399,8 @@
     },
     "BALANCE3": {
       "frames": [
-        "variant-s2-d0",
-        "variant-s2-d1"
+        "variant-s3k-d0",
+        "variant-s3k-d1"
       ],
       "end": "loop",
       "durations": [
@@ -3640,20 +3410,21 @@
     },
     "BALANCE4": {
       "frames": [
-        "variant-s2-cf",
-        "variant-s2-c8",
-        "variant-s2-c9",
-        "variant-s2-ca",
-        "variant-s2-cb"
+        "variant-s3k-cf",
+        "variant-s3k-c8",
+        "variant-s3k-c9",
+        "variant-s3k-ca",
+        "variant-s3k-cb"
       ],
-      "end": "loop",
+      "end": "loop-back",
       "durations": [
         4,
         4,
         4,
         4,
         4
-      ]
+      ],
+      "loopBackSteps": 4
     },
     "TAILS_CARRIED": {
       "frames": [
@@ -3681,7 +3452,7 @@
     },
     "HURT2": {
       "frames": [
-        "hurt-00"
+        "variant-s3k-8d"
       ],
       "end": "loop",
       "durations": [
@@ -3690,8 +3461,8 @@
     },
     "SLIDE": {
       "frames": [
-        "hurt-00",
-        "variant-s2-4f"
+        "variant-s3k-8d",
+        "variant-s3k-8c"
       ],
       "end": "loop",
       "durations": [
@@ -3709,6 +3480,30 @@
         10,
         10
       ]
+    },
+    "DUCK": {
+      "frames": [
+        "duck-00",
+        "duck-01"
+      ],
+      "durations": [
+        6,
+        6
+      ],
+      "end": "loop-back",
+      "loopBackSteps": 1
+    },
+    "LOOK_UP": {
+      "frames": [
+        "look_up-00",
+        "look_up-01"
+      ],
+      "durations": [
+        6,
+        6
+      ],
+      "end": "loop-back",
+      "loopBackSteps": 1
     }
   },
   "nativeFrames": {
@@ -3770,6 +3565,112 @@
     "swing/6": "object-pose-7e",
     "swing/7": "object-pose-7f",
     "bar-end/0": "object-pose-94",
-    "bar-end/1": "object-pose-95"
+    "bar-end/1": "object-pose-95",
+    "family-roll/0": "roll-blur",
+    "family-roll/1": "roll-00",
+    "family-roll/4": "roll-03",
+    "family-roll/2": "roll-01",
+    "family-roll/3": "roll-02",
+    "family-warp1/0": "variant-s1-33",
+    "family-warp2/0": "variant-s1-33-rot52",
+    "family-warp3/0": "variant-s1-33-rot53",
+    "family-warp4/0": "variant-s1-33-rot54",
+    "family-float2/1": "variant-s3k-c9",
+    "family-float2/0": "variant-s3k-c8",
+    "family-float2/2": "variant-s3k-ca",
+    "family-float2/4": "variant-s3k-cc",
+    "family-float2/6": "variant-s3k-ce",
+    "family-float2/7": "variant-s3k-cf",
+    "family-leap1/0": "variant-s1-43",
+    "family-leap1/1": "variant-s1-44",
+    "family-surf/0": "variant-s1-49",
+    "family-burnt/0": "variant-s1-4b",
+    "family-shrink/0": "variant-s1-4e",
+    "family-shrink/1": "variant-s1-4e-scale79",
+    "family-shrink/2": "variant-s1-4e-scale80",
+    "family-shrink/3": "variant-s1-4e-scale81",
+    "family-shrink/4": "variant-s1-4e-scale82",
+    "family-shrink/5": "variant-blank",
+    "family-hurt-fall/1": "variant-s3k-8d",
+    "family-hurt-fall/0": "variant-s3k-8c",
+    "family-blank/0": "variant-blank",
+    "family-blink/0": "wait-00",
+    "family-get-up/1": "variant-s2-0a",
+    "family-balance2/0": "variant-s3k-a1",
+    "family-balance2/1": "variant-s3k-a2",
+    "family-balance2/2": "variant-s3k-a3",
+    "family-hang2/0": "hang-01",
+    "family-hang2/1": "variant-s2-6c",
+    "family-bubble/0": "variant-s3k-ac",
+    "family-bubble/1": "variant-s3k-03",
+    "family-bubble/2": "variant-s3k-04",
+    "family-hurt/0": "hurt-00",
+    "family-balance3/0": "variant-s3k-d0",
+    "family-balance3/1": "variant-s3k-d1",
+    "family-balance4/0": "variant-s3k-cf",
+    "family-balance4/1": "variant-s3k-c8",
+    "family-balance4/2": "variant-s3k-c9",
+    "family-balance4/3": "variant-s3k-ca",
+    "family-balance4/4": "variant-s3k-cb",
+    "family-blink/1": "variant-s3k-c5",
+    "family-blink/2": "variant-s3k-c6",
+    "family-blink/3": "variant-s3k-c7",
+    "family-get-up/0": "variant-s3k-8f",
+    "family-float2/3": "variant-s3k-cb",
+    "family-float2/5": "variant-s3k-cd",
+    "family-victory/0": "variant-s3k-b0",
+    "family-victory/1": "variant-s3k-b2",
+    "family-victory/2": "variant-s3k-b1",
+    "family-victory/3": "variant-s3k-b3",
+    "family-wait/7": "wait-07",
+    "family-wait/8": "wait-08",
+    "family-wait/0": "wait-00",
+    "family-wait/1": "wait-01",
+    "family-wait/2": "wait-02",
+    "family-wait/3": "wait-03",
+    "family-wait/4": "wait-04",
+    "family-wait/5": "wait-05",
+    "family-wait/6": "wait-06",
+    "family-tails-carried/0": "hang-00",
+    "family-tails-carried/1": "hang-01",
+    "family-tails-carried/2": "hang-02",
+    "family-death/0": "death-00",
+    "family-drown/0": "drown-00",
+    "family-spring/0": "spring-00",
+    "family-look-up/0": "look_up-00",
+    "family-look-up/1": "look_up-01",
+    "family-duck/0": "duck-00",
+    "family-duck/1": "duck-01",
+    "family-push/0": "push-00",
+    "family-push/1": "push-01",
+    "family-push/2": "push-00",
+    "family-push/3": "push-01",
+    "family-hang/0": "hang-00",
+    "family-hang/1": "hang-01",
+    "family-skid/0": "skid-00",
+    "family-skid/1": "skid-01",
+    "family-skid/2": "skid-02",
+    "family-skid/3": "skid-03",
+    "family-balance/0": "balance-00",
+    "family-balance/1": "balance-01",
+    "family-balance/2": "balance-02",
+    "family-spindash/0": "spindash-blur",
+    "family-spindash/1": "spindash-00",
+    "family-spindash/2": "spindash-01",
+    "family-spindash/3": "spindash-02",
+    "family-spindash/4": "spindash-03",
+    "family-spindash/5": "spindash-04",
+    "family-walk/0": "walk-00",
+    "family-walk/1": "walk-01",
+    "family-walk/2": "walk-02",
+    "family-walk/3": "walk-03",
+    "family-walk/4": "walk-04",
+    "family-walk/5": "walk-05",
+    "family-walk/6": "walk-06",
+    "family-walk/7": "walk-07",
+    "family-run/0": "run-00",
+    "family-run/1": "run-01",
+    "family-run/2": "run-02",
+    "family-run/3": "run-03"
   }
 }

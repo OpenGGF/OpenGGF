@@ -221,6 +221,11 @@ public abstract class SuperStateController {
         ringDrainCounter = rewindState.ringDrainCounter();
     }
 
+    /** The ordinary art owner supplies this before a scene can borrow another profile. */
+    void bindNormalAnimationProfile(SpriteAnimationProfile profile) {
+        normalAnimProfile = profile instanceof ScriptedVelocityAnimationProfile ? profile : null;
+    }
+
     protected final void reconcileRewindPhysicsAndAnimationProfile(boolean activeSuper) {
         PlayableSpriteInternalAccess.installSuperPhysicsProfile(player, this, activeSuper ? getSuperProfile() : getNormalProfile());
         SpriteAnimationProfile current = player.getAnimationProfile();

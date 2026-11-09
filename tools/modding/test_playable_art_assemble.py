@@ -29,6 +29,7 @@ class PlayableArtAssemblyTest(unittest.TestCase):
                 manifest, _, _ = assembler.assemble(art, Path(directory))
             self.assertEqual('hold', manifest['animations']['BLINK']['end'])
             self.assertEqual('WALK', manifest['animations']['GET_UP']['next'])
+            handoff['scripts']['WAIT']['end'] = 'loop-back'
             handoff['scripts']['WAIT']['loopBackSteps'] = 0
             with patch.object(assembler.json, 'loads', side_effect=[handoff, palette]):
                 with self.assertRaisesRegex(ValueError, 'loopBackSteps'):
@@ -45,7 +46,7 @@ class PlayableArtAssemblyTest(unittest.TestCase):
             self.assertEqual(before, {name:(committed/name).read_bytes() for name in before})
             assembler.assemble(art, out)
             self.assertEqual(before, {p.name:p.read_bytes() for p in out.iterdir()})
-            self.assertEqual(stats, dict(frames=226, maxTilesPerFrame=30, animations=52))
+            self.assertEqual(stats, dict(frames=208, maxTilesPerFrame=30, animations=52))
             self.assertEqual('hang-00', source[manifest['nativeFrames']['hang/0']]['id'])
             self.assertEqual('wait-03', source[manifest['nativeFrames']['wait/fidget']]['id'])
             self.assertEqual('roll-01', source[manifest['nativeFrames']['roll/1']]['id'])
@@ -79,7 +80,8 @@ class PlayableArtAssemblyTest(unittest.TestCase):
                 self.assertEqual(native[name]['ids'],
                                  [source[i]['id'] for i in manifest['animations'][name]['frames']])
             self.assertEqual([1]*10, manifest['animations']['SPINDASH']['durations'])
-            self.assertEqual('hold',manifest['animations']['DUCK']['end'])
+            self.assertEqual('loop-back',manifest['animations']['DUCK']['end'])
+            self.assertEqual(1,manifest['animations']['DUCK']['loopBackSteps'])
             self.assertEqual('WALK',manifest['animations']['SPRING']['next'])
             self.assertEqual([48],manifest['animations']['SPRING']['durations'])
 
@@ -93,13 +95,15 @@ class PlayableArtAssemblyTest(unittest.TestCase):
         for key, host in native['selectedSharedScripts'].items():
             script = native['scripts'][host+'/'+key]
             actual = manifest['animations'][key]
-            self.assertEqual(script['ids'], [ids[i] for i in actual['frames']], key)
+            self.assertEqual(handoff['scripts'][key]['frames'], [ids[i] for i in actual['frames']], key)
             if script['speedDriven']:
                 self.assertTrue(actual['speedDriven'])
                 self.assertNotIn('durations', actual)
             else:
                 self.assertEqual([script['ticks']]*len(script['ids']), actual['durations'])
-            expected_end = ('hold' if script['parameter'] == 1 else 'loop') if script['end'] == 'loopBack' else script['end']
+            expected_end = 'loop-back' if script['end'] == 'loopBack' else script['end']
+            if script['end'] == 'loopBack':
+                self.assertEqual(script['parameter'], actual['loopBackSteps'])
             self.assertEqual(expected_end, actual['end'])
         blank = next(f for f in handoff['frames'] if f['id']=='variant-blank')
         with Image.open(art/blank['file']) as im:

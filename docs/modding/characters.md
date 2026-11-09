@@ -673,5 +673,40 @@ solo defaults. Registered mod characters are selectable as sidekicks as well
 as leaders. A host that lacks sidekicks still needs explicit module support.
 The MICA patch supplies that support in S1.
 
-The TALON example currently uses MICA's sheet and palette as temporary assets.
-Its down-held reticle and divebomb are deferred; jump alone flaps normally.
+The TALON example uses its own sheet, palette and Solar tables. Holding down
+while airborne requests the homing reticle; down+jump starts a divebomb
+(Instagib while Solar), and jump alone flaps normally.
+
+### Shared animation families
+
+Normal Sonic scripts in each stock module publish `DonorCapabilities.getAnimationFamilies()`.
+Each binding names a canonical animation, its drawing family and an ordered list
+of phase numbers. `family-float2/0`, for example, is a normal `nativeFrames` alias
+in the playable sheet. Supply each phase once; several host scripts may reuse it.
+Keep the canonical script table for movement, custom timing and missing-family
+fallbacks. No container version or canonical enum ordinal changes are required.
+
+Host-aware binding reads delay, repeated step order, LOOP_BACK count and SWITCH
+from the host's ROM-loaded script. A family binds only when all its phases are
+supplied. Native stock art bypasses this path. Directional ledge balance families
+remain distinct: BALANCE/BALANCE2 face the edge; BALANCE3/BALANCE4 face away,
+with separate near-edge entry and wobble phases. FLOAT–FLOAT4 share FLOAT2;
+SLIDE/WATER_SLIDE share HURT_FALL; GET_AIR shares BUBBLE. Numeric phase indices
+are explicit module correspondence, never interpolation by cycle length.
+
+Cross-game Sonic donation uses these same correspondences. Missing donor script
+names borrow family phases into host-timed scripts in a private ID namespace;
+typed `AnimationId` and canonical requests select them. Raw integer animation
+writes retain their existing meaning. Unused native dash slots are N/A, not
+proof of a leap pose. Warp, ending leap/surf and shrink retain compatibility
+fallbacks where a donor lacks their family. Tails' family inventory remains
+reference-only; its archetype and CPU behavior are unchanged by this table.
+
+A binding may omit a canonical animation name while still defining its family:
+Sonic's native carried-exit script shares TAILS_CARRIED phases and retains its
+own finite terminator. A null family means explicit N/A. Normal Sonic's legacy
+FLY slot belongs to WAIT's lying phases; Tails' actual flight remains separate.
+
+Bindings can also declare a small mapping offset when native scripts reuse the
+same drawing at a different anchor. The binder creates mapping views sharing the
+same tiles and DPLC, so these variants require no duplicate sheet drawings.

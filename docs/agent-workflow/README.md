@@ -574,3 +574,8 @@ never preserved.
 - Next-line Mod API and multiplayer contracts: [subsystem reference](../architecture/next-line-subsystems.md),
   [creator handbook](../modding/index.md), and
   [API compatibility](../architecture/mod-api-compatibility.md).
+
+Animation-family review method: [`animation_family_review.py`](../../tools/modding/animation_family_review.py)
+joins the production art audit with module phase profiles, emits a cited native
+script inventory and exact-palette, full-frame native/MICA GIFs. Inputs and limits
+are documented in the [playable art guide](../../tools/modding/playable_art/README.md#shared-family-phases).
