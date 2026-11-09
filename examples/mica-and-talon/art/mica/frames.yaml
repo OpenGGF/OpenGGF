@@ -998,12 +998,12 @@
       "order": 0,
       "file": "frames/push-00.png",
       "hotspot": [
-        18,
-        16
+        21,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": ""
+      "notes": "Consistency: re-reduced; original source uniform 32.906667:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "push-01",
@@ -1011,12 +1011,12 @@
       "order": 1,
       "file": "frames/push-01.png",
       "hotspot": [
-        17,
+        21,
         16
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": ""
+      "notes": "Consistency: re-reduced; original source uniform 32.911790:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "duck-00",
@@ -1024,12 +1024,12 @@
       "order": 0,
       "file": "frames/duck-00.png",
       "hotspot": [
-        10,
-        12
+        13,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": ""
+      "notes": "Consistency: regenerated; original source uniform 20.370370:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "duck-01",
@@ -1037,12 +1037,12 @@
       "order": 1,
       "file": "frames/duck-01.png",
       "hotspot": [
-        11,
-        6
+        8,
+        -2
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": ""
+      "notes": "Consistency: regenerated; original source uniform 30.000000:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "look_up-00",
@@ -1050,12 +1050,12 @@
       "order": 0,
       "file": "frames/look_up-00.png",
       "hotspot": [
-        16,
+        14,
         18
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
-      "notes": ""
+      "notes": "Consistency: re-reduced; original source uniform 36.954733:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "look_up-01",
@@ -1063,12 +1063,12 @@
       "order": 1,
       "file": "frames/look_up-01.png",
       "hotspot": [
-        16,
-        18
+        12,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
-      "notes": ""
+      "notes": "Consistency: re-reduced; original source uniform 42.057613:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "skid-00",
@@ -1076,12 +1076,12 @@
       "order": 0,
       "file": "frames/skid-00.png",
       "hotspot": [
-        18,
-        18
+        16,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
-      "notes": ""
+      "notes": "Consistency: re-reduced; original source uniform 33.742690:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "skid-01",
@@ -1089,12 +1089,12 @@
       "order": 1,
       "file": "frames/skid-01.png",
       "hotspot": [
-        18,
-        18
+        16,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
-      "notes": ""
+      "notes": "Consistency: re-reduced; original source uniform 33.304094:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "skid-02",
@@ -1102,12 +1102,12 @@
       "order": 2,
       "file": "frames/skid-02.png",
       "hotspot": [
-        17,
-        19
+        15,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
-      "notes": ""
+      "notes": "Consistency: re-reduced; original source uniform 31.441441:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "skid-03",
@@ -1115,12 +1115,12 @@
       "order": 3,
       "file": "frames/skid-03.png",
       "hotspot": [
-        11,
-        17
+        12,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
-      "notes": ""
+      "notes": "Consistency: re-reduced; original source uniform 35.719373:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "balance-00",
@@ -1128,12 +1128,12 @@
       "order": 0,
       "file": "frames/balance-00.png",
       "hotspot": [
-        18,
-        17
+        14,
+        10
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": ""
+      "notes": "Consistency: regenerated; original source uniform 15.111111:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "balance-01",
@@ -1141,12 +1141,12 @@
       "order": 1,
       "file": "frames/balance-01.png",
       "hotspot": [
-        20,
-        17
+        14,
+        8
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": ""
+      "notes": "Consistency: regenerated; original source uniform 16.111111:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "balance-02",
@@ -1154,12 +1154,12 @@
       "order": 2,
       "file": "frames/balance-02.png",
       "hotspot": [
-        19,
-        17
+        14,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": ""
+      "notes": "Consistency: regenerated; original source uniform 15.000000:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "balance-03",
@@ -1167,12 +1167,12 @@
       "order": 3,
       "file": "frames/balance-03.png",
       "hotspot": [
-        20,
-        17
+        14,
+        10
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": ""
+      "notes": "Consistency: regenerated; original source uniform 15.555556:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "drown-00",
@@ -1219,12 +1219,12 @@
       "order": 0,
       "file": "frames/get_air-00.png",
       "hotspot": [
-        18,
+        16,
         17
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
-      "notes": ""
+      "notes": "Consistency: re-reduced; original source uniform 34.722222:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "get_air-01",
@@ -1232,12 +1232,12 @@
       "order": 1,
       "file": "frames/get_air-01.png",
       "hotspot": [
-        18,
-        17
+        16,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
-      "notes": ""
+      "notes": "Consistency: re-reduced; original source uniform 37.006173:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "hang-00",
@@ -1245,12 +1245,12 @@
       "order": 0,
       "file": "frames/hang-00.png",
       "hotspot": [
-        16,
-        24
+        10,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Consistency: re-reduced; original source uniform 14.751543:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "hang-01",
@@ -1258,12 +1258,12 @@
       "order": 1,
       "file": "frames/hang-01.png",
       "hotspot": [
-        16,
-        24
+        11,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Consistency: re-reduced; original source uniform 16.168482:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "hang-02",
@@ -1271,12 +1271,12 @@
       "order": 2,
       "file": "frames/hang-02.png",
       "hotspot": [
-        16,
-        24
+        11,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Consistency: re-reduced; original source uniform 17.158825:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "stop-00",
@@ -1284,8 +1284,8 @@
       "order": 0,
       "file": "frames/stop-00.png",
       "hotspot": [
-        18,
-        18
+        16,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
@@ -1297,8 +1297,8 @@
       "order": 1,
       "file": "frames/stop-01.png",
       "hotspot": [
-        18,
-        18
+        16,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
@@ -1310,8 +1310,8 @@
       "order": 2,
       "file": "frames/stop-02.png",
       "hotspot": [
-        17,
-        19
+        15,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
@@ -1323,8 +1323,8 @@
       "order": 3,
       "file": "frames/stop-03.png",
       "hotspot": [
-        11,
-        17
+        12,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
@@ -1804,12 +1804,12 @@
       "order": 191,
       "file": "frames/variant-s3k-a2.png",
       "hotspot": [
-        22,
-        22
+        19,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Consistency: re-reduced; original source uniform 8.571429:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "variant-s3k-a3",
@@ -1817,12 +1817,12 @@
       "order": 191,
       "file": "frames/variant-s3k-a3.png",
       "hotspot": [
-        21,
-        22
+        19,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Consistency: re-reduced; original source uniform 8.611111:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "variant-s3k-c8",
@@ -1830,12 +1830,12 @@
       "order": 191,
       "file": "frames/variant-s3k-c8.png",
       "hotspot": [
-        22,
-        12
+        20,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Consistency: re-reduced; original source uniform 9.259259:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "variant-s3k-c9",
@@ -1843,12 +1843,12 @@
       "order": 191,
       "file": "frames/variant-s3k-c9.png",
       "hotspot": [
-        15,
-        12
+        14,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Consistency: re-reduced; original source uniform 9.259259:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "variant-s3k-ca",
@@ -1882,12 +1882,12 @@
       "order": 191,
       "file": "frames/variant-s3k-cc.png",
       "hotspot": [
-        15,
-        12
+        14,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Consistency: re-reduced; original source uniform 9.120370:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "variant-s3k-cd",
@@ -1999,12 +1999,12 @@
       "order": 191,
       "file": "frames/variant-s3k-03.png",
       "hotspot": [
-        14,
-        18
+        12,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Consistency: re-reduced; original source uniform 8.859649:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "variant-s3k-04",
@@ -2012,12 +2012,12 @@
       "order": 191,
       "file": "frames/variant-s3k-04.png",
       "hotspot": [
-        14,
-        19
+        12,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Consistency: re-reduced; original source uniform 8.809524:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "variant-s3k-8c",
@@ -2389,12 +2389,12 @@
       "order": 29,
       "file": "frames/object-pose-69.png",
       "hotspot": [
-        16,
-        15
+        14,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Consistency: re-reduced; original source uniform 10.349206:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "object-pose-6a",
@@ -2402,12 +2402,12 @@
       "order": 30,
       "file": "frames/object-pose-6a.png",
       "hotspot": [
-        15,
-        16
+        14,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Consistency: re-reduced; original source uniform 10.761905:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "object-pose-6b",
@@ -2415,12 +2415,12 @@
       "order": 31,
       "file": "frames/object-pose-6b.png",
       "hotspot": [
-        17,
-        14
+        15,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Consistency: re-reduced; original source uniform 10.793651:1; anatomical scale, never silhouette fit."
     },
     {
       "id": "object-pose-6c",
