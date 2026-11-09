@@ -10,13 +10,14 @@ import org.junit.jupiter.api.parallel.Isolated;
 import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Cold two-human EHZ input prefix; a regression draft, not a qualified full route. */
+/** Cold two-human EHZ input prefix; a regression draft, not a qualified full route, so it lives
+ * under route-drafts/ outside the committed-route guard (TestCommittedRoutesQualifiedGuard). */
 @Isolated @RequiresRom(SonicGame.SONIC_2)
 class TestStageplayCompetitionSpiralJump {
     @Test void jumpingOffSpiralPreservesNativeAirborneVelocity() throws Exception {
         TestEnvironment.resetEngineOnly();
         var route = RouteFiles.readDraft(Path.of(getClass().getResource(
-                "/routes/s2/competition/ehz-spiral-jump-regression.route.json").toURI()));
+                "/route-drafts/s2/competition/ehz-spiral-jump-regression.route.json").toURI()));
         boolean[] checked = {false};
         var result = new RouteReplay(new StageplayCompetitionRouteHosts(
                 Path.of(System.getProperty("sonic2.rom.path")))).replay(route, Cancellation.NONE, (row, sample) -> {
