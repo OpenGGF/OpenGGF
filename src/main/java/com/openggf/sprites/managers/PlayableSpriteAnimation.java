@@ -304,10 +304,10 @@ public class PlayableSpriteAnimation {
                 return;
             }
             int nativeAnimation = sprite.getAnimationId();
-            int strikeId = com.openggf.level.objects.PlayableSheetAnimationBinding.HOMING_DIVE_ID;
+            int strikeId = HomingStrikePose.select(sprite.getAnimationSet(), sprite.getXSpeed(), sprite.getYSpeed());
             var homing = com.openggf.sprites.playable.PlayableSpriteInternalAccess.homingAttack(sprite);
             boolean strikePose = homing != null && homing.isStriking(sprite)
-                    && sprite.getAnimationSet().getScript(strikeId) != null;
+                    && strikeId >= 0;
             // Only script execution sees the creator pose. Touch/solids still see
             // the native attacking Roll byte, including after rewind restores.
             if (strikePose) sprite.setAnimationId(strikeId);
@@ -361,6 +361,18 @@ public class PlayableSpriteAnimation {
         var animationSet = sprite.getAnimationSet();
         if (animationSet == null) {
             return;
+        }
+        if (sprite.getAnimationId() != lastAnimationId
+                && HomingStrikePose.isStrike(sprite.getAnimationId()) && HomingStrikePose.isStrike(lastAnimationId)) {
+            // Direction changes retain the next-frame cursor and duration, including
+            // generic fallback transitions. Republish the current phase immediately
+            // even on timer-held ticks; shorter authored cycles wrap naturally.
+            var redirected = animationSet.getScript(sprite.getAnimationId());
+            if (redirected != null && !redirected.frames().isEmpty()) {
+                int current = Math.max(0, sprite.getAnimationFrameIndex() - 1) % redirected.frames().size();
+                publishMappingFrame(redirected.frames().get(current));
+            }
+            lastAnimationId = sprite.getAnimationId();
         }
         if (sprite.getAnimationId() != lastAnimationId) {
             SpriteAnimationProfile profile = sprite.getAnimationProfile();

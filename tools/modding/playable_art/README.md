@@ -45,8 +45,13 @@ and orientation. The round 3 slope frames use explicit native pixel rows, with r
 gloves, bent limbs and boots. Integration must check the W2 slope stride and
 direction contract and runtime ground contact before materializing the sheet.
 
-`HOMING_DIVE` is a **custom handoff key**, not an existing `CanonicalAnimation`
-enum member. The ability lane must bind the four scale-first poses explicitly.
+`HOMING_DIVE` is an optional canonical strike key. Directional handoff keys
+`HOMING_DIVE_FORWARD`, `HOMING_DIVE_FORWARD_UP`, `HOMING_DIVE_UP`,
+`HOMING_DIVE_FORWARD_DOWN` and `HOMING_DIVE_DOWN` are also accepted by the
+assembler, with two-tick looping frames. Normal facing mirrors leftward flight.
+The engine selects current velocity direction, then falls back to `HOMING_DIVE`,
+then native animation. Match cycle lengths/timing to preserve phase when turning;
+see [character sheets](../../../docs/modding/characters.md) for sector boundaries.
 STOP intentionally shares SKID artwork. Preview timings are illustrative; W2
 supplies native speed-driven walk/run timing. The assembler supplies the fixed
 script timing and end actions. The reducer stops at indexed frames; the assembler below supplies mapping pieces

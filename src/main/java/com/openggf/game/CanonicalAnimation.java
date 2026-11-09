@@ -236,5 +236,16 @@ public enum CanonicalAnimation {
     SUPER_TRANSFORM,
 
     /** Optional creator-authored pose during a world-owned homing strike or dash. */
-    HOMING_DIVE
+    HOMING_DIVE,
+
+    /** Optional forward strike pose; mirrored by normal facing. */
+    HOMING_DIVE_FORWARD,
+    /** Optional forward/up strike pose. */
+    HOMING_DIVE_FORWARD_UP,
+    /** Optional vertical up strike pose. */
+    HOMING_DIVE_UP,
+    /** Optional forward/down strike pose. */
+    HOMING_DIVE_FORWARD_DOWN,
+    /** Optional vertical down strike pose. */
+    HOMING_DIVE_DOWN
 }
