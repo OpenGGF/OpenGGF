@@ -3850,3 +3850,70 @@ hashes and argv are retained under
 or route verdict is inferred from these checks. The separate carried-entry
 metadata work remains outside this candidate until its own later accounting,
 review and qualification.
+
+
+### Scoped diagnosis and private-seed qualification (2026-11-09)
+
+The combined candidate was tested clean and frozen at `893e0568eefc`, after the
+Opus review and bounded direct-model repair above. The complete change-based
+smoke selected **4,626/4,626 source classes**, completed **94/94 ordinary batches**
+and the full guard lane. Ordinary results were **37,743 cases, 29 failures,
+zero errors and 49 allowed skips**; all **843 guards passed without skips**.
+The original runner verdict remains **FAILED** (38,586 total cases), not a
+full-suite pass.
+
+The command used Java 25, Lua 5.4, MSE off, displays unset and:
+
+```text
+python3 tools/testing/run_categories.py --base c4ca46472e75a0df6f23dfd410e347ab8ed52a70 --max-minutes 40 --workers 2 --headless-gl surfaceless-egl --keep-diagnostics --run
+```
+
+Every c9 selected class remains. The sole class addition is the 50-case
+scoped-reader suite; the earlier 11-case contact move retains its explicit
+identity mapping. The two new fixture witnesses explain the other case-count
+increase. Planned validation flags, ROM discovery, skip inputs and budgets
+match the retained c4/c9 plans; the effective optional-catalogue difference is
+accounted for below. All 49 complete skip dictionaries are literally equal, and
+no identity or causal message was omitted or capped. Against c9, 26 failure messages match literally;
+two Set displays retain identical expected/actual memberships and the physical
+trail message changes only its two JVM identity hashes. Unchanged test blobs,
+the published fixture repair, and every full message are recorded separately.
+The c4 strict comparison remains different: its four runtime-catalogue outcomes
+retain the previously demonstrated matched-input attribution, its three Set
+displays remain explicit, and its absent rendering failure is not claimed fixed.
+No normalization or replacement runner verdict was introduced.
+
+Fresh EHZ1 and first-HCZ/HCZ2 commands used the same profiles, selectors, normal
+queued memory, fork count and inputs as c4, with separate report paths containing
+spaces. All three complete payloads and contexts are byte-identical to c4;
+owner identities and actual physical paths were verified, and both report roots
+passed the canonical validator. EHZ1 compares 5,852/5,852 rows cleanly; first HCZ
+compares 3,519/3,574 cleanly; HCZ2 retains 26 errors across 14,149/14,208 comparisons.
+All three publish the ALL completion gate. Both HCZ reports still lack eight
+advertised auxiliary schemas. Existing FAST/SMPS log warnings remain; neither
+clean payload counts nor completion certify a whole route.
+
+Both actual printed HCZ triage commands were executed unchanged through the
+POSIX shell. They correctly read paths containing spaces, report the primary
+clean result and select HCZ2's frame-6640 animation mismatch with its context and
+compressed auxiliary evidence. This does not certify Windows quoting. The first
+runner attempt stopped before Maven because its own path check compared a
+relative printed path with an absolute export; that preparation error and the
+resolved-path repair are retained separately from source/test outcomes.
+
+| Check | Queue s | Execution/preparation s | Wall s | User s | Residual s |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Complete smoke and guards | 254.000 | 1,784.990 | 2,052.925 | 0 | 13.935 |
+| EHZ1 | 23 | 35.029 | 58.588 | 0 | 0.559 |
+| HCZ pair | 0 | 41.945 | 42.750 | 0 | 0.805 |
+| Two printed triage commands | 0 | 0.855 | 2.278 | 0 | 1.423 |
+
+Evidence remains under `target/code-climb/scope-seed-category/` and
+`target/code-climb/scope-seed-domain/`: original terminal export/verdict, both
+strict comparisons, per-identity disposition, selection/input proof, all skip
+records, 96 actual command arrays, logs, owner checks and fresh domain XML.
+Consumed category diagnostics were acknowledged through the runner after these
+exports. All four owned units are terminal and retired. Source worktrees and
+useful evidence remain retained; the separate carried-entry increment is not
+part of this candidate. No original trial was regraded or receives inferred
+score credit. The wider goal remains unmet and delivery stays in draft PR271.
