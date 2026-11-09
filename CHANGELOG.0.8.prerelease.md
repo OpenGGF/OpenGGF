@@ -127,6 +127,9 @@ under the matching area heading; see the
     the rest of the race, so slopes stopped turning the player and the pose kept
     the angle it had when it left. This also applies to the two-player mode
     started from the Sonic 3&K title.
+  - Sand bars now reject exact zero-distance top contacts, matching the
+    original contact routine instead of landing a frame early. Turning on the
+    ground also restarts Sonic's walk/run animation as in the original.
   - Lap times, the total and the best lap are shown and ranked.
   - A teleport monitor swaps you with the nearest racer through the host.
   - Rooms without a verifier show the finish order labelled UNVERIFIED.

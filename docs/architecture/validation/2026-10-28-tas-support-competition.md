@@ -287,3 +287,119 @@ Knuckles P1/Tails P2 assignments listed above, and the original solo Match/Time
 Attack consumers. Other supported character/team/donor/width axes are unassessed
 here, not declared unsupported. These limits remain linked from the coverage
 backlog; a local missing-host mechanism is not a full-act certificate.
+
+## Native Desert Palace race qualification (2026-11-09)
+
+Lane N starts at `26b4723df` (the airborne standing-object release correction).
+`TestS3kCompetitionNativeRace` now compares a full locked-on NTSC Sonic solo
+Time Attack race against BizHawk 2.11/GPGX. The hosted arena uses the same
+`S3kCompetitionNativeHost`, actors, terrain, native slot dispatcher and object
+routines as the title product; only its outer menu/presentation is bypassed.
+No native row initializes or updates engine state. The engine starts from its
+ordinary arena load and executes 240 neutral countdown iterations.
+
+Native entry uses controller edges from cold title, Competition cursor 2,
+Sonic confirmation and track cursor 3. No RAM writes, position setup, cheats or
+injected gameplay state are used. `sub_371BE` (sonic3k.asm:74435-74453) owns GO:
+its `Update_HUD_timer` transition enables the first race input on the next
+hardware frame. Native race row 0 is hardware frame 1545, V-int word 1497,
+level word 243; row 2527 is hardware 4072, V-int 4024, level 2770.
+All 2528 observed rows poll input (zero lag). The final row has current lap 6
+and timer flag $80: five completed laps. The earlier TAS publication remains
+unanchored; this independently authored course does not certify that movie.
+
+The native start save is made on the first loaded Desert Palace frame and
+reloaded for subsequent passes. A cold/restore check of the original input
+produced identical state rows, then the final qualified input was replayed
+from that save. The final preserved sampler reproduced the fixture byte for
+byte. Native RAM P1 is $B000, using the SST offsets in
+`sonic3k.constants.asm`; samples are after each completed hardware frame.
+The fixture retains hardware, lag, V-int, level, input, full 16.16 X/Y,
+velocities, angle, status/secondary, routine, object_control, interact,
+animation/mapping, race clock and lap. Only the native `interact` address is
+translated to the existing semantic slot index `(address-$B000)/$4A` (zero
+means the engine's absent identity -1). A retained last-standing link is
+compared even after the player leaves it.
+
+The input starts with the lead's `video/v3/tape-dpz-s7.txt` through race row
+1925. Its original final approach does not finish natively. Replace the
+remaining approach with original race rows [429,945), then hold RIGHT through
+row 2527. This controller-only composition completes the fifth lap; it neither
+fits state nor changes the native start. The frozen RLE tape retains 240 hosted
+countdown rows for reproducibility. Slopes/curves, quarter pipes, springs,
+sand bars, moving platforms, wrap and five lap crossings are traversed.
+
+Two first divergences were repaired in their owners:
+
+- Race row 916: `SolidObjectTop` engine landing at Y=323 versus native Y=317,
+  still airborne, with y_vel=602. `loc_1E45A`
+  (sonic3k.asm:42044-42058) uses unsigned BHI and CMP/BLO: the admissible
+  interval is -16..-1, excluding zero. The miniature solid helper had admitted
+  zero. Correcting that bound restores all movement/status fields for the run.
+- Race row 1089: mapping 20 versus native 19, with identical physics.
+  `loc_113FE` (sonic3k.asm:22827-22832) and `sub_11482`
+  (sonic3k.asm:22893-22900) write prev_anim=1 when ground acceleration changes
+  facing. Preserving that write restarts the walking/running cycle. All 15
+  compared P1 fields then agree over all 2528 race rows.
+
+The tangent steps are native, not residual collision error. Examples (race
+row, integer displacement, resulting angle): 246 `(0,-4)` $D8; 252 `(0,-3)`
+$D4; 606 `(0,-4)` $AC; 608 `(-1,-5)` $A8. Ground movement integrates before
+`Player_AnglePos`: `loc_10844` (sonic3k.asm:21661-21674), while `loc_EC5A`
+(sonic3k.asm:18781-18810) selects cardinal sensor/correction directions. Thus a
+completed step includes cardinal attachment correction and its new angle;
+its displacement need not follow that angle's tangent. This supports the
+lead's native-quadrant explanation for these steps, without declaring every
+large angle/direction difference harmless in every course.
+
+Maximum absolute per-frame integer-coordinate displacement is X=28 px
+(excluding the 1024-pixel wrap), Y=16 px. Including native subpixel words,
+the maxima are X=27.4453125 px and Y=16.05078125 px, both on race row 286.
+Neither exceeds the hub's 32-pixel bound; no hub change was made.
+
+Frozen evidence: `src/test/resources/competition/s3k/dpz-sonic-native.csv.gz`
+is 70169 bytes, SHA256
+`62065ce49b0c2aa177c86586e4a689685be089ca9db567decf01d6d3ce1d0260`.
+Its decompressed CSV SHA256 is
+`cd1237e74e7c44d159d212b80d3d22254b03f93e3bdabaad3ad39b83337fa69d`.
+The 1023-byte `dpz-sonic-native.tape` SHA256 is
+`d2065b9dea771177712b64942f6de797d5e16ba8f2ac52aea689b9cbfbd617f0`.
+
+Reproduction: build the pinned `tools/tracechaser/bizhawk-headless/build.sh`
+with `BIZHAWK_HOME` pointing to official 2.11; compile
+`tools/bizhawk/S3kCompetitionNativeProbe.cs` against its executable,
+BizHawk.Emulation.Cores.dll and Mono's netstandard facade. Set MONO_PATH to the
+built host and BizHawk dll directories, LD_LIBRARY_PATH to the latter. Expand
+the frozen RLE tape to one integer mask per line. Invoke the probe with absolute
+ROM, expanded tape and an existing external output directory. First execution
+creates `start.state`; subsequent executions load it. `native.csv` is overwritten
+only in that explicitly supplied diagnostic directory. Compare it byte for byte
+with the decompressed fixture. The host verifies the original ROM identity.
+The probe fails unless all input rows end at native lap 6 and timer flag $80.
+No desktop, native library patches or secondary emulator are needed.
+
+This qualifies one locked-on NTSC Sonic DPZ route for frame-state parity;
+original-S3, Tails/Knuckles, the other four arenas, GP/Match breadth, alternative
+routes, death/timeout, rewind boundaries and native pixels remain open. The
+regression uses the fixture input column only as controller input and all state
+columns only as assertions. No remaining state difference is excused by the
+reimplementation boundary for this run.
+
+Validation on the lane N tree based at `26b4723df`: the exact requested
+selection below passed **500 tests, 0 failures/errors/skips**, including the
+new full-race test and unchanged `TestS3kArenaZoomFraming` seed-19 route. Thus
+no seed-19 regeneration was necessary. The lead reported 501 baseline tests;
+that numeric total was not reproduced by this exact selector, and no existing
+test source was removed or changed here. Only the new one-test class was added.
+ROM discovery reported all original ROM properties found, none missing.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kCompetition*,TestHosted*,TestS3kArena*,TestS3kMiniature*,TestS3CompetitionProduct,TestS3kNativeTitleModeProvider,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+```
+
+This bounded selection took 1m55s including recompilation; it is not a full-suite
+or category-run verdict. Its build/test lease was acquired immediately (no queue
+wait). No user wait was incurred; intermediate native/probe executions and
+compiler preparation were separate from this Maven duration. Disassembly checks
+found no stale citations in the changed files; `git diff --check` passed.

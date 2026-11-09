@@ -223,7 +223,10 @@ adds representative pause/reset, art and occurrence-ownership evidence. The
 covers both original-S3 and locked-on act-zero bindings for all five arenas,
 both human input lanes, destructive state/pixel replay and authored goal-boundary
 Match/Time Attack consumers. Its [obligation matrix](../architecture/validation/2026-10-28-tas-support-competition.md#act-obligations-in-this-bounded-host-increment)
-keeps full traversal/GP, viewport, donor, roster and native-pixel obligations open;
+now includes [a full native DPZ Sonic Time Attack race](../architecture/validation/2026-10-28-tas-support-competition.md#native-desert-palace-race-qualification-2026-11-09):
+2528 input-driven race frames, five laps and exact P1 state comparison including
+subpixels and animation, with native curve-tangent steps corroborated. Other
+arena/character traversals, GP, viewport, donor, roster and native-pixel obligations remain open;
 this is an LTS-08 auxiliary-mode increment, not completed act certification.
 
 Hosted Competition lane F (2026-11-07): positioned BPZ crossings now exercise five

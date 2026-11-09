@@ -787,7 +787,9 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
         if (topOnly) {
             if (p.yVelocity() < 0) return Contact.NONE;
             int distance = (short) (y - standingHeight - p.centreY() - p.yRadius() - 4);
-            if (distance > 0 || distance < -0x10) return Contact.NONE;
+            // loc_1E45A (sonic3k.asm:42044-42058): BHI followed by unsigned
+            // CMP.W #-$10 / BLO admits -16..-1; zero also branches out.
+            if (distance >= 0 || distance < -0x10) return Contact.NONE;
             p.setCentreNative(p.centreX(), (p.centreY() + distance + 3) & 0xFFFF);
             setRide(p);
             return Contact.TOP;
