@@ -3984,7 +3984,7 @@ recorded emerald array, complete entry RAM removes the giant-ring unknown, and
 zero `act3_flag` adds no continuation note. Expectations are literals, never a
 second resolver/import call. The nested helper's `Probe` name intentionally keeps
 its inherited test out of independent trace-profile discovery. This conditional
-entry witness compares no gameplay rows and certifies no whole leaf, route or
+entry witness compares no gameplay rows and does not certify a whole leaf, route or
 run-chain parity; HCZ2 remains an unrun holdout.
 
 The broad-catch guard initially reported only the expected old/new site mismatch.
@@ -4100,7 +4100,7 @@ exact argv under `target/code-climb/carried-entry-diagnostics/reconcile-publishe
 The real first-HCZ post-binder abort again publishes exactly once with the
 original literal provenance, empty diagnostic lists, zero comparisons/errors/
 warnings and an INCOMPLETE gate over 3,574 planned rows. Its owner schema remains
-exactly three fields. Empty notes and zero compared rows certify no complete
+exactly three fields. Empty notes and zero compared rows do not certify complete
 entry provenance, whole-leaf, route or run-chain parity. HCZ2 remains unrun here.
 
 Queue wait was 0 seconds, Maven execution 110 seconds, wall time 110.982 seconds,
@@ -4112,3 +4112,31 @@ local merge commit. All owned validation jobs are terminal. Root retains
 independent Opus review, broader/domain qualification, final integration and
 publication into the same draft PR271; no delivery or contributor-score gain is
 inferred from this bounded pass.
+
+
+### Carried-entry Opus approval and private-probe repair (2026-11-09)
+
+Opus reviewed clean `79a06ea620` without a blocker and accepted the one-for-one
+serialization-boundary re-key. The handler is unchanged; the new append contains
+immutable diagnostic lists and nullable provenance. The allowance reason now preserves its original
+unresolved-debt prefix and relocation history, and records that approval. Keys,
+counts, scanner and budgets are unchanged: 1,011 rows, 1,013 allowances.
+
+Its Low finding was a test-isolation defect: the intentional HCZ abort used the
+configured trace-report root, leaving a fake standalone report in normal lookup.
+Root added independent report/sidecar containment assertions. The real inherited
+case failed exactly once against the old directory choice, with zero errors or
+skips; it now always uses its JUnit-owned temporary directory. GREEN has 29 distinct
+cases across the complete diagnostics suite and broad-catch guard, all passing
+without skips. The configured report root contains no probe folder. The fixture
+still proves only a post-binder abort, zero comparisons and an incomplete gate;
+empty notes do not certify broader entry state or route parity.
+
+Only that test, the allowance reason and audit prose changed after review;
+production, driver/writer and scoped-model sources remain exact reviewed blobs.
+Exact argv, fresh XML, full RED assertion, source hashes and unit receipts are in
+`target/code-climb/carried-entry-diagnostics/review-repair/`. RED used 0s queue,
+36.954s Maven and 37.843s wall; GREEN used 0s queue, 34.649s Maven and 35.454s wall.
+User wait is zero; residuals are 0.889s and 0.805s. No broad/domain verdict or new
+score is inferred. The test's wording and earlier ambiguous “certify no” prose
+now explicitly say “do not certify”.

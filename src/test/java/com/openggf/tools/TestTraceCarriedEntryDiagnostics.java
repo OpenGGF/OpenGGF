@@ -208,14 +208,19 @@ class TestTraceCarriedEntryDiagnostics {
     @RequiresRom(SonicGame.SONIC_3K)
     @ExtendWith(TraceReplayRomCatalogueExtension.class)
     void realFirstHczEntryDiagnosticsSurvivePostBinderAbort(@TempDir Path directory) throws Exception {
-        Path reportDirectory = Path.of(System.getProperty("openggf.trace.reports", directory.toString()))
-                .resolve("carried-entry-post-binder");
+        Path reportDirectory = directory.resolve("carried-entry-post-binder");
         HczEntryAbortProbe probe = new HczEntryAbortProbe(reportDirectory);
         IntentionalEntryAbort failure = assertThrows(IntentionalEntryAbort.class, probe::replayMatchesTrace);
         assertSame(probe.abort, failure);
         assertEquals(1, probe.observations, "existing post-step observer must have executed after binder creation");
         assertEquals(1, probe.publications, "aborted inherited replay must publish exactly once");
         assertNotNull(probe.report);
+        assertTrue(probe.report.physicalPath().toAbsolutePath().normalize()
+                        .startsWith(directory.toAbsolutePath().normalize()),
+                "post-binder probe must stay inside this test's TempDir");
+        assertTrue(probe.report.metadataPath().toAbsolutePath().normalize()
+                        .startsWith(directory.toAbsolutePath().normalize()),
+                "probe owner metadata must also stay inside this test's TempDir");
         assertTrue(Files.isRegularFile(probe.report.metadataPath()), "real writer must publish owner metadata");
         JsonNode json = new ObjectMapper().readTree(Files.readString(probe.report.physicalPath()));
         JsonNode diagnostics = json.get("carried_entry_diagnostics");
@@ -223,7 +228,7 @@ class TestTraceCarriedEntryDiagnostics {
         // Independent fixture/source inspection: manifest index 9 names hcz; four
         // earlier stages finish with clear_routine=3, matching the recorded four
         // emeralds. Complete level_entry_ram removes the giant-ring unknown;
-        // Act3_flag=0 admits no continuation. Empty notes certify no wider entry state.
+        // Act3_flag=0 admits no continuation. Empty notes do not certify wider entry state.
         assertEquals("s3k-sonic-tails-complete-emeralds segment 9 (hcz)", diagnostics.path("provenance").textValue());
         assertEquals("[]", diagnostics.path("disagreements").toString());
         assertEquals("[]", diagnostics.path("unresolved").toString());
