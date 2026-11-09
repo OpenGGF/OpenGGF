@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.PlayableEntity;
@@ -9,7 +11,6 @@ import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
-import com.openggf.sprites.playable.Tails;
 
 /** SKL $96 Obj_Rockn, loc_8EDC0–loc_8F042, with independently solid shell. */
 public final class RocknBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
@@ -64,7 +65,7 @@ public final class RocknBadnikInstance extends AbstractS3kBadnikInstance impleme
         if (dx < -0x29 || dx >= 0x29 || dy < -16 || dy >= 16) return;
         boolean attack = player.getInvincibleFrames() > 0 || player.isSuperSonic() || player.getAnimationId() == 9 || player.getAnimationId() == 2;
         if (player instanceof Knuckles) attack |= player.getDoubleJumpFlag() == 1 || player.getDoubleJumpFlag() == 3;
-        if (player instanceof Tails && player.getDoubleJumpFlag() != 0 && !PlayerFluidContextAccess.movementUnderwater(player)) {
+        if (PlayableArchetype.isTails(player) && player.getDoubleJumpFlag() != 0 && !PlayerFluidContextAccess.movementUnderwater(player)) {
             int angle = TrigLookupTable.calcAngle((short)dx, (short)dy);
             attack |= ((angle - 0x20) & 255) < 0x40;
         }

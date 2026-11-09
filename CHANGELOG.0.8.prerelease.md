@@ -35,7 +35,13 @@ under the matching area heading; see the
 
 ## Modding and tools
 
-- **MICA, an original character framework example:** optional directional homing
+- **MICA, an original character framework example:** TALON now joins as her
+  default sidekick and is selectable solo. His Tails archetype uses native S3K
+  flight and explicitly declared S1/S2 flight; Solar doubles flap acceleration
+  without Flickies. Art and Solar colours temporarily reuse MICA's assets;
+  reticle/divebomb follow separately. The candidate API adds default sidekick
+  selection, flight declarations and the native Tails respawn factory.
+  Optional directional homing
   strike sheet poses follow current velocity with phase-preserving turns, normal
   facing mirrors and generic/native fallbacks. The maintained
   `examples/mica-and-talon` demo plays in all three stock games with Sonic's

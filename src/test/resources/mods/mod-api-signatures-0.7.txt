@@ -1495,6 +1495,7 @@ CONSTRUCTOR com.openggf.game.CharacterDefinition public  <init>(com.openggf.game
 CONSTRUCTOR com.openggf.game.CharacterDefinition public  <init>(com.openggf.game.CharacterKey,java.lang.String,com.openggf.game.CharacterDefinition$PlayableFactory,com.openggf.game.CharacterDefinition$RespawnStrategyFactory,com.openggf.game.PlayerCharacter,com.openggf.sprites.playable.SecondaryAbility,boolean,com.openggf.game.CharacterDefinition$ArtSupplier,com.openggf.game.CharacterDefinition$PaletteSupplier,java.util.Set<com.openggf.game.CharacterDefinition$MovementAbility>)
 CONSTRUCTOR com.openggf.game.CharacterDefinition public  <init>(com.openggf.game.CharacterKey,java.lang.String,com.openggf.game.CharacterDefinition$PlayableFactory,com.openggf.game.CharacterDefinition$RespawnStrategyFactory,com.openggf.game.PlayerCharacter,com.openggf.sprites.playable.SecondaryAbility,boolean,com.openggf.game.CharacterDefinition$ArtSupplier,com.openggf.game.CharacterDefinition$PaletteSupplier,java.util.Set<com.openggf.game.CharacterDefinition$MovementAbility>,com.openggf.game.CharacterDefinition$PaletteSupplier)
 CONSTRUCTOR com.openggf.game.CharacterDefinition public  <init>(com.openggf.game.CharacterKey,java.lang.String,com.openggf.game.CharacterDefinition$PlayableFactory,com.openggf.game.CharacterDefinition$RespawnStrategyFactory,com.openggf.game.PlayerCharacter,com.openggf.sprites.playable.SecondaryAbility,boolean,com.openggf.game.CharacterDefinition$ArtSupplier,com.openggf.game.CharacterDefinition$PaletteSupplier,java.util.Set<com.openggf.game.CharacterDefinition$MovementAbility>,com.openggf.game.CharacterDefinition$PaletteSupplier,com.openggf.game.CharacterDefinition$PresentationSupplier,com.openggf.game.CharacterDefinition$SuperFormSupplier)
+CONSTRUCTOR com.openggf.game.CharacterDefinition public  <init>(com.openggf.game.CharacterKey,java.lang.String,com.openggf.game.CharacterDefinition$PlayableFactory,com.openggf.game.CharacterDefinition$RespawnStrategyFactory,com.openggf.game.PlayerCharacter,com.openggf.sprites.playable.SecondaryAbility,boolean,com.openggf.game.CharacterDefinition$ArtSupplier,com.openggf.game.CharacterDefinition$PaletteSupplier,java.util.Set<com.openggf.game.CharacterDefinition$MovementAbility>,com.openggf.game.CharacterDefinition$PaletteSupplier,com.openggf.game.CharacterDefinition$PresentationSupplier,com.openggf.game.CharacterDefinition$SuperFormSupplier,com.openggf.game.CharacterKey)
 CONSTRUCTOR com.openggf.game.CharacterPresentation public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.game.CharacterPresentation public  <init>(java.lang.String,java.lang.String,java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$Art>,java.util.Map<com.openggf.game.CharacterPresentation$Font,java.util.Map<java.lang.Character,com.openggf.game.CharacterPresentation$Image>>)
 CONSTRUCTOR com.openggf.game.CharacterPresentation public  <init>(java.lang.String,java.lang.String,java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$Art>,java.util.Map<com.openggf.game.CharacterPresentation$Font,java.util.Map<java.lang.Character,com.openggf.game.CharacterPresentation$Image>>,java.util.Map<com.openggf.game.StageSpriteSet$Surface,com.openggf.game.StageSpriteSet>)
@@ -2862,7 +2863,9 @@ FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.C
 FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation WARP3
 FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation WARP4
 FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation WATER_SLIDE
+FIELD com.openggf.game.CharacterDefinition$MovementAbility public,static,final com.openggf.game.CharacterDefinition$MovementAbility CROSS_GAME_FLIGHT
 FIELD com.openggf.game.CharacterDefinition$MovementAbility public,static,final com.openggf.game.CharacterDefinition$MovementAbility SPINDASH
+FIELD com.openggf.game.CharacterDefinition$MovementAbility public,static,final com.openggf.game.CharacterDefinition$MovementAbility SUPER_FLIGHT_LIFT
 FIELD com.openggf.game.CharacterKey public,static,final com.openggf.game.CharacterKey KNUCKLES
 FIELD com.openggf.game.CharacterKey public,static,final com.openggf.game.CharacterKey SONIC
 FIELD com.openggf.game.CharacterKey public,static,final com.openggf.game.CharacterKey TAILS
@@ -5956,6 +5959,7 @@ METHOD com.openggf.game.CharacterDefinition public  com.openggf.game.CharacterDe
 METHOD com.openggf.game.CharacterDefinition public  com.openggf.game.CharacterDefinition$PresentationSupplier presentationSupplier()
 METHOD com.openggf.game.CharacterDefinition public  com.openggf.game.CharacterDefinition$RespawnStrategyFactory respawnStrategyFactory()
 METHOD com.openggf.game.CharacterDefinition public  com.openggf.game.CharacterDefinition$SuperFormSupplier superFormSupplier()
+METHOD com.openggf.game.CharacterDefinition public  com.openggf.game.CharacterKey defaultSidekick()
 METHOD com.openggf.game.CharacterDefinition public  com.openggf.game.CharacterKey key()
 METHOD com.openggf.game.CharacterDefinition public  com.openggf.game.PlayerCharacter behavesLike()
 METHOD com.openggf.game.CharacterDefinition public  com.openggf.sprites.playable.SecondaryAbility secondaryAbility()
@@ -15663,6 +15667,7 @@ METHOD com.openggf.sprites.playable.SidekickRespawnStrategy public  int diagnost
 METHOD com.openggf.sprites.playable.SidekickRespawnStrategy public  void onApproachComplete(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.sprites.playable.AbstractPlayableSprite)
 METHOD com.openggf.sprites.playable.SidekickRespawnStrategy public,abstract  boolean beginApproach(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.sprites.playable.AbstractPlayableSprite)
 METHOD com.openggf.sprites.playable.SidekickRespawnStrategy public,abstract  boolean updateApproaching(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.sprites.playable.AbstractPlayableSprite,int)
+METHOD com.openggf.sprites.playable.SidekickRespawnStrategy public,static  com.openggf.sprites.playable.SidekickRespawnStrategy tails(com.openggf.sprites.playable.SidekickCpuController)
 METHOD com.openggf.sprites.playable.SuperState public,static  com.openggf.sprites.playable.SuperState valueOf(java.lang.String)
 METHOD com.openggf.sprites.playable.SuperState public,static  com.openggf.sprites.playable.SuperState[] values()
 METHOD com.openggf.sprites.playable.SuperStateController protected  boolean hasTransformationEmeralds()
@@ -17959,6 +17964,7 @@ RECORD-COMPONENT com.openggf.game.BonusStageState savedZoneAndAct int
 RECORD-COMPONENT com.openggf.game.BonusStageState topSolidBit byte
 RECORD-COMPONENT com.openggf.game.CharacterDefinition artSupplier com.openggf.game.CharacterDefinition$ArtSupplier
 RECORD-COMPONENT com.openggf.game.CharacterDefinition behavesLike com.openggf.game.PlayerCharacter
+RECORD-COMPONENT com.openggf.game.CharacterDefinition defaultSidekick com.openggf.game.CharacterKey
 RECORD-COMPONENT com.openggf.game.CharacterDefinition displayName java.lang.String
 RECORD-COMPONENT com.openggf.game.CharacterDefinition key com.openggf.game.CharacterKey
 RECORD-COMPONENT com.openggf.game.CharacterDefinition movementAbilities java.util.Set<com.openggf.game.CharacterDefinition$MovementAbility>

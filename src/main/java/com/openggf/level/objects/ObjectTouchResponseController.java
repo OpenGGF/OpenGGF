@@ -1,5 +1,7 @@
 package com.openggf.level.objects;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 
 import com.openggf.camera.Camera;
@@ -29,7 +31,6 @@ import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.SidekickCpuController;
-import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.GroundMode;
@@ -1271,7 +1272,7 @@ final class ObjectTouchResponseController {
     }
 
     private boolean isS3kAbilityAttack(PlayableEntity player, ObjectInstance target) {
-        if (player instanceof Tails tails) {
+        if (player instanceof AbstractPlayableSprite tails && PlayableArchetype.isTails(player)) {
             return player.getDoubleJumpFlag() != 0
                     && !PlayerFluidContextAccess.movementUnderwater(tails)
                     && isTailsFlightAttackAngle(player, target);

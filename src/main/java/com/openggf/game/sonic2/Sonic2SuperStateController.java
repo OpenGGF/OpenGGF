@@ -194,7 +194,7 @@ public class Sonic2SuperStateController extends SuperStateController
     protected PhysicsProfile getNormalProfile() {
         // Obj02_Init (loc_1B8D8) retains Tails' $0F standing radius;
         // normal-state rewind must not install Sonic's $13 body/balance profile.
-        return player instanceof com.openggf.sprites.playable.Tails
+        return com.openggf.sprites.playable.PlayableArchetype.isTails(player)
                 ? PhysicsProfile.SONIC_2_TAILS : PhysicsProfile.SONIC_2_SONIC;
     }
 

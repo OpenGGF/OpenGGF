@@ -1723,7 +1723,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         /** ROM dispatch hook for Tails' distinct rolling-speed routine. */
         public boolean usesTailsRollSpeedRoutine() {
-                return false;
+                return PlayableArchetype.isTails(this);
         }
 
         /**

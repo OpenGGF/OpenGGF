@@ -1,5 +1,7 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.CanonicalAnimation;
@@ -1567,7 +1569,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean tryActivateTailsFlight() {
 		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
 		if (capabilityRules == null
-				|| !capabilityRules.tailsFlightEnabled()
+				|| !(capabilityRules.tailsFlightEnabled()
+					|| PlayableArchetype.declares(sprite,
+						com.openggf.game.CharacterDefinition.MovementAbility.CROSS_GAME_FLIGHT))
 				|| sprite.getSecondaryAbility() != SecondaryAbility.FLY
 				|| sprite.getTailsFlightController() == null
 				|| sprite.getTailsFlightController().isActive()) {
@@ -1599,7 +1603,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean isManualTailsFlightActive() {
 		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
 		if (capabilityRules == null
-				|| !capabilityRules.tailsFlightEnabled()
+				|| !(capabilityRules.tailsFlightEnabled()
+					|| PlayableArchetype.declares(sprite,
+						com.openggf.game.CharacterDefinition.MovementAbility.CROSS_GAME_FLIGHT))
 				|| sprite.getSecondaryAbility() != SecondaryAbility.FLY
 				|| sprite.getTailsFlightController() == null
 				|| !sprite.getTailsFlightController().isActive()) {

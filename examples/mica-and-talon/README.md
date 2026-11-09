@@ -88,3 +88,14 @@ A spring launch need not select SPRING: subtype bit 0 deliberately selects WALK
 and native twirl state. S2's `loc_189FE` (s2.asm:33937-33953) and S3K's
 `loc_22FE0` (sonic3k.asm:47778-47801) own that behavior. The sheet preserves it;
 S1's ordinary upward spring displays the authored SPRING poses.
+
+TALON's phase 2 engine skeleton is registered alongside MICA. Selecting MICA
+chooses MICA & TALON by default; either character can be selected solo, and the
+sidekick row stays editable. TALON uses the Tails route and native follow/respawn
+strategy. S3K flight is native; S1/S2 flight explicitly borrows that model as a
+mod capability. Solar doubles flap acceleration and has no Flickies.
+
+Temporary art: TALON currently receives MICA's materialized sheet and Gilded
+palette as placeholders. The art lane will supply `talon-sheet.yaml` and
+`talon.png`. Down-held reticle and down+jump divebomb remain TODOs in
+`TalonCharacter`; jump currently flaps regardless of down.
