@@ -18,8 +18,12 @@ ROM. A passing fixture proves only the fields and rows it actually compares.
 ## Establish a trustworthy measurement
 
 Use JDK 25 and absolute ROM paths with the properties in root `AGENTS.md`.
-Before reporting suite numbers, read the measurement-hazard table in
-[briefing-trace-rounds.md](../../../docs/agent-workflow/briefing-trace-rounds.md).
+Before reporting suite numbers, read the
+[current measurement-hazard table](../../../docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).
+Use the [condition finder](../../../docs/agent-workflow/briefing-trace-rounds.md#find-the-matching-failure-pattern)
+to open only the matching detailed rules or notes; the catalogue is not required
+linear reading. Applicable input, timing, baseline, skip, ownership and freshness
+contracts remain in force.
 Confirm the requested concrete test exists and which fixture/segments it drives.
 
 Choose the concrete invocation through

@@ -4661,3 +4661,75 @@ This component is local after published `c42764c8a5`. Game-aware diagnostic hint
 and the verified hazard-entry design remain to be implemented before combined
 review, qualification and delivery into the same draft PR271. No broad/domain
 pass or new contributor score is inferred from these focused cases.
+
+
+### Native diagnosis hints and bounded measurement reading — 2026-11-09
+
+The fresh original-F assessment at `4da34da` remains **60/100**, vector
+`[3,2,3,2,2,3,2,2]`. It identified player `routine` being classified as an object
+and S1/S2 native hints being offered for S3K, plus the mandatory hazard catalogue
+as a browsing barrier. No new grade is claimed by the repairs below.
+
+Ten focused cases were run before the hint repair: **nine intended assertion
+failures, one passing S2 control, zero errors/skips**. The cases use the existing
+producer/reader/brief path, rather than a newly invented API. They distinguish
+plain/player routine and subpixel fields, native player vocabularies in all
+three games, S3K animation/solid labels, and unknown-game fallback. Existing
+sidekick/object-slot controls retain their ownership.
+
+Triage now uses the CLI's declared or fixture-resolved game for native search
+terms. Three
+small exhaustive subsystem switches supply native labels/families; unknown
+games retain only the recorded field. Search order, deduplication and raw-field
+fallback remain explicit. Canonical player fields precede generic object-routine
+classification; Tails and indexed object routines retain their separate paths.
+The internal tool helper now requires the game argument; all repository callers
+compile. It is not a pinned Mod API. Suggested tests are still heuristic; this
+change makes native search terms game-aware, not every recommendation causal.
+
+Root checked all emitted terms against the **exact gitlink objects**, not the
+off-pin working reference copies: S1 `28872a46`, S2 `34fc7f13`, S3K `8b2cf3c4`.
+Each label/family exists there. This is search-vocabulary evidence, not proof
+that a suggested routine caused a particular mismatch. No optional reference
+checkout, asset, canonical trace payload or runtime gameplay owner was changed.
+
+One fresh GREEN selection passes **134 unique cases in two suites**, zero
+failures/errors/skips: the complete triage and verification-scope selections.
+Both runs used Java 25, Lua 5.4, normal memory, MSE off, displays unset,
+surfaceless EGL and fresh output directories; ROM discovery says missing=none.
+RED queue/Maven/wall seconds: 0/33.999/34.851, residual 0.852. GREEN:
+0/91.000/91.816, residual 0.816; Maven reports whole seconds for that run.
+User wait is zero; editing/coordination time is unmeasured. Source fingerprints
+match before/after each run. Both owned units are terminal and retired.
+
+The required measurement anchor now ends at a higher-level catalogue boundary:
+**37 lines / 676 words**, containing nine current rules and a ten-condition
+finder, versus the former 1,819-line section. Historical material remains
+conditional reference. The canonical replay skill links directly to the current
+table and finder; its generated mirror is identical. Root independently checked
+all **139 IDs and their table occurrences**, all **150 old heading targets**
+(two explicit legacy anchors), and all **49 original link instances**. The old
+long body's nonempty lines retain exact order/content after inserted headings;
+**136 unreviewed level-two sections are byte-identical**. All 75 distinct added
+local link targets resolve under a static heading/explicit-anchor check.
+
+Only three numbered lessons change meaning: rule 2 now names frame/field
+presentation priority rather than alphabetical causality; rules 98/111 separate
+Surefire filename selection from JUnit tag gates. Current report source and the
+pinned Surefire 3.2.5 descriptor supplied that verification. Historical examples,
+Mutator notes and unresolved older prescriptions remain; current owning
+contracts take precedence. The shorter entry grants no additional timing,
+input, cleanup or validation authority. This is navigation preservation and
+source correction, not semantic certification of every historical anecdote.
+
+Full commands, fresh XML, all RED assertions, exact source hashes, pinned-label
+checks and independent conservation/link evidence remain in
+`target/code-climb/native-triage-hints/`. The external Sol docs candidate and
+preservation receipt are retained outside the checkout; only the applied
+canonical/mirror/doc changes are delivered. No raw output is committed.
+
+This component and the local resolved-scope repair at `b2d558da` await one
+combined independent Opus correctness review, appropriate combined qualification
+and publication to the same draft PR271. Published head remains `c42764c8a5`.
+No broad/domain pass or contributor-score increase is inferred from these
+focused results or the reduced required-reading span.

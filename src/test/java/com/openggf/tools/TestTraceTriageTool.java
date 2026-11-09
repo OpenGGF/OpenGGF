@@ -436,10 +436,67 @@ class TestTraceTriageTool {
         assertEquals("0x0019", boot.actual());
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"routine", "player_routine", "x_sub", "y_sub"})
+    void canonicalPlayerStateStaysWithPlayerPhysics(String field) {
+        assertEquals(Subsystem.PLAYER_PHYSICS, TraceTriageTool.classifySubsystem(field, false));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "s1, Sonic_Control, Obj01",
+            "s2, Obj01, Sonic_Control",
+            "s3k, Sonic_Control, Obj01"
+    })
+    void nativePlayerHintsUseTheReportedGame(String game, String expected, String foreign)
+            throws Exception {
+        String brief = TraceTriageTool.renderBrief(game, "zone", hintReport("x"), "", "");
+
+        assertTrue(brief.contains("  - " + expected + "\n"));
+        assertFalse(brief.contains("  - " + foreign + "\n"));
+    }
+
+    @Test
+    void unknownGameDoesNotBorrowAnotherGamesNativeHints() throws Exception {
+        String brief = TraceTriageTool.renderBrief("custom", "zone", hintReport("x"), "", "");
+
+        assertFalse(brief.contains("  - Sonic_Move\n"));
+        assertFalse(brief.contains("  - Obj01\n"));
+        assertTrue(brief.contains("  - x\n"), "the recorded field remains a generic search term");
+    }
+
+    @Test
+    void sonic3kAnimationHintsUseItsNativeVocabulary() throws Exception {
+        String brief = TraceTriageTool.renderBrief(
+                "s3k", "zone", hintReport("player_animation_id"), "", "");
+
+        assertTrue(brief.contains("  - Animate_Sprite\n"));
+        assertFalse(brief.contains("  - AnimateSprite\n"));
+    }
+
+    @Test
+    void sonic3kSolidHintsUseItsNativeVocabulary() throws Exception {
+        String brief = TraceTriageTool.renderBrief(
+                "s3k", "zone", hintReport("object_slot[5].routine"), "", "");
+
+        assertTrue(brief.contains("  - SolidObjectFull\n"));
+        assertFalse(brief.contains("  - SolidObject\n"));
+    }
+
+    private static TraceReport hintReport(String field) throws IOException {
+        FieldComparison comparison = field.equals("player_animation_id")
+                ? FieldComparison.animation(field, "0x01", "0x02", Severity.ERROR, 1)
+                : new FieldComparison(field, "0x01", "0x02", Severity.ERROR, 1);
+        DivergenceReport report = new DivergenceReport(List.of(
+                new FrameComparison(7, Map.of(field, comparison))));
+        return TraceTriageTool.parseReport(report.toJson());
+    }
+
     @Test
     void classifiesSidekickField() {
         assertEquals(Subsystem.SIDEKICK, TraceTriageTool.classifySubsystem("tails_air", false));
         assertEquals(Subsystem.SIDEKICK, TraceTriageTool.classifySubsystem("tails_x", false));
+        assertEquals(Subsystem.SIDEKICK, TraceTriageTool.classifySubsystem("tails_routine", false));
     }
 
     @Test

@@ -175,6 +175,10 @@ under the matching area heading; see the
   that boundary. Triage exposes missing auxiliary references and absent comparison
   coverage without changing the published gate or mismatch totals. Replay guidance
   routes segment diagnosis through the correct lane, movie and report owners.
+  Native search hints use each game's disassembly vocabulary; canonical player
+  routine/subpixel fields stay with player physics. Required measurement reading
+  is a current rule table and condition finder, with historical cases retained
+  for selective lookup.
   Triage selects its first divergence, bootstrap and evidence window from the
   saved verification scope while retaining global counts and legacy global views.
   Replay stopping, release assertions and publication share the verification scope

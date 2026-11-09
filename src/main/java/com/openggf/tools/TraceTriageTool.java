@@ -390,6 +390,13 @@ public final class TraceTriageTool {
             return Subsystem.SIDEKICK;
         }
 
+        // These unqualified recorder fields belong to the playable character,
+        // unlike object_slot[n].routine or a Tails-prefixed routine.
+        if (f.equals("routine") || f.equals("player_routine")
+                || f.equals("x_sub") || f.equals("y_sub")) {
+            return Subsystem.PLAYER_PHYSICS;
+        }
+
         // Object slot / routine / subtype fields.
         if (f.startsWith("object_slot") || f.contains("object_slot")
                 || f.contains("routine") || f.contains("subtype")) {
@@ -449,75 +456,71 @@ public final class TraceTriageTool {
     }
 
     /**
-     * Suggests disassembly search terms for a divergent field. Pure string
-     * logic. Returned terms are intended for {@code RomOffsetFinder} / disasm
-     * label search, not exact addresses.
+     * Suggests search terms in the reported game's pinned disassembly. Terms
+     * include label families, not addresses or a claim that a routine caused
+     * the divergence. Unknown games retain only the recorded field name.
      */
-    public static List<String> suggestDisasmSearchTerms(String field, Subsystem subsystem) {
-        Set<String> terms = new LinkedHashSet<>();
-        switch (subsystem) {
-            case PLAYER_PHYSICS -> {
-                terms.add("Sonic_Move");
-                terms.add("Obj01");
-                terms.add("Player_Subroutines");
-                terms.add("ChkRoll");
-            }
-            case PLAYABLE_ANIMATION -> {
-                terms.add("Animate_Sonic");
-                terms.add("AnimateSprite");
-                terms.add("mapping_frame");
-                terms.add("anim_frame");
-            }
-            case SIDEKICK -> {
-                terms.add("Obj02");
-                terms.add("Tails_");
-                terms.add("Obj_Tails");
-                terms.add("CtrlData_");
-            }
-            case OBJECT_SOLID -> {
-                terms.add("SolidObject");
-                terms.add("PlatformObject");
-                terms.add("MvSonicOnPtfm");
-            }
-            case TOUCH_RESPONSE -> {
-                terms.add("Touch_Response");
-                terms.add("Touch_Loop");
-                terms.add("HurtSonic");
-            }
-            case EVENT -> {
-                terms.add("Dynamic_Resize");
-                terms.add("LevEvents_");
-                terms.add("Deform");
-            }
-            case PALETTE -> {
-                terms.add("PalCycle");
-                terms.add("Pal_");
-                terms.add("AnPal");
-            }
-            case LAYOUT_MUTATION -> {
-                terms.add("AniArt");
-                terms.add("Dynamic_");
-                terms.add("LoadZoneTiles");
-            }
-            case ART_PLC -> {
-                terms.add("PLC_");
-                terms.add("ArtNem_");
-                terms.add("ArtKos_");
-                terms.add("DPLC_");
-            }
-            case TEST_BOOTSTRAP -> {
-                terms.add("Level_Init");
-                terms.add("RandomNumber");
-                terms.add("Oscillating_Data");
-            }
-            default -> {
-                // fall through to field-name token below
-            }
-        }
+    public static List<String> suggestDisasmSearchTerms(
+            String game, String field, Subsystem subsystem) {
+        String gameKey = game == null ? "" : game.toLowerCase(Locale.ROOT);
+        List<String> nativeTerms = switch (gameKey) {
+            case "s1" -> sonic1SearchTerms(subsystem);
+            case "s2" -> sonic2SearchTerms(subsystem);
+            case "s3k" -> sonic3kSearchTerms(subsystem);
+            default -> List.of();
+        };
+        Set<String> terms = new LinkedHashSet<>(nativeTerms);
         if (field != null && !field.isBlank()) {
             terms.add(field);
         }
         return new ArrayList<>(terms);
+    }
+
+    private static List<String> sonic1SearchTerms(Subsystem subsystem) {
+        return switch (subsystem) {
+            case PLAYER_PHYSICS -> List.of("Sonic_Move", "Sonic_Control", "Sonic_ChkRoll");
+            case PLAYABLE_ANIMATION -> List.of("Sonic_Animate", "AnimateSprite");
+            case OBJECT_SOLID -> List.of("SolidObject", "PlatformObject", "MvSonicOnPtfm");
+            case TOUCH_RESPONSE -> List.of("ReactToItem", "React_Enemy", "Sonic_Hurt");
+            case EVENT -> List.of("DynamicLevelEvents", "DeformLayers");
+            case PALETTE -> List.of("PaletteCycle", "PalCycle_Sega");
+            case LAYOUT_MUTATION -> List.of("LevelLayoutLoad", "LevelDataLoad");
+            case ART_PLC -> List.of("AddPLC", "RunPLC", "NewPLC");
+            case TEST_BOOTSTRAP -> List.of("RandomNumber", "OscillateNumInit", "OscillateNumDo");
+            case SIDEKICK, UNKNOWN -> List.of();
+        };
+    }
+
+    private static List<String> sonic2SearchTerms(Subsystem subsystem) {
+        return switch (subsystem) {
+            case PLAYER_PHYSICS -> List.of("Sonic_Move", "Obj01");
+            case PLAYABLE_ANIMATION -> List.of("Sonic_Animate", "Tails_Animate", "AnimateSprite");
+            case SIDEKICK -> List.of("Obj02", "TailsCPU_Normal", "TailsCPU_Control");
+            case OBJECT_SOLID -> List.of("SolidObject", "PlatformObject", "MvSonicOnPtfm");
+            case TOUCH_RESPONSE -> List.of("TouchResponse", "Touch_Loop", "HurtCharacter");
+            case EVENT -> List.of("RunDynamicLevelEvents", "DeformBgLayer", "LevEvents_");
+            case PALETTE -> List.of("PalCycle", "PalCycle_Load");
+            case LAYOUT_MUTATION -> List.of("Level_Layout");
+            case ART_PLC -> List.of("LoadPLC");
+            case TEST_BOOTSTRAP -> List.of("RandomNumber", "OscillateNumInit", "OscillateNumDo");
+            case UNKNOWN -> List.of();
+        };
+    }
+
+    private static List<String> sonic3kSearchTerms(Subsystem subsystem) {
+        return switch (subsystem) {
+            case PLAYER_PHYSICS -> List.of("Sonic_Move", "Sonic_Control");
+            case PLAYABLE_ANIMATION -> List.of("Animate_Sonic", "Animate_Tails", "Animate_Sprite");
+            case SIDEKICK -> List.of("Tails_Control", "Obj_Tails");
+            case OBJECT_SOLID -> List.of("SolidObjectFull", "SolidObjectTop", "MvSonicOnPtfm");
+            case TOUCH_RESPONSE -> List.of("TouchResponse", "Touch_Loop", "HurtCharacter");
+            case EVENT -> List.of("Do_ResizeEvents", "DeformBgLayer");
+            case PALETTE -> List.of("Animate_Palette", "AnPal_");
+            case LAYOUT_MUTATION -> List.of("Load_Level", "Layout_");
+            case ART_PLC -> List.of("Load_PLC", "Queue_Kos_Module", "Process_Kos_Queue");
+            case TEST_BOOTSTRAP -> List.of("Random_Number", "OscillateNumInit", "OscillateNumDo");
+            case UNKNOWN -> List.of();
+        };
     }
 
     /**
@@ -675,7 +678,7 @@ public final class TraceTriageTool {
             sb.append("\n");
 
             sb.append("Suggested disassembly search terms (RomOffsetFinder / disasm label search):\n");
-            for (String t : suggestDisasmSearchTerms(first.field(), sub)) {
+            for (String t : suggestDisasmSearchTerms(game, first.field(), sub)) {
                 sb.append("  - ").append(t).append("\n");
             }
             sb.append("\n");
