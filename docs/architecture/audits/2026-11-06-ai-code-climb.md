@@ -5642,3 +5642,118 @@ the local reproduction does not invent one for those runs. This is a test
 precondition repair, not a production rendering fix or an explanation of the
 separate original Competition black-pixel failure. That merge blocker remains.
 The final combined candidate still requires smoke/guards and matched domains.
+
+### Captured-parent and local-reference combined qualification — 2026-11-09
+
+The combined source is `c327c5487e7b33737e79498457fff7d801d54b2d`,
+clean before and after validation, fingerprint
+`f838d85b685a90d7737901dd3d0510d4716994ef1fef24d51ec766495cde630b`.
+It includes the c06 reconciliation, Clamer/Orbinaut captured-parent hooks, local
+Mantis reference declarations, review repairs, retired-constructor-child witness
+and the test-only suspension precondition repair described above. Independent
+Opus scrutiny of ec159 found no blocker; the bounded diagnostic findings were
+repaired in 914. This qualification adds no new runtime change or score claim.
+
+The unchanged category runner selected 4,641 candidate classes against c06.
+All 94 ordinary batches and the full guards lane completed. Candidate ordinary
+results were 37,938 cases, 29 failures, zero errors and 49 allowed skips; all
+846 guard cases passed. The independent c06 baseline completed 4,637 classes,
+94 ordinary batches and full guards: 37,755 ordinary cases, 29 failures, zero
+errors and 49 allowed skips, plus 843 passing guards. Both raw verdicts remain
+FAILED; neither is represented as a full-suite pass.
+
+```text
+VERDICT FAILED: head=c06efe67da76 source=b3978581a01f focused 4637/4637 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38598 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+VERDICT FAILED: head=c327c5487e7b source=f838d85b685a change-based 4641/4641 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38784 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Exact full causal comparison retained every raw difference. Twenty-five
+candidate failures match an actual source-specific reference literally; four
+are individually reviewed display differences: one FieldScreen/StoryScreen
+object-identity display and three MHZ expected-Set ordering displays. Source,
+actual memberships and full causal tails support those four dispositions. No
+blanket normalization was applied. Two scene failure identities absent from the
+original c06 run were reproduced on unchanged c06 production source with the
+exact candidate scene fixture. All eight scene failures are accounted for by
+that control, not by changing the original baseline.
+
+Two baseline failures are absent: the suspension case has the separately
+recorded natural RED and normal-input/final GREEN; the physical-display-world
+case is merely an observed absence, not a fix. Its unchanged baseline source
+failed before its intended assertion because no gameplay mode was active.
+Current ambient-state attribution is unknown. All 49 complete skip dictionaries,
+classification inputs and selected baseline classes are preserved. The four new
+classes and the 11-case contact-memory package/type rename are explicitly
+mapped; omission and causal truncation counters are zero. Runner, comparator,
+skip policy and executable POM configuration are unchanged. Baseline and candidate
+root ROM layouts remain different and untouched (zero versus ten existing files
+or links); verified absolute ROM properties and configuration inputs match.
+
+The guard log freshly reports all 17 exact-policy cases passing. The existing
+focused XML names the three new guard cases on byte-identical test source.
+Category execution deliberately removes raw per-batch XML after summarizing;
+none is recreated or claimed retained. An additional collection check initially
+expected such XML and stopped before writing any disposition. It was corrected
+to use the actual retained log and focused XML; no tests were rerun.
+
+The single planned candidate domain pair is complete, on that same frozen
+source, with three fresh JUnit owners independently verified from identity hashes.
+There were no JUnit errors or skips; EHZ and HCZ1 passed, HCZ2 failed identically
+to c06. All gates were reached with ALL verification and zero bootstrap errors
+or warnings.
+
+| Standalone replay | Compared / planned rows | Gameplay errors / warnings |
+| --- | ---: | ---: |
+| EHZ1 | 5,852 / 5,852 | 0 / 0 |
+| HCZ1 | 3,519 / 3,574 | 0 / 0 |
+| HCZ2 | 14,149 / 14,208 | 26 / 0 |
+
+HCZ2 retains two physics and 24 animation errors; the first is frame 6640,
+`player_animation_id`, expected `0x0013`, actual `0x0005`. Full report bytes and
+context bytes equal c06 after detaching only the exact previously approved final
+`carried_entry_diagnostics` field. The complete candidate reports are also byte-
+identical to the preceding qualified candidate. Nothing was reserialized or
+normalized for comparison. HCZ1/HCZ2 share a logical key, so pairing uses each
+full class/method and independently derived owner key.
+
+Both HCZ reports retain eight missing advertised auxiliary schemas: cage state,
+cage execution, velocity writes, position writes, Sonic record position, Tails CPU
+normal step, CNZ cylinder state and cylinder execution. These are coverage limits,
+not counted trace warnings. Logs separately retain FAST-without-manifest/NONE
+and blocked presentation-shadow SMPS warnings; the whole logs are not warning-
+free. Standalone completion does not certify route or run-chain parity.
+
+| Invocation | Queue seconds | Execution/preparation seconds | Wall seconds | User wait | Unseparated overhead/rounding |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| c06 baseline smoke and guards | 2905 | 1936.38 | 4855.759522 | 0 | 14.379522 |
+| Candidate smoke and guards | 3244 | 1923.42 | 5190.903233 | 0 | 23.483233 |
+| c06 ehz1 | 3 | 40.066 | 43.651444 | 0 | 0.585444 |
+| c06 hcz | 26 | 42.026 | 69.248308 | 0 | 1.222308 |
+| Candidate ehz1 | 55 | 39.395 | 95.640867 | 0 | 1.245867 |
+| Candidate hcz | 950 | 44.637 | 995.254576 | 0 | 0.617576 |
+
+Broad commands use Java25/Lua5.4, displays unset, surfaceless EGL, two workers
+and a 40-minute execution cap excluding queue admission. Candidate command:
+`python3 tools/testing/run_categories.py --base c06efe67da766c1de1a68dfb327b85e400940fb8 --workers 2 --headless-gl surfaceless-egl --max-minutes 40 --keep-diagnostics --run`.
+Exact argv, complete source/selection/negative/skip/input/cap exports, source-
+specific controls and raw verdicts are indexed by
+`target/code-climb/parent-locality-wave/candidate-category/publication-disposition.json`;
+domain ownership and raw payloads are retained under the adjacent `domain/`
+directory. Original diagnostics remain unacknowledged.
+
+Further design research rejected the optional-comparison-family facade because
+it introduced a second phase/frame protocol without solving a contributor
+barrier. Legacy null-family constructors are retained: source comments explicitly
+promise host compatibility, and absence of an in-repo persisted reader does not
+prove external consumers absent. Neither alternative is implemented. Original D
+remains 80.0 on ec159; later tests and guide corrections imply no new score, and
+the stronger six-trial target remains unmet.
+
+The original 2dd Competition black-pixel failure is still unattributed and blocks
+merging. The suspension precondition and these later passes do not explain it.
+Publication is only to the existing draft PR271; no destination branch merge,
+push, release, route certification or full-suite qualification is authorized.
+Only this audit prose changes after c327 validation. All production, test, POM,
+policy, fixture and submodule bytes remain those actually tested. Owned units
+are terminal and retired; source trees, original receipts and unknown ignored
+assets are retained. PR269 is already merged and was not written or retired here.
