@@ -5447,3 +5447,61 @@ The local Mantis declaration increment is independently owned by Sol in the
 existing parent staging tree. No candidate broad run or new combined Opus review
 has started. PR271 remains the sole destination and the historical pixel merge
 blocker is unchanged.
+
+
+### Local Mantis reference ownership — 2026-11-09
+
+This increment starts at `430d5137bab0ef0569020c30c0235c87dc74d0c4` in the
+isolated parent-family tree. Mantis now declares its mutable `child` and the
+visual child's `parent` with the internal `@RewindCapturedReference` marker.
+The existing `DefaultObjectRewindPolicies` owner reads that declaration; its two
+Mantis string-keyed `CAPTURED` exceptions are removed. All other catalogue bytes
+and all 91 compatibility field names remain unchanged. This removes two remote
+ownership decisions, not a net amount of Java source or the whole legacy catalogue.
+
+The marker requests the existing strict object-reference codec in ordinary compact
+capture. Explicit exclusions still win; final and non-object declarations are
+invalid. General registry precedence remains unchanged. A concrete subclass that
+falls back to scalar capture still omits its references. The supported/fallback
+sibling witness checks actual restore behavior and the existing coverage,
+inventory and disposition results. All three report the fallback's omitted link;
+no disposition-predicate correction or baseline growth was needed.
+
+The compile-valid RED stage added the marker type and declarations and removed
+only the two catalogue rows, with the policy reader unchanged. Twelve cases
+executed: nine intended assertion failures, zero errors and zero skips. In
+particular, the real Mantis field disappeared from the plan and the existing
+unregistered-parent test stopped throwing. Laziness, exclusions and SnaleBlaster
+controls passed. The reader then passed 130 focused cases across ten suites,
+including actual Mantis and SnaleBlaster graph reconstruction, strict missing
+identity, null/reference payload order and scalar fallback. A final focused guard
+selection passed 47 cases across five suites, including all eleven local-reference
+cases, exact-policy, compact-reachability, field-disposition and Mod API surface
+checks. Both real Mantis classes select compact capture and include their marked
+fields. Public API and signature pins were not edited.
+
+All invocations used the queue, `--normal`, Java 25, Lua 5.4 and `-Dmse=off`, with
+both display variables unset. No drawing or EGL selection was required. Exact
+commands, all fresh XML case identities/assertions and full source manifests
+including the then-untracked Java files are retained under
+`target/code-climb/local-reference-ownership/{red,green,guards}`. The RED selector
+was `TestRewindCapturedReference` plus the existing Mantis missing-parent-ID case.
+GREEN selected the local-reference class, ordinary-plan preservation, object
+reference/schema/policy tests, coverage/inventory/disposition tests and the three
+real Mantis/Snale graph controls. The final `-Pguards` selector was
+`TestRewindCapturedReference,TestExactRewindPolicyGuard,TestCapturedPolicyCompactReachabilityGuard,TestRewindFieldDispositionGuard,TestModApiSignatureSurface`.
+
+| Focused invocation | Queue seconds | Maven seconds | Wrapper wall seconds | User wait | Unseparated overhead/rounding |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| RED | 6 | 93 | 100.235431 | 0 | 1.235431 |
+| GREEN | 51 | 104 | 155.381165 | 0 | 0.381165 |
+| Focused guards | 97 | 37.203 | 134.920778 | 0 | 0.717778 |
+
+Queue and Maven printed durations are rounded; source preparation and review time
+are outside these command measurements. All three owned invocations are terminal.
+The recreation hooks, lifecycle, snapshots, schema traversal, codecs, scalar
+capture and SnaleBlaster contracts remain byte-identical to the starting commit.
+The preceding parent-family section and its history are retained unchanged.
+Root still owns independent review, combined qualification, integration and any
+PR271 publication. This bounded pass does not explain the historical pixel failure
+or grant contributor-score, route or merge clearance.

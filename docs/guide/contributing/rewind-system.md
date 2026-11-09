@@ -417,11 +417,11 @@ without a known parent are eligible. Old 4–9 argument entry constructors retai
 legacy FIFO behavior and stay explicitly legacy on recapture. They cannot provide
 the family guarantee of current owned-helper captures.
 
-Adoption preserves constructor-established links in both directions. It does not
-repair every link: `schema.RewindPolicyRegistry` and `DefaultObjectRewindPolicies`
-are the authoritative reference-disposition owners. Read final/structural rules,
-global field-name rules and per-class overrides before assuming a parent/child
-field becomes an identity reference. Captured reference fields resolve in phase 2;
+Adoption preserves constructor-established links in both directions. For mutable
+identity links, start with the [field-local capture rule](#ordinary-field-capture)
+and check the concrete class's selected projection. Unmarked fields retain the
+compatibility rules in `DefaultObjectRewindPolicies`; general/manual schemas
+consult `schema.RewindPolicyRegistry`. Captured reference fields resolve in phase 2;
 excluded structural/final links need construction or an explicit class contract.
 Children without constructor candidates need their own recreate path. After
 family retries stop making progress, independent recreation may proceed even when
@@ -430,8 +430,9 @@ for that missing parent. Family metadata distinguishes parents, not construction
 from routine births. A same-class/subtype routine child can still consume a
 constructor candidate within its own family according to capture order; an explicit
 class contract is needed when those roles must be distinguished. The coverage analyzer recognizes explicit hooks; its new-gap guard fails
-against the committed baseline. Do not add a marker or expand that baseline to
-make an unsupported child appear covered.
+against the committed baseline. Do not add a recreate marker or expand that baseline
+solely to make an unsupported child appear covered. A field capture declaration
+does not establish a recreate path.
 
 Run the ordinary family witnesses and neighbors through the queue:
 
@@ -498,6 +499,8 @@ reflection metadata; it does not expose the runtime cache. `GenericRewindEligibi
 ordinary object or badnik route; concrete capture/restore overrides own their bespoke
 state.
 
+<a id="ordinary-field-capture"></a>
+
 For a field change, start with
 `RewindSchemaRegistry.defaultObjectFieldSelectionForAudit(...)`: it reports the
 concrete class's selected projection and captured field keys. Registering a codec
@@ -506,6 +509,25 @@ alone does not admit a field to ordinary capture. General/manual schemas consult
 actual projection. The shared built-in catalogue identifies replaceable renderer
 caches and final engine handles as structural, without claiming they are captured.
 A replaceable tile descriptor needs captured state or an explicit exclusion.
+
+For an ordinary actor's mutable `ObjectInstance` link that must retain its exact
+managed identity, declare `@RewindCapturedReference(reason = "...")` on the field.
+Mantis declares both its `child` and the child's `parent` this way, replacing their
+two central string-keyed exceptions. `DefaultObjectRewindPolicies` interprets the
+declaration before its legacy catalogue and field-name defaults; those defaults
+remain compatibility rules for unmarked fields. The declaration uses the existing
+strict object-reference codec and does not supply a constructor or parent lookup.
+
+Static, Java-transient, synthetic, `@RewindTransient` and `@RewindDeferred` fields
+remain excluded. A marked final reference or a non-`ObjectInstance` field is invalid.
+General/manual schemas retain their existing higher-priority registry policies.
+The marker is engine-internal and is not a creator Mod API annotation.
+
+The declaration requests capture in the compact projection. It does not add a
+reference to legacy scalar fallback: an unsupported field elsewhere in a concrete
+subclass can still make that class omit the link. Check the concrete selection
+API above, and keep the coverage, inventory and disposition checks reporting that
+omission. Constructor-established links and recreation remain separate contracts.
 
 The inventory and coverage checks use this selection. Coverage also inspects the
 badnik base under its separate manual rules. Queries can initialize cached runtime
