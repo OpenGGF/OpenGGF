@@ -1,6 +1,7 @@
 package com.openggf.game.rewind.schema;
 
 import com.openggf.game.rewind.FieldKey;
+import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic1.objects.Sonic1SwingingPlatformObjectInstance;
@@ -15,6 +16,7 @@ import com.openggf.game.sonic2.objects.SidewaysPformObjectInstance;
 import com.openggf.game.sonic2.objects.SpiralObjectInstance;
 import com.openggf.game.sonic2.objects.SwingingPlatformObjectInstance;
 import com.openggf.game.sonic2.objects.TornadoObjectInstance;
+import com.openggf.game.sonic2.objects.bosses.Sonic2EHZBossInstance;
 import com.openggf.game.sonic3k.objects.ClamerObjectInstance;
 import com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
@@ -61,6 +63,33 @@ class TestRewindSchemaRegistry {
     @AfterEach
     void clearRegistry() {
         RewindSchemaRegistry.clearForTest();
+    }
+
+    @Test
+    void legacyScalarMetadataStillAcceptsANonactorWithoutAllocatingASchema() {
+        RewindSchemaRegistry.clearForTest();
+        assertEquals(List.of("alphaParent", "zetaParent", "alphaChild", "betaChild", "zetaChild"),
+                GenericFieldCapturer.defaultObjectSubclassCapturedFieldsForAudit(ChildFixture.class)
+                        .stream().map(java.lang.reflect.Field::getName).toList());
+        assertEquals(1, RewindSchemaRegistry.schemaFor(PolicyFixture.class).schemaId());
+        RewindSchemaRegistry.clearForTest();
+        assertEquals(5, GenericFieldCapturer.defaultObjectSubclassCapturedFieldsForAudit(ChildFixture.class).size());
+        assertEquals(1, RewindSchemaRegistry.schemaFor(PolicyFixture.class).schemaId());
+    }
+
+    @Test
+    void ordinaryBossGraphSelectionDoesNotNormalizeTheGeneralUtilityPolicy() {
+        var ordinary = RewindSchemaRegistry.defaultObjectFieldSelectionForAudit(Sonic2EHZBossInstance.class)
+                .orElseThrow();
+        assertTrue(ordinary.compact());
+        assertTrue(ordinary.capturedFields().contains(new FieldKey(
+                "com.openggf.level.objects.boss.AbstractBossInstance", "childComponents")),
+                "the audit exposes stable keys rather than runtime reflection handles");
+        assertTrue(ordinary.capturedFields().stream()
+                .anyMatch(field -> field.fieldName().equals("childComponents")));
+        assertPolicy(RewindSchemaRegistry.schemaFor(Sonic2EHZBossInstance.class),
+                "childComponents", RewindFieldPolicy.TRANSIENT);
+        assertTrue(RewindSchemaRegistry.defaultObjectFieldSelectionForAudit(ChildFixture.class).isEmpty());
     }
 
     @Test

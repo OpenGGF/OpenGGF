@@ -4968,3 +4968,91 @@ A separate local ordinary-field preservation prototype passed all four cases
 on unchanged `171b` (queue 79s; Maven 43.179s; wall 123.800s; user wait 0s;
 1.621s residual/unknown). This is not an ownership refactor or a pixel repair.
 Its source remains outside this documentation-only publication.
+
+### Ordinary field discovery and failure evidence — 2026-11-09
+
+Hypothesis for original trial D: one owner for ordinary superclass traversal and
+an audit view of the concrete capture projection remove conflicting answers about
+which fields ride rewind. This does not consolidate constructor recipes, all field
+policies or the general/manual capture contract, and earns no automatic rubric
+credit. The latest original-D reading remains the older b63 static assessment.
+
+The local increment starts at `36b37a173740e6312852970fe0241a3ae372144d`.
+The final focused working-tree fingerprint was
+`e10d8b2630be6512d5eb5099c9ba0dba85dd5bc9f7ea8a876dd971bb74be98f3`; it matched at both command boundaries.
+`RewindSchemaRegistry` derives both ordinary projections using the same hierarchy,
+excluding the manually captured badnik base and sorting superclass-first by field
+name/type. `GenericFieldCapturer` retains its original legacy cache lifetime,
+scalar admission, cloning and restore path. Compact support, schema-ID allocation,
+unsupported-class fallback, field/write order and snapshot format are preserved.
+
+The selection view exposes captured membership as immutable `FieldKey` values and
+fresh inspection metadata. The registry's separate scalar derivation returns fresh
+fields; it does not expose the legacy runtime cache. The existing Generic audit API
+keeps its previous contract. A real capture witness disables access on derived
+metadata and verifies that scalar and compact capture still work independently.
+General policy registrations cannot certify ordinary membership. Inventory and
+coverage use the concrete selection, explicit exclusions and built-in structural
+roles; coverage separately retains the badnik base's manual inspection. A direct
+disposition audit now reports `<not-ordinary>` instead of silently auditing nothing.
+Annotation counts remain available, but removal advice is withheld for actors,
+including abstract/manual bases whose fields subclasses may inherit.
+
+Two source-only Opus reviews found no runtime/snapshot regression, but exposed
+real diagnostic defects. The initial inventory changed from four inherited rows
+to 55, adding 51 structural-handle reports. Root's first final-only correction
+was too broad: a 292-case selection had one disposition-guard failure and one
+existing optional measurement skip; its inventory retained 22 non-final renderer
+reports. Those 22 keys matched the guard exactly. The final catalogue preserves
+replaceable renderer caches while other built-in handles require a final identity;
+a replaceable `PatternDesc`, unrelated mutable helpers and unsupported mutable
+values remain reportable. The fixed declared-type membership remains the same 18
+types, including array/list policy lookup. No baseline, skip rule, scanner budget,
+signature pin or codec allowance was enlarged.
+
+The subsequent four-case RED selection had exactly three intended failures:
+mutable access to cached scalar reflection fields broke an actual capture; direct
+manual auditing passed vacuously; and failure images ignored configured diagnostics
+routing. The real absent/empty temporary-property control passed. Root implemented
+the bounded review repairs; no third independent review or runtime certification
+by Opus is claimed.
+
+Final focused command (Java25, Lua5.4, displays unset, verified ROM discovery):
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards '-Dtest=TestOrdinaryActorPlanPreservation,TestRewindSchemaRegistry,TestRewindPolicyRegistry,TestCompactFieldCapturer,TestCompactFieldCapturerPolicy,TestGenericFieldCapturer,TestRewindObjectReferenceCodecs,TestRewindCollectionCodecs,TestRewindHelperCodecs,TestRewindFieldDispositionAudit,TestRewindFieldDispositionGuard,TestRewindCoverageAnalyzer,TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard,TestRewindFieldInventoryTool,TestSonic2CompetitionFieldPixels,TestIczMinibossFieldDisposition,TestLbzKnucklesInventoryRewind,TestRewindArchitectureGuard,TestCapturedPolicyCompactReachabilityGuard' -Dopenggf.surefire.reports=target/code-climb/ordinary-plan-ownership/final-focused/surefire test -B
+```
+
+The equivalent worktree-relative report path is shown; the local `steps.json`
+retains the exact launched argument array.
+
+All **196 cases / 20 fresh suites passed**, zero failures, errors or skips; every
+selector ran and none unrequested ran. The five preservation cases include exact
+ordered payload/identity/restore checks and metadata isolation. All four pixel
+cases ran with the S2 ROM present. Queue was 321s, Maven 102s (rounded), wall
+425.253903s, user wait 0s, residual startup/teardown 2.253903s. The separate actual
+inventory command was `python3 tools/testing/maven_queue.py --normal -Dmse=off
+-Dexec.mainClass=com.openggf.tools.rewind.RewindFieldInventoryTool compile exec:java
+-B`. Its four complete rows matched the retained baseline literally. Both raw CLI
+exits remain 1 because inherited unsupported fields remain. Queue was 531s, wall
+532.896054s and user wait 0s; the remaining 1.896054s includes Maven execution and
+startup, not separately timed because the CLI exits before a Maven total is printed.
+Coding/investigation time was not separately instrumented.
+
+Pixel diagnostics preserve the oracle, rendering cadence and original expected/
+actual assertion. Only a mismatch saves the already captured framebuffer, requested
+mode, actual batching flags, PID and fork label; no GL readback/state query or pass-
+path supplier was added. The shared diagnostics router honors caller output roots,
+and the default PNG namespace survives category report/tmp compaction. Actual image
+pixels, unavailable-writer handling, configured routing and absent/empty property
+restoration are checked. The helper is retained/indexed as a recurring method.
+After the focused run, the pixel fixture changed only in its Javadoc; the method
+index and this entry are documentation. The inverse comment replacement is byte-exact. The original broad black-pixel assertion remains
+unattributed and still blocks merging; these passes establish diagnostics only.
+
+Raw RED/failed runs, full fresh XML identities/hashes, literal inventory comparison,
+source freezes, timing and review results remain under
+`target/code-climb/ordinary-plan-ownership/`. The focused unit is terminal and
+retired. Broad/domain qualification and exact comparison remain pending, followed
+by task-branch-only delivery to draft PR271. No destination branch push or merge,
+new PR or current-tree usability score is claimed by this entry.

@@ -315,8 +315,8 @@ python3 tools/testing/maven_queue.py -Dmse=off -DskipTests test-compile exec:jav
 The command exits non-zero while unsupported fields remain, so redirect its
 output when generating a migration worklist.
 
-To list concrete object classes currently covered by default subclass scalar
-capture:
+To list legacy scalar-rollout candidates for default object subclasses (the
+full inventory above also covers ordinary badniks):
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off -DskipTests test-compile exec:java \
@@ -469,30 +469,43 @@ Automatic field capture currently has two side-by-side implementations:
 | `RewindScanSupport` | Source scanner shared by tests and tools for runtime-owner field audits. |
 | `GenericRewindEligibility` | Central eligibility helper for audit classes and default object subclass capture decisions. |
 | `com.openggf.game.rewind.identity` | Stable value ids and a per-capture `RewindIdentityTable` for player, object, and spawn references. |
-| `com.openggf.game.rewind.schema` | Compact schema foundation: cached per-class field plans, little-endian scalar buffers, value/reference codecs, policy registry, context-aware capture, and `CompactFieldCapturer`. Default non-badnik object subclass scalar state uses this path when every default field has codec support; unsupported shapes fall back to the legacy generic snapshot. |
+| `com.openggf.game.rewind.schema` | Compact schema foundation: cached per-class field plans, little-endian scalar buffers, value/reference codecs, policy registry, context-aware capture, and `CompactFieldCapturer`. Ordinary object and badnik subclass fields use the compact projection when it is nonempty and fully supported; otherwise the whole subclass projection falls back to legacy scalar capture. The badnik base owns its separate hand-written state. |
 
 Compact capture supports primitives/wrappers, `String`, enums, primitive/enum
 arrays, `BitSet`, simple immutable records, value-only `List` / `Set` / `Map`
 fields, selected helper state (`SubpixelMotion.State`, `ObjectAnimationState`,
 `PlatformBobHelper`, `AnimationTimer`), and player/object references when a
 `RewindCaptureContext` with a populated `RewindIdentityTable` is supplied.
-Final fields are structural by default unless their codec explicitly restores
-in place. Final collections/maps whose element, key, or value type is a
-player/object identity reference are also treated as structural for default
-object subclass capture; the owning object manager restores those links by
-stable identity rather than by compact scalar sidecar state. `RewindPolicyRegistry`
-centralizes repeated decisions for runtime and rendering service types so shared
-base classes do not need redundant `@RewindTransient` annotations.
+These are codec capabilities, not admission guarantees for ordinary actor fields.
+Final values need an in-place restore contract; object/player links and their
+collections additionally need the owning field policy and identity context.
+Check the concrete selection before relying on a codec or structural default.
 
-For concrete `AbstractObjectInstance` subclasses, default subclass scalar capture
-is enabled centrally by
-`GenericRewindEligibility.usesDefaultObjectSubclassCapture(...)` when the class
-does not declare a concrete `captureRewindState` or `restoreRewindState`
-override. `GenericFieldCapturer.defaultObjectSubclassCapturedFieldsForAudit(...)`
-backs the rollout audit exposed by
-`RewindFieldInventoryTool --object-rollout-candidates`. Fields annotated
-`@RewindDeferred` are excluded from generic capture until a stable identity/value
-codec or manual snapshot path exists.
+`RewindSchemaRegistry` owns ordinary subclass hierarchy traversal and compact
+schema planning. `GenericFieldCapturer` owns the legacy scalar cache, value
+admission and cloning. The registry's scalar derivation returns independent
+reflection metadata; it does not expose the runtime cache. `GenericRewindEligibility.usesDefaultSubclassCapture(...)` selects the
+ordinary object or badnik route; concrete capture/restore overrides own their bespoke
+state.
+
+For a field change, start with
+`RewindSchemaRegistry.defaultObjectFieldSelectionForAudit(...)`: it reports the
+concrete class's selected projection and captured field keys. Registering a codec
+alone does not admit a field to ordinary capture. General/manual schemas consult
+`RewindPolicyRegistry`; ordinary fields use `DefaultObjectRewindPolicies` and their
+actual projection. The shared built-in catalogue identifies replaceable renderer
+caches and final engine handles as structural, without claiming they are captured.
+A replaceable tile descriptor needs captured state or an explicit exclusion.
+
+The inventory and coverage checks use this selection. Coverage also inspects the
+badnik base under its separate manual rules. Queries can initialize cached runtime
+schemas and allocate schema IDs; planning errors fail the inventory. The selection
+API exposes captured membership as immutable keys, not runtime reflection handles.
+The older `GenericFieldCapturer` scalar-audit API retains its cached-handle contract;
+use the selection API for current ordinary capture decisions. Annotation
+density still counts actor annotations, but does not recommend removing them:
+current membership cannot prove the selection after an annotation edit.
+`@RewindDeferred` excludes state until its identity/value capture is implemented.
 
 `PerObjectRewindSnapshot.compactGenericState` stores the compact sidecar for
 default object subclass fields. Restore prefers that blob when present and uses
@@ -529,8 +542,9 @@ store stable identities such as object slots, spawn records, player role, or exp
 value records.
 
 Prefer extending the central capture stack before editing many leaf object classes:
-add a codec, policy-registry rule, or shared base-class snapshot when the same field
-shape repeats. Add per-object annotations or rewind overrides only for genuinely
+extend the owning field-admission rule, codec, or shared base-class snapshot when
+the same field shape repeats. Confirm actual selected membership afterward;
+a general policy or codec registration alone does not establish ordinary capture. Add per-object annotations or rewind overrides only for genuinely
 bespoke state, identity links, or child lifecycle that cannot be represented by the
 generic scalar path.
 

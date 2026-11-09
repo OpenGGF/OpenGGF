@@ -18,7 +18,12 @@ import com.openggf.tests.*;
 import com.openggf.tests.rules.*;
 import com.openggf.tools.PresentationOffscreenTestContext;
 import java.util.*;
+import java.nio.file.Path;
+import java.nio.file.Files;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.opentest4j.AssertionFailedError;
 import org.junit.jupiter.api.parallel.Isolated;
 
 /** Real ROM rows through the ordinary shared tile/SAT renderer, fixed field zero only. */
@@ -100,7 +105,14 @@ class TestSonic2CompetitionFieldPixels {
                         int word = planes.cell(Sonic2CompetitionPlanes.PlaneId.FOREGROUND_P1, x / 8, y / 8);
                         int c = Im2FieldOracle.pixel(bytes, word & 1023, (word & 0x800) == 0 ? x % 8 : 7 - x % 8,
                                 (word & 0x1000) == 0 ? 2 * (y % 8) : 15 - 2 * (y % 8));
-                        assertEquals(rgb(c, word >>> 13 & 3), planePixels.argb(x, y), "plane " + x + "," + y);
+                        int expected = rgb(c, word >>> 13 & 3);
+                        int actual = planePixels.argb(x, y);
+                        String message = "plane " + x + "," + y;
+                        if (expected != actual) {
+                            message = failureDetails("plane", message + " word=" + word,
+                                    batching, graphics, planePixels);
+                        }
+                        assertEquals(expected, actual, message);
                     }
                 var entries = new ArrayList<Sonic2CompetitionSatBuilder.SatEntry>();
                 for (int flip = 0; flip < 4; flip++)
@@ -123,8 +135,15 @@ class TestSonic2CompetitionFieldPixels {
                                 sy = height - 1 - sy;
                             int cell = (entry.name().patternIndex() + sx / 8 * entry.heightCells() + sy / 16) & 1023;
                             int c = Im2FieldOracle.pixel(bytes, cell, sx % 8, sy % 16);
-                            assertEquals(rgb(c, entry.name().palette()), pixels.argb(entry.x() + x, top + y),
-                                    "sprite " + entry + " at " + x + "," + y);
+                            int expected = rgb(c, entry.name().palette());
+                            int actual = pixels.argb(entry.x() + x, top + y);
+                            String message = "sprite " + entry + " at " + x + "," + y;
+                            if (expected != actual) {
+                                message = failureDetails("sprite", message + " cell=" + cell
+                                                + " source=" + sx % 8 + "," + sy % 16,
+                                        batching, graphics, pixels);
+                            }
+                            assertEquals(expected, actual, message);
                         }
                 }
             }
@@ -133,6 +152,131 @@ class TestSonic2CompetitionFieldPixels {
             TestEnvironment.resetAll();
         }
     }
+    @Test
+    void diagnosticFrameRetainsThePixelsAndOriginalMismatch() throws Exception {
+        String previous = System.getProperty("openggf.test.diagnostics");
+        Path configuredRoot = TestSessionOutputPaths.diagnostics("competition-field-routing-control");
+        Path retainedPath = null;
+        try {
+            System.setProperty("openggf.test.diagnostics", configuredRoot.toString());
+            var graphics = new GraphicsManager();
+            graphics.setBatchingEnabled(false);
+            graphics.setInstancedBatchingEnabled(false);
+            var image = new RgbaImage(2, 2, new int[] {0xFFFF0000, 0xFF000000, 0xFF00FF00, 0xFF0000FF});
+            var failure = assertThrows(AssertionFailedError.class,
+                    () -> assertEquals(0xFFCC0033, image.argb(1, 0),
+                            failureDetails("image-control", "known synthetic mismatch", false, graphics, image)));
+            assertEquals(0xFFCC0033, failure.getExpected().getValue());
+            assertEquals(0xFF000000, failure.getActual().getValue());
+            assertTrue(failure.getMessage().contains("iteration=direct"));
+            assertTrue(failure.getMessage().contains("batching/instanced=false/false"));
+            retainedPath = actualFramePath(failure);
+            assertTrue(retainedPath.startsWith(configuredRoot.toAbsolutePath()),
+                    "failure artifacts must respect the caller's diagnostics root");
+            RgbaImage retained = ScreenshotCapture.loadPNG(retainedPath);
+            assertEquals(image.width(), retained.width());
+            assertEquals(image.height(), retained.height());
+            assertArrayEquals(image.pixels(), retained.pixels());
+        } finally {
+            if (previous == null) {
+                System.clearProperty("openggf.test.diagnostics");
+            } else {
+                System.setProperty("openggf.test.diagnostics", previous);
+            }
+            if (retainedPath != null) {
+                Files.deleteIfExists(retainedPath);
+            }
+        }
+    }
+
+    @Test
+    void unavailableArtifactDoesNotReplaceThePixelAssertion() throws Exception {
+        var graphics = new GraphicsManager();
+        var image = new RgbaImage(1, 1, new int[] {0xFF000000});
+        try (MockedStatic<ScreenshotCapture> writer = Mockito.mockStatic(ScreenshotCapture.class)) {
+            writer.when(() -> ScreenshotCapture.savePNG(Mockito.same(image), Mockito.any(Path.class)))
+                    .thenThrow(new java.io.IOException("synthetic writer failure"));
+            var failure = assertThrows(AssertionFailedError.class,
+                    () -> assertEquals(0xFFCC0033, image.argb(0, 0),
+                            failureDetails("writer-control", "known synthetic mismatch", true, graphics, image)));
+            assertEquals(0xFFCC0033, failure.getExpected().getValue());
+            assertEquals(0xFF000000, failure.getActual().getValue());
+            assertTrue(failure.getMessage().contains("artifactUnavailable=IOException"));
+            assertTrue(failure.getMessage().contains("iteration=instanced"));
+        }
+    }
+
+    @Test
+    void absentAndEmptyForkPropertiesCannotMaskTheMismatch() throws Exception {
+        String previous = System.getProperty("java.io.tmpdir");
+        var graphics = new GraphicsManager();
+        var image = new RgbaImage(1, 1, new int[] {0xFF000000});
+        try {
+            for (String incoming : new String[] {null, ""}) {
+                if (incoming == null) {
+                    System.clearProperty("java.io.tmpdir");
+                } else {
+                    System.setProperty("java.io.tmpdir", incoming);
+                }
+                var failure = assertThrows(AssertionFailedError.class,
+                        () -> assertEquals(0xFFCC0033, image.argb(0, 0),
+                                failureDetails("property-control", "known synthetic mismatch", false, graphics, image)));
+                assertEquals(0xFFCC0033, failure.getExpected().getValue());
+                assertEquals(0xFF000000, failure.getActual().getValue());
+                assertTrue(failure.getMessage().contains("fork=<unset>"));
+                Path retainedPath = actualFramePath(failure);
+                try {
+                    assertArrayEquals(image.pixels(), ScreenshotCapture.loadPNG(retainedPath).pixels());
+                } finally {
+                    Files.deleteIfExists(retainedPath);
+                }
+            }
+        } finally {
+            if (previous == null) {
+                System.clearProperty("java.io.tmpdir");
+            } else {
+                System.setProperty("java.io.tmpdir", previous);
+            }
+        }
+    }
+
+    private static Path actualFramePath(AssertionFailedError failure) {
+        String message = failure.getMessage();
+        String marker = "; actualFrame=";
+        int start = message.indexOf(marker);
+        assertTrue(start >= 0, message);
+        int end = message.indexOf(" ==> expected:", start);
+        return Path.of(message.substring(start + marker.length(), end));
+    }
+
+    /**
+     * Retains first-mismatch evidence without another render or GL readback.
+     * Inputs are the captured framebuffer, requested mode and current batching flags.
+     * Origin: an unexplained category-run competition projection assertion (2026-11-09).
+     */
+    private static String failureDetails(String kind, String location, boolean iteration,
+            GraphicsManager graphics, RgbaImage image) {
+        long pid = ProcessHandle.current().pid();
+        String mode = iteration ? "instanced" : "direct";
+        String message = location + "; iteration=" + mode + " pid=" + pid;
+        try {
+            String temporaryRoot = System.getProperty("java.io.tmpdir", "");
+            String fork = temporaryRoot.isEmpty() ? "<unset>"
+                    : String.valueOf(Path.of(temporaryRoot).getFileName());
+            message += " fork=" + fork;
+            message += " batching/instanced=" + graphics.isBatchingEnabled()
+                    + "/" + graphics.isInstancedBatchingEnabled();
+            Path path = TestSessionOutputPaths.diagnostics("competition-field-pixels")
+                    .resolve(pid + "-" + mode + "-" + kind + ".png");
+            Files.createDirectories(path.getParent());
+            ScreenshotCapture.savePNG(image, path);
+            return message + "; actualFrame=" + path.toAbsolutePath();
+        } catch (Exception | LinkageError diagnosticFailure) {
+            // An unavailable artifact must leave the original expected/actual assertion primary.
+            return message + "; artifactUnavailable=" + diagnosticFailure.getClass().getSimpleName();
+        }
+    }
+
     private static int rgb(int color, int palette) {
         return color == 0 ? 0xFF000000 : 0xFF000000 | (color * 17 << 16) | (palette * 85 << 8) | (255 - color * 17);
     }
