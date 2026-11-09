@@ -143,6 +143,7 @@ under the matching area heading; see the
   retries that lease before acquiring another, avoiding an orphaned audio tap.
   Closing the controller also ends admission permanently, so a delayed encoder
   finalizer cannot clear resources acquired by a recording started after close.
+  S2 music requests now use native ROM mailbox bytes while retaining playback IDs, fixing CNZ 2P audio crashes and music priority/classification.
 
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the
