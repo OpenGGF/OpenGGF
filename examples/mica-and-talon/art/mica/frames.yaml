@@ -1331,19 +1331,6 @@
       "notes": ""
     },
     {
-      "id": "native-pose-ba",
-      "animation": "NATIVE_POSE",
-      "order": 0,
-      "file": "frames/native-pose-ba.png",
-      "hotspot": [
-        16,
-        20
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 6,
-      "notes": "Reuse original MICA normal-Sonic mapping art from endings/s3k/ride-ba.png; no scaling or native pixel copying."
-    },
-    {
       "id": "native-pose-ca",
       "animation": "NATIVE_POSE",
       "order": 1,
@@ -1368,71 +1355,6 @@
       "angle_set": "flat",
       "duration_ticks": 6,
       "notes": "Reuse original MICA normal-Sonic mapping art from endings/s3k/rescue_float-cb.png; no scaling or native pixel copying."
-    },
-    {
-      "id": "native-pose-96",
-      "animation": "NATIVE_POSE",
-      "order": 3,
-      "file": "frames/native-pose-96.png",
-      "hotspot": [
-        15,
-        15
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 6,
-      "notes": "Reuse original MICA normal-Sonic mapping art from wave3/s3k-slot-96.png; no scaling or native pixel copying."
-    },
-    {
-      "id": "native-pose-97",
-      "animation": "NATIVE_POSE",
-      "order": 4,
-      "file": "frames/native-pose-97.png",
-      "hotspot": [
-        15,
-        15
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 6,
-      "notes": "Reuse original MICA normal-Sonic mapping art from wave3/s3k-slot-97.png; no scaling or native pixel copying."
-    },
-    {
-      "id": "native-pose-98",
-      "animation": "NATIVE_POSE",
-      "order": 5,
-      "file": "frames/native-pose-98.png",
-      "hotspot": [
-        15,
-        15
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 6,
-      "notes": "Reuse original MICA normal-Sonic mapping art from wave3/s3k-slot-98.png; no scaling or native pixel copying."
-    },
-    {
-      "id": "native-pose-99",
-      "animation": "NATIVE_POSE",
-      "order": 6,
-      "file": "frames/native-pose-99.png",
-      "hotspot": [
-        15,
-        15
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 6,
-      "notes": "Reuse original MICA normal-Sonic mapping art from wave3/s3k-slot-99.png; no scaling or native pixel copying."
-    },
-    {
-      "id": "native-pose-9a",
-      "animation": "NATIVE_POSE",
-      "order": 7,
-      "file": "frames/native-pose-9a.png",
-      "hotspot": [
-        15,
-        15
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 6,
-      "notes": "Reuse original MICA normal-Sonic mapping art from wave3/s3k-slot-9a.png; no scaling or native pixel copying."
     },
     {
       "id": "native-pose-24",
@@ -2123,12 +2045,12 @@
     "hang/2": "hang-02",
     "wait/stand": "wait-00",
     "wait/fidget": "wait-03",
-    "roll/0": "native-pose-96",
-    "roll/1": "native-pose-97",
-    "roll/2": "native-pose-98",
-    "roll/3": "native-pose-99",
-    "roll/4": "native-pose-9a",
-    "ride/stand": "native-pose-ba",
+    "roll/0": "roll-00",
+    "roll/1": "roll-01",
+    "roll/2": "roll-02",
+    "roll/3": "roll-03",
+    "roll/4": "roll-blur",
+    "ride/stand": "wait-00",
     "crane/fall": "native-pose-ca",
     "hang/crane": "native-pose-cb",
     "bar/release": "native-pose-24",

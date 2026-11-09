@@ -175,12 +175,26 @@ class TestMicaCharacterIntegration {
             var expected = new LinkedHashMap<Integer,String>();
             expected.put(0x24, "bar/release");
             for (int frame : new int[]{0x55, 0x56, 0x57, 0x59, 0x5A}) expected.put(frame, "twist/" + (frame - 0x55));
-            expected.put(0xBA, "ride/stand"); expected.put(0xCA, "crane/fall"); expected.put(0xCB, "hang/crane");
-            for (int i = 0; i < 5; i++) expected.put(0x96 + i, "roll/" + i);
+            expected.put(0xCA, "crane/fall"); expected.put(0xCB, "hang/crane");
             for (var entry : expected.entrySet()) {
                 int target = sheet.nativeFrames().get(entry.getValue());
                 assertTrue(target >= 98, "reuse the existing native-pose asset instead of a core fallback");
                 assertEquals(source.dplcFrames().get(target), session.player().getSpriteRenderer().dplcFrame(entry.getKey()), entry.getValue());
+            }
+            // Raw roll and stand bytes reuse the approved core cycles, so objects that
+            // write $96-$9A/$BA directly (AIZ intro, slots) match her normal roll and idle.
+            // ROLL interleaves the solid frame like native $96,$9A,$97,$9A,...
+            var roll = sheet.animations().get("ROLL").steps().stream()
+                    .map(com.openggf.level.objects.PlayableSheetReader.AnimationStep::frameIndex).toList();
+            var core = new LinkedHashMap<Integer,Integer>();
+            for (int i = 0; i < 4; i++) core.put(0x96 + i, roll.get(i * 2));
+            core.put(0x9A, roll.get(1));
+            core.put(0xBA, sheet.animations().get("WAIT").steps().get(0).frameIndex());
+            for (var entry : core.entrySet()) {
+                String name = entry.getKey() == 0xBA ? "ride/stand" : "roll/" + (entry.getKey() - 0x96);
+                assertEquals(entry.getValue(), sheet.nativeFrames().get(name), name);
+                assertEquals(source.dplcFrames().get(entry.getValue()),
+                        session.player().getSpriteRenderer().dplcFrame(entry.getKey()), name);
             }
         }
     }
@@ -1179,8 +1193,8 @@ class TestMicaCharacterIntegration {
         assertEquals(powered ? com.openggf.game.mutators.HomingAttackRuntime.Mode.INSTAGIB
                 : com.openggf.game.mutators.HomingAttackRuntime.Mode.HOMING, runtime.capture().launchMode());
         // The Buzzer sits ahead and above, so the strike flies forward-up
-        // (HOMING_DIVE_FORWARD_UP, sheet frames 120-123 after the 256 native frames).
-        assertTrue(List.of(376, 377, 378, 379).contains(player.getMappingFrame()),
+        // (HOMING_DIVE_FORWARD_UP, sheet frames 114-117 after the 256 native frames).
+        assertTrue(List.of(370, 371, 372, 373).contains(player.getMappingFrame()),
                 "The strike selects the authored forward-up dive pose: " + player.getMappingFrame());
         assertEquals(player.resolveAnimationId(CanonicalAnimation.ROLL), player.getAnimationId(),
                 "The visual dive must retain native roll attack semantics");
@@ -1430,7 +1444,7 @@ class TestMicaCharacterIntegration {
                     "art/mica/endings/s2/photo-[1-4]\\.png")), "Phase 1 packages no MICA photo overrides");
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(
                     packed.getInputStream(packed.getJarEntry("art/mica.ggfp")).readAllBytes());
-            assertEquals(132, sheet.frames().size());
+            assertEquals(126, sheet.frames().size());
             assertEquals(22, sheet.animations().size());
             assertEquals(List.of(27, 28, 29, 30), sheet.animations().get("HOMING_DIVE").steps()
                     .stream().map(com.openggf.level.objects.PlayableSheetReader.AnimationStep::frameIndex).toList());
