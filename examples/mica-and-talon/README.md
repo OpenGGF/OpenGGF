@@ -1,8 +1,8 @@
 # MICA and TALON — character example
 
-This framework demonstration is not a released mod. The maintained Mod API 0.7 candidate example currently registers **MICA** in Sonic
-1, Sonic 2 and Sonic 3 & Knuckles. TALON and the approved concept art in
-[concept](concept/) are reserved for later work.
+This framework demonstration is not a released mod. The maintained Mod API 0.7 candidate example registers **MICA and TALON** in Sonic
+1, Sonic 2 and Sonic 3 & Knuckles. MICA leads with TALON as her default follower;
+TALON is also selectable solo. Approved concept art is in [concept](concept/).
 
 The playable sheet contains 98 original indexed poses and 18 canonical animations,
 including four slope cycles for WALK and RUN, the breathing idle loop, and
@@ -20,7 +20,7 @@ python3 examples/mica-and-talon/build.py --run
 The script compiles the current engine, compiles the mod against that same build,
 converts the authored PNG/YAML into playable art, and packages
 `target/mica-and-talon/mica-and-talon.jar`. All generated output stays under the
-checkout's `target/`. No ROM data is packaged. Supply your own supported ROMs.
+checkout's `target/` (the authored sheet assembly refreshes `src/main/mod/`). No ROM data is packaged. Supply your own supported ROMs.
 
 With `--run`, the engine loads the development classes. Choose a game and MICA in
 its launch character row. Settings default to
@@ -52,7 +52,13 @@ slots cycle to gold while the normal sheet and homing move remain her own.
 Enable **Gilded form settings** in the host overlay to override the per-game form
 switches, S1 emerald requirement, ring requirement and S1 music at the next full
 load. S1's six-emerald/50-ring default is mod-defined and requires no donor ROM.
-S2 and S3K retain their native default emerald gates. Phase 2 will add TALON.
+S2 and S3K retain their native default emerald gates. TALON uses his own 82-frame, 13-animation sheet and palette. His native flight
+flaps normally; airborne down previews a target and down+jump dives onto it.
+Solar uses white-gold plumage with flame wingtips, Instagib dives and twice the
+native flap lift, with no Flickies or Hyper tier. Regenerate Solar Java tables
+with `python3 tools/modding/playable_art/solar_java.py`; `--check` verifies sync.
+The S2 HUD spells TALON; S3K retains TAL because the native glyphs exceed its
+32-pixel cell. S1 keeps native fallback until T/A/L supplementary art exists.
 
 The build copies presentation, wave3 stage, continue, portrait, snowboard and
 ending PNGs into the jar alongside `art/mica.ggfp`. Presentation is currently a
@@ -89,13 +95,16 @@ and native twirl state. S2's `loc_189FE` (s2.asm:33937-33953) and S3K's
 `loc_22FE0` (sonic3k.asm:47778-47801) own that behavior. The sheet preserves it;
 S1's ordinary upward spring displays the authored SPRING poses.
 
-TALON's phase 2 engine skeleton is registered alongside MICA. Selecting MICA
+TALON is registered alongside MICA. Selecting MICA
 chooses MICA & TALON by default; either character can be selected solo, and the
 sidekick row stays editable. TALON uses the Tails route and native follow/respawn
 strategy. S3K flight is native; S1/S2 flight explicitly borrows that model as a
 mod capability. Solar doubles flap acceleration and has no Flickies.
 
-Temporary art: TALON currently receives MICA's materialized sheet and Gilded
-palette as placeholders. The art lane will supply `talon-sheet.yaml` and
-`talon.png`. Down-held reticle and down+jump divebomb remain TODOs in
-`TalonCharacter`; jump currently flaps regardless of down.
+TALON's `talon-sheet.yaml` and `talon.png` bake to `art/talon.ggfp`, independently
+of MICA. His six-phase wingbeat and tired cycles serve normal/ascent flight;
+S1/S2 use private mod animation IDs because those hosts have no native flight
+vocabulary. S3K uses its native flight IDs. Airborne down requests the target
+reticle; down+jump takes over flight with a targeted divebomb. Without down,
+jump retains native flight/flaps. Solar palettes are generated from his own
+presentation data. HUD glyph and missing presentation limits are listed above.

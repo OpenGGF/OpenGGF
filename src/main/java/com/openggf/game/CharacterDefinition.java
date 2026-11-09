@@ -60,6 +60,12 @@ public record CharacterDefinition(
     @ModApi @FunctionalInterface
     public interface PresentationSupplier {
         CharacterPresentation load(String persistedCode) throws IOException;
+
+        /** Host-aware presentation (for example, a name fitting the host's HUD cell).
+         * Existing suppliers retain their single-argument behavior. */
+        default CharacterPresentation load(String persistedCode, GameId host) throws IOException {
+            return load(persistedCode);
+        }
     }
 
     /** Loads the owner-bound super-form profile for the canonical persisted key. */

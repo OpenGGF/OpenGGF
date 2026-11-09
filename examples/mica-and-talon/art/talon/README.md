@@ -19,7 +19,7 @@ SPRING/HURT/DEATH/DUCK/LOOK_UP one each; SKID 2; TAILS_FLY 6;
 TAILS_FLY_TIRED 6. Canonical names follow `CanonicalAnimation`; `FLY_TIRED` is
 not an accepted enum name. Flight wings are integrated; no tail sprite exists.
 `talon-custom-frames.json` is intentionally empty: all supplied poses are canonical.
-No character-class binding or Java changes are part of this handoff.
+The example mod binds this sheet in TalonMod and the Solar tables in TalonSolar.
 
 Round 1 source selection: WAIT and WALK strip attempt 2; RUN attempt 3; ROLL and
 SPINDASH attempt 2; static poses attempt 1 except spring. Flight and tired flight
@@ -76,8 +76,8 @@ inspection and Python validation, without a Java build or runtime certification.
 
 `presentation/solar.yaml` mirrors MICA's data-table form: six fade tables and
 complete dry S2/S3K cycle tables, preserving non-plumage indices. White-gold
-plumage and orange flame feather-tip slot 6 are data only; no binding, underwater,
-Hyper or runtime visual certification is claimed.
+plumage and orange flame feather-tip slot 6 are bound through generated TalonSolar
+tables (`solar_java.py --check`). No authored underwater or Hyper palette is claimed.
 
 ## Review and remaining art weaknesses
 

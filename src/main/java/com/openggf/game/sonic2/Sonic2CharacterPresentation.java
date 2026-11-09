@@ -18,7 +18,7 @@ public final class Sonic2CharacterPresentation {
         var key = CharacterKey.parsePersisted(ActiveGameplayTeamResolver.resolveMainCharacterCode(config));
         var definition = module.getPlayableCharacterRegistry().find(key).orElse(null);
         return definition == null || definition.presentationSupplier() == null ? null
-                : definition.presentationSupplier().load(key.persisted());
+                : definition.presentationSupplier().load(key.persisted(), module.getGameId());
     }
 
     public static CharacterPresentation.Image name(Rom rom, CharacterPresentation presentation,

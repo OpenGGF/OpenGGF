@@ -4,7 +4,7 @@ Build a character from a design, then take the same sheet into Sonic 1, Sonic 2
 and Sonic 3 & Knuckles. This walkthrough uses MICA, an original jade pangolin,
 from [MICA and TALON](../../../examples/mica-and-talon/README.md). It is a framework
 demonstration on the unpublished Mod API 0.7 candidate, not a released mod.
-TALON is planned for phase 2.
+TALON is selectable solo and follows MICA by default.
 
 Start with Java 25, Maven, Python 3 with Pillow, and matching engine/SDK sources.
 Run commands below from the repository root. You need your own supported ROMs to
@@ -202,5 +202,15 @@ Compare at 1×, check grounded/slope contact, ability chaining, dry/water forms,
 results and stock fallbacks. Programmatic stage/ending entry proves those
 surfaces, not the physical entry trigger or a complete route. Full title-to-ending
 route captures remain open, as do S2 2P presentation, title/branding art, reel prize
-symbols, custom Tornado pilots and TALON. Keep those limits visible when sharing
+symbols, custom Tornado pilots and TALON's missing presentation surfaces. Keep those limits visible when sharing
 what your tests actually establish.
+
+### Host-specific HUD names
+
+`CharacterDefinition.PresentationSupplier` remains a functional interface. Its
+optional `load(String persistedCode, GameId host)` overload defaults to the old
+single-argument method. Override both methods when HUD names need to differ by
+host; the HUD adapters call the overload through the same owner fault boundary.
+TALON uses TALON for S2's 32-pixel glyph composition and TAL for S3K's narrower
+cell. S1 still needs supplementary T/A/L letter art. Non-HUD callers may use the
+single-argument fallback, so keep it complete and safe for any host.

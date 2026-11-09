@@ -670,6 +670,12 @@ final class LevelPlayableArtInitializer {
                 String archetype = switch (definition.behavesLike()) {
                     case TAILS_ALONE -> "tails"; case KNUCKLES -> "knuckles"; default -> "sonic";
                 };
+                // Creator routes can opt into a movement archetype absent from the
+                // host roster (for example cross-game flight). Bind their own art
+                // to the host's default motion vocabulary, without requiring donor art.
+                if (!host.getDonorCapabilities().getPlayableCharacters().contains(definition.behavesLike())) {
+                    archetype = "sonic";
+                }
                 var nativeArt = hostProvider.loadPlayerSpriteArt(archetype);
                 if (nativeArt == null || !(nativeArt.animationProfile() instanceof com.openggf.sprites.animation.ScriptedVelocityAnimationProfile profile))
                     throw new IOException("Host cannot bind canonical playable animations");
