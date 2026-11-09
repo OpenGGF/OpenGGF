@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -96,7 +97,7 @@ class TestS1BadnikChildGraphRewind {
             assertEquals(4, readObjectList(parent, "spikes").size());
             for (ObjectInstance spike : readObjectList(parent, "spikes")) {
                 assertSame(parent, readObject(spike, "parent"), "normal routine birth must use its real parent");
-                assertTrue(!readBoolean(spike, "launched"), "null player must leave this fixture orbiting");
+                assertFalse(readBoolean(spike, "launched"), "null player must leave this fixture orbiting");
                 expectedParents.put(objectId(manager, spike), objectId(manager, parent));
             }
         }
@@ -255,7 +256,7 @@ class TestS1BadnikChildGraphRewind {
             assertEquals(4, readObjectList(parent, "spikes").size());
             for (ObjectInstance spike : readObjectList(parent, "spikes")) {
                 assertSame(parent, readObject(spike, "parent"), "source must use ordinary owned birth");
-                assertTrue(!readBoolean(spike, "launched"));
+                assertFalse(readBoolean(spike, "launched"));
                 expected.put(objectId(manager, spike), objectId(manager, parent));
             }
         }

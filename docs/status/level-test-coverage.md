@@ -3,10 +3,16 @@
 Parent-linked rewind maintenance (2026-11-09): the Clamer and S1 badnik graph
 witnesses named in the [rewind guide](../guide/contributing/rewind-system.md#ordinary-dynamic-objects-and-constructor-children)
 check routine-spawned children against two nearby same-class parents, including
-fresh reconstruction after movement and metadata boundary/legacy controls.
+fresh reconstruction after Orbinaut satellite movement and metadata boundary/legacy
+controls; the Clamer parents remain stationary.
 These injected-service graph checks establish neither a native route trigger nor
 act, viewport, donor/team or whole-route rewind coverage; those obligations remain
 inherited. The snapshot format and native update routines are unchanged.
+Only these two recreate hooks use the captured parent in this increment. Other
+proximity relinks remain unassessed, including the owned Shellcracker claw's
+nearest-parent helper; this does not establish their family correctness. The
+Clamer constructor probe still requires a live Clamer before its hook can run,
+and Stageplay admission refusal is outside these witnesses.
 
 S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
 exercise P1 breaking for all eight outcomes and hold the award for six seconds.

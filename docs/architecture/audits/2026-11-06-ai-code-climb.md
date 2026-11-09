@@ -5275,3 +5275,47 @@ fresh XML, full assertions, source seals and proof are retained under
 remains separately owned by root; its diagnostic/pixel obligations are not waived.
 Independent correctness review, combined qualification and PR271 integration of
 this isolated increment remain pending.
+
+### Captured-parent review follow-up — 2026-11-09
+
+Independent Opus 5.5 static scrutiny of `6752c370..786e245bc7` found no blocking
+correctness defect. It verified both exact-parent hooks, retry side effects,
+parent inventories and the adversarial witnesses. It ran no JVM or tests; the
+155-case result above remains root-observed evidence. This supersedes only the
+pending-review state above; combined qualification and integration remain pending.
+
+The review's suggested reused-Clamer witness rests on an incorrect eligibility
+assumption. `ObjectRewindTypeSafety.compute` checks the scalar field projection:
+`GenericFieldCapturer.isDefaultObjectValueField` excludes object references, and
+the mutable `ClamerObjectInstance.springChildSlot` cannot satisfy the final-only
+noncaptured-field rule. Clamer therefore cannot reuse in place today. No runtime
+eligibility rule was changed to accommodate the review. The adversarial test now
+leaves the manager's production default enabled, and still verifies fresh parents,
+fresh springs and both links through two restores and an intervening update and
+recapture. Both graph suites passed again: 16 cases, zero failures/errors/skips.
+The source seal was `4a2a593923874d966f4121f2e0e8b90d0369c0a2911132a767d00b6d41f16295`
+before and after that run. Both reviewed gameplay source files remain byte-identical
+to `786e245bc7`; the later test edit adds only one blank line.
+
+This bounded follow-up also replaces two negated-boolean assertions with
+`assertFalse`, removes the Clamer legacy-hook assertion that could not fail,
+clarifies the context's preferred manager accessor, and corrects the coverage
+note: Orbinaut satellites move; the Clamer parents do not. The exact command is
+the RED2 two-class selection above with the GREEN normal/EGL flags and fresh
+`target/code-climb/parent-family/review-followup/{surefire,trace-reports,diagnostics}`
+outputs. Queue wait was 44 seconds, Maven 99 seconds (rounded), wall 145.099285
+seconds, user wait zero, and unseparated overhead/rounding 2.099285 seconds.
+All sixteen fresh case identities and XML remain in the terminal receipt.
+
+Remaining exposure is explicit in the coverage backlog. Only two hooks were
+migrated; roughly 56 proximity lookups across 43 files remain to classify, not
+all of them parent links. The owned Shellcracker claw's
+`Sonic2BadnikChildRewindLinks` lookup has the same potential family ambiguity and
+is unassessed here. Clamer probe construction still requires an available live
+Clamer before the new hook runs; accepting an exact destroyed parent inside the
+hook does not repair that earlier availability limit. Null-manager compatibility
+branches and Stageplay admission refusal have no runtime witness in this change.
+The latter may fail a required parent-side reference rather than borrow an
+unrelated owner. No speculative runtime change was made for either case.
+The positional snapshot-copy fixture and repeated setup remain local test
+maintenance costs. This follow-up grants no contributor-score or route credit.

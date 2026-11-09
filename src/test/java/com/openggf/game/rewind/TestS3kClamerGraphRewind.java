@@ -61,7 +61,8 @@ class TestS3kClamerGraphRewind {
                 CLAMER_SPAWN.y() + springOffsetY, CLAMER_SPAWN.layoutIndex() + 1);
         Harness harness = Harness.create(List.of(CLAMER_SPAWN, upperSpawn));
         ObjectManager manager = harness.objectManager();
-        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        // Keep the production default: Clamer's mutable spring link makes it
+        // ineligible for in-place reuse, even after a prior reconstruction.
         // First pass leaves WAIT_OFFSCREEN; the second initializes through owned spawnChild.
         manager.update(harness.camera().getX(), null, List.of(), 0);
         manager.update(harness.camera().getX(), null, List.of(), 1);
@@ -128,7 +129,6 @@ class TestS3kClamerGraphRewind {
         }
     }
 
-
     @Test
     void clamerKnownMissingWrongTypeAndExplicitNoParentNeverUseNearestFallback() throws Exception {
         ClamerFamilyBoundary boundary = clamerFamilyBoundary();
@@ -163,7 +163,6 @@ class TestS3kClamerGraphRewind {
                     clamerEntryWithFamily(boundary.entry(), family),
                     new DynamicObjectRecreateContext(boundary.manager()));
             assertNotNull(recreated, "legacy/unknown family must keep its historical recreate hook");
-            assertNotSame(boundary.sourceSpring(), recreated);
             assertSame(boundary.nearest(), readObjectField(recreated, "parent"),
                     "legacy/unknown Clamer family must retain nearest-parent compatibility");
         }
