@@ -25,7 +25,7 @@ class TestS3kCompetitionNativeRace {
      * Each fixture's provenance: docs/architecture/validation/2026-10-28-tas-support-competition.md.
      */
     @ParameterizedTest(name = "{1}")
-    @CsvSource({"3, dpz, 2528"})
+    @CsvSource({"3, dpz, 2528", "0, alz, 2143", "2, cgz, 3329"})
     void sonicTraversesFiveLapsExactlyAsNative(int arenaIndex, String key, int raceRows) throws Exception {
         try (var fixture = new HostedArenaFixture();
              var stream = getClass().getResourceAsStream("/competition/s3k/" + key + "-sonic-native.csv.gz");
@@ -48,7 +48,7 @@ class TestS3kCompetitionNativeRace {
                 // Native SST addresses translate to the engine's existing semantic slot identity.
                 int interact = n[18] == 0 ? -1 : (n[18] - 0xB000) / 0x4A;
                 int[] expected = {n[6],n[7],n[8],n[9],n[10],n[11],n[12],n[13],n[14],n[15],n[16],n[17],interact,n[19],n[20]};
-                int[] actual = {p.centreX(),p.xFraction(),p.centreY(),p.yFraction(),p.xVelocity(),p.yVelocity(),
+                int[] actual = {p.centreX(),p.xFraction(),p.centreY() & 0xFFFF,p.yFraction(),p.xVelocity(),p.yVelocity(),
                         p.groundVelocity(),p.angle(),p.status(),p.statusSecondary(),p.routine(),p.objectControl(),
                         p.standingObject(),p.animation(),p.mappingFrame()};
                 assertArrayEquals(expected, actual, key + " race frame " + count + ": x,xf,y,yf,xv,yv,gsp,angle,status,secondary,routine,control,interact,anim,mapping");

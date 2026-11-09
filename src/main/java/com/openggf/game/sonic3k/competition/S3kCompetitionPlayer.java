@@ -172,9 +172,12 @@ public final class S3kCompetitionPlayer {
         if (value*direction>=0) {
             // loc_113FE (sonic3k.asm:22827-22832), sub_11482 (sonic3k.asm:22893-22900):
             // a ground-facing change writes prev_anim=1, restarting the walk cycle.
-            if (facingLeft() != (direction<0)) animationState=new S3kMiniatureAnimation.State(
-                    1,animationState.frame(),animationState.timer(),animationState.mappingFrame(),animationState.renderFlips());
-            setFacingLeft(direction<0); setPushing(false);
+            if (facingLeft() != (direction<0)) {
+                setPushing(false);
+                animationState=new S3kMiniatureAnimation.State(
+                        1,animationState.frame(),animationState.timer(),animationState.mappingFrame(),animationState.renderFlips());
+            }
+            setFacingLeft(direction<0);
             groundVelocity=accelerated(value,direction*speeds.acceleration(),speeds.maxSpeed());
             animation=0; return;
         }

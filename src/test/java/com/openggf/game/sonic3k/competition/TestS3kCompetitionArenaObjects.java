@@ -254,6 +254,43 @@ class TestS3kCompetitionArenaObjects {
     }
 
     @Test
+    void springKeepsItsStandingBitUntilTheFollowingSolidPass() {
+        Fixture f=fixture();
+        var spring=f.place(Kind.SPRING,0x100,0x100,2,0);
+        f.tick();
+        var p=f.players.get(0);
+        p.setCentre(0x100,0xEE); p.setAirborne(true); p.setYVelocity(0x200);
+        f.tick();
+        assertEquals(-0xA00,p.yVelocity());
+        assertTrue(p.airborne()); assertEquals(0,p.status()&8);
+        assertEquals(1,spring.nativeStandingMask());
+        p.setCentreNative(0x100,0xE8);
+        f.tick();
+        assertEquals(0xE8,p.centreY(),"carried standing branch releases without a second top correction");
+        assertEquals(0,spring.nativeStandingMask());
+    }
+
+    @Test
+    void solidPushReleaseIsOwnedPerObjectAndRestartsWalkAnimation() {
+        Fixture f=fixture();
+        var block=f.place(Kind.INVISIBLE_PLATFORM,0x100,0x100,0x11,0);
+        f.tick();
+        var p=f.players.get(0);
+        p.setCentre(0xF8,0x100); p.setXVelocity(0x100);
+        f.tick();
+        assertTrue(p.pushing());
+        var before=f.capture();
+        p.setCentre(0x200,0x100); p.setPreviousAnimation(0);
+        f.tick();
+        assertFalse(p.pushing()); assertEquals(1,p.capture().animationState().previousAnimation());
+        // An unrelated non-contact must preserve a terrain-owned push bit.
+        p.setPushing(true); f.tick(); assertTrue(p.pushing());
+        f.restore(before);
+        p=f.players.get(0); p.setCentre(0x200,0x100);
+        f.tick(); assertFalse(p.pushing(),"rewind restores the object's push ownership");
+    }
+
+    @Test
     void floorButtonCanLatchTheRetractingSpringTrigger() {
         Fixture f = fixture();
         var button = f.place(Kind.FLOOR_BUTTON, 0x100, 0x200, 0x10, 0);

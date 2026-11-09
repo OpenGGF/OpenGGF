@@ -106,6 +106,7 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
     private ObjectAnimationState animationState;
     private boolean initialized;
     private int standingMask;
+    private int pushingMask;
     private int extension;
     private int delay;
     private boolean retracting;
@@ -205,10 +206,11 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
         if (firstPass && kind == Kind.SPRING) { updateDynamicSpawn(x, y); return; }
         // RideObject_SetRide clears the previous object's native status bit when the player rides another.
         // The miniature body stores that relationship by SST identity rather than an SST pointer.
-        // An airborne rider keeps this object's bit: SolidObjectFull2_1P's loc_1DCF0
-        // (sonic3k.asm:41070-41087) releases it, clearing Status_OnObj on the player as well.
+        // A spring launch keeps this object's bit even after clearing player OnObj.
+        // SolidObjectFull2_1P / loc_1DCF0 (sonic3k.asm:41110-41135) releases
+        // the airborne rider on the following pass, also clearing player OnObj.
         for (var player : context.players()) {
-            if (player.standingObject() != nativeIdentity() || (player.status() & 8) == 0)
+            if (player.standingObject() != nativeIdentity())
                 standingMask &= ~(1 << player.slot());
         }
         switch (kind) {
@@ -498,7 +500,9 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
                 int vy = down ? (speed == 0x1000 ? 0xD00 : speed) : -speed;
                 player.setCentreNative(player.centreX(), (player.centreY() + (down ? -4 : 8)) & 0xFFFF);
                 player.setYVelocity(vy);
-                releaseRide(player);
+                // sub_22F98 (sonic3k.asm:47759-47772): the spring retains its
+                // standing bit until SolidObjectFull2_1P releases it next pass.
+                player.setStatus(player.status() & ~8);
                 player.setAirborne(true);
                 player.setJumping(false);
                 if (down) player.setDoubleJumpFlag(0);
@@ -781,9 +785,11 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
             if (p.standingObject() == nativeIdentity()) p.setStatus((p.status() & ~8) | 2);
             return Contact.NONE;
         }
-        if (p.routine() >= 6 || (p.objectControl() & 0x80) != 0) return Contact.NONE;
-        if (!topOnly && usesVisibleFullRoutine() && !nativeVisible) return Contact.NONE;
-        if (dx < -rangeX || dx > rangeX || (topOnly && dx == rangeX)) return Contact.NONE;
+        if (p.routine() >= 6) return Contact.NONE;
+        if ((p.objectControl() & 0x80) != 0) return releasePush(p);
+        if (!topOnly && usesVisibleFullRoutine() && !nativeVisible) return releasePush(p);
+        if (dx < -rangeX || dx > rangeX || (topOnly && dx == rangeX))
+            return topOnly ? Contact.NONE : releasePush(p);
         if (topOnly) {
             if (p.yVelocity() < 0) return Contact.NONE;
             int distance = (short) (y - standingHeight - p.centreY() - p.yRadius() - 4);
@@ -798,7 +804,7 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
         int defaultHeight = objectHalfHeight + 0xB;
         int dy = (p.centreY() - y + 4 + combinedHeight) & 0xFFF;
         int totalHeight = combinedHeight + defaultHeight;
-        if (dy >= totalHeight) { p.setPushing(false); return Contact.NONE; }
+        if (dy >= totalHeight) return releasePush(p);
         int penetrationX = dx <= 0 ? dx + rangeX : dx - rangeX;
         int penetrationY = dy <= combinedHeight ? dy : dy - 4 - totalHeight;
         if (Math.abs(penetrationX) <= Math.abs(penetrationY) && Math.abs(penetrationY) > 4) {
@@ -807,7 +813,8 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
                 p.setGroundVelocity(0);
             }
             p.setCentreNative((p.centreX() - penetrationX) & 0xFFFF, p.centreY());
-            p.setPushing(!p.airborne());
+            if (p.airborne()) { pushingMask &= ~mask; p.setPushing(false); }
+            else { pushingMask |= mask; p.setPushing(true); }
             return Contact.SIDE;
         }
         if (penetrationY < 0) {
@@ -823,6 +830,20 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
         if (p.yVelocity() < 0) return Contact.NONE;
         setRide(p);
         return Contact.TOP;
+    }
+
+    private Contact releasePush(S3kCompetitionPlayer p) {
+        // loc_1E0A2 / sub_1E0C2 (sonic3k.asm:41557-41577): only this
+        // object's per-player pushing bit authorizes clearing the player's bit.
+        int mask=1 << p.slot();
+        if ((pushingMask & mask) != 0) {
+            pushingMask &= ~mask;
+            if (p.animation()!=2 && p.animation()!=9) {
+                p.setAnimation(0); p.setPreviousAnimation(1); // MOVE.W #1,anim
+            }
+            p.setPushing(false);
+        }
+        return Contact.NONE;
     }
 
     private void setRide(S3kCompetitionPlayer player) {

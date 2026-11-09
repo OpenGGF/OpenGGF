@@ -225,7 +225,10 @@ both human input lanes, destructive state/pixel replay and authored goal-boundar
 Match/Time Attack consumers. Its [obligation matrix](../architecture/validation/2026-10-28-tas-support-competition.md#act-obligations-in-this-bounded-host-increment)
 now includes [a full native DPZ Sonic Time Attack race](../architecture/validation/2026-10-28-tas-support-competition.md#native-desert-palace-race-qualification-2026-11-09):
 2528 input-driven race frames, five laps and exact P1 state comparison including
-subpixels and animation, with native curve-tangent steps corroborated. Other
+subpixels and animation, with native curve-tangent steps corroborated.
+[Azure Lake and Chrome Gadget](../architecture/validation/2026-10-28-tas-support-competition.md#native-azure-lake-and-chrome-gadget-race-qualification-2026-11-09)
+add 2143 and 3329 exact native Sonic race rows with spring/push ownership and
+bounded rewind regression checks. Other
 arena/character traversals, GP, viewport, donor, roster and native-pixel obligations remain open;
 this is an LTS-08 auxiliary-mode increment, not completed act certification.
 

@@ -75,6 +75,19 @@ class TestS3kCompetitionPlayer {
         p.tick(new Input(LEFT,0),new Sensors(),BOUNDS,2);
         assertEquals(0x8F0,p.groundVelocity(),"slide infinite-inertia bit skips input and friction");
     }
+    @Test void groundAccelerationRetainsPushUntilFacingChanges() {
+        // loc_113FE / sub_11482: only a changed facing bit clears Status_Push.
+        for (boolean left : new boolean[]{false,true}) {
+            var p=player(0,Character.SONIC);
+            p.setFacingLeft(left); p.setPushing(true); p.setStatus(p.status()|8);
+            int held=left?LEFT:RIGHT;
+            p.tick(new Input(held,0),new Sensors(),BOUNDS,0);
+            assertTrue(p.pushing(), "holding into the same wall retains push");
+            p.setGroundVelocity(0);
+            p.tick(new Input(left?RIGHT:LEFT,0),new Sensors(),BOUNDS,1);
+            assertFalse(p.pushing(), "turning releases push");
+        }
+    }
     @Test void nativeJumpHasClearanceGateAndSharedSevenFourteenRadiiWrites() {
         var p=player(0,Character.SONIC); var terrain=new Sensors(); terrain.jumpAllowed=false;
         p.tick(new Input(JUMP,JUMP),terrain,BOUNDS,0); assertFalse(p.airborne());

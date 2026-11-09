@@ -406,3 +406,82 @@ or category-run verdict. Its build/test lease was acquired immediately (no queue
 wait). No user wait was incurred; intermediate native/probe executions and
 compiler preparation were separate from this Maven duration. Disassembly checks
 found no stale citations in the changed files; `git diff --check` passed.
+
+## Native Azure Lake and Chrome Gadget race qualification (2026-11-09)
+
+Lane P is based at `617839db8`. It adds locked-on NTSC Sonic solo Time Attack
+fixtures for arena cursor 0 (`alz`, 2143 race rows) and 2 (`cgz`, 3329 race rows).
+Both use the Desert Palace method above: original ROM, BizHawk 2.11/GPGX,
+cold title/controller-only menu entry, ordinary hosted load, 240 neutral
+countdown iterations, and native observations used only as assertions. Every
+race row matches all 15 compared player fields. Both final rows have lap 6 and
+timer flag $80, with no lag rows. Y is compared as a 16-bit word: the engine's
+signed negative integer and the probe's unsigned word represent the same native
+position above the arena. No production coordinate behavior was changed.
+
+Three ROM-owned corrections were needed:
+
+- Chrome Gadget seed 2 row 70 / seed 1 row 120 and Azure Lake seed 3 row 318:
+  acceleration cleared Status_Push unconditionally. `loc_113FE`
+  (sonic3k.asm:22827-22832) and `sub_11482`
+  (sonic3k.asm:22893-22900) clear it only when facing changes.
+  `S3kCompetitionPlayer.accelerate` now preserves that branch, retaining the
+  push pose while continuing to hold into a wall on an object.
+- Chrome Gadget seed 2 row 531 (seed 3 row 515): the engine corrected Y by two
+  pixels on the frame after a spring launch. `sub_22F98`
+  (sonic3k.asm:47759-47772) clears player OnObj but leaves the spring's standing
+  bit set. `SolidObjectFull2_1P` / `loc_1DCF0`
+  (sonic3k.asm:41110-41135) releases that airborne rider on the following pass,
+  without another top-contact correction. The arena object spring and standing
+  prepass now preserve this lifetime.
+- Chrome Gadget seed 2 row 1015 retained a stale player push bit; row 1694 also
+  retained the push mapping. `loc_1E0A2` / `sub_1E0C2`
+  (sonic3k.asm:41557-41577) release only a push owned by this object's per-player
+  status bit, and write word 1 to anim (anim=0, prev_anim=1), except for roll
+  and spindash. `CompetitionArenaObjectInstance.solid` now tracks this mask,
+  including the airborne-side clear. Its ordinary reflected rewind schema
+  captures the mask; the focused regression restores and replays its release.
+
+Azure Lake uses the lead's seed 1 tape, truncated at native completion. Seeds
+1, 2 and 3 also match every observed native row (2143, 2278 and 2229) after the
+fixes. Its frozen route stands on mud (40 frames), the retracting spring (8)
+and its base (19); it passes the floor button and both path swaps. These
+histograms indicate route participation, not exhaustive object certification.
+
+Chrome Gadget uses seed 2 through race row 2621, then repeats that tape's
+race rows [1912,2622), stopping at the first native finish (row 3328).
+This is controller-only composition; no observed state initializes gameplay.
+The original seed 2 tape matches all 3377 rows but ends at native lap 5.
+A fresh fixed-engine search (Go-Explore, seed 1, budget 60000, cell size 32)
+finished five native laps but exposed the inherited idle terrain-edge balance
+omission at race row 328 (native status=1/anim=6, engine status=0/anim=7).
+That alternate route is not the frozen qualification and remains an open gap.
+Straight RIGHT extension of seed 2 also failed to complete; repeating its
+successful lap produced the qualified input. The frozen Chrome Gadget route
+stands on the blade for over 900 frames, uses fans and springs, and passes the
+triangles, floor button, retracting spring and base. Near-object histograms
+alone do not prove every subtype branch was taken.
+
+The final expanded tapes were sampled again with the preserved native probe.
+Chrome Gadget's restored start and Azure Lake's cold and restored starts all
+reproduced the frozen CSV bytes exactly. Native saves and regenerable scratch
+outputs are not committed. Frozen resources are
+`src/test/resources/competition/s3k/{alz,cgz}-sonic-native.csv.gz` and matching
+RLE `.tape` files. SHA256 (compressed CSV, then tape):
+
+- ALZ: `0041dcc40e6b8f4e55cd798a530cc52e458f76e3d99c68330062c03c200b5eb0`,
+  `202c89c4a34b179e0ec3a7cd5fb525262482dd119a6e2a8b46ce673970ed3fce`.
+- CGZ: `e77002d15ffb7bbc2eb2f1d82b3ad42b9a32e9682a3822b84f182b40f170ddc2`,
+  `683134b6f4e4587345a6a39f1514f0992c952695313ae521524cf541bec83766`.
+
+This adds two bounded Sonic route witnesses. Original-S3, other characters,
+GP/Match, viewport/donor/roster breadth, native pixels and exhaustive object
+branches remain inherited obligations; loading or finishing these routes does
+not certify all arena behavior.
+
+Regression sensitivity: restoring the original player class makes
+`groundAccelerationRetainsPushUntilFacingChanges` fail its held-wall assertion.
+Restoring the original arena object class makes both new spring/push ownership
+regressions fail and the frozen CGZ race fail at row 531 (Y=25 versus native
+Y=23). The production sources are restored for final validation. The preceding
+focused player/object/DPZ/ALZ run passed 55 tests with no skips.
