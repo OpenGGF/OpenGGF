@@ -874,9 +874,13 @@ uncaptured `final` scalar, or an object reference not captured as a rewind id fa
 fails `TestStaticStateRewindCoverageGuard` — fix it with a `RewindSnapshottable` adapter,
 not a baseline entry, unless the gap is genuinely intentional.
 New concrete object classes also change `TestRemainingRewindTailInventory`, an
-ordinary-suite check outside `-Pguards`. Run its real round-trip sweep and update
-the test/resource totals only after verifying the new class passes or has honest
-graph coverage. A passing coverage guard alone does not check those totals.
+ordinary-suite check outside `-Pguards`. It compares discovered class identities
+with `isolated-round-trip-classes.txt` and the named graph dispositions in
+`RewindRoundTripHarness`; aggregate totals cannot substitute for a class. Declare
+the actual isolated round-trip or focused graph route, verify its execution, and
+retain its per-class outcome through `TestRewindHarnessCoverageRatchet`. A named
+graph row does not execute its test, and a passing coverage guard does not prove
+the inventory or the graph behavior.
 
 **A completed gameplay tick may precede completed publication.** The outer PLC
 frame publishes dynamic-art diagnostics in `finish()`, after the gameplay body

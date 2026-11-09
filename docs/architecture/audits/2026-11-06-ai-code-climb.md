@@ -5555,3 +5555,45 @@ failure has an onboarding-interception source hypothesis under a separate bounde
 runtime investigation. It does not explain the original Competition black-pixel
 failure, which remains an explicit merge blocker. PR271 is the sole destination;
 this local repair makes no publication or whole-suite claim.
+
+### Retired constructor-child inventory witness — 2026-11-09
+
+The original-D assessment identified a missing ordinary surviving-parent/retired-
+child example. The new case in `TestConstructorChildFamilyRewind` removes a child
+through the real manager, verifies ordinary unload detached the parent's captured
+link and uncaptured active inventory, then captures only the surviving parent.
+Restore constructs a fresh unmatched child. The test checks phase 2 restored the
+captured link to null before checking that drop notification emptied the separate
+inventory, retired the candidate and published neither membership nor identity.
+Recapture must still contain only the parent. The original nine test bodies and
+all production code remain unchanged.
+
+A compile-valid fixture-only no-op drop callback produced exactly one intended
+assertion failure on the uncaptured inventory, after the captured link was already
+null. Restoring that callback passed 20 cases in six fresh suites: the complete
+constructor-family class, dynamic-chain retry, two-phase references, all five EHZ
+wheel-orphan cases, two TurboSpiker retirement cases and the strict unregistered-
+reference case. No errors or skips occurred in either invocation. This negative
+control demonstrates that the witness detects missing owner cleanup; it is not a
+newly discovered production defect.
+
+Both checks used queued normal-memory Java25/Lua5.4 commands with displays unset
+and explicit surfaceless EGL. RED queue/Maven/wall/user/unseparated seconds were
+7/36.648/44.198881/0/0.550881; GREEN was 77/31.771/109.439524/0/0.668524.
+Commands, fresh XML hashes, exact case identities, source manifests and the
+temporary mutation are retained in the parent staging tree under
+`target/code-climb/retired-constructor-child`. Root verified all artifact hashes
+and copied the tested Java file byte-for-byte. Both focused jobs are terminal.
+The estimate of sixteen GREEN cases was corrected to twenty after reading the
+five cases in the selected EHZ class; no selector changed and no rerun was added.
+
+The guide now names ordinary and unmatched-drop detach, strict retired-reference
+capture, the hook/codec gate, per-class isolated versus named graph declarations,
+and the four related guards by role. A graph declaration does not execute its
+named test. The original graph command is retained, with a separate targeted
+retirement-neighbor command. The stale pitfalls advice to update totals now
+points to the actual binary-class inventory and per-class outcomes. These are
+source-derived routing corrections; the guards named in that text were not run
+by this focused worker. No coverage baseline, API pin, allowance or runtime
+contract changed, and no new contributor score is inferred. Combined candidate
+qualification and the original Competition pixel attribution remain outstanding.

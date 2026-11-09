@@ -429,10 +429,58 @@ a captured parent failed or defers to later player refresh; adoption remains blo
 for that missing parent. Family metadata distinguishes parents, not construction
 from routine births. A same-class/subtype routine child can still consume a
 constructor candidate within its own family according to capture order; an explicit
-class contract is needed when those roles must be distinguished. The coverage analyzer recognizes explicit hooks; its new-gap guard fails
-against the committed baseline. Do not add a recreate marker or expand that baseline
-solely to make an unsupported child appear covered. A field capture declaration
-does not establish a recreate path.
+class contract is needed when those roles must be distinguished.
+
+A child can retire while its ordinary dynamic parent survives. Clear captured
+owner links during ordinary `onUnload`/removal: a captured link to an already
+unregistered retired child fails strict identity capture. Also implement
+`onDroppedAsUnmatchedRewindReconstructionChild()` when reconstruction creates a
+child that was absent from the snapshot. That notification must detach the
+candidate from any owner-held active inventory and retire it as its lifetime
+requires. The default callback does nothing. An uncaptured inventory is not
+cleared by phase-2 field restore, so restoring a separate captured link to `null`
+does not prevent an untracked live child from remaining in the owner's update list.
+
+[TestConstructorChildFamilyRewind](../../../src/test/java/com/openggf/level/objects/TestConstructorChildFamilyRewind.java)
+checks the ordinary surviving-parent/retired-child contract, including the
+uncaptured inventory after the captured link restores to null.
+[TestEHZBossWheelOrphanAfterSiblingDestroy](../../../src/test/java/com/openggf/game/rewind/TestEHZBossWheelOrphanAfterSiblingDestroy.java)
+checks the real boss inventory after one wheel retires before capture.
+[TestS3kBadnikChildGraphRewind](../../../src/test/java/com/openggf/game/rewind/TestS3kBadnikChildGraphRewind.java)
+checks ordinary TurboSpiker removal detaching its captured shell link and the
+trail retiring when its launched shell unloads.
+
+Runtime adoption does not itself give a new production child a coverage route.
+The current analyzer and round-trip harness require a recognized recreate path:
+`RewindRecreatable` or an exact registered dynamic codec. The hook-less children
+in the constructor-family unit fixture demonstrate adoption, not production
+coverage. The committed `src/test/resources/rewind/coverage-baseline.txt` is empty;
+a placeholder hook or exemption does not establish graph coverage.
+
+Give each concrete production class one honest round-trip disposition:
+
+- Add its binary name to `src/test/resources/rewind/isolated-round-trip-classes.txt`
+  when the real isolated round-trip can execute and prove it.
+- For a graph-dependent class, name its focused graph test in
+  `RewindRoundTripHarness.GRAPH_COVERED_ISOLATED_PROBE_CLASSES`, and actually run
+  that test. `probeClass` returns `GraphCovered` for the row without executing the
+  named graph test; the row alone is not proof. The recreate-path gate still
+  precedes that graph lookup.
+
+`TestRemainingRewindTailInventory` compares discovered class identities with those
+two declarations; `TestRewindHarnessCoverageRatchet` checks each declared outcome.
+These are ordinary-suite checks, not aggregate totals to adjust. A graph outcome
+still requires the separately executed named test. The four related guards are
+[TestRewindCoverageGuard](../../../src/test/java/com/openggf/game/rewind/coverage/TestRewindCoverageGuard.java)
+for recreate/state gaps,
+[TestParentDependentGraphCoverageGuard](../../../src/test/java/com/openggf/game/rewind/TestParentDependentGraphCoverageGuard.java)
+for the unexpected parent-dependent tail and named evidence,
+[TestRewindFieldDispositionGuard](../../../src/test/java/com/openggf/game/rewind/schema/TestRewindFieldDispositionGuard.java)
+for actual field capture/exclusion, and
+[TestCapturedPolicyCompactReachabilityGuard](../../../src/test/java/com/openggf/game/rewind/schema/TestCapturedPolicyCompactReachabilityGuard.java)
+for explicit identity collections that would be lost to scalar fallback. Select
+the affected checks; a passing guard or a declaration is not a substitute for the
+retirement/graph witness.
 
 Run the ordinary family witnesses and neighbors through the queue:
 
@@ -440,10 +488,16 @@ Run the ordinary family witnesses and neighbors through the queue:
 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestConstructorChildFamilyRewind,TestObjectManagerDynamicChainRewindRestore,TestTwoPhaseRestoreOrdering,TestObjectManagerRewindSnapshot,TestModOwnedDynamicObjectRewind,TestS3kClamerGraphRewind,TestS1BadnikChildGraphRewind' test -B
 ```
 
+For retirement changes, also select the real boss and TurboSpiker neighbors:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off '-Dtest=TestEHZBossWheelOrphanAfterSiblingDestroy,TestS3kBadnikChildGraphRewind#turboSpikerCaptureIgnoresShellAfterDynamicChildRemoval+turboSpikerTrailRetiresWhenLaunchedShellUnloads' test -B
+```
+
 `TestObjectRewindExactAdoption` covers the separate FBZ exact-SST adoption surface;
 it does not establish ordinary constructor-family adoption. Recreate probes must
-remain side-effect-free; unmatched constructed children receive their existing
-owner cleanup hook before being discarded.
+remain side-effect-free; unmatched constructed children receive the drop
+notification above before being discarded.
 
 ## Technical Architecture
 

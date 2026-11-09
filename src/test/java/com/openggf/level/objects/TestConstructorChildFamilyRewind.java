@@ -2,6 +2,7 @@ package com.openggf.level.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindCapturedReference;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry;
@@ -12,10 +13,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -28,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Adoption must retain each captured family even when another same-class child's
  * entry is encountered before its own parent has reconstructed.
  *
- * <p>The child has no independent recreation hook: its constructor-owned final
+ * <p>FamilyChild has no independent recreation hook: its constructor-owned final
  * links are rebuilt by its parent, as supported by construction-child adoption.
  * Both links use the default structural policy; no custom codec repairs them.
  */
@@ -142,6 +145,47 @@ class TestConstructorChildFamilyRewind {
             assertEquals(2, manager.getActiveObjects().stream()
                     .filter(o -> o instanceof FamilyParent || o instanceof FamilyChild).count());
         }
+    }
+
+    @Test
+    void survivingParentDropsItsRetiredChildFromUncapturedInventoryAfterReconstruction() {
+        ObjectManager manager = createHarness();
+        InventoryParent source = manager.createDynamicObject(() -> new InventoryParent(spawnAt(0x100)));
+        InventoryChild retired = source.child;
+        var identities = manager.captureIdentityContext().requireIdentityTable();
+        var parentId = identities.idFor(source);
+        var childId = identities.idFor(retired);
+        assertNotNull(parentId);
+        assertNotNull(childId);
+        assertEquals(List.of(retired), source.activeChildren);
+
+        manager.removeDynamicObject(retired);
+        assertTrue(retired.isDestroyed(), "ordinary removal must retire the child through onUnload");
+        assertNull(source.child, "ordinary removal must clear the captured owner link before capture");
+        assertTrue(source.activeChildren.isEmpty(), "ordinary removal must detach the owner's active inventory");
+        assertTrue(manager.objectQuery().resolve(childId).isEmpty());
+        var adapter = manager.rewindSnapshottable();
+        var snapshot = adapter.capture();
+        assertEquals(List.of(parentId), snapshot.dynamicObjects().stream().map(DynamicObjectEntry::objectId).toList(),
+                "capture must retain the surviving parent without the retired child");
+        assertNotNull(snapshot.dynamicObjects().getFirst().state().compactGenericState());
+
+        adapter.restore(snapshot);
+        InventoryParent restored = assertInstanceOf(InventoryParent.class,
+                manager.objectQuery().resolve(parentId).orElseThrow());
+        assertNotSame(source, restored, "restore must reconstruct the surviving ordinary dynamic parent");
+        InventoryChild unmatched = restored.constructedChild;
+        assertNotSame(retired, unmatched, "restore must construct a fresh, unmatched child candidate");
+        assertSame(restored, unmatched.parent);
+        assertNull(restored.child, "phase 2 restores the captured null link even if drop cleanup is missing");
+        assertTrue(restored.activeChildren.isEmpty(),
+                "unmatched-child drop must detach the uncaptured active inventory, not rely on phase-2 null");
+        assertTrue(unmatched.isDestroyed(), "the discarded candidate must not remain a live child");
+        assertEquals(List.of(restored), new ArrayList<>(manager.getActiveObjects()));
+        assertFalse(manager.getActiveObjects().contains(unmatched));
+        assertNull(manager.captureIdentityContext().requireIdentityTable().encodeObject(unmatched));
+        assertEquals(List.of(parentId), adapter.capture().dynamicObjects().stream()
+                .map(DynamicObjectEntry::objectId).toList(), "recapture must contain no dangling child identity");
     }
 
     @Test
@@ -395,6 +439,47 @@ class TestConstructorChildFamilyRewind {
         public void update(int vIntRunCount, PlayableEntity player) {
             updates++;
             updateDynamicSpawn(getX() + 1, getY());
+        }
+
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    static final class InventoryParent extends AbstractObjectInstance implements SpawnRewindRecreatable {
+        @RewindCapturedReference(reason = "the owner's current child is captured independently of its inventory")
+        InventoryChild child;
+        final transient List<InventoryChild> activeChildren = new ArrayList<>();
+        // Observation only; this is not the inventory used to drive live children.
+        final transient InventoryChild constructedChild;
+
+        InventoryParent(ObjectSpawn spawn) {
+            super(spawn, "InventoryParent");
+            constructedChild = spawnChild(() -> new InventoryChild(this));
+            child = constructedChild;
+            activeChildren.add(child);
+        }
+
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    static final class InventoryChild extends AbstractObjectInstance {
+        final InventoryParent parent;
+
+        InventoryChild(InventoryParent parent) {
+            super(parent.getSpawn(), "InventoryChild");
+            this.parent = parent;
+        }
+
+        @Override public void onUnload() { detachFromParent(); }
+
+        @Override
+        protected void onDroppedAsUnmatchedRewindReconstructionChild() {
+            detachFromParent();
+        }
+
+        private void detachFromParent() {
+            parent.activeChildren.remove(this);
+            if (parent.child == this) parent.child = null;
+            setDestroyed(true);
         }
 
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
