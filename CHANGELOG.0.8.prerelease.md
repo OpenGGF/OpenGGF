@@ -137,7 +137,9 @@ under the matching area heading; see the
   anchors use the shared BK2 splice. Provisional exports remain visibly blocked;
   engine qualification does not imply native parity. The Stageplay route planner
   behind them plans two-player goals and repairs or continues a route after a
-  frozen prefix. The desktop editor's side of this lives in the separate
+  frozen prefix. Joint search also combines independent charge, roll and jump
+  policies for the two pads, scores damage to either actor, and prunes stalled
+  trials. The desktop editor's side of this lives in the separate
   OpenGGF-Editor repository.
 
 - **Recording audio recovery:** viewport recording retains the real audio lease
