@@ -28,7 +28,7 @@ def verify(root):
         assert im.mode=='P' and im.info['transparency']==0, f['id']
         assert im.getpalette()[:48]==expected, f['id']
         data=tuple(im.get_flattened_data() if hasattr(im,'get_flattened_data') else im.getdata())
-        assert max(data)<16 and any(data), f['id']
+        assert max(data)<16 and (any(data) or f['id']=='variant-blank'), f['id']
         assert set(im.convert('RGBA').getchannel('A').get_flattened_data() if hasattr(im,'get_flattened_data') else im.convert('RGBA').getchannel('A').getdata()) <= {0,255}
         # Outline must be ink at every exposed native silhouette edge.
         for y in range(im.height):

@@ -20,6 +20,12 @@ FIXED = {'WAIT': (6, 'loop'), 'SPINDASH': (1, 'loop'), 'DUCK': (6, 'hold'),
 OPTIONAL = {'FLY': (2, 'loop'), 'TAILS_FLY': (2, 'loop'),
             'TAILS_FLY_TIRED': (12, 'loop')}
 
+OPTIONAL |= {name: (8, 'loop') for name in (
+    'ROLL2', 'WARP1', 'WARP2', 'WARP3', 'WARP4', 'FLOAT', 'FLOAT2', 'FLOAT3',
+    'FLOAT4', 'LEAP1', 'LEAP2', 'SURF', 'BURNT', 'SHRINK', 'WATER_SLIDE',
+    'NULL_ANIM', 'BLANK', 'BLINK', 'GET_UP', 'BALANCE2', 'BALANCE3', 'BALANCE4',
+    'HANG2', 'BUBBLE', 'HURT2', 'SLIDE', 'VICTORY', 'HURT_FALL', 'TAILS_CARRIED')}
+
 SPEED = {'WALK', 'RUN', 'ROLL', 'PUSH'}
 SLOPES = ('flat', 'up45', 'steep', 'inverted')
 
@@ -69,6 +75,10 @@ def assemble(root, output):
     required = set(handoff.get('requiredAnimations', SPEED | FIXED.keys()))
     if not required <= SPEED | fixed.keys() or not required <= set(groups):
         raise ValueError('Missing canonical core animations')
+    # Scripts may reuse drawings already owned by another canonical cycle.
+    for name in handoff.get('scripts', {}):
+        if name in fixed:
+            groups.setdefault(name, [])
     animations = {}
     for name, entries in groups.items():
         entries.sort(key=lambda item: item[0]['order'])
@@ -116,10 +126,10 @@ def assemble(root, output):
                 spec['frames'] = [by_id[key] for key in authored['frames']]
                 if name == 'SPINDASH':
                     spec['durations'] = [1] * len(spec['frames'])
-        # Other characters may supply their own native timer bytes and script order.
-        authored = handoff.get('scripts', {}).get(name) if character != 'mica' else None
+        # Authored variant scripts may share art across canonical cycles.
+        authored = handoff.get('scripts', {}).get(name) if character != 'mica' or name not in ('WAIT', 'ROLL', 'SPINDASH') else None
         if authored:
-            by_id = {f['id']: i for f, i in entries}
+            by_id = {f['id']: i for i, f in enumerate(source)}
             steps = authored['frames']
             if not steps or any(key not in by_id for key in steps):
                 raise ValueError('Invalid authored script frames: ' + name)
@@ -129,6 +139,9 @@ def assemble(root, output):
                 if len(durations) != len(steps) or any(type(t) is not int or not 1 <= t <= 256 for t in durations):
                     raise ValueError('Invalid authored script durations: ' + name)
                 spec['durations'] = durations
+            if authored.get('speedDriven'):
+                spec['speedDriven'] = True
+                spec.pop('durations', None)
             if 'end' in authored:
                 if authored['end'] not in ('loop', 'hold', 'next'):
                     raise ValueError('Invalid authored script end: ' + name)
