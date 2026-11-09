@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -93,6 +95,28 @@ class TestSonic1MovingBlockObjectInstance {
         assertEquals(null, manager.getRidingObject(player));
         assertEquals(false, player.isOnObject());
         assertEquals(true, player.getAir());
+    }
+
+    @Test
+    void movingBlockLifetimeUsesItsWidenedOriginWindowAfterShuttling() {
+        ProbeMovingBlock block = new ProbeMovingBlock(new ObjectSpawn(768, 100, 0x52, 0x3A, 0, false, 0));
+        block.setServices(new StubObjectServices());
+        // Real type 0A movement travels twice the 64-pixel active half-width.
+        for (int tick = 1; tick <= 16; tick++) {
+            block.update(tick, null);
+        }
+        assertEquals(896, block.getX());
+        assertEquals(768, block.getOutOfRangeReferenceX());
+
+        // Coarse camera is zero: origin distance 768 is beyond native 640,
+        // inside widened 848; the moved X's distance 896 is outside both.
+        AbstractObjectInstance.updateCameraBounds(128, 0, 448, 224, 0);
+        assertFalse(block.isPersistent());
+        AbstractObjectInstance.updateCameraBounds(128, 0, 656, 224, 0);
+        assertTrue(block.isPersistent(), "retention follows the widened origin, not live X or native 640");
+
+        AbstractObjectInstance.updateCameraBounds(0, 0, 528, 224, 0);
+        assertFalse(block.isPersistent(), "the same origin leaves the widened window one camera chunk later");
     }
 
     private static void setPrivateInt(Object instance, String fieldName, int value) throws Exception {

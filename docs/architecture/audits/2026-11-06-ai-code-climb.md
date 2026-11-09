@@ -3917,3 +3917,45 @@ exports. All four owned units are terminal and retired. Source worktrees and
 useful evidence remain retained; the separate carried-entry increment is not
 part of this candidate. No original trial was regraded or receives inferred
 score credit. The wider goal remains unmet and delivery stays in draft PR271.
+
+
+### Original trial-A coarse-X kernel consolidation (2026-11-09)
+
+The protected coarse-X adapter now delegates to the existing caller-bound
+`ObjectRangeOps` kernel, and its viewport bound delegates with one width read.
+Saw's skipped-delete placement release uses the existing two-argument native
+640 predicate against `origX`. Its skip/tracked guards, camera and service read
+cadence, release callback, live SST, slot and rewind identity remain unchanged.
+This consolidates arithmetic; it changes no gameplay or window policy. Buzz
+retains its live-X widened veto, moving blocks retain their widened origin
+window, and signed, extended-left, render and Stageplay policies are untouched.
+
+An independent division/modulo oracle covers all **262,144 coarse-word pairs**
+and **144 extreme-int pairs**, with twelve caller bounds including negative,
+nonstandard and extreme values. Equal unsigned deltas preserve comparison for
+any caller int bound, including 16-bit wrapping and inclusive chunk boundaries.
+A changing-width witness checks one read. An actual type-0A moving block travels
+128 pixels before its origin and live X occupy different range chunks; native,
+widened and next-camera-chunk controls distinguish the retained policy. All
+previous JUnit identities and assertions remain.
+
+Three deliberate mutants (discarded custom bound, extra width read and
+moving-block live-X anchor) produced **three intended assertion failures, zero
+errors/skips**. They were restored before the final refactor; these are not
+three shipped defects. The final normal-memory queued selection passed **60
+cases, zero failures/errors/skips**, across `TestObjectRangeOps`,
+`TestAbstractObjectInstanceRange`, `TestObjectRangeHelpers`,
+`TestBuzzBomberLifecycle`, `TestSonic1SawPlacementReentry`,
+`TestSonic1MovingBlockObjectInstance` and `TestStageplayActivationPolicy`.
+
+Both commands used Java 25, Lua 5.4, MSE off, displays unset, surfaceless EGL and
+fresh report/tmp roots. Printed queue/Maven times and measured wall time were
+39/93/133.031 seconds for intentional RED, and 0/88/89.448 seconds for GREEN;
+user wait was zero. The respective 1.031/1.448-second residuals include wrapper
+overhead and printed-time rounding. Original XML, full case identities, exact
+argv/environment, source hashes and proof are retained under
+`target/code-climb/range-kernel/`. The existing FAST/NONE manifest warning remains
+explicit in the logs. This bounded selection is not combined-head, route or
+full-suite qualification. Root owns independent review, combined qualification
+and delivery through the same draft PR271; no original trial is regraded and
+no rubric credit is inferred.
