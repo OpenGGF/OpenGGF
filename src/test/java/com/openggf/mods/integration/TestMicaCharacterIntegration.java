@@ -1389,7 +1389,7 @@ class TestMicaCharacterIntegration {
                     "art/mica/endings/s2/photo-[1-4]\\.png")), "Phase 1 packages no MICA photo overrides");
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(
                     packed.getInputStream(packed.getJarEntry("art/mica.ggfp")).readAllBytes());
-            assertEquals(112, sheet.frames().size());
+            assertEquals(132, sheet.frames().size());
             assertEquals(18, sheet.animations().size());
             assertEquals(List.of(28, 29, 30, 31), sheet.animations().get("HOMING_DIVE").steps()
                     .stream().map(com.openggf.level.objects.PlayableSheetReader.AnimationStep::frameIndex).toList());
