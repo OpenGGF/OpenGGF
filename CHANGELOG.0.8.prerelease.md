@@ -43,8 +43,10 @@ under the matching area heading; see the
   controller 1 and Tails on controller 2. Its menu selects Emerald Hill, Mystic
   Cave, Casino Night or the special stage. Each zone plays two acts with
   separate rings, lives, score, time and results, then zone and game results
-  with their own music; a tied zone goes to a special-stage tiebreaker. The
-  screen renders at 320x448 progressive resolution with half-height pixels,
+  with their own music; a tied zone goes to a special-stage tiebreaker.
+  EHZ spiral jumps now retain airborne state and upward velocity when releasing
+  the invisible path controller, including simultaneous two-human routes.
+  The screen renders at 320x448 progressive resolution with half-height pixels,
   preserving every row of the native 8x16 cells without interlace combing.
   It splits at progressive line 216 through the shared Competition renderer; each
   half draws its player's planes, sprites and HUD from the ROM's two-player art.

@@ -450,3 +450,94 @@ Queue wait exceeded 602 seconds; Maven execution took 2 minutes 29 seconds.
 User wait was zero; other task wall time was not instrumented. All owned search
 and native jobs are finished. The branch is a partial implementation handoff;
 the route/native gate remains blocked as described above.
+
+### Simultaneous EHZ jump release (2026-11-09)
+
+Implementation lane: `bugfix/ai-s2-competition-jump-cancel`, based on PR #273
+head `89ff11b21ce4117899368ad46b8f9a3cf454c588`. Scratch evidence:
+`~/Videos/OGGF/s2-competition/jump-cancel/`. No native/trace state enters gameplay.
+
+The owner is invisible spiral **Obj06**, not a moving platform or another
+player's standing bit. Temporary `setAir` call-stack logging identified
+`SpiralObjectInstance.updateRidingPlayer`: it grounded a latched jumping rider
+before its release test. `loc_215C0 (s2.asm:47205-47216)` tests inertia then
+`in_air`; `Obj06_Spiral_CharacterFallsOff (s2.asm:47219-47225)` clears only the
+selected player's standing/on-object state, sets flip cleanup, and leaves
+`y_vel` intact. Removing the premature airborne clear preserves P1's -$680
+jump velocity. No CPU/video timing simulation or fixBugs=1 behavior is added.
+
+The focused cold-ROM test replays a planner-authored 2,231-row input prefix
+from the title, with both humans traversing EHZ. Its resource is explicitly a
+regression **draft**, with no ENGINE/BIZHAWK qualification claim. The companion
+object test holds both standing bits, jumps P1, and checks P2 stays attached.
+Existing act coverage, viewport breadth and rewind obligations remain inherited;
+this does not certify a new route or act.
+
+Fresh read-only BizHawk 2.11/GPGX capture under xvfb completed 3,300 physical
+frames (`native/host.json`, exit 0). It used the unchanged entry-only movie,
+SHA-256 `76b9283d91381c00ac577c40bf55727e13d4eda46b2f787aed7a529aadc722bf`.
+The exporter also observes every object slot. At native frame 2296 P1 is
+(4604,677), `y_vel=-1664`, status 6; P2 is (4605,574), status 2. Obj06 at
+(4800,640), slot 71, has status 0 after releasing P1. Fixed engine integer
+positions for **both players** match through row 3202 / physical frame 3271
+(row + 69), improving the original first mismatch at row 2228. This is a
+position comparison, not complete state/pixel parity. Frame 3272 is lagged:
+`lfc=1942` and both positions are held. Engine row 3203 matches native frame
+3273 (`lfc=1943`), opening a physical-input/lag admission frontier, not another
+proven shared-object defect. No observed filler or native values were fed into
+engine replay.
+
+The original `final.route.json` no longer passes cold ENGINE replay: P1 dies
+at row 2538, after the now-correct jump; positions still agree with native.
+A Stageplay RoutePlanner repair from its unchanged first 2,200 rows toward
+remaining original goals exhausted 180,000 steps (41 expansions, 1,501 trials,
+best draft 2,226 rows) without qualification. No inputs were edited by hand,
+no replacement was published, and the external original was preserved.
+**Stop boundary:** route re-authoring and physical-lag qualification are now
+open-ended; the original historical ENGINE stamp is stale for this engine,
+BIZHAWK remains failed. Act 1 is not qualified through finish, so no new act-2
+inlet witness was attempted and the old witness remains invalid here.
+
+Verification of this patch against source base `89ff11b21` (Java 25, verified
+S2 REV01 found; no missing ROMs):
+
+- `python3 tools/testing/maven_queue.py -Dmse=off package -DskipTests` passed.
+- `python3 tools/testing/maven_queue.py -Dmse=off
+  -Dopenggf.headless.gl=surfaceless-egl
+  "-Dtest=$(cat target/jump-test-selection.txt)" test`: 104 classes,
+  503 tests, 7 prerequisite failures, 0 errors/skips. Selection covers all
+  Competition package tests, `TestSonic2Competition*`, `TestSpiralObjectInstance`,
+  `TestS2SpiralGraphRewind`, both frozen routes and the new cold-ROM regression.
+  All seven failures were the unchanged baseline `DISPLAY == null` assertions
+  in `TestSonic2NativeCompetitionHost` and `TestCompetitiveHalfpipeEgl`;
+  the initial command inherited `DISPLAY=:0`. No gameplay assertion failed.
+- Corrected launch: `env -u DISPLAY -u WAYLAND_DISPLAY python3
+  tools/testing/maven_queue.py -Dmse=off
+  -Dopenggf.headless.gl=surfaceless-egl
+  -Dtest=TestSonic2NativeCompetitionHost,TestCompetitiveHalfpipeEgl test`:
+  **7 passed, 0 failures/errors/skips**. No baseline gameplay failure remains
+  to attribute; a separate baseline Maven run was not performed.
+- `python3 tools/testing/maven_queue.py -Dmse=off
+  -Dtest=TestSonic2ChainResetOwners,TestObjectPhysicsStandardizationGuard,TestScalarOnlyCodecDeletion,TestRewindSchemaRegistry
+  test`: **581 passed, 0 failures/errors/skips**. These cover the remaining
+  source-text references to the changed object outside the Competition package.
+- `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+  -Dsurefire.forkCount=1
+  -Dtest=TestS2Ehz1TraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay
+  test`: **4 passed, 0 skips**. Fresh JSON comparison gates reached all 44,502
+  planned rows (5,852 + 10,134 + 12,811 + 15,705), with zero errors, warnings
+  or bootstrap errors. This is bounded trace coverage, not a full-suite pass.
+- `git diff --check` and `python3 tools/disasm/disasm_citations.py check
+  src/main/java/com/openggf/game/sonic2/objects/SpiralObjectInstance.java
+  docs/architecture/plans/2026-11-07-s2-competition-parity.md` passed; citation
+  checker reports 10 verified and 6 inherited unverifiable references. New
+  labels/lines were also read directly from pinned S2 commit `34fc7f130a96`.
+
+The 104-class selection waited at least 331 seconds in queue and ran for
+1 minute 51 seconds; trace execution took 50 seconds, the extra references
+40 seconds and corrected EGL launch 39 seconds. Native capture took 15.9
+seconds. Queue time for the other jobs and other task time were not fully
+instrumented; user wait was zero. No native/search jobs remain running.
+Detailed diagnostic outputs and the selection are retained under the task
+worktree's `target/` and external scratch directory. No new native qualification
+or act-2 witness is claimed.

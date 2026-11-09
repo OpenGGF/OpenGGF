@@ -1,5 +1,12 @@
 # Level test coverage backlog
 
+S2 EHZ simultaneous jump release (2026-11-09): the
+[bounded investigation](../architecture/plans/2026-11-07-s2-competition-parity.md#simultaneous-ehz-jump-release-2026-11-09)
+adds a cold-ROM two-human spiral-jump prefix and independent-rider unit coverage.
+Both integer trajectories match native through row 3202; physical lag, a new
+planner-qualified route, act-2 inlet, pictures, viewport breadth and inherited
+rewind/route obligations remain open. No additional act is certified.
+
 S2 Competition (2026-11-08): the [Competition parity plan](../architecture/plans/2026-11-07-s2-competition-parity.md#route-and-act-obligations)
 records the [CNZ object-display regression](../architecture/plans/2026-11-07-s2-competition-parity.md#cnz-object-display-follow-up-2026-11-09) and the EHZ/MCZ/CNZ and special-stage route obligations as an LTS-08
 auxiliary-mode increment. Native state prefixes match for EHZ 1, MCZ 1, CNZ 1
