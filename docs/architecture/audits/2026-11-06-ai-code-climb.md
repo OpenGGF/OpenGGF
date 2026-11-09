@@ -3701,3 +3701,59 @@ Only this test class and the existing audit changed. Production, shared fixture,
 selection, skip policy and prior broad/trace evidence are unchanged. This is
 bounded fixture qualification; the earlier raw category verdicts remain FAILED,
 and no new full-smoke, full-suite or contributor-score claim follows from it.
+
+
+### Retire the unreachable private S3K comparison seed (2026-11-09)
+
+The proposed shared assembly helper was rejected before implementation. Its
+premise was incomplete: the duplicate seeded branch exists in the standalone
+driver, but no real inherited entry can reach it. The direct bootstrap call
+returns only `ReplayStartState(cursor, -1)` or `DEFAULT(0, -1)`; the compatibility
+seeded entrypoint delegates to the same unseeded result. `hasSeededTraceState()`
+requires a nonnegative second field. The existing disabled-seeding policies are
+unchanged. A forced seeded witness would require reflection, a mock, or a new
+bootstrap hook and would not establish a reachable production path.
+
+After that finite call-graph proof, root authorized deleting only the private
+seeded comparison branch and its unreachable previous-frame ternary arm. No
+shared helper, public API, input import, fixture, tolerance or policy was added.
+The reachable prefix/frame-zero checkpoint initialization stays intact. A scoped
+mechanical projection verifies the whole source prefix before `replayS3kTrace`,
+both surviving checkpoint bodies and the entire tail from frame-counter
+alignment onward byte-for-byte. This covers the general replay path, live S3K
+assembly, row-versus-CSV-frame lookups, both sprite evaluations, diagnostic-hook
+ordering, scheduling, auxiliary comparisons, frontier and report lifecycle.
+The driver falls from 1,679 to 1,633 lines; that size reduction earns no automatic
+contributor score. Public replay-start records, compatibility methods and all
+other consumers remain unchanged.
+
+One bounded post-change check used Java 25, Lua 5.4, displays unset and queued
+normal-memory execution:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Ptrace-segments \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Dopenggf.headless.gl=surfaceless-egl -Dtrace.print.summary=true \
+  -Dopenggf.surefire.reports=<task-target>/s3k-private-seed-retirement/focused/surefire \
+  -Dopenggf.trace.reports=<task-target>/s3k-private-seed-retirement/focused/reports \
+  '-Dtest=TestS3kReplayReferenceClosureIntegration,TestTraceReplayStartPositionPolicy,TestTraceBinder,TestTraceExecutionModel,TestTraceBinderComparisonDedup,TestTraceReplayInvariantGuard,TestTraceReplayReferenceClosureGuard' test
+```
+
+All seven requested suites actually ran: **155 cases passed, zero failures,
+errors or skips**, with every ROM property found (`missing=none`). The existing
+S3K inherited-entry integration passed its positive closure-validation assertion.
+Its fresh owner-keyed AIZ report contains 26,041 gameplay comparisons against
+26,228 planned rows, an ALL gate reached and zero gameplay/bootstrap mismatch
+errors or warnings. It retains eight unavailable advertised auxiliary schemas;
+compiler/runtime log warnings are retained separately. This is one focused
+integration witness, not a dynamic execution of deleted seeded behavior, a
+paired-domain result, whole-route certification or a full-suite pass.
+
+Queue wait was 0 seconds; Maven execution 65 seconds; wall time 66.732 seconds;
+user wait 0 and residual 1.732 seconds. Rounded durations include wrapper
+uncertainty; investigation/edit time was not measured. Exact argv, fresh XML,
+report/owner identities, source projection and hashes are retained under
+`target/code-climb/s3k-private-seed-retirement/`. The prior investigation handoff
+under `target/code-climb/s3k-comparison-assembly/` records the rejected extraction
+and wider public-consumer boundary. Root owns independent review, final combined
+qualification, integration and publication to the existing draft PR271.

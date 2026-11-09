@@ -741,59 +741,13 @@ public abstract class AbstractTraceReplayTest {
                                 TraceReplayBootstrap.ReplayStartState replayStart,
                                 FrontierReplayStopper frontierStopper) {
         int driveTraceIndex = replayStart.startingTraceIndex();
-        TraceFrame previousDriveFrame = replayStart.hasSeededTraceState()
-                ? trace.getFrame(replayStart.seededTraceIndex())
-                : driveTraceIndex > 0 ? trace.getFrame(driveTraceIndex - 1) : null;
+        TraceFrame previousDriveFrame = driveTraceIndex > 0
+                ? trace.getFrame(driveTraceIndex - 1) : null;
         S3kReplayCheckpointDetector detector = new S3kReplayCheckpointDetector();
         S3kRequiredCheckpointGuard checkpointGuard = new S3kRequiredCheckpointGuard();
         Integer semanticTimingPrefixLastRawFrame = semanticTimingPrefixLastRawFrame(trace);
 
-        if (replayStart.hasSeededTraceState()) {
-            TraceFrame seededFrame = trace.getFrame(replayStart.seededTraceIndex());
-            TraceReplayBootstrap.ReplayPrimaryState seededPrimary =
-                    TraceReplayBootstrap.capturePrimaryReplayStateForComparison(
-                            trace, seededFrame, comparedSprite(fixture));
-            EngineDiagnostics engineDiag = captureEngineDiagnostics(comparedSprite(fixture), seededFrame);
-            String romDiag = combineDiagnostics(
-                    seededFrame.hasExtendedData() ? seededFrame.formatDiagnostics() : "",
-                    TraceEventFormatter.summariseFrameEvents(
-                            trace.getEventsForFrame(replayStart.seededTraceIndex())));
-            TraceCharacterState seededSidekick = captureFirstSidekickState();
-            String secondaryCharacterLabel = meta.recordedSidekicks().isEmpty()
-                    ? "sidekick"
-                    : meta.recordedSidekicks().getFirst();
-
-            TraceEvent.CpuState expectedSidekickCpu =
-                    trace.cpuStateForFrame(seededFrame.frame(), secondaryCharacterLabel);
-            TraceEvent.TailsCpuNormalStep expectedSidekickNormalStep =
-                    trace.tailsCpuNormalStepForFrame(seededFrame.frame(), secondaryCharacterLabel);
-            EngineSidekickCpuState actualSidekickCpu = captureFirstSidekickCpuState();
-            binder.compareFrame(seededFrame,
-                    seededPrimary.x(), seededPrimary.y(),
-                    seededPrimary.xSpeed(), seededPrimary.ySpeed(), seededPrimary.gSpeed(),
-                    seededPrimary.angle(),
-                    seededPrimary.air(), seededPrimary.rolling(),
-                    seededPrimary.groundMode(), romDiag,
-                    engineDiag,
-                    secondaryCharacterLabel,
-                    seededSidekick,
-                    expectedSidekickCpu,
-                    actualSidekickCpu,
-                    expectedSidekickNormalStep);
-            compareDynamicArtIfAdvertised(
-                    trace, binder, seededFrame.frame());
-            recordUnmatchedHardwareCompletions(
-                    fixture, binder, seededFrame.frame());
-            observeFrontierAndShouldStop(frontierStopper, binder, seededFrame.frame());
-
-            for (int frame = 0; frame <= replayStart.seededTraceIndex(); frame++) {
-                for (TraceEvent event : trace.getEventsForFrame(frame)) {
-                    if (event instanceof TraceEvent.Checkpoint traceCheckpoint) {
-                        detector.seedCheckpoint(traceCheckpoint.name());
-                    }
-                }
-            }
-        } else if (driveTraceIndex > 0) {
+        if (driveTraceIndex > 0) {
             // Seed only the diagnostic checkpoint detector for trace prefix
             // frames that the replay policy intentionally starts after.
             for (int frame = 0; frame < driveTraceIndex; frame++) {
