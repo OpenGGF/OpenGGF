@@ -57,6 +57,8 @@ import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.TraceVerificationScope;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
+import com.openggf.trace.replay.TraceSegmentCarriedState;
+import com.openggf.trace.DivergenceReport.CarriedEntryDiagnostics;
 import com.openggf.trace.replay.TraceReplayEngineSnapshot;
 import com.openggf.tests.trace.s3k.S3kRequiredCheckpointGuard;
 import com.openggf.tests.trace.s3k.S3kReplayCheckpointDetector;
@@ -364,6 +366,7 @@ public abstract class AbstractTraceReplayTest {
         // when replay fails. Earlier method exits rely on entry retirement;
         // conditions/extensions that prevent method entry cannot retire here.
         TraceBinder binder = null;
+        TraceSegmentCarriedState carriedEntry = null;
         HeadlessTestFixture fixture = null;
         boolean hardwareTimingReplayClosed = false;
         boolean comparisonGateReached = false;
@@ -425,7 +428,7 @@ public abstract class AbstractTraceReplayTest {
             // (sonic3k.asm:7927-7928) after Process_Sprites. Apply the ground
             // snap/camera reset first so any bonus-entry object injection
             // survives it, matching production's load-then-inject order.
-            TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
+            carriedEntry = TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
             afterFixtureBuild(trace);
 
             if (GameServices.debugOverlay() != null) {
@@ -653,7 +656,7 @@ public abstract class AbstractTraceReplayTest {
                     TestSessionOutputPaths.ReportAllocation allocation = writeReport(reportDirectory,
                             buildDivergenceReport(binder, meta, trace), meta,
                             new ReplayGate(
-                                    trace.frameCount(), comparisonGateReached, verificationScope));
+                                    trace.frameCount(), comparisonGateReached, verificationScope), carriedEntry);
                     TraceReplayConsole.printDiagnosticRoute(
                             SessionInvocationExtension.SessionInvocation.current(),
                             traceDir, allocation, replayFailure != null);
@@ -1620,12 +1623,14 @@ public abstract class AbstractTraceReplayTest {
 
     private TestSessionOutputPaths.ReportAllocation writeReport(
             Path outputDirectory, DivergenceReport report, TraceMetadata meta,
-            ReplayGate replayGate) throws IOException {
+            ReplayGate replayGate, TraceSegmentCarriedState carriedEntry) throws IOException {
         TraceVerificationScope scope = replayGate.verification();
         TestSessionOutputPaths.ReportAllocation allocation = TraceReportWriter.writeReport(
                 outputDirectory, report, "trace", SessionInvocationExtension.SessionInvocation.current(),
                 "single", TraceReportWriter.standaloneLogicalKey(meta, scope), scope,
-                TraceReplayConsole.contextRadius(), replayGate);
+                TraceReplayConsole.contextRadius(), replayGate,
+                carriedEntry == null ? null : new CarriedEntryDiagnostics(
+                        carriedEntry.provenance(), carriedEntry.disagreements(), carriedEntry.unresolved()));
         onReportPublished(allocation);
         return allocation;
     }

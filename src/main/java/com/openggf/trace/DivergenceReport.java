@@ -77,6 +77,64 @@ public class DivergenceReport {
         }
     }
 
+    /**
+     * Diagnostic strings from an already computed entry evaluation, without
+     * gameplay values. Presence does not certify an import or full resolution.
+     */
+    public record CarriedEntryDiagnostics(String provenance, List<String> disagreements,
+                                          List<String> unresolved) {
+        public CarriedEntryDiagnostics {
+            disagreements = List.copyOf(disagreements);
+            unresolved = List.copyOf(unresolved);
+        }
+
+        /** Absence is not reported/unknown; present metadata must satisfy this codec. */
+        public static CarriedEntryDiagnostics readOptionalFrom(JsonNode report) throws IOException {
+            JsonNode entry = report.get("carried_entry_diagnostics");
+            if (entry == null) {
+                return null;
+            }
+            if (!entry.isObject()) {
+                throw new IOException("carried_entry_diagnostics must be an object");
+            }
+            JsonNode schema = entry.path("schema");
+            if (!schema.isIntegralNumber() || !schema.canConvertToInt() || schema.intValue() != 1) {
+                throw new IOException("Unsupported carried_entry_diagnostics schema");
+            }
+            JsonNode provenance = entry.get("provenance");
+            if (provenance == null || !provenance.isNull() && !provenance.isTextual()) {
+                throw new IOException("carried_entry_diagnostics.provenance must be a string or null");
+            }
+            return new CarriedEntryDiagnostics(provenance.isNull() ? null : provenance.textValue(),
+                    readStrings(entry, "disagreements"), readStrings(entry, "unresolved"));
+        }
+
+        private static List<String> readStrings(JsonNode entry, String field) throws IOException {
+            JsonNode values = entry.get(field);
+            if (values == null || !values.isArray()) {
+                throw new IOException("carried_entry_diagnostics." + field + " must be an array of strings");
+            }
+            List<String> strings = new ArrayList<>();
+            for (JsonNode value : values) {
+                if (!value.isTextual()) {
+                    throw new IOException("carried_entry_diagnostics." + field + " must contain only strings");
+                }
+                strings.add(value.textValue());
+            }
+            return List.copyOf(strings);
+        }
+
+        private void appendTo(ObjectNode report) {
+            ObjectNode entry = report.putObject("carried_entry_diagnostics");
+            entry.put("schema", 1);
+            entry.put("provenance", provenance);
+            ArrayNode disagreementNotes = entry.putArray("disagreements");
+            disagreements.forEach(disagreementNotes::add);
+            ArrayNode unresolvedNotes = entry.putArray("unresolved");
+            unresolved.forEach(unresolvedNotes::add);
+        }
+    }
+
     private final List<FrameComparison> allComparisons;
     private final List<DivergenceGroup> errors;
     private final List<DivergenceGroup> warnings;
@@ -322,7 +380,7 @@ public class DivergenceReport {
     }
 
     public String toJson() {
-        return serialize(null).json();
+        return serialize(null, null).json();
     }
 
     /**
@@ -330,11 +388,16 @@ public class DivergenceReport {
      * Legacy serialization-error documents retain their gate; malformed error documents still fail.
      */
     public String toJson(ReplayGate replayGate) throws IOException {
-        if (replayGate == null) {
+        return toJson(replayGate, null);
+    }
+
+    /** Serializes an optional, already computed diagnostic evaluation on this original report. */
+    public String toJson(ReplayGate replayGate, CarriedEntryDiagnostics diagnostics) throws IOException {
+        if (replayGate == null && diagnostics == null) {
             return toJson();
         }
-        Serialization result = serialize(replayGate);
-        if (!result.failed()) {
+        Serialization result = serialize(replayGate, diagnostics);
+        if (!result.failed() || replayGate == null) {
             return result.json();
         }
         // The writer historically parsed the legacy error document before
@@ -352,7 +415,7 @@ public class DivergenceReport {
 
     private record Serialization(String json, boolean failed) { }
 
-    private Serialization serialize(ReplayGate replayGate) {
+    private Serialization serialize(ReplayGate replayGate, CarriedEntryDiagnostics diagnostics) {
         try {
             ObjectMapper mapper = new ObjectMapper();
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
@@ -407,6 +470,9 @@ public class DivergenceReport {
 
             if (replayGate != null) {
                 replayGate.appendTo(root);
+            }
+            if (diagnostics != null) {
+                diagnostics.appendTo(root);
             }
             return new Serialization(mapper.writeValueAsString(root), false);
         } catch (Exception failure) {

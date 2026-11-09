@@ -4,6 +4,7 @@ import com.openggf.tests.SessionInvocationExtension.SessionInvocation;
 import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.DivergenceReport.ReplayGate;
+import com.openggf.trace.DivergenceReport.CarriedEntryDiagnostics;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceVerificationScope;
 
@@ -124,6 +125,22 @@ public final class TraceReportWriter {
             TraceVerificationScope scope,
             int contextRadius,
             ReplayGate replayGate) throws IOException {
+        return writeReport(outputDirectory, report, profile, invocation, laneId, logicalKey,
+                scope, contextRadius, replayGate, null);
+    }
+
+    /** Optional diagnostic strings never participate in publication scope or mismatch decisions. */
+    public static TestSessionOutputPaths.ReportAllocation writeReport(
+            Path outputDirectory,
+            DivergenceReport report,
+            String profile,
+            SessionInvocation invocation,
+            String laneId,
+            String logicalKey,
+            TraceVerificationScope scope,
+            int contextRadius,
+            ReplayGate replayGate,
+            CarriedEntryDiagnostics diagnostics) throws IOException {
         if (replayGate != null && replayGate.verification() != scope) {
             throw new IllegalArgumentException("Replay gate verification must match report scope");
         }
@@ -138,7 +155,8 @@ public final class TraceReportWriter {
                                 profile, invocation.className(), invocation.methodName(),
                                 invocation.parameterIndex(), invocation.invocationId(),
                                 laneId, logicalKey, ".json");
-        publish(allocation, allocation.physicalPath(), report.toJson(replayGate), "report");
+        publish(allocation, allocation.physicalPath(), diagnostics == null
+                ? report.toJson(replayGate) : report.toJson(replayGate, diagnostics), "report");
         if (report.hasErrors(scope)) {
             Path contextPath = contextPath(allocation.physicalPath());
             publish(allocation, contextPath,
