@@ -88,3 +88,39 @@ class SlopeContactTests(unittest.TestCase):
                                   if im.getpixel((x, y)))
                 self.assertLessEqual(support, source['native_support'] + 0.00001)
                 self.assertLessEqual(source['native_support'] - support, 0.71)
+
+
+class TalonAssemblyTests(unittest.TestCase):
+    def test_original_talon_sheet_timing_and_palette(self):
+        art = ROOT/'examples/mica-and-talon/art/talon'
+        source = json.loads((art/'frames.yaml').read_text())
+        colors = json.loads((art/'palette.yaml').read_text())['colors']
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory)
+            manifest, custom, stats = assembler.assemble(art, out)
+            self.assertEqual(74, stats['frames'])
+            self.assertEqual(13, stats['animations'])
+            self.assertFalse((out/'mica.png').exists())
+            committed = ROOT/'examples/mica-and-talon/src/main/mod'
+            for file in out.iterdir():
+                self.assertEqual(file.read_bytes(), (committed/file.name).read_bytes())
+            self.assertEqual([2,2],manifest['animations']['TAILS_FLY']['durations'])
+            self.assertEqual([12,12],manifest['animations']['TAILS_FLY_TIRED']['durations'])
+            for name in ('ROLL','SPINDASH'):
+                seq=manifest['animations'][name]['frames']
+                self.assertEqual(6,len(seq))
+                self.assertEqual(1,len(set(seq[1::2])))
+            self.assertEqual([48],manifest['animations']['SPRING']['durations'])
+            self.assertEqual([4],manifest['animations']['HURT']['durations'])
+            with Image.open(out/'talon.png') as sheet:
+                self.assertEqual(sum(colors,[]),sheet.getpalette()[:48])
+                for f,baked in zip(source['frames'],manifest['frames']):
+                    original=Image.open(art/f['file'])
+                    restored=Image.new('P',original.size)
+                    for p in baked['pieces']:
+                        sx,sy=p['sourceX'],p['sourceY']
+                        restored.paste(sheet.crop((sx,sy,sx+p['widthPixels'],sy+p['heightPixels'])),
+                                       (p['xOffset']+f['hotspot'][0],p['yOffset']+f['hotspot'][1]))
+                    self.assertEqual(original.tobytes(),restored.tobytes())
+            for name,n in [('WALK',8),('RUN',4)]:
+                self.assertEqual([n]*4,list(map(len,manifest['animations'][name]['slopes'])))

@@ -1,0 +1,724 @@
+{
+  "method": "8x nearest real-palette native pose + TALON concept; GPT Image; aspect-safe crop/reduce; no painting.",
+  "frames": {
+    "wait-00": {
+      "group": "wait",
+      "cell": 0,
+      "attempt": 2,
+      "native": {
+        "size": [
+          32,
+          31
+        ],
+        "hotspot": [
+          20,
+          15
+        ],
+        "mapping": 1,
+        "tail": 9
+      }
+    },
+    "wait-01": {
+      "group": "wait",
+      "cell": 1,
+      "attempt": 2,
+      "native": {
+        "size": [
+          35,
+          31
+        ],
+        "hotspot": [
+          23,
+          15
+        ],
+        "mapping": 2,
+        "tail": 10
+      }
+    },
+    "wait-02": {
+      "group": "wait",
+      "cell": 2,
+      "attempt": 2,
+      "native": {
+        "size": [
+          36,
+          31
+        ],
+        "hotspot": [
+          24,
+          15
+        ],
+        "mapping": 3,
+        "tail": 11
+      }
+    },
+    "wait-03": {
+      "group": "wait",
+      "cell": 3,
+      "attempt": 2,
+      "native": {
+        "size": [
+          36,
+          31
+        ],
+        "hotspot": [
+          24,
+          15
+        ],
+        "mapping": 5,
+        "tail": 12
+      }
+    },
+    "wait-04": {
+      "group": "wait",
+      "cell": 4,
+      "attempt": 2,
+      "native": {
+        "size": [
+          35,
+          31
+        ],
+        "hotspot": [
+          23,
+          15
+        ],
+        "mapping": 6,
+        "tail": 13
+      }
+    },
+    "wait-05": {
+      "group": "wait",
+      "cell": 5,
+      "attempt": 2,
+      "native": {
+        "size": [
+          32,
+          31
+        ],
+        "hotspot": [
+          20,
+          15
+        ],
+        "mapping": 7,
+        "tail": 9
+      }
+    },
+    "wait-06": {
+      "group": "wait",
+      "cell": 6,
+      "attempt": 2,
+      "native": {
+        "size": [
+          35,
+          31
+        ],
+        "hotspot": [
+          23,
+          15
+        ],
+        "mapping": 8,
+        "tail": 10
+      }
+    },
+    "walk-00": {
+      "group": "walk",
+      "cell": 0,
+      "attempt": 2,
+      "native": {
+        "size": [
+          41,
+          32
+        ],
+        "hotspot": [
+          26,
+          16
+        ],
+        "mapping": 16,
+        "tail": 0
+      }
+    },
+    "walk-01": {
+      "group": "walk",
+      "cell": 1,
+      "attempt": 2,
+      "native": {
+        "size": [
+          34,
+          32
+        ],
+        "hotspot": [
+          24,
+          16
+        ],
+        "mapping": 17,
+        "tail": 0
+      }
+    },
+    "walk-02": {
+      "group": "walk",
+      "cell": 2,
+      "attempt": 2,
+      "native": {
+        "size": [
+          44,
+          32
+        ],
+        "hotspot": [
+          28,
+          20
+        ],
+        "mapping": 18,
+        "tail": 0
+      }
+    },
+    "walk-03": {
+      "group": "walk",
+      "cell": 3,
+      "attempt": 2,
+      "native": {
+        "size": [
+          40,
+          32
+        ],
+        "hotspot": [
+          26,
+          16
+        ],
+        "mapping": 19,
+        "tail": 0
+      }
+    },
+    "walk-04": {
+      "group": "walk",
+      "cell": 4,
+      "attempt": 2,
+      "native": {
+        "size": [
+          41,
+          32
+        ],
+        "hotspot": [
+          26,
+          16
+        ],
+        "mapping": 20,
+        "tail": 0
+      }
+    },
+    "walk-05": {
+      "group": "walk",
+      "cell": 5,
+      "attempt": 2,
+      "native": {
+        "size": [
+          34,
+          32
+        ],
+        "hotspot": [
+          24,
+          16
+        ],
+        "mapping": 21,
+        "tail": 0
+      }
+    },
+    "walk-06": {
+      "group": "walk",
+      "cell": 6,
+      "attempt": 2,
+      "native": {
+        "size": [
+          44,
+          32
+        ],
+        "hotspot": [
+          28,
+          20
+        ],
+        "mapping": 14,
+        "tail": 0
+      }
+    },
+    "walk-07": {
+      "group": "walk",
+      "cell": 7,
+      "attempt": 2,
+      "native": {
+        "size": [
+          41,
+          32
+        ],
+        "hotspot": [
+          26,
+          16
+        ],
+        "mapping": 15,
+        "tail": 0
+      }
+    },
+    "run-00": {
+      "group": "run",
+      "cell": 0,
+      "attempt": 3,
+      "native": {
+        "size": [
+          36,
+          32
+        ],
+        "hotspot": [
+          21,
+          16
+        ],
+        "mapping": 46,
+        "tail": 0
+      }
+    },
+    "run-01": {
+      "group": "run",
+      "cell": 1,
+      "attempt": 3,
+      "native": {
+        "size": [
+          36,
+          32
+        ],
+        "hotspot": [
+          22,
+          16
+        ],
+        "mapping": 47,
+        "tail": 0
+      }
+    },
+    "run-02": {
+      "group": "run",
+      "cell": 2,
+      "attempt": 3,
+      "native": {
+        "size": [
+          37,
+          31
+        ],
+        "hotspot": [
+          22,
+          16
+        ],
+        "mapping": 48,
+        "tail": 0
+      }
+    },
+    "run-03": {
+      "group": "run",
+      "cell": 3,
+      "attempt": 3,
+      "native": {
+        "size": [
+          36,
+          32
+        ],
+        "hotspot": [
+          22,
+          16
+        ],
+        "mapping": 49,
+        "tail": 0
+      }
+    },
+    "roll-00": {
+      "group": "roll",
+      "cell": 0,
+      "attempt": 2,
+      "native": {
+        "size": [
+          48,
+          28
+        ],
+        "hotspot": [
+          34,
+          14
+        ],
+        "mapping": 72,
+        "tail": 73
+      }
+    },
+    "roll-01": {
+      "group": "roll",
+      "cell": 1,
+      "attempt": 2,
+      "native": {
+        "size": [
+          48,
+          28
+        ],
+        "hotspot": [
+          34,
+          14
+        ],
+        "mapping": 71,
+        "tail": 74
+      }
+    },
+    "roll-02": {
+      "group": "roll",
+      "cell": 2,
+      "attempt": 2,
+      "native": {
+        "size": [
+          48,
+          28
+        ],
+        "hotspot": [
+          34,
+          14
+        ],
+        "mapping": 70,
+        "tail": 75
+      }
+    },
+    "roll-03": {
+      "group": "roll",
+      "cell": 3,
+      "attempt": 2,
+      "native": {
+        "size": [
+          48,
+          28
+        ],
+        "hotspot": [
+          34,
+          14
+        ],
+        "mapping": 70,
+        "tail": 75
+      }
+    },
+    "spindash-00": {
+      "group": "spindash",
+      "cell": 0,
+      "attempt": 2,
+      "native": {
+        "size": [
+          43,
+          25
+        ],
+        "hotspot": [
+          30,
+          9
+        ],
+        "mapping": 96,
+        "tail": 129
+      }
+    },
+    "spindash-01": {
+      "group": "spindash",
+      "cell": 1,
+      "attempt": 2,
+      "native": {
+        "size": [
+          44,
+          24
+        ],
+        "hotspot": [
+          30,
+          8
+        ],
+        "mapping": 97,
+        "tail": 130
+      }
+    },
+    "spindash-02": {
+      "group": "spindash",
+      "cell": 2,
+      "attempt": 2,
+      "native": {
+        "size": [
+          44,
+          25
+        ],
+        "hotspot": [
+          30,
+          9
+        ],
+        "mapping": 98,
+        "tail": 131
+      }
+    },
+    "spindash-03": {
+      "group": "spindash",
+      "cell": 3,
+      "attempt": 2,
+      "native": {
+        "size": [
+          44,
+          25
+        ],
+        "hotspot": [
+          30,
+          9
+        ],
+        "mapping": 98,
+        "tail": 131
+      }
+    },
+    "spring-00": {
+      "group": "spring-alternatives",
+      "cell": 0,
+      "attempt": "two alternatives after two rejected pose-strip attempts",
+      "native": {
+        "mapping": 89,
+        "size": [
+          22,
+          47
+        ],
+        "hotspot": [
+          14,
+          23
+        ]
+      }
+    },
+    "hurt-00": {
+      "group": "poses",
+      "cell": 1,
+      "attempt": 1,
+      "native": {
+        "size": [
+          32,
+          31
+        ],
+        "hotspot": [
+          16,
+          15
+        ],
+        "mapping": 92,
+        "tail": 0
+      }
+    },
+    "death-00": {
+      "group": "poses",
+      "cell": 2,
+      "attempt": 1,
+      "native": {
+        "size": [
+          29,
+          32
+        ],
+        "hotspot": [
+          14,
+          16
+        ],
+        "mapping": 93,
+        "tail": 0
+      }
+    },
+    "duck-00": {
+      "group": "poses",
+      "cell": 3,
+      "attempt": 1,
+      "native": {
+        "size": [
+          40,
+          20
+        ],
+        "hotspot": [
+          24,
+          4
+        ],
+        "mapping": 91,
+        "tail": 12
+      }
+    },
+    "look_up-00": {
+      "group": "poses",
+      "cell": 4,
+      "attempt": 1,
+      "native": {
+        "size": [
+          23,
+          31
+        ],
+        "hotspot": [
+          11,
+          15
+        ],
+        "mapping": 4,
+        "tail": 0
+      }
+    },
+    "skid-00": {
+      "group": "poses",
+      "cell": 5,
+      "attempt": 1,
+      "native": {
+        "size": [
+          43,
+          31
+        ],
+        "hotspot": [
+          27,
+          16
+        ],
+        "mapping": 103,
+        "tail": 136
+      }
+    },
+    "skid-01": {
+      "group": "poses",
+      "cell": 6,
+      "attempt": 1,
+      "native": {
+        "size": [
+          43,
+          32
+        ],
+        "hotspot": [
+          27,
+          16
+        ],
+        "mapping": 104,
+        "tail": 135
+      }
+    },
+    "fly-00": {
+      "group": "fly",
+      "cell": 0,
+      "attempt": 2,
+      "native": {
+        "size": [
+          36,
+          32
+        ],
+        "hotspot": [
+          25,
+          20
+        ],
+        "mapping": 160,
+        "tail": 39
+      }
+    },
+    "fly-01": {
+      "group": "fly",
+      "cell": 1,
+      "attempt": 2,
+      "native": {
+        "size": [
+          36,
+          32
+        ],
+        "hotspot": [
+          25,
+          20
+        ],
+        "mapping": 160,
+        "tail": 40
+      }
+    },
+    "fly_tired-00": {
+      "group": "fly_tired",
+      "cell": 0,
+      "attempt": 2,
+      "native": {
+        "size": [
+          36,
+          32
+        ],
+        "hotspot": [
+          25,
+          20
+        ],
+        "mapping": 163,
+        "tail": 39
+      }
+    },
+    "fly_tired-01": {
+      "group": "fly_tired",
+      "cell": 1,
+      "attempt": 2,
+      "native": {
+        "size": [
+          36,
+          32
+        ],
+        "hotspot": [
+          25,
+          20
+        ],
+        "mapping": 164,
+        "tail": 40
+      }
+    }
+  },
+  "nativeScripts": {
+    "WAIT": {
+      "mappingSequence": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        3,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        3,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        6,
+        7,
+        8,
+        7,
+        8,
+        7,
+        8,
+        7,
+        8,
+        7,
+        8,
+        6
+      ],
+      "duration": 8,
+      "loopBack": 28
+    }
+  },
+  "limitations": [
+    "Owner-requested blur interleaves adapt native three-frame Tails roll/spindash.",
+    "Owner-requested single spring uses 48-tick hold; native Tails spring alternates two poses.",
+    "TAILS_FLY maps native single body A0 onto two integrated wing drawings synchronized with tail rotor.",
+    "WAIT partial-loop start unsupported by current converter."
+  ],
+  "cleanup": "Palette shading only: right/front shoe area on walk5-7 and run0-1 changes red to red-shadow and white to glove-shadow; no limb painting."
+}

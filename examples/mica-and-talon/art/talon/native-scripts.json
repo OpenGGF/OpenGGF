@@ -1,0 +1,431 @@
+{
+  "nativeReference": {
+    "WAIT": {
+      "mappingSequence": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        3,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        3,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        6,
+        7,
+        8,
+        7,
+        8,
+        7,
+        8,
+        7,
+        8,
+        7,
+        8,
+        6
+      ],
+      "ticksPerStep": 8,
+      "end": "repeat-last",
+      "repeatSteps": 28
+    },
+    "WALK": {
+      "mappingSequence": [
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        14,
+        15
+      ],
+      "speedDriven": true
+    },
+    "RUN": {
+      "mappingSequence": [
+        46,
+        47,
+        48,
+        49
+      ],
+      "speedDriven": true
+    },
+    "ROLL": {
+      "mappingSequence": [
+        72,
+        71,
+        70
+      ],
+      "speedDriven": true
+    },
+    "SPINDASH": {
+      "mappingSequence": [
+        96,
+        97,
+        98
+      ],
+      "ticksPerStep": 1
+    },
+    "SPRING": {
+      "mappingSequence": [
+        89,
+        90,
+        89,
+        90,
+        89,
+        90,
+        89,
+        90,
+        89,
+        90,
+        89,
+        90
+      ],
+      "ticksPerStep": 4,
+      "end": "WALK"
+    },
+    "HURT": {
+      "mappingSequence": [
+        92
+      ],
+      "ticksPerStep": 4
+    },
+    "DEATH": {
+      "mappingSequence": [
+        93
+      ],
+      "ticksPerStep": 4
+    },
+    "DUCK": {
+      "mappingSequence": [
+        91
+      ],
+      "ticksPerStep": 64,
+      "end": "hold"
+    },
+    "LOOK_UP": {
+      "mappingSequence": [
+        4
+      ],
+      "ticksPerStep": 64,
+      "end": "hold"
+    },
+    "SKID": {
+      "mappingSequence": [
+        103,
+        104,
+        103,
+        104
+      ],
+      "ticksPerStep": 8,
+      "end": "WALK"
+    },
+    "TAILS_FLY": {
+      "game": "S3K",
+      "mappingSequence": [
+        160
+      ],
+      "ticksPerStep": 32,
+      "tailSequence": [
+        39,
+        40
+      ],
+      "tailTicks": 2
+    },
+    "TAILS_FLY_TIRED": {
+      "game": "S3K",
+      "mappingSequence": [
+        163,
+        164
+      ],
+      "ticksPerStep": 12,
+      "tailSequence": [
+        39,
+        40
+      ],
+      "tailTicks": 2
+    }
+  },
+  "talonScripts": {
+    "WAIT": {
+      "frames": [
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-02",
+        "wait-01",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-02",
+        "wait-01",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-05",
+        "wait-06",
+        "wait-05",
+        "wait-06",
+        "wait-05",
+        "wait-06",
+        "wait-05",
+        "wait-06",
+        "wait-05",
+        "wait-06",
+        "wait-04"
+      ],
+      "durations": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ],
+      "end": "loop",
+      "nativeLoopBackSteps": 28,
+      "limitation": "Native FE28 partial repeat is data only: converter loops full intro; engine lane must bind exact repeat."
+    },
+    "SPRING": {
+      "frames": [
+        "spring-00"
+      ],
+      "durations": [
+        48
+      ],
+      "end": "next",
+      "next": "WALK"
+    },
+    "DUCK": {
+      "frames": [
+        "duck-00"
+      ],
+      "durations": [
+        64
+      ],
+      "end": "hold"
+    },
+    "LOOK_UP": {
+      "frames": [
+        "look_up-00"
+      ],
+      "durations": [
+        64
+      ],
+      "end": "hold"
+    },
+    "HURT": {
+      "frames": [
+        "hurt-00"
+      ],
+      "durations": [
+        4
+      ],
+      "end": "loop"
+    },
+    "DEATH": {
+      "frames": [
+        "death-00"
+      ],
+      "durations": [
+        4
+      ],
+      "end": "loop"
+    },
+    "SKID": {
+      "frames": [
+        "skid-00",
+        "skid-01",
+        "skid-00",
+        "skid-01"
+      ],
+      "durations": [
+        8,
+        8,
+        8,
+        8
+      ],
+      "end": "next",
+      "next": "WALK"
+    },
+    "TAILS_FLY": {
+      "frames": [
+        "fly-00",
+        "fly-01"
+      ],
+      "durations": [
+        2,
+        2
+      ],
+      "end": "loop"
+    },
+    "TAILS_FLY_TIRED": {
+      "frames": [
+        "fly_tired-00",
+        "fly_tired-01"
+      ],
+      "durations": [
+        12,
+        12
+      ],
+      "end": "loop"
+    },
+    "ROLL": {
+      "frames": [
+        "roll-00",
+        "roll-03",
+        "roll-01",
+        "roll-03",
+        "roll-02",
+        "roll-03"
+      ],
+      "end": "loop"
+    },
+    "SPINDASH": {
+      "frames": [
+        "spindash-00",
+        "spindash-03",
+        "spindash-01",
+        "spindash-03",
+        "spindash-02",
+        "spindash-03"
+      ],
+      "end": "loop",
+      "durations": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "note": "Comparison and handoff data only. WAIT partial repeat requires engine support. Blur interleaves and single spring are owner-directed adaptations."
+}

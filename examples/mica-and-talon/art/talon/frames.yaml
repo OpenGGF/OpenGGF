@@ -1,0 +1,1229 @@
+{
+  "format": "openggf-playable-art-handoff-1",
+  "character": "talon",
+  "requiredAnimations": [
+    "DEATH",
+    "DUCK",
+    "HURT",
+    "LOOK_UP",
+    "ROLL",
+    "RUN",
+    "SKID",
+    "SPINDASH",
+    "SPRING",
+    "TAILS_FLY",
+    "TAILS_FLY_TIRED",
+    "WAIT",
+    "WALK"
+  ],
+  "palette": "palette.yaml",
+  "facing": "right",
+  "tick_rate": 60,
+  "frames": [
+    {
+      "id": "wait-00",
+      "animation": "WAIT",
+      "order": 0,
+      "file": "frames/wait-00.png",
+      "hotspot": [
+        10,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image wait strip attempt 2, cell 0; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "wait-01",
+      "animation": "WAIT",
+      "order": 1,
+      "file": "frames/wait-01.png",
+      "hotspot": [
+        10,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image wait strip attempt 2, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "wait-02",
+      "animation": "WAIT",
+      "order": 2,
+      "file": "frames/wait-02.png",
+      "hotspot": [
+        10,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image wait strip attempt 2, cell 2; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "wait-03",
+      "animation": "WAIT",
+      "order": 3,
+      "file": "frames/wait-03.png",
+      "hotspot": [
+        10,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image wait strip attempt 2, cell 3; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "wait-04",
+      "animation": "WAIT",
+      "order": 4,
+      "file": "frames/wait-04.png",
+      "hotspot": [
+        9,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image wait strip attempt 2, cell 4; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "wait-05",
+      "animation": "WAIT",
+      "order": 5,
+      "file": "frames/wait-05.png",
+      "hotspot": [
+        10,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image wait strip attempt 2, cell 5; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "wait-06",
+      "animation": "WAIT",
+      "order": 6,
+      "file": "frames/wait-06.png",
+      "hotspot": [
+        10,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image wait strip attempt 2, cell 6; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "walk-00",
+      "animation": "WALK",
+      "order": 0,
+      "file": "frames/walk-00.png",
+      "hotspot": [
+        16,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image walk strip attempt 2, cell 0; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "walk-01",
+      "animation": "WALK",
+      "order": 1,
+      "file": "frames/walk-01.png",
+      "hotspot": [
+        18,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image walk strip attempt 2, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "walk-02",
+      "animation": "WALK",
+      "order": 2,
+      "file": "frames/walk-02.png",
+      "hotspot": [
+        18,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image walk strip attempt 2, cell 2; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "walk-03",
+      "animation": "WALK",
+      "order": 3,
+      "file": "frames/walk-03.png",
+      "hotspot": [
+        17,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image walk strip attempt 2, cell 3; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "walk-04",
+      "animation": "WALK",
+      "order": 4,
+      "file": "frames/walk-04.png",
+      "hotspot": [
+        16,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image walk strip attempt 2, cell 4; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "walk-05",
+      "animation": "WALK",
+      "order": 5,
+      "file": "frames/walk-05.png",
+      "hotspot": [
+        18,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image walk strip attempt 2, cell 5; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "walk-06",
+      "animation": "WALK",
+      "order": 6,
+      "file": "frames/walk-06.png",
+      "hotspot": [
+        17,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image walk strip attempt 2, cell 6; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "walk-07",
+      "animation": "WALK",
+      "order": 7,
+      "file": "frames/walk-07.png",
+      "hotspot": [
+        16,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image walk strip attempt 2, cell 7; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "run-00",
+      "animation": "RUN",
+      "order": 0,
+      "file": "frames/run-00.png",
+      "hotspot": [
+        15,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image run strip attempt 3, cell 0; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "run-01",
+      "animation": "RUN",
+      "order": 1,
+      "file": "frames/run-01.png",
+      "hotspot": [
+        16,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image run strip attempt 3, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "run-02",
+      "animation": "RUN",
+      "order": 2,
+      "file": "frames/run-02.png",
+      "hotspot": [
+        15,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image run strip attempt 3, cell 2; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "run-03",
+      "animation": "RUN",
+      "order": 3,
+      "file": "frames/run-03.png",
+      "hotspot": [
+        16,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image run strip attempt 3, cell 3; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "roll-00",
+      "animation": "ROLL",
+      "order": 0,
+      "file": "frames/roll-00.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image roll strip attempt 2, cell 0; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "roll-01",
+      "animation": "ROLL",
+      "order": 1,
+      "file": "frames/roll-01.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image roll strip attempt 2, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "roll-02",
+      "animation": "ROLL",
+      "order": 2,
+      "file": "frames/roll-02.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image roll strip attempt 2, cell 2; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "roll-03",
+      "animation": "ROLL",
+      "order": 3,
+      "file": "frames/roll-03.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image roll strip attempt 2, cell 3; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "spindash-00",
+      "animation": "SPINDASH",
+      "order": 0,
+      "file": "frames/spindash-00.png",
+      "hotspot": [
+        14,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image spindash strip attempt 2, cell 0; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "spindash-01",
+      "animation": "SPINDASH",
+      "order": 1,
+      "file": "frames/spindash-01.png",
+      "hotspot": [
+        14,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image spindash strip attempt 2, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "spindash-02",
+      "animation": "SPINDASH",
+      "order": 2,
+      "file": "frames/spindash-02.png",
+      "hotspot": [
+        14,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image spindash strip attempt 2, cell 2; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "spindash-03",
+      "animation": "SPINDASH",
+      "order": 3,
+      "file": "frames/spindash-03.png",
+      "hotspot": [
+        14,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image spindash strip attempt 2, cell 3; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "spring-00",
+      "animation": "SPRING",
+      "order": 0,
+      "file": "frames/spring-00.png",
+      "hotspot": [
+        11,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Dedicated GPT Image spring request: two alternatives, first selected after rejecting both initial pose-strip springs. Native $59 envelope 22x47, hotspot 14,23."
+    },
+    {
+      "id": "hurt-00",
+      "animation": "HURT",
+      "order": 1,
+      "file": "frames/hurt-00.png",
+      "hotspot": [
+        16,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image poses strip attempt 1, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "death-00",
+      "animation": "DEATH",
+      "order": 2,
+      "file": "frames/death-00.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image poses strip attempt 1, cell 2; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "duck-00",
+      "animation": "DUCK",
+      "order": 3,
+      "file": "frames/duck-00.png",
+      "hotspot": [
+        19,
+        4
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image poses strip attempt 1, cell 3; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "look_up-00",
+      "animation": "LOOK_UP",
+      "order": 4,
+      "file": "frames/look_up-00.png",
+      "hotspot": [
+        11,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image poses strip attempt 1, cell 4; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "skid-00",
+      "animation": "SKID",
+      "order": 5,
+      "file": "frames/skid-00.png",
+      "hotspot": [
+        24,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image poses strip attempt 1, cell 5; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "skid-01",
+      "animation": "SKID",
+      "order": 6,
+      "file": "frames/skid-01.png",
+      "hotspot": [
+        23,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image poses strip attempt 1, cell 6; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "fly-00",
+      "animation": "TAILS_FLY",
+      "order": 0,
+      "file": "frames/fly-00.png",
+      "hotspot": [
+        21,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image fly strip attempt 2, cell 0; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "fly-01",
+      "animation": "TAILS_FLY",
+      "order": 1,
+      "file": "frames/fly-01.png",
+      "hotspot": [
+        25,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image fly strip attempt 2, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "fly_tired-00",
+      "animation": "TAILS_FLY_TIRED",
+      "order": 0,
+      "file": "frames/fly_tired-00.png",
+      "hotspot": [
+        25,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image fly_tired strip attempt 2, cell 0; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "fly_tired-01",
+      "animation": "TAILS_FLY_TIRED",
+      "order": 1,
+      "file": "frames/fly_tired-01.png",
+      "hotspot": [
+        22,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Built-in GPT Image fly_tired strip attempt 2, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+    },
+    {
+      "id": "walk-up45-00",
+      "animation": "WALK",
+      "order": 8,
+      "file": "frames/walk-up45-00.png",
+      "hotspot": [
+        18,
+        12
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-00, 45 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-up45-01",
+      "animation": "WALK",
+      "order": 9,
+      "file": "frames/walk-up45-01.png",
+      "hotspot": [
+        20,
+        10
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-01, 45 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-up45-02",
+      "animation": "WALK",
+      "order": 10,
+      "file": "frames/walk-up45-02.png",
+      "hotspot": [
+        21,
+        15
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-02, 45 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-up45-03",
+      "animation": "WALK",
+      "order": 11,
+      "file": "frames/walk-up45-03.png",
+      "hotspot": [
+        19,
+        11
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-03, 45 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-up45-04",
+      "animation": "WALK",
+      "order": 12,
+      "file": "frames/walk-up45-04.png",
+      "hotspot": [
+        18,
+        12
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-04, 45 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-up45-05",
+      "animation": "WALK",
+      "order": 13,
+      "file": "frames/walk-up45-05.png",
+      "hotspot": [
+        20,
+        10
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-05, 45 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-up45-06",
+      "animation": "WALK",
+      "order": 14,
+      "file": "frames/walk-up45-06.png",
+      "hotspot": [
+        21,
+        14
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-06, 45 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-up45-07",
+      "animation": "WALK",
+      "order": 15,
+      "file": "frames/walk-up45-07.png",
+      "hotspot": [
+        18,
+        11
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-07, 45 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-steep-00",
+      "animation": "WALK",
+      "order": 16,
+      "file": "frames/walk-steep-00.png",
+      "hotspot": [
+        16,
+        5
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-00, 90 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-steep-01",
+      "animation": "WALK",
+      "order": 17,
+      "file": "frames/walk-steep-01.png",
+      "hotspot": [
+        16,
+        4
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-01, 90 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-steep-02",
+      "animation": "WALK",
+      "order": 18,
+      "file": "frames/walk-steep-02.png",
+      "hotspot": [
+        20,
+        5
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-02, 90 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-steep-03",
+      "animation": "WALK",
+      "order": 19,
+      "file": "frames/walk-steep-03.png",
+      "hotspot": [
+        16,
+        5
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-03, 90 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-steep-04",
+      "animation": "WALK",
+      "order": 20,
+      "file": "frames/walk-steep-04.png",
+      "hotspot": [
+        16,
+        5
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-04, 90 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-steep-05",
+      "animation": "WALK",
+      "order": 21,
+      "file": "frames/walk-steep-05.png",
+      "hotspot": [
+        16,
+        4
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-05, 90 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-steep-06",
+      "animation": "WALK",
+      "order": 22,
+      "file": "frames/walk-steep-06.png",
+      "hotspot": [
+        20,
+        6
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-06, 90 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-steep-07",
+      "animation": "WALK",
+      "order": 23,
+      "file": "frames/walk-steep-07.png",
+      "hotspot": [
+        16,
+        5
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-07, 90 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-inverted-00",
+      "animation": "WALK",
+      "order": 24,
+      "file": "frames/walk-inverted-00.png",
+      "hotspot": [
+        13,
+        14
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-00, 135 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-inverted-01",
+      "animation": "WALK",
+      "order": 25,
+      "file": "frames/walk-inverted-01.png",
+      "hotspot": [
+        11,
+        10
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-01, 135 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-inverted-02",
+      "animation": "WALK",
+      "order": 26,
+      "file": "frames/walk-inverted-02.png",
+      "hotspot": [
+        16,
+        9
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-02, 135 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-inverted-03",
+      "animation": "WALK",
+      "order": 27,
+      "file": "frames/walk-inverted-03.png",
+      "hotspot": [
+        12,
+        14
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-03, 135 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-inverted-04",
+      "animation": "WALK",
+      "order": 28,
+      "file": "frames/walk-inverted-04.png",
+      "hotspot": [
+        13,
+        13
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-04, 135 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-inverted-05",
+      "animation": "WALK",
+      "order": 29,
+      "file": "frames/walk-inverted-05.png",
+      "hotspot": [
+        11,
+        8
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-05, 135 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-inverted-06",
+      "animation": "WALK",
+      "order": 30,
+      "file": "frames/walk-inverted-06.png",
+      "hotspot": [
+        15,
+        9
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-06, 135 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "walk-inverted-07",
+      "animation": "WALK",
+      "order": 31,
+      "file": "frames/walk-inverted-07.png",
+      "hotspot": [
+        12,
+        14
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final walk-07, 135 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "run-up45-00",
+      "animation": "RUN",
+      "order": 4,
+      "file": "frames/run-up45-00.png",
+      "hotspot": [
+        17,
+        14
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final run-00, 45 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "run-up45-01",
+      "animation": "RUN",
+      "order": 5,
+      "file": "frames/run-up45-01.png",
+      "hotspot": [
+        17,
+        13
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final run-01, 45 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "run-up45-02",
+      "animation": "RUN",
+      "order": 6,
+      "file": "frames/run-up45-02.png",
+      "hotspot": [
+        18,
+        13
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final run-02, 45 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "run-up45-03",
+      "animation": "RUN",
+      "order": 7,
+      "file": "frames/run-up45-03.png",
+      "hotspot": [
+        18,
+        13
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final run-03, 45 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "run-steep-00",
+      "animation": "RUN",
+      "order": 8,
+      "file": "frames/run-steep-00.png",
+      "hotspot": [
+        16,
+        9
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final run-00, 90 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "run-steep-01",
+      "animation": "RUN",
+      "order": 9,
+      "file": "frames/run-steep-01.png",
+      "hotspot": [
+        16,
+        8
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final run-01, 90 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "run-steep-02",
+      "animation": "RUN",
+      "order": 10,
+      "file": "frames/run-steep-02.png",
+      "hotspot": [
+        16,
+        8
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final run-02, 90 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "run-steep-03",
+      "animation": "RUN",
+      "order": 11,
+      "file": "frames/run-steep-03.png",
+      "hotspot": [
+        16,
+        8
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final run-03, 90 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "run-inverted-00",
+      "animation": "RUN",
+      "order": 12,
+      "file": "frames/run-inverted-00.png",
+      "hotspot": [
+        15,
+        10
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final run-00, 135 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "run-inverted-01",
+      "animation": "RUN",
+      "order": 13,
+      "file": "frames/run-inverted-01.png",
+      "hotspot": [
+        14,
+        16
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final run-01, 135 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "run-inverted-02",
+      "animation": "RUN",
+      "order": 14,
+      "file": "frames/run-inverted-02.png",
+      "hotspot": [
+        15,
+        10
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final run-02, 135 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "run-inverted-03",
+      "animation": "RUN",
+      "order": 15,
+      "file": "frames/run-inverted-03.png",
+      "hotspot": [
+        14,
+        16
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "derive_slopes.derive: final run-03, 135 degrees CCW; integer support alignment."
+    }
+  ],
+  "scripts": {
+    "WAIT": {
+      "frames": [
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-02",
+        "wait-01",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-02",
+        "wait-01",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-05",
+        "wait-06",
+        "wait-05",
+        "wait-06",
+        "wait-05",
+        "wait-06",
+        "wait-05",
+        "wait-06",
+        "wait-05",
+        "wait-06",
+        "wait-04"
+      ],
+      "durations": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ],
+      "end": "loop",
+      "nativeLoopBackSteps": 28,
+      "limitation": "Native FE28 partial repeat is data only: converter loops full intro; engine lane must bind exact repeat."
+    },
+    "SPRING": {
+      "frames": [
+        "spring-00"
+      ],
+      "durations": [
+        48
+      ],
+      "end": "next",
+      "next": "WALK"
+    },
+    "DUCK": {
+      "frames": [
+        "duck-00"
+      ],
+      "durations": [
+        64
+      ],
+      "end": "hold"
+    },
+    "LOOK_UP": {
+      "frames": [
+        "look_up-00"
+      ],
+      "durations": [
+        64
+      ],
+      "end": "hold"
+    },
+    "HURT": {
+      "frames": [
+        "hurt-00"
+      ],
+      "durations": [
+        4
+      ],
+      "end": "loop"
+    },
+    "DEATH": {
+      "frames": [
+        "death-00"
+      ],
+      "durations": [
+        4
+      ],
+      "end": "loop"
+    },
+    "SKID": {
+      "frames": [
+        "skid-00",
+        "skid-01",
+        "skid-00",
+        "skid-01"
+      ],
+      "durations": [
+        8,
+        8,
+        8,
+        8
+      ],
+      "end": "next",
+      "next": "WALK"
+    },
+    "TAILS_FLY": {
+      "frames": [
+        "fly-00",
+        "fly-01"
+      ],
+      "durations": [
+        2,
+        2
+      ],
+      "end": "loop"
+    },
+    "TAILS_FLY_TIRED": {
+      "frames": [
+        "fly_tired-00",
+        "fly_tired-01"
+      ],
+      "durations": [
+        12,
+        12
+      ],
+      "end": "loop"
+    },
+    "ROLL": {
+      "frames": [
+        "roll-00",
+        "roll-03",
+        "roll-01",
+        "roll-03",
+        "roll-02",
+        "roll-03"
+      ],
+      "end": "loop"
+    },
+    "SPINDASH": {
+      "frames": [
+        "spindash-00",
+        "spindash-03",
+        "spindash-01",
+        "spindash-03",
+        "spindash-02",
+        "spindash-03"
+      ],
+      "end": "loop",
+      "durations": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  }
+}
