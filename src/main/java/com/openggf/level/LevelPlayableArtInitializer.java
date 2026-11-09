@@ -742,7 +742,8 @@ final class LevelPlayableArtInitializer {
             return;
         }
         try {
-            String characterCode = SpriteManagerInternalAccess.usesNativeScriptedArt(spriteManager, playable)
+            String characterCode = !playable.characterKey().isBuiltin() ? "sonic"
+                    : SpriteManagerInternalAccess.usesNativeScriptedArt(spriteManager, playable)
                     ? playable.characterKey().persisted() : playable.getCode().endsWith("_p2")
                     ? playable.getCode().substring(0, playable.getCode().length() - 3)
                     : playable.getCode();
@@ -837,7 +838,8 @@ final class LevelPlayableArtInitializer {
         } else {
             return null;
         }
-        String characterCode = SpriteManagerInternalAccess.usesNativeScriptedArt(spriteManager, playable)
+        String characterCode = !playable.characterKey().isBuiltin() ? "sonic"
+                    : SpriteManagerInternalAccess.usesNativeScriptedArt(spriteManager, playable)
                 ? playable.characterKey().persisted() : playable.getCode().endsWith("_p2")
                 ? playable.getCode().substring(0, playable.getCode().length() - 3)
                 : playable.getCode();

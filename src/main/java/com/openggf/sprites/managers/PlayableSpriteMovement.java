@@ -648,6 +648,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (motionMutators != null) {
 			motionMutators.beforeMovement(sprite);
 		}
+		com.openggf.sprites.playable.PlayableSpriteInternalAccess.movementTick(sprite);
 		var homingAttack = homingAttack();
 		if (homingAttack != null) {
 			homingAttack.beforeMovement(sprite);

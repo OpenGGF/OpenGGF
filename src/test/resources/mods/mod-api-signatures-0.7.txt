@@ -14973,6 +14973,7 @@ METHOD com.openggf.sprites.playable.AbstractPlayableSprite protected  void onExi
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite protected  void onGroundStateChanged(boolean)
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite protected  void onLanded()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite protected  void onLevelReset()
+METHOD com.openggf.sprites.playable.AbstractPlayableSprite protected  void onMovementTick()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite protected  void restoreSubclassRewindState(com.openggf.level.objects.PerObjectRewindSnapshot$PlayableSubclassRewindExtra)
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite protected  void setCollisionRadii(short,short,boolean)
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite protected  void setGameRulesForTest(com.openggf.game.rules.GameRules)

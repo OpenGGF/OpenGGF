@@ -192,6 +192,10 @@ public final class PlayableSpriteInternalAccess {
         sprite.mutatorPolicySource = source;
     }
 
+    public static void movementTick(AbstractPlayableSprite sprite) {
+        sprite.dispatchMovementTick();
+    }
+
     public static com.openggf.game.mutators.HomingAttackRuntime homingAttack(AbstractPlayableSprite sprite) {
         PlayableMutatorPolicySource source = sprite.mutatorPolicySource;
         var level = sprite.currentLevelManagerIfAvailable();

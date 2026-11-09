@@ -1737,6 +1737,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return false;
         }
 
+        /** Once per live movement tick, before input dispatch and homing preview selection.
+         * Owner-fault-bounded; keep mutable subclass state in the rewind hooks.
+         */
+        protected void onMovementTick() { }
+
+        final void dispatchMovementTick() {
+                com.openggf.game.CharacterConstructionScope.invoke(characterCallbackInvoker,
+                        () -> { onMovementTick(); return null; });
+        }
+
         final boolean hasConstructionCallbackInvoker(com.openggf.game.CharacterConstructionScope.CallbackInvoker invoker) {
                 return characterCallbackInvoker == invoker;
         }
