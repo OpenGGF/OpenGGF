@@ -71,7 +71,9 @@ class TestMicaCharacterIntegration {
             var hy = handle.getClass().getDeclaredField("y"); hy.setAccessible(true);
             player.setCentreX((short) hx.getInt(handle)); player.setCentreY((short) (hy.getInt(handle) + 4));
             player.setAir(true); player.setXSpeed((short) 0); player.setYSpeed((short) 0);
-            var source = com.openggf.level.objects.PlayableSheetMaterializer.read(Files.readAllBytes(temp.resolve("classes/art/mica.ggfp"))).art();
+            byte[] encoded = Files.readAllBytes(temp.resolve("classes/art/mica.ggfp"));
+            var sheet = com.openggf.level.objects.PlayableSheetReader.read(encoded);
+            var source = com.openggf.level.objects.PlayableSheetMaterializer.read(encoded).art();
             var hangFrames = source.animationSet().getScript(CanonicalAnimation.HANG.ordinal()).frames();
             var csv = new StringBuilder(com.openggf.tools.GameplayCaptureSession.stateHeader()).append('\n');
             int observed = 0, swings = 0;
@@ -85,7 +87,8 @@ class TestMicaCharacterIntegration {
                 }
                 if (frame >= 0x78 && frame <= 0x7F) {
                     swings++;
-                    assertEquals(source.dplcFrames().get(hangFrames.getFirst()), player.getSpriteRenderer().dplcFrame(frame));
+                    assertEquals(source.dplcFrames().get(sheet.nativeFrames().get("swing/" + (frame - 0x78))),
+                            player.getSpriteRenderer().dplcFrame(frame));
                     if (i % 10 == 0) com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve("swing-" + i + ".png"));
                 }
                 csv.append(session.stateLine(i, null)).append('\n');
@@ -174,7 +177,12 @@ class TestMicaCharacterIntegration {
             var source = com.openggf.level.objects.PlayableSheetMaterializer.read(encoded).art();
             var expected = new LinkedHashMap<Integer,String>();
             expected.put(0x24, "bar/release");
-            for (int frame : new int[]{0x55, 0x56, 0x57, 0x59, 0x5A}) expected.put(frame, "twist/" + (frame - 0x55));
+            for (int frame = 0x55; frame <= 0x5B; frame++) expected.put(frame, "twist/" + (frame - 0x55));
+            for (int frame = 0x5C; frame <= 0x62; frame++) expected.put(frame, "pole/" + (frame - 0x5C));
+            for (int frame = 0x63; frame <= 0x68; frame++) expected.put(frame, "bar/" + (frame - 0x63));
+            for (int frame = 0x69; frame <= 0x77; frame++) expected.put(frame, "tumble/" + (frame - 0x69));
+            for (int frame = 0x78; frame <= 0x7F; frame++) expected.put(frame, "swing/" + (frame - 0x78));
+            expected.put(0x94, "bar-end/0"); expected.put(0x95, "bar-end/1");
             expected.put(0xBA, "ride/stand"); expected.put(0xCA, "crane/fall"); expected.put(0xCB, "hang/crane");
             for (int i = 0; i < 5; i++) expected.put(0x96 + i, "roll/" + i);
             for (var entry : expected.entrySet()) {
@@ -1430,7 +1438,7 @@ class TestMicaCharacterIntegration {
                     "art/mica/endings/s2/photo-[1-4]\\.png")), "Phase 1 packages no MICA photo overrides");
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(
                     packed.getInputStream(packed.getJarEntry("art/mica.ggfp")).readAllBytes());
-            assertEquals(132, sheet.frames().size());
+            assertEquals(172, sheet.frames().size());
             assertEquals(22, sheet.animations().size());
             assertEquals(List.of(27, 28, 29, 30), sheet.animations().get("HOMING_DIVE").steps()
                     .stream().map(com.openggf.level.objects.PlayableSheetReader.AnimationStep::frameIndex).toList());

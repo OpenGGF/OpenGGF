@@ -415,3 +415,27 @@ ANIM script; that tag is not a `CanonicalAnimation` member. The sheet now has
 `native-pose-core.json` records original asset hashes; verification rejects stale
 reuse after those assets change. The shared palette and visible pixels remain
 unchanged; transparent margins are cropped with the matching hotspot shift.
+
+## MICA early S3K object poses (batch 3, 2026-11-09)
+
+The core sheet now has 172 drawings / 22 canonical keys. Forty new semantic
+`nativeFrames` bindings cover swing $78–$7F, tumble $69–$77, twist $58/$5B,
+pole $5C–$62 and bar $63–$68/$94/$95. These are object byte aliases, not new
+canonical scripts. The original MICA indexed rows live in `recipe.json`;
+`object-poses/` records exact built-in GPT Image prompts, per-frame selections,
+source hashes and manual head/torso landmark rectangles. `native-pose-core.json`
+keeps native reference geometry separate from the exported tight crop/hotspot.
+
+Native full-palette S3K references were enlarged 8× before redraw. Two attempts
+per base pose were reduced uniformly into the native aspect, quantized to the
+unchanged palette and given inside ink; there are no painted pixel edits. Seven
+drawings use `derive_slopes.rotate` quarter-turns: $7A/$7C/$7E from $78,
+$7B/$7D/$7F from $79, and $64 from $5D. Each native pair was checked for exact
+RGBA equality under that rotation before deriving original MICA art. The other
+33 poses change perspective or limbs and were generated independently.
+
+External review: `$MICA_BATCH3_REVIEW_ROOT/review.html`.
+It retains both attempts, lossless PNG animation at 60Hz, hotspot-aligned scale
+panels and packaged-mod vine/tree/HCZ conveyor MP4s with state CSVs. Tumble scale
+clusters simplify at 1×; twist front/back poses coexist with the older side
+views. This covers the byte slots, not later-zone route certification.

@@ -1,0 +1,308 @@
+{
+  "58": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 2,
+    "atlas": "twist",
+    "raw_sha256": "096b78d98c08495ddf6c6a3ccc64066144d69e4cca92ab98cb2931c15f3e741b",
+    "prompt": "Create transparent horizontal sprite atlas, exactly TWO equal width cells. Redraw image1 native Sonic poses as original jade pangolin MICA image2 in approved tiny pixel style image3. Cell1 FRONT facing viewer, neutral feet down fists at sides; cell2 BACK facing viewer, neutral feet down, fists at sides. Preserve native stance/proportions/size. MICA overlapping jade scale hood, cream long muzzle and belly, white gloves, coral hiking boots, tapered tail. No quills, no gold, no text, no furniture. Flat limited palette black outline, coherent 40px tall design, consistent head size front/back. Alternative attempt: simplified readable scale clusters and round compact head.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "5B": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "twist",
+    "raw_sha256": "cfd0d3c9e9cfabefd61ae774244d56f5f4b4dccaefdd0afd1184e95e06b61825",
+    "prompt": "Create transparent horizontal sprite atlas, exactly TWO equal width cells. Redraw image1 native Sonic poses as original jade pangolin MICA image2 in approved tiny pixel style image3. Cell1 FRONT facing viewer, neutral feet down fists at sides; cell2 BACK facing viewer, neutral feet down, fists at sides. Preserve native stance/proportions/size. MICA overlapping jade scale hood, cream long muzzle and belly, white gloves, coral hiking boots, tapered tail. No quills, no gold, no text, no furniture. Flat limited palette black outline, coherent 40px tall design, consistent head size front/back. ",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "5C": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "pole",
+    "raw_sha256": "4620f006f11ff154b72574e0d91c44ad698be1d317bb0f2eac57734b9a561e36",
+    "prompt": "Transparent horizontal sprite atlas with exactly SEVEN equal-width cells. Image1 shows seven native Sonic spinning-pole frames. Replace Sonic with MICA jade pangolin image2, approved pixel-art style image3. MATCH EACH POSE EXACTLY and orientation, face/back view, glove positions and boot positions. These bodies are HORIZONTAL, heads left in first cells, feet right; rear scale views in middle, face on right in final. Do not turn upright! Scaled jade hood/tail, cream muzzle, white gloves, coral boots. No bars, furniture, Sonic quills, gold, letters. Simple flat palette pixel clusters black outline, consistent head/body proportions in all cells. ",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "5D": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "pole",
+    "raw_sha256": "4620f006f11ff154b72574e0d91c44ad698be1d317bb0f2eac57734b9a561e36",
+    "prompt": "Transparent horizontal sprite atlas with exactly SEVEN equal-width cells. Image1 shows seven native Sonic spinning-pole frames. Replace Sonic with MICA jade pangolin image2, approved pixel-art style image3. MATCH EACH POSE EXACTLY and orientation, face/back view, glove positions and boot positions. These bodies are HORIZONTAL, heads left in first cells, feet right; rear scale views in middle, face on right in final. Do not turn upright! Scaled jade hood/tail, cream muzzle, white gloves, coral boots. No bars, furniture, Sonic quills, gold, letters. Simple flat palette pixel clusters black outline, consistent head/body proportions in all cells. ",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "5E": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "pole",
+    "raw_sha256": "4620f006f11ff154b72574e0d91c44ad698be1d317bb0f2eac57734b9a561e36",
+    "prompt": "Transparent horizontal sprite atlas with exactly SEVEN equal-width cells. Image1 shows seven native Sonic spinning-pole frames. Replace Sonic with MICA jade pangolin image2, approved pixel-art style image3. MATCH EACH POSE EXACTLY and orientation, face/back view, glove positions and boot positions. These bodies are HORIZONTAL, heads left in first cells, feet right; rear scale views in middle, face on right in final. Do not turn upright! Scaled jade hood/tail, cream muzzle, white gloves, coral boots. No bars, furniture, Sonic quills, gold, letters. Simple flat palette pixel clusters black outline, consistent head/body proportions in all cells. ",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "5F": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "pole",
+    "raw_sha256": "4620f006f11ff154b72574e0d91c44ad698be1d317bb0f2eac57734b9a561e36",
+    "prompt": "Transparent horizontal sprite atlas with exactly SEVEN equal-width cells. Image1 shows seven native Sonic spinning-pole frames. Replace Sonic with MICA jade pangolin image2, approved pixel-art style image3. MATCH EACH POSE EXACTLY and orientation, face/back view, glove positions and boot positions. These bodies are HORIZONTAL, heads left in first cells, feet right; rear scale views in middle, face on right in final. Do not turn upright! Scaled jade hood/tail, cream muzzle, white gloves, coral boots. No bars, furniture, Sonic quills, gold, letters. Simple flat palette pixel clusters black outline, consistent head/body proportions in all cells. ",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "60": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "pole",
+    "raw_sha256": "4620f006f11ff154b72574e0d91c44ad698be1d317bb0f2eac57734b9a561e36",
+    "prompt": "Transparent horizontal sprite atlas with exactly SEVEN equal-width cells. Image1 shows seven native Sonic spinning-pole frames. Replace Sonic with MICA jade pangolin image2, approved pixel-art style image3. MATCH EACH POSE EXACTLY and orientation, face/back view, glove positions and boot positions. These bodies are HORIZONTAL, heads left in first cells, feet right; rear scale views in middle, face on right in final. Do not turn upright! Scaled jade hood/tail, cream muzzle, white gloves, coral boots. No bars, furniture, Sonic quills, gold, letters. Simple flat palette pixel clusters black outline, consistent head/body proportions in all cells. ",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "61": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "pole",
+    "raw_sha256": "4620f006f11ff154b72574e0d91c44ad698be1d317bb0f2eac57734b9a561e36",
+    "prompt": "Transparent horizontal sprite atlas with exactly SEVEN equal-width cells. Image1 shows seven native Sonic spinning-pole frames. Replace Sonic with MICA jade pangolin image2, approved pixel-art style image3. MATCH EACH POSE EXACTLY and orientation, face/back view, glove positions and boot positions. These bodies are HORIZONTAL, heads left in first cells, feet right; rear scale views in middle, face on right in final. Do not turn upright! Scaled jade hood/tail, cream muzzle, white gloves, coral boots. No bars, furniture, Sonic quills, gold, letters. Simple flat palette pixel clusters black outline, consistent head/body proportions in all cells. ",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "62": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "pole",
+    "raw_sha256": "4620f006f11ff154b72574e0d91c44ad698be1d317bb0f2eac57734b9a561e36",
+    "prompt": "Transparent horizontal sprite atlas with exactly SEVEN equal-width cells. Image1 shows seven native Sonic spinning-pole frames. Replace Sonic with MICA jade pangolin image2, approved pixel-art style image3. MATCH EACH POSE EXACTLY and orientation, face/back view, glove positions and boot positions. These bodies are HORIZONTAL, heads left in first cells, feet right; rear scale views in middle, face on right in final. Do not turn upright! Scaled jade hood/tail, cream muzzle, white gloves, coral boots. No bars, furniture, Sonic quills, gold, letters. Simple flat palette pixel clusters black outline, consistent head/body proportions in all cells. ",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "63": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 2,
+    "atlas": "bar",
+    "raw_sha256": "45fcb23191753b1d5b2f16311a4be7db5e20d3da4ecbb971804189b3d498f316",
+    "prompt": "Transparent horizontal sprite atlas with exactly SEVEN equal-width cells, each full character isolated. Transform each of seven native Sonic bar-turning poses image1 into MICA original jade pangolin image2, approved tiny pixel style image3. Exact sequence: 1 front upright arms over head feet down; 2 rear upside down feet up head down; 3 rear inverted extended body; 4 rear inverted tucked; 5 front tightly tucked/crouched; 6 front upright hanging arms overhead feet spread; 7 front upright hanging subtly shifted grip. Match source body orientations and foreshortening strictly. MICA scaled jade hood/tapered tail, cream face/belly, coral boots, white gloves, black outline, flat palette clusters. No quills, gold, text, furniture or bars. Same head and torso size all cells except native foreshortening. Alternative attempt; strict native glove and boot locations; fully clean transparent background.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "64": {
+    "method": "deterministic derive_slopes.rotate quarter-turn",
+    "derived_from": "object-pose-5d",
+    "rotation_degrees": 270,
+    "native_evidence": "Native RGBA including alpha equals this quarter-turn byte-for-byte; no pose approximation."
+  },
+  "65": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "bar",
+    "raw_sha256": "9db4fca28806d81e52b5582a96f597db1239bdaaf2b27bc2b7bb312715d77c04",
+    "prompt": "Transparent horizontal sprite atlas with exactly SEVEN equal-width cells, each full character isolated. Transform each of seven native Sonic bar-turning poses image1 into MICA original jade pangolin image2, approved tiny pixel style image3. Exact sequence: 1 front upright arms over head feet down; 2 rear upside down feet up head down; 3 rear inverted extended body; 4 rear inverted tucked; 5 front tightly tucked/crouched; 6 front upright hanging arms overhead feet spread; 7 front upright hanging subtly shifted grip. Match source body orientations and foreshortening strictly. MICA scaled jade hood/tapered tail, cream face/belly, coral boots, white gloves, black outline, flat palette clusters. No quills, gold, text, furniture or bars. Same head and torso size all cells except native foreshortening. ",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "66": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 2,
+    "atlas": "bar",
+    "raw_sha256": "45fcb23191753b1d5b2f16311a4be7db5e20d3da4ecbb971804189b3d498f316",
+    "prompt": "Transparent horizontal sprite atlas with exactly SEVEN equal-width cells, each full character isolated. Transform each of seven native Sonic bar-turning poses image1 into MICA original jade pangolin image2, approved tiny pixel style image3. Exact sequence: 1 front upright arms over head feet down; 2 rear upside down feet up head down; 3 rear inverted extended body; 4 rear inverted tucked; 5 front tightly tucked/crouched; 6 front upright hanging arms overhead feet spread; 7 front upright hanging subtly shifted grip. Match source body orientations and foreshortening strictly. MICA scaled jade hood/tapered tail, cream face/belly, coral boots, white gloves, black outline, flat palette clusters. No quills, gold, text, furniture or bars. Same head and torso size all cells except native foreshortening. Alternative attempt; strict native glove and boot locations; fully clean transparent background.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "67": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "bar",
+    "raw_sha256": "9db4fca28806d81e52b5582a96f597db1239bdaaf2b27bc2b7bb312715d77c04",
+    "prompt": "Transparent horizontal sprite atlas with exactly SEVEN equal-width cells, each full character isolated. Transform each of seven native Sonic bar-turning poses image1 into MICA original jade pangolin image2, approved tiny pixel style image3. Exact sequence: 1 front upright arms over head feet down; 2 rear upside down feet up head down; 3 rear inverted extended body; 4 rear inverted tucked; 5 front tightly tucked/crouched; 6 front upright hanging arms overhead feet spread; 7 front upright hanging subtly shifted grip. Match source body orientations and foreshortening strictly. MICA scaled jade hood/tapered tail, cream face/belly, coral boots, white gloves, black outline, flat palette clusters. No quills, gold, text, furniture or bars. Same head and torso size all cells except native foreshortening. ",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "68": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 2,
+    "atlas": "bar",
+    "raw_sha256": "45fcb23191753b1d5b2f16311a4be7db5e20d3da4ecbb971804189b3d498f316",
+    "prompt": "Transparent horizontal sprite atlas with exactly SEVEN equal-width cells, each full character isolated. Transform each of seven native Sonic bar-turning poses image1 into MICA original jade pangolin image2, approved tiny pixel style image3. Exact sequence: 1 front upright arms over head feet down; 2 rear upside down feet up head down; 3 rear inverted extended body; 4 rear inverted tucked; 5 front tightly tucked/crouched; 6 front upright hanging arms overhead feet spread; 7 front upright hanging subtly shifted grip. Match source body orientations and foreshortening strictly. MICA scaled jade hood/tapered tail, cream face/belly, coral boots, white gloves, black outline, flat palette clusters. No quills, gold, text, furniture or bars. Same head and torso size all cells except native foreshortening. Alternative attempt; strict native glove and boot locations; fully clean transparent background.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "69": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 2,
+    "atlas": "tumble-a",
+    "raw_sha256": "cd13c4b2316cbab2b70a114b266afe28b18f7933ee15fb9b070b00e0bdf4a281",
+    "prompt": "Create a horizontal sprite atlas of exactly FIVE equal-width cells on transparency. Image 1 is five native Sonic tumble poses; transform EACH to MICA the jade pangolin from image2, matching approved pixel style image3. Preserve exact per-cell body orientation, face direction, bent arms, leg positions, feet directions, perspective and relative head/body size. These are five DIFFERENT 3D tumbling poses, not rigid rotations. Match silhouettes from left to right precisely, including prone/sideways and upside down. MICA has overlapping jade scale hood (no quills), cream muzzle and belly, long tapered scaled tail, white gloves, coral hiking boots. Keep tiny-pixel readability, flat 15-color-like clusters, dark outline, no smooth shading, no text, no furniture, no gold character. Same scale across cells. All five isolated full figures, no clipping. Second independent attempt; minimize head-size drift, preserve exact native limb geometry.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "6A": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "tumble-a",
+    "raw_sha256": "d080b6c0ccbfdcff4bb0c92e7faf06fb1e2a6ab6970f6f5c784089bb279dc09b",
+    "prompt": "Create a horizontal sprite atlas of exactly FIVE equal-width cells on transparency. Image 1 is five native Sonic tumble poses; transform EACH to MICA the jade pangolin from image2, matching approved pixel style image3. Preserve exact per-cell body orientation, face direction, bent arms, leg positions, feet directions, perspective and relative head/body size. These are five DIFFERENT 3D tumbling poses, not rigid rotations. Match silhouettes from left to right precisely, including prone/sideways and upside down. MICA has overlapping jade scale hood (no quills), cream muzzle and belly, long tapered scaled tail, white gloves, coral hiking boots. Keep tiny-pixel readability, flat 15-color-like clusters, dark outline, no smooth shading, no text, no furniture, no gold character. Same scale across cells. All five isolated full figures, no clipping.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "6B": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 2,
+    "atlas": "tumble-a",
+    "raw_sha256": "cd13c4b2316cbab2b70a114b266afe28b18f7933ee15fb9b070b00e0bdf4a281",
+    "prompt": "Create a horizontal sprite atlas of exactly FIVE equal-width cells on transparency. Image 1 is five native Sonic tumble poses; transform EACH to MICA the jade pangolin from image2, matching approved pixel style image3. Preserve exact per-cell body orientation, face direction, bent arms, leg positions, feet directions, perspective and relative head/body size. These are five DIFFERENT 3D tumbling poses, not rigid rotations. Match silhouettes from left to right precisely, including prone/sideways and upside down. MICA has overlapping jade scale hood (no quills), cream muzzle and belly, long tapered scaled tail, white gloves, coral hiking boots. Keep tiny-pixel readability, flat 15-color-like clusters, dark outline, no smooth shading, no text, no furniture, no gold character. Same scale across cells. All five isolated full figures, no clipping. Second independent attempt; minimize head-size drift, preserve exact native limb geometry.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "6C": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "tumble-a",
+    "raw_sha256": "d080b6c0ccbfdcff4bb0c92e7faf06fb1e2a6ab6970f6f5c784089bb279dc09b",
+    "prompt": "Create a horizontal sprite atlas of exactly FIVE equal-width cells on transparency. Image 1 is five native Sonic tumble poses; transform EACH to MICA the jade pangolin from image2, matching approved pixel style image3. Preserve exact per-cell body orientation, face direction, bent arms, leg positions, feet directions, perspective and relative head/body size. These are five DIFFERENT 3D tumbling poses, not rigid rotations. Match silhouettes from left to right precisely, including prone/sideways and upside down. MICA has overlapping jade scale hood (no quills), cream muzzle and belly, long tapered scaled tail, white gloves, coral hiking boots. Keep tiny-pixel readability, flat 15-color-like clusters, dark outline, no smooth shading, no text, no furniture, no gold character. Same scale across cells. All five isolated full figures, no clipping.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "6D": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 2,
+    "atlas": "tumble-a",
+    "raw_sha256": "cd13c4b2316cbab2b70a114b266afe28b18f7933ee15fb9b070b00e0bdf4a281",
+    "prompt": "Create a horizontal sprite atlas of exactly FIVE equal-width cells on transparency. Image 1 is five native Sonic tumble poses; transform EACH to MICA the jade pangolin from image2, matching approved pixel style image3. Preserve exact per-cell body orientation, face direction, bent arms, leg positions, feet directions, perspective and relative head/body size. These are five DIFFERENT 3D tumbling poses, not rigid rotations. Match silhouettes from left to right precisely, including prone/sideways and upside down. MICA has overlapping jade scale hood (no quills), cream muzzle and belly, long tapered scaled tail, white gloves, coral hiking boots. Keep tiny-pixel readability, flat 15-color-like clusters, dark outline, no smooth shading, no text, no furniture, no gold character. Same scale across cells. All five isolated full figures, no clipping. Second independent attempt; minimize head-size drift, preserve exact native limb geometry.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "6E": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 2,
+    "atlas": "tumble-b",
+    "raw_sha256": "7e28fedf5cd41b36eba7daba18f5a4cd68ea913bfe4ebe4882bfc152e76a3e1c",
+    "prompt": "Create a horizontal sprite atlas of exactly FIVE equal-width cells on transparency. Image 1 is five native Sonic tumble poses; transform EACH to MICA the jade pangolin from image2, matching approved pixel style image3. Preserve exact per-cell body orientation, face direction, bent arms, leg positions, feet directions, perspective and relative head/body size. These are five DIFFERENT 3D tumbling poses, not rigid rotations. Match silhouettes from left to right precisely, including prone/sideways and upside down. MICA has overlapping jade scale hood (no quills), cream muzzle and belly, long tapered scaled tail, white gloves, coral hiking boots. Keep tiny-pixel readability, flat 15-color-like clusters, dark outline, no smooth shading, no text, no furniture, no gold character. Same scale across cells. All five isolated full figures, no clipping. Second independent attempt; keep head size stable, follow native limb geometry and rear-facing orientations strictly.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "6F": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "tumble-b",
+    "raw_sha256": "85a9bffe8d583abdf07c17c4568841f263d9cbeb852f574f84ab7f3ac269d9e7",
+    "prompt": "Create a horizontal sprite atlas of exactly FIVE equal-width cells on transparency. Image 1 is five native Sonic tumble poses; transform EACH to MICA the jade pangolin from image2, matching approved pixel style image3. Preserve exact per-cell body orientation, face direction, bent arms, leg positions, feet directions, perspective and relative head/body size. These are five DIFFERENT 3D tumbling poses, not rigid rotations. Match silhouettes from left to right precisely, including prone/sideways and upside down. MICA has overlapping jade scale hood (no quills), cream muzzle and belly, long tapered scaled tail, white gloves, coral hiking boots. Keep tiny-pixel readability, flat 15-color-like clusters, dark outline, no smooth shading, no text, no furniture, no gold character. Same scale across cells. All five isolated full figures, no clipping.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "70": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 2,
+    "atlas": "tumble-b",
+    "raw_sha256": "7e28fedf5cd41b36eba7daba18f5a4cd68ea913bfe4ebe4882bfc152e76a3e1c",
+    "prompt": "Create a horizontal sprite atlas of exactly FIVE equal-width cells on transparency. Image 1 is five native Sonic tumble poses; transform EACH to MICA the jade pangolin from image2, matching approved pixel style image3. Preserve exact per-cell body orientation, face direction, bent arms, leg positions, feet directions, perspective and relative head/body size. These are five DIFFERENT 3D tumbling poses, not rigid rotations. Match silhouettes from left to right precisely, including prone/sideways and upside down. MICA has overlapping jade scale hood (no quills), cream muzzle and belly, long tapered scaled tail, white gloves, coral hiking boots. Keep tiny-pixel readability, flat 15-color-like clusters, dark outline, no smooth shading, no text, no furniture, no gold character. Same scale across cells. All five isolated full figures, no clipping. Second independent attempt; keep head size stable, follow native limb geometry and rear-facing orientations strictly.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "71": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "tumble-b",
+    "raw_sha256": "85a9bffe8d583abdf07c17c4568841f263d9cbeb852f574f84ab7f3ac269d9e7",
+    "prompt": "Create a horizontal sprite atlas of exactly FIVE equal-width cells on transparency. Image 1 is five native Sonic tumble poses; transform EACH to MICA the jade pangolin from image2, matching approved pixel style image3. Preserve exact per-cell body orientation, face direction, bent arms, leg positions, feet directions, perspective and relative head/body size. These are five DIFFERENT 3D tumbling poses, not rigid rotations. Match silhouettes from left to right precisely, including prone/sideways and upside down. MICA has overlapping jade scale hood (no quills), cream muzzle and belly, long tapered scaled tail, white gloves, coral hiking boots. Keep tiny-pixel readability, flat 15-color-like clusters, dark outline, no smooth shading, no text, no furniture, no gold character. Same scale across cells. All five isolated full figures, no clipping.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "72": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 2,
+    "atlas": "tumble-b",
+    "raw_sha256": "7e28fedf5cd41b36eba7daba18f5a4cd68ea913bfe4ebe4882bfc152e76a3e1c",
+    "prompt": "Create a horizontal sprite atlas of exactly FIVE equal-width cells on transparency. Image 1 is five native Sonic tumble poses; transform EACH to MICA the jade pangolin from image2, matching approved pixel style image3. Preserve exact per-cell body orientation, face direction, bent arms, leg positions, feet directions, perspective and relative head/body size. These are five DIFFERENT 3D tumbling poses, not rigid rotations. Match silhouettes from left to right precisely, including prone/sideways and upside down. MICA has overlapping jade scale hood (no quills), cream muzzle and belly, long tapered scaled tail, white gloves, coral hiking boots. Keep tiny-pixel readability, flat 15-color-like clusters, dark outline, no smooth shading, no text, no furniture, no gold character. Same scale across cells. All five isolated full figures, no clipping. Second independent attempt; keep head size stable, follow native limb geometry and rear-facing orientations strictly.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "73": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 2,
+    "atlas": "tumble-c",
+    "raw_sha256": "79a07a004ea7d8613cde91ef2f3ff22b431484d4d04e6cddca8ea65e17bf6337",
+    "prompt": "Create a horizontal sprite atlas of exactly FIVE equal-width cells on transparency. Image 1 is five native Sonic tumble poses; transform EACH to MICA the jade pangolin from image2, matching approved pixel style image3. Preserve exact per-cell body orientation, face direction, bent arms, leg positions, feet directions, perspective and relative head/body size. These are five DIFFERENT 3D tumbling poses, not rigid rotations. Match silhouettes from left to right precisely, including prone/sideways and upside down. MICA has overlapping jade scale hood (no quills), cream muzzle and belly, long tapered scaled tail, white gloves, coral hiking boots. Keep tiny-pixel readability, flat 15-color-like clusters, dark outline, no smooth shading, no text, no furniture, no gold character. Same scale across cells. All five isolated full figures, no clipping. IMPORTANT: all five frames show the BACK of the head like native, not a face. Jade scale armour and tail face camera, curled limbs. Match each boot and glove location. Alternate clean attempt with stable small head proportions.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "74": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "tumble-c",
+    "raw_sha256": "411a2333e613fe7730819ef4931169a154d037c7aefc4868b92df665ecb6a753",
+    "prompt": "Create a horizontal sprite atlas of exactly FIVE equal-width cells on transparency. Image 1 is five native Sonic tumble poses; transform EACH to MICA the jade pangolin from image2, matching approved pixel style image3. Preserve exact per-cell body orientation, face direction, bent arms, leg positions, feet directions, perspective and relative head/body size. These are five DIFFERENT 3D tumbling poses, not rigid rotations. Match silhouettes from left to right precisely, including prone/sideways and upside down. MICA has overlapping jade scale hood (no quills), cream muzzle and belly, long tapered scaled tail, white gloves, coral hiking boots. Keep tiny-pixel readability, flat 15-color-like clusters, dark outline, no smooth shading, no text, no furniture, no gold character. Same scale across cells. All five isolated full figures, no clipping. IMPORTANT: all five frames show the BACK of the head like native, not a face. Jade scale armour and tail face camera, curled limbs. Match each boot and glove location.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "75": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 2,
+    "atlas": "tumble-c",
+    "raw_sha256": "79a07a004ea7d8613cde91ef2f3ff22b431484d4d04e6cddca8ea65e17bf6337",
+    "prompt": "Create a horizontal sprite atlas of exactly FIVE equal-width cells on transparency. Image 1 is five native Sonic tumble poses; transform EACH to MICA the jade pangolin from image2, matching approved pixel style image3. Preserve exact per-cell body orientation, face direction, bent arms, leg positions, feet directions, perspective and relative head/body size. These are five DIFFERENT 3D tumbling poses, not rigid rotations. Match silhouettes from left to right precisely, including prone/sideways and upside down. MICA has overlapping jade scale hood (no quills), cream muzzle and belly, long tapered scaled tail, white gloves, coral hiking boots. Keep tiny-pixel readability, flat 15-color-like clusters, dark outline, no smooth shading, no text, no furniture, no gold character. Same scale across cells. All five isolated full figures, no clipping. IMPORTANT: all five frames show the BACK of the head like native, not a face. Jade scale armour and tail face camera, curled limbs. Match each boot and glove location. Alternate clean attempt with stable small head proportions.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "76": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "tumble-c",
+    "raw_sha256": "411a2333e613fe7730819ef4931169a154d037c7aefc4868b92df665ecb6a753",
+    "prompt": "Create a horizontal sprite atlas of exactly FIVE equal-width cells on transparency. Image 1 is five native Sonic tumble poses; transform EACH to MICA the jade pangolin from image2, matching approved pixel style image3. Preserve exact per-cell body orientation, face direction, bent arms, leg positions, feet directions, perspective and relative head/body size. These are five DIFFERENT 3D tumbling poses, not rigid rotations. Match silhouettes from left to right precisely, including prone/sideways and upside down. MICA has overlapping jade scale hood (no quills), cream muzzle and belly, long tapered scaled tail, white gloves, coral hiking boots. Keep tiny-pixel readability, flat 15-color-like clusters, dark outline, no smooth shading, no text, no furniture, no gold character. Same scale across cells. All five isolated full figures, no clipping. IMPORTANT: all five frames show the BACK of the head like native, not a face. Jade scale armour and tail face camera, curled limbs. Match each boot and glove location.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "77": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 2,
+    "atlas": "tumble-c",
+    "raw_sha256": "79a07a004ea7d8613cde91ef2f3ff22b431484d4d04e6cddca8ea65e17bf6337",
+    "prompt": "Create a horizontal sprite atlas of exactly FIVE equal-width cells on transparency. Image 1 is five native Sonic tumble poses; transform EACH to MICA the jade pangolin from image2, matching approved pixel style image3. Preserve exact per-cell body orientation, face direction, bent arms, leg positions, feet directions, perspective and relative head/body size. These are five DIFFERENT 3D tumbling poses, not rigid rotations. Match silhouettes from left to right precisely, including prone/sideways and upside down. MICA has overlapping jade scale hood (no quills), cream muzzle and belly, long tapered scaled tail, white gloves, coral hiking boots. Keep tiny-pixel readability, flat 15-color-like clusters, dark outline, no smooth shading, no text, no furniture, no gold character. Same scale across cells. All five isolated full figures, no clipping. IMPORTANT: all five frames show the BACK of the head like native, not a face. Jade scale armour and tail face camera, curled limbs. Match each boot and glove location. Alternate clean attempt with stable small head proportions.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "78": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 2,
+    "atlas": "swing",
+    "raw_sha256": "69895e82faa23d539f925d23656d92de49cf4839db7a243d4500eef3acf4fe24",
+    "prompt": "Create a horizontal sprite atlas with exactly TWO equal-width cells, transparent background. Redraw the two Sonic reference poses from image 1 as MICA the original jade pangolin in image 2, using the approved tiny pixel sprite style of image 3. Preserve each reference pose EXACTLY: hand positions gripping an invisible vine over head, face direction, leg bend and splayed boot angles, orientation and body proportions. Cell1 hangs vertically facing right with both gloves above head, boots spread; cell2 body tilts diagonally 45 degrees counterclockwise, hands above-left, feet lower-right. Keep MICA's jade overlapping scale hood and tapered tail, cream muzzle/belly, white gloves, coral hiking boots, black outline. Equal character scale, no gold variant, no Sonic quills, no bar/vine/furniture, no text. Flat limited palette pixel-art shapes suitable for reduction to 40px tall. Match native silhouette and camera orientation; do not substitute standing poses. Alternative attempt: prioritize matching the native arm, muzzle and boot locations, small consistent head; long thin tapered tail.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "79": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "swing",
+    "raw_sha256": "69dc50df1577cf7e2af0ab641dd71a954107d6e932c0b7e88dd4b80ad3d28e73",
+    "prompt": "Create a horizontal sprite atlas with exactly TWO equal-width cells, transparent background. Redraw the two Sonic reference poses from image 1 as MICA the original jade pangolin in image 2, using the approved tiny pixel sprite style of image 3. Preserve each reference pose EXACTLY: hand positions gripping an invisible vine over head, face direction, leg bend and splayed boot angles, orientation and body proportions. Cell1 hangs vertically facing right with both gloves above head, boots spread; cell2 body tilts diagonally 45 degrees counterclockwise, hands above-left, feet lower-right. Keep MICA's jade overlapping scale hood and tapered tail, cream muzzle/belly, white gloves, coral hiking boots, black outline. Equal character scale, no gold variant, no Sonic quills, no bar/vine/furniture, no text. Flat limited palette pixel-art shapes suitable for reduction to 40px tall. Match native silhouette and camera orientation; do not substitute standing poses.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "7A": {
+    "method": "deterministic derive_slopes.rotate quarter-turn",
+    "derived_from": "object-pose-78",
+    "rotation_degrees": 90,
+    "native_evidence": "Native RGBA including alpha equals this quarter-turn byte-for-byte; no pose approximation."
+  },
+  "7B": {
+    "method": "deterministic derive_slopes.rotate quarter-turn",
+    "derived_from": "object-pose-79",
+    "rotation_degrees": 90,
+    "native_evidence": "Native RGBA including alpha equals this quarter-turn byte-for-byte; no pose approximation."
+  },
+  "7C": {
+    "method": "deterministic derive_slopes.rotate quarter-turn",
+    "derived_from": "object-pose-78",
+    "rotation_degrees": 180,
+    "native_evidence": "Native RGBA including alpha equals this quarter-turn byte-for-byte; no pose approximation."
+  },
+  "7D": {
+    "method": "deterministic derive_slopes.rotate quarter-turn",
+    "derived_from": "object-pose-79",
+    "rotation_degrees": 180,
+    "native_evidence": "Native RGBA including alpha equals this quarter-turn byte-for-byte; no pose approximation."
+  },
+  "7E": {
+    "method": "deterministic derive_slopes.rotate quarter-turn",
+    "derived_from": "object-pose-78",
+    "rotation_degrees": 270,
+    "native_evidence": "Native RGBA including alpha equals this quarter-turn byte-for-byte; no pose approximation."
+  },
+  "7F": {
+    "method": "deterministic derive_slopes.rotate quarter-turn",
+    "derived_from": "object-pose-79",
+    "rotation_degrees": 270,
+    "native_evidence": "Native RGBA including alpha equals this quarter-turn byte-for-byte; no pose approximation."
+  },
+  "94": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 1,
+    "atlas": "bar",
+    "raw_sha256": "9db4fca28806d81e52b5582a96f597db1239bdaaf2b27bc2b7bb312715d77c04",
+    "prompt": "Transparent horizontal sprite atlas with exactly SEVEN equal-width cells, each full character isolated. Transform each of seven native Sonic bar-turning poses image1 into MICA original jade pangolin image2, approved tiny pixel style image3. Exact sequence: 1 front upright arms over head feet down; 2 rear upside down feet up head down; 3 rear inverted extended body; 4 rear inverted tucked; 5 front tightly tucked/crouched; 6 front upright hanging arms overhead feet spread; 7 front upright hanging subtly shifted grip. Match source body orientations and foreshortening strictly. MICA scaled jade hood/tapered tail, cream face/belly, coral boots, white gloves, black outline, flat palette clusters. No quills, gold, text, furniture or bars. Same head and torso size all cells except native foreshortening. ",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  },
+  "95": {
+    "method": "GPT Image native-pose redraw",
+    "attempt": 2,
+    "atlas": "bar",
+    "raw_sha256": "45fcb23191753b1d5b2f16311a4be7db5e20d3da4ecbb971804189b3d498f316",
+    "prompt": "Transparent horizontal sprite atlas with exactly SEVEN equal-width cells, each full character isolated. Transform each of seven native Sonic bar-turning poses image1 into MICA original jade pangolin image2, approved tiny pixel style image3. Exact sequence: 1 front upright arms over head feet down; 2 rear upside down feet up head down; 3 rear inverted extended body; 4 rear inverted tucked; 5 front tightly tucked/crouched; 6 front upright hanging arms overhead feet spread; 7 front upright hanging subtly shifted grip. Match source body orientations and foreshortening strictly. MICA scaled jade hood/tapered tail, cream face/belly, coral boots, white gloves, black outline, flat palette clusters. No quills, gold, text, furniture or bars. Same head and torso size all cells except native foreshortening. Alternative attempt; strict native glove and boot locations; fully clean transparent background.",
+    "cleanup": "Uniform native-aspect padding and Lanczos reduction; shared fixed palette, alpha threshold and inside ink only. No painted edits."
+  }
+}

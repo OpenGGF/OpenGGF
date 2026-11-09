@@ -1719,6 +1719,526 @@
       "angle_set": "flat",
       "duration_ticks": 2,
       "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "object-pose-58",
+      "animation": "NATIVE_POSE",
+      "order": 14,
+      "file": "frames/object-pose-58.png",
+      "hotspot": [
+        12,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-5b",
+      "animation": "NATIVE_POSE",
+      "order": 15,
+      "file": "frames/object-pose-5b.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-5c",
+      "animation": "NATIVE_POSE",
+      "order": 16,
+      "file": "frames/object-pose-5c.png",
+      "hotspot": [
+        16,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-5d",
+      "animation": "NATIVE_POSE",
+      "order": 17,
+      "file": "frames/object-pose-5d.png",
+      "hotspot": [
+        3,
+        10
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-5e",
+      "animation": "NATIVE_POSE",
+      "order": 18,
+      "file": "frames/object-pose-5e.png",
+      "hotspot": [
+        28,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-5f",
+      "animation": "NATIVE_POSE",
+      "order": 19,
+      "file": "frames/object-pose-5f.png",
+      "hotspot": [
+        25,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-60",
+      "animation": "NATIVE_POSE",
+      "order": 20,
+      "file": "frames/object-pose-60.png",
+      "hotspot": [
+        9,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-61",
+      "animation": "NATIVE_POSE",
+      "order": 21,
+      "file": "frames/object-pose-61.png",
+      "hotspot": [
+        33,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-62",
+      "animation": "NATIVE_POSE",
+      "order": 22,
+      "file": "frames/object-pose-62.png",
+      "hotspot": [
+        20,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-63",
+      "animation": "NATIVE_POSE",
+      "order": 23,
+      "file": "frames/object-pose-63.png",
+      "hotspot": [
+        11,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-64",
+      "animation": "NATIVE_POSE",
+      "order": 24,
+      "file": "frames/object-pose-64.png",
+      "hotspot": [
+        11,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-65",
+      "animation": "NATIVE_POSE",
+      "order": 25,
+      "file": "frames/object-pose-65.png",
+      "hotspot": [
+        11,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-66",
+      "animation": "NATIVE_POSE",
+      "order": 26,
+      "file": "frames/object-pose-66.png",
+      "hotspot": [
+        12,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-67",
+      "animation": "NATIVE_POSE",
+      "order": 27,
+      "file": "frames/object-pose-67.png",
+      "hotspot": [
+        13,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-68",
+      "animation": "NATIVE_POSE",
+      "order": 28,
+      "file": "frames/object-pose-68.png",
+      "hotspot": [
+        13,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-69",
+      "animation": "NATIVE_POSE",
+      "order": 29,
+      "file": "frames/object-pose-69.png",
+      "hotspot": [
+        16,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-6a",
+      "animation": "NATIVE_POSE",
+      "order": 30,
+      "file": "frames/object-pose-6a.png",
+      "hotspot": [
+        15,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-6b",
+      "animation": "NATIVE_POSE",
+      "order": 31,
+      "file": "frames/object-pose-6b.png",
+      "hotspot": [
+        17,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-6c",
+      "animation": "NATIVE_POSE",
+      "order": 32,
+      "file": "frames/object-pose-6c.png",
+      "hotspot": [
+        16,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-6d",
+      "animation": "NATIVE_POSE",
+      "order": 33,
+      "file": "frames/object-pose-6d.png",
+      "hotspot": [
+        17,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-6e",
+      "animation": "NATIVE_POSE",
+      "order": 34,
+      "file": "frames/object-pose-6e.png",
+      "hotspot": [
+        17,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-6f",
+      "animation": "NATIVE_POSE",
+      "order": 35,
+      "file": "frames/object-pose-6f.png",
+      "hotspot": [
+        16,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-70",
+      "animation": "NATIVE_POSE",
+      "order": 36,
+      "file": "frames/object-pose-70.png",
+      "hotspot": [
+        16,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-71",
+      "animation": "NATIVE_POSE",
+      "order": 37,
+      "file": "frames/object-pose-71.png",
+      "hotspot": [
+        16,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-72",
+      "animation": "NATIVE_POSE",
+      "order": 38,
+      "file": "frames/object-pose-72.png",
+      "hotspot": [
+        14,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-73",
+      "animation": "NATIVE_POSE",
+      "order": 39,
+      "file": "frames/object-pose-73.png",
+      "hotspot": [
+        17,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-74",
+      "animation": "NATIVE_POSE",
+      "order": 40,
+      "file": "frames/object-pose-74.png",
+      "hotspot": [
+        16,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-75",
+      "animation": "NATIVE_POSE",
+      "order": 41,
+      "file": "frames/object-pose-75.png",
+      "hotspot": [
+        12,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-76",
+      "animation": "NATIVE_POSE",
+      "order": 42,
+      "file": "frames/object-pose-76.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-77",
+      "animation": "NATIVE_POSE",
+      "order": 43,
+      "file": "frames/object-pose-77.png",
+      "hotspot": [
+        16,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-78",
+      "animation": "NATIVE_POSE",
+      "order": 44,
+      "file": "frames/object-pose-78.png",
+      "hotspot": [
+        17,
+        25
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-79",
+      "animation": "NATIVE_POSE",
+      "order": 45,
+      "file": "frames/object-pose-79.png",
+      "hotspot": [
+        26,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-7a",
+      "animation": "NATIVE_POSE",
+      "order": 46,
+      "file": "frames/object-pose-7a.png",
+      "hotspot": [
+        26,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-7b",
+      "animation": "NATIVE_POSE",
+      "order": 47,
+      "file": "frames/object-pose-7b.png",
+      "hotspot": [
+        24,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-7c",
+      "animation": "NATIVE_POSE",
+      "order": 48,
+      "file": "frames/object-pose-7c.png",
+      "hotspot": [
+        18,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-7d",
+      "animation": "NATIVE_POSE",
+      "order": 49,
+      "file": "frames/object-pose-7d.png",
+      "hotspot": [
+        15,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-7e",
+      "animation": "NATIVE_POSE",
+      "order": 50,
+      "file": "frames/object-pose-7e.png",
+      "hotspot": [
+        22,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-7f",
+      "animation": "NATIVE_POSE",
+      "order": 51,
+      "file": "frames/object-pose-7f.png",
+      "hotspot": [
+        13,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-94",
+      "animation": "NATIVE_POSE",
+      "order": 52,
+      "file": "frames/object-pose-94.png",
+      "hotspot": [
+        12,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-95",
+      "animation": "NATIVE_POSE",
+      "order": 53,
+      "file": "frames/object-pose-95.png",
+      "hotspot": [
+        10,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
     }
   ],
   "scripts": {
@@ -2137,6 +2657,46 @@
     "twist/1": "native-pose-56",
     "twist/2": "native-pose-57",
     "twist/4": "native-pose-59",
-    "twist/5": "native-pose-5a"
+    "twist/5": "native-pose-5a",
+    "twist/3": "object-pose-58",
+    "twist/6": "object-pose-5b",
+    "pole/0": "object-pose-5c",
+    "pole/1": "object-pose-5d",
+    "pole/2": "object-pose-5e",
+    "pole/3": "object-pose-5f",
+    "pole/4": "object-pose-60",
+    "pole/5": "object-pose-61",
+    "pole/6": "object-pose-62",
+    "bar/0": "object-pose-63",
+    "bar/1": "object-pose-64",
+    "bar/2": "object-pose-65",
+    "bar/3": "object-pose-66",
+    "bar/4": "object-pose-67",
+    "bar/5": "object-pose-68",
+    "tumble/0": "object-pose-69",
+    "tumble/1": "object-pose-6a",
+    "tumble/2": "object-pose-6b",
+    "tumble/3": "object-pose-6c",
+    "tumble/4": "object-pose-6d",
+    "tumble/5": "object-pose-6e",
+    "tumble/6": "object-pose-6f",
+    "tumble/7": "object-pose-70",
+    "tumble/8": "object-pose-71",
+    "tumble/9": "object-pose-72",
+    "tumble/10": "object-pose-73",
+    "tumble/11": "object-pose-74",
+    "tumble/12": "object-pose-75",
+    "tumble/13": "object-pose-76",
+    "tumble/14": "object-pose-77",
+    "swing/0": "object-pose-78",
+    "swing/1": "object-pose-79",
+    "swing/2": "object-pose-7a",
+    "swing/3": "object-pose-7b",
+    "swing/4": "object-pose-7c",
+    "swing/5": "object-pose-7d",
+    "swing/6": "object-pose-7e",
+    "swing/7": "object-pose-7f",
+    "bar-end/0": "object-pose-94",
+    "bar-end/1": "object-pose-95"
   }
 }
