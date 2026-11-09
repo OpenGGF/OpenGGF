@@ -699,8 +699,16 @@ names borrow family phases into host-timed scripts in a private ID namespace;
 typed `AnimationId` and canonical requests select them. Raw integer animation
 writes retain their existing meaning. Unused native dash slots are N/A, not
 proof of a leap pose. Warp, ending leap/surf and shrink retain compatibility
-fallbacks where a donor lacks their family. Tails' family inventory remains
-reference-only; its archetype and CPU behavior are unchanged by this table.
+fallbacks where a donor lacks their family. Tails-archetype creator art selects a separate native vocabulary through
+`DonorCapabilities.forPlayableCharacter(TAILS_ALONE)`. S2/S3K providers publish
+Tails' own phase counts, repeated steps and LOOP_BACK tails; the binder retains
+the loaded Tails script clocks and terminators. Native stock characters and
+cross-game Sonic donation continue using the original unscoped vocabulary.
+Hosts without a native Tails route retain their default pose vocabulary.
+Creator flight can ask `TailsFlightController.selectAnimation(carrying)` for the
+same native flight/swim branch without duplicating fluid, fatigue or carry rules.
+When installing private scripts, offset source mapping indices by the native-frame
+alias reservation; never overwrite every variant with a normal-flight script.
 
 A binding may omit a canonical animation name while still defining its family:
 Sonic's native carried-exit script shares TAILS_CARRIED phases and retains its

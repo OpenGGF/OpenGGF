@@ -679,7 +679,9 @@ final class LevelPlayableArtInitializer {
                 var nativeArt = hostProvider.loadPlayerSpriteArt(archetype);
                 if (nativeArt == null || !(nativeArt.animationProfile() instanceof com.openggf.sprites.animation.ScriptedVelocityAnimationProfile profile))
                     throw new IOException("Host cannot bind canonical playable animations");
-                art = com.openggf.level.objects.PlayableSheetAnimationBinding.bind(art, host.getDonorCapabilities(), nativeArt);
+                art = com.openggf.level.objects.PlayableSheetAnimationBinding.bind(art, host.getDonorCapabilities().forPlayableCharacter(
+                        archetype.equals("tails") ? com.openggf.game.PlayerCharacter.TAILS_ALONE
+                                : com.openggf.game.PlayerCharacter.SONIC_ALONE), nativeArt);
             }
             return art;
         }

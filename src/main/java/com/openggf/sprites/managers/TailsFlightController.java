@@ -105,7 +105,8 @@ public final class TailsFlightController {
         sprite.setDoubleJumpProperty((byte) 0);
     }
 
-    private void applyAnimation(boolean carryingMainCharacter) {
+    /** Native flight/swim pose selection, shared with creator sheets using private animation IDs. */
+    public CanonicalAnimation selectAnimation(boolean carryingMainCharacter) {
         CanonicalAnimation animation;
         if (PlayerFluidContextAccess.movementUnderwater(sprite)) {
             if ((sprite.getDoubleJumpProperty() & 0xFF) == 0) {
@@ -129,7 +130,11 @@ public final class TailsFlightController {
                     : CanonicalAnimation.TAILS_FLY;
         }
 
-        int animationId = sprite.resolveAnimationId(animation);
+        return animation;
+    }
+
+    private void applyAnimation(boolean carryingMainCharacter) {
+        int animationId = sprite.resolveAnimationId(selectAnimation(carryingMainCharacter));
         if (animationId >= 0) {
             sprite.setAnimationId(animationId);
             if (sprite.getForcedAnimationId() >= 0) {

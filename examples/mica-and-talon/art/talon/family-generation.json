@@ -1,0 +1,3834 @@
+{
+  "method": "Built-in GPT Image: real-palette native 8x pose inputs; approved WAIT/WALK/RUN/FLY identity; three alternative rows per family; uniform anatomical forehead scale, palette reduction only; no native pixels retained.",
+  "sources": {
+    "PUSH": [
+      "699853e1",
+      4,
+      3
+    ],
+    "BALANCE": [
+      "3c93c88d",
+      2,
+      3
+    ],
+    "BALANCE2": [
+      "8fe0e03f",
+      3,
+      3
+    ],
+    "BALANCE3": [
+      "2d6efd07",
+      2,
+      3
+    ],
+    "BALANCE4": [
+      "a09acb58",
+      5,
+      3
+    ],
+    "HANG": [
+      "f188dbf4",
+      2,
+      3
+    ],
+    "HANG2": [
+      "50a08c83",
+      2,
+      3
+    ],
+    "BUBBLE": [
+      "dad3482b",
+      3,
+      3
+    ],
+    "HURT_FALL": [
+      "1437e090",
+      2,
+      3
+    ],
+    "DROWN": [
+      "94563843",
+      1,
+      3
+    ],
+    "FLOAT2": [
+      "e6dc705a",
+      8,
+      3
+    ],
+    "BLINK": [
+      "beb6fcbe",
+      3,
+      3
+    ],
+    "GET_UP": [
+      "eed82bbd",
+      2,
+      3
+    ],
+    "VICTORY": [
+      "18976a5b",
+      4,
+      3
+    ],
+    "TAILS_CARRIED": [
+      "7445efdf",
+      3,
+      3
+    ],
+    "SUPER_TRANSFORM": [
+      "59094ff4",
+      5,
+      3
+    ],
+    "TAILS_FLY_ASCEND": [
+      "ed94187e",
+      6,
+      3
+    ],
+    "TAILS_FLY_CARRY": [
+      "bda6fb26",
+      6,
+      3
+    ],
+    "TAILS_FLY_CARRY_ASCEND": [
+      "5987c322",
+      6,
+      3
+    ],
+    "TAILS_SWIM": [
+      "aa894fde",
+      5,
+      3
+    ],
+    "TAILS_SWIM_ASCEND": [
+      "b8831b88",
+      5,
+      3
+    ],
+    "TAILS_SWIM_CARRY": [
+      "7bbab6e2",
+      2,
+      3
+    ],
+    "TAILS_SWIM_TIRED": [
+      "d1691db4",
+      3,
+      3
+    ]
+  },
+  "choices": {
+    "PUSH": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "BALANCE": [
+      0,
+      2
+    ],
+    "BALANCE2": [
+      1,
+      0,
+      2
+    ],
+    "BALANCE3": [
+      1,
+      1
+    ],
+    "BALANCE4": [
+      0,
+      1,
+      2,
+      1,
+      2
+    ],
+    "HANG": [
+      1,
+      2
+    ],
+    "HANG2": [
+      0,
+      1
+    ],
+    "BUBBLE": [
+      0,
+      1,
+      2
+    ],
+    "HURT_FALL": [
+      1,
+      2
+    ],
+    "DROWN": [
+      2
+    ],
+    "FLOAT2": [
+      0,
+      1,
+      0,
+      2,
+      1,
+      2,
+      0,
+      1
+    ],
+    "BLINK": [
+      0,
+      1,
+      2
+    ],
+    "GET_UP": [
+      1,
+      2
+    ],
+    "VICTORY": [
+      0,
+      1,
+      2,
+      1
+    ],
+    "TAILS_CARRIED": [
+      1,
+      0,
+      2
+    ],
+    "SUPER_TRANSFORM": [
+      1,
+      2,
+      0,
+      1,
+      2
+    ],
+    "TAILS_FLY_ASCEND": [
+      0,
+      1,
+      2,
+      0,
+      1,
+      2
+    ],
+    "TAILS_FLY_CARRY": [
+      1,
+      2,
+      0,
+      1,
+      2,
+      0
+    ],
+    "TAILS_FLY_CARRY_ASCEND": [
+      0,
+      1,
+      2,
+      1,
+      0,
+      2
+    ],
+    "TAILS_SWIM": [
+      0,
+      2,
+      1,
+      2,
+      1
+    ],
+    "TAILS_SWIM_ASCEND": [
+      1,
+      0,
+      2,
+      1,
+      2
+    ],
+    "TAILS_SWIM_CARRY": [
+      1,
+      2
+    ],
+    "TAILS_SWIM_TIRED": [
+      1,
+      0,
+      2
+    ]
+  },
+  "frames": {
+    "family-push-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-699853e1-356e-4004-92a9-28b1ed5d24af.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        0,
+        0
+      ],
+      "scale": 7.5,
+      "goggleSourceBox": [
+        135,
+        19,
+        210,
+        46
+      ],
+      "size": [
+        34,
+        30
+      ],
+      "attempt": 1,
+      "hotspot": [
+        18,
+        11
+      ],
+      "sha256": "e913137b3f37780d1dbf3345836ff4a7009c2fb9f436d6a81f01492c09c5b84e",
+      "reference": {
+        "size": [
+          28,
+          30
+        ],
+        "hotspot": [
+          12,
+          14
+        ],
+        "host": "s2",
+        "mapping": 99,
+        "tailExcluded": true
+      },
+      "nativePalmPlane": 16
+    },
+    "family-push-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-699853e1-356e-4004-92a9-28b1ed5d24af.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        1,
+        0
+      ],
+      "scale": 7.5,
+      "goggleSourceBox": [
+        79,
+        19,
+        154,
+        46
+      ],
+      "size": [
+        26,
+        31
+      ],
+      "attempt": 1,
+      "hotspot": [
+        10,
+        12
+      ],
+      "sha256": "e913137b3f37780d1dbf3345836ff4a7009c2fb9f436d6a81f01492c09c5b84e",
+      "reference": {
+        "size": [
+          23,
+          30
+        ],
+        "hotspot": [
+          7,
+          14
+        ],
+        "host": "s2",
+        "mapping": 100,
+        "tailExcluded": true
+      },
+      "nativePalmPlane": 16
+    },
+    "family-push-02": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-699853e1-356e-4004-92a9-28b1ed5d24af.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        2,
+        0
+      ],
+      "scale": 7.3,
+      "goggleSourceBox": [
+        92,
+        19,
+        165,
+        46
+      ],
+      "size": [
+        28,
+        32
+      ],
+      "attempt": 1,
+      "hotspot": [
+        12,
+        13
+      ],
+      "sha256": "e913137b3f37780d1dbf3345836ff4a7009c2fb9f436d6a81f01492c09c5b84e",
+      "reference": {
+        "size": [
+          23,
+          30
+        ],
+        "hotspot": [
+          7,
+          14
+        ],
+        "host": "s2",
+        "mapping": 101,
+        "tailExcluded": true
+      },
+      "nativePalmPlane": 16
+    },
+    "family-push-03": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-699853e1-356e-4004-92a9-28b1ed5d24af.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        3,
+        0
+      ],
+      "scale": 7.1,
+      "goggleSourceBox": [
+        91,
+        18,
+        162,
+        45
+      ],
+      "size": [
+        29,
+        32
+      ],
+      "attempt": 1,
+      "hotspot": [
+        13,
+        13
+      ],
+      "sha256": "e913137b3f37780d1dbf3345836ff4a7009c2fb9f436d6a81f01492c09c5b84e",
+      "reference": {
+        "size": [
+          24,
+          30
+        ],
+        "hotspot": [
+          8,
+          14
+        ],
+        "host": "s2",
+        "mapping": 102,
+        "tailExcluded": true
+      },
+      "nativePalmPlane": 16
+    },
+    "family-balance-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-3c93c88d-5ae1-4d1a-94bf-165efd892638.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        0,
+        0
+      ],
+      "scale": 8.6,
+      "goggleSourceBox": [
+        114,
+        24,
+        200,
+        56
+      ],
+      "size": [
+        27,
+        31
+      ],
+      "attempt": 1,
+      "hotspot": [
+        13,
+        12
+      ],
+      "sha256": "8d9e3837329af813bd9d32a01f8e3dd88facc8b93533e762ed9e4a5f6412f5b7",
+      "reference": {
+        "size": [
+          29,
+          31
+        ],
+        "hotspot": [
+          24,
+          15
+        ],
+        "host": "s2",
+        "mapping": 105,
+        "tailExcluded": true
+      }
+    },
+    "family-balance-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-3c93c88d-5ae1-4d1a-94bf-165efd892638.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        1,
+        2
+      ],
+      "scale": 8.7,
+      "goggleSourceBox": [
+        112,
+        26,
+        199,
+        56
+      ],
+      "size": [
+        25,
+        29
+      ],
+      "attempt": 3,
+      "hotspot": [
+        12,
+        10
+      ],
+      "sha256": "8d9e3837329af813bd9d32a01f8e3dd88facc8b93533e762ed9e4a5f6412f5b7",
+      "reference": {
+        "size": [
+          26,
+          31
+        ],
+        "hotspot": [
+          20,
+          15
+        ],
+        "host": "s2",
+        "mapping": 106,
+        "tailExcluded": true
+      }
+    },
+    "family-balance2-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-8fe0e03f-caa3-433f-b075-eda0a6a3e553.png",
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        0,
+        1
+      ],
+      "scale": 8.4,
+      "goggleSourceBox": [
+        124,
+        27,
+        208,
+        54
+      ],
+      "size": [
+        25,
+        26
+      ],
+      "attempt": 2,
+      "hotspot": [
+        14,
+        11
+      ],
+      "sha256": "223e32a675b377eabdb7855eb0b49bc178ab83eb5a310924e6281ad4d0e1e349",
+      "reference": {
+        "size": [
+          32,
+          37
+        ],
+        "hotspot": [
+          16,
+          17
+        ],
+        "mapping": 200,
+        "host": "s2-sonic",
+        "label": "Map_Sonic_175C"
+      },
+      "landmarkCorrection": 1.15,
+      "finalScale": 7.304347826086957
+    },
+    "family-balance2-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-8fe0e03f-caa3-433f-b075-eda0a6a3e553.png",
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        1,
+        0
+      ],
+      "scale": 7.7,
+      "goggleSourceBox": [
+        105,
+        20,
+        182,
+        46
+      ],
+      "size": [
+        24,
+        28
+      ],
+      "attempt": 1,
+      "hotspot": [
+        14,
+        13
+      ],
+      "sha256": "223e32a675b377eabdb7855eb0b49bc178ab83eb5a310924e6281ad4d0e1e349",
+      "reference": {
+        "size": [
+          36,
+          37
+        ],
+        "hotspot": [
+          13,
+          17
+        ],
+        "mapping": 203,
+        "host": "s2-sonic",
+        "label": "Map_Sonic_17AA"
+      },
+      "landmarkCorrection": 1.15,
+      "finalScale": 6.695652173913044
+    },
+    "family-balance2-02": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-8fe0e03f-caa3-433f-b075-eda0a6a3e553.png",
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        2,
+        2
+      ],
+      "scale": 6.7,
+      "goggleSourceBox": [
+        108,
+        17,
+        175,
+        42
+      ],
+      "size": [
+        27,
+        30
+      ],
+      "attempt": 3,
+      "hotspot": [
+        13,
+        11
+      ],
+      "sha256": "223e32a675b377eabdb7855eb0b49bc178ab83eb5a310924e6281ad4d0e1e349",
+      "reference": {
+        "size": [
+          29,
+          37
+        ],
+        "hotspot": [
+          13,
+          17
+        ],
+        "mapping": 202,
+        "host": "s2-sonic",
+        "label": "Map_Sonic_1790"
+      }
+    },
+    "family-balance3-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-2d6efd07-3006-4be0-9b8d-bc05e3eb0d49.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        0,
+        1
+      ],
+      "scale": 10.2,
+      "goggleSourceBox": [
+        95,
+        13,
+        197,
+        56
+      ],
+      "size": [
+        33,
+        35
+      ],
+      "attempt": 2,
+      "hotspot": [
+        16,
+        16
+      ],
+      "sha256": "3240ead72dbb250e44337f38c87271e785b5b494804dac59e08a5e448194da9e",
+      "reference": {
+        "size": [
+          31,
+          37
+        ],
+        "hotspot": [
+          12,
+          17
+        ],
+        "mapping": 208,
+        "host": "s2-sonic",
+        "label": "Map_Sonic_1854"
+      }
+    },
+    "family-balance3-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-2d6efd07-3006-4be0-9b8d-bc05e3eb0d49.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        1,
+        1
+      ],
+      "scale": 10.5,
+      "goggleSourceBox": [
+        95,
+        9,
+        200,
+        50
+      ],
+      "size": [
+        35,
+        32
+      ],
+      "attempt": 2,
+      "hotspot": [
+        17,
+        13
+      ],
+      "sha256": "3240ead72dbb250e44337f38c87271e785b5b494804dac59e08a5e448194da9e",
+      "reference": {
+        "size": [
+          32,
+          37
+        ],
+        "hotspot": [
+          12,
+          17
+        ],
+        "mapping": 209,
+        "host": "s2-sonic",
+        "label": "Map_Sonic_186E"
+      }
+    },
+    "family-balance4-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-a09acb58-8161-4b3e-8782-16503dea3aab.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        0,
+        0
+      ],
+      "scale": 6.2,
+      "goggleSourceBox": [
+        44,
+        10,
+        106,
+        34
+      ],
+      "size": [
+        23,
+        32
+      ],
+      "attempt": 1,
+      "hotspot": [
+        10,
+        10
+      ],
+      "sha256": "b3a776951284e0a5224e7a7b05016c254db741d6d1eb88896d41b0a2eb084682",
+      "reference": {
+        "size": [
+          30,
+          37
+        ],
+        "hotspot": [
+          22,
+          17
+        ],
+        "mapping": 207,
+        "host": "s2-sonic",
+        "label": "Map_Sonic_183A"
+      },
+      "landmarkCorrection": 0.92,
+      "finalScale": 6.739130434782608
+    },
+    "family-balance4-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-a09acb58-8161-4b3e-8782-16503dea3aab.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        1,
+        1
+      ],
+      "scale": 5.3,
+      "goggleSourceBox": [
+        51,
+        5,
+        104,
+        29
+      ],
+      "size": [
+        35,
+        37
+      ],
+      "attempt": 2,
+      "hotspot": [
+        16,
+        15
+      ],
+      "sha256": "b3a776951284e0a5224e7a7b05016c254db741d6d1eb88896d41b0a2eb084682",
+      "reference": {
+        "size": [
+          32,
+          37
+        ],
+        "hotspot": [
+          16,
+          17
+        ],
+        "mapping": 200,
+        "host": "s2-sonic",
+        "label": "Map_Sonic_175C"
+      },
+      "landmarkCorrection": 0.92,
+      "finalScale": 5.760869565217391
+    },
+    "family-balance4-02": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-a09acb58-8161-4b3e-8782-16503dea3aab.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        2,
+        2
+      ],
+      "scale": 5.3,
+      "goggleSourceBox": [
+        44,
+        5,
+        97,
+        28
+      ],
+      "size": [
+        38,
+        35
+      ],
+      "attempt": 3,
+      "hotspot": [
+        17,
+        13
+      ],
+      "sha256": "b3a776951284e0a5224e7a7b05016c254db741d6d1eb88896d41b0a2eb084682",
+      "reference": {
+        "size": [
+          29,
+          37
+        ],
+        "hotspot": [
+          13,
+          17
+        ],
+        "mapping": 201,
+        "host": "s2-sonic",
+        "label": "Map_Sonic_1776"
+      },
+      "landmarkCorrection": 0.92,
+      "finalScale": 5.760869565217391
+    },
+    "family-balance4-03": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-a09acb58-8161-4b3e-8782-16503dea3aab.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        3,
+        1
+      ],
+      "scale": 5.1,
+      "goggleSourceBox": [
+        40,
+        4,
+        91,
+        26
+      ],
+      "size": [
+        41,
+        36
+      ],
+      "attempt": 2,
+      "hotspot": [
+        18,
+        14
+      ],
+      "sha256": "b3a776951284e0a5224e7a7b05016c254db741d6d1eb88896d41b0a2eb084682",
+      "reference": {
+        "size": [
+          29,
+          37
+        ],
+        "hotspot": [
+          13,
+          17
+        ],
+        "mapping": 202,
+        "host": "s2-sonic",
+        "label": "Map_Sonic_1790"
+      },
+      "landmarkCorrection": 0.92,
+      "finalScale": 5.5434782608695645
+    },
+    "family-balance4-04": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-a09acb58-8161-4b3e-8782-16503dea3aab.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        4,
+        2
+      ],
+      "scale": 5.9,
+      "goggleSourceBox": [
+        49,
+        9,
+        108,
+        32
+      ],
+      "size": [
+        29,
+        32
+      ],
+      "attempt": 3,
+      "hotspot": [
+        13,
+        11
+      ],
+      "sha256": "b3a776951284e0a5224e7a7b05016c254db741d6d1eb88896d41b0a2eb084682",
+      "reference": {
+        "size": [
+          36,
+          37
+        ],
+        "hotspot": [
+          13,
+          17
+        ],
+        "mapping": 203,
+        "host": "s2-sonic",
+        "label": "Map_Sonic_17AA"
+      },
+      "landmarkCorrection": 0.92,
+      "finalScale": 6.41304347826087
+    },
+    "family-hang-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-f188dbf4-910f-4d3f-863c-2ba49b04ddfb.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        0,
+        1
+      ],
+      "scale": 12.0,
+      "goggleSourceBox": [
+        132,
+        32,
+        252,
+        66
+      ],
+      "size": [
+        44,
+        24
+      ],
+      "attempt": 2,
+      "hotspot": [
+        22,
+        12
+      ],
+      "sha256": "2bf138eab2bab496286895a8832c9ff0a281670af461a22b18c3c4e8aad5883d",
+      "reference": {
+        "size": [
+          39,
+          29
+        ],
+        "hotspot": [
+          20,
+          13
+        ],
+        "host": "s2",
+        "mapping": 108,
+        "tailExcluded": true
+      },
+      "hostReference": {
+        "size": [
+          39,
+          29
+        ],
+        "hotspot": [
+          20,
+          13
+        ],
+        "host": "s2",
+        "mapping": 108,
+        "tailExcluded": true
+      },
+      "poseReference": {
+        "host": "s2-sonic",
+        "mapping": 80,
+        "source": "HANG-sonic-8x.png",
+        "reason": "Unambiguous hand-over-hand grip without Tails appendage silhouette."
+      }
+    },
+    "family-hang-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-f188dbf4-910f-4d3f-863c-2ba49b04ddfb.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        1,
+        2
+      ],
+      "scale": 11.8,
+      "goggleSourceBox": [
+        135,
+        40,
+        253,
+        76
+      ],
+      "size": [
+        45,
+        25
+      ],
+      "attempt": 3,
+      "hotspot": [
+        22,
+        12
+      ],
+      "sha256": "2bf138eab2bab496286895a8832c9ff0a281670af461a22b18c3c4e8aad5883d",
+      "reference": {
+        "size": [
+          40,
+          27
+        ],
+        "hotspot": [
+          20,
+          13
+        ],
+        "host": "s2",
+        "mapping": 109,
+        "tailExcluded": true
+      },
+      "hostReference": {
+        "size": [
+          40,
+          27
+        ],
+        "hotspot": [
+          20,
+          13
+        ],
+        "host": "s2",
+        "mapping": 109,
+        "tailExcluded": true
+      },
+      "poseReference": {
+        "host": "s2-sonic",
+        "mapping": 81,
+        "source": "HANG-sonic-8x.png",
+        "reason": "Unambiguous hand-over-hand grip without Tails appendage silhouette."
+      }
+    },
+    "family-hang2-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-50a08c83-89de-447c-be84-772f18b66b34.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        0,
+        0
+      ],
+      "scale": 11.0,
+      "goggleSourceBox": [
+        99,
+        77,
+        209,
+        120
+      ],
+      "size": [
+        26,
+        32
+      ],
+      "attempt": 1,
+      "hotspot": [
+        13,
+        16
+      ],
+      "sha256": "3891736975008405ee06f538a43b4732dc2612dec79a45d503269e17ea2c8e61",
+      "reference": {
+        "size": [
+          28,
+          32
+        ],
+        "hotspot": [
+          12,
+          24
+        ],
+        "host": "s2",
+        "mapping": 133,
+        "tailExcluded": true
+      }
+    },
+    "family-hang2-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-50a08c83-89de-447c-be84-772f18b66b34.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        1,
+        1
+      ],
+      "scale": 10.9,
+      "goggleSourceBox": [
+        100,
+        65,
+        209,
+        106
+      ],
+      "size": [
+        27,
+        33
+      ],
+      "attempt": 2,
+      "hotspot": [
+        13,
+        16
+      ],
+      "sha256": "3891736975008405ee06f538a43b4732dc2612dec79a45d503269e17ea2c8e61",
+      "reference": {
+        "size": [
+          30,
+          31
+        ],
+        "hotspot": [
+          12,
+          24
+        ],
+        "host": "s2",
+        "mapping": 134,
+        "tailExcluded": true
+      }
+    },
+    "family-bubble-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-dad3482b-3c61-4b37-8d07-f6f88d6f9230.png",
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        0,
+        0
+      ],
+      "scale": 7.8,
+      "goggleSourceBox": [
+        71,
+        11,
+        149,
+        36
+      ],
+      "size": [
+        21,
+        27
+      ],
+      "attempt": 1,
+      "hotspot": [
+        16,
+        15
+      ],
+      "sha256": "aea5b9aa0258f72ab51330a5879ceee27151f02f9fc12672f3658d5fa501d557",
+      "reference": {
+        "size": [
+          31,
+          32
+        ],
+        "hotspot": [
+          15,
+          16
+        ],
+        "host": "s2",
+        "mapping": 116,
+        "tailExcluded": true
+      },
+      "landmarkCorrection": 1.12,
+      "finalScale": 6.9642857142857135
+    },
+    "family-bubble-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-dad3482b-3c61-4b37-8d07-f6f88d6f9230.png",
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        1,
+        1
+      ],
+      "scale": 7.7,
+      "goggleSourceBox": [
+        73,
+        11,
+        150,
+        35
+      ],
+      "size": [
+        23,
+        26
+      ],
+      "attempt": 2,
+      "hotspot": [
+        16,
+        15
+      ],
+      "sha256": "aea5b9aa0258f72ab51330a5879ceee27151f02f9fc12672f3658d5fa501d557",
+      "reference": {
+        "size": [
+          44,
+          32
+        ],
+        "hotspot": [
+          28,
+          20
+        ],
+        "host": "s2",
+        "mapping": 18,
+        "tailExcluded": true
+      },
+      "landmarkCorrection": 1.12,
+      "finalScale": 6.874999999999999
+    },
+    "family-bubble-02": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-dad3482b-3c61-4b37-8d07-f6f88d6f9230.png",
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        2,
+        2
+      ],
+      "scale": 7.9,
+      "goggleSourceBox": [
+        68,
+        14,
+        147,
+        37
+      ],
+      "size": [
+        21,
+        24
+      ],
+      "attempt": 3,
+      "hotspot": [
+        16,
+        15
+      ],
+      "sha256": "aea5b9aa0258f72ab51330a5879ceee27151f02f9fc12672f3658d5fa501d557",
+      "reference": {
+        "size": [
+          40,
+          32
+        ],
+        "hotspot": [
+          26,
+          16
+        ],
+        "host": "s2",
+        "mapping": 19,
+        "tailExcluded": true
+      },
+      "landmarkCorrection": 1.12,
+      "finalScale": 7.053571428571428
+    },
+    "family-hurt-fall-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-1437e090-e65c-4c79-b581-3613ba20afcf.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        0,
+        1
+      ],
+      "scale": 12.7,
+      "goggleSourceBox": [
+        85,
+        32,
+        212,
+        70
+      ],
+      "size": [
+        21,
+        25
+      ],
+      "attempt": 2,
+      "hotspot": [
+        13,
+        16
+      ],
+      "sha256": "99cc2c75ee0fc204b1968f8d65fda3b9a7d2c3e68c6e88b10b07eb76e9e5e10b",
+      "reference": {
+        "size": [
+          32,
+          32
+        ],
+        "hotspot": [
+          16,
+          16
+        ],
+        "host": "s3",
+        "mapping": 137,
+        "tailExcluded": true
+      },
+      "landmarkCorrection": 1.12,
+      "finalScale": 11.339285714285712
+    },
+    "family-hurt-fall-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-1437e090-e65c-4c79-b581-3613ba20afcf.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        1,
+        2
+      ],
+      "scale": 13.0,
+      "goggleSourceBox": [
+        98,
+        30,
+        228,
+        68
+      ],
+      "size": [
+        23,
+        24
+      ],
+      "attempt": 3,
+      "hotspot": [
+        15,
+        15
+      ],
+      "sha256": "99cc2c75ee0fc204b1968f8d65fda3b9a7d2c3e68c6e88b10b07eb76e9e5e10b",
+      "reference": {
+        "size": [
+          32,
+          31
+        ],
+        "hotspot": [
+          16,
+          15
+        ],
+        "host": "s3",
+        "mapping": 138,
+        "tailExcluded": true
+      },
+      "landmarkCorrection": 1.12,
+      "finalScale": 11.607142857142856
+    },
+    "family-drown-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-94563843-e6e0-4fcc-bcb1-276629c3ed90.png",
+      "grid": [
+        1,
+        3
+      ],
+      "cell": [
+        0,
+        2
+      ],
+      "scale": 23.0,
+      "goggleSourceBox": [
+        146,
+        57,
+        376,
+        125
+      ],
+      "size": [
+        21,
+        24
+      ],
+      "attempt": 3,
+      "hotspot": [
+        12,
+        15
+      ],
+      "sha256": "970c19389e14ef28a32f5a8ce54d96b9860a7fe3d98dafd7ce4609b84fd5c104",
+      "reference": {
+        "size": [
+          29,
+          32
+        ],
+        "hotspot": [
+          14,
+          16
+        ],
+        "host": "s2",
+        "mapping": 93,
+        "tailExcluded": true
+      },
+      "landmarkCorrection": 1.12,
+      "finalScale": 20.535714285714285
+    },
+    "family-float2-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
+      "grid": [
+        8,
+        3
+      ],
+      "cell": [
+        0,
+        0
+      ],
+      "scale": 8,
+      "goggleSourceBox": [
+        155,
+        18,
+        199,
+        31
+      ],
+      "size": [
+        26,
+        13
+      ],
+      "attempt": 1,
+      "hotspot": [
+        13,
+        6
+      ],
+      "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
+      "reference": {
+        "size": [
+          44,
+          17
+        ],
+        "hotspot": [
+          24,
+          9
+        ],
+        "host": "s3",
+        "mapping": 181,
+        "tailExcluded": true
+      }
+    },
+    "family-float2-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
+      "grid": [
+        8,
+        3
+      ],
+      "cell": [
+        1,
+        1
+      ],
+      "scale": 8,
+      "goggleSourceBox": [
+        117,
+        15,
+        165,
+        28
+      ],
+      "size": [
+        22,
+        13
+      ],
+      "attempt": 2,
+      "hotspot": [
+        11,
+        6
+      ],
+      "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
+      "reference": {
+        "size": [
+          40,
+          17
+        ],
+        "hotspot": [
+          20,
+          9
+        ],
+        "host": "s3",
+        "mapping": 182,
+        "tailExcluded": true
+      }
+    },
+    "family-float2-02": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
+      "grid": [
+        8,
+        3
+      ],
+      "cell": [
+        2,
+        0
+      ],
+      "scale": 8,
+      "goggleSourceBox": [
+        57,
+        16,
+        119,
+        30
+      ],
+      "size": [
+        22,
+        14
+      ],
+      "attempt": 1,
+      "hotspot": [
+        11,
+        7
+      ],
+      "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
+      "reference": {
+        "size": [
+          30,
+          17
+        ],
+        "hotspot": [
+          15,
+          9
+        ],
+        "host": "s3",
+        "mapping": 183,
+        "tailExcluded": true
+      }
+    },
+    "family-float2-03": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
+      "grid": [
+        8,
+        3
+      ],
+      "cell": [
+        3,
+        2
+      ],
+      "scale": 8,
+      "goggleSourceBox": [
+        13,
+        14,
+        60,
+        27
+      ],
+      "size": [
+        22,
+        13
+      ],
+      "attempt": 3,
+      "hotspot": [
+        11,
+        6
+      ],
+      "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
+      "reference": {
+        "size": [
+          40,
+          17
+        ],
+        "hotspot": [
+          20,
+          9
+        ],
+        "host": "s3",
+        "mapping": 184,
+        "tailExcluded": true
+      }
+    },
+    "family-float2-04": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
+      "grid": [
+        8,
+        3
+      ],
+      "cell": [
+        4,
+        1
+      ],
+      "scale": 8,
+      "goggleSourceBox": [
+        14,
+        14,
+        46,
+        26
+      ],
+      "size": [
+        25,
+        12
+      ],
+      "attempt": 2,
+      "hotspot": [
+        12,
+        6
+      ],
+      "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
+      "reference": {
+        "size": [
+          44,
+          17
+        ],
+        "hotspot": [
+          20,
+          9
+        ],
+        "host": "s3",
+        "mapping": 185,
+        "tailExcluded": true
+      }
+    },
+    "family-float2-05": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
+      "grid": [
+        8,
+        3
+      ],
+      "cell": [
+        5,
+        2
+      ],
+      "scale": 8,
+      "goggleSourceBox": [
+        11,
+        12,
+        26,
+        28
+      ],
+      "size": [
+        21,
+        16
+      ],
+      "attempt": 3,
+      "hotspot": [
+        10,
+        8
+      ],
+      "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
+      "reference": {
+        "size": [
+          37,
+          17
+        ],
+        "hotspot": [
+          17,
+          9
+        ],
+        "host": "s3",
+        "mapping": 186,
+        "tailExcluded": true
+      }
+    },
+    "family-float2-06": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
+      "grid": [
+        8,
+        3
+      ],
+      "cell": [
+        6,
+        0
+      ],
+      "scale": 8,
+      "goggleSourceBox": [
+        49,
+        3,
+        113,
+        15
+      ],
+      "size": [
+        20,
+        16
+      ],
+      "attempt": 1,
+      "hotspot": [
+        10,
+        8
+      ],
+      "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
+      "reference": {
+        "size": [
+          30,
+          17
+        ],
+        "hotspot": [
+          16,
+          9
+        ],
+        "host": "s3",
+        "mapping": 187,
+        "tailExcluded": true
+      }
+    },
+    "family-float2-07": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
+      "grid": [
+        8,
+        3
+      ],
+      "cell": [
+        7,
+        1
+      ],
+      "scale": 8,
+      "goggleSourceBox": [
+        140,
+        12,
+        158,
+        27
+      ],
+      "size": [
+        21,
+        16
+      ],
+      "attempt": 2,
+      "hotspot": [
+        10,
+        8
+      ],
+      "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
+      "reference": {
+        "size": [
+          37,
+          17
+        ],
+        "hotspot": [
+          20,
+          9
+        ],
+        "host": "s3",
+        "mapping": 188,
+        "tailExcluded": true
+      }
+    },
+    "family-blink-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-beb6fcbe-f986-4f49-987a-451cd766b6fe.png",
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        0,
+        0
+      ],
+      "scale": 6.9,
+      "goggleSourceBox": [
+        55,
+        20,
+        124,
+        46
+      ],
+      "size": [
+        20,
+        31
+      ],
+      "attempt": 1,
+      "hotspot": [
+        10,
+        12
+      ],
+      "sha256": "f27dc759ebe76d62e973e749e28e200d31cfd6907a58643f8f11972064e83a75",
+      "reference": {
+        "size": [
+          21,
+          31
+        ],
+        "hotspot": [
+          9,
+          15
+        ],
+        "host": "s2",
+        "mapping": 1,
+        "tailExcluded": true
+      }
+    },
+    "family-blink-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-beb6fcbe-f986-4f49-987a-451cd766b6fe.png",
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        1,
+        1
+      ],
+      "scale": 7.3,
+      "goggleSourceBox": [
+        50,
+        18,
+        123,
+        44
+      ],
+      "size": [
+        19,
+        29
+      ],
+      "attempt": 2,
+      "hotspot": [
+        9,
+        10
+      ],
+      "sha256": "f27dc759ebe76d62e973e749e28e200d31cfd6907a58643f8f11972064e83a75",
+      "reference": {
+        "size": [
+          21,
+          31
+        ],
+        "hotspot": [
+          9,
+          15
+        ],
+        "host": "s2",
+        "mapping": 2,
+        "tailExcluded": true
+      }
+    },
+    "family-blink-02": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-beb6fcbe-f986-4f49-987a-451cd766b6fe.png",
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        2,
+        2
+      ],
+      "scale": 7.1,
+      "goggleSourceBox": [
+        55,
+        17,
+        126,
+        43
+      ],
+      "size": [
+        20,
+        30
+      ],
+      "attempt": 3,
+      "hotspot": [
+        10,
+        11
+      ],
+      "sha256": "f27dc759ebe76d62e973e749e28e200d31cfd6907a58643f8f11972064e83a75",
+      "reference": {
+        "size": [
+          21,
+          31
+        ],
+        "hotspot": [
+          9,
+          15
+        ],
+        "host": "s2",
+        "mapping": 3,
+        "tailExcluded": true
+      }
+    },
+    "family-get-up-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-eed82bbd-0d2a-4259-9dfb-42d5b54c3035.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        0,
+        1
+      ],
+      "scale": 9.4,
+      "goggleSourceBox": [
+        242,
+        34,
+        336,
+        59
+      ],
+      "size": [
+        40,
+        21
+      ],
+      "attempt": 2,
+      "hotspot": [
+        20,
+        2
+      ],
+      "sha256": "27d12165d37827e1aeabff27254bcbe0181fe4cd7a122d7313c3489bee3c655c",
+      "reference": {
+        "size": [
+          22,
+          31
+        ],
+        "hotspot": [
+          10,
+          15
+        ],
+        "host": "s2",
+        "mapping": 8,
+        "tailExcluded": true
+      }
+    },
+    "family-get-up-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-eed82bbd-0d2a-4259-9dfb-42d5b54c3035.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        1,
+        2
+      ],
+      "scale": 11.0,
+      "goggleSourceBox": [
+        84,
+        22,
+        194,
+        65
+      ],
+      "size": [
+        19,
+        32
+      ],
+      "attempt": 3,
+      "hotspot": [
+        9,
+        13
+      ],
+      "sha256": "27d12165d37827e1aeabff27254bcbe0181fe4cd7a122d7313c3489bee3c655c",
+      "reference": {
+        "size": [
+          16,
+          22
+        ],
+        "hotspot": [
+          20,
+          7
+        ],
+        "host": "s2",
+        "mapping": 9,
+        "tailExcluded": true
+      }
+    },
+    "family-victory-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-18976a5b-4615-41a3-8bb9-a70757087963.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        0,
+        0
+      ],
+      "scale": 8.5,
+      "goggleSourceBox": [
+        57,
+        21,
+        142,
+        52
+      ],
+      "size": [
+        18,
+        30
+      ],
+      "attempt": 1,
+      "hotspot": [
+        9,
+        11
+      ],
+      "sha256": "058c64a6cb238c8b5b68c8a867355c7f433d4122c52bf88841c6e3a34d63c066",
+      "reference": {
+        "hotspot": [
+          17,
+          19
+        ],
+        "label": "word_147766",
+        "size": [
+          27,
+          39
+        ],
+        "mapping": 176,
+        "host": "s3k-sonic"
+      }
+    },
+    "family-victory-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-18976a5b-4615-41a3-8bb9-a70757087963.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        1,
+        1
+      ],
+      "scale": 8.6,
+      "goggleSourceBox": [
+        57,
+        20,
+        143,
+        51
+      ],
+      "size": [
+        21,
+        30
+      ],
+      "attempt": 2,
+      "hotspot": [
+        10,
+        11
+      ],
+      "sha256": "058c64a6cb238c8b5b68c8a867355c7f433d4122c52bf88841c6e3a34d63c066",
+      "reference": {
+        "hotspot": [
+          17,
+          19
+        ],
+        "label": "word_147788",
+        "size": [
+          30,
+          39
+        ],
+        "mapping": 178,
+        "host": "s3k-sonic"
+      }
+    },
+    "family-victory-02": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-18976a5b-4615-41a3-8bb9-a70757087963.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        2,
+        2
+      ],
+      "scale": 8.7,
+      "goggleSourceBox": [
+        57,
+        21,
+        144,
+        52
+      ],
+      "size": [
+        22,
+        29
+      ],
+      "attempt": 3,
+      "hotspot": [
+        11,
+        10
+      ],
+      "sha256": "058c64a6cb238c8b5b68c8a867355c7f433d4122c52bf88841c6e3a34d63c066",
+      "reference": {
+        "hotspot": [
+          17,
+          19
+        ],
+        "label": "word_147774",
+        "size": [
+          31,
+          39
+        ],
+        "mapping": 177,
+        "host": "s3k-sonic"
+      }
+    },
+    "family-victory-03": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-18976a5b-4615-41a3-8bb9-a70757087963.png",
+      "grid": [
+        4,
+        3
+      ],
+      "cell": [
+        3,
+        1
+      ],
+      "scale": 8.5,
+      "goggleSourceBox": [
+        58,
+        20,
+        143,
+        51
+      ],
+      "size": [
+        21,
+        30
+      ],
+      "attempt": 2,
+      "hotspot": [
+        10,
+        11
+      ],
+      "sha256": "058c64a6cb238c8b5b68c8a867355c7f433d4122c52bf88841c6e3a34d63c066",
+      "reference": {
+        "hotspot": [
+          17,
+          19
+        ],
+        "label": "word_14779C",
+        "size": [
+          28,
+          39
+        ],
+        "mapping": 179,
+        "host": "s3k-sonic"
+      }
+    },
+    "family-tails-carried-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-7445efdf-4c1f-43fd-9b08-3f4f55a101f9.png",
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        0,
+        1
+      ],
+      "scale": 6.7,
+      "goggleSourceBox": [
+        74,
+        45,
+        141,
+        69
+      ],
+      "size": [
+        26,
+        34
+      ],
+      "attempt": 2,
+      "hotspot": [
+        13,
+        24
+      ],
+      "sha256": "7354cb05ddc2a27100756badeb30039d6d5ff1bb0b7a3553fcba916d3f787487",
+      "reference": {
+        "hotspot": [
+          16,
+          24
+        ],
+        "label": "word_1474CE",
+        "size": [
+          32,
+          48
+        ],
+        "mapping": 144,
+        "host": "s3k-sonic"
+      },
+      "nativeGripTop": -24,
+      "anchorCorrectionY": 7
+    },
+    "family-tails-carried-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-7445efdf-4c1f-43fd-9b08-3f4f55a101f9.png",
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        1,
+        0
+      ],
+      "scale": 5.2,
+      "goggleSourceBox": [
+        101,
+        44,
+        153,
+        63
+      ],
+      "size": [
+        36,
+        41
+      ],
+      "attempt": 1,
+      "hotspot": [
+        14,
+        24
+      ],
+      "sha256": "7354cb05ddc2a27100756badeb30039d6d5ff1bb0b7a3553fcba916d3f787487",
+      "reference": {
+        "hotspot": [
+          16,
+          24
+        ],
+        "label": "word_1474E8",
+        "size": [
+          34,
+          42
+        ],
+        "mapping": 145,
+        "host": "s3k-sonic"
+      },
+      "landmarkCorrection": 0.8,
+      "finalScale": 6.5,
+      "nativeGripTop": -24,
+      "anchorCorrectionY": 8
+    },
+    "family-tails-carried-02": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-7445efdf-4c1f-43fd-9b08-3f4f55a101f9.png",
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        2,
+        2
+      ],
+      "scale": 5.1,
+      "goggleSourceBox": [
+        109,
+        39,
+        160,
+        60
+      ],
+      "size": [
+        42,
+        39
+      ],
+      "attempt": 3,
+      "hotspot": [
+        16,
+        24
+      ],
+      "sha256": "7354cb05ddc2a27100756badeb30039d6d5ff1bb0b7a3553fcba916d3f787487",
+      "reference": {
+        "hotspot": [
+          16,
+          24
+        ],
+        "label": "word_147502",
+        "size": [
+          37,
+          37
+        ],
+        "mapping": 146,
+        "host": "s3k-sonic"
+      },
+      "landmarkCorrection": 0.75,
+      "finalScale": 6.8,
+      "nativeGripTop": -24,
+      "anchorCorrectionY": 10
+    },
+    "family-super-transform-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-59094ff4-11f4-476e-a664-2170cfa75563.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        0,
+        1
+      ],
+      "scale": 5.3,
+      "goggleSourceBox": [
+        69,
+        20,
+        122,
+        39
+      ],
+      "size": [
+        27,
+        29
+      ],
+      "attempt": 2,
+      "hotspot": [
+        16,
+        13
+      ],
+      "sha256": "553c7474b7b64197a1606d996cb3318be93f2f04a3ba7d22bfd70fa63be8cfb4",
+      "reference": {
+        "size": [
+          23,
+          32
+        ],
+        "hotspot": [
+          11,
+          16
+        ],
+        "mapping": 109,
+        "host": "s2-sonic",
+        "label": "Map_Sonic_0BFE"
+      },
+      "landmarkCorrection": 0.88,
+      "finalScale": 6.0227272727272725
+    },
+    "family-super-transform-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-59094ff4-11f4-476e-a664-2170cfa75563.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        1,
+        2
+      ],
+      "scale": 6.1,
+      "goggleSourceBox": [
+        82,
+        15,
+        143,
+        40
+      ],
+      "size": [
+        25,
+        34
+      ],
+      "attempt": 3,
+      "hotspot": [
+        18,
+        15
+      ],
+      "sha256": "553c7474b7b64197a1606d996cb3318be93f2f04a3ba7d22bfd70fa63be8cfb4",
+      "reference": {
+        "size": [
+          29,
+          45
+        ],
+        "hotspot": [
+          16,
+          25
+        ],
+        "mapping": 110,
+        "host": "s2-sonic",
+        "label": "Map_Sonic_0C08"
+      }
+    },
+    "family-super-transform-02": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-59094ff4-11f4-476e-a664-2170cfa75563.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        2,
+        0
+      ],
+      "scale": 6.733333333333333,
+      "goggleSourceBox": null,
+      "size": [
+        27,
+        30
+      ],
+      "attempt": 1,
+      "hotspot": [
+        13,
+        15
+      ],
+      "sha256": "553c7474b7b64197a1606d996cb3318be93f2f04a3ba7d22bfd70fa63be8cfb4",
+      "reference": {
+        "size": [
+          28,
+          47
+        ],
+        "hotspot": [
+          16,
+          27
+        ],
+        "mapping": 111,
+        "host": "s2-sonic",
+        "label": "Map_Sonic_0C22"
+      }
+    },
+    "family-super-transform-03": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-59094ff4-11f4-476e-a664-2170cfa75563.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        3,
+        1
+      ],
+      "scale": 6.4,
+      "goggleSourceBox": [
+        91,
+        12,
+        155,
+        38
+      ],
+      "size": [
+        33,
+        33
+      ],
+      "attempt": 2,
+      "hotspot": [
+        17,
+        13
+      ],
+      "sha256": "553c7474b7b64197a1606d996cb3318be93f2f04a3ba7d22bfd70fa63be8cfb4",
+      "reference": {
+        "size": [
+          28,
+          47
+        ],
+        "hotspot": [
+          16,
+          27
+        ],
+        "mapping": 112,
+        "host": "s2-sonic",
+        "label": "Map_Sonic_0C3C"
+      },
+      "landmarkCorrection": 0.9,
+      "finalScale": 7.111111111111112
+    },
+    "family-super-transform-04": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-59094ff4-11f4-476e-a664-2170cfa75563.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        4,
+        2
+      ],
+      "scale": 6.5,
+      "goggleSourceBox": [
+        84,
+        13,
+        149,
+        39
+      ],
+      "size": [
+        30,
+        34
+      ],
+      "attempt": 3,
+      "hotspot": [
+        16,
+        13
+      ],
+      "sha256": "553c7474b7b64197a1606d996cb3318be93f2f04a3ba7d22bfd70fa63be8cfb4",
+      "reference": {
+        "size": [
+          28,
+          48
+        ],
+        "hotspot": [
+          16,
+          28
+        ],
+        "mapping": 113,
+        "host": "s2-sonic",
+        "label": "Map_Sonic_0C66"
+      },
+      "landmarkCorrection": 0.9,
+      "finalScale": 7.222222222222222
+    },
+    "family-tails-fly-ascend-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-ed94187e-b0c5-4952-bd10-20cded10ed43.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        0,
+        0
+      ],
+      "scale": 5.6,
+      "goggleSourceBox": [
+        101,
+        59,
+        157,
+        78
+      ],
+      "size": [
+        38,
+        36
+      ],
+      "attempt": 1,
+      "hotspot": [
+        23,
+        22
+      ],
+      "sha256": "4d08158f3c1a65b6f04ed87ad359436579a3c7d3d1c3359104a9051d0dbdb513",
+      "reference": {
+        "size": [
+          31,
+          28
+        ],
+        "hotspot": [
+          20,
+          16
+        ],
+        "host": "s3",
+        "mapping": 160,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-fly-ascend-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-ed94187e-b0c5-4952-bd10-20cded10ed43.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        1,
+        1
+      ],
+      "scale": 5.6,
+      "goggleSourceBox": [
+        97,
+        19,
+        153,
+        37
+      ],
+      "size": [
+        37,
+        27
+      ],
+      "attempt": 2,
+      "hotspot": [
+        22,
+        15
+      ],
+      "sha256": "4d08158f3c1a65b6f04ed87ad359436579a3c7d3d1c3359104a9051d0dbdb513",
+      "reference": {
+        "size": [
+          31,
+          28
+        ],
+        "hotspot": [
+          20,
+          16
+        ],
+        "host": "s3",
+        "mapping": 160,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-fly-ascend-02": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-ed94187e-b0c5-4952-bd10-20cded10ed43.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        2,
+        2
+      ],
+      "scale": 5.7,
+      "goggleSourceBox": [
+        125,
+        12,
+        182,
+        30
+      ],
+      "size": [
+        45,
+        26
+      ],
+      "attempt": 3,
+      "hotspot": [
+        27,
+        13
+      ],
+      "sha256": "4d08158f3c1a65b6f04ed87ad359436579a3c7d3d1c3359104a9051d0dbdb513",
+      "reference": {
+        "size": [
+          31,
+          28
+        ],
+        "hotspot": [
+          20,
+          16
+        ],
+        "host": "s3",
+        "mapping": 160,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-fly-ascend-03": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-ed94187e-b0c5-4952-bd10-20cded10ed43.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        3,
+        0
+      ],
+      "scale": 5.6,
+      "goggleSourceBox": [
+        84,
+        14,
+        140,
+        32
+      ],
+      "size": [
+        34,
+        31
+      ],
+      "attempt": 1,
+      "hotspot": [
+        20,
+        14
+      ],
+      "sha256": "4d08158f3c1a65b6f04ed87ad359436579a3c7d3d1c3359104a9051d0dbdb513",
+      "reference": {
+        "size": [
+          31,
+          28
+        ],
+        "hotspot": [
+          20,
+          16
+        ],
+        "host": "s3",
+        "mapping": 160,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-fly-ascend-04": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-ed94187e-b0c5-4952-bd10-20cded10ed43.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        4,
+        1
+      ],
+      "scale": 5.6,
+      "goggleSourceBox": [
+        91,
+        12,
+        147,
+        30
+      ],
+      "size": [
+        35,
+        27
+      ],
+      "attempt": 2,
+      "hotspot": [
+        21,
+        13
+      ],
+      "sha256": "4d08158f3c1a65b6f04ed87ad359436579a3c7d3d1c3359104a9051d0dbdb513",
+      "reference": {
+        "size": [
+          31,
+          28
+        ],
+        "hotspot": [
+          20,
+          16
+        ],
+        "host": "s3",
+        "mapping": 160,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-fly-ascend-05": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-ed94187e-b0c5-4952-bd10-20cded10ed43.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        5,
+        2
+      ],
+      "scale": 5.5,
+      "goggleSourceBox": [
+        93,
+        53,
+        148,
+        72
+      ],
+      "size": [
+        38,
+        34
+      ],
+      "attempt": 3,
+      "hotspot": [
+        22,
+        21
+      ],
+      "sha256": "4d08158f3c1a65b6f04ed87ad359436579a3c7d3d1c3359104a9051d0dbdb513",
+      "reference": {
+        "size": [
+          31,
+          28
+        ],
+        "hotspot": [
+          20,
+          16
+        ],
+        "host": "s3",
+        "mapping": 160,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-fly-carry-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-bda6fb26-96ab-49e9-aeb0-709c78e616e0.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        0,
+        1
+      ],
+      "scale": 5.7,
+      "goggleSourceBox": [
+        78,
+        53,
+        135,
+        77
+      ],
+      "size": [
+        34,
+        34
+      ],
+      "attempt": 2,
+      "hotspot": [
+        19,
+        22
+      ],
+      "sha256": "851f2c249dcad59c2033b468a8dc1aac452cbd331a9a746cbea005ecff4e8b6a",
+      "reference": {
+        "size": [
+          31,
+          28
+        ],
+        "hotspot": [
+          20,
+          16
+        ],
+        "host": "s3",
+        "mapping": 162,
+        "tailExcluded": true
+      },
+      "nativeFootBaseline": 12,
+      "anchorCorrectionY": 0
+    },
+    "family-tails-fly-carry-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-bda6fb26-96ab-49e9-aeb0-709c78e616e0.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        1,
+        2
+      ],
+      "scale": 5.3,
+      "goggleSourceBox": [
+        111,
+        24,
+        164,
+        44
+      ],
+      "size": [
+        46,
+        32
+      ],
+      "attempt": 3,
+      "hotspot": [
+        26,
+        20
+      ],
+      "sha256": "851f2c249dcad59c2033b468a8dc1aac452cbd331a9a746cbea005ecff4e8b6a",
+      "reference": {
+        "size": [
+          31,
+          28
+        ],
+        "hotspot": [
+          20,
+          16
+        ],
+        "host": "s3",
+        "mapping": 162,
+        "tailExcluded": true
+      },
+      "nativeFootBaseline": 12,
+      "anchorCorrectionY": 4
+    },
+    "family-tails-fly-carry-02": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-bda6fb26-96ab-49e9-aeb0-709c78e616e0.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        2,
+        0
+      ],
+      "scale": 5.4,
+      "goggleSourceBox": [
+        111,
+        21,
+        165,
+        41
+      ],
+      "size": [
+        46,
+        31
+      ],
+      "attempt": 1,
+      "hotspot": [
+        26,
+        19
+      ],
+      "sha256": "851f2c249dcad59c2033b468a8dc1aac452cbd331a9a746cbea005ecff4e8b6a",
+      "reference": {
+        "size": [
+          31,
+          28
+        ],
+        "hotspot": [
+          20,
+          16
+        ],
+        "host": "s3",
+        "mapping": 162,
+        "tailExcluded": true
+      },
+      "nativeFootBaseline": 12,
+      "anchorCorrectionY": 3
+    },
+    "family-tails-fly-carry-03": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-bda6fb26-96ab-49e9-aeb0-709c78e616e0.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        3,
+        1
+      ],
+      "scale": 5.6,
+      "goggleSourceBox": [
+        85,
+        17,
+        141,
+        37
+      ],
+      "size": [
+        36,
+        29
+      ],
+      "attempt": 2,
+      "hotspot": [
+        20,
+        17
+      ],
+      "sha256": "851f2c249dcad59c2033b468a8dc1aac452cbd331a9a746cbea005ecff4e8b6a",
+      "reference": {
+        "size": [
+          31,
+          28
+        ],
+        "hotspot": [
+          20,
+          16
+        ],
+        "host": "s3",
+        "mapping": 162,
+        "tailExcluded": true
+      },
+      "nativeFootBaseline": 12,
+      "anchorCorrectionY": 2
+    },
+    "family-tails-fly-carry-04": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-bda6fb26-96ab-49e9-aeb0-709c78e616e0.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        4,
+        2
+      ],
+      "scale": 5.7,
+      "goggleSourceBox": [
+        82,
+        18,
+        139,
+        42
+      ],
+      "size": [
+        34,
+        34
+      ],
+      "attempt": 3,
+      "hotspot": [
+        19,
+        22
+      ],
+      "sha256": "851f2c249dcad59c2033b468a8dc1aac452cbd331a9a746cbea005ecff4e8b6a",
+      "reference": {
+        "size": [
+          31,
+          28
+        ],
+        "hotspot": [
+          20,
+          16
+        ],
+        "host": "s3",
+        "mapping": 162,
+        "tailExcluded": true
+      },
+      "nativeFootBaseline": 12,
+      "anchorCorrectionY": 7
+    },
+    "family-tails-fly-carry-05": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-bda6fb26-96ab-49e9-aeb0-709c78e616e0.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        5,
+        0
+      ],
+      "scale": 5.6,
+      "goggleSourceBox": [
+        90,
+        22,
+        146,
+        43
+      ],
+      "size": [
+        37,
+        30
+      ],
+      "attempt": 1,
+      "hotspot": [
+        21,
+        18
+      ],
+      "sha256": "851f2c249dcad59c2033b468a8dc1aac452cbd331a9a746cbea005ecff4e8b6a",
+      "reference": {
+        "size": [
+          31,
+          28
+        ],
+        "hotspot": [
+          20,
+          16
+        ],
+        "host": "s3",
+        "mapping": 162,
+        "tailExcluded": true
+      },
+      "nativeFootBaseline": 12,
+      "anchorCorrectionY": 2
+    },
+    "family-tails-fly-carry-ascend-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-5987c322-404f-407d-809d-4f2e775252bb.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        0,
+        0
+      ],
+      "scale": 5.5,
+      "goggleSourceBox": [
+        60,
+        12,
+        115,
+        32
+      ],
+      "size": [
+        25,
+        31
+      ],
+      "attempt": 1,
+      "hotspot": [
+        16,
+        19
+      ],
+      "sha256": "a0036c8ea5dac1d6fe8753fcbe0fbc8360ceac2bb24982e897fdd6ba7e561297",
+      "reference": {
+        "size": [
+          29,
+          30
+        ],
+        "hotspot": [
+          20,
+          18
+        ],
+        "host": "s3",
+        "mapping": 161,
+        "tailExcluded": true
+      },
+      "nativeFootBaseline": 12,
+      "anchorCorrectionY": 5
+    },
+    "family-tails-fly-carry-ascend-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-5987c322-404f-407d-809d-4f2e775252bb.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        1,
+        1
+      ],
+      "scale": 6.0,
+      "goggleSourceBox": [
+        88,
+        44,
+        148,
+        68
+      ],
+      "size": [
+        33,
+        33
+      ],
+      "attempt": 2,
+      "hotspot": [
+        20,
+        21
+      ],
+      "sha256": "a0036c8ea5dac1d6fe8753fcbe0fbc8360ceac2bb24982e897fdd6ba7e561297",
+      "reference": {
+        "size": [
+          29,
+          30
+        ],
+        "hotspot": [
+          20,
+          18
+        ],
+        "host": "s3",
+        "mapping": 161,
+        "tailExcluded": true
+      },
+      "nativeFootBaseline": 12,
+      "anchorCorrectionY": 2
+    },
+    "family-tails-fly-carry-ascend-02": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-5987c322-404f-407d-809d-4f2e775252bb.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        2,
+        2
+      ],
+      "scale": 5.5,
+      "goggleSourceBox": [
+        111,
+        14,
+        166,
+        34
+      ],
+      "size": [
+        42,
+        30
+      ],
+      "attempt": 3,
+      "hotspot": [
+        25,
+        18
+      ],
+      "sha256": "a0036c8ea5dac1d6fe8753fcbe0fbc8360ceac2bb24982e897fdd6ba7e561297",
+      "reference": {
+        "size": [
+          29,
+          30
+        ],
+        "hotspot": [
+          20,
+          18
+        ],
+        "host": "s3",
+        "mapping": 161,
+        "tailExcluded": true
+      },
+      "nativeFootBaseline": 12,
+      "anchorCorrectionY": 4
+    },
+    "family-tails-fly-carry-ascend-03": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-5987c322-404f-407d-809d-4f2e775252bb.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        3,
+        1
+      ],
+      "scale": 5.5,
+      "goggleSourceBox": [
+        112,
+        13,
+        167,
+        33
+      ],
+      "size": [
+        43,
+        30
+      ],
+      "attempt": 2,
+      "hotspot": [
+        25,
+        18
+      ],
+      "sha256": "a0036c8ea5dac1d6fe8753fcbe0fbc8360ceac2bb24982e897fdd6ba7e561297",
+      "reference": {
+        "size": [
+          29,
+          30
+        ],
+        "hotspot": [
+          20,
+          18
+        ],
+        "host": "s3",
+        "mapping": 161,
+        "tailExcluded": true
+      },
+      "nativeFootBaseline": 12,
+      "anchorCorrectionY": 4
+    },
+    "family-tails-fly-carry-ascend-04": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-5987c322-404f-407d-809d-4f2e775252bb.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        4,
+        0
+      ],
+      "scale": 5.5,
+      "goggleSourceBox": [
+        93,
+        13,
+        148,
+        33
+      ],
+      "size": [
+        35,
+        29
+      ],
+      "attempt": 1,
+      "hotspot": [
+        22,
+        17
+      ],
+      "sha256": "a0036c8ea5dac1d6fe8753fcbe0fbc8360ceac2bb24982e897fdd6ba7e561297",
+      "reference": {
+        "size": [
+          29,
+          30
+        ],
+        "hotspot": [
+          20,
+          18
+        ],
+        "host": "s3",
+        "mapping": 161,
+        "tailExcluded": true
+      },
+      "nativeFootBaseline": 12,
+      "anchorCorrectionY": 3
+    },
+    "family-tails-fly-carry-ascend-05": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-5987c322-404f-407d-809d-4f2e775252bb.png",
+      "grid": [
+        6,
+        3
+      ],
+      "cell": [
+        5,
+        2
+      ],
+      "scale": 5.6,
+      "goggleSourceBox": [
+        64,
+        13,
+        120,
+        33
+      ],
+      "size": [
+        27,
+        29
+      ],
+      "attempt": 3,
+      "hotspot": [
+        16,
+        17
+      ],
+      "sha256": "a0036c8ea5dac1d6fe8753fcbe0fbc8360ceac2bb24982e897fdd6ba7e561297",
+      "reference": {
+        "size": [
+          29,
+          30
+        ],
+        "hotspot": [
+          20,
+          18
+        ],
+        "host": "s3",
+        "mapping": 161,
+        "tailExcluded": true
+      },
+      "nativeFootBaseline": 12,
+      "anchorCorrectionY": 3
+    },
+    "family-tails-swim-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-aa894fde-81a9-4ab7-9330-e9dbffcc4e82.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        0,
+        0
+      ],
+      "scale": 7.5,
+      "goggleSourceBox": [
+        96,
+        27,
+        171,
+        50
+      ],
+      "size": [
+        27,
+        25
+      ],
+      "attempt": 1,
+      "hotspot": [
+        18,
+        15
+      ],
+      "sha256": "a5cd2e713a87ed426c85889aca7f2363674e8070452261833c1d53af03e3b9de",
+      "reference": {
+        "size": [
+          34,
+          32
+        ],
+        "hotspot": [
+          20,
+          14
+        ],
+        "host": "s3",
+        "mapping": 189,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-swim-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-aa894fde-81a9-4ab7-9330-e9dbffcc4e82.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        1,
+        2
+      ],
+      "scale": 7.2,
+      "goggleSourceBox": [
+        101,
+        28,
+        173,
+        49
+      ],
+      "size": [
+        29,
+        24
+      ],
+      "attempt": 3,
+      "hotspot": [
+        19,
+        15
+      ],
+      "sha256": "a5cd2e713a87ed426c85889aca7f2363674e8070452261833c1d53af03e3b9de",
+      "reference": {
+        "size": [
+          33,
+          28
+        ],
+        "hotspot": [
+          19,
+          14
+        ],
+        "host": "s3",
+        "mapping": 190,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-swim-02": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-aa894fde-81a9-4ab7-9330-e9dbffcc4e82.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        2,
+        1
+      ],
+      "scale": 7.3,
+      "goggleSourceBox": [
+        124,
+        28,
+        197,
+        49
+      ],
+      "size": [
+        36,
+        23
+      ],
+      "attempt": 2,
+      "hotspot": [
+        22,
+        15
+      ],
+      "sha256": "a5cd2e713a87ed426c85889aca7f2363674e8070452261833c1d53af03e3b9de",
+      "reference": {
+        "size": [
+          33,
+          29
+        ],
+        "hotspot": [
+          17,
+          14
+        ],
+        "host": "s3",
+        "mapping": 191,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-swim-03": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-aa894fde-81a9-4ab7-9330-e9dbffcc4e82.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        3,
+        2
+      ],
+      "scale": 7.3,
+      "goggleSourceBox": [
+        100,
+        26,
+        173,
+        48
+      ],
+      "size": [
+        28,
+        24
+      ],
+      "attempt": 3,
+      "hotspot": [
+        19,
+        15
+      ],
+      "sha256": "a5cd2e713a87ed426c85889aca7f2363674e8070452261833c1d53af03e3b9de",
+      "reference": {
+        "size": [
+          37,
+          28
+        ],
+        "hotspot": [
+          19,
+          14
+        ],
+        "host": "s3",
+        "mapping": 192,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-swim-04": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-aa894fde-81a9-4ab7-9330-e9dbffcc4e82.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        4,
+        1
+      ],
+      "scale": 7.3,
+      "goggleSourceBox": [
+        106,
+        29,
+        179,
+        51
+      ],
+      "size": [
+        32,
+        25
+      ],
+      "attempt": 2,
+      "hotspot": [
+        20,
+        15
+      ],
+      "sha256": "a5cd2e713a87ed426c85889aca7f2363674e8070452261833c1d53af03e3b9de",
+      "reference": {
+        "size": [
+          33,
+          30
+        ],
+        "hotspot": [
+          19,
+          14
+        ],
+        "host": "s3",
+        "mapping": 193,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-swim-ascend-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-b8831b88-cf4d-4daa-a422-64d888f3484f.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        0,
+        1
+      ],
+      "scale": 6.3,
+      "goggleSourceBox": [
+        106,
+        23,
+        169,
+        46
+      ],
+      "size": [
+        32,
+        30
+      ],
+      "attempt": 2,
+      "hotspot": [
+        22,
+        15
+      ],
+      "sha256": "7fdfbed6cc14d7e4583efc83b60e15b844c09fee9994ec31aa52a4a831485621",
+      "reference": {
+        "size": [
+          34,
+          32
+        ],
+        "hotspot": [
+          20,
+          14
+        ],
+        "host": "s3",
+        "mapping": 189,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-swim-ascend-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-b8831b88-cf4d-4daa-a422-64d888f3484f.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        1,
+        0
+      ],
+      "scale": 6.5,
+      "goggleSourceBox": [
+        132,
+        22,
+        197,
+        43
+      ],
+      "size": [
+        40,
+        27
+      ],
+      "attempt": 1,
+      "hotspot": [
+        25,
+        15
+      ],
+      "sha256": "7fdfbed6cc14d7e4583efc83b60e15b844c09fee9994ec31aa52a4a831485621",
+      "reference": {
+        "size": [
+          33,
+          28
+        ],
+        "hotspot": [
+          19,
+          14
+        ],
+        "host": "s3",
+        "mapping": 190,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-swim-ascend-02": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-b8831b88-cf4d-4daa-a422-64d888f3484f.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        2,
+        2
+      ],
+      "scale": 6.4,
+      "goggleSourceBox": [
+        98,
+        22,
+        162,
+        44
+      ],
+      "size": [
+        32,
+        29
+      ],
+      "attempt": 3,
+      "hotspot": [
+        20,
+        15
+      ],
+      "sha256": "7fdfbed6cc14d7e4583efc83b60e15b844c09fee9994ec31aa52a4a831485621",
+      "reference": {
+        "size": [
+          33,
+          29
+        ],
+        "hotspot": [
+          17,
+          14
+        ],
+        "host": "s3",
+        "mapping": 191,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-swim-ascend-03": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-b8831b88-cf4d-4daa-a422-64d888f3484f.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        3,
+        1
+      ],
+      "scale": 6.3,
+      "goggleSourceBox": [
+        106,
+        22,
+        169,
+        43
+      ],
+      "size": [
+        33,
+        27
+      ],
+      "attempt": 2,
+      "hotspot": [
+        22,
+        15
+      ],
+      "sha256": "7fdfbed6cc14d7e4583efc83b60e15b844c09fee9994ec31aa52a4a831485621",
+      "reference": {
+        "size": [
+          37,
+          28
+        ],
+        "hotspot": [
+          19,
+          14
+        ],
+        "host": "s3",
+        "mapping": 192,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-swim-ascend-04": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-b8831b88-cf4d-4daa-a422-64d888f3484f.png",
+      "grid": [
+        5,
+        3
+      ],
+      "cell": [
+        4,
+        2
+      ],
+      "scale": 6.4,
+      "goggleSourceBox": [
+        102,
+        20,
+        166,
+        44
+      ],
+      "size": [
+        32,
+        30
+      ],
+      "attempt": 3,
+      "hotspot": [
+        21,
+        15
+      ],
+      "sha256": "7fdfbed6cc14d7e4583efc83b60e15b844c09fee9994ec31aa52a4a831485621",
+      "reference": {
+        "size": [
+          33,
+          30
+        ],
+        "hotspot": [
+          19,
+          14
+        ],
+        "host": "s3",
+        "mapping": 193,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-swim-carry-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-7bbab6e2-11ac-4136-a889-a5eced3bcb88.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        0,
+        1
+      ],
+      "scale": 9.1,
+      "goggleSourceBox": [
+        163,
+        31,
+        254,
+        69
+      ],
+      "size": [
+        40,
+        34
+      ],
+      "attempt": 2,
+      "hotspot": [
+        23,
+        21
+      ],
+      "sha256": "7df12f7e7bf189ef62413d4c65932bc32d5e20def3e610b7bcea716ded1e18d5",
+      "reference": {
+        "size": [
+          24,
+          39
+        ],
+        "hotspot": [
+          12,
+          26
+        ],
+        "host": "s3",
+        "mapping": 207,
+        "tailExcluded": true
+      },
+      "nativeFootBaseline": 13,
+      "anchorCorrectionY": 5
+    },
+    "family-tails-swim-carry-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-7bbab6e2-11ac-4136-a889-a5eced3bcb88.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        1,
+        2
+      ],
+      "scale": 9.2,
+      "goggleSourceBox": [
+        173,
+        31,
+        265,
+        69
+      ],
+      "size": [
+        41,
+        34
+      ],
+      "attempt": 3,
+      "hotspot": [
+        24,
+        21
+      ],
+      "sha256": "7df12f7e7bf189ef62413d4c65932bc32d5e20def3e610b7bcea716ded1e18d5",
+      "reference": {
+        "size": [
+          24,
+          39
+        ],
+        "hotspot": [
+          12,
+          26
+        ],
+        "host": "s3",
+        "mapping": 208,
+        "tailExcluded": true
+      },
+      "nativeFootBaseline": 13,
+      "anchorCorrectionY": 5
+    },
+    "family-tails-swim-tired-00": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-d1691db4-a478-46b4-951c-268db539b2ed.png",
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        0,
+        1
+      ],
+      "scale": 10.9,
+      "goggleSourceBox": [
+        122,
+        44,
+        231,
+        75
+      ],
+      "size": [
+        27,
+        24
+      ],
+      "attempt": 2,
+      "hotspot": [
+        16,
+        15
+      ],
+      "sha256": "454813711a6a420f931ed850f1961f4d08b3fb3d0d931c698cf99f757b643f31",
+      "reference": {
+        "size": [
+          38,
+          28
+        ],
+        "hotspot": [
+          20,
+          15
+        ],
+        "host": "s3",
+        "mapping": 194,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-swim-tired-01": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-d1691db4-a478-46b4-951c-268db539b2ed.png",
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        1,
+        0
+      ],
+      "scale": 11.4,
+      "goggleSourceBox": [
+        115,
+        37,
+        229,
+        70
+      ],
+      "size": [
+        26,
+        24
+      ],
+      "attempt": 1,
+      "hotspot": [
+        15,
+        14
+      ],
+      "sha256": "454813711a6a420f931ed850f1961f4d08b3fb3d0d931c698cf99f757b643f31",
+      "reference": {
+        "size": [
+          34,
+          32
+        ],
+        "hotspot": [
+          16,
+          19
+        ],
+        "host": "s3",
+        "mapping": 205,
+        "tailExcluded": true
+      }
+    },
+    "family-tails-swim-tired-02": {
+      "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-d1691db4-a478-46b4-951c-268db539b2ed.png",
+      "grid": [
+        3,
+        3
+      ],
+      "cell": [
+        2,
+        2
+      ],
+      "scale": 11.2,
+      "goggleSourceBox": [
+        122,
+        30,
+        234,
+        61
+      ],
+      "size": [
+        28,
+        23
+      ],
+      "attempt": 3,
+      "hotspot": [
+        16,
+        13
+      ],
+      "sha256": "454813711a6a420f931ed850f1961f4d08b3fb3d0d931c698cf99f757b643f31",
+      "reference": {
+        "size": [
+          34,
+          32
+        ],
+        "hotspot": [
+          16,
+          19
+        ],
+        "host": "s3",
+        "mapping": 206,
+        "tailExcluded": true
+      }
+    }
+  },
+  "scriptPolicy": "Family aliases bind ROM delay, ordered repetitions, LOOP_BACK and terminator. Canonical representative scripts use native S2/S3K sequence; unused cross-host families retain explicit own reference.",
+  "wingPresentation": "Selected six-frame cycles for new flight variants use approved FLY two-tick wing clock. Native family body phase counts/timers remain in per-game providers; no detached rotor or gameplay-state changes.",
+  "floatCorrespondence": {
+    "S2_FLOAT": [
+      0,
+      1
+    ],
+    "S2_FLOAT2": [
+      0,
+      2,
+      4,
+      5,
+      7
+    ],
+    "S3K_FLOAT": [
+      0
+    ],
+    "S3K_FLOAT2": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "evidence": "Native Tails pose union: S2 $6E/$73 are two right-facing limb poses; $6F front, $70 left, $71 back-left, $72 back-right. S3K $B5-$BC supplies eight directional views. Local unique-frame ordinals are inventory labels, never cross-host correspondence."
+  }
+}

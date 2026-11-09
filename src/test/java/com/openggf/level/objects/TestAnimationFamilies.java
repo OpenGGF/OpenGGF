@@ -22,15 +22,23 @@ class TestAnimationFamilies {
     @Test @RequiresRom(SonicGame.SONIC_2) void s2() throws Exception { verify(new Sonic2GameModule()); }
     @Test @RequiresRom(SonicGame.SONIC_3K) void s3k() throws Exception { verify(new Sonic3kGameModule()); }
 
-    private void verify(GameModule module) throws Exception {
+    @Test @RequiresRom(SonicGame.SONIC_2) void tailsS2() throws Exception { verify(new Sonic2GameModule(), true); }
+    @Test @RequiresRom(SonicGame.SONIC_3K) void tailsS3k() throws Exception { verify(new Sonic3kGameModule(), true); }
+
+    private void verify(GameModule module) throws Exception { verify(module, false); }
+    private void verify(GameModule module, boolean tails) throws Exception {
         TestEnvironment.activeGameplayMode();
-        var caps = module.getDonorCapabilities();
-        var nativeArt = caps.getPlayerArtProvider(RomByteReader.fromRom(TestEnvironment.currentRom())).loadPlayerSpriteArt("sonic");
+        var originalCaps = module.getDonorCapabilities();
+        var sonicFamilies = originalCaps.getAnimationFamilies();
+        var caps = tails ? originalCaps.forPlayableCharacter(PlayerCharacter.TAILS_ALONE) : originalCaps;
+        assertSame(originalCaps, originalCaps.forPlayableCharacter(PlayerCharacter.SONIC_ALONE));
+        assertSame(sonicFamilies, originalCaps.getAnimationFamilies(), "Tails view must not mutate Sonic donation");
+        var nativeArt = caps.getPlayerArtProvider(RomByteReader.fromRom(TestEnvironment.currentRom())).loadPlayerSpriteArt(tails ? "tails" : "sonic");
         assertEquals(nativeArt.animationSet().getAllScripts().keySet(), caps.getAnimationFamilies().keySet(),
                 "Every native Sonic script must have a family or explicit N/A");
         Path project = Path.of("examples/mica-and-talon/src/main/mod"), encoded = temporary.resolve("mica.ggfp");
         assertEquals(0, GgfModCli.run(new String[]{"convert", "art", "--playable", "--image",
-                project.resolve("mica.png").toString(), "--sheet", project.resolve("mica-sheet.yaml").toString(),
+                project.resolve(tails ? "talon.png" : "mica.png").toString(), "--sheet", project.resolve(tails ? "talon-sheet.yaml" : "mica-sheet.yaml").toString(),
                 "--out", encoded.toString()}, System.out));
         var sheet = PlayableSheetReader.read(Files.readAllBytes(encoded));
         var source = PlayableSheetMaterializer.read(Files.readAllBytes(encoded)).art();

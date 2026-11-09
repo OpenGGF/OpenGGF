@@ -4,6 +4,7 @@
   { "name": "java.util.LinkedHashMap", "methods": [{ "name": "<init>", "parameterTypes": [] }] },
   { "name": "java.util.ArrayList", "methods": [{ "name": "<init>", "parameterTypes": [] }] },
   { "name": "com.openggf.game.AnimationFamilies$Binding", "allDeclaredConstructors": true, "allDeclaredMethods": true, "allDeclaredFields": true },
+  { "name": "com.openggf.game.DonorCapabilities$NativeFramePose", "allDeclaredConstructors": true, "allDeclaredMethods": true, "allDeclaredFields": true },
   { "name": "com.openggf.game.CanonicalAnimation", "allDeclaredMethods": true, "allDeclaredFields": true },
   { "name": "com.openggf.game.sonic3k.Sonic3kGameModule" },
   { "name": "org.lwjgl.glfw.GLFW", "allDeclaredFields": true },

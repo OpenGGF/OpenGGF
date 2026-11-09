@@ -174,3 +174,41 @@ hotspots; grounded flats use a common floor. GIF centisecond rounding may be
 clamped by browsers. Sources, source hashes, reduction factors and selections
 are in provenance/prompts; final original indexed rows live in recipe.json.
 Review: `$HOME/scratch/agent-tmp/talon-consistency-20261109/review.html`.
+
+## Shared families (2026-11-09)
+
+The sheet now has **167 drawings and 47 canonical keys**: 85 additions, including
+one transparent BLANK. `family-generation.json` records each selected generated
+attempt, source hash, reference mapping, reduction factor and landmark correction.
+There are three generated alternatives per phase, selected individually; PUSH,
+HANG and reverse balances also have rejected earlier generations. Raw attempts
+and decoded native poses remain outside Git in the review scratch directory.
+
+New sets cover PUSH; all four directional ledge balances; eight FLOAT2 views;
+HANG/HANG2; BUBBLE; HURT_FALL; BLINK/GET_UP; DROWN (shared by BURNT); VICTORY;
+TAILS_CARRIED; SUPER_TRANSFORM; and flight ascend/carry/carry-ascend plus all four
+swim variants. ROLL2/HURT2 and the other canonical synonyms reuse existing art.
+New flight variants bind the native single-body phase and use TALON private
+presentation scripts for six integrated wing phases at two ticks each. The
+approved original FLY and tired FLY cycles retain their authored wingbeats.
+
+Each family phase is supplied once through semantic aliases. Module-owned Tails
+correspondences preserve ROM timing, repetitions, LOOP_BACK and terminators;
+Sonic correspondences remain separate. `family-script-references.json` records
+the representative canonical scripts' native terminators. The existing approved
+core cycles retain their intentional adaptations. S1 has no native Tails table;
+it uses its Sonic pose vocabulary and the declared creator flight implementation.
+
+Review: `$HOME/scratch/agent-tmp/talon-families-20261109/review.html`.
+`family_review.py` produces per-host native-timed, full-frame exact-palette GIFs,
+a whole-character baseline lineup and the landmark table. GIF centisecond
+rounding preserves total 60Hz timing; viewers can clamp 10ms frames. Speed-driven
+PUSH uses the native stationary-wall interval of 33 ticks per phase. Native comparison pixels
+are never runtime or repository assets. No runtime route certification is claimed.
+
+Final registration keeps PUSH palms at the native wall plane, carrier boots on
+the native handhold baseline and carried hands at the native grip top. The three
+new flight variants play all six integrated wing phases at two ticks per phase,
+like approved FLY. Host-native body bindings and terminators remain unchanged.
+The review verifies every full GIF tick after encoding; speed-driven samples are
+labelled, including stationary PUSH at 33 ticks per phase.

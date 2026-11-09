@@ -2346,3 +2346,98 @@ The review directory retains `verification.json`, exact logs and same-class
 baseline attribution. Failed category diagnostics were inspected and acknowledged;
 only this task's owned detached baseline checkout is removed after preserving
 its results. The implementation branch and review assets remain for integration.
+
+### TALON shared-family art and archetype binding (2026-11-09)
+
+Local `feature/ai-talon-families`, based on `c3789d8d05`; no push or integration.
+The source bank grows **82 → 167** drawings and **13 → 47** canonical keys.
+The 85 additions cover the 18 shared-family obligations (BURNT reuses DROWN,
+BLANK is literal transparency), plus the seven missing flight/swim variants.
+All 82 approved PNGs remain byte-identical. There are 27 built-in GPT Image
+requests: three alternative rows per family, plus rejected/replaced PUSH,
+HANG and reverse-edge strips. Final reductions and per-phase selections are
+recorded under TALON's art directory; native pixels remain in scratch only.
+
+The owner authorized the initially excluded tooling/binding changes after the
+Sonic/Tails phase-count conflict was demonstrated. Per-game capabilities now
+provide `forPlayableCharacter(TAILS_ALONE)` views with Tails correspondence and
+raw-pose vocabularies. The original provider and Sonic donation path are unchanged.
+Native timing and terminators come from loaded scripts, including Tails WAIT and
+BLINK LOOP_BACK tails. The assembler accepts flight/swim variants and canonical
+ROLL2's required speed flag. Both new candidate API methods are signature-pinned;
+the unpublished candidate version is unchanged.
+
+TALON's prior movement hook overwrote every flight variant with normal FLY and
+used unrelocated indices. It now uses the native controller's pure pose selector,
+preserves source terminators, reserves private IDs and applies the mapping-bank
+relocation. Native flight writes its pose after the movement hook; TALON
+redirects only that selected native ID through its own setters into the private
+wing cycle. The optional forced slot follows the same local presentation path.
+A diagnostic captured native ID 33, cursor 1 and a 32-tick timer before this
+correction; membership alone had passed while S3K ascent wings were static. The ascent/fatigue integration checks verify the actual relocated
+variant drawings in all three hosts. Native single-body-phase flight bindings retain their native body phase count
+and timer. TALON's private presentation scripts play the selected six integrated
+wing phases at the approved FLY cadence (two ticks each), preserving native loop
+terminators. Original FLY/tired-FLY and all 82 approved PNGs remain unchanged.
+The exact body and authored wing clocks are shown side by side in review.
+
+Final contact registration uses the native PUSH palm plane, carrier boot baseline
+and carried hand-grip top. No contours were painted for those hotspot corrections.
+S2 float correspondence is chosen by native view, not local dedup ordinals:
+TailsAni_Float (s2.asm:41588) uses phases `[0,1]`, and TailsAni_Float2
+(s2.asm:41590) uses `[0,2,4,5,7]` in the eight-view union from AniTails0E
+(General/Sprites/Tails/Anim - Tails.asm:62) and AniTails0F
+(General/Sprites/Tails/Anim - Tails.asm:63). Local unique-frame ordinals are
+inventory labels; they do not establish cross-host pose correspondence.
+Jackson's new native-pose record receives native-image reflection metadata and
+an extension to the existing packaging guard. No native-image binary is claimed.
+
+Validation checkpoint: Python discovery **52 passed**; focused family, donation,
+canonical-sheet, MICA/TALON integration, signature and four required S3K checks
+**142 passed, zero failures/errors/skips**. Initial failures were an invalid fixed
+ROLL2 timing flag and a test-only File/Rom type mismatch, both corrected.
+The earlier baseline integration/audit selection passed **43 tests** on the base.
+Coverage obligations: TALON S1 **2 → 2**, S2 **61 → 44**, S3K **96 → 71**.
+Presentation/special-stage/end-scene gaps remain outside this animation pass.
+Scoped citations have no stale entries (three near and fifteen unverifiable references across the two checked documents, including native source paths with spaces).
+
+Lead owns final validation. Additional native flight/carry checks passed
+**73 tests with no failures/errors/skips**. The change-based smoke command was:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base c3789d8d05 --workers 2 --headless-gl surfaceless-egl --run
+```
+
+```text
+VERDICT FAILED: head=c3789d8d0583 source=f6289e4adad7 change-based 4509/4509 candidate classes; ordinary 91/91 batches; guards 1/1 batches; tests=38022 failures=38 errors=1 skipped=50 (allowed=47 unexplained=3); missing ROM properties=none; skip inputs audio_reference_files=false,gl=true,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+This invocation inherited DISPLAY/WAYLAND_DISPLAY despite selecting EGL. Eight
+explicit display-environment assertions and three reel skips required repair.
+With both variables unset, all 21 affected classes (including the failed guard)
+ran **127 tests** on `c3789d8d05` and this tree: **30 failures, three errors,
+zero skips** on each. All test identities, exception types and assertions match;
+only JVM object addresses and printed Set ordering differ. No skip-policy or
+unrelated gameplay changes were made. The inherited failures include the known
+AIZ draw-cache inventory mismatch. No new/worse ordinary or guard failure remains.
+This is attributed smoke evidence, not a green full-suite claim.
+
+Smoke execution was 1,855.95 seconds plus 40.74 seconds preparation; rounded
+admission records total 4,782 seconds queue wait. User-input wait is zero; other
+investigation and generation time is unmeasured. Exact rollup, per-case base/task
+snapshots and normalization are retained in the review scratch directory.
+
+After the frozen smoke snapshot, bounded corrections affect TALON art/contact
+metadata, S2 float correspondence and native-image reflection metadata. Native
+Sonic/donation Java paths remain the tested snapshot. Final focused validation
+also checks six distinct ascent wing frames in every host, catching a later
+native animation write that frame membership alone cannot detect. The final selection
+passes **144 tests, zero failures/errors/skips**, including ordinary and forced
+six-phase ascent in all three hosts. Both Python selections pass: **52 modding
+tests plus seven native-pose tests**. All 82 original PNG hashes remain unchanged.
+The review checks every encoded GIF tick against source RGB pixels and duration.
+Native body bindings and native stock behavior are distinct from TALON's authored
+wing cadence; full carrying-route contact is not certified.
+
+Review and exact logs:
+`$HOME/scratch/agent-tmp/talon-families-20261109/review.html`.

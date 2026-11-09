@@ -32,6 +32,9 @@ public interface DonorCapabilities {
      */
     Set<PlayerCharacter> getPlayableCharacters();
 
+    /** Selects a native animation vocabulary for creator art; stock donation uses this provider unchanged. */
+    default DonorCapabilities forPlayableCharacter(PlayerCharacter archetype) { return this; }
+
     /** Module-owned phase correspondence; null family marks N/A, null animation an unnamed native script. */
     default Map<Integer, AnimationFamilies.Binding> getAnimationFamilies() { return Map.of(); }
 

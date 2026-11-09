@@ -494,3 +494,35 @@ Tails is reference-only: its phase indices are local to each script, its blink
 slots are distinct from Sonic's ending slots, and reserved scripts add no TALON
 drawing obligation. Native Sonic scripts retained without a live selector remain
 in the inventory with that limitation stated.
+
+## TALON shared-family review
+
+`examples/mica-and-talon/art/talon/family_review.py` is the maintained full-rate
+review for TALON's shared families and flight/swim variants. It consumes the
+coverage audit JSON and pinned disassemblies, writes decoded comparison pixels
+only outside the repository, emits exact-palette full-tick GIFs and a common
+engine-centre lineup, and displays recorded anatomical/reduction landmarks.
+
+```sh
+python3 examples/mica-and-talon/art/talon/family_review.py "$HOME/scratch/agent-tmp/talon-families-20261109"
+```
+
+The scratch input contains `baseline/` or `after/` audit JSON and `host-native/`
+S1 reference exports from `animation_family_review.py --export-references`.
+Tails profiles come from the per-game archetype view; native stock/donation
+retains the original unscoped Sonic provider. BLANK is semantic transparency;
+BURNT may share DROWN's shipped pose. Canonical ROLL2 requires native speed timing.
+New flight/swim names are accepted directly by assembly. Native single-phase
+flight bodies retain their clock at right; TALON's selected six-phase integrated
+wing cycles run at the approved authored cadence at left, over a least-common-
+multiple window. No detached rotor is copied. Every decoded GIF tick is checked
+against the exact RGB source and cumulative 60Hz-to-centisecond duration. PUSH
+uses its native stationary-wall 33-tick interval; other speed-driven samples are
+labelled. Finite end actions are labelled; each review window restarts.
+
+For cross-host phase correspondence, compare native pose views before assigning
+family phases. Local dedup ordinals only inventory each host's unique drawings;
+the S2 five-view float cycle needs `[0,2,4,5,7]` in the S3K eight-view family.
+Register functional contacts (PUSH palms, carrier boots, carried grip) independently
+of skull/torso scale. Anatomical scale is measured against approved WAIT, never
+against wingspan or sprite bounds.

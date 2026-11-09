@@ -8,8 +8,9 @@ import java.util.Set;
 /** TALON: native flight, down-held targeting and a Solar Instagib dive. */
 public final class TalonCharacter extends AbstractPlayableSprite {
     // Private mod animation IDs, outside native and homing namespaces.
-    private static final int FLIGHT = 0x200, TIRED = 0x201;
+    private static final int FLIGHT = 0x200;
     private com.openggf.sprites.animation.SpriteAnimationSet authoredAnimations;
+    private int authoredMappingCount;
     public TalonCharacter(String code, int x, int y) {
         super(code, (short) x, (short) y,
                 new CharacterPhysicsSpec(PhysicsProfile.SONIC_2_TAILS));
@@ -19,6 +20,7 @@ public final class TalonCharacter extends AbstractPlayableSprite {
         return new CharacterDefinition(CharacterKey.mod(owner, "talon"), "TALON", (code, x, y) -> {
                     var talon = new TalonCharacter(code, x, y);
                     talon.authoredAnimations = materialized.art().animationSet();
+                    talon.authoredMappingCount = materialized.art().mappingFrames().size();
                     return talon;
                 },
                 SidekickRespawnStrategy::tails, PlayerCharacter.TAILS_ALONE, SecondaryAbility.FLY, true,
@@ -39,25 +41,47 @@ public final class TalonCharacter extends AbstractPlayableSprite {
     @Override public SecondaryAbility getSecondaryAbility() { return SecondaryAbility.FLY; }
     @Override protected void onMovementTick() {
         HomingAttack.requestReticle(this, getAir() && isDownPressed());
-        if (authoredAnimations == null || getAnimationSet() == null
-                || getTailsFlightController() == null || !getTailsFlightController().isActive()) return;
-        var flight = authoredAnimations.getScript(CanonicalAnimation.TAILS_FLY.ordinal());
-        var tired = authoredAnimations.getScript(CanonicalAnimation.TAILS_FLY_TIRED.ordinal());
-        // TALON has no native-frame aliases, so host binding preserves his frame indices.
-        // S3K's shared glide/flight IDs can otherwise overwrite ascent with a fallback.
-        for (var pose : java.util.List.of(CanonicalAnimation.TAILS_FLY, CanonicalAnimation.TAILS_FLY_ASCEND,
-                CanonicalAnimation.TAILS_FLY_CARRY, CanonicalAnimation.TAILS_FLY_CARRY_ASCEND)) {
-            int id = resolveAnimationId(pose);
-            if (id >= 0) getAnimationSet().addScript(id, flight);
-        }
-        int tiredId = resolveAnimationId(CanonicalAnimation.TAILS_FLY_TIRED);
-        if (tiredId >= 0) getAnimationSet().addScript(tiredId, tired);
-        if (resolveAnimationId(CanonicalAnimation.TAILS_FLY) < 0) {
-            // Mod-only flight in S1/S2 needs private script IDs.
-            getAnimationSet().addScript(FLIGHT, flight);
-            getAnimationSet().addScript(TIRED, tired);
-            setAnimationId((getDoubleJumpProperty() & 0xFF) == 0 ? TIRED : FLIGHT);
-        }
+        if (!hasFlightArt()) return;
+        int id = installFlightArt(selectedFlightPose());
+        super.setAnimationId(id);
+        if (getForcedAnimationId() >= 0) super.setForcedAnimationId(id);
+    }
+
+    private boolean hasFlightArt() {
+        return authoredAnimations != null && getAnimationSet() != null
+                && getTailsFlightController() != null && getTailsFlightController().isActive();
+    }
+
+    private CanonicalAnimation selectedFlightPose() {
+        return getTailsFlightController().selectAnimation(getTailsCarryController() != null
+                && getTailsCarryController().isCarryingMainCharacter());
+    }
+
+    // The movement hook runs before native flight. Redirect its later pose write
+    // locally too, retaining the native selector and this sheet's private clock.
+    @Override public void setAnimationId(int id) {
+        super.setAnimationId(flightPresentationId(id));
+    }
+    @Override public void setForcedAnimationId(int id) {
+        super.setForcedAnimationId(flightPresentationId(id));
+    }
+    private int flightPresentationId(int id) {
+        if (id < 0 || id >= FLIGHT || !hasFlightArt()) return id;
+        var pose = selectedFlightPose();
+        return id == resolveAnimationId(pose) ? installFlightArt(pose) : id;
+    }
+
+    private int installFlightArt(CanonicalAnimation pose) {
+        var source = authoredAnimations.getScript(pose.ordinal());
+        if (source == null) source = authoredAnimations.getScript(CanonicalAnimation.TAILS_FLY.ordinal());
+        // Native-frame aliases reserve the byte-sized object namespace before the
+        // creator mapping bank. Do not write unrelocated source indices into it.
+        int relocation = getAnimationFrameCount() >= authoredMappingCount + 256 ? 256 : 0;
+        var frames = source.frames().stream().map(frame -> frame + relocation).toList();
+        int id = FLIGHT + pose.ordinal();
+        getAnimationSet().addScript(id, new com.openggf.sprites.animation.SpriteAnimationScript(
+                source.delay(), frames, source.endAction(), source.endParam()));
+        return id;
     }
     @Override protected boolean onAbilityActivate(boolean up, boolean down, boolean left, boolean right) {
         // Native transformation owns an eligible air press before the character ability.
