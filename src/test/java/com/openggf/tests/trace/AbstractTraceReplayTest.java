@@ -164,6 +164,7 @@ public abstract class AbstractTraceReplayTest {
     }
 
     /** Independent trace gate selected with {@code -Dtrace.verification}. */
+    // Resolved once before fixture assembly; stopping, assertions and publication share it.
     protected TraceVerificationScope verificationScope() {
         return TraceVerificationScope.fromSystemProperty();
     }
@@ -475,7 +476,7 @@ public abstract class AbstractTraceReplayTest {
             EngineSnapshot frameZero = captureEngineSnapshot(fixture);
             binder.compareBootstrapFrame0(trace, frameZero);
 
-            FrontierReplayStopper frontierStopper = FrontierReplayStopper.fromSystemProperties();
+            FrontierReplayStopper frontierStopper = FrontierReplayStopper.fromSystemProperties(verificationScope);
             if ("s3k".equals(meta.game())) {
                 hardwareTimingReplayClosed = replayS3kTrace(
                         trace, meta, fixture, binder, replayStart, frontierStopper);
@@ -518,7 +519,7 @@ public abstract class AbstractTraceReplayTest {
                 System.err.println(report.getContextWindow(
                         report.firstErrorFrame(verificationScope), TraceReplayConsole.contextRadius()));
             }
-            assertReportHasNoReleaseBlockingDivergences(report);
+            assertReportHasNoReleaseBlockingDivergences(report, verificationScope);
         } catch (Exception | Error failure) {
             replayFailure = failure;
             throw failure;
@@ -574,9 +575,10 @@ public abstract class AbstractTraceReplayTest {
         }
     }
 
-    protected void assertReportHasNoReleaseBlockingDivergences(DivergenceReport report) {
+    protected void assertReportHasNoReleaseBlockingDivergences(
+            DivergenceReport report, TraceVerificationScope verificationScope) {
         TraceReplayDiagnostics.assertNoReleaseBlockingDivergences(
-                report, verificationScope(), allowDiagnosticOnlyWarnings());
+                report, verificationScope, allowDiagnosticOnlyWarnings());
     }
 
     /**

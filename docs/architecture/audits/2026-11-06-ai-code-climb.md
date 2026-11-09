@@ -4612,3 +4612,52 @@ than infer a score gain from tests, extraction or document reordering. The
 publication commit adds only this evidence. Sole destination remains draft
 PR271 on `feature/ai-code-climb-followup`; no destination branch push or merge
 is authorized by this delivery. Useful worktrees and evidence remain retained.
+
+
+### One invocation scope authority (2026-11-09)
+
+The original-F assessment exposed two inconsistent scope reads in the standalone
+replay path. The entry already resolved `verificationScope()` before fixture
+assembly, but frontier creation re-read the JVM property and the release
+assertion re-invoked the override later. A subclass-selected animation run could
+therefore stop on physics errors, or publish an animation gate while failing a
+physics assertion after its scope provider changed during fixture assembly.
+
+Two real S2/EHZ1 driver witnesses use the existing private dynamic-art fixture,
+whose deliberately mismatched evidence is PHYSICS while recorded character
+animation is valid. No canonical payload, input, tolerance or gameplay state
+is changed. One chooses ANIMATION against a PHYSICS system property; the other
+changes its provider after assembly with frontier stopping disabled. Both fail
+against the old code, exactly two assertion failures with zero errors/skips:
+wrong incomplete ANIMATION gate, and a release failure on out-of-scope physics.
+These failures are not inherited gameplay defects.
+
+The existing resolved enum is now passed into frontier construction and release
+assertions in both standalone and credits drivers. Credits publication receives
+that same value. There is no new state object, mode, context, fallback overload
+or runtime policy. Two internal protected test-helper signatures now accept the
+scope explicitly; all repository callers are adapted. This is test support, not
+a Mod API surface/version change. The normal default scope remains selected
+from the existing JVM property once. Reporting/retirement use the original
+selection; changing a provider during assembly does not change an invocation.
+
+One fresh normal-memory queued GREEN selection passes **68 unique cases in ten
+suites**, zero failures/errors/skips: every prior 55 identity, both new real
+driver witnesses and eleven report-policy cases. The new assertions require
+a complete ANIMATION gate, all 5,852 comparisons, the final validated frame, one
+publication and still-present global physics errors as the out-of-scope control.
+The fixture restores its caller's verification property. Credits uses the same
+explicit data flow and compiles with its report-policy checks; the real-driver
+witness is S2, not a new credits route certification.
+
+Java 25, Lua 5.4, MSE off, displays unset, surfaceless EGL and fresh paths were
+used; verified ROM discovery reports missing=none. RED queue/Maven/wall times
+are 0/40.220/41.159 seconds, residual 0.939. GREEN is 0/44.498/45.391, residual
+0.893. User wait is zero; editing/coordination time is unmeasured. Full commands,
+all failure messages, fresh XML and immutable source hashes are retained in
+`target/code-climb/scope-diagnosis/`. Both units are terminal and retired.
+
+This component is local after published `c42764c8a5`. Game-aware diagnostic hints
+and the verified hazard-entry design remain to be implemented before combined
+review, qualification and delivery into the same draft PR271. No broad/domain
+pass or new contributor score is inferred from these focused cases.

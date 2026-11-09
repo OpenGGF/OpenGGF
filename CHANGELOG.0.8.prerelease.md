@@ -177,6 +177,8 @@ under the matching area heading; see the
   routes segment diagnosis through the correct lane, movie and report owners.
   Triage selects its first divergence, bootstrap and evidence window from the
   saved verification scope while retaining global counts and legacy global views.
+  Replay stopping, release assertions and publication share the verification scope
+  resolved before fixture assembly, including subclass-provided scopes.
   Unclassifiable groups fail a narrow diagnosis through both JSON and direct-model
   entry; caller mutation cannot alter the captured evidence.
   Replay completion metadata has one report-owned value and strict wire codec; ordinary publication

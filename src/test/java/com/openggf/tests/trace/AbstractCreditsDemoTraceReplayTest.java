@@ -72,6 +72,7 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
         return false;
     }
 
+    // Resolved once before fixture assembly; stopping, assertions and publication share it.
     protected TraceVerificationScope verificationScope() {
         return TraceVerificationScope.fromSystemProperty();
     }
@@ -165,7 +166,7 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
 
             // 5. Run frame-by-frame comparison
             TraceBinder binder = new TraceBinder(tolerances());
-            FrontierReplayStopper frontierStopper = FrontierReplayStopper.fromSystemProperties();
+            FrontierReplayStopper frontierStopper = FrontierReplayStopper.fromSystemProperties(verificationScope);
 
             for (int i = 0; i < frameLimit; i++) {
                 TraceFrame expected = trace.getFrame(i);
@@ -266,7 +267,7 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
 
             // 7. Write report if there are any divergences
             if (report.hasErrors() || report.hasWarnings()) {
-                writeReport(report, idx);
+                writeReport(report, idx, verificationScope);
             }
 
             // 8. Log summary only when explicitly requested. Failing assertions
@@ -279,7 +280,7 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
                 System.err.println(report.getContextWindow(
                         report.firstErrorFrame(verificationScope), TraceReplayConsole.contextRadius()));
             }
-            assertReportHasNoReleaseBlockingDivergences(report);
+            assertReportHasNoReleaseBlockingDivergences(report, verificationScope);
         } finally {
             sharedLevel.dispose();
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,
@@ -289,9 +290,10 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
         }
     }
 
-    protected void assertReportHasNoReleaseBlockingDivergences(DivergenceReport report) {
+    protected void assertReportHasNoReleaseBlockingDivergences(
+            DivergenceReport report, TraceVerificationScope verificationScope) {
         TraceReplayDiagnostics.assertNoReleaseBlockingDivergences(
-                report, verificationScope(), allowDiagnosticOnlyWarnings());
+                report, verificationScope, allowDiagnosticOnlyWarnings());
     }
 
     private void initialiseDemoPlayerState(HeadlessTestFixture fixture) {
@@ -439,12 +441,12 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
                 -1, -1, sprite.getAnimationId(), sprite.getMappingFrame(), lives);
     }
 
-    private void writeReport(DivergenceReport report, int demoIndex) throws IOException {
+    private void writeReport(
+            DivergenceReport report, int demoIndex, TraceVerificationScope scope) throws IOException {
         String prefix = String.format("s1_credits_%02d_%s%d",
             demoIndex,
             zoneSlug(demoIndex),
             Sonic1CreditsDemoData.DEMO_ACT[demoIndex] + 1);
-        TraceVerificationScope scope = verificationScope();
         String scopeSuffix = scope == TraceVerificationScope.ALL
                 ? ""
                 : "_" + scope.name().toLowerCase();

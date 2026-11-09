@@ -10,6 +10,7 @@ import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceVerificationScope;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -37,13 +38,27 @@ class TestAbstractTraceReplayDynamicArtTerminal
     Path tempDir;
     private Path activeTrace;
     private Path activeReports;
+    private Path expectedReportPath;
+    private TraceVerificationScope selectedScope;
+    private TraceVerificationScope scopeAfterFixtureBuild;
+    private String priorSystemScope;
     private int reportPublications;
     private int lastValidatedFrame;
+
+    @BeforeEach
+    void rememberSystemScope() {
+        priorSystemScope = System.getProperty("trace.verification");
+    }
 
     @AfterEach
     void clearFrontierProperties() {
         System.clearProperty("trace.frontierOnly");
         System.clearProperty("trace.context.radius");
+        if (priorSystemScope == null) {
+            System.clearProperty("trace.verification");
+        } else {
+            System.setProperty("trace.verification", priorSystemScope);
+        }
     }
 
     @Override
@@ -96,17 +111,68 @@ class TestAbstractTraceReplayDynamicArtTerminal
                 "an actually-taken early frontier must not invent terminal data");
     }
 
+    @Test
+    void frontierUsesTheResolvedScopeRatherThanTheSystemProperty() throws Exception {
+        prepareAdvertisedFixture();
+        selectedScope = TraceVerificationScope.ANIMATION;
+        expectedReportPath = activeReports.resolve("s2_ehz1_animation_report.json");
+        System.setProperty("trace.verification", "physics");
+        System.setProperty("trace.frontierOnly", "true");
+        System.setProperty("trace.context.radius", "0");
+
+        super.replayMatchesTrace();
+
+        assertCompleteAnimationReport();
+    }
+
+    @Test
+    void cleanlinessUsesTheScopeResolvedBeforeFixtureAssembly() throws Exception {
+        prepareAdvertisedFixture();
+        selectedScope = TraceVerificationScope.ANIMATION;
+        scopeAfterFixtureBuild = TraceVerificationScope.PHYSICS;
+        expectedReportPath = activeReports.resolve("s2_ehz1_animation_report.json");
+        System.setProperty("trace.verification", "animation");
+        System.setProperty("trace.frontierOnly", "false");
+
+        super.replayMatchesTrace();
+
+        assertCompleteAnimationReport();
+    }
+
+    private void assertCompleteAnimationReport() throws IOException {
+        assertEquals(1, reportPublications);
+        var report = new ObjectMapper().readTree(Files.readString(reportPath()));
+        assertEquals(new ReplayGate(FINAL_FRAME + 1, true, TraceVerificationScope.ANIMATION),
+                ReplayGate.readOptionalFrom(report),
+                "stopping, cleanliness and publication use the same resolved scope");
+        assertEquals(FINAL_FRAME + 1, report.path("total_frames").asInt());
+        assertEquals(FINAL_FRAME, lastValidatedFrame);
+        assertTrue(report.path("error_count").asInt() > 0,
+                "the intentionally mismatched physics evidence remains as an out-of-scope control");
+    }
+
+    @Override
+    protected TraceVerificationScope verificationScope() {
+        return selectedScope != null ? selectedScope : super.verificationScope();
+    }
+
     @Override
     protected void afterFixtureBuild(com.openggf.trace.TraceData trace) {
         var gameplay = SessionManager.getCurrentGameplayMode();
         gameplay.endDynamicArtComparisonSegment();
         gameplay.plcFrameLifecycle()
                 .setComparisonSegmentsExternallyManaged(true);
+        if (scopeAfterFixtureBuild != null) {
+            selectedScope = scopeAfterFixtureBuild;
+        }
     }
 
     private void prepareAdvertisedFixture() throws IOException {
         activeTrace = tempDir.resolve("trace");
         activeReports = tempDir.resolve("reports");
+        expectedReportPath = activeReports.resolve("s2_ehz1_report.json");
+        selectedScope = null;
+        scopeAfterFixtureBuild = null;
         reportPublications = 0;
         lastValidatedFrame = -1;
         Files.createDirectories(activeTrace);
@@ -166,7 +232,7 @@ class TestAbstractTraceReplayDynamicArtTerminal
     }
 
     private Path reportPath() {
-        return activeReports.resolve("s2_ehz1_report.json");
+        return expectedReportPath;
     }
 
     @Override protected SonicGame game() { return SonicGame.SONIC_2; }

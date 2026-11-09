@@ -17,9 +17,8 @@ final class FrontierReplayStopper {
         this.verificationScope = verificationScope;
     }
 
-    static FrontierReplayStopper fromSystemProperties() {
+    static FrontierReplayStopper fromSystemProperties(TraceVerificationScope scope) {
         int contextRadius = TraceReplayConsole.contextRadius();
-        TraceVerificationScope scope = TraceVerificationScope.fromSystemProperty();
         return Boolean.getBoolean("trace.frontierOnly")
                 ? enabled(contextRadius, scope)
                 : disabled(contextRadius, scope);

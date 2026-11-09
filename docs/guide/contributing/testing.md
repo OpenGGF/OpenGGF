@@ -645,6 +645,8 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCou
 
 `-Dtrace.verification=all|physics|animation` selects the verification scope
 (default `all`); animation-only requires CSV v7 character-animation fields.
+The driver resolves that scope once before fixture assembly; frontier stopping,
+release assertions and publication share it, including a subclass override.
 Standalone reports use a separate scope suffix for physics and animation.
 Triage uses the scope saved in the report's gate for its first divergence,
 bootstrap diagnosis, context/auxiliary focus and frontier-log hint. Bootstrap
