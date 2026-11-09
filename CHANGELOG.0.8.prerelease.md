@@ -133,6 +133,9 @@ under the matching area heading; see the
   - Sand bars now reject exact zero-distance top contacts, matching the
     original contact routine instead of landing a frame early. Turning on the
     ground also restarts Sonic's walk/run animation as in the original.
+    Same-facing acceleration preserves pushing, and unrolled object landings
+    preserve the skid pose; a native Balloon Park Sonic race covers five laps
+    through balloons, bumpers and elephants.
   - A racer who rises above an arena's top edge, which the original allows,
     is no longer removed by the room's speed check as if they had jumped
     65,535 pixels.

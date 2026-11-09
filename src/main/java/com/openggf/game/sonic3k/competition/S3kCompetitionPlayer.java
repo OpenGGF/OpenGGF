@@ -170,11 +170,14 @@ public final class S3kCompetitionPlayer {
     private void accelerate(int direction) {
         int value=groundVelocity;
         if (value*direction>=0) {
-            // loc_113FE (sonic3k.asm:22827-22832), sub_11482 (sonic3k.asm:22893-22900):
-            // a ground-facing change writes prev_anim=1, restarting the walk cycle.
-            if (facingLeft() != (direction<0)) animationState=new S3kMiniatureAnimation.State(
-                    1,animationState.frame(),animationState.timer(),animationState.mappingFrame(),animationState.renderFlips());
-            setFacingLeft(direction<0); setPushing(false);
+            // loc_113FE (sonic3k.asm:22827-22832), sub_11482
+            // (sonic3k.asm:22893-22900): only a facing change clears Status_Push.
+            if (facingLeft() != (direction<0)) {
+                setPushing(false);
+                animationState=new S3kMiniatureAnimation.State(
+                        1,animationState.frame(),animationState.timer(),animationState.mappingFrame(),animationState.renderFlips());
+            }
+            setFacingLeft(direction<0);
             groundVelocity=accelerated(value,direction*speeds.acceleration(),speeds.maxSpeed());
             animation=0; return;
         }
@@ -405,11 +408,13 @@ public final class S3kCompetitionPlayer {
     public void land(int terrainAngle) {
         angle=terrainAngle&255;
         int oldRadius=yRadius;
+        // Player_TouchFloor (sonic3k.asm:24375-24412) preserves an unrolled pose.
         if (rolling()) {
+            animation=0;
             setCentreNative(centreX(),centreY()+(((angle+0x40)&0x80)!=0?-(oldRadius-0xB):oldRadius-0xB));
         }
         status&=~(2|4|0x10|0x20); jumping=doubleJumpFlag=flipAngle=flipType=flipsRemaining=0;
-        setRadii(5,0xB); animation=0; publish();
+        setRadii(5,0xB); publish();
     }
     /** Ring/shield allocation decisions stay in the session damage owner. */
     public void hurt() { hurt(centreX()); }

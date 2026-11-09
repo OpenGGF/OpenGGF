@@ -53,6 +53,17 @@ class TestS3kCompetitionPlayer {
         assertEquals(new Speeds(0x4C0,0x1C,0x70),readSpeeds(rom,Character.TAILS));
         assertEquals(new Speeds(0x580,0x10,0x200),readSpeeds(rom,Character.KNUCKLES));
     }
+    @Test void accelerationPreservesPushingUntilFacingChanges() {
+        for (int direction : new int[]{LEFT, RIGHT}) {
+            var p=player(0,Character.SONIC);
+            p.setFacingLeft(direction==LEFT); p.setPushing(true);
+            p.tick(new Input(direction,0),new Sensors(),BOUNDS,0);
+            assertTrue(p.pushing(), "same-facing acceleration retains the terrain push bit");
+            p.setGroundVelocity(0);
+            p.tick(new Input(direction==LEFT?RIGHT:LEFT,0),new Sensors(),BOUNDS,1);
+            assertFalse(p.pushing(), "a facing change clears the push bit");
+        }
+    }
     @Test void brakingUsesNativeCharacterDecelerationAndFixBugsZeroSkidRegister() {
         var sonic=player(0,Character.SONIC); var knuckles=player(1,Character.KNUCKLES);
         sonic.setGroundVelocity(0x100); knuckles.setGroundVelocity(0x100);

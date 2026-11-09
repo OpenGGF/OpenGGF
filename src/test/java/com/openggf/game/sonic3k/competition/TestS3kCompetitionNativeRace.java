@@ -25,14 +25,15 @@ class TestS3kCompetitionNativeRace {
      * Each fixture's provenance: docs/architecture/validation/2026-10-28-tas-support-competition.md.
      */
     @ParameterizedTest(name = "{1}")
-    @CsvSource({"3, dpz, 2528"})
+    @CsvSource({"3, dpz, 2528", "1, bpz, 2389"})
     void sonicTraversesFiveLapsExactlyAsNative(int arenaIndex, String key, int raceRows) throws Exception {
         try (var fixture = new HostedArenaFixture();
              var stream = getClass().getResourceAsStream("/competition/s3k/" + key + "-sonic-native.csv.gz");
              var rows = new BufferedReader(new InputStreamReader(new GZIPInputStream(stream), StandardCharsets.US_ASCII))) {
             var arena = new S3kHostedArenaSession(fixture.host, new HostedArenaRequest(arenaIndex, "sonic", false), () -> {});
             fixture.host.world().context().beginGameplayRun(TimeAttackRuntime.competitionPolicy(MonitorRule.OFF), arenaIndex, 0);
-            for (int i = 0; i < 240; i++) fixture.iteration(() -> arena.step(TestS3kArenaZoomFraming.input(0, 0)));
+            // Native GO is sampled after level frame 242; first race input runs at 243.
+            for (int i = 0; i < 242; i++) fixture.iteration(() -> arena.step(TestS3kArenaZoomFraming.input(0, 0)));
             rows.readLine(); // Named, frozen native RAM columns; see the capture provenance.
             int previous = 0, count = 0;
             String row;
@@ -44,6 +45,7 @@ class TestS3kCompetitionNativeRace {
                 var input = TestS3kArenaZoomFraming.input(n[5], previous);
                 previous = n[5];
                 fixture.iteration(() -> arena.step(input));
+                assertEquals(n[4], fixture.host.session().levelFrameCounter(), "native level-frame origin");
                 var p = fixture.host.session().player(0);
                 // Native SST addresses translate to the engine's existing semantic slot identity.
                 int interact = n[18] == 0 ? -1 : (n[18] - 0xB000) / 0x4A;
