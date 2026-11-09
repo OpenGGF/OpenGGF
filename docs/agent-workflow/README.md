@@ -18,6 +18,15 @@ Zone delivery: [methodology v2](../architecture/designs/2026-09-15-zone-methodol
 retains FBZ's route slices and adds early short native comparisons and compatibility
 checks. Its first target is the [Sandopolis plan](../architecture/plans/2026-09-15-soz-methodology-v2.md).
 
+## Default delivery
+
+Agent work defaults to a PR against the targeted release's `develop` or `next`
+branch. Follow [root guidance](../../AGENTS.md#delivery-and-documentation) for
+release selection, copy-on-write worktrees, verification, task-branch push and
+PR retention. Leave merging to review unless the user authorizes it; direct
+integration is an explicit opt-in. The main checkout keeps its branch and
+unrelated work.
+
 ## Delivery skills
 
 - [Mod authoring](../../.agents/skills/mod-authoring/SKILL.md) routes creator
