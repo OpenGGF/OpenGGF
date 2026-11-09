@@ -191,6 +191,22 @@ No gameplay, HUD/V-int ordering or progressive renderer code changed. The
 follow-up report appends each failure's disposition and the exact integrated
 selection/limits under `~/Videos/OGGF/s2-competition/lanes/flow/REPORT.md`.
 
+## Flow fixture audit follow-up 2 (2026-11-09)
+
+Branch `feature/ai-s2-competition-flow-fix2` starts at integrated `4518d67fe`.
+The lead attributed three additional failures against `86245b77f`. The initial
+camera-order and placement-phase fixtures now drive the existing native title
+continuation before asserting leave samples or injecting ordinary crossings.
+All camera values, the4096 block boundary, Masher976/972 positions and negative
+controls remain. The native title-control fixture distinguishes accepted Start
+from the22-pass palette handoff, retaining both-controller selection and
+once-only action consumption. No production code or route inputs change.
+
+The validation inventory scans file names and source text for S2 Competition,
+two-player/2P, title and options consumers in addition to the requested glob
+patterns. The report's Follow-up2 section records the complete selectors,
+additional matches, results and limits rather than relying on one naming prefix.
+
 ## Rejected approaches
 
 | Approach | Evidence and replacement |
