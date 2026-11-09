@@ -766,8 +766,33 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
 
         @Override
         public ClamerSpringChild recreateForRewind(RewindRecreateContext ctx) {
-            ClamerObjectInstance restoredParent =
-                    RewindRecreateObjectLinks.nearestLiveObject(ctx, ClamerObjectInstance.class);
+            if (ctx == null) {
+                return null;
+            }
+            var entry = ctx.dynamicEntry();
+            var family = entry == null ? null : entry.constructionFamily();
+            ClamerObjectInstance restoredParent;
+            if (family != null && family.known()) {
+                // A captured family is authoritative, including known absence.
+                if (family.parentId() == null) {
+                    return null;
+                }
+                var manager = ctx.objectManager();
+                if (manager == null && ctx.objectServices() != null) {
+                    manager = ctx.objectServices().objectManager();
+                }
+                if (manager == null) {
+                    return null;
+                }
+                var owner = manager.objectQuery().resolve(family.parentId()).orElse(null);
+                if (!(owner instanceof ClamerObjectInstance clamer)) {
+                    return null;
+                }
+                restoredParent = clamer;
+            } else {
+                restoredParent =
+                        RewindRecreateObjectLinks.nearestLiveObject(ctx, ClamerObjectInstance.class);
+            }
             return restoredParent == null ? null : new ClamerSpringChild(restoredParent);
         }
 

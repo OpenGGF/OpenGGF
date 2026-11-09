@@ -102,7 +102,7 @@ Trace production lives in the optional pinned `tools/tracechaser/` submodule (`g
 
 - ROM `x_pos`/`y_pos` mean `getCentreX()`/`getCentreY()`; `getX()`/`getY()`/HUD `Pos:` are top-left. Playable native writes: `NativePositionOps`.
 - Object `update` receives `V_int_run_count`, not executed-frame count/`Level_frame_counter`; name the ROM clock read.
-- Rewind: new objects need recreation/captured state; persistent managers need registered `RewindSnapshottable` adapters.
+- Rewind: new objects need [recreation and captured state](docs/guide/contributing/rewind-system.md#ordinary-dynamic-objects-and-constructor-children); persistent managers need registered `RewindSnapshottable` adapters.
 - Keep logic in managers, not `Engine.java`; match nearby idioms.
 - Read [pitfalls](docs/architecture/implementation-pitfalls.md) (collision/tiles/headless/rewind/audio) and [S3K rules](AGENTS_S3K.md) (half/tables/zones).
 - S3K changes keep `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils` green.
