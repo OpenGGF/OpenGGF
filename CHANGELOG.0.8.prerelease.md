@@ -175,6 +175,9 @@ under the matching area heading; see the
   that boundary. Triage exposes missing auxiliary references and absent comparison
   coverage without changing the published gate or mismatch totals. Replay guidance
   routes segment diagnosis through the correct lane, movie and report owners.
+  Triage selects its first divergence, bootstrap and evidence window from the
+  saved verification scope while retaining global counts and legacy global views.
+  Unclassifiable groups fail a narrow diagnosis instead of appearing clean.
   Replay completion metadata has one report-owned value and strict wire codec; ordinary publication
   no longer reparses and rewrites its own JSON. Scene presentation spells out
   capture, restoration and failure cleanup in operation order. Retained raw-field

@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.trace.DivergenceReport.ReplayGate;
 import com.openggf.trace.TraceFiles;
 import com.openggf.trace.TraceMetadata;
+import com.openggf.trace.TraceVerificationScope;
+import com.openggf.trace.VerificationGroup;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -59,7 +61,10 @@ public final class TraceTriageTool {
     // Parsed model
     // ------------------------------------------------------------------
 
-    /** A single divergence group lifted from the report's {@code errors}/{@code warnings} arrays. */
+    /**
+     * A published error/warning group. Its verification group may be unknown
+     * in legacy evidence; only ALL or absent-gate diagnosis accepts that case.
+     */
     public record Divergence(
             String field,
             String severity,
@@ -68,7 +73,8 @@ public final class TraceTriageTool {
             int frameSpan,
             String expectedAtStart,
             String actualAtStart,
-            boolean cascading) {
+            boolean cascading,
+            VerificationGroup verificationGroup) {
     }
 
     /** A bootstrap (frame-0) divergence lifted from the report's {@code bootstrap} array. */
@@ -80,7 +86,19 @@ public final class TraceTriageTool {
             String context) {
     }
 
-    /** Immutable view of a parsed trace report. */
+    /** The gate's diagnostic view; the parsed report keeps its global evidence. */
+    private record DiagnosticSelection(
+            TraceVerificationScope scope, Bootstrap bootstrapError, Divergence divergence) {
+        boolean hasEvidence() {
+            return bootstrapError != null || divergence != null;
+        }
+
+        boolean hasHardError() {
+            return bootstrapError != null || divergence != null && "ERROR".equals(divergence.severity());
+        }
+    }
+
+    /** Immutable view of the published global evidence, before diagnostic scope selection. */
     public record TraceReport(
             int errorCount,
             int warningCount,
@@ -93,28 +111,33 @@ public final class TraceTriageTool {
             List<String> missingAdvertisedAuxSchemas) {
 
         /**
-         * The earliest per-frame hard error, otherwise the earliest per-frame
-         * warning. Bootstrap errors are surfaced separately before this frontier.
+         * The global earliest per-frame hard error, otherwise the earliest
+         * warning. Raw evidence readers do not inherit the CLI's selected scope.
          */
         public Divergence firstDivergence() {
-            Divergence best = null;
-            for (Divergence d : errors) {
-                if (best == null || d.startFrame() < best.startFrame()) {
-                    best = d;
-                }
-            }
+            return firstDivergence(TraceVerificationScope.ALL);
+        }
+
+        private Divergence firstDivergence(TraceVerificationScope scope) {
+            Divergence best = earliest(errors, scope);
             if (best != null) {
                 return best;
             }
-            for (Divergence d : warnings) {
-                if (best == null || d.startFrame() < best.startFrame()) {
+            return earliest(warnings, scope);
+        }
+
+        private static Divergence earliest(List<Divergence> groups, TraceVerificationScope scope) {
+            Divergence best = null;
+            for (Divergence d : groups) {
+                if (scope.includes(d.verificationGroup())
+                        && (best == null || d.startFrame() < best.startFrame())) {
                     best = d;
                 }
             }
             return best;
         }
 
-        /** The first bootstrap ERROR, if present (frame-0 prelude failure). */
+        /** The global first bootstrap ERROR, if present (frame-0 prelude failure). */
         public Bootstrap firstBootstrapError() {
             for (Bootstrap b : bootstrap) {
                 if ("ERROR".equalsIgnoreCase(b.severity())) {
@@ -122,6 +145,14 @@ public final class TraceTriageTool {
                 }
             }
             return null;
+        }
+
+        private DiagnosticSelection diagnosticSelection() {
+            TraceVerificationScope scope = replayGate == null
+                    ? TraceVerificationScope.ALL : replayGate.verification();
+            // Bootstrap discrepancies describe the physics/prelude boundary.
+            Bootstrap boot = scope.includes(VerificationGroup.PHYSICS) ? firstBootstrapError() : null;
+            return new DiagnosticSelection(scope, boot, firstDivergence(scope));
         }
     }
 
@@ -183,8 +214,13 @@ public final class TraceTriageTool {
             }
         }
 
+        ReplayGate gate = ReplayGate.readOptionalFrom(root);
+        if (gate != null && gate.verification() != TraceVerificationScope.ALL) {
+            requireClassifiedGroups(errors);
+            requireClassifiedGroups(warnings);
+        }
         return new TraceReport(errorCount, warningCount, totalFrames, summary,
-                List.copyOf(bootstrap), errors, warnings, ReplayGate.readOptionalFrom(root),
+                List.copyOf(bootstrap), errors, warnings, gate,
                 List.copyOf(missingAuxSchemas));
     }
 
@@ -204,9 +240,32 @@ public final class TraceTriageTool {
                     requiredText(n, "field"), severity, startFrame, endFrame, frameSpan,
                     requiredText(n, "expected_at_start"),
                     requiredText(n, "actual_at_start"),
-                    requiredBoolean(n, "cascading")));
+                    requiredBoolean(n, "cascading"), reportedVerificationGroup(n)));
         }
         return List.copyOf(out);
+    }
+
+    private static VerificationGroup reportedVerificationGroup(JsonNode group) {
+        JsonNode value = group.get("verification_group");
+        if (value == null || !value.isTextual()) {
+            return null;
+        }
+        return switch (value.textValue()) {
+            case "physics" -> VerificationGroup.PHYSICS;
+            case "animation" -> VerificationGroup.ANIMATION;
+            default -> null;
+        };
+    }
+
+    private static void requireClassifiedGroups(List<Divergence> groups) throws IOException {
+        for (Divergence group : groups) {
+            if (group.verificationGroup() == null) {
+                // ALL/absent-gate reports historically accepted unclassified groups.
+                // A narrow diagnosis cannot safely call that evidence out of scope.
+                throw new IOException("Narrow replay verification requires canonical verification_group "
+                        + "'physics' or 'animation' for field '" + group.field() + "'");
+            }
+        }
     }
 
     private static JsonNode requiredArray(JsonNode parent, String field) throws IOException {
@@ -486,11 +545,11 @@ public final class TraceTriageTool {
      * Decides whether {@code docs/status/trace-frontier-log.md} likely needs an
      * update. The frontier log must be updated when a trace frontier moves,
      * passes, regresses, or is used to select the next target. If the report
-     * shows any errors, the frontier is currently failing and the log should
-     * record (or already record) the current first-error frame/field.
+     * shows errors within the published gate's scope, the selected frontier is
+     * failing. Global totals remain available independently of this diagnosis.
      */
     public static boolean frontierLogLikelyNeedsUpdate(TraceReport report) {
-        return report.errorCount() > 0 || report.firstBootstrapError() != null;
+        return report.diagnosticSelection().hasHardError();
     }
 
     // ------------------------------------------------------------------
@@ -514,6 +573,7 @@ public final class TraceTriageTool {
                                      TraceReport report,
                                      String contextExcerpt,
                                      String auxExcerpt) {
+        DiagnosticSelection selected = report.diagnosticSelection();
         StringBuilder sb = new StringBuilder();
         sb.append("=== Trace Triage Brief ===\n");
         sb.append("Game/Zone: ").append(blankToDash(game)).append(" / ")
@@ -530,6 +590,10 @@ public final class TraceTriageTool {
                     .append(" (").append(gate.plannedTraceRows()).append(" planned trace rows; ")
                     .append(gate.verification().name().toLowerCase(Locale.ROOT)).append(" verification).\n");
         }
+        if (selected.scope() != TraceVerificationScope.ALL) {
+            sb.append("Diagnosis scope: ").append(selected.scope().name().toLowerCase(Locale.ROOT))
+                    .append("; totals and report summary cover all verification groups.\n");
+        }
         if (report.totalFrames() == 0) {
             sb.append("Comparison coverage: absent (0 frames compared); gameplay comparison coverage is not established.\n");
         }
@@ -542,7 +606,7 @@ public final class TraceTriageTool {
         sb.append("Report summary: ").append(blankToDash(report.summary())).append("\n");
         sb.append("\n");
 
-        Bootstrap bootErr = report.firstBootstrapError();
+        Bootstrap bootErr = selected.bootstrapError();
         if (bootErr != null) {
             Subsystem bootSub = classifySubsystem(bootErr.field(), true);
             sb.append("BOOTSTRAP (frame 0) ERROR present:\n");
@@ -557,14 +621,23 @@ public final class TraceTriageTool {
             sb.append("\n");
         }
 
-        Divergence first = report.firstDivergence();
+        Divergence first = selected.divergence();
         if (first == null) {
-            sb.append("PER-FRAME DIVERGENCE: none in ")
-                    .append(report.totalFrames()).append(" compared frames.\n");
+            sb.append("PER-FRAME DIVERGENCE: none ");
+            if (selected.scope() != TraceVerificationScope.ALL) {
+                sb.append("for ").append(selected.scope().name().toLowerCase(Locale.ROOT))
+                        .append(" verification ");
+            }
+            sb.append("in ").append(report.totalFrames()).append(" compared frames.\n");
             sb.append("\n");
         } else {
             Subsystem sub = classifySubsystem(first.field(), false);
-            sb.append("FIRST DIVERGENCE\n");
+            sb.append("FIRST DIVERGENCE");
+            if (selected.scope() != TraceVerificationScope.ALL) {
+                sb.append(" (").append(selected.scope().name().toLowerCase(Locale.ROOT))
+                        .append(" verification)");
+            }
+            sb.append('\n');
             sb.append("  frame    : ").append(first.startFrame())
                     .append(" (span ").append(first.frameSpan())
                     .append(", ends ").append(first.endFrame()).append(")\n");
@@ -877,8 +950,9 @@ public final class TraceTriageTool {
             String json = Files.readString(reportFile, StandardCharsets.UTF_8);
             TraceReport report = parseReport(json);
 
-            Divergence first = report.firstDivergence();
-            boolean bootstrapError = report.firstBootstrapError() != null;
+            DiagnosticSelection selected = report.diagnosticSelection();
+            Divergence first = selected.divergence();
+            boolean bootstrapError = selected.bootstrapError() != null;
             int focusFrame = bootstrapError || first == null
                     ? 0 : first.startFrame();
             // Aux snapshots use -1 for the pre-trace state; context begins at 0.
@@ -887,7 +961,8 @@ public final class TraceTriageTool {
             String contextExcerpt = "";
             Path contextFile = contextPath == null
                     ? contextPathForReport(reportFile) : Path.of(contextPath);
-            if (contextPath != null || Files.exists(contextFile)) {
+            if ((selected.scope() == TraceVerificationScope.ALL || selected.hasEvidence())
+                    && (contextPath != null || Files.exists(contextFile))) {
                 String contextText = Files.readString(contextFile, StandardCharsets.UTF_8);
                 contextExcerpt = extractContextNearFrame(contextText, focusFrame, 2, 12);
             }
@@ -895,7 +970,7 @@ public final class TraceTriageTool {
             String auxExcerpt = "";
             Path auxFile = auxPath != null ? Path.of(auxPath)
                     : fixture == null ? null : TraceFiles.resolve(fixture, "aux_state.jsonl");
-            if (auxFile != null && (first != null || report.firstBootstrapError() != null)) {
+            if (auxFile != null && selected.hasEvidence()) {
                 auxExcerpt = readAuxNearFrame(auxFile, auxFocusFrame, 3, 12);
             }
 
