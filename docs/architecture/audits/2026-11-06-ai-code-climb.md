@@ -3605,8 +3605,11 @@ to use the JVM's original working directory. It supplies absolute optional test
 paths, reads the literal `SEGA` header bytes through the scene's `SceneRomLibrary`
 view, verifies the catalogue's actual source paths, and enters GHZ/EHZ with
 ROM-backed terrain. Requiring S1 again must preserve the original restoration
-snapshot; the witness checks resolved configuration and exact caller JVM-property
-restoration. It makes no private absent-key-presence claim.
+snapshot; the resolved-configuration checks detect an overwritten first snapshot.
+They do not independently prove fixture close, because level disposal first resets
+configuration to defaults. The caller JVM properties are restored in a `finally`
+block as test cleanup, without claiming a separate restoration witness. It makes
+no private absent-key-presence claim.
 
 The first attempt had a witness reflection setup error (`Game.art()` instead of
 the public field) and is invalid RED evidence. After correcting that test-only
@@ -3654,3 +3657,163 @@ This is a bounded test-fixture repair, with the inherited gameplay failures
 reported rather than repaired. No category/full-suite run or replacement
 category `VERDICT` was produced; prior raw qualification verdicts are unchanged.
 Root retains review and publication ownership for draft PR271.
+
+
+### Optional-ROM fixture review repairs (2026-11-09)
+
+Opus 5.5 reviewed `78f3ebc2..ce7ef00c` read-only and found no blocker. Its two
+low-severity findings were useful: the custom-audio entry could silently skip
+its donor chapter, and the restoration wording exceeded what the witness
+proved. Root handled these findings without another delegated review round.
+
+Both normal and audio entry now share `open(boolean withAudio)`. The real
+empty-discovery-directory witness executes both paths, always covers required
+S1, and additionally covers S2 when supplied. It compares the scene's full
+256-byte ROM header/title block with the supplied image, checks the actual
+catalogue source and enters decoded GHZ/EHZ fields. S1 is checked first for a
+deterministic missing-binding failure. Optional S2 absence no longer skips the
+S1 witness. The repeated-required-binding checks detect overwriting the first
+fixture snapshot; shared fixture tests own independent close/restoration
+coverage. JVM-property cleanup is a `finally` obligation, not a self-asserted
+restoration test. The tautological post-cleanup assertion was removed.
+
+Final command, with Java 25, Lua 5.4, displays unset and normal queue admission:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dopenggf.surefire.reports=<task-target>/scene-rom-fixture/review-final/surefire \
+  '-Dtest=TestThreeIslandsScene,TestRomCatalogueFixture,TestSceneRomLibrary,TestHeadlessBackendPropertyIsolation' test
+```
+
+Fresh XML contains **33 cases: 25 passed, eight inherited failures, zero errors
+and zero skips**. Both normal/audio witness invocations pass. All twelve original
+scene identities and their outcomes/types remain unchanged. Seven failing
+messages are literal matches; the physical-trail assertion retains its
+FieldScreen/StoryScreen failure with two different JVM identity displays. The
+complete old/new texts are retained in
+`target/code-climb/scene-rom-fixture/review-final-disposition.json`. Every ROM
+property was found, with `missing=none`. Queue wait was 0 seconds, Maven
+execution 38.553 seconds, wall time 39.628 seconds, user wait 0 and residual
+1.075 seconds. Investigation/edit time was not measured.
+
+Only this test class and the existing audit changed. Production, shared fixture,
+selection, skip policy and prior broad/trace evidence are unchanged. This is
+bounded fixture qualification; the earlier raw category verdicts remain FAILED,
+and no new full-smoke, full-suite or contributor-score claim follows from it.
+
+
+### Retire the unreachable private S3K comparison seed (2026-11-09)
+
+The proposed shared assembly helper was rejected before implementation. Its
+premise was incomplete: the duplicate seeded branch exists in the standalone
+driver, but no real inherited entry can reach it. The direct bootstrap call
+returns only `ReplayStartState(cursor, -1)` or `DEFAULT(0, -1)`; the compatibility
+seeded entrypoint delegates to the same unseeded result. `hasSeededTraceState()`
+requires a nonnegative second field. The existing disabled-seeding policies are
+unchanged. A forced seeded witness would require reflection, a mock, or a new
+bootstrap hook and would not establish a reachable production path.
+
+After that finite call-graph proof, root authorized deleting only the private
+seeded comparison branch and its unreachable previous-frame ternary arm. No
+shared helper, public API, input import, fixture, tolerance or policy was added.
+The reachable prefix/frame-zero checkpoint initialization stays intact. A scoped
+mechanical projection verifies the whole source prefix before `replayS3kTrace`,
+both surviving checkpoint bodies and the entire tail from frame-counter
+alignment onward byte-for-byte. This covers the general replay path, live S3K
+assembly, row-versus-CSV-frame lookups, both sprite evaluations, diagnostic-hook
+ordering, scheduling, auxiliary comparisons, frontier and report lifecycle.
+The driver falls from 1,679 to 1,633 lines; that size reduction earns no automatic
+contributor score. Public replay-start records, compatibility methods and all
+other consumers remain unchanged.
+
+One bounded post-change check used Java 25, Lua 5.4, displays unset and queued
+normal-memory execution:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Ptrace-segments \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Dopenggf.headless.gl=surfaceless-egl -Dtrace.print.summary=true \
+  -Dopenggf.surefire.reports=<task-target>/s3k-private-seed-retirement/focused/surefire \
+  -Dopenggf.trace.reports=<task-target>/s3k-private-seed-retirement/focused/reports \
+  '-Dtest=TestS3kReplayReferenceClosureIntegration,TestTraceReplayStartPositionPolicy,TestTraceBinder,TestTraceExecutionModel,TestTraceBinderComparisonDedup,TestTraceReplayInvariantGuard,TestTraceReplayReferenceClosureGuard' test
+```
+
+All seven requested suites actually ran: **155 cases passed, zero failures,
+errors or skips**, with every ROM property found (`missing=none`). The existing
+S3K inherited-entry integration passed its positive closure-validation assertion.
+Its fresh owner-keyed AIZ report contains 26,041 gameplay comparisons against
+26,228 planned rows, an ALL gate reached and zero gameplay/bootstrap mismatch
+errors or warnings. It retains eight unavailable advertised auxiliary schemas;
+compiler/runtime log warnings are retained separately. This is one focused
+integration witness, not a dynamic execution of deleted seeded behavior, a
+paired-domain result, whole-route certification or a full-suite pass.
+
+Queue wait was 0 seconds; Maven execution 65 seconds; wall time 66.732 seconds;
+user wait 0 and residual 1.732 seconds. Rounded durations include wrapper
+uncertainty; investigation/edit time was not measured. Exact argv, fresh XML,
+report/owner identities, source projection and hashes are retained under
+`target/code-climb/s3k-private-seed-retirement/`. The prior investigation handoff
+under `target/code-climb/s3k-comparison-assembly/` records the rejected extraction
+and wider public-consumer boundary. Root owns independent review, final combined
+qualification, integration and publication to the existing draft PR271.
+
+
+### Saved-scope trace diagnosis and private-driver integration (2026-11-09)
+
+The report producer deliberately retains both verification groups and global
+counts/summary. Its context writer uses the selected gate scope, but triage
+previously discarded `verification_group` and selected the earliest global
+mismatch. A physics brief could therefore select animation evidence, miss its
+actual context and focus compressed auxiliary evidence on the wrong frame.
+Animation diagnosis could similarly prioritize a physics bootstrap discrepancy.
+
+The reader now retains the canonical group and derives one private diagnostic
+selection from the published gate. Brief, bootstrap, context/auxiliary focus and
+frontier-log hint use that selection. Bootstrap discrepancies remain physics.
+Global counts, arrays, summary and the public global first-divergence/bootstrap
+accessors remain intact for saved-baseline consumers. Narrow headings explain
+why the selected mismatch can differ from the global summary. Unknown group
+membership fails narrow evidence reading with no brief; ALL and absent-gate
+reports preserve their legacy global behavior. Primary malformed evidence is
+validated before selection. Wire publication, replay completion, comparison
+collection, gameplay and input contracts are unchanged.
+
+The first real producer/writer/CLI RED selection had two failures, one per
+narrow scope: an out-of-scope mismatch at frame 2 incorrectly displaced the
+selected mismatch at frame 9. Those new, unpublished cases moved unchanged into
+`TestTraceTriageVerificationScope`, beside bootstrap, warning, no-selected-error,
+legacy and malformed-group neighbors. The expanded RED run had **30 cases,
+21 intended failures, nine passing controls, zero errors/skips**. GREEN had
+**104 passing cases** across the old 74-case reader suite and the new 30-case
+scope suite. Four report/protocol suites added **53 passing cases**, including
+the non-opt-in saved-baseline reader check. Every selected suite ran; no opt-in
+report-backed baseline audit was claimed.
+
+Component commands use Java 25, Lua 5.4, MSE off, displays unset, surfaceless EGL,
+normal queued memory and distinct fresh reports. Evidence remains in the owned
+triage-scope worktree under `target/code-climb/triage-scope/`: exact command
+arrays, source hashes, fresh XML, complete RED messages and
+`focused-qualification.json`. Timing separates queue/Maven/wall/user/residual:
+
+| Component | Cases | Queue s | Maven s | Wall s | User s | Residual s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Primary RED | 2 failures | 0 | 100 | 101.781 | 0 | 1.781 |
+| Expanded RED | 21 failures / 9 controls | 552 | 36.346 | 589.129 | 0 | 0.783 |
+| Reader GREEN | 104 passed | 52 | 91 | 144.516 | 0 | 1.516 |
+| Report/protocol | 53 passed | 48 | 33.208 | 82.147 | 0 | 0.939 |
+
+The separate Sol retirement in `8fc54d6793` passed 155 cases and is documented
+above. Integration `6c148777e2` kept all four scope-change blobs exact and the
+driver blob exact, with no conflicts. These are **312 component-case passes on
+separately tested source blobs**, not a combined-head smoke or route verdict.
+Root independently reproduced the whole-file projection removing only the
+constant-unreachable seeded branch/ternary arm. Source and receipt proofs remain
+under `target/code-climb/triage-scope-integration/` and
+`target/code-climb/s3k-private-seed-retirement/` in the PR worktree.
+
+Combined independent review and qualification remain pending at this checkpoint.
+No original contributor trial was regraded and no score credit is inferred.
+The sole delivery remains follow-up draft PR271; no destination branch was
+written. Both source trees, their generated resources and original evidence are
+retained pending final accounting.
