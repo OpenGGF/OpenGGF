@@ -12,7 +12,7 @@ class TestClientTeleportSwap {
     @Test void requestQueueEngineResultAndHashedReplay(@TempDir Path dir) throws Exception {
         var runtime = new TimeAttackRuntime(new GhostStore(dir), dir.resolve("id"), () -> false);
         runtime.armForLaunch(new TimeAttackLaunchRequest("s2", 0, 0, "sonic", List.of(), TrackKind.ACT,
-                CompetitionRoomSettings.Mode.COMPETITION, MonitorRule.COMPETITION_ITEMS, true));
+                CompetitionRoomSettings.Mode.COMPETITION, MonitorRule.RANDOMISED, true));
         var queued = new ArrayList<RaceEvent>();
         runtime.attachHandle(new RunHandle() {
             public void retry() { fail("competition retry"); }

@@ -580,21 +580,40 @@ class TestTimeAttackScene {
         chooseMode(1);
         for (int i = 0; i < 5; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // past race mode, policy, window, pool
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
-        assertTrue(host.capturesTextInput(), "creation is a modal even before its password editor opens");
+        assertFalse(host.capturesTextInput(), "the form keeps its arrows until its password is edited");
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        assertTrue(host.capturesTextInput(), "the password editor takes text");
         type("a long private room password");
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        assertFalse(host.capturesTextInput(), "the accepted password returns the arrows to the form");
         scene.focusLost(null);
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
-        assertEquals(openggf.timeattack.mp.RaceSession.State.IDLE, scene.raceSession().state());
-        assertTrue(host.capturesTextInput());
+        assertEquals(openggf.timeattack.mp.RaceSession.State.IDLE, scene.raceSession().state(),
+                "focus loss erased the password, so CREATE ROOM refuses");
         assertTrue(launched.isEmpty());
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE);
         assertFalse(host.capturesTextInput());
+    }
+
+    @Test
+    void theKeyboardReachesCreateRoomInTheAccessForm() throws Exception {
+        fingerprint = Optional.of(FP);
+        open(List.of("s2"));
+        chooseMode(1);
+        for (int i = 0; i < 5; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // past race mode, policy, window, pool
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        var canvas = new openggf.timeattack.ui.RecordingSceneCanvas(320);
+        scene.draw(null, canvas);
+        assertTrue(canvas.shows("CREATE ROOM"), "the access form is open");
+        assertFalse(host.capturesTextInput());
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // members may invite
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // CREATE ROOM
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        idleUntil("the hosted lobby", () -> scene.raceSession().state() == openggf.timeattack.mp.RaceSession.State.LOBBY);
     }
 
     @Test
@@ -655,7 +674,7 @@ class TestTimeAttackScene {
             scene.focusLost(null);
             assertFalse(host.capturesTextInput());
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_C);
-            assertTrue(host.capturesTextInput());
+            assertFalse(host.capturesTextInput(), "the creation form keeps its arrows until its password is edited");
             scene.draw(null, canvas);
             assertTrue(canvas.shows("CREATE ROOM"));
             assertFalse(canvas.shows("Rooms listed on your master server"));

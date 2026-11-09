@@ -2180,3 +2180,12 @@ loads also take that native dispatch: FBZ2 starpost5 finishes at `$B06` with
 maxY `$B00`, rather than stopping at the intermediate clamp. The
 [FBZ2 matrix](architecture/validation/levels/s3k-fbz-act2.md#native-checkpoint-initial-camera--2026-11-05)
 records the ROM-backed derivation, retained route assertions and bounded checks.
+
+### Competition idle edge balance (2026-11-09)
+
+Miniature racers now select idle terrain/object-edge balance before look/duck,
+including facing and Sonic/Knuckles' second pose. Miniature Knuckles shares
+Sonic_Move, rather than the campaign Knuckles animation reset. Tails retains
+its four-pixel object margin and single pose. See the
+[arena balance qualification](architecture/validation/2026-10-28-tas-support-competition.md#native-miniature-idle-balance-qualification-2026-11-09)
+for bounded route evidence and remaining arena gaps.

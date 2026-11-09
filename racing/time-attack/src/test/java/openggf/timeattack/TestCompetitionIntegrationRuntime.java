@@ -13,7 +13,7 @@ class TestCompetitionIntegrationRuntime {
     TimeAttackRuntime runtime(TrackKind kind) {
         var r = new TimeAttackRuntime(new GhostStore(root),root.resolve("identity"),()->false);
         r.armForLaunch(new TimeAttackLaunchRequest("s3k",0,0,"sonic",List.of(),kind,
-                CompetitionRoomSettings.Mode.COMPETITION,MonitorRule.COMPETITION_ITEMS,true));
+                CompetitionRoomSettings.Mode.COMPETITION,MonitorRule.RANDOMISED,true));
         r.beginAttemptForTest("fp"); return r;
     }
     @Test void liveActProfileCarriesTheEngineSourceInventory() {

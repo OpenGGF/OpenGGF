@@ -51,7 +51,7 @@ class TestCompetitionRoomSettings {
         var s2 = TimeAttackTrackCatalog.eligible("s2", 0, 0).orElseThrow();
         var boss = TimeAttackTrackCatalog.eligible("s2", 0, 1).orElseThrow();
         var s3 = TimeAttackTrackCatalog.eligible("s3k", 0, 0).orElseThrow();
-        assertEquals(List.of(MonitorRule.values()), CompetitionRoomSettings.legalMonitors(COMPETITION, List.of(s2)));
+        assertEquals(List.of(NORMAL, RANDOMISED, OFF), CompetitionRoomSettings.legalMonitors(COMPETITION, List.of(s2)));
         assertEquals(List.of(NORMAL, OFF), CompetitionRoomSettings.legalMonitors(COMPETITION, List.of(s2, boss)));
         assertEquals(List.of(NORMAL, OFF), CompetitionRoomSettings.legalMonitors(COMPETITION, List.of(s3)));
         assertEquals(List.of(COMPETITION_ITEMS, OFF), CompetitionRoomSettings.legalMonitors(COMPETITION, TimeAttackTrackCatalog.arenas()));
@@ -61,7 +61,9 @@ class TestCompetitionRoomSettings {
         assertTrue(CompetitionRoomSettings.legalMonitors(TIME_ATTACK, TimeAttackTrackCatalog.arenas()).isEmpty());
         assertFalse(CompetitionRoomSettings.defaults().legalFor(List.of()));
         assertEquals(COMPETITION_ITEMS, CompetitionRoomSettings.defaultsFor(COMPETITION, TimeAttackTrackCatalog.arenas()).monitors());
-        assertEquals(NORMAL, CompetitionRoomSettings.defaultsFor(COMPETITION, List.of(s2)).monitors());
+        assertEquals(RANDOMISED, CompetitionRoomSettings.defaultsFor(COMPETITION, List.of(s2)).monitors(),
+                "S2 Competition defaults to the original two-player draw");
+        assertEquals(NORMAL, CompetitionRoomSettings.defaultsFor(COMPETITION, List.of(s2, boss)).monitors());
         assertThrows(IllegalArgumentException.class, () -> CompetitionRoomSettings.defaultsFor(COMPETITION, List.of()));
     }
 }

@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.competition.*;
 import com.openggf.ghost.GhostFrame;
 import com.openggf.graphics.ScreenshotCapture;
+import com.openggf.graphics.SpritePresentation;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -35,7 +36,18 @@ class TestS3kSoloArenaViewPixels {
         before.entries().forEach((key,value) -> assertEquals(List.of(),
                 com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key,value,after.entries().get(key)),key));
     }
-    @Test void soloViewDraws224RowsAndMiniatureGhostWithoutAnyVisibilityWrites() throws Exception {
+    /** Screen bounds of the prepared tiles that satisfy {@code filter}: minX, minY, maxX, maxY. */
+    private static int[] bounds(SpritePresentation.Frame frame, java.util.function.Predicate<SpritePresentation.Tile> filter) {
+        int[] box = {Integer.MAX_VALUE,Integer.MAX_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE};
+        for (var tile : frame.tiles()) {
+            if (!filter.test(tile)) continue;
+            box[0]=Math.min(box[0],(int)tile.x()); box[1]=Math.min(box[1],(int)tile.y());
+            box[2]=Math.max(box[2],(int)(tile.x()+tile.width())); box[3]=Math.max(box[3],(int)(tile.y()+tile.height()));
+        }
+        return box;
+    }
+
+    @Test void zoomDrawsFullSizeBodyAndGhostAtDoubledPositionsWithoutAnyStateWrites() throws Exception {
         assumeTrue(PresentationOffscreenTestContext.requested(),"requires owned EGL");
         var settings = new GameplayCaptureSession.Settings(320,"sonic","","off",null,null,null);
         try (var capture = new GameplayCaptureSession(settings)) {
@@ -53,7 +65,8 @@ class TestS3kSoloArenaViewPixels {
                         new NativeMenuHostContext(engine,new Sonic3kGameModule(),new InputHandler(),capture.loop()::setGameplayMode))) {
                     var context = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
                     var host = (S3kCompetitionNativeHost)NativeCompetitionRoster.from(context.getWorldSession());
-                    for (int frame=0;frame<90;frame++) {
+                    // Past the native countdown, so only TIME and the lap digit share the screen.
+                    for (int frame=0;frame<330;frame++) {
                         context.plcFrameLifecycle().runLogicalIteration(() -> {}, token -> {
                             com.openggf.game.competition.NativeCompetitionIterationAccess.runAdmitted(token,
                                     () -> session.step(com.openggf.control.PlayerInputState.neutral()));
@@ -69,47 +82,48 @@ class TestS3kSoloArenaViewPixels {
                     session.draw();
                     var baseline = ScreenshotCapture.captureFramebuffer(320,224);
                     assertUnchanged(before,context.getRewindRegistry().capture());
-                    assertEquals(224,baseline.height());
                     assertNotEquals(0xFF00FF,baseline.argb(160,223)&0xFFFFFF,"last row is presented");
-                    var ghosts = new GhostRenderer();
-                    ghosts.setArtSource(session.ghostArtSource());
-                    var player = session.localPlayer();
-                    // A nearby high-priority airborne pose tests the same loop image as P1 without terrain occlusion.
                     var source = session.ghostArtSource();
-                    var nativePiece = view.get().projectNativeSprites(context,host,host.scroll())
-                            .pieces().stream().filter(piece -> piece.nativeSlot()==0).findFirst().orElseThrow();
+                    var player = session.localPlayer();
+                    var standing = view.get().prepareOverlay(context,host);
+                    int bodyX = source.screenX(player.getCentreX()), bodyY = source.screenY(player.getCentreY());
+                    int[] body = bounds(standing, tile -> !tile.ghost() && tile.y() >= 32
+                            && Math.abs(tile.x()+4-bodyX) < 32 && Math.abs(tile.y()+4-bodyY) < 40);
+                    assertTrue(body[3]-body[1] >= 32,
+                            "arena "+arena+" body must use the full-size art, not a 2x miniature: "+java.util.Arrays.toString(body));
+
+                    var ghosts = new GhostRenderer();
+                    ghosts.setArtSource(source);
+                    // The local pose, 40 px right and 32 px up in world pixels: 80 and 64 on screen.
                     var ghost = new ActiveGhost("remote","sonic",new GhostFrame(player.getCentreX()+40,
-                            player.getCentreY()-32,host.players().getFirst().mappingFrame(),false,false,false,2,true));
+                            player.getCentreY()-32,host.players().getFirst().mappingFrame(),
+                            (host.players().getFirst().renderFlips()&1)!=0,false,false,2,true));
                     var activeGhost = new java.util.concurrent.atomic.AtomicReference<>(ghost);
-                    context.getGhostRenderRegistry().register((bucket,high) -> ghosts.renderForLayer(List.of(activeGhost.get()),
-                            bucket,high,player.getCentreX(),player.getCentreY(),"sonic"));
-                    var prepared = view.get().prepareSprites(context,host,host.scroll());
-                    var ghostTiles = prepared.tiles().stream().filter(com.openggf.graphics.SpritePresentation.Tile::ghost).toList();
-                    System.out.println("arena="+arena+" player="+player.getCentreX()+","+player.getCentreY()
-                            +" camera="+session.ghostArtSource().cameraX()+","+session.ghostArtSource().cameraY()
-                            +" spriteMapping="+player.getMappingFrame()+" nativeMapping="+host.players().getFirst().mappingFrame()
-                            +" ghostTiles="+ghostTiles);
-                    glClear(GL_COLOR_BUFFER_BIT); session.draw();
-                    var withGhost = ScreenshotCapture.captureFramebuffer(320,224);
-                    var pictures = java.nio.file.Path.of("target/lane-b/pixel-diagnostics");
-                    java.nio.file.Files.createDirectories(pictures);
-                    ScreenshotCapture.savePNG(baseline,pictures.resolve("arena-"+arena+"-baseline.png"));
-                    ScreenshotCapture.savePNG(withGhost,pictures.resolve("arena-"+arena+"-ghost.png"));
-                    assertFalse(ghostTiles.isEmpty(),"SAT must retain ghost tiles in arena "+arena);
-                    assertEquals((float)(nativePiece.screenX()+40),ghostTiles.getFirst().x(),"ghost shares P1's horizontal loop image");
-                    assertEquals((float)(nativePiece.screenY()-32),ghostTiles.getFirst().y(),"ghost shares P1's vertical loop image");
-                    assertTrue(ghostTiles.stream().anyMatch(tile -> {
+                    com.openggf.game.ghost.GhostRenderRegistry.GhostLayerRenderer hook = (bucket,high) ->
+                            ghosts.renderForLayer(List.of(activeGhost.get()),bucket,high,player.getCentreX(),player.getCentreY(),"sonic");
+                    context.getGhostRenderRegistry().register(hook);
+                    var prepared = view.get().prepareOverlay(context,host);
+                    int[] ghostBox = bounds(prepared, SpritePresentation.Tile::ghost);
+                    assertNotEquals(Integer.MAX_VALUE,ghostBox[0],"overlay must retain ghost tiles in arena "+arena);
+                    assertEquals(body[0]+80,ghostBox[0],"ghost shares P1's horizontal loop image at double scale");
+                    assertEquals(body[1]-64,ghostBox[1],"ghost shares P1's vertical loop image at double scale");
+                    assertTrue(prepared.tiles().stream().filter(SpritePresentation.Tile::ghost).anyMatch(tile -> {
                         var pattern = prepared.patternVersions().get(tile.patternId());
                         return pattern != null && (pattern.a()!=0 || pattern.b()!=0 || pattern.c()!=0 || pattern.d()!=0);
                     }),"prepared ghost must retain nonempty ROM pattern versions in arena "+arena);
-                    assertFalse(sameRgb(baseline,withGhost),"miniature ghost must change pixels in arena "+arena);
+                    glClear(GL_COLOR_BUFFER_BIT); session.draw();
+                    var withGhost = ScreenshotCapture.captureFramebuffer(320,224);
+                    var pictures = java.nio.file.Path.of("target/arena-zoom/pixel-diagnostics");
+                    java.nio.file.Files.createDirectories(pictures);
+                    ScreenshotCapture.savePNG(baseline,pictures.resolve("arena-"+arena+"-baseline.png"));
+                    ScreenshotCapture.savePNG(withGhost,pictures.resolve("arena-"+arena+"-ghost.png"));
+                    assertFalse(sameRgb(baseline,withGhost),"full-size ghost must change pixels in arena "+arena);
                     activeGhost.set(new ActiveGhost(ghost.slotId(),ghost.characterCode(),ghost.frame(),null,.5f));
                     glClear(GL_COLOR_BUFFER_BIT); session.draw();
                     var translucent = ScreenshotCapture.captureFramebuffer(320,224);
-                    ScreenshotCapture.savePNG(translucent,pictures.resolve("arena-"+arena+"-half-alpha.png"));
-                    assertFalse(sameRgb(withGhost,translucent),
-                            "SAT must retain ghost translucency in arena "+arena);
+                    assertFalse(sameRgb(withGhost,translucent),"ghost translucency must survive in arena "+arena);
                     assertUnchanged(before,context.getRewindRegistry().capture());
+                    context.getGhostRenderRegistry().unregister(hook);
                     ghosts.clearSlots();
                 }
             }

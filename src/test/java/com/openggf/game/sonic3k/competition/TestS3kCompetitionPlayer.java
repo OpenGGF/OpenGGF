@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @org.junit.jupiter.api.parallel.Isolated
 class TestS3kCompetitionPlayer {
     private static final Bounds BOUNDS=new Bounds(0x3FF,0x3FF,false,0);
-    private static final class Sensors implements Terrain {
+    private static class Sensors implements Terrain {
         boolean jumpAllowed=true;
         boolean land;
         int floorAngle;
@@ -35,6 +35,46 @@ class TestS3kCompetitionPlayer {
     private static S3kCompetitionPlayer player(int slot,Character c) {
         return new S3kCompetitionPlayer(slot,c,0x600,200);
     }
+    @Test void idleTerrainBalancePrecedesLookAndDuckAndRestoresItsSensors() {
+        for (Character c:Character.values()) for (boolean left:new boolean[]{false,true}) {
+            var p=player(0,c); p.setFacingLeft(!left); p.setFloorTilts(left?0:3,left?3:0);
+            var restored=S3kCompetitionPlayer.recreate(p.capture());
+            var terrain=new Sensors() {
+                @Override public int floorEdgeDistance(S3kCompetitionPlayer actor,int x) {
+                    return x==actor.centreX()?12:11;
+                }
+            };
+            restored.tick(new Input(UP|DOWN,0),terrain,BOUNDS,0);
+            assertEquals(6,restored.animation()); assertEquals(left,restored.facingLeft());
+            var deep=player(0,c); deep.setFloorTilts(left?0:3,left?3:0);
+            deep.tick(Input.NONE,new Sensors() {
+                @Override public int floorEdgeDistance(S3kCompetitionPlayer actor,int x) { return 12; }
+            },BOUNDS,0);
+            assertEquals(c==Character.TAILS?6:12,deep.animation());
+        }
+    }
+    @Test void idleObjectBalanceUsesNativeWidthMarginsAndStatusGate() {
+        for (Character c:Character.values()) for (boolean left:new boolean[]{false,true}) {
+            for (int offset:new int[]{-5,-4,1,2,3,4,16,17,18,19,23,24}) {
+                var p=player(0,c); p.setStandingObject(7); p.setFacingLeft(!left);
+                int distance=left?offset:20-offset;
+                var surface=new BalanceObject(p.centreX()+10-distance,10,0);
+                var terrain=new Sensors() {
+                    @Override public BalanceObject balanceObject(int slot) { assertEquals(7,slot); return surface; }
+                };
+                int margin=c==Character.TAILS?4:2;
+                boolean edge=distance<margin || distance>=20-margin;
+                p.tick(new Input(UP,0),terrain,BOUNDS,0);
+                assertEquals(edge?(c!=Character.TAILS && (distance< -4 || distance>=24)?12:6):7,p.animation());
+                if(edge) assertEquals(distance<margin,p.facingLeft());
+            }
+            var p=player(0,c); p.setStandingObject(7);
+            p.tick(new Input(UP,0),new Sensors() {
+                @Override public BalanceObject balanceObject(int slot) { return new BalanceObject(p.centreX()+10,10,128); }
+            },BOUNDS,0);
+            assertEquals(7,p.animation());
+        }
+    }
     @Test void independentHumanSlotsUseNativeInitSpeedsAndFullFractionWords() {
         var p1=player(0,Character.SONIC); var p2=player(1,Character.TAILS);
         var terrain=new Sensors();
@@ -53,6 +93,17 @@ class TestS3kCompetitionPlayer {
         assertEquals(new Speeds(0x4C0,0x1C,0x70),readSpeeds(rom,Character.TAILS));
         assertEquals(new Speeds(0x580,0x10,0x200),readSpeeds(rom,Character.KNUCKLES));
     }
+    @Test void accelerationPreservesPushingUntilFacingChanges() {
+        for (int direction : new int[]{LEFT, RIGHT}) {
+            var p=player(0,Character.SONIC);
+            p.setFacingLeft(direction==LEFT); p.setPushing(true);
+            p.tick(new Input(direction,0),new Sensors(),BOUNDS,0);
+            assertTrue(p.pushing(), "same-facing acceleration retains the terrain push bit");
+            p.setGroundVelocity(0);
+            p.tick(new Input(direction==LEFT?RIGHT:LEFT,0),new Sensors(),BOUNDS,1);
+            assertFalse(p.pushing(), "a facing change clears the push bit");
+        }
+    }
     @Test void brakingUsesNativeCharacterDecelerationAndFixBugsZeroSkidRegister() {
         var sonic=player(0,Character.SONIC); var knuckles=player(1,Character.KNUCKLES);
         sonic.setGroundVelocity(0x100); knuckles.setGroundVelocity(0x100);
@@ -66,6 +117,18 @@ class TestS3kCompetitionPlayer {
         assertEquals(-0x3D0,left.groundVelocity()); assertEquals(0xD,left.animation());
         assertEquals(0x3D0,right.groundVelocity()); assertNotEquals(0xD,right.animation());
     }
+    @Test void groundAccelerationPreservesPushUntilFacingChanges() {
+        for (int direction : new int[]{LEFT, RIGHT}) {
+            var p=player(0,Character.SONIC);
+            p.setFacingLeft(direction==LEFT); p.setGroundVelocity(direction==LEFT?-0x100:0x100);
+            p.setPushing(true);
+            p.tick(new Input(direction,0),new Sensors(),BOUNDS,0);
+            assertTrue(p.pushing(), "same-facing acceleration keeps the object-owned push state");
+            p.setGroundVelocity(0);
+            p.tick(new Input(direction==LEFT?RIGHT:LEFT,0),new Sensors(),BOUNDS,1);
+            assertFalse(p.pushing(), "a facing change clears Push");
+        }
+    }
     @Test void aboveCapMomentumIsPreservedAndNeutralFrictionIsCharacterAcceleration() {
         var p=player(0,Character.SONIC); p.setGroundVelocity(0x900);
         p.tick(new Input(RIGHT,0),new Sensors(),BOUNDS,0);
@@ -74,6 +137,19 @@ class TestS3kCompetitionPlayer {
         p.setStatusSecondary(0x80);
         p.tick(new Input(LEFT,0),new Sensors(),BOUNDS,2);
         assertEquals(0x8F0,p.groundVelocity(),"slide infinite-inertia bit skips input and friction");
+    }
+    @Test void groundAccelerationRetainsPushUntilFacingChanges() {
+        // loc_113FE / sub_11482: only a changed facing bit clears Status_Push.
+        for (boolean left : new boolean[]{false,true}) {
+            var p=player(0,Character.SONIC);
+            p.setFacingLeft(left); p.setPushing(true); p.setStatus(p.status()|8);
+            int held=left?LEFT:RIGHT;
+            p.tick(new Input(held,0),new Sensors(),BOUNDS,0);
+            assertTrue(p.pushing(), "holding into the same wall retains push");
+            p.setGroundVelocity(0);
+            p.tick(new Input(left?RIGHT:LEFT,0),new Sensors(),BOUNDS,1);
+            assertFalse(p.pushing(), "turning releases push");
+        }
     }
     @Test void nativeJumpHasClearanceGateAndSharedSevenFourteenRadiiWrites() {
         var p=player(0,Character.SONIC); var terrain=new Sensors(); terrain.jumpAllowed=false;

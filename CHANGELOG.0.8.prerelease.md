@@ -17,6 +17,12 @@ under the matching area heading; see the
   ring slots' link to the object pass. The link now survives resets. This
   regressed in 0.7.
 
+- **Keyboard in the Create Room form:** the room-access form claimed the
+  keyboard for typing whenever it was open, which hid the arrow keys from its
+  own rows, so a keyboard player could not reach CREATE ROOM. It now takes
+  typed text only while the room password is being edited. This shipped in
+  0.7.
+
 - **S3K support notice says beta:** starting Sonic 3 & Knuckles from the hub
   now shows the beta notice, matching the 0.7 release notes. 0.7 shipped with
   the alpha notice. Players who hid the alpha notice see the beta one once.
@@ -122,18 +128,56 @@ under the matching area heading; see the
   Everyone starts at the same scheduled moment, there are no restarts, and the
   first past the post wins. Placement counts each player's own frames from GO,
   so network lag never changes the order. The host picks the monitor rules
-  (normal, randomised, competition items or off) and a cutoff after the first
-  finisher. Sonic 2 and Sonic 3&K acts can be raced in either mode.
+  and a cutoff after the first finisher. Sonic 2 acts use the original
+  two-player monitors by default: each box gives one of eight items, picked as
+  the original picks them, so teleport is never guaranteed. Normal or no
+  monitors are the alternatives. Sonic 2 and Sonic 3&K acts can be raced in
+  either mode.
   - Sonic 3&K's five Competition arenas (Azure Lake, Balloon Park, Chrome
     Gadget, Desert Palace and Endless Mine) are new Competition-only tracks.
     Each player races them alone in one full-screen view, under the shipped
     Match Race rules: five laps, losing a lap for a backwards crossing or a
     death, false starts and the 9'59"99 limit.
+  - The arena view shows exactly what the original top half shows, magnified
+    twice, with full-size Sonic, Tails and Knuckles (and ghosts) posed and angled
+    from the original animations. They still pass behind foreground scenery, and
+    TIME, laps and the countdown keep their screen size. The item icon sits under
+    TIME and is hidden when monitors are off.
+  - A player who jumps or falls off a platform, spring or blade stops counting
+    as standing on it, as in the original. Before, the flag stayed set, sometimes for
+    the rest of the race, so slopes stopped turning the player and the pose kept
+    the angle it had when it left. This also applies to the two-player mode
+    started from the Sonic 3&K title.
+  - Azure Lake and Chrome Gadget now have full five-lap native Sonic regressions;
+    wall pushing and spring release retain the original object-owned state.
+    Idle miniature racers now balance at terrain and object edges with the
+    original facing, pose thresholds and character-specific margins.
+  - Sand bars now reject exact zero-distance top contacts, matching the
+    original contact routine instead of landing a frame early. Turning on the
+    ground also restarts Sonic's walk/run animation as in the original.
+    Same-facing acceleration preserves pushing, and unrolled object landings
+    preserve the skid pose; a native Balloon Park Sonic race covers five laps
+    through balloons, bumpers and elephants.
+    Endless Mine preserves the spring's contact-release pass and rock-pushing
+    animation, with a full five-lap native Sonic regression.
+  - A racer who rises above an arena's top edge, which the original allows,
+    is no longer removed by the room's speed check as if they had jumped
+    65,535 pixels.
   - Lap times, the total and the best lap are shown and ranked.
   - A teleport monitor swaps you with the nearest racer through the host.
   - Rooms without a verifier show the finish order labelled UNVERIFIED.
   - Solo arena runs now swap shoe state with the empty second slot, as the
     ROM does, instead of ignoring the swap item.
+  - While the mass start holds an arena, a start card shows the track, its
+    laps, the field, the racers and the live time to GO, then fades to black
+    as the arena is released and its own fade brings in the 3-2-1-GO. The
+    held arena is never drawn before it has run a frame: as in the original
+    game, it is black until then, instead of a frozen frame with garbage
+    tiles in its background.
+  - After your finish, your final frame stays on screen while the other
+    racers keep moving and the standings and cutoff keep counting. When the
+    host ends the round, you return to the lobby: an arena has no results
+    tally to end the run, so a finisher used to stay on the finish screen.
 
 ## Modding and tools
 

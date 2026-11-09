@@ -87,6 +87,11 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private final java.util.Map<Integer, GhostFrame> latestGhostFrames = new java.util.HashMap<>();
     private List<ControlMessage.StandingsRow> finalPlacements = List.of();
     private boolean leaveRequested;
+    /**
+     * The last admitted frame has not executed a step yet. A finished arena keeps its final native
+     * frame and takes no more steps, while the rest of the room is still racing.
+     */
+    private boolean stepPending;
     private boolean showMinimap = true;
     private final QuickChatChooser quickChat = new QuickChatChooser();
     private boolean chatKeyConsumed;
@@ -153,6 +158,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         publisherActive = false;
         pendingAttemptOrdinal = -1;
         leaveRequested = false;
+        stepPending = false;
         publisher = null;
         remoteGhosts = List.of();
     }
@@ -351,12 +357,15 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     public boolean admit(com.openggf.mods.run.RunInput input) {
         pump();
         if (terminal) return false;
+        // The previous admitted frame took no step: other racers' presentation still advances.
+        if (stepPending) advancePresentation();
         leaveIfRoundOver();
         pollLocalInput(input);
         boolean released = !holdGameplay();
         if (released && competition() && !publisherActive && pendingAttemptOrdinal >= 0) {
             startPublisher(pendingAttemptOrdinal);
         }
+        stepPending = released;
         return released;
     }
 
@@ -394,7 +403,11 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
      * the window is closed.
      */
     private void leaveIfRoundOver() {
-        if (runtime == null || leaveRequested || runtime.isAttemptFinished()) {
+        if (runtime == null || leaveRequested) return;
+        // An act's finished attempt ends with its results tally. An arena has no tally, so its
+        // finisher leaves when the host closes the round.
+        boolean arena = runtime.launch() != null && runtime.launch().kind() == com.openggf.mods.run.TrackKind.ARENA;
+        if (runtime.isAttemptFinished() && !(arena && latestRoundClosed)) {
             return;
         }
         if (roundsStarted != attachedRound || latestRoundClosed) {
@@ -421,6 +434,14 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     /** Draws the multiplayer HUD (countdown, window, standings, votes, minimap) over the run. */
     @Override
     public void drawOverlay(LevelOverlayCanvas canvas, int levelWidth, int localCentreX) {
+        ArenaStartCard.Card card = arenaStartCard();
+        if (card != null) {
+            ArenaStartCard.draw(canvas, card);
+            if (quickChat.isOpen() && session.chatMode().allowsQuickChat()) {
+                quickChat.drawRace(canvas, openggf.timeattack.ui.MenuPage.words(card.track()), quickChatKeyLabel());
+            }
+            return;
+        }
         MultiplayerHudRenderer.render(canvas, hudState(), levelWidth, localCentreX, showMinimap,
                 runtime != null && runtime.isAttemptFinished());
         if (quickChat.isOpen() && session.chatMode().allowsQuickChat()) {
@@ -431,6 +452,40 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
             com.openggf.mods.ui.CompactFont.shadowed(canvas, quickChat.raceHint(quickChatKeyLabel()), 6,
                     Math.max(4, canvas.height() - 56), 1, HudTextLayout.MUTED, 0xC0000000);
         }
+    }
+
+    /**
+     * The pre-race page while this round's arena is held for the mass start, else null. The held
+     * native arena has not run a frame, so the page stands in for it until release.
+     */
+    ArenaStartCard.Card arenaStartCard() {
+        if (runtime == null || leaveRequested || latestRoundClosed || roundsStarted != attachedRound
+                || !competition() || !"ARENA".equals(session.launch().config().trackKind())
+                || session.phase() != ClientRaceSession.Phase.COUNTDOWN) {
+            return null;
+        }
+        long goAt = session.launch().countdownEndsAtHubMillis();
+        long hubNow = clockMillis.getAsLong() + session.clockOffsetMillis();
+        long toRelease = openggf.timeattack.MassStartRelease.releaseAt(goAt, true) - hubNow;
+        if (toRelease <= 0) return null;
+        ControlMessage.RoundConfig config = session.roundConfig();
+        var track = config == null ? java.util.Optional.<openggf.timeattack.TimeAttackTrackCatalog.Track>empty()
+                : openggf.timeattack.TimeAttackTrackCatalog.arenas().stream()
+                        .filter(t -> t.zone() == config.zone()).findFirst();
+        var colours = nameColours();
+        List<ArenaStartCard.Racer> racers = new ArrayList<>();
+        List<ControlMessage.PlayerInfo> players = new ArrayList<>(session.players());
+        players.sort(java.util.Comparator.comparingInt((ControlMessage.PlayerInfo p) ->
+                p.slot() == session.localSlot() ? 0 : 1).thenComparingInt(ControlMessage.PlayerInfo::slot));
+        for (ControlMessage.PlayerInfo player : players) {
+            racers.add(new ArenaStartCard.Racer(player.displayName(),
+                    colours.getOrDefault(player.slot(), openggf.timeattack.ui.MenuPage.TEXT),
+                    player.slot() == session.localSlot()));
+        }
+        return new ArenaStartCard.Card(track.map(openggf.timeattack.TimeAttackTrackCatalog.Track::label).orElse("ARENA"),
+                track.map(openggf.timeattack.TimeAttackTrackCatalog.Track::lapCount).orElse(5),
+                competitionFieldSize, Math.max(0, goAt - hubNow), toRelease, racers,
+                session.chatMode().allowsQuickChat() && !session.chatDisabled() ? quickChatKeyLabel() : "");
     }
 
     /** Called on the engine thread when an attached run's level is ready (launch and retry). */
@@ -456,6 +511,12 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                 && !(competition() && session.phase() == ClientRaceSession.Phase.COUNTDOWN)) {
             runtime.voidCurrentAttempt();
         }
+        advancePresentation();
+    }
+
+    /** One display frame of the remote ghosts and hurt flashes. */
+    private void advancePresentation() {
+        stepPending = false;
         remoteGhosts = presentRemoteGhosts("net:",
                 registry.advanceAll(session.localSlot()), session::appearance);
         trackHurt();

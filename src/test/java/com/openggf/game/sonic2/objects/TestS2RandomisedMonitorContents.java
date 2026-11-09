@@ -39,7 +39,7 @@ class TestS2RandomisedMonitorContents {
 
     @Test void nativeFrameDrawAndFrozenTeleportGuard() {
         var level = GameServices.level();
-        for (var rule : new MonitorRule[]{MonitorRule.RANDOMISED,MonitorRule.COMPETITION_ITEMS}) {
+        for (var rule : new MonitorRule[]{MonitorRule.RANDOMISED}) {
             for (boolean swaps : new boolean[]{false,true}) for (boolean running : new boolean[]{false,true}) {
                 policy(rule,swaps);
                 if (running) level.getLevelGamestate().resumeTimer();
@@ -48,7 +48,7 @@ class TestS2RandomisedMonitorContents {
                     level.setFrameCounter(frame);
                     var contents = icon();
                     contents.update(0x4321,player); // A deliberately different V-int count.
-                    int expected = rule==MonitorRule.RANDOMISED ? (frame & 7)+1 : (frame & 1)==0 ? 3 : 8;
+                    int expected = (frame & 7)+1;
                     if (expected==8 && (!running || !swaps)) expected=7;
                     assertEquals(expected,contents.selectedSubtype(),rule+" at level frame "+frame);
                 }

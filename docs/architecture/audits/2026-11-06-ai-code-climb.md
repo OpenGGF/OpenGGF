@@ -5414,3 +5414,36 @@ The latter may fail a required parent-side reference rather than borrow an
 unrelated owner. No speculative runtime change was made for either case.
 The positional snapshot-copy fixture and repeated setup remain local test
 maintenance costs. This follow-up grants no contributor-score or route credit.
+
+### Reviewed parent integration and c06 reconciliation — 2026-11-09
+
+The reviewed parent repair through `430d5137bab0ef0569020c30c0235c87dc74d0c4`
+was integrated with published `495670099c` in `54f4f26f9c`. The only conflict was
+the audit append: literal common prefix, then the published qualification suffix,
+then the complete parent/follow-up suffix. All 17,034 paths were checked; ten
+parent-only paths and the published OOZ fixture remain exact, with one audit
+union. The full production tree equals the reviewed parent tree, and only the
+independently qualified OOZ test differs among test sources.
+
+The next merge imports develop `c06efe67da766c1de1a68dfb327b85e400940fb8`.
+All 17,056 paths were compared: 16,917 unchanged, 77 task-only, 59 upstream-only,
+three documentation overlaps and zero blob/mode/deletion violations. No manual
+source resolution was required. Changelog, workflow README and coverage backlog
+match the automatic merge tree `d7ccbd3f72567786a4af4760c1e2fd643da761e3`.
+
+One source-frozen focused command covered all 21 upstream changed/added test
+classes plus the 16 graph/required-S3K boundary classes: 367 cases in 37 fresh
+suites, zero failures/errors/skips. Java25, Lua5.4, normal memory, displays unset,
+EGL, forkCount1 and alphabetical ordering; actual arrays, XML/source hashes and
+queue/execution/user/unknown timing remain in
+`target/code-climb/parent-locality-wave/root-focused`. Both same-name loading
+classes and the racing sources added by the root POM actually ran. After that
+run this audit note alone changed; program/test/POM bytes remain exact.
+
+The c06 independent baseline is frozen separately at the exact upstream SHA:
+4,637 smoke classes, 94 ordinary batches plus full guards, workers2, forty-minute
+execution cap excluding queue wait. It is pending, not a qualification result.
+The local Mantis declaration increment is independently owned by Sol in the
+existing parent staging tree. No candidate broad run or new combined Opus review
+has started. PR271 remains the sole destination and the historical pixel merge
+blocker is unchanged.
