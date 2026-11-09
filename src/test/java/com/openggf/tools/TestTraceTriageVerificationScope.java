@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openggf.tests.SessionInvocationExtension.SessionInvocation;
 import com.openggf.tests.trace.TraceReportWriter;
+import com.openggf.tools.TraceTriageTool.Divergence;
 import com.openggf.tools.TraceTriageTool.TraceReport;
 import com.openggf.trace.BootstrapDivergence;
 import com.openggf.trace.DivergenceReport;
@@ -12,10 +13,13 @@ import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
 import com.openggf.trace.TraceVerificationScope;
+import com.openggf.trace.VerificationGroup;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayOutputStream;
@@ -24,13 +28,16 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Real report publication and CLI diagnosis with independent verification scopes. */
@@ -184,31 +191,69 @@ class TestTraceTriageVerificationScope {
     }
 
     @ParameterizedTest
-    @CsvSource(delimiter = '|', value = {
-            "PHYSICS | missing", "ANIMATION | missing",
-            "PHYSICS | null", "ANIMATION | null",
-            "PHYSICS | 17", "ANIMATION | 17",
-            "PHYSICS | \"unknown\"", "ANIMATION | \"unknown\"",
-            "PHYSICS | \"PHYSICS\"", "ANIMATION | \"PHYSICS\"",
-            "PHYSICS | \" physics\"", "ANIMATION | \" physics\"",
-            "PHYSICS | \"physics \"", "ANIMATION | \"physics \""
-    })
+    @MethodSource("unclassifiableGroups")
     void narrowScopeRejectsUnclassifiableGroups(
-            TraceVerificationScope scope, String groupJson, @TempDir Path tempDir) throws Exception {
+            TraceVerificationScope scope, String array, String groupJson, @TempDir Path tempDir) throws Exception {
+        Severity severity = array.equals("errors") ? Severity.ERROR : Severity.WARNING;
         Path report = publishReport(tempDir, new DivergenceReport(List.of(frame(9,
-                new FieldComparison("x", "10", "11", Severity.ERROR, 1)))), true, scope);
+                new FieldComparison("x", "10", "11", severity, 1)))), true, scope);
         var mapper = new ObjectMapper();
         ObjectNode payload = (ObjectNode) mapper.readTree(Files.readString(report));
-        ObjectNode group = (ObjectNode) payload.path("errors").get(0);
+        ObjectNode group = (ObjectNode) payload.path(array).get(0);
         if (groupJson.equals("missing")) group.remove("verification_group");
         else group.set("verification_group", mapper.readTree(groupJson));
         Files.writeString(report, payload.toString());
+
+        assertThrows(IOException.class, () -> TraceTriageTool.parseReport(payload.toString()));
 
         TriageResult result = runTriage("--report", report.toString());
 
         assertEquals(1, result.status());
         assertEquals("", result.output(), "unknown scope membership must not produce a clean brief");
         assertTrue(result.errors().contains("verification_group"));
+    }
+
+    private static Stream<Arguments> unclassifiableGroups() {
+        List<Arguments> cases = new ArrayList<>();
+        for (TraceVerificationScope scope : List.of(TraceVerificationScope.PHYSICS, TraceVerificationScope.ANIMATION)) {
+            for (String array : List.of("errors", "warnings")) {
+                for (String value : List.of("missing", "null", "17", "\"unknown\"",
+                        "\"PHYSICS\"", "\" physics\"", "\"physics \"")) {
+                    cases.add(Arguments.of(scope, array, value));
+                }
+            }
+        }
+        return cases.stream();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"PHYSICS, errors", "PHYSICS, warnings", "ANIMATION, errors", "ANIMATION, warnings"})
+    void directNarrowModelsRejectUnclassifiedGroups(TraceVerificationScope scope, String array) {
+        boolean error = array.equals("errors");
+        Divergence unknown = new Divergence("x", error ? "ERROR" : "WARNING", 9, 9, 1,
+                "10", "11", false, null);
+
+        assertThrows(IllegalArgumentException.class, () -> new TraceReport(error ? 1 : 0, error ? 0 : 1,
+                1, "unclassified evidence", List.of(), error ? List.of(unknown) : List.of(),
+                error ? List.of() : List.of(unknown), new ReplayGate(10, true, scope), List.of()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"errors", "warnings"})
+    void callerMutationCannotEraseValidatedFrontier(String array) {
+        boolean error = array.equals("errors");
+        String severity = error ? "ERROR" : "WARNING";
+        List<Divergence> callerGroups = new ArrayList<>(List.of(new Divergence(
+                "x", severity, 9, 9, 1, "10", "11", false, VerificationGroup.PHYSICS)));
+        TraceReport report = new TraceReport(error ? 1 : 0, error ? 0 : 1, 1, "classified evidence",
+                List.of(), error ? callerGroups : List.of(), error ? List.of() : callerGroups,
+                new ReplayGate(10, true, TraceVerificationScope.PHYSICS), List.of());
+        callerGroups.set(0, new Divergence("x", severity, 9, 9, 1, "10", "11", false, null));
+
+        String brief = TraceTriageTool.renderBrief("s2", "ehz1", report, "", "");
+
+        assertTrue(brief.contains("frame    : 9 (span"), brief);
+        assertEquals(error, TraceTriageTool.frontierLogLikelyNeedsUpdate(report));
     }
 
     @Test
@@ -227,8 +272,8 @@ class TestTraceTriageVerificationScope {
         assertEquals("", result.output());
     }
 
-    private static FrameComparison frame(int row, FieldComparison comparison) {
-        return new FrameComparison(row, Map.of(comparison.fieldName(), comparison));
+    private static FrameComparison frame(int traceFrame, FieldComparison comparison) {
+        return new FrameComparison(traceFrame, Map.of(comparison.fieldName(), comparison));
     }
 
     private static Path publishReport(Path directory, DivergenceReport report, boolean completed,

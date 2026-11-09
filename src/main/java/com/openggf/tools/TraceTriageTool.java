@@ -110,6 +110,17 @@ public final class TraceTriageTool {
             ReplayGate replayGate,
             List<String> missingAdvertisedAuxSchemas) {
 
+        public TraceReport {
+            bootstrap = List.copyOf(bootstrap);
+            errors = List.copyOf(errors);
+            warnings = List.copyOf(warnings);
+            missingAdvertisedAuxSchemas = List.copyOf(missingAdvertisedAuxSchemas);
+            if (replayGate != null && replayGate.verification() != TraceVerificationScope.ALL) {
+                requireClassifiedGroups(errors);
+                requireClassifiedGroups(warnings);
+            }
+        }
+
         /**
          * The global earliest per-frame hard error, otherwise the earliest
          * warning. Raw evidence readers do not inherit the CLI's selected scope.
@@ -215,13 +226,14 @@ public final class TraceTriageTool {
         }
 
         ReplayGate gate = ReplayGate.readOptionalFrom(root);
-        if (gate != null && gate.verification() != TraceVerificationScope.ALL) {
-            requireClassifiedGroups(errors);
-            requireClassifiedGroups(warnings);
+        try {
+            return new TraceReport(errorCount, warningCount, totalFrames, summary,
+                    bootstrap, errors, warnings, gate, missingAuxSchemas);
+        } catch (IllegalArgumentException failure) {
+            // Wire readers retain their checked failure contract; direct model
+            // callers receive the same invariant from the value constructor.
+            throw new IOException(failure.getMessage(), failure);
         }
-        return new TraceReport(errorCount, warningCount, totalFrames, summary,
-                List.copyOf(bootstrap), errors, warnings, gate,
-                List.copyOf(missingAuxSchemas));
     }
 
     private static List<Divergence> parseGroups(JsonNode array, String severity) throws IOException {
@@ -257,12 +269,12 @@ public final class TraceTriageTool {
         };
     }
 
-    private static void requireClassifiedGroups(List<Divergence> groups) throws IOException {
+    private static void requireClassifiedGroups(List<Divergence> groups) {
         for (Divergence group : groups) {
             if (group.verificationGroup() == null) {
                 // ALL/absent-gate reports historically accepted unclassified groups.
                 // A narrow diagnosis cannot safely call that evidence out of scope.
-                throw new IOException("Narrow replay verification requires canonical verification_group "
+                throw new IllegalArgumentException("Narrow replay verification requires canonical verification_group "
                         + "'physics' or 'animation' for field '" + group.field() + "'");
             }
         }
@@ -961,6 +973,8 @@ public final class TraceTriageTool {
             String contextExcerpt = "";
             Path contextFile = contextPath == null
                     ? contextPathForReport(reportFile) : Path.of(contextPath);
+            // Preserve legacy ALL context reads; a narrow view with no selected
+            // evidence must not show an unrelated (possibly stale) context window.
             if ((selected.scope() == TraceVerificationScope.ALL || selected.hasEvidence())
                     && (contextPath != null || Files.exists(contextFile))) {
                 String contextText = Files.readString(contextFile, StandardCharsets.UTF_8);

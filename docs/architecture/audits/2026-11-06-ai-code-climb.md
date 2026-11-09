@@ -3817,3 +3817,36 @@ No original contributor trial was regraded and no score credit is inferred.
 The sole delivery remains follow-up draft PR271; no destination branch was
 written. Both source trees, their generated resources and original evidence are
 retained pending final accounting.
+
+
+### Combined Opus review and direct-model invariant repair (2026-11-09)
+
+Opus reviewed `700ff4dd2d..dd1972ca2d` read-only and found no blocker. It confirmed
+ALL/absent-gate compatibility, scoped frontier/context/auxiliary agreement, the
+finite unreachable-branch proof and the exact integrated source blobs. It found
+missing warning-array rejection coverage, a latent direct-constructor bypass,
+and an unexplained ALL-context compatibility condition. Root repaired these
+without another delegated review round.
+
+The immutable parsed model now enforces classification at construction for
+narrow gates and snapshots its lists. Both direct callers and JSON readers obey
+the same rule; the parser translates construction failure back to its existing
+checked IOException contract. A caller cannot mutate its original error/warning
+list and quietly erase the selected frontier. ALL/absent-gate legacy data and
+raw global accessors remain unchanged. The context condition now states why ALL
+retains legacy reads while a narrow empty selection avoids unrelated evidence.
+
+The malformed-group table now covers both arrays explicitly. An intentional
+one-line warning-validation mutant demonstrated **14 warning-case failures**;
+four direct-constructor cases and two caller-mutation cases independently exposed
+the pre-fix model gap. That RED had **50 cases, 20 failures, zero errors/skips**;
+it is not described as twenty shipped runtime defects. The mutant was restored
+before the repair. GREEN has **124 reader cases** (74 original plus 50 scoped
+cases), and the separate four-suite report/protocol check has **53 cases**;
+both have zero failures/errors/skips. Fresh XML, full negative messages, source
+hashes and argv are retained under
+`target/code-climb/triage-scope-integration/review-{red,green,protocol}/`.
+`review-repair-qualification.json` records exact timing and identities. No broad
+or route verdict is inferred from these checks. The separate carried-entry
+metadata work remains outside this candidate until its own later accounting,
+review and qualification.
