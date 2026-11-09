@@ -42,7 +42,8 @@ high-risk boundaries and integration, without requiring repeated “green”
 self-review rituals. Fix blocking findings and make unresolved scope explicit.
 
 Follow root `AGENTS.md` for documentation, branch safety, baseline comparisons,
-merge, push, and cleanup. Use the current main-workspace branch as the integration
-base unless the user specifies otherwise. Existing authorization persists;
+PR delivery, push, and cleanup. Default to a PR against the targeted release
+branch (`develop` or `next`) from an isolated cow worktree; merge or direct
+integration requires the user's authorization. Existing authorization persists;
 this skill adds no final approval gate. Report the delivered behavior, important
 design decisions, test evidence, reconciled conflicts, and remaining limitations.
