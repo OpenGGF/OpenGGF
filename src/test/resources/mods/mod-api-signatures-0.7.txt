@@ -5974,6 +5974,7 @@ METHOD com.openggf.game.CharacterDefinition$MovementAbility public,static  com.o
 METHOD com.openggf.game.CharacterDefinition$MovementAbility public,static  com.openggf.game.CharacterDefinition$MovementAbility[] values()
 METHOD com.openggf.game.CharacterDefinition$PaletteSupplier public,abstract  com.openggf.level.Palette load(java.lang.String) THROWS java.io.IOException
 METHOD com.openggf.game.CharacterDefinition$PlayableFactory public,abstract  com.openggf.sprites.playable.AbstractPlayableSprite create(java.lang.String,int,int)
+METHOD com.openggf.game.CharacterDefinition$PresentationSupplier public  com.openggf.game.CharacterPresentation load(java.lang.String,com.openggf.game.GameId) THROWS java.io.IOException
 METHOD com.openggf.game.CharacterDefinition$PresentationSupplier public,abstract  com.openggf.game.CharacterPresentation load(java.lang.String) THROWS java.io.IOException
 METHOD com.openggf.game.CharacterDefinition$RespawnStrategyFactory public,abstract  com.openggf.sprites.playable.SidekickRespawnStrategy create(com.openggf.sprites.playable.SidekickCpuController)
 METHOD com.openggf.game.CharacterDefinition$SuperFormSupplier public,abstract  com.openggf.game.SuperFormProfile load(java.lang.String) THROWS java.io.IOException

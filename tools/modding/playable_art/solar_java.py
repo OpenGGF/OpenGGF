@@ -1,0 +1,64 @@
+"""Regenerate TALON's Solar super-form tables in TalonSolar.java from solar.yaml.
+
+Purpose: solar.yaml is the single source of TALON's
+Solar palette cycles; the example mod's Java profile carries the same tables as
+Mega Drive colour words. This keeps the two in step.
+Inputs: examples/mica-and-talon/art/talon/presentation/solar.yaml (JSON subset).
+Origin: TALON character mod, 2026-11-09; binds the approved Solar presentation data.
+
+Usage: python3 -I tools/modding/playable_art/solar_java.py [--check]
+"""
+import json
+import pathlib
+import re
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parents[3]
+YAML = ROOT / "examples/mica-and-talon/art/talon/presentation/solar.yaml"
+JAVA = ROOT / "examples/mica-and-talon/src/main/java/mica/TalonSolar.java"
+STEPS = [0, 36, 73, 109, 146, 182, 219, 255]
+
+
+def md_word(rgb):
+    r, g, b = (STEPS.index(c) * 2 for c in rgb)
+    return (b << 8) | (g << 4) | r
+
+
+def table(frames):
+    rows = ["List.of(" + ",".join(hex(md_word(c)) for c in frame) + ")" for frame in frames]
+    return "List.of(" + ",\n            ".join(rows) + ")"
+
+
+def render(source, data):
+    tables = {"fade": data["fade_frames"], "s2": data["cycles"]["s2"]["frames"],
+              "s3k": data["cycles"]["s3k"]["frames"]}
+    for name, frames in tables.items():
+        pattern = re.compile(r"(private static List<List<Integer>> " + name + r"\(\) \{ return ).*?(; \})", re.S)
+        source, count = pattern.subn(lambda m: m.group(1) + table(frames) + m.group(2), source)
+        if count != 1:
+            raise SystemExit(f"TalonSolar.{name}() not found exactly once")
+    for name in ("s2", "s3k"):
+        cycle = data["cycles"][name]
+        pattern = re.compile(r"(new SuperFormProfile.Form\(fade, " + name + r"\(\), List.of\(\), )\d+, \d+,")
+        source, count = pattern.subn(lambda m: m.group(1) + str(cycle["ticks_per_frame"])
+                                    + ", " + str(cycle["fade_ticks_per_frame"]) + ",", source)
+        if count != 1:
+            raise SystemExit(f"TalonSolar.{name} timing not found exactly once")
+    return source
+
+
+def main(argv):
+    data = json.loads(YAML.read_text())
+    current = JAVA.read_text()
+    wanted = render(current, data)
+    if "--check" in argv:
+        if current != wanted:
+            print("TalonSolar.java is out of date with solar.yaml; run solar_java.py")
+            return 1
+        return 0
+    JAVA.write_text(wanted)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

@@ -20,7 +20,7 @@ public final class Sonic3kCharacterPresentation {
         String code = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
         var definition = world.getPlayableCharacterRegistry().find(CharacterKey.parsePersisted(code)).orElse(null);
         if (definition == null || definition.presentationSupplier() == null) return null;
-        return definition.presentationSupplier().load(code);
+        return definition.presentationSupplier().load(code, GameId.S3K);
     }
 
     public static Pattern[] hud(Rom rom, Pattern[] nativeTiles, CharacterPresentation presentation) throws IOException {

@@ -1442,6 +1442,22 @@ class TestMicaCharacterIntegration {
                     com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(config));
             assertEquals(SecondaryAbility.FLY, talon.getSecondaryAbility());
             assertNull(talon.getTailsTailsController(), "wings live in the body sheet");
+            var definition = resolved.getPlayableCharacterRegistry().find(talon.characterKey()).orElseThrow();
+            var encoded = Files.readAllBytes(temp.resolve("classes/art/talon.ggfp"));
+            var sheet = com.openggf.level.objects.PlayableSheetReader.read(encoded);
+            var materialized = com.openggf.level.objects.PlayableSheetMaterializer.read(encoded);
+            assertEquals(82, sheet.frames().size());
+            assertEquals(13, sheet.animations().size());
+            assertEquals(6, sheet.animations().get("TAILS_FLY").steps().size());
+            assertEquals(6, sheet.animations().get("TAILS_FLY_TIRED").steps().size());
+            assertEquals(materialized.art().dplcFrames(), definition.artSupplier().load(talonCode).dplcFrames());
+            assertTrue(materialized.palette().dataEquals(definition.paletteSupplier().load(talonCode)));
+            assertFalse(materialized.palette().dataEquals(resolved.getPlayableCharacterRegistry()
+                    .find(CharacterKey.parsePersisted(CODE)).orElseThrow().paletteSupplier().load(CODE)));
+            var solar = definition.superFormSupplier().load(talonCode).games().get(base.getGameId());
+            assertEquals(Set.of(SuperFormProfile.Tier.SUPER), solar.keySet());
+            assertEquals(PhysicsProfile.SONIC_3K_SUPER_TAILS, solar.get(SuperFormProfile.Tier.SUPER).physics());
+            assertEquals(game.equals("s2") ? "TALON" : "TAL", definition.presentationSupplier().load(talonCode, base.getGameId()).hudName());
             talon.setCentreY((short) 120);
             talon.setAir(true); talon.setJumping(true); talon.setRolling(true); talon.setRollingJump(true);
             var movement = new com.openggf.sprites.managers.PlayableSpriteMovement(talon);
@@ -1457,6 +1473,7 @@ class TestMicaCharacterIntegration {
             talon.getTailsFlightController().updateVertical(false, false, 2);
             assertEquals(-0x40, talon.getYSpeed(), "Solar doubles the native flap acceleration");
             talon.setSuperSonic(false);
+            if (game.equals("s2")) verifyTalonDive(world, talon);
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, CODE);
             config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, talonCode);
             var teamModule = resolver.resolveForLaunch(base, new GameplayLaunchRequest(game, CODE, List.of(talonCode)),
@@ -1478,6 +1495,88 @@ class TestMicaCharacterIntegration {
         }
     }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
+    void talonFlightArtS1() throws Exception { talonFlightArt("sonic1.rom.path"); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void talonFlightArtS2() throws Exception { talonFlightArt("sonic2.rom.path"); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void talonFlightArtS3k() throws Exception { talonFlightArt("s3k.rom.path"); }
+
+    private void talonFlightArt(String romProperty) throws Exception {
+        var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320, "mica-and-talon:talon", "", "off", null, null, null);
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            session.boot(Path.of(System.getProperty(romProperty)), 0, 0, settings);
+            var talon = session.player();
+            var source = com.openggf.level.objects.PlayableSheetMaterializer.read(
+                    Files.readAllBytes(temp.resolve("classes/art/talon.ggfp"))).art().animationSet();
+            for (int i = 0; i < 60; i++) session.step(null);
+            talon.setCentreY((short) (talon.getCentreY() - 80));
+            talon.setAir(true); talon.getTailsFlightController().activate();
+            talon.setYSpeed((short) -0x80);
+            session.step(null); session.step(null);
+            for (int i = 0; i < 12; i++) {
+                session.step(null);
+                assertTrue(source.getScript(CanonicalAnimation.TAILS_FLY.ordinal()).frames()
+                        .contains(talon.getMappingFrame()), "ascent frame " + talon.getMappingFrame() + " in " + romProperty);
+            }
+            talon.setDoubleJumpProperty((byte) 0);
+            for (int i = 0; i < 12; i++) {
+                session.step(null);
+                assertTrue(source.getScript(CanonicalAnimation.TAILS_FLY_TIRED.ordinal()).frames()
+                        .contains(talon.getMappingFrame()), "fatigue uses TALON tired wings in " + romProperty);
+            }
+        }
+    }
+
+    private void verifyTalonDive(com.openggf.tests.HeadlessTestFixture world,
+            com.openggf.sprites.playable.AbstractPlayableSprite talon) throws Exception {
+        var runtime = com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                com.openggf.game.session.SessionManager.getCurrentWorldSession(),
+                com.openggf.game.mutators.HomingAttackRuntime.class);
+        for (boolean solar : List.of(false, true)) {
+            runtime.resetForMissingSnapshot();
+            talon.setSuperSonic(solar);
+            talon.setCentreX((short) (GameServices.camera().getX() + 80));
+            talon.setCentreY((short) (GameServices.camera().getY() + 48));
+            talon.setAir(true); talon.setJumping(false); talon.setYSpeed((short) 0);
+            talon.getTailsFlightController().activate();
+            var buzzer = GameServices.level().getObjectManager().createDynamicObject(() ->
+                    new com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance(
+                            new com.openggf.level.objects.ObjectSpawn(talon.getCentreX() + 96, talon.getCentreY() + 32,
+                                    com.openggf.game.sonic2.constants.Sonic2ObjectIds.BUZZER, 0, 0, false, 0)));
+            world.stepFrame(false, true, false, false, false);
+            assertTrue(reticleFlag(runtime, "reticleVisible"), "down in flight previews a native target");
+            world.stepFrame(false, false, false, false, false);
+            assertFalse(reticleFlag(runtime, "reticleVisible"), "release hides the reticle");
+            world.stepFrame(false, true, false, false, false);
+            assertTrue(reticleFlag(runtime, "reticleVisible"));
+            talon.setAir(false);
+            world.stepFrame(false, true, false, false, false);
+            assertFalse(reticleFlag(runtime, "reticleVisible"), "landing hides the reticle");
+            talon.setAir(true); talon.setJumping(false);
+            talon.getTailsFlightController().activate();
+            world.stepFrame(false, true, false, false, true);
+            assertFalse(talon.getTailsFlightController().isActive());
+            assertEquals(com.openggf.game.mutators.HomingAttackRuntime.Phase.HOMING, runtime.phase());
+            assertEquals(solar ? com.openggf.game.mutators.HomingAttackRuntime.Mode.INSTAGIB
+                    : com.openggf.game.mutators.HomingAttackRuntime.Mode.HOMING, runtime.capture().launchMode());
+            var registry = com.openggf.game.session.SessionManager.getCurrentGameplayMode().getRewindRegistry();
+            var before = registry.capture();
+            var expected = new ArrayList<String>();
+            for (int i = 0; i < 20; i++) {
+                world.stepIdleFrames(1);
+                expected.add(talon.getCentreX() + ":" + talon.getCentreY() + ":" + runtime.capture());
+            }
+            assertTrue(buzzer.isDestroyed(), "dive kills through native badnik touch");
+            registry.restore(before);
+            for (int i = 0; i < 20; i++) {
+                world.stepIdleFrames(1);
+                assertEquals(expected.get(i), talon.getCentreX() + ":" + talon.getCentreY() + ":" + runtime.capture());
+            }
+        }
+    }
+
     private Path buildSample() throws Exception {
         Path project = Path.of("examples/mica-and-talon"), classes = temp.resolve("classes");
         Files.createDirectories(classes.resolve("art"));
@@ -1494,6 +1593,10 @@ class TestMicaCharacterIntegration {
                 "--image",project.resolve("src/main/mod/mica.png").toString(),
                 "--sheet",project.resolve("src/main/mod/mica-sheet.yaml").toString(),
                 "--out",classes.resolve("art/mica.ggfp").toString()},System.out));
+        assertEquals(0,com.openggf.tools.modsdk.GgfModCli.run(new String[]{"convert","art","--playable",
+                "--image",project.resolve("src/main/mod/talon.png").toString(),
+                "--sheet",project.resolve("src/main/mod/talon-sheet.yaml").toString(),
+                "--out",classes.resolve("art/talon.ggfp").toString()},System.out));
         for (String surface : List.of("continue", "portrait", "snowboard")) {
             Path source = project.resolve("art/mica/" + surface);
             Path destination = classes.resolve("art/mica/" + surface);

@@ -1594,6 +1594,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (tailsFlightActivatedThisFrame || !isManualTailsFlightActive()) {
 			return;
 		}
+		// Native flight consumes flap edges outside JumpHeight's double-jump gate.
+		// Offer mod characters that edge first; native Tails' default hook declines it.
+		if (inputJumpPress && com.openggf.sprites.playable.CharacterRuntimeHooks.activateAbility(
+				sprite, inputUp, inputDown, inputLeft, inputRight)) {
+			inputJumpPress = false;
+			return;
+		}
 		boolean carryingMainCharacter = sprite.getTailsCarryController() != null
 				&& sprite.getTailsCarryController().isCarryingMainCharacter();
 		sprite.getTailsFlightController().updateVertical(

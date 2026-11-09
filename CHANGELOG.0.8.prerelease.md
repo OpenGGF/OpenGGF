@@ -38,8 +38,11 @@ under the matching area heading; see the
 - **MICA, an original character framework example:** TALON now joins as her
   default sidekick and is selectable solo. His Tails archetype uses native S3K
   flight and explicitly declared S1/S2 flight; Solar doubles flap acceleration
-  without Flickies. Art and Solar colours temporarily reuse MICA's assets;
-  reticle/divebomb follow separately. The candidate API adds default sidekick
+  without Flickies. His own 82-frame sheet and palette replace the placeholder;
+  generated Solar tables use white-gold plumage and flame wingtips. Airborne
+  down previews targets; down+jump divebombs (Instagib in Solar), while ordinary
+  jump retains flight/flaps. S2 spells TALON on the HUD; S1 glyph supplements
+  and wider S3K names remain open. The candidate API adds default sidekick
   selection, flight declarations and the native Tails respawn factory.
   Optional directional homing
   previews airborne homing targets, locks the reticle during strikes, and draws
@@ -87,7 +90,7 @@ under the matching area heading; see the
   with three-game headless footage
   of movement, springs, normal/powered strikes and a GHZ airborne chain. The
   [tutorial](docs/modding/guides/original-character.md) explains the workflow.
-  TALON is planned for phase 2; this is not a released mod or full-route certification.
+  TALON is included as a playable leader and follower; this is not a released mod or full-route certification.
 
 - **Character API on the 0.7 candidate:** canonical playable animation tables
   share host speed timing, slope cycles, explicit end actions and fallbacks across

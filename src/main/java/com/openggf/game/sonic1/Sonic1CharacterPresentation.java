@@ -25,7 +25,7 @@ public final class Sonic1CharacterPresentation {
         String code = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
         var definition = world.getPlayableCharacterRegistry().find(CharacterKey.parsePersisted(code)).orElse(null);
         return definition == null || definition.presentationSupplier() == null
-                ? null : definition.presentationSupplier().load(code);
+                ? null : definition.presentationSupplier().load(code, GameId.S1);
     }
 
     static CharacterPresentation.Art art(CharacterPresentation presentation) {

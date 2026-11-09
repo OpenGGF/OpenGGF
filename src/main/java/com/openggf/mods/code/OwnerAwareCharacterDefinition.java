@@ -53,9 +53,17 @@ final class OwnerAwareCharacterDefinition {
                                 definition.underwaterPaletteSupplier().load(code),
                                 "Mod character underwater palette supplier returned null for " + key.persisted())),
                 definition.presentationSupplier() == null ? null
-                        : code -> callIo(owner, faultBoundary, () -> Objects.requireNonNull(
-                                definition.presentationSupplier().load(code),
-                                "Mod character presentation supplier returned null for " + key.persisted())),
+                        : new CharacterDefinition.PresentationSupplier() {
+                            @Override public com.openggf.game.CharacterPresentation load(String code) throws java.io.IOException {
+                                return callIo(owner, faultBoundary, () -> Objects.requireNonNull(
+                                        definition.presentationSupplier().load(code), "Mod presentation returned null"));
+                            }
+                            @Override public com.openggf.game.CharacterPresentation load(String code, com.openggf.game.GameId host)
+                                    throws java.io.IOException {
+                                return callIo(owner, faultBoundary, () -> Objects.requireNonNull(
+                                        definition.presentationSupplier().load(code, host), "Mod presentation returned null"));
+                            }
+                        },
                 definition.superFormSupplier() == null ? null
                         : code -> callIo(owner, faultBoundary, () -> Objects.requireNonNull(
                                 definition.superFormSupplier().load(code), "Mod super profile returned null")), definition.defaultSidekick());

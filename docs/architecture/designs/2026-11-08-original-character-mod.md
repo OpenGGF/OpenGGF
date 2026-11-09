@@ -7,8 +7,8 @@ from a supplied base design, then reduced to native Mega Drive constraints. The 
 a framework demonstration: where the Mod API lacks a seam, this work adds the safe
 facade rather than reaching into engine internals.
 
-Status: phase 1 code-complete; phase 2 TALON engine skeleton implemented with
-placeholder assets. Reticle/divebomb and final TALON art remain deferred. Evidence gaps and
+Status: phase 1 code-complete; phase 2 TALON playable art, Solar palettes and
+down-held reticle/divebomb wiring implemented. Evidence gaps and
 follow-ons are listed under [Open items](#open-items); see also
 [Delivery plan and status](#delivery-plan-and-status). Mod API line: 0.7 candidate
 (`mod-api-release-policy.properties`).
@@ -1834,15 +1834,33 @@ selects that team; the sidekick row remains editable for solo play. TALON is a
 separate selectable solo leader with `TAILS_ALONE`. S1 sidekick support is
 provided by the MICA patch, leaving the stock S1 roster unchanged.
 
-**Temporary assets:** TALON receives MICA's materialized sheet and placeholder
-Gilded colours. The separate art lane replaces these with `talon-sheet.yaml` and
-`talon.png`; no copied art is checked in here. The temporary short HUD name is TAL (TALON exceeds S3K’s 32-pixel cell);
-the display name remains TALON, with native
-presentation fallback for missing surfaces/glyphs. The Solar profile uses Tails'
-super physics and is independent of MICA's Hyper form.
+**Playable wiring (2026-11-09):** TALON now loads his independently baked
+`art/talon.ggfp` (82 frames, 13 canonical animations) and palette through bounded
+mod assets. `TalonSolar` is generated from `art/talon/presentation/solar.yaml`;
+`solar_java.py --check` and its Python sync test guard the palette tables.
+The profile keeps Tails' Super physics, double flap lift and no Flickies/Hyper.
+The mod aliases ascent/carry wing variants to its own flight cycle. S1/S2, which
+have no native flight IDs, select private mod scripts from the existing tick
+hook. S3K's shared glide/flight IDs are rebound to TALON's wing cycles before
+native flight selects its animation. The art initializer uses the host's default
+motion vocabulary when a creator's route archetype is absent from the native
+roster; this allows S1 to install TALON's own art without nonexistent native
+Tails assets.
+`onMovementTick` requests the reticle only for airborne held down using the
+existing pinned `isDownPressed()` API. The air ability gate tries native Super
+transformation first, then down+jump divebomb (Instagib in Solar); ordinary
+jump still enters/flaps native flight. Active manual flight offers its jump edge
+to the character hook before native flap handling; native Tails declines it.
+Ground duck and flight descent are native.
+The backward-compatible `PresentationSupplier.load(code, host)` overload lets
+the HUD adapters supply their host without an internal engine lookup in mod code.
+The owner wrapper preserves its fault boundary and the candidate signature pin
+adds that one method; the API remains the unpublished 0.7 candidate.
 
-**Deferred:** `TalonCharacter` has a TODO for the down-held tick reticle and
-down+jump divebomb / Solar Instagib dive. Neither is implemented in this phase.
+S2's 32-pixel native glyph composition spells TALON. S3K retains TAL because
+TALON's native glyphs exceed 32 pixels. S1 retains its native fallback pending
+supplementary T/A/L art; no letters were painted. Other TALON presentation
+surfaces and exact WAIT partial-loop playback remain separate obligations.
 
 
 Validation ownership: `TestPlayableArchetype` checks that the replacement boolean
@@ -1973,4 +1991,54 @@ and `SidekickRespawnStrategy.tails(...)`. Existing constructors retain their
 source/signature forms. The compiled normalized snapshot matches the pin.
 Disassembly citation and whitespace checks pass. No art assets, API version,
 skip-policy debt or native algorithm constants were substituted to obtain these
-results. Down-held reticle and divebomb remain the explicit `TalonCharacter` TODO.
+results. At that historical checkpoint, down-held reticle and divebomb remained
+the `TalonCharacter` TODO; the playable wiring section above supersedes it.
+
+### TALON playable wiring verification (2026-11-09)
+
+Base: `fb617c82dd82ff6bc06d108ea08f6b0a2644e845`, isolated local
+`feature/ai-talon-wiring`; no push or integration requested. No MICA art/sheet
+changes. Final bounded selection: **214 tests, zero failures/errors/skips**,
+including 40 MICA/TALON integration cases. All required ROMs were found.
+The final run waited 99 seconds for admission and Maven reported 2:21 execution;
+these are separate from earlier iteration/queue time, which is not totalled.
+There was no user-approval wait. This is focused verification, not smoke or a
+full-suite result.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestMicaCharacterIntegration,TestHomingAttackMutator,TestHomingStrikePose,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestTailsFlightController,TestPlayableSpriteMovementTailsFlight,TestSonic1CharacterPresentation,TestSonic2CharacterPresentation,TestLevelPlayableArtInitializerModArt' test
+python3 -m unittest discover -s tools/modding
+python3 tools/modding/playable_art/solar_java.py --check
+python3 examples/mica-and-talon/build.py
+git diff --check
+```
+
+Python discovery passed **52 tests**; Solar sync passed. Packaging reports zero
+compatibility findings. The signature test confirms the single added host-aware
+presentation overload against the updated candidate pin; the release descriptor
+retains unpublished candidate 0.7.0 (the commit hook forbids descriptor edits
+for ordinary candidate signature regeneration). ModApiVersion documents the addition. No new disassembly citations
+were introduced. The repository-wide citation audit reports existing stale
+references outside the edits; the targeted new API/wrapper files pass.
+
+Rendered normal/tired-flight assertions run against production capture sessions
+in S1/S2/S3K. Logic acceptance exercises reticle release/landing, actual down+jump
+input from flight, native badnik touch defeat in normal/Solar modes, Instagib mode
+selection, and deterministic registry rewind across the strike. Earlier assertions
+exposed S1's missing native Tails art and S3K's glide/flight ID collision; neither
+was accepted as a passing visual result. Direct facade-only activation would miss
+the native active-flight input branch, so acceptance uses the frame driver.
+
+Media and reproducible scripts are under
+`$HOME/scratch/agent-tmp/talon-wiring-20261109/`:
+`s2-flight/capture.mp4`, `s2-movement/capture.mp4`, `s2-dive/capture.mp4`,
+`s3k-flight/capture.mp4`, `s3k-movement/capture.mp4`, `s3k-dive/capture.mp4`,
+`s3k-team/capture.mp4`, and `contact-sheet.png`. Each clip retains `state.csv`
+and native frames; `capture.py`, controller scripts and `contact.py` reproduce
+selection and labelling. Down-held targeting precedes the dive in the encounter
+clips; both show native defeat explosions/100-point awards. Videos are bounded
+positioned encounters and native team movement, not complete-route certification.
+S1 supplementary T/A/L glyphs, a full-width S3K HUD name, other TALON presentation
+surfaces and exact WAIT partial-loop playback remain outstanding.
