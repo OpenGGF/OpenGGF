@@ -136,6 +136,8 @@ under the matching area heading; see the
     Same-facing acceleration preserves pushing, and unrolled object landings
     preserve the skid pose; a native Balloon Park Sonic race covers five laps
     through balloons, bumpers and elephants.
+    Endless Mine preserves the spring's contact-release pass and rock-pushing
+    animation, with a full five-lap native Sonic regression.
   - A racer who rises above an arena's top edge, which the original allows,
     is no longer removed by the room's speed check as if they had jumped
     65,535 pixels.
