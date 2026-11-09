@@ -192,7 +192,7 @@ The shipped game takes `Vint_Lag` when the 68K main loop has not re-armed
 `Vint_routine` before the next VBlank. In a Sonic 2 special stage, that result
 depends on the variable cost of the complete `SS_MainLoop`, the substantial
 `Vint_S2SS` service path, DMA/DPLC work, and hardware contention. OpenGGF does
-not yet model those costs at cycle granularity. Ordinary interactive play
+not yet model those costs at cycle granularity. Ordinary and competitive interactive play
 therefore uses the existing stateless segment/speed approximation to retain the
 special stage's expected slowdown and speed simulation. Its ratios were fitted
 from one Stage 1 recording, not derived from the ROM routine, so it is an interim
@@ -203,7 +203,7 @@ it, and a recorded `lag_state.lagged` outcome admits the already-existing
 `VBlank_Lag` loop through the separate scheduling-only contract. That outcome
 supplies no gameplay value or work.
 
-Ordinary entry now spends the existing measured104-presentation NTSC load hold
+Ordinary and competitive entry spend the shared measured 104-presentation NTSC load hold
 after fade-to-white and before track/player work; recorded startup does not add
 it again. This closes the unwired live entry presentation, while its full CPU/
 device derivation and PAL duration remain unqualified. The recurring bucket
@@ -716,7 +716,7 @@ blocked. The presentation and timing differences are:
 | U-3, U-4 | The split is exact at progressive line 216 (field line 108): no blanked band and no sprite carry-over from the upper table. Native pictures differ from the engine on field rows 108-112 at the seam. |
 | U-5 | The art residency holds only patterns the game loads. Cell words that point at VDP table memory show loaded art or zeros, not table bytes; DMA source wrap is not modelled. |
 | U-7 | Sprite pieces past the 80th table entry are dropped instead of overwriting the RAM after the table. |
-| Lag | Every logical iteration completes in its frame. Native CPU-overrun lag frames are not reproduced in levels or in the competitive special stage, which also does not use the one-player special stage's slowdown approximation. |
+| Lag | Level iterations still complete in their frames. The competitive special stage now shares the one-player segment/speed lag approximation and 104-frame white entry load hold, with real startup waits and the outgoing results fade to white. This remains an empirical approximation, not exact native CPU-overrun pacing. |
 | Rewind | Held live rewind is off in `COMPETITION_MENU`, `COMPETITION` and `COMPETITION_RESULTS`, as in S3K Competition. Registry capture and restore of the Competition owners work and are tested. |
 
 Modelled ROM quirks, so not differences: the title-card and fade interrupts

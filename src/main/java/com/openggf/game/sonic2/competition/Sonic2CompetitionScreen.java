@@ -25,15 +25,16 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen, com.open
     private boolean optionsEntry;
     private int fadePass;
     private boolean fadeIn;
+    private boolean fadeToWhite;
     private Sonic2CompetitionSession.Snapshot destination;
-    public record State(int fadePass, boolean fadeIn, Sonic2CompetitionSession.Snapshot destination) { }
+    public record State(int fadePass, boolean fadeIn, boolean fadeToWhite, Sonic2CompetitionSession.Snapshot destination) { }
     @Override public String key() { return "s2-competition-menu-flow"; }
-    @Override public State capture() { return new State(fadePass, fadeIn, destination); }
+    @Override public State capture() { return new State(fadePass, fadeIn, fadeToWhite, destination); }
     @Override public void restore(State state) {
-        fadePass = state.fadePass(); fadeIn = state.fadeIn(); destination = state.destination();
+        fadeToWhite = state.fadeToWhite(); fadePass = state.fadePass(); fadeIn = state.fadeIn(); destination = state.destination();
         pendingLoad = null;
     }
-    @Override public void resetForMissingSnapshot() { fadePass = 0; fadeIn = false; destination = null; }
+    @Override public void resetForMissingSnapshot() { fadePass = 0; fadeIn = false; fadeToWhite = false; destination = null; }
 
 
     /** Resolve the current PLC owner after each world/load replacement, never a retired queue. */
@@ -103,7 +104,7 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen, com.open
         // Level (s2.asm:4756-4765). No gameplay runs during these waits.
         if (destination != null) {
             if (++fadePass == 22) {
-                session.restore(destination); destination = null; fadePass = 0; clearFlowFade();
+                session.restore(destination); destination = null; fadeToWhite = false; fadePass = 0; clearFlowFade();
                 pendingLoad = new PendingLoad(session.phase(), session.romZone(), session.act(), session.specialStageIndex());
             }
             return;
@@ -137,12 +138,17 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen, com.open
         if (session.phase() == Sonic2CompetitionSession.Phase.ACT
                 && (before != session.phase() || beforeAct != session.act()))
         {
-            destination = session.capture(); session.restore(source); fadePass = 0;
+            destination = session.capture(); session.restore(source); fadePass = 0; fadeToWhite = false;
             return;
         }
         else if (session.phase() == Sonic2CompetitionSession.Phase.SPECIAL_STAGE
                 && (before != session.phase() || beforeSpecial != session.specialStageIndex()))
-            pendingLoad = new PendingLoad(session.phase(), session.romZone(), session.act(), session.specialStageIndex());
+        {
+            // SpecialStage (s2.asm:6537-6550) fades the previous results
+            // picture before touching special-stage RAM or loading assets.
+            destination = session.capture(); session.restore(source); fadePass = 0; fadeToWhite = true;
+            return;
+        }
         if (session.phase() != before) {
             session.setResultsPlcReady(false);
             if (presentation != null) presentation.invalidate();
@@ -177,7 +183,8 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen, com.open
     @Override public void draw() {
         var graphics = GameServices.graphics();
         var mode = fadeIn ? com.openggf.graphics.PaletteFadePresentation.Mode.FROM_BLACK
-                : destination != null ? com.openggf.graphics.PaletteFadePresentation.Mode.TO_BLACK
+                : destination != null ? (fadeToWhite ? com.openggf.graphics.PaletteFadePresentation.Mode.TO_WHITE
+                : com.openggf.graphics.PaletteFadePresentation.Mode.TO_BLACK)
                 : com.openggf.graphics.PaletteFadePresentation.Mode.NONE;
         if (fadeIn || destination != null) graphics.setPaletteFadePresentation(mode, fadePass, -1);
         if (session.phase() == Sonic2CompetitionSession.Phase.ACT) host.draw(session);
@@ -193,7 +200,8 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen, com.open
         // MenuScreen/TwoPlayerResults select VDP background palette/color 0/0 (Pal_Menu's blue).
         var color = assets.menuPalettes()[0].getColor(0);
         var mode = fadeIn ? com.openggf.graphics.PaletteFadePresentation.Mode.FROM_BLACK
-                : destination != null ? com.openggf.graphics.PaletteFadePresentation.Mode.TO_BLACK
+                : destination != null ? (fadeToWhite ? com.openggf.graphics.PaletteFadePresentation.Mode.TO_WHITE
+                : com.openggf.graphics.PaletteFadePresentation.Mode.TO_BLACK)
                 : com.openggf.graphics.PaletteFadePresentation.Mode.NONE;
         int rgb = com.openggf.graphics.PaletteFadePresentation.fadeRgb(color.r & 255, color.g & 255, color.b & 255, mode, fadePass);
         int displayed = com.openggf.graphics.color.DisplayColorConverter.toPackedRgb(
