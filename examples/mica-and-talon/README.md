@@ -2,7 +2,9 @@
 
 This framework demonstration is not a released mod. The maintained Mod API 0.7 candidate example registers **MICA and TALON** in Sonic
 1, Sonic 2 and Sonic 3 & Knuckles. MICA leads with TALON as her default follower;
-TALON is also selectable solo. Approved concept art is in [concept](concept/).
+TALON is also selectable solo. The [character reference](concept/README.md) has
+both approved model sheets, the in-game palettes, the on-model rules and the
+candidate selection.
 
 The playable sheet contains 98 original indexed poses and 18 canonical animations,
 including four slope cycles for WALK and RUN, the breathing idle loop, and

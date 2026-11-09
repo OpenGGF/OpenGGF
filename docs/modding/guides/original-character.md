@@ -20,8 +20,9 @@ read at native resolution. Her route is Sonic's, and her action is airborne
 homing. Gilded turns the jade scales gold. These decisions constrain both art and
 code; drawing a flying character does not grant native flight.
 
-Use the approved references under
-[`examples/mica-and-talon/concept/`](../../../examples/mica-and-talon/concept/).
+Use the approved model sheets in the
+[MICA and TALON character reference](../../../examples/mica-and-talon/concept/README.md),
+which also records the concept brief and why two of four candidates were chosen.
 For your own character, first approve a turnaround and a few key poses. Ask GPT
 Image for image edits against that same reference rather than fresh unrelated
 characters. A useful pose request specifies facing, silhouette, planted feet,

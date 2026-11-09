@@ -42,7 +42,9 @@ The user settled these on 2026-11-08:
    twice the native lift. No Super Flickies.
 
 Both characters must be original designs, not existing Sega characters. The approved
-concept sheets are `examples/mica-and-talon/concept/mica.png` and `talon.png`.
+concept sheets are `examples/mica-and-talon/concept/mica.png` and `talon.png`; the
+[character reference](../../../examples/mica-and-talon/concept/README.md) describes them
+and keeps the four-candidate selection sheet and brief.
 
 ## What already exists
 
