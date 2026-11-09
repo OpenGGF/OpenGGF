@@ -173,6 +173,14 @@ roundtrip reproduced four second-title errors before the repair, then passed
 actual disk/session reloads; see the
 [task evidence](plans/2026-10-13-s3k-playable-completion.md#saved-slot-hpz-to-ssz-roundtrips-2026-10-17).
 
+**Verified test ROM properties do not populate a standalone title catalogue.**
+A rendering fixture can boot with mocked ROM services while `MasterTitleScreen`
+finds no catalogue images and enters onboarding. Before testing Resume, dismiss
+that modal through normal Back and neutral input and assert resume zoom actually
+started. Otherwise Enter can open the onboarding browser and a pixel assertion
+measures that screen. `TestEngineSuspensionRendering` preserves this precondition
+without requiring a ROM or changing its scene colours and publication cadence.
+
 
 **Changing dispatch order must preserve captured physical parent ownership.**
 S3K `CreateChild1_Normal` stores the parent's SST address in `parent3`, not a

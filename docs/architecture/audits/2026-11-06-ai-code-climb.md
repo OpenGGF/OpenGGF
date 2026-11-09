@@ -5597,3 +5597,48 @@ source-derived routing corrections; the guards named in that text were not run
 by this focused worker. No coverage baseline, API pin, allowance or runtime
 contract changed, and no new contributor score is inferred. Combined candidate
 qualification and the original Competition pixel attribution remain outstanding.
+
+### Suspension fixture: observed onboarding interception — 2026-11-09
+
+The repeated `TestEngineSuspensionRendering` failure was reproduced on an owned
+temporary merge with all 5,151 main-source files byte-identical to c06. The first
+arm changed only read-only diagnostic logging. Its original pixel assertion
+failed exactly: `published full-size pixel 80,60`, expected 255, actual 464190
+(`0x07153e`). Onboarding was active before Enter; afterward its browser was open,
+`resumeZooming` remained false and the zoom counter stayed 32. At the nominal
+full-size opportunity the scene had still drawn once. Thus this local failure
+measured the onboarding screen, not a missing captured blue scene.
+
+The control sent normal Back and a neutral logic step before the original Enter.
+Onboarding and its child-input gate cleared; Enter started resume zoom; its
+counter reached zero and the four original colours were blue, red, magenta and
+yellow. The original later resume-publication and draw-count assertions passed.
+No private state write, ROM prerequisite, render-state reset, retry, tolerance or
+production change was added. The final fixture retains assertions for dismissal,
+gate release and actual resume admission, and all seven display-frame call sites,
+loop bounds, captures and original assertions. Two logic-only menu opportunities
+are conditional on onboarding. Temporary logging, including the prior GL vendor
+line, is absent from the final source and retained in the diagnostic logs.
+
+The natural RED ran one case with one assertion failure and no errors/skips.
+The public-input control and the final logging-free fixture each passed that same
+single JUnit identity with no errors/skips. RED queue/Maven/wall/user/unseparated
+seconds were 19/96 (rounded)/116.732804/0/1.732804; control was
+58/34.829/94.487493/0/1.658493; final was
+186/33.972/221.364600/0/1.392600. All used queued normal-memory Java25/Lua5.4,
+displays unset, one fork and explicit surfaceless EGL. Source/analysis/between-job
+time was separately recorded as 498.178693 seconds, not labelled test execution.
+After final GREEN only three leading indents changed; root verified every line
+and identical Java tokens/literals. Root consumed the exact resulting patch and
+all 42 recorded artifact hashes and three fresh XML files.
+
+The task-local `target/code-climb/parent-locality-wave/suspension-consumption.json`
+indexes the durable handoff and source/RED/control/final evidence.
+All owned focused jobs are terminal. No forced no-catalogue layout was needed;
+the existing layout reproduced the modal despite verified ROM test properties.
+The image-present catalogue branch was not separately exercised. Earlier broad
+failures have the identical assertion but no recorded modal-state transcript;
+the local reproduction does not invent one for those runs. This is a test
+precondition repair, not a production rendering fix or an explanation of the
+separate original Competition black-pixel failure. That merge blocker remains.
+The final combined candidate still requires smoke/guards and matched domains.
