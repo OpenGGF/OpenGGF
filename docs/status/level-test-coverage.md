@@ -230,7 +230,9 @@ subpixels and animation, with native curve-tangent steps corroborated.
 add 2143 and 3329 exact native Sonic race rows with spring/push ownership and
 bounded rewind regression checks. A [native BPZ Sonic race](../architecture/validation/2026-10-28-tas-support-competition.md#native-balloon-park-race-qualification-2026-11-09)
 adds 2389 race rows through balloons, bumpers and elephants, five completed
-laps, and focused pushing/landing-pose regressions. Other
+laps, and focused pushing/landing-pose regressions. The
+[Endless Mine native qualification](../architecture/validation/2026-10-28-tas-support-competition.md#native-endless-mine-race-qualification-2026-11-09)
+adds a five-lap Sonic route through springs, rocks and the invisible platform. Other
 arena/character traversals, GP, viewport, donor, roster and native-pixel obligations remain open;
 this is an LTS-08 auxiliary-mode increment, not completed act certification.
 

@@ -367,6 +367,50 @@ class TestS3kCompetitionArenaObjects {
     }
 
     @Test
+    void upwardSpringRetainsItsStandingBitUntilTheNextSolidPass() {
+        Fixture f = fixture();
+        var spring = f.place(Kind.SPRING, 0x200, 0x200, 2, 0);
+        spring.tickNative(f);
+        var p = f.players.get(0);
+        p.setCentre(0x200, 0x1EC); p.setAirborne(true); p.setYVelocity(0x100);
+        spring.tickNative(f);
+        assertEquals(-0xA00, p.yVelocity());
+        // The next actor pass rises ten pixels. SolidObjectFull2_1P must only
+        // release the spring's standing bit, without resolving a second contact.
+        p.setCentreNative(p.centreX(), p.centreY() - 10);
+        int expectedY = p.centreY();
+        spring.tickNative(f);
+        assertEquals(expectedY, p.centreY());
+        assertTrue(p.airborne());
+    }
+
+    @Test
+    void fullSolidsReleaseOnlyTheirOwnPushContact() {
+        Fixture f = fixture();
+        var rock = f.place(Kind.ROCK, 0x100, 0x100, 0x31, 0);
+        var other = f.place(Kind.ROCK, 0x100, 0x200, 0x31, 0);
+        f.tick();
+        var p = f.players.get(0);
+        p.setCentre(0x110, 0x100); p.setXVelocity(-0x100);
+        rock.tickNative(f);
+        assertTrue(p.pushing());
+        var pushed = f.capture();
+        other.tickNative(f);
+        assertTrue(p.pushing(), "an unrelated solid does not clear the rock's Push bit");
+        p.setCentre(0x180, 0x100);
+        rock.tickNative(f);
+        assertFalse(p.pushing(), "the owning rock clears Push when X leaves its range");
+        assertEquals(0, p.animation());
+        assertEquals(1, p.animationState().previousAnimation());
+        f.restore(pushed);
+        p = f.players.get(0);
+        assertTrue(p.pushing());
+        p.setCentre(0x180, 0x100);
+        f.objects.get(0).tickNative(f);
+        assertFalse(p.pushing(), "rewind preserves the owning object's pushing bit");
+    }
+
+    @Test
     void competitionFanLiftsBothSlotsAndRejectsItsExclusiveRightEdge() {
         Fixture f = fixture();
         var fan = f.place(Kind.FAN, 0x100, 0x100, 0, 0);

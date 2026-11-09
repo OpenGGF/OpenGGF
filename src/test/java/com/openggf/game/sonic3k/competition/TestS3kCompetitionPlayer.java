@@ -77,6 +77,18 @@ class TestS3kCompetitionPlayer {
         assertEquals(-0x3D0,left.groundVelocity()); assertEquals(0xD,left.animation());
         assertEquals(0x3D0,right.groundVelocity()); assertNotEquals(0xD,right.animation());
     }
+    @Test void groundAccelerationPreservesPushUntilFacingChanges() {
+        for (int direction : new int[]{LEFT, RIGHT}) {
+            var p=player(0,Character.SONIC);
+            p.setFacingLeft(direction==LEFT); p.setGroundVelocity(direction==LEFT?-0x100:0x100);
+            p.setPushing(true);
+            p.tick(new Input(direction,0),new Sensors(),BOUNDS,0);
+            assertTrue(p.pushing(), "same-facing acceleration keeps the object-owned push state");
+            p.setGroundVelocity(0);
+            p.tick(new Input(direction==LEFT?RIGHT:LEFT,0),new Sensors(),BOUNDS,1);
+            assertFalse(p.pushing(), "a facing change clears Push");
+        }
+    }
     @Test void aboveCapMomentumIsPreservedAndNeutralFrictionIsCharacterAcceleration() {
         var p=player(0,Character.SONIC); p.setGroundVelocity(0x900);
         p.tick(new Input(RIGHT,0),new Sensors(),BOUNDS,0);

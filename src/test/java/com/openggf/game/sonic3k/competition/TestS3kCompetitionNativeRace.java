@@ -25,7 +25,7 @@ class TestS3kCompetitionNativeRace {
      * Each fixture's provenance: docs/architecture/validation/2026-10-28-tas-support-competition.md.
      */
     @ParameterizedTest(name = "{1}")
-    @CsvSource({"3, dpz, 2528", "1, bpz, 2389", "0, alz, 2143", "2, cgz, 3329"})
+    @CsvSource({"0, alz, 2143", "1, bpz, 2389", "2, cgz, 3329", "3, dpz, 2528", "4, emz, 3645"})
     void sonicTraversesFiveLapsExactlyAsNative(int arenaIndex, String key, int raceRows) throws Exception {
         try (var fixture = new HostedArenaFixture();
              var stream = getClass().getResourceAsStream("/competition/s3k/" + key + "-sonic-native.csv.gz");
