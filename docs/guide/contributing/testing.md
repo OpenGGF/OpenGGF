@@ -662,6 +662,17 @@ and do not print the standalone diagnostic route; inspect their own publication
 and Surefire evidence. Credits currently publish only on divergence, so even a
 clean rerun can leave an older failing report. UNKNOWN does not by itself mean an
 old file.
+Standalone level reports may also publish `carried_entry_diagnostics`: the
+provenance, disagreements and unresolved notes from the entry evaluation that
+was already computed by the one carried-state import. Triage lists those strings
+separately from mismatches and completion. Presence means an evaluation was
+reported; it does not establish which gameplay values were imported, complete
+entry provenance or run-chain parity, even when both note lists are empty.
+Absent metadata means not reported/unknown, including paths that never computed
+that evaluation. Special-stage, credits and continuous drivers do not acquire
+this standalone diagnostic claim. Malformed present diagnostics fail evidence
+reading with CLI status 1 and no brief; older reports without them remain readable.
+
 Planned trace rows and gameplay comparisons count different boundaries; their
 totals need not match. Auxiliary-availability notes are best effort: an absent or
 unrecognised optional field does not establish full reference coverage. Triage

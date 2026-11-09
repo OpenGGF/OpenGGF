@@ -3817,3 +3817,129 @@ No original contributor trial was regraded and no score credit is inferred.
 The sole delivery remains follow-up draft PR271; no destination branch was
 written. Both source trees, their generated resources and original evidence are
 retained pending final accounting.
+
+
+### Retain the computed carried-entry diagnostic evaluation (2026-11-09)
+
+This bounded increment starts from local alignment head `e5b5e6d574`, whose
+tracked tree exactly equals reviewed candidate `dd1972ca2d`. The existing
+`applyStartPositionAndGroundSnap` entry helper already computes one
+`TraceSegmentCarriedState`, uses it for camera and post-initialization restoration,
+and previously discarded it. Both overloads now return that same record; paths
+that never computed one return null. The standalone driver retains the reference
+and projects only its existing provenance, disagreement and unresolved strings
+at final publication. No import, resolution, gameplay read, callback or state
+operation was added, removed or reordered. Continuous, special-stage and credits
+publication paths do not acquire this standalone diagnostic claim.
+
+`DivergenceReport.CarriedEntryDiagnostics` is the single immutable diagnostic
+projection and strict optional wire codec. The original report instance receives
+it only at serialization time through the existing report writer, preserving
+virtual summary behavior and the existing serialization-error publication path.
+A base-class copy attachment was rejected because it could erase a subclass's
+throwing summary and turn a producer failure into ordinary evidence. The JSON
+contains no gameplay scalars. Absent metadata means not reported/unknown; malformed
+present metadata fails evidence reading with CLI status 1 and empty stdout.
+Triage displays the strings separately from mismatches and completion and states
+that even empty note lists do not establish imported gameplay state, complete
+provenance or run-chain parity. Default report publication without attached
+metadata retains its bytes. Counters, warnings, verification groups, selected
+frontier, gate, comparison coverage and the three-field owner schema are unchanged.
+
+Mechanical inverse projections reconstruct the whole bootstrap and standalone
+driver source files byte-for-byte after removing only return/diagnostic plumbing.
+The serialization attempt reconstructs its original block after removing only
+the diagnostic parameter and conditional append; its sole catch body is unchanged.
+Every existing helper caller remains a statement invocation, and all main and
+5,582 test sources were compiled with the new Java return descriptors. The public
+helper and reader-record constructor are internal tooling Java surfaces, outside
+the pinned Mod API; precompiled consumers need recompilation. Source searches
+found no guard pinned to the helper's former void signature. Existing invariant,
+source-policy, clock, configuration and carried-resolution checks executed; no
+renamed signature was silently omitted by a method-body lookup.
+
+The original three-case RED used literal wire injection and the real inherited
+first-HCZ entry. It failed at the expected assertions: missing displayed literal
+notes, accepted malformed present metadata, and dropped diagnostics after a real
+post-binder abort. It had zero errors/skips, rather than a missing-new-API compiler
+failure. The expanded first GREEN ran 208 cases: 206 passed and two new error-document
+cases errored because this test initially omitted `.json` in its owner-sidecar
+filename. That test setup was corrected; those errors are retained in the receipts.
+The corrected 25-case diagnostic suite passes, including literal data through
+the real writer/CLI, malformed-present cases, ALL/narrow/no-gate neighbors,
+zero comparisons, defensive copies and both valid/malformed serialization-error
+publication with diagnostics attached. Existing report/reader/policy suites
+contribute 183 passing cases; configuration, clock, resolver and three selected
+source-policy checks contribute another 26 passing cases.
+
+The real witness inherits `TestS3kSonicTailsHczSegmentTraceReplay`: committed
+`hcz`, segment 9, engine act 0 / recorded act 1. Its existing rewind-closure
+observer deliberately aborts before the first gameplay comparison, after binder
+creation. Publication runs exactly once and leaves a fresh owner-keyed INCOMPLETE
+report with 3,574 planned rows, zero comparisons, zero errors/warnings and literal
+provenance `s3k-sonic-tails-complete-emeralds segment 9 (hcz)`. Independently
+inspected manifest/fixture evidence establishes the expected empty diagnostic
+lists: the four earlier stages end with `clear_routine=3`, their counts match the
+recorded emerald array, complete entry RAM removes the giant-ring unknown, and
+zero `act3_flag` adds no continuation note. Expectations are literals, never a
+second resolver/import call. The nested helper's `Probe` name intentionally keeps
+its inherited test out of independent trace-profile discovery. This conditional
+entry witness compares no gameplay rows and certifies no whole leaf, route or
+run-chain parity; HCZ2 remains an unrun holdout.
+
+The broad-catch guard initially reported only the expected old/new site mismatch.
+Root authorized a local one-for-one proposal, preserving allowance count 1 and
+the exact reason prefix, “Unresolved legacy recovery; investigate the caller and
+attempted operation before narrowing this boundary.” The key changes from
+`serialize(ReplayGate)` fingerprint
+`ac0440803ac7cf7ca5d4c69e3edba085d07072dd763411698fcd03bbd63f93a5`
+to `serialize(ReplayGate,CarriedEntryDiagnostics)` fingerprint
+`8605ab231ec928aa366822d293172f147f217b07397099f41def83539e0e622e`.
+Total allowances remain 1,013. No handler, fallback, scanner relaxation or allowance
+was added. Its four cases pass after the row-only update. This guard pass is not
+independent approval of recovery semantics: fresh Opus approval is still pending
+before publication of this increment.
+
+All four bounded commands used Java 25, Lua 5.4, MSE off, displays unset,
+surfaceless EGL, normal queued memory and fresh per-invocation reports:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Ptrace-segments \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dopenggf.surefire.reports=<task-target>/final-guard/surefire \
+  -Dopenggf.trace.reports=<task-target>/final-guard/trace-reports \
+  '-Dtest=TestTraceCarriedEntryDiagnostics,TestBroadCatchSwallowingGuard' test
+```
+
+The final command ran exactly those two concrete suites: **29 passed, zero
+failures/errors/skips**. Across the focused components, 238 distinct cases have
+passing evidence after accounting for the corrected setup and one-for-one guard
+proposal; this is not a category or full-suite verdict. Every invocation found
+all six ROM properties (`missing=none`) and fresh XML; compiler/runtime warnings
+remain in the ignored logs. No category, full-HCZ, paired-domain or broad rerun
+was performed.
+
+| Attempt | Cases / disposition | Queue s | Maven s | Wall s | User s | Residual s |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Primary RED | 3 intended failures | 0 | 35.622 | 36.737 | 0 | 1.115 |
+| Expanded GREEN | 206 pass / 2 setup errors | 0 | 100 | 101.472 | 0 | 1.472 |
+| Corrected / guard | 54 pass / 1 expected inventory failure | 0 | 46.058 | 47.091 | 0 | 1.033 |
+| Final guard / diagnostics | 29 pass | 0 | 40.894 | 41.893 | 0 | 0.999 |
+
+Maven's minute-format duration is rounded; residual includes wrapper/clock
+uncertainty. Investigation and editing time was not measured. `git diff --check`
+and the staged new-citation guard pass. An unnecessary repository-wide
+`disasm_citations.py check` exited 1 on existing pinned-reference debt: all three
+local disassembly checkouts differ from their pins, and the summary includes
+2,042 stale, 121 missing-file, 32 out-of-range and 202 unresolved-file records.
+No new citation text was added; the staged guard reports no added stale citations.
+No unrelated citations or disassembly pins were repaired. Exact argv, source
+hashes, complete failure messages, fresh XML/case identities, retained first-HCZ
+report/owner and inverse proofs are under
+`target/code-climb/carried-entry-diagnostics/` in the owned worktree. No raw or
+regenerable output is committed. Guide/changelog text is folded into existing
+owners; no frontier or discrepancy status changed. Root owns reconciling its
+separate constructor-invariant repair, combined reader/metadata qualification,
+independent review and eventual integration/publication to draft PR271. No push,
+destination write or PR update occurred in this increment.

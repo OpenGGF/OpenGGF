@@ -179,7 +179,10 @@ under the matching area heading; see the
   saved verification scope while retaining global counts and legacy global views.
   Unclassifiable groups fail a narrow diagnosis instead of appearing clean.
   Replay completion metadata has one report-owned value and strict wire codec; ordinary publication
-  no longer reparses and rewrites its own JSON. Scene presentation spells out
+  no longer reparses and rewrites its own JSON. Standalone reports retain the
+  existing carried-entry evaluation's provenance, disagreements and unresolved
+  notes; triage keeps those conditional entry diagnostics separate from mismatch
+  and completion decisions. Scene presentation spells out
   capture, restoration and failure cleanup in operation order. Retained raw-field
   diagnostics follow that storage and are exercised on successful test paths.
 

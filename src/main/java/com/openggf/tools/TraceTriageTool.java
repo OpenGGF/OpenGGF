@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.trace.DivergenceReport.ReplayGate;
+import com.openggf.trace.DivergenceReport.CarriedEntryDiagnostics;
 import com.openggf.trace.TraceFiles;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceVerificationScope;
@@ -108,6 +109,7 @@ public final class TraceTriageTool {
             List<Divergence> errors,
             List<Divergence> warnings,
             ReplayGate replayGate,
+            CarriedEntryDiagnostics carriedEntryDiagnostics,
             List<String> missingAdvertisedAuxSchemas) {
 
         /**
@@ -220,7 +222,7 @@ public final class TraceTriageTool {
             requireClassifiedGroups(warnings);
         }
         return new TraceReport(errorCount, warningCount, totalFrames, summary,
-                List.copyOf(bootstrap), errors, warnings, gate,
+                List.copyOf(bootstrap), errors, warnings, gate, CarriedEntryDiagnostics.readOptionalFrom(root),
                 List.copyOf(missingAuxSchemas));
     }
 
@@ -602,6 +604,16 @@ public final class TraceTriageTool {
                     .append(String.join(", ", report.missingAdvertisedAuxSchemas())).append(".\n");
             sb.append("Aux reference evidence is limited; replay gate and mismatch totals remain as published.\n");
         }
+        CarriedEntryDiagnostics entry = report.carriedEntryDiagnostics();
+        if (entry == null) {
+            sb.append("Carried entry diagnostics: not reported (unknown).\n");
+        } else {
+            sb.append("Carried entry diagnostic evaluation:\n");
+            sb.append("Provenance: ").append(entry.provenance() == null ? "unknown" : entry.provenance()).append("\n");
+            appendEntryNotes(sb, "Disagreements", entry.disagreements());
+            appendEntryNotes(sb, "Unresolved", entry.unresolved());
+            sb.append("This evaluation does not establish imported gameplay state, complete provenance or run-chain parity.\n");
+        }
         sb.append("Saved report only; check this invocation's Surefire result and process completion.\n");
         sb.append("Report summary: ").append(blankToDash(report.summary())).append("\n");
         sb.append("\n");
@@ -680,6 +692,18 @@ public final class TraceTriageTool {
                 .append("  (file: docs/status/trace-frontier-log.md)\n");
 
         return sb.toString();
+    }
+
+    private static void appendEntryNotes(StringBuilder brief, String label, List<String> notes) {
+        brief.append(label).append(":");
+        if (notes.isEmpty()) {
+            brief.append(" none reported\n");
+        } else {
+            brief.append("\n");
+            for (String note : notes) {
+                brief.append("  - ").append(note).append("\n");
+            }
+        }
     }
 
     private static String comparisonOnlyReminder() {
