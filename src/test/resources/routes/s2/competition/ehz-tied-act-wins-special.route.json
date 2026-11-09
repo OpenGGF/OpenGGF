@@ -559,6 +559,13 @@
     "content" : "6dc4ffbf5525a1090e798cf85d05bc3606cab18d440a9b8cedccdddf116bc670",
     "environment" : "openggf 0.8.prerelease-fb73ff855-dirty stageplay-s2-competition-title/1",
     "rows" : 18966
+  }, {
+    "scope" : "BIZHAWK",
+    "passed" : true,
+    "content" : "6dc4ffbf5525a1090e798cf85d05bc3606cab18d440a9b8cedccdddf116bc670",
+    "environment" : "BizHawk2.11/GPGX cold read-only required-goals movie 89777702e15f6c2adddb4fa9b9232b136ef323e4bda01712530377ba249f92cb; accepted comparison boundary null",
+    "rows" : 18966,
+    "coverage" : [ "ehz-act1-play", "ehz-act2-play", "tied-act-wins-to-competitive-special-stage" ]
   } ],
   "native" : {
     "entry" : {
