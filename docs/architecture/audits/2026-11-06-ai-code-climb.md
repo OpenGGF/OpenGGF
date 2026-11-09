@@ -5056,3 +5056,117 @@ source freezes, timing and review results remain under
 retired. Broad/domain qualification and exact comparison remain pending, followed
 by task-branch-only delivery to draft PR271. No destination branch push or merge,
 new PR or current-tree usability score is claimed by this entry.
+
+## Ordinary field ownership: completed qualification (2026-11-09)
+
+Tested source is clean `0edbb73281133b7e03c0598fc9c5445814eb25bd`, tree fingerprint
+`bbb9fe02097facbffc025dd018dbac9c0d4964d0eeeb46fb7c601e1210450846`.
+Local code `efe8811eb1` was merged with develop `735fbbcb8ed1` without conflicts.
+That destination-side increment changes nine Markdown files only; its runtime,
+test, tool, POM, policy and hook inputs equal retained C4. The candidate field
+changes are separately qualified here. The configuration SHA-256 remains
+`9938bc5500e2dd48ddf2b46d1ec3ddd98e1b03b291a33e7e7b0d04319920608e`.
+The earlier 196-case focused result and literal four-row inventory comparison
+remain bounded evidence with their documented source/comment preservation proofs.
+The new broad/domain commands below execute the actual merged head.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 735fbbcb8ed10e07ff74e7f24b1d898e3ac83cd3 --workers 2 --headless-gl surfaceless-egl --max-minutes 40 --keep-diagnostics --run
+```
+
+Run `20261109T132003Z-680efa5f` completed **4,628/4,628 selected candidate
+classes, 94/94 ordinary batches and 1/1 guards**. Ordinary: 37,812 cases,
+29 failures, zero errors, 49 allowed skips. Guards: **843 cases / 103 suites**,
+zero failures, errors or skips. No missing ROM properties, unexplained skips,
+omitted records or causal-message caps. Source/configuration match before/after.
+The exact raw verdict is retained; this is bounded smoke, not a full-suite pass:
+
+```text
+VERDICT FAILED: head=0edbb7328113 source=bbb9fe02097f change-based 4628/4628 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38655 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+All 29 negative identities, kinds and types equal the prior qualified `4da34da064d3`.
+Twenty-seven complete assertions **and full details** are literal. Two explicit
+reviews retain both exact texts: Three Islands' two default `Object` identity
+hashes, and MHZ widescreen's expected `Set` iteration order. The relevant test,
+screen and policy source blobs are unchanged; expected/actual Set memberships
+are identical. Every detail after its first line, including nested causes,
+is literal for all 29. No normalization is enabled; strict comparison remains
+DIFFERENT, and the original FAILED verdict is not relabelled.
+
+Relative to the original C4 broad run, the two absent Three Islands negatives and
+changed catalogue branches retain the earlier paired C4 reproductions with matched
+runtime discovery; all four actual control XML hashes were reverified. The three
+MHZ Set displays retain explicit source-backed membership review. The absent C4
+EngineSuspension negative is not claimed fixed. All **49 complete skip dictionaries**
+match C4, qualified4da and observed2dd, including projection metadata. Recorded
+selection/environment inputs match. The sole class addition since qualified4da
+is `TestOrdinaryActorPlanPreservation`; no class was removed. Against C4, the
+contact test rename preserves all 11 method identities and its reviewed body;
+the two earlier trace-diagnostic classes are accounted additions.
+
+The original `2dd029ebbd7c` competition black-pixel failure did not recur. This
+establishes no cause, fix or flake classification. Its negative remains retained
+and **blocks merging**. Draft-only publication is the authorized delivery mode.
+
+Fresh matched domain commands, sequential normal queue, Java25/Lua5.4,
+displays unset and verified ROM discovery:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dtrace.print.summary=true -Dopenggf.surefire.reports=target/code-climb/ordinary-fields-domain/ehz1-surefire '-Dopenggf.trace.reports=target/code-climb/ordinary-fields-domain/ehz1-reports with spaces' -Dtest=TestS2Ehz1TraceReplay test -B
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Ptrace-segments -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dtrace.print.summary=true -Dopenggf.surefire.reports=target/code-climb/ordinary-fields-domain/hcz-surefire '-Dopenggf.trace.reports=target/code-climb/ordinary-fields-domain/hcz-reports with spaces' '-Dtest=TestS3kSonicTailsHczSegmentTraceReplay,TestS3kSonicTailsHcz2SegmentTraceReplay' test -B
+```
+
+EHZ1 passes: **5,852/5,852** compared rows. First HCZ passes:
+**3,519/3,574**. HCZ2 retains its assertion failure: **14,149/14,208**, the same
+26 mismatches (2 physics, 24 animation), first animation at frame 6640. All gates
+are reached with ALL verification; trace/bootstrap counted warnings and bootstrap
+errors are zero. Each exact class ran once, with no errors/skips; process outcomes
+are checked separately from report content. All three owner identities and actual
+paths validate. Reports/contexts match C4 exactly except the reviewed final
+carried-entry field. They also match the entire current-format report/context bytes
+at actual `0b3ab89ac8` and `7908d32106`, **including** that metadata.
+
+Both exact printed POSIX HCZ triage commands execute successfully with report paths
+containing spaces. HCZ2 identifies frame 6640/player animation; first HCZ reports
+no per-frame divergence. These are real command executions, not substring tests.
+No Windows/quote-character or whole-route certification is inferred. Eight missing
+advertised HCZ auxiliary schemas, FAST/SMPS log warnings and bounded excerpts
+remain limitations. EHZ's carried-entry diagnostics still say no run manifest
+names the segment. Empty HCZ note lists do not certify complete entry provenance.
+
+| Command | Reported queue s | Execution s | User wait s | Unknown/rounding s | Wall s |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Category, including preparation | 8298 | 1924.230 | 0 | 18.313 | 10240.543 |
+| EHZ1 | 101 | 37.121 | 0 | 0.902 | 139.023 |
+| HCZ pair | 96 | 49.437 | 0 | 0.784 | 146.221 |
+| Emitted HCZ1 triage | 97 | 0.387 | 0 | 0.745 | 98.132 |
+| Emitted HCZ2 triage | 48 | 0.556 | 0 | 0.462 | 49.018 |
+
+The sequential domain pipeline wall is 433.123s; about 0.729s lies outside its four
+command intervals. Category execution includes preparation; other execution cells
+are Maven totals. Exact values/arrays remain in existing task diagnostics. Coding,
+research and inter-command investigation gaps were not separately timed, and some
+research overlapped queue waits; the table is not an end-to-end delivery clock.
+
+Fresh blind **original D** at this same head is **53.75/100**, vector
+`[3,2,2,2,1,3,2,2]`. This is source-only contributor usability, not runtime evidence;
+the other five trials were not regraded. The stronger per-trial/per-axis target
+remains unmet. Field-name policies, recipe/probe sprawl, local constructor-family
+coverage and competing parent relinks still impose substantial knowledge burden.
+Existing context already carries family identity and manager; a new context API is
+unnecessary. Two real-family witness patches are prepared externally, not applied
+or run; no RED claim. A broad interface collapse was not justified: the 23 level
+interfaces include 19 constructor recipes and distinct public/deferred roles.
+An EHZ constructor-family coverage candidate was identified, but a declaration
+alone must not count as proof, and removal of its real recreate hook is unproven.
+These investigations receive no automatic rubric credit.
+
+Raw category verdicts, exact assertions/skips, source proofs and dispositions are
+under `target/code-climb/ordinary-plan-ownership/category/`; fresh reports, owner
+checks, current-format byte comparison and actual emitted-command evidence are
+under `target/code-climb/ordinary-fields-domain/`. All owned validation jobs are
+terminal and their units retired. Diagnostics, original pixel evidence and retained
+baseline/worker trees remain preserved; unknown work is not discarded. The task
+branch/worktree stays for draft PR271. No destination merge/push or new PR is
+part of this increment. The following publication commit changes audit prose only.
