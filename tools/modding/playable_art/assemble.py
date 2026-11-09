@@ -52,8 +52,9 @@ def assemble(root, output):
                                    hFlip=False, vFlip=False, paletteIndex=0, priority=False))
         max_tiles = max(max_tiles, w*h//64)
         frames.append(dict(delay=1, pieces=pieces))
-        if frame['animation'] == 'HOMING_DIVE':
-            custom.setdefault('HOMING_DIVE', []).append(i)
+        if frame['animation'] in {'HOMING_DIVE', 'HOMING_DIVE_FORWARD', 'HOMING_DIVE_FORWARD_UP',
+                                  'HOMING_DIVE_UP', 'HOMING_DIVE_FORWARD_DOWN', 'HOMING_DIVE_DOWN'}:
+            custom.setdefault(frame['animation'], []).append(i)
         elif frame['animation'] in SPEED | FIXED.keys():
             groups[frame['animation']].append((frame, i))
         elif frame['animation'] != 'NATIVE_POSE':
@@ -98,9 +99,8 @@ def assemble(root, output):
             if name == 'GET_AIR':
                 spec.update(frames=[indices[0], indices[0], indices[1], indices[1]], durations=[12]*4)
         animations[name] = spec
-    if custom.get('HOMING_DIVE'):
-        animations['HOMING_DIVE'] = dict(frames=custom['HOMING_DIVE'],
-                                       durations=[2]*len(custom['HOMING_DIVE']), end='loop')
+    for name, indices in custom.items():
+        animations[name] = dict(frames=indices, durations=[2]*len(indices), end='loop')
     frame_indices = {frame['id']: i for i, frame in enumerate(source)}
     native_frames = {}
     for key, frame_id in handoff.get('nativeFrames', {}).items():

@@ -35,7 +35,9 @@ under the matching area heading; see the
 
 ## Modding and tools
 
-- **MICA, an original character framework example:** the maintained
+- **MICA, an original character framework example:** optional directional homing
+  strike sheet poses follow current velocity with phase-preserving turns, normal
+  facing mirrors and generic/native fallbacks. The maintained
   `examples/mica-and-talon` demo plays in all three stock games with Sonic's
   single-player physics, native S2/S3K spindash (disabled in S1), character-owned
   homing (including an untargeted forward

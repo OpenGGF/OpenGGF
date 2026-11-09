@@ -7,6 +7,7 @@ import java.util.Objects;
 
 public final class ModApiVersion {
     /**
+     * Optional directional canonical homing strike sheet keys extend this same 0.7 candidate.
      * Current unpublished compiled-mod API candidate, including the grouped landing animation rule,
      * saved rewind budget scope,
      * allowance and stage/life-loss controls, plus the saved sprite scanline-limit

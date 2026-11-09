@@ -53,9 +53,12 @@ public final class PlayableSheetAnimationBinding {
             if (next < 0) next = host.resolveNativeId(CanonicalAnimation.WAIT);
             scripts.addScript(id, new SpriteAnimationScript(script.delay(), script.frames(), script.endAction(), next));
         }
-        var strike = art.animationSet().getScript(CanonicalAnimation.HOMING_DIVE.ordinal());
-        if (strike != null) scripts.addScript(HOMING_DIVE_ID,
-                new SpriteAnimationScript(strike.delay(), strike.frames(), SpriteAnimationEndAction.LOOP, 0));
+        // Append-only canonical keys map into a private contiguous strike namespace.
+        for (int offset = 0; offset <= 5; offset++) {
+            var strike = art.animationSet().getScript(CanonicalAnimation.HOMING_DIVE.ordinal() + offset);
+            if (strike != null) scripts.addScript(HOMING_DIVE_ID + offset,
+                    new SpriteAnimationScript(strike.delay(), strike.frames(), SpriteAnimationEndAction.LOOP, 0));
+        }
         // Native movement keeps the Walk byte even at running speed. A sheet
         // with RUN but no WALK still needs that dispatch to reach its run tier.
         if (art.animationSet().getScript(CanonicalAnimation.WALK.ordinal()) == null

@@ -223,7 +223,7 @@ host profile and character ability still own dispatch.
 | S2+ animations (introduced in Sonic 2) | `SPINDASH`, `SKID`, `SLIDE`, `HANG2`, `BUBBLE`, `HURT2`, `FLY`, `TAILS_FLY`, `TAILS_FLY_ASCEND`, `TAILS_FLY_CARRY`, `TAILS_FLY_CARRY_ASCEND`, `TAILS_FLY_TIRED`, `TAILS_SWIM`, `TAILS_SWIM_ASCEND`, `TAILS_SWIM_CARRY`, `TAILS_SWIM_TIRED` |
 | S3K animations (introduced in Sonic 3&K) | `BLINK`, `GET_UP`, `VICTORY`, `BLANK`, `HURT_FALL`, `GLIDE_DROP`, `GLIDE_LAND`, `GLIDE_SLIDE`, `TAILS_CARRIED` |
 | Powered transformation | `SUPER_TRANSFORM` |
-| Character-owned strike | `HOMING_DIVE` |
+| Character-owned strike | `HOMING_DIVE`, `HOMING_DIVE_FORWARD`, `HOMING_DIVE_FORWARD_UP`, `HOMING_DIVE_UP`, `HOMING_DIVE_FORWARD_DOWN`, `HOMING_DIVE_DOWN` |
 
 ### Authoring the animation table
 
@@ -269,14 +269,24 @@ implicit native tumble or Super alternate frames.
 ROM-free standalone modules have no native ID vocabulary; their default presentation
 retains the authored `WAIT` cycle. Native profile binding applies to stock hosts.
 
-`HOMING_DIVE` is an optional fixed-duration canonical sheet animation for a
-character-owned targeted `HomingAttack` strike. The host binds it
-to a reserved creator script ID outside stock animation bytes and selects it only
-while that character's world-owned strike is active. Without it the native roll
-remains. Landing, hurt, control takeover and strike completion return selection to
-the native profile. No per-character animation latch is needed for rewind: the
-world strike phase and ordinary script cursor are already captured. All four MICA
-dive frames loop at two ticks each; collision remains the native attacking roll.
+Optional fixed-duration strike keys are `HOMING_DIVE_FORWARD`,
+`HOMING_DIVE_FORWARD_UP`, `HOMING_DIVE_UP`, `HOMING_DIVE_FORWARD_DOWN` and
+`HOMING_DIVE_DOWN`. Both world-owned `HomingAttack` modes select by current
+velocity, with normal facing mirroring leftward flight. Measured clockwise from
+forward (positive y is down), the sectors are [-22.5°, 22.5°) forward,
+[-67.5°, -22.5°) forward-up, [-90°, -67.5°) up,
+[22.5°, 67.5°) forward-down and [67.5°, 90°] down.
+A nonzero x velocity sets facing in the homing runtime; zero keeps facing.
+Tiny x values naturally select vertical poses; a stopped strike selects forward.
+
+Selection falls back from the exact direction to `HOMING_DIVE`, then the native
+animation. A sheet supplying only `HOMING_DIVE` retains its existing behavior.
+Direction changes preserve the script cursor and timer, immediately publishing
+the corresponding pose even during held ticks; differing cycle lengths wrap the
+cursor. Keep matching frame counts and durations for aligned directional phases.
+Only script execution sees reserved creator IDs: collision retains native Roll.
+Landing, hurt, control takeover and completion restore native selection. Direction
+is derived each frame; existing world strike and script rewind state suffice.
 
 
 ## Presentation contract

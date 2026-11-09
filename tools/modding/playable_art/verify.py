@@ -52,8 +52,11 @@ def verify(root):
             assert im.size==(29,29) and f['hotspot']==[14,14],f['id']
         counts[f['animation']]+=1
     assert counts['WALK']==32 and counts['RUN']==16
-    required={'WAIT','WALK','RUN','ROLL','SPINDASH','PUSH','DUCK','LOOK_UP','SKID','STOP','SPRING','BALANCE','HURT','DEATH','DROWN','GET_AIR','HANG','HOMING_DIVE'}
-    assert required==set(counts)-{'NATIVE_POSE'}
+    required={'WAIT','WALK','RUN','ROLL','SPINDASH','PUSH','DUCK','LOOK_UP','SKID','STOP','SPRING','BALANCE','HURT','DEATH','DROWN','GET_AIR','HANG'}
+    strikes = {'HOMING_DIVE', 'HOMING_DIVE_FORWARD', 'HOMING_DIVE_FORWARD_UP',
+               'HOMING_DIVE_UP', 'HOMING_DIVE_FORWARD_DOWN', 'HOMING_DIVE_DOWN'}
+    assert required <= set(counts) <= required | strikes | {'NATIVE_POSE'}
+    assert strikes & set(counts)
     # Flood-fill removal must not erase an enclosed eye-white pixel of same colour.
     test=Image.new('RGBA',(5,5),'white')
     for x,y in ((1,1),(2,1),(3,1),(1,2),(3,2),(1,3),(2,3),(3,3)):

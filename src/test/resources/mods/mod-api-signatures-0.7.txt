@@ -2820,6 +2820,11 @@ FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.C
 FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HANG
 FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HANG2
 FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HOMING_DIVE
+FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HOMING_DIVE_DOWN
+FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HOMING_DIVE_FORWARD
+FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HOMING_DIVE_FORWARD_DOWN
+FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HOMING_DIVE_FORWARD_UP
+FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HOMING_DIVE_UP
 FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HURT
 FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HURT2
 FIELD com.openggf.game.CanonicalAnimation public,static,final com.openggf.game.CanonicalAnimation HURT_FALL
