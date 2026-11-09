@@ -122,6 +122,11 @@ under the matching area heading; see the
     from the original animations. They still pass behind foreground scenery, and
     TIME, laps and the countdown keep their screen size. The item icon sits under
     TIME and is hidden when monitors are off.
+  - A player who jumps or falls off a platform, spring or blade stops counting
+    as standing on it, as in the original. Before, the flag stayed set, sometimes for
+    the rest of the race, so slopes stopped turning the player and the pose kept
+    the angle it had when it left. This also applies to the two-player mode
+    started from the Sonic 3&K title.
   - Lap times, the total and the best lap are shown and ranked.
   - A teleport monitor swaps you with the nearest racer through the host.
   - Rooms without a verifier show the finish order labelled UNVERIFIED.

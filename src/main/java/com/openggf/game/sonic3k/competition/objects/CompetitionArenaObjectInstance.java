@@ -203,10 +203,12 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
         }
         // Obj_Spring ends in Spring_Common's RTS; retracting springs explicitly continue into their routine.
         if (firstPass && kind == Kind.SPRING) { updateDynamicSpawn(x, y); return; }
-        // RideObject_SetRide / the player jump owner clear the previous object's native status bit.
+        // RideObject_SetRide clears the previous object's native status bit when the player rides another.
         // The miniature body stores that relationship by SST identity rather than an SST pointer.
+        // An airborne rider keeps this object's bit: SolidObjectFull2_1P's loc_1DCF0
+        // (sonic3k.asm:41070-41087) releases it, clearing Status_OnObj on the player as well.
         for (var player : context.players()) {
-            if (player.standingObject() != nativeIdentity() || (player.status() & 8) == 0 || player.airborne())
+            if (player.standingObject() != nativeIdentity() || (player.status() & 8) == 0)
                 standingMask &= ~(1 << player.slot());
         }
         switch (kind) {

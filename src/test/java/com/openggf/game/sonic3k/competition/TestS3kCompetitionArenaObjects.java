@@ -123,11 +123,16 @@ class TestS3kCompetitionArenaObjects {
         f.players.get(1).setAirborne(true);
         f.players.get(1).setYVelocity(-0x100);
         f.tick();
-        assertEquals(0x180, blade.extensionWord(), "only one remaining rider contributes $80");
+        // Sonic_Jump only sets Status_InAir; the blade still holds P2's bit when loc_35B16 counts.
+        assertEquals(0x200, blade.extensionWord(), "the rider who just jumped still contributes $80");
+        assertEquals(0, f.players.get(1).status() & 8, "SolidObjectFull2_1P loc_1DCF0 clears Status_OnObj");
         f.players.get(0).setAirborne(true);
         f.players.get(0).setYVelocity(-0x100);
         f.tick();
-        assertEquals(0x80, blade.extensionWord());
+        assertEquals(0x280, blade.extensionWord(), "only P1's bit survived the previous release");
+        assertEquals(0, f.players.get(0).status() & 8);
+        f.tick();
+        assertEquals(0x180, blade.extensionWord(), "no riders: the blade retracts by $100");
     }
 
     @Test
