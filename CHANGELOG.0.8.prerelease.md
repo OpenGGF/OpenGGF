@@ -55,7 +55,9 @@ under the matching area heading; see the
   finish crossing. Teleport monitors swap the players' positions,
   speeds, cameras and backgrounds. Badnik, bumper, bonus-block and cage
   scores go to the player who earned them, and the Casino Night slot machines
-  and cages serve both players. Enemies whose ROM routine ends in
+  and cages serve both players. Casino Night round bumpers, bonus blocks, slot
+  cages and prizes now enter both sprite pages; plungers retain their moving head
+  and fixed base with the ROM two-player art, palette and priority. Enemies whose ROM routine ends in
   `MarkObjGone_P1` retire once both cameras are more than `$300` away and
   reload when revisited; the finish-grace countdown runs before players move;
   GAME OVER and TIME OVER cards appear in both views. The competitive special stage runs both players

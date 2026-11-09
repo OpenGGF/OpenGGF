@@ -1,7 +1,7 @@
 # Level test coverage backlog
 
 S2 Competition (2026-11-08): the [Competition parity plan](../architecture/plans/2026-11-07-s2-competition-parity.md#route-and-act-obligations)
-records the EHZ/MCZ/CNZ and special-stage route obligations as an LTS-08
+records the [CNZ object-display regression](../architecture/plans/2026-11-07-s2-competition-parity.md#cnz-object-display-follow-up-2026-11-09) and the EHZ/MCZ/CNZ and special-stage route obligations as an LTS-08
 auxiliary-mode increment. Native state prefixes match for EHZ 1, MCZ 1, CNZ 1
 and the competitive special stage up to the first native lag frame or open
 frontier; act 2 routes, results, tiebreaker and native pictures beyond the

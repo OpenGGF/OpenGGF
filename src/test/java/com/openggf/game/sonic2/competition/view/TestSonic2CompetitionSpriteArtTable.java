@@ -157,32 +157,34 @@ class TestSonic2CompetitionSpriteArtTable {
             case 0x7F->new int[]{0x297F6,0x29830};case 0x80->new int[]{0x29990,0x29A66};
             case 0x81->new int[]{0x2A026,0x2A0FE};case 0x86->new int[]{0x2B158,0x2B1AA};
             case 0xD2->new int[]{0x2B53A,0x2B59A};case 0xD4->new int[]{0x2B8FE,0x2B94A};
+            case 0x44->new int[]{0x1F742,0x1F770};case 0xD6->new int[]{0x2BB7E,0x2BBA6};
+            case 0xD8->new int[]{0x2C6C0,0x2C6FC};case 0xD3->new int[]{0x2BC86,0x2BD48};case 0xDC->new int[]{0x2BD4E,0x2BDF6};
             case 0xD5->new int[]{0x2BA1A,0x2BA66};case 0xD7->new int[]{0x2C45A,0x2C4AC};
             default->throw new AssertionError("Uncertified Init: "+row.role());
         }; start=span[0];end=span[1];
         if(id!=0x2E) {
-            boolean second=id==0x25;
+            boolean second=id==0x25 || id==0xD3 || id==0xDC;
             has(r,start,end,(second?"237c":"217c")+"%08x0004".formatted(e.mappingsAddress()));
         } else has(r,start,end,"227c%08x".formatted(e.mappingsAddress()));
         if(id==0x41) {
             int palette=(row.subtypeValue()&2)!=0?0x2000:0;
             has(r,start,end,"317c%04x0002".formatted(e.artTile1P()^palette));
             if(palette!=0) has(r,start,end,"08e800050002");
-        } else has(r,start,end,(id==0x25?"337c":"317c")+"%04x0002".formatted(e.artTile1P()));
+        } else has(r,start,end,((id==0x25 || id==0xD3 || id==0xDC)?"337c":"317c")+"%04x0002".formatted(e.artTile1P()));
         if(id==0x36) {
             int index=row.subtypeValue()>>>4;
             assertEquals(e.widthPixels(),r.readU8(0x15916+index*2));
             assertEquals(e.yRadius(),r.readU8(0x15917+index*2));
         } else if(id==0x18) assertEquals(e.widthPixels(),r.readU8(0x104C4));
-        else has(r,start,end,(id==0x25?"137c":"117c")+"%04x0019".formatted(e.widthPixels()));
+        else has(r,start,end,((id==0x25 || id==0xD3 || id==0xDC)?"137c":"117c")+"%04x0019".formatted(e.widthPixels()));
         if(row.role().equals("checkpoint-dongle"))
             has(r,0x1F180,0x1F206,"137c%04x0018".formatted(row.priorityBucket()));
         else if(id==0x77) assertEquals(0,row.priorityBucket()); // cleared SST: Init has no priority write.
-        else has(r,start,end,(id==0x25?"137c":"117c")+"%04x0018".formatted(row.priorityBucket()));
+        else has(r,start,end,((id==0x25 || id==0xD3 || id==0xDC)?"137c":"117c")+"%04x0018".formatted(row.priorityBucket()));
         int baseFlags=e.renderFlagsInit()&~0x10;
         if(id==0x2E) baseFlags=e.renderFlagsInit();
-        String suffix=id==0x25?"0001":"0001";
-        if(!contains(r,start,end,(id==0x25?"137c":"117c")+"%04x".formatted(baseFlags)+suffix))
+        String suffix=(id==0x25 || id==0xD3 || id==0xDC)?"0001":"0001";
+        if(!contains(r,start,end,((id==0x25 || id==0xD3 || id==0xDC)?"137c":"117c")+"%04x".formatted(baseFlags)+suffix))
             has(r,start,end,"0028%04x0001".formatted(baseFlags));
         if((e.renderFlagsInit()&0x10)!=0) {
             has(r,start,end,"08e800040001");

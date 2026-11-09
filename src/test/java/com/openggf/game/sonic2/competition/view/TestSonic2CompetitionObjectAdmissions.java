@@ -27,13 +27,13 @@ class TestSonic2CompetitionObjectAdmissions {
         var graphics=GraphicsManager.getInstance();graphics.initHeadless();
         try {
             var manager=new ObjectManager(List.of(),null,0,null,null,graphics,mock(Camera.class),new StubObjectServices());
-            var owner=new AbstractObjectInstance(new ObjectSpawn(100,80,0x44,0,0,false,0),"deferred-bumper") {
+            var owner=new AbstractObjectInstance(new ObjectSpawn(100,80,0x76,0,0,false,0),"deferred-spikes") {
                 @Override public void update(int vint,PlayableEntity player) { }
                 @Override public void appendRenderCommands(List<GLCommand> commands){fail("deferred owner cannot fall back to ordinary drawing");}
             };
             manager.addDynamicObjectAtSlot(owner,40);
             assertTrue(Sonic2CompetitionObjectDisplay.admissions(manager,null).isEmpty());
-            assertEquals(0x44,Sonic2CompetitionObjectDisplay.deferred(manager).getFirst().id());
+            assertEquals(0x76,Sonic2CompetitionObjectDisplay.deferred(manager).getFirst().id());
             assertEquals(40,Sonic2CompetitionObjectDisplay.deferred(manager).getFirst().slot());
             assertFalse(Sonic2CompetitionObjectDisplay.adopted(owner));
         } finally {graphics.resetState();}

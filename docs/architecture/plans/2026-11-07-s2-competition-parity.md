@@ -275,8 +275,9 @@ Held rewind is off (D2).
    mechanisms rather than add a completion kind.
 7. Seam rows 108-112 stay unsupported (U-3, U-4); palette publication on lag
    frames (U-6) and the lives-rewrite flag equivalence (U-8) are unverified.
-8. Display inventory: 41 adopted and 11 deferred of 52 placed object IDs
-   (926 placements); the `Obj3A` capsule's Competition reachability proof is
+8. Display inventory: the historical C2 survey had 41 adopted and 11 deferred
+   of 52 placed object IDs (926 placements). The CNZ follow-up below leaves four
+   explicit deferred IDs in the current 53-ID placed/child inventory; the `Obj3A` capsule's Competition reachability proof is
    deferred. `Obj3C` is not placed in any shipped layout and is not implemented.
 9. The native lag counting script used for the rates above is external; promote
    it under `tools/bizhawk/` if lag rates are needed again.
@@ -296,3 +297,88 @@ Held rewind is off (D2).
 All four are indexed in the [agent workflow guide](../../agent-workflow/README.md).
 Native movies, CSVs, screenshots and comparison output stay outside the
 repository.
+
+## CNZ object display follow-up (2026-11-09)
+
+Base: `a41d0c7141b0c12a06375d98224864dd94c42ca7`. This bounded review uses
+`cnz1-slot-flip.route.json` (2,486 engine rows). A fresh
+`RouteFiles.exportBk2` export equals the prior qualification movie SHA-256
+`92070b90f795cdd43a8d6c66634dbc8c6421dbe3f921fddb065457864caf5891`.
+Its native witness has 1,337 prefix rows and engine anchor 1,268. Cold official
+BizHawk 2.11/GPGX capture with `capture_every_frame.lua`, plan `last=2555`,
+REV01 SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`, completed with
+2,555 PNGs and CSV rows. The first attempt crashed in Mesa EGL; the successful
+xvfb run set `LIBGL_ALWAYS_SOFTWARE=1 EGL_PLATFORM=x11` and unset
+`WAYLAND_DISPLAY`. No RAM writes or fixture saves were used.
+
+Evidence remains under `~/Videos/OGGF/s2-competition/cnz-objects/`:
+`native-software/host.json`, `frames.csv`, original 348x480 PNGs,
+`route-export.bk2`, `before/lfc-*.png`, `before-sheet-*.png` and
+`before-alignment.csv`. Native pictures are cropped by `(14,16,334,464)`;
+engine pictures retain all 320x448 pixels. Pairing is by LFC, restricting the
+native rows to active two-player mode and LFC > 1. There are 1,211 matched
+engine rows through LFC1211; the route's last eight engine rows have no native
+LFC match before movie end because native lag repeats LFC. One retained native
+frame per LFC is diagnostic alignment, not a claim of field/lag timing parity.
+
+| Observation (engine row / native frame, LFC) | Half | Classification and owning evidence |
+| --- | --- | --- |
+| Slot cage missing around spinning Sonic (1989 / 2059, 722) | upper | Fixed: ObjD6 was explicitly deferred. Adopt its ROM Init mapping, art, width and bucket. |
+| Round bumpers missing (2349 / 2426, 1082; also the lower view earlier) | upper and lower | Fixed: Obj44 was explicitly deferred. Adopt its ROM Init mapping, palette 2 and bucket 1. |
+| Prize rings absent during payout (2169 / 2241, 902) | upper | Fixed: ObjDC was explicitly deferred. Project its actual ring-sheet spin/sparkle frame with native ring art and palette 1. |
+| Plunger display exclusion found in ROM audit (no independent route contact witness) | either camera | Fixed: Obj85 was explicitly deferred. Project its single SST, moving head and fixed base child; DisplaySprite3 supplies bucket 4. Both vertical and diagonal ROM variants are checked. |
+| Bonus-block and bomb-prize display exclusions found in ROM audit (no independent route hit/payout witness) | either camera | Fixed display paths for ObjD8 and ObjD3, independently checked against ROM Init operands. Bomb payout is not independently reached by this route, so its regression establishes display operands, not native payout parity. |
+| Interlaced striping, distorted moving sprites and alternating terrain rows | both | Documented U-1. Preserve complete native cells in the engine; do not synthesize field timing. |
+| Rows at the seam and lag-frame sprite tearing | seam/both | Documented U-2/U-3/U-4. Table-memory art and entry overflow remain U-5/U-7. No new hardware timing model is introduced. |
+| Different slot symbols/reward and later P2 path/camera (e.g. LFC962+) | both | Not evidence of missing art: native and engine outcomes/trajectories have diverged. The BIZHAWK route stamp accepts named goals, not full-state parity. Input and gameplay stay unchanged in this display correction. |
+
+The six owners leave the explicit deferred inventory. Invisible forced-spin
+triggers have no native sprite to restore; sliding spikes, sideways platforms
+and the conservative capsule-results child obligation remain outside this CNZ
+route correction. Existing art residency and per-player SAT culling are reused;
+no ordinary atlas pixels or disassembly assets enter the native picture.
+
+Regression owners: `TestSonic2CompetitionSpriteArtTable` independently reads
+raw REV01 mapping/art/width/flags/bucket writes for the four ordinary rows;
+`TestSonic2CompetitionCnzObjectDisplay` covers the native plunger variants and
+ring-sheet spin/sparkle projection; the all-layout display inventory exercises
+placed subtypes. Existing Competition EGL tests and the unchanged frozen route
+cover composition and gameplay acceptance. This is CNZ1 Sonic/human-Tails at
+320 only; act 2, other routes, arbitrary widths/donors, held rewind and complete
+native-state parity remain inherited gaps. No act certification is claimed.
+
+After evidence: `after/engine.mkv`, `after/result.txt`, `after-pairs/lfc-*.png`
+and `after-pairs-sheet-{0,1,2,3}.png` under the same scratch root. The unchanged
+2,486-row route passes, and `cmp` finds its before/after `engine-frames.csv`
+byte-identical. A separate before/after pixel comparison checks every engine
+row: 847 rows change (first 1586, last 2485), 829 in the upper view and 273 in
+the lower view, recorded in `changed-pixels.csv`. At row1989/LFC722 the restored
+cage alone changes 720 pixels within `(120,81)-(168,121)`. At row2169/LFC902
+prize rings and the cage are visible above, with restored round bumpers below.
+Contact sheet 2 shows these directly against the original native images.
+This verifies display repair without re-authoring or requalifying input tapes.
+
+Validation (Java25, `-Dmse=off`, all test execution through `maven_queue.py`,
+`DISPLAY`/`WAYLAND_DISPLAY` unset, `-Dopenggf.headless.gl=surfaceless-egl`):
+
+- Base `a41d0c714`: `-Dtest=com.openggf.game.sonic2.competition.**,TestSonic2Competition*,TestStageplayCompetition* test`:
+  502 tests in104 classes, three failures, zero errors/skips. Queue30s,
+  Maven execution122s.
+- Focused `-Dtest=TestSonic2CompetitionSpriteArtTable,TestSonic2CompetitionObjectDisplay,TestSonic2CompetitionObjectAdmissions,TestSonic2CompetitionCnzObjectDisplay,TestSonic2CompetitionDisplayInventory,DebugSonic2CompetitionRouteVideo`
+  with `-Ds2video.route=cnz1-slot-flip` and `-Ds2video.out=<scratch>/after`:
+  14 tests pass, no skips. Queue109s, execution92s. The first focused attempt
+  stopped at a missing import in the new test, corrected before this pass.
+- Final: the baseline selector plus all25 source-text referencing test classes
+  (`Sonic2CompetitionSpriteArtTable`, `Sonic2CompetitionObjectDisplay`,
+  `LauncherSpringObjectInstance`): 1,154 tests in117 classes; the same three
+  failures, zero errors/skips. Queue389s, execution65s. The exact selector is
+  `final-selector.txt`, the source match list is `referencing-tests.txt`, and
+  outputs are `baseline-tests.log`, `focused2.log`, `final-tests.log` under the
+  external evidence root. Parsed test identity/kind/message JSONs compare equal.
+- Inherited failures: `DebugSonic2CompetitionC2Capture.captureAvailableC2MovieCuts`
+  invocations1/2/3 cannot reach `flowers-1800`, `hud-ring-first-pickup-1908`,
+  `monitor-1875-before` respectively. These optional cut diagnostics fail
+  identically on the exact baseline; no new/worsened failures were observed.
+- Changed-file disassembly citation check: no stale citations. `git diff --check`
+  and local plan links pass. The task is a bounded display correction, not a
+  full-suite/public-release or native-state parity qualification.
