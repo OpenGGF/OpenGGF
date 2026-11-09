@@ -17,6 +17,9 @@ FIXED = {'WAIT': (6, 'loop'), 'SPINDASH': (1, 'loop'), 'DUCK': (6, 'hold'),
          'SPRING': (24, 'next'), 'BALANCE': (10, 'loop'), 'HURT': (65, 'loop'),
          'DEATH': (33, 'loop'), 'DROWN': (33, 'loop'), 'GET_AIR': (12, 'next'),
          'HANG': (2, 'loop')}
+OPTIONAL = {'FLY': (2, 'loop'), 'TAILS_FLY': (2, 'loop'),
+            'TAILS_FLY_TIRED': (12, 'loop')}
+
 SPEED = {'WALK', 'RUN', 'ROLL', 'PUSH'}
 SLOPES = ('flat', 'up45', 'steep', 'inverted')
 
@@ -24,6 +27,10 @@ SLOPES = ('flat', 'up45', 'steep', 'inverted')
 def assemble(root, output):
     handoff = json.loads((root / 'frames.yaml').read_text())
     source = handoff['frames']
+    character = handoff.get('character', 'mica')
+    if not character.isidentifier() or not character.islower():
+        raise ValueError('Invalid character output name')
+    fixed = FIXED | OPTIONAL
     colors = json.loads((root / 'palette.yaml').read_text())['colors']
     palette = sum(colors, [])
     sheet = Image.new('P', (512, ((len(source) + 7) // 8) * 48), 0)
@@ -55,11 +62,12 @@ def assemble(root, output):
         if frame['animation'] in {'HOMING_DIVE', 'HOMING_DIVE_FORWARD', 'HOMING_DIVE_FORWARD_UP',
                                   'HOMING_DIVE_UP', 'HOMING_DIVE_FORWARD_DOWN', 'HOMING_DIVE_DOWN'}:
             custom.setdefault(frame['animation'], []).append(i)
-        elif frame['animation'] in SPEED | FIXED.keys():
+        elif frame['animation'] in SPEED | fixed.keys():
             groups[frame['animation']].append((frame, i))
         elif frame['animation'] != 'NATIVE_POSE':
             raise ValueError('Unknown animation: ' + frame['animation'])
-    if set(groups) != SPEED | FIXED.keys():
+    required = set(handoff.get('requiredAnimations', SPEED | FIXED.keys()))
+    if not required <= SPEED | fixed.keys() or not required <= set(groups):
         raise ValueError('Missing canonical core animations')
     animations = {}
     for name, entries in groups.items():
@@ -74,7 +82,7 @@ def assemble(root, output):
                     raise ValueError('Four equal even slope cycles required')
                 spec.update(frames=cycles[0], slopes=cycles)
         else:
-            ticks, end = FIXED[name]
+            ticks, end = fixed[name]
             if name == 'SPRING' and len(indices) == 1:
                 ticks = 48  # SonAni_Spring has one mapping and delay $2F + 1.
             spec.update(durations=[ticks]*len(indices), end=end)
@@ -95,7 +103,7 @@ def assemble(root, output):
                     spec = dict(frames=[by_id[key] for key in steps],
                                 durations=durations, end=authored['end'])
                     if spec['end'] == 'next':
-                        if authored.get('next') not in SPEED | FIXED.keys():
+                        if authored.get('next') not in SPEED | fixed.keys():
                             raise ValueError('Invalid WAIT next animation')
                         spec['next'] = authored['next']
             if name == 'GET_AIR':
@@ -108,6 +116,28 @@ def assemble(root, output):
                 spec['frames'] = [by_id[key] for key in authored['frames']]
                 if name == 'SPINDASH':
                     spec['durations'] = [1] * len(spec['frames'])
+        # Other characters may supply their own native timer bytes and script order.
+        authored = handoff.get('scripts', {}).get(name) if character != 'mica' else None
+        if authored:
+            by_id = {f['id']: i for f, i in entries}
+            steps = authored['frames']
+            if not steps or any(key not in by_id for key in steps):
+                raise ValueError('Invalid authored script frames: ' + name)
+            spec['frames'] = [by_id[key] for key in steps]
+            if 'durations' in authored:
+                durations = authored['durations']
+                if len(durations) != len(steps) or any(type(t) is not int or not 1 <= t <= 256 for t in durations):
+                    raise ValueError('Invalid authored script durations: ' + name)
+                spec['durations'] = durations
+            if 'end' in authored:
+                if authored['end'] not in ('loop', 'hold', 'next'):
+                    raise ValueError('Invalid authored script end: ' + name)
+                spec['end'] = authored['end']
+                spec.pop('next', None)
+                if authored['end'] == 'next':
+                    if authored.get('next') not in groups:
+                        raise ValueError('Invalid next animation: ' + name)
+                    spec['next'] = authored['next']
         animations[name] = spec
     for name, indices in custom.items():
         animations[name] = dict(frames=indices, durations=[2]*len(indices), end='loop')
@@ -121,10 +151,10 @@ def assemble(root, output):
                     palette=['#%02X%02X%02X' % tuple(c) for c in colors],
                     frames=frames, animations=animations, nativeFrames=native_frames)
     output.mkdir(parents=True, exist_ok=True)
-    sheet.save(output / 'mica.png', transparency=0, bits=8)
-    (output / 'mica-sheet.yaml').write_text(json.dumps(manifest, indent=2)+'\n')
+    sheet.save(output / f'{character}.png', transparency=0, bits=8)
+    (output / f'{character}-sheet.yaml').write_text(json.dumps(manifest, indent=2)+'\n')
     # Frame inventory for reviewers and custom animation consumers.
-    (output / 'mica-custom-frames.json').write_text(json.dumps(custom, indent=2)+'\n')
+    (output / f'{character}-custom-frames.json').write_text(json.dumps(custom, indent=2)+'\n')
     stats = dict(frames=len(frames), maxTilesPerFrame=max_tiles, animations=len(animations))
     print(json.dumps(stats))
     return manifest, custom, stats

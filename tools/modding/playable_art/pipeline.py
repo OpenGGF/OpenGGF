@@ -155,6 +155,7 @@ def build(recipe_path, review=None):
                             angle_set=frame.get('angle_set','flat'), duration_ticks=frame.get('ticks',6),
                             notes=frame.get('notes','')))
     (root/'frames.yaml').write_text(json.dumps(dict(format='openggf-playable-art-handoff-1',
+        **{k: recipe[k] for k in ('character', 'requiredAnimations') if k in recipe},
         palette=recipe['palette'], facing='right', tick_rate=60, frames=records,
         **({'scripts': recipe['scripts']} if 'scripts' in recipe else {}),
         **({'nativeFrames': recipe['nativeFrames']} if 'nativeFrames' in recipe else {})), indent=2)+'\n')
