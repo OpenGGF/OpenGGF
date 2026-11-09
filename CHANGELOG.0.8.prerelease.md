@@ -147,6 +147,10 @@ under the matching area heading; see the
 
 ## Maintenance and release preparation
 
+- **Engine quality and contributions:** the README and contributor entry point now
+  acknowledge maintainability weaknesses and invite focused improvements to object
+  lifetime, collision contact, rewind reconstruction, trace diagnosis and navigation.
+
 - **Contributor readability:** live objects, slots and stable identities share
   population storage; actor reconstruction and contact memory have separate owners
   behind the existing runtime entry points. Mutable contact memory is package-private

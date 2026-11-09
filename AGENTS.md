@@ -109,7 +109,28 @@ Trace production lives in the optional pinned `tools/tracechaser/` submodule (`g
 
 ## Delivery and documentation
 
-Follow the user's integration flow. Never switch the main workspace's branch. New branches use isolated `.worktrees/` checkouts named `feature/ai-*` or `bugfix/ai-*`, based on the current main branch. Preserve unrelated work and dirty submodules.
+Default to PR-based delivery (`stage-to-PR`) unless the user establishes another
+flow. Select `develop` or `next` from the targeted release using
+`mod-api-release-policy.properties` and the destination's `pom.xml`; do not
+hard-code release numbers. With no other target established, use the main
+workspace's branch when it is `develop` or `next`. Ask only if the release target
+remains ambiguous. Fetch the selected destination and branch from its updated
+remote tip, even when the main workspace has another branch checked out.
+
+Never switch the main workspace's branch. Create isolated `.worktrees/`
+checkouts with branches named `feature/ai-*` or `bugfix/ai-*` using the cowtree
+skill's `git cowtree add` helper. Accept its normal-checkout fallback when
+reflinks are unavailable; never hard-link files. Preserve unrelated work and
+dirty submodules.
+
+Run the relevant required checks, commit, push the task branch, and create or
+update its PR against the selected destination. Routine task-branch updates,
+pushes and CI reruns are authorized. Leave the PR open for review unless the
+user explicitly authorizes merging (including Full Send). Do not locally merge
+into or push the destination in the default flow. Retain the task branch and
+worktree while the PR needs them; after merge, clean up only when every change
+is accounted for. Direct-to-dev-branch delivery requires explicit opt-in.
+Report the PR, tested commit, checks and remaining state.
 
 Install the hooks with `tools/testing/install-hooks.sh` (PowerShell: `tools/testing/install-hooks.ps1`) and never use `--no-verify`. Non-master, non-merge commits carry seven trailers, `Changelog`, `Guide`, `Known-Discrepancies`, `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs` and `Skills`, each starting `updated` or `n/a` and matching the staged files. A source `feat`, `fix` or `perf` needs a changelog entry or an inline reason.
 
