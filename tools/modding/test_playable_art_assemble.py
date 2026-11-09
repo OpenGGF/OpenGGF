@@ -98,14 +98,16 @@ class TalonAssemblyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             out = Path(directory)
             manifest, custom, stats = assembler.assemble(art, out)
-            self.assertEqual(74, stats['frames'])
+            self.assertEqual(82, stats['frames'])
             self.assertEqual(13, stats['animations'])
             self.assertFalse((out/'mica.png').exists())
             committed = ROOT/'examples/mica-and-talon/src/main/mod'
             for file in out.iterdir():
                 self.assertEqual(file.read_bytes(), (committed/file.name).read_bytes())
-            self.assertEqual([2,2],manifest['animations']['TAILS_FLY']['durations'])
-            self.assertEqual([12,12],manifest['animations']['TAILS_FLY_TIRED']['durations'])
+            self.assertEqual([2]*6,manifest['animations']['TAILS_FLY']['durations'])
+            self.assertEqual(6,len(set(manifest['animations']['TAILS_FLY']['frames'])))
+            self.assertEqual([4]*6,manifest['animations']['TAILS_FLY_TIRED']['durations'])
+            self.assertEqual(6,len(set(manifest['animations']['TAILS_FLY_TIRED']['frames'])))
             for name in ('ROLL','SPINDASH'):
                 seq=manifest['animations'][name]['frames']
                 self.assertEqual(6,len(seq))

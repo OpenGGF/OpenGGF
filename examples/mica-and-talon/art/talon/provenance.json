@@ -582,69 +582,97 @@
       "group": "fly",
       "cell": 0,
       "attempt": 2,
-      "native": {
-        "size": [
-          36,
-          32
-        ],
-        "hotspot": [
-          25,
-          20
-        ],
-        "mapping": 160,
-        "tail": 39
-      }
+      "wing_phase": "high V",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly2 cell 0; high V; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
     },
     "fly-01": {
       "group": "fly",
       "cell": 1,
-      "attempt": 2,
-      "native": {
-        "size": [
-          36,
-          32
-        ],
-        "hotspot": [
-          25,
-          20
-        ],
-        "mapping": 160,
-        "tail": 40
-      }
+      "attempt": 1,
+      "wing_phase": "upper downstroke extended",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly1 cell 1; upper downstroke extended; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
     },
     "fly_tired-00": {
       "group": "fly_tired",
       "cell": 0,
       "attempt": 2,
-      "native": {
-        "size": [
-          36,
-          32
-        ],
-        "hotspot": [
-          25,
-          20
-        ],
-        "mapping": 163,
-        "tail": 39
-      }
+      "wing_phase": "shallow raised droop",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 0; shallow raised droop; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
     },
     "fly_tired-01": {
       "group": "fly_tired",
       "cell": 1,
       "attempt": 2,
-      "native": {
-        "size": [
-          36,
-          32
-        ],
-        "hotspot": [
-          25,
-          20
-        ],
-        "mapping": 164,
-        "tail": 40
-      }
+      "wing_phase": "horizontal laboured downstroke",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 1; horizontal laboured downstroke; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly-02": {
+      "group": "fly",
+      "cell": 2,
+      "attempt": 2,
+      "wing_phase": "horizontal power stroke",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly2 cell 2; horizontal power stroke; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly-03": {
+      "group": "fly",
+      "cell": 3,
+      "attempt": 2,
+      "wing_phase": "low fully swept",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly2 cell 3; low fully swept; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly-04": {
+      "group": "fly",
+      "cell": 4,
+      "attempt": 1,
+      "wing_phase": "folded mid upstroke",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly1 cell 4; folded mid upstroke; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly-05": {
+      "group": "fly",
+      "cell": 5,
+      "attempt": 2,
+      "wing_phase": "upper recovery reopening",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly2 cell 5; upper recovery reopening; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly_tired-02": {
+      "group": "fly_tired",
+      "cell": 2,
+      "attempt": 2,
+      "wing_phase": "low shallow beat",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 2; low shallow beat; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly_tired-03": {
+      "group": "fly_tired",
+      "cell": 3,
+      "attempt": 2,
+      "wing_phase": "deep sag",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 3; deep sag; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly_tired-04": {
+      "group": "fly_tired",
+      "cell": 4,
+      "attempt": 2,
+      "wing_phase": "folded low recovery",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 4; folded low recovery; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly_tired-05": {
+      "group": "fly_tired",
+      "cell": 5,
+      "attempt": 2,
+      "wing_phase": "bent horizontal recovery",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 5; bent horizontal recovery; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
     }
   },
   "nativeScripts": {
@@ -717,8 +745,49 @@
   "limitations": [
     "Owner-requested blur interleaves adapt native three-frame Tails roll/spindash.",
     "Owner-requested single spring uses 48-tick hold; native Tails spring alternates two poses.",
-    "TAILS_FLY maps native single body A0 onto two integrated wing drawings synchronized with tail rotor.",
     "WAIT partial-loop start unsupported by current converter."
   ],
-  "cleanup": "Palette shading only: right/front shoe area on walk5-7 and run0-1 changes red to red-shadow and white to glove-shadow; no limb painting."
+  "cleanup": "Palette shading only: right/front shoe area on walk5-7 and run0-1 changes red to red-shadow and white to glove-shadow; no limb painting.",
+  "flightRound2": {
+    "review": "$HOME/scratch/agent-tmp/talon-flight-20261109/review.html",
+    "selection": {
+      "fly": [
+        "fly2",
+        "fly1",
+        "fly2",
+        "fly2",
+        "fly1",
+        "fly2"
+      ],
+      "fly_tired": [
+        "tired2",
+        "tired2",
+        "tired2",
+        "tired2",
+        "tired2",
+        "tired2"
+      ]
+    },
+    "phases": {
+      "fly": [
+        "high V",
+        "upper downstroke extended",
+        "horizontal power stroke",
+        "low fully swept",
+        "folded mid upstroke",
+        "upper recovery reopening"
+      ],
+      "fly_tired": [
+        "shallow raised droop",
+        "horizontal laboured downstroke",
+        "low shallow beat",
+        "deep sag",
+        "folded low recovery",
+        "bent horizontal recovery"
+      ]
+    },
+    "body": "Fixed generated plate per cycle; no bob. Crop 480x480 before uniform 10:1 reduction; goggle translation only.",
+    "timing": "Six frames x2 ticks flight; six x4 tired. Sheet scripts drive host 0x20/0x24 without native count truncation.",
+    "method": "Built-in GPT Image whole strips, two attempts per cycle; tired attempt 1 rejected for white halo. No painted contours."
+  }
 }

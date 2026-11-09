@@ -468,12 +468,12 @@
       "order": 0,
       "file": "frames/fly-00.png",
       "hotspot": [
-        21,
+        19,
         20
       ],
       "angle_set": "flat",
-      "duration_ticks": 6,
-      "notes": "Built-in GPT Image fly strip attempt 2, cell 0; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "duration_ticks": 2,
+      "notes": "Flight round 2: fly2 cell 0; high V; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
     },
     {
       "id": "fly-01",
@@ -481,12 +481,64 @@
       "order": 1,
       "file": "frames/fly-01.png",
       "hotspot": [
-        25,
-        19
+        22,
+        14
       ],
       "angle_set": "flat",
-      "duration_ticks": 6,
-      "notes": "Built-in GPT Image fly strip attempt 2, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "duration_ticks": 2,
+      "notes": "Flight round 2: fly1 cell 1; upper downstroke extended; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    {
+      "id": "fly-02",
+      "animation": "TAILS_FLY",
+      "order": 2,
+      "file": "frames/fly-02.png",
+      "hotspot": [
+        21,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Flight round 2: fly2 cell 2; horizontal power stroke; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    {
+      "id": "fly-03",
+      "animation": "TAILS_FLY",
+      "order": 3,
+      "file": "frames/fly-03.png",
+      "hotspot": [
+        16,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Flight round 2: fly2 cell 3; low fully swept; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    {
+      "id": "fly-04",
+      "animation": "TAILS_FLY",
+      "order": 4,
+      "file": "frames/fly-04.png",
+      "hotspot": [
+        20,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Flight round 2: fly1 cell 4; folded mid upstroke; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    {
+      "id": "fly-05",
+      "animation": "TAILS_FLY",
+      "order": 5,
+      "file": "frames/fly-05.png",
+      "hotspot": [
+        19,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Flight round 2: fly2 cell 5; upper recovery reopening; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
     },
     {
       "id": "fly_tired-00",
@@ -494,12 +546,12 @@
       "order": 0,
       "file": "frames/fly_tired-00.png",
       "hotspot": [
-        25,
-        18
+        21,
+        15
       ],
       "angle_set": "flat",
-      "duration_ticks": 6,
-      "notes": "Built-in GPT Image fly_tired strip attempt 2, cell 0; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "duration_ticks": 4,
+      "notes": "Flight round 2: tired2 cell 0; shallow raised droop; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
     },
     {
       "id": "fly_tired-01",
@@ -508,11 +560,63 @@
       "file": "frames/fly_tired-01.png",
       "hotspot": [
         22,
-        20
+        15
       ],
       "angle_set": "flat",
-      "duration_ticks": 6,
-      "notes": "Built-in GPT Image fly_tired strip attempt 2, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "duration_ticks": 4,
+      "notes": "Flight round 2: tired2 cell 1; horizontal laboured downstroke; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    {
+      "id": "fly_tired-02",
+      "animation": "TAILS_FLY_TIRED",
+      "order": 2,
+      "file": "frames/fly_tired-02.png",
+      "hotspot": [
+        21,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Flight round 2: tired2 cell 2; low shallow beat; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    {
+      "id": "fly_tired-03",
+      "animation": "TAILS_FLY_TIRED",
+      "order": 3,
+      "file": "frames/fly_tired-03.png",
+      "hotspot": [
+        18,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Flight round 2: tired2 cell 3; deep sag; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    {
+      "id": "fly_tired-04",
+      "animation": "TAILS_FLY_TIRED",
+      "order": 4,
+      "file": "frames/fly_tired-04.png",
+      "hotspot": [
+        21,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Flight round 2: tired2 cell 4; folded low recovery; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    {
+      "id": "fly_tired-05",
+      "animation": "TAILS_FLY_TIRED",
+      "order": 5,
+      "file": "frames/fly_tired-05.png",
+      "hotspot": [
+        21,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Flight round 2: tired2 cell 5; bent horizontal recovery; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
     },
     {
       "id": "walk-up45-00",
@@ -1176,9 +1280,17 @@
     "TAILS_FLY": {
       "frames": [
         "fly-00",
-        "fly-01"
+        "fly-01",
+        "fly-02",
+        "fly-03",
+        "fly-04",
+        "fly-05"
       ],
       "durations": [
+        2,
+        2,
+        2,
+        2,
         2,
         2
       ],
@@ -1187,11 +1299,19 @@
     "TAILS_FLY_TIRED": {
       "frames": [
         "fly_tired-00",
-        "fly_tired-01"
+        "fly_tired-01",
+        "fly_tired-02",
+        "fly_tired-03",
+        "fly_tired-04",
+        "fly_tired-05"
       ],
       "durations": [
-        12,
-        12
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
       ],
       "end": "loop"
     },
