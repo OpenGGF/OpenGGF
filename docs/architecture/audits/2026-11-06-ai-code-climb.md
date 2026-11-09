@@ -3959,3 +3959,30 @@ explicit in the logs. This bounded selection is not combined-head, route or
 full-suite qualification. Root owns independent review, combined qualification
 and delivery through the same draft PR271; no original trial is regraded and
 no rubric credit is inferred.
+
+
+### Native SST source composition (2026-11-09)
+
+Root expanded the compressed registration helper in `ObjectNativeSstOverwrite`
+from 137 to 197 lines: one mutation per line, explicit nested loops/conditionals,
+readable record components and four local-name expansions (`s`, `o`, `a`, `found`).
+No helper/facade, API, ownership operation or algorithm was introduced. The partial
+write, fixed/prefix replacement, collision rebinding, callback and cursor paths
+remain separate and ordered as before.
+
+The lexical proof preserves every non-brace token after the explicit alpha-name
+mapping, all nine comments modulo whitespace, and every literal/operator/call.
+Fourteen added brace pairs wrap only prior single statements or nested loop bodies
+(3 in create, 6 in replaceValidated, 3 in currentOwner, 1 each in occupant/residue).
+That proof does not replace review of block association. Four existing native
+query/fixed/prefix/word2C suites passed **67 distinct cases**, zero failures/errors
+or skips. Queue was 0s, Maven 92s (rounded), wall 93.286s, user wait 0s and residual
+1.286s. Source hashes stayed frozen; edit/coordination time was not separately
+measured. These are source-composition and focused
+registration checks, not an ownership redesign, combined smoke or rubric grade.
+
+The prepared projection, before-source snapshot, token proof, exact command,
+source hashes and fresh XML remain in `target/code-climb/native-sst-readability/`.
+The component is based on the verified range commit `4b1df83611a3`; root independently
+checked its four touched Java hashes and 60 distinct passing XML identities.
+Separate carried-entry integration and combined qualification remain pending.
