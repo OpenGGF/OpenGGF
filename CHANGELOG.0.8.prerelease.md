@@ -199,7 +199,9 @@ under the matching area heading; see the
   Ordinary family/reference/coverage guidance points to the actual owners.
   Compact and scalar subclass fields share hierarchy ownership; diagnostic tools
   check actual capture membership and distinguish structural handles from dropped
-  state. Pixel-oracle failures retain the rendering mode and captured frame.
+  state. Mantis declares its captured parent/child references on their fields;
+  scalar fallback still reports links it omits. Pixel-oracle failures retain the
+  rendering mode and captured frame.
   Production badnik and contact witnesses, shared coarse-X arithmetic with
   explicit native/wider bounds, and
   a typed rewind HUD frame make contribution paths easier to follow. HCZ owns

@@ -507,6 +507,25 @@ actual projection. The shared built-in catalogue identifies replaceable renderer
 caches and final engine handles as structural, without claiming they are captured.
 A replaceable tile descriptor needs captured state or an explicit exclusion.
 
+For an ordinary actor's mutable `ObjectInstance` link that must retain its exact
+managed identity, declare `@RewindCapturedReference(reason = "...")` on the field.
+Mantis declares both its `child` and the child's `parent` this way, replacing their
+two central string-keyed exceptions. `DefaultObjectRewindPolicies` interprets the
+declaration before its legacy catalogue and field-name defaults; those defaults
+remain compatibility rules for unmarked fields. The declaration uses the existing
+strict object-reference codec and does not supply a constructor or parent lookup.
+
+Static, Java-transient, synthetic, `@RewindTransient` and `@RewindDeferred` fields
+remain excluded. A marked final reference or a non-`ObjectInstance` field is invalid.
+General/manual schemas retain their existing higher-priority registry policies.
+The marker is engine-internal and is not a creator Mod API annotation.
+
+The declaration requests capture in the compact projection. It does not add a
+reference to legacy scalar fallback: an unsupported field elsewhere in a concrete
+subclass can still make that class omit the link. Check the concrete selection
+API above, and keep the coverage, inventory and disposition checks reporting that
+omission. Constructor-established links and recreation remain separate contracts.
+
 The inventory and coverage checks use this selection. Coverage also inspects the
 badnik base under its separate manual rules. Queries can initialize cached runtime
 schemas and allocate schema IDs; planning errors fail the inventory. The selection
