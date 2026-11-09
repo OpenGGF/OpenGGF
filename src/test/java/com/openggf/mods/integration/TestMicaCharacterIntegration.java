@@ -1158,8 +1158,10 @@ class TestMicaCharacterIntegration {
         assertEquals(com.openggf.game.mutators.HomingAttackRuntime.Phase.HOMING, runtime.phase());
         assertEquals(powered ? com.openggf.game.mutators.HomingAttackRuntime.Mode.INSTAGIB
                 : com.openggf.game.mutators.HomingAttackRuntime.Mode.HOMING, runtime.capture().launchMode());
-        assertTrue(List.of(284, 285, 286, 287).contains(player.getMappingFrame()),
-                "The strike selects the authored dive pose");
+        // The Buzzer sits ahead and above, so the strike flies forward-up
+        // (HOMING_DIVE_FORWARD_UP, sheet frames 120-123 after the 256 native frames).
+        assertTrue(List.of(376, 377, 378, 379).contains(player.getMappingFrame()),
+                "The strike selects the authored forward-up dive pose: " + player.getMappingFrame());
         assertEquals(player.resolveAnimationId(CanonicalAnimation.ROLL), player.getAnimationId(),
                 "The visual dive must retain native roll attack semantics");
         var strike = registry.capture();
@@ -1390,8 +1392,8 @@ class TestMicaCharacterIntegration {
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(
                     packed.getInputStream(packed.getJarEntry("art/mica.ggfp")).readAllBytes());
             assertEquals(132, sheet.frames().size());
-            assertEquals(18, sheet.animations().size());
-            assertEquals(List.of(28, 29, 30, 31), sheet.animations().get("HOMING_DIVE").steps()
+            assertEquals(22, sheet.animations().size());
+            assertEquals(List.of(27, 28, 29, 30), sheet.animations().get("HOMING_DIVE").steps()
                     .stream().map(com.openggf.level.objects.PlayableSheetReader.AnimationStep::frameIndex).toList());
             assertEquals(List.of(8, 8, 8, 8), sheet.animations().get("WALK").slopes()
                     .stream().map(List::size).toList());
