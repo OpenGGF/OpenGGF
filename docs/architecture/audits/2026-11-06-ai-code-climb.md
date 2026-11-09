@@ -4432,3 +4432,45 @@ certify a clean route or every getter cadence. No new behavior test was needed
 for the literal movement. Independent correctness review, combined smoke,
 matched replay qualification and publication remain root-owned and pending for
 this increment. No push, destination update or PR write was performed here.
+
+
+### Primary replay route composition (2026-11-09)
+
+After publication of `85d9e60ea1`, Sol extracted the complete general comparison
+loop into one private, same-file `void replayGeneralTrace` method with six
+existing collaborators. The entry method is 381 to 263 lines; all 120 moved
+lines and 767 executable tokens retain their order. Inlining the call and
+removing the helper reconstructs the entire original class byte-for-byte. The
+S3K helper, outer catch/finally and both outer frontier reads remain exact.
+The S3K boolean still means hardware timing already closed, not completion.
+Five in-memory negative controls break the proof as intended; they are not
+shipped defects or runtime mutation tests. No new context, result model, API,
+field, fixture, tolerance or gameplay authority is added.
+
+One normal-memory queued selection passes **53 unique cases in seven suites,
+zero failures/errors/skips**, including the real inherited S2 completion/frontier
+cases and source-sensitive replay/life-count guards. Root independently checked
+the source hash and all seven fresh XML hashes/identities. This proves the
+selected paths only; it is not a clean whole-leaf, combined smoke or full-suite
+result. Exact argv, source reconstruction and receipts are retained in
+`target/code-climb/replay-flow-readability/`. Queue/Maven/wall times are
+0/39.500/39.571 seconds, user wait zero and residual 0.071 seconds. Editing and
+coordination time were not measured. Existing warnings remain in the logs.
+
+The diagnosis guide now presents the normal first-HCZ journey in four steps
+before scope controls and producer/freshness exceptions. The primary route is
+49 lines including its heading; the complete section grows from 115 to 126
+lines because all material caveats are retained. It does not claim whole-file
+shrinkage or a score improvement. The skill corrects first HCZ versus HCZ2 and
+links to that recipe without duplicating it. The segment-profile POM comment
+uses the queued concrete-class example; every byte outside that comment is
+unchanged. Fixture metadata is untouched.
+
+Root checked all 25 relative links in the guide and skill, unchanged link
+multisets, code fences, the new command's shell syntax, XML syntax, exact POM
+comment isolation and the generated skill mirror. The fresh-output properties,
+completion/scope rules, absent-gate behavior, carried-entry limits and retirement
+caveats remain explicit. No new trace invocation was run for documentation.
+`target/code-climb/replay-flow-route-review/` retains the root verification.
+Independent Opus review and combined qualification remain pending; this local
+increment is not pushed. The same draft PR271 remains the sole destination.

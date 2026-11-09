@@ -593,34 +593,54 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCou
 
 ### Diagnose one trace replay
 
-Start at the concrete test class: its `game()`, `zone()`, `act()` and
-`traceDirectory()` identify the engine entry and fixture. Read that fixture's
-`metadata.json` for the recorded team, row count and `source_bk2`. The replay
-loader first checks the fixture parent's `_movies/<source_bk2>`, then the run-root
-movie beside the segment directories, then a retained `.bk2` in the fixture
-directory. Sonic/Tails run segments use the run-root placement; not every movie
-lives in the game's `_movies/` pool. A missing movie can skip the test.
+1. **Run one concrete leaf with fresh output.** Use Java 25. The first HCZ
+   Sonic/Tails leaf (`hcz`, recorded act 1 / engine act index 0) uses
+   `trace-segments`. Choose unused output directories for each invocation
+   (here `hcz-attempt-1`):
 
-Find the current lane in the `trace-replay`, `trace-replay-r7` and
-`trace-segments` profiles in [root pom.xml](../../../pom.xml).
-The [release-scope record](../../status/trace-scope-release-6.md) describes historical
-scope; its status table and a test's comments are not current results. The first
-HCZ Sonic/Tails leaf (`hcz`, recorded act 1 / engine act index 0) is standalone
-segment instrumentation. Its lane is `trace-segments`, while run chains supply
-release-gate evidence:
+   ```bash
+   python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments \
+     -Dsurefire.forkCount=1 -Dtrace.print.summary=true \
+     -Dopenggf.surefire.reports=target/hcz-attempt-1/surefire \
+     -Dopenggf.trace.reports=target/hcz-attempt-1/trace-reports \
+     '-Dtest=TestS3kSonicTailsHczSegmentTraceReplay' test
+   ```
 
-```bash
-python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments \
-  -Dsurefire.forkCount=1 -Dtrace.print.summary=true \
-  '-Dtest=TestS3kSonicTailsHczSegmentTraceReplay' test
-```
+2. **Check prerequisites and this invocation's result.** Check the wrapper's
+   verified-ROM discovery line, fixture payload and referenced movie (lookup
+   below). Read this class's fresh Surefire result in
+   `target/hcz-attempt-1/surefire/`. Confirm the invocation executed without
+   errors or skips and reached its intended gate; setup failures and prerequisite
+   skips may leave an older same-test artifact.
 
-This leaf ends at the giant-ring transition into `ss_5`. For the act-spanning
-neighbour, select `TestS3kSonicTailsHcz2SegmentTraceReplay` with the same command.
-Its `Hcz2` identifies directory `hcz_2`, the second HCZ segment, not an act-2-only
-test. It enters engine act index 0 and crosses the act transition.
-Use metadata and recorded `zone_act_state` events to locate the mismatch's act;
-the copied run-wide notes and the report's initial logical key are insufficient.
+3. **Execute the printed triage command.** The standalone
+   `AbstractTraceReplayTest` driver prints its concrete test, resolved fixture,
+   exact report and a copyable triage command; `trace.print.summary=true` prints
+   that route on success too. Execute the actual command to inspect the report,
+   sibling context and fixture's plain or compressed auxiliary evidence without
+   finding hashed report names yourself.
+
+4. **Interpret the gate and coverage limits.** The triage brief distinguishes a
+   completed comparison gate, an incomplete prefix and reports with no published
+   gate, whose completion is UNKNOWN. Triage reads saved evidence and does not
+   certify freshness or process success. Planned trace rows and gameplay
+   comparisons count different boundaries, so totals need not match. Auxiliary
+   availability is best effort: an absent or unrecognised optional field does
+   not establish full reference coverage. Standalone segments are instrumentation;
+   run chains supply release-gate evidence. A completed leaf does not establish
+   run-chain parity.
+
+   For a real divergence, read the
+   [trace diagnosis procedure](../../../.agents/skills/trace-replay-bug-fixing/SKILL.md)
+   and its linked measurement hazards before reporting counts or changing code.
+   Comparison spans use the loaded `TraceFrame.frame()` key from the CSV; the
+   replay loop's row ordinal and ROM counters are separate. Check each auxiliary
+   lookup's key rather than assuming the numbers coincide. Trace comparisons do
+   not authorise copying observed gameplay state into the engine. Record new
+   measured frontiers in the existing [frontier log](../../status/trace-frontier-log.md),
+   with the tested commit and command.
+
+#### Scope controls and shortened runs
 
 `-Dtrace.verification=all|physics|animation` selects the verification scope
 (default `all`); animation-only requires CSV v7 character-animation fields.
@@ -645,23 +665,34 @@ gate. `-Dtrace.print.context=true` prints the first error's context to stderr.
 both report windows and frontier stopping. These switches do not relax assertions
 or make a shortened prefix complete.
 
-Use Java 25. Check the wrapper's verified-ROM discovery line and ensure the
-fixture payload and referenced movie are available. The standalone
-`AbstractTraceReplayTest` driver prints its concrete test, resolved fixture,
-exact published report and a copyable triage
-command. `trace.print.summary=true` also prints that route for a successful
-replay. Copy the command to inspect the report, its sibling context and the
-fixture's plain or compressed auxiliary evidence without finding hashed report
-names yourself.
+#### Fixture lookup, producer differences and freshness exceptions
 
-After completion, read this class's fresh Surefire result under
-`target/surefire-reports/`. The triage brief distinguishes a completed comparison
-gate, an incomplete prefix and reports with no published gate, whose completion
-is unknown. Some current special-stage/credits producers also omit this metadata
-and do not print the standalone diagnostic route; inspect their own publication
-and Surefire evidence. Credits currently publish only on divergence, so even a
-clean rerun can leave an older failing report. UNKNOWN does not by itself mean an
-old file.
+The concrete test's `game()`, `zone()`, `act()` and `traceDirectory()` identify
+the engine entry and fixture. Read its `metadata.json` for the recorded team,
+row count and `source_bk2`. The replay loader first checks the fixture parent's
+`_movies/<source_bk2>`, then the run-root movie beside the segment directories,
+then a retained `.bk2` in the fixture directory. Sonic/Tails run segments use
+the run-root placement; not every movie lives in the game's `_movies/` pool.
+A missing movie can skip the test.
+
+Find current lane membership in the `trace-replay`, `trace-replay-r7` and
+`trace-segments` profiles in [root pom.xml](../../../pom.xml).
+The [release-scope record](../../status/trace-scope-release-6.md) describes historical
+scope; its status table and a test's comments are not current results.
+The first HCZ leaf ends at the giant-ring transition into `ss_5`. For the
+act-spanning neighbour, select `TestS3kSonicTailsHcz2SegmentTraceReplay` with the
+same command and fresh output directories. Its `Hcz2` identifies directory
+`hcz_2`, the second HCZ segment, not an act-2-only test. It enters engine act
+index 0 and crosses the act transition. Use metadata and recorded
+`zone_act_state` events to locate the mismatch's act; copied run-wide notes and
+the report's initial logical key are insufficient.
+
+Some current special-stage/credits producers omit gate metadata and do not
+print the standalone diagnostic route; inspect their own publication and
+Surefire evidence. Credits currently publish only on divergence, so even a
+clean rerun can leave an older failing report. UNKNOWN does not by itself mean
+an old file.
+
 Standalone level reports may also publish `carried_entry_diagnostics`: the
 provenance, disagreements and unresolved notes from the entry evaluation that
 was already computed by the one carried-state import. Triage lists those strings
@@ -673,35 +704,15 @@ that evaluation. Special-stage, credits and continuous drivers do not acquire
 this standalone diagnostic claim. Malformed present diagnostics fail evidence
 reading with CLI status 1 and no brief; older reports without them remain readable.
 
-Planned trace rows and gameplay comparisons count different boundaries; their
-totals need not match. Auxiliary-availability notes are best effort: an absent or
-unrecognised optional field does not establish full reference coverage. Triage
-reads saved evidence and does not certify its freshness or process success. Confirm this invocation executed without errors
-or skips and reached its intended gate. Setup failures and prerequisite skips may
-happen before a new report is published, leaving an older same-test artifact.
-Use fresh `-Dopenggf.surefire.reports=target/<attempt>/surefire` and
-`-Dopenggf.trace.reports=target/<attempt>/trace-reports` directories when retaining
-an invocation; an owner hash distinguishes tests, not freshness. Preserve prior
-evidence before clearing generated reports, and keep output in this worktree's
-`target/`.
-
 On method entry, the standalone driver retires earlier report/context/owner files
 only when their sidecar verifies this invocation, lane and verification scope.
 It preserves unverified or foreign artifacts, and leaves the whole triple when
 the context path is a link or directory. Retirement is also disabled if the report
 path or any ancestor is symbolic, even though publication can follow that link.
 Conditions and extensions that prevent method entry cannot use retirement, so
-it does not replace fresh output directories and Surefire evidence.
-
-For a real divergence, read the
-[trace diagnosis procedure](../../../.agents/skills/trace-replay-bug-fixing/SKILL.md)
-and its linked measurement hazards before reporting counts or changing code.
-Comparison spans use the loaded `TraceFrame.frame()` key from the CSV; the replay
-loop's row ordinal and ROM counters are separate. Check each auxiliary lookup's
-key rather than assuming the numbers coincide;
-trace comparisons do not authorise copying observed gameplay state into the
-engine. Record new measured frontiers in the existing
-[frontier log](../../status/trace-frontier-log.md), with the tested commit and command.
+it does not replace fresh output directories and Surefire evidence. An owner
+hash distinguishes tests, not freshness. Preserve prior evidence before clearing
+generated reports, and keep output in this worktree's `target/`.
 
 For the full workflow, including recording traces and reading divergence reports, see
 [Trace Replay Testing](trace-replay.md).

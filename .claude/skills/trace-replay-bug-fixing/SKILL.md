@@ -24,7 +24,9 @@ Confirm the requested concrete test exists and which fixture/segments it drives.
 
 Choose the concrete invocation through
 [diagnose one trace replay](../../../docs/guide/contributing/testing.md#diagnose-one-trace-replay),
-which gives the HCZ2 segment command, fixture/movie lookup and printed triage route.
+which starts with the first HCZ Sonic/Tails leaf and names HCZ2 as its act-spanning
+neighbour. It gives the queued fresh-output command, fixture/movie lookup and
+printed triage route.
 
 The ordinary suite excludes replay tests. `trace-replay` covers the release-6
 gate, `trace-replay-r7` the deferred gate, and `trace-segments` standalone run
