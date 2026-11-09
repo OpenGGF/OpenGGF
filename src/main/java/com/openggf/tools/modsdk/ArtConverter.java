@@ -209,7 +209,7 @@ public final class ArtConverter {
         }
     }
     public record PlayableAnimation(List<Integer> frames, List<Integer> durations, boolean speedDriven,
-            String end, String next, List<List<Integer>> slopes) {}
+            String end, String next, List<List<Integer>> slopes, int loopBackSteps) {}
 
     Manifest readManifest(Path path) throws IOException {
         try (var parser = yaml.createParser(readBounded(path, limits.maxMetadataBytes(), "Art manifest exceeds metadata byte limit"))) {

@@ -46,7 +46,9 @@ under the matching area heading; see the
   homing (including an untargeted forward
   dash), a four-frame HOMING_DIVE pose, and powered Instagib strikes. Its
   rerunnable original sheet has 112 frames, 18 canonical animations, slope cycles,
-  a shared palette and a breathing/fidget idle. Native object mapping bytes can
+  a shared palette and a breathing/fidget idle. Canonical sheets preserve native
+  partial-loop WAIT tails and finite hold/next endings; MICA and TALON skip
+  their idle intros after the first pass. Native object mapping bytes can
   bind semantic sheet poses; MICA supplies three native-reference hang poses for
   vines and grapples, reuses fourteen existing native mapping poses for turns, rolls, riding,
   bar release and crane release, and names canonical fallbacks for remaining raw poses. The

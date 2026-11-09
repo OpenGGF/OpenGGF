@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -13,6 +14,26 @@ spec.loader.exec_module(assembler)
 
 
 class PlayableArtAssemblyTest(unittest.TestCase):
+    def test_authored_finite_scripts_and_invalid_rewind(self):
+        art = ROOT/'examples/mica-and-talon/art/mica'
+        handoff = json.loads((art/'frames.yaml').read_text())
+        palette = json.loads((art/'palette.yaml').read_text())
+        for name in ('BLINK', 'GET_UP'):
+            frame = dict(handoff['frames'][0], id=name.lower(), animation=name, order=0)
+            handoff['frames'].append(frame)
+            handoff['scripts'][name] = dict(frames=[frame['id']], durations=[2],
+                                           end='hold' if name == 'BLINK' else 'next')
+        handoff['scripts']['GET_UP']['next'] = 'WALK'
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(assembler.json, 'loads', side_effect=[handoff, palette]):
+                manifest, _, _ = assembler.assemble(art, Path(directory))
+            self.assertEqual('hold', manifest['animations']['BLINK']['end'])
+            self.assertEqual('WALK', manifest['animations']['GET_UP']['next'])
+            handoff['scripts']['WAIT']['loopBackSteps'] = 0
+            with patch.object(assembler.json, 'loads', side_effect=[handoff, palette]):
+                with self.assertRaisesRegex(ValueError, 'loopBackSteps'):
+                    assembler.assemble(art, Path(directory))
+
     def test_roundtrip_pixels_hotspots_slopes_and_custom_hook(self):
         art = ROOT/'examples/mica-and-talon/art/mica'
         source = json.loads((art/'frames.yaml').read_text())['frames']
@@ -47,7 +68,8 @@ class PlayableArtAssemblyTest(unittest.TestCase):
                 for slope, cycle in zip(assembler.SLOPES,cycles):
                     self.assertTrue(all(source[i]['angle_set']==slope for i in cycle))
             idle = manifest['animations']['WAIT']
-            self.assertEqual('loop', idle['end'])
+            self.assertEqual('loop-back', idle['end'])
+            self.assertEqual(6, idle['loopBackSteps'])
             native = json.loads((art/'round3/native-scripts.json').read_text())
             self.assertEqual(native['WAIT']['mappingSequence'],
                              [source[i]['order']+1 for i in idle['frames']])
@@ -100,6 +122,8 @@ class TalonAssemblyTests(unittest.TestCase):
             manifest, custom, stats = assembler.assemble(art, out)
             self.assertEqual(82, stats['frames'])
             self.assertEqual(13, stats['animations'])
+            self.assertEqual('loop-back', manifest['animations']['WAIT']['end'])
+            self.assertEqual(28, manifest['animations']['WAIT']['loopBackSteps'])
             self.assertFalse((out/'mica.png').exists())
             committed = ROOT/'examples/mica-and-talon/src/main/mod'
             for file in out.iterdir():

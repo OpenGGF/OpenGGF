@@ -56,6 +56,7 @@ public final class PlayableArtConverter {
                     steps.add(new PlayableSheetReader.AnimationStep(spec.frames().get(i),
                             spec.speedDriven() ? 1 : spec.durations().get(i), false));
                 var action = switch (spec.end() == null ? "loop" : spec.end()) {
+                    case "loop-back" -> com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP_BACK;
                     case "loop" -> com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP;
                     case "hold" -> com.openggf.sprites.animation.SpriteAnimationEndAction.HOLD;
                     case "next" -> com.openggf.sprites.animation.SpriteAnimationEndAction.SWITCH;
@@ -63,7 +64,7 @@ public final class PlayableArtConverter {
                 };
                 animations.put(entry.getKey(), new PlayableSheetReader.Animation(steps, spec.speedDriven(),
                         action, spec.next() == null ? "WAIT" : spec.next(),
-                        spec.slopes() == null ? List.of() : spec.slopes()));
+                        spec.slopes() == null ? List.of() : spec.slopes(), spec.loopBackSteps()));
             }
             int paletteLine = base.palette().map(BakedSheetReader.Palette::line).orElseThrow(
                     () -> new IllegalArgumentException("Playable art requires a 16-color palette"));

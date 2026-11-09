@@ -33,6 +33,9 @@ class TestCanonicalPlayableSheet {
         var host = module.getDonorCapabilities();
         var nativeArt = host.getPlayerArtProvider(RomByteReader.fromRom(TestEnvironment.currentRom())).loadPlayerSpriteArt("sonic");
         var source = sheet();
+        verifyEndings(source, module, nativeArt);
+        if (host.hasSidekick()) verifyEndings(source, module, host.getPlayerArtProvider(
+                RomByteReader.fromRom(TestEnvironment.currentRom())).loadPlayerSpriteArt("tails"));
         assertSame(nativeArt, PlayableSheetAnimationBinding.bind(nativeArt, host,
                 (ScriptedVelocityAnimationProfile) nativeArt.animationProfile()), "stock art is untouched");
         var aliasKey = host.getNativeFramePoses().entrySet().iterator().next();
@@ -108,6 +111,61 @@ class TestCanonicalPlayableSheet {
                 reference.getAnimationManager().update(clock);
                 authored.getAnimationManager().update(clock);
                 assertEquals(reference.getAnimationTick(), authored.getAnimationTick(), "native timer at " + clock);
+            }
+        }
+    }
+
+    private void verifyEndings(SpriteArtSet source, GameModule module, SpriteArtSet nativeArt) {
+        var host = module.getDonorCapabilities();
+        int waitId = host.resolveNativeId(CanonicalAnimation.WAIT);
+        int rewind = nativeArt.animationSet().getScript(waitId).endParam();
+        int delay = nativeArt.animationSet().getScript(waitId).delay();
+        assertTrue(Set.of(2, 6, 28, 53).contains(rewind));
+        var scripts = new SpriteAnimationSet();
+        source.animationSet().getAllScripts().forEach(scripts::addScript);
+        var frames = new ArrayList<Integer>();
+        for (int i = 0; i < rewind + 3; i++) frames.add(i < 3 ? 0 : 1);
+        scripts.addScript(CanonicalAnimation.WAIT.ordinal(), new SpriteAnimationScript(delay, frames,
+                SpriteAnimationEndAction.LOOP_BACK, rewind));
+        scripts.addScript(CanonicalAnimation.BLINK.ordinal(), new SpriteAnimationScript(1, List.of(2, 3),
+                SpriteAnimationEndAction.HOLD, 0));
+        scripts.addScript(CanonicalAnimation.GET_UP.ordinal(), new SpriteAnimationScript(3, List.of(4),
+                SpriteAnimationEndAction.SWITCH, CanonicalAnimation.WALK.ordinal()));
+        var authored = new SpriteArtSet(source.artTiles(), source.mappingFrames(), source.dplcFrames(),
+                source.paletteIndex(), source.basePatternIndex(), source.frameDelay(), source.bankSize(),
+                source.animationProfile(), scripts);
+        var bound = PlayableSheetAnimationBinding.bind(authored, host,
+                (ScriptedVelocityAnimationProfile) nativeArt.animationProfile());
+        assertEquals(rewind, bound.animationSet().getScript(waitId).endParam());
+        var idle = sprite(bound, module, 0);
+        idle.setAnimationId(waitId);
+        for (int clock = 0; clock <= (rewind + 3) * (delay + 1); clock++) {
+            idle.getAnimationManager().update(clock);
+            assertEquals(clock < 3 * (delay + 1) ? 0 : 1, idle.getMappingFrame(), "WAIT at " + clock);
+        }
+        assertEquals(4, idle.getAnimationFrameIndex(), "FE publishes first tail entry immediately");
+        for (var key : List.of(CanonicalAnimation.BLINK, CanonicalAnimation.GET_UP)) {
+            int id = host.resolveNativeId(key);
+            if (id < 0) continue;
+            var finite = sprite(bound, module, 0);
+            finite.setAnimationId(id);
+            // External animation ownership: hosts without S2 Sonic's deep-idle
+            // interrupt otherwise publish WAIT before executing this script.
+            finite.setMoveLockTimer(32);
+            for (int clock = 0; clock < 4; clock++) {
+                finite.getAnimationManager().update(clock);
+                assertEquals(id, finite.getAnimationId());
+            }
+            finite.getAnimationManager().update(4);
+            if (key == CanonicalAnimation.BLINK) {
+                for (int clock = 5; clock < 24; clock++) {
+                    finite.getAnimationManager().update(clock);
+                    assertEquals(3, finite.getMappingFrame());
+                    assertEquals(id, finite.getAnimationId());
+                }
+            } else {
+                assertEquals(host.resolveNativeId(CanonicalAnimation.WALK), finite.getAnimationId());
+                assertEquals(4, finite.getMappingFrame(), "FD defers target frame until next update");
             }
         }
     }

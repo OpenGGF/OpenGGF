@@ -17,7 +17,7 @@ FIXED = {'WAIT': (6, 'loop'), 'SPINDASH': (1, 'loop'), 'DUCK': (6, 'hold'),
          'SPRING': (24, 'next'), 'BALANCE': (10, 'loop'), 'HURT': (65, 'loop'),
          'DEATH': (33, 'loop'), 'DROWN': (33, 'loop'), 'GET_AIR': (12, 'next'),
          'HANG': (2, 'loop')}
-OPTIONAL = {'FLY': (2, 'loop'), 'TAILS_FLY': (2, 'loop'),
+OPTIONAL = {'BLINK': (2, 'next'), 'GET_UP': (4, 'next'), 'FLY': (2, 'loop'), 'TAILS_FLY': (2, 'loop'),
             'TAILS_FLY_TIRED': (12, 'loop')}
 
 SPEED = {'WALK', 'RUN', 'ROLL', 'PUSH'}
@@ -92,20 +92,6 @@ def assemble(root, output):
                 # Legacy four-pose handoffs retain the 31*6-tick stock wait.
                 # Authored scripts can animate that interval using repeated poses.
                 spec['durations'] = [186, 6, 30, 18]
-                authored = handoff.get('scripts', {}).get('WAIT')
-                if authored:
-                    by_id = {f['id']: i for f, i in entries}
-                    steps, durations = authored['frames'], authored['durations']
-                    if (not steps or len(steps) != len(durations)
-                            or any(type(t) is not int or not 1 <= t <= 256 for t in durations)
-                            or authored['end'] not in ('loop', 'hold', 'next')):
-                        raise ValueError('Invalid authored WAIT script')
-                    spec = dict(frames=[by_id[key] for key in steps],
-                                durations=durations, end=authored['end'])
-                    if spec['end'] == 'next':
-                        if authored.get('next') not in SPEED | fixed.keys():
-                            raise ValueError('Invalid WAIT next animation')
-                        spec['next'] = authored['next']
             if name == 'GET_AIR':
                 spec.update(frames=[indices[0], indices[0], indices[1], indices[1]], durations=[12]*4)
         # Preserve native interleaves using symbolic art IDs after sheet packing.
@@ -117,7 +103,7 @@ def assemble(root, output):
                 if name == 'SPINDASH':
                     spec['durations'] = [1] * len(spec['frames'])
         # Other characters may supply their own native timer bytes and script order.
-        authored = handoff.get('scripts', {}).get(name) if character != 'mica' else None
+        authored = handoff.get('scripts', {}).get(name)
         if authored:
             by_id = {f['id']: i for f, i in entries}
             steps = authored['frames']
@@ -130,10 +116,15 @@ def assemble(root, output):
                     raise ValueError('Invalid authored script durations: ' + name)
                 spec['durations'] = durations
             if 'end' in authored:
-                if authored['end'] not in ('loop', 'hold', 'next'):
+                if authored['end'] not in ('loop', 'loop-back', 'hold', 'next'):
                     raise ValueError('Invalid authored script end: ' + name)
                 spec['end'] = authored['end']
                 spec.pop('next', None)
+                if authored['end'] == 'loop-back':
+                    count = authored.get('loopBackSteps')
+                    if type(count) is not int or not 1 <= count <= len(steps):
+                        raise ValueError('Invalid loopBackSteps: ' + name)
+                    spec['loopBackSteps'] = count
                 if authored['end'] == 'next':
                     if authored.get('next') not in groups:
                         raise ValueError('Invalid next animation: ' + name)

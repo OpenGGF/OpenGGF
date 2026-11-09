@@ -256,9 +256,34 @@ animations:
 Frame indices refer to the manifest's top-level `frames`. Fixed `durations` are
 positive ticks per frame and must match the frame list length. `speedDriven`
 is required for `WALK`, `RUN`, `ROLL`, `ROLL2`, and `PUSH`, selecting native
-walk/run, roll or push timing. Other poses require fixed durations. End actions are `loop` (default), `hold`, or `next`
+walk/run, roll or push timing. Other poses require fixed durations. End actions are `loop` (default), `loop-back` with `loopBackSteps: N`, `hold`, or `next`
 with an authored canonical `next` target. WALK and RUN share the host's speed
 threshold and native slope orientation rules.
+
+`loop-back` repeats the final N authored steps (1 through the script length),
+including their full durations; it never counts unique drawings or elapsed ticks.
+`hold` keeps the final frame. `next` writes the target animation ID when the
+source duration expires; its first frame publishes on the following update.
+The binding translates only `next` targets into host IDs and preserves rewind counts.
+GGFP v2 ANIM end tags are 0=loop, 1=hold, 2=next, 3=loop-back;
+only tag 3 adds an unsigned big-endian 16-bit step count before the next-key string.
+This unreleased format has no migration path.
+
+Native ownership: SAnim_End_FE (s2.asm:38430-38437) rewinds from the
+terminator and immediately publishes the target frame; SAnim_End_FD
+(s2.asm:38440-38446) writes only the animation byte. MICA's 179-step S2
+intro repeats the last six steps, matching SonAni_Wait (s2.asm:38702-38714).
+TALON repeats 28, matching TailsAni_Wait (s2.asm:41566-41569).
+Other native hosts use rewind 2 in SonAni_Wait (_anim/Sonic.asm:181-188),
+53 in AniSonic05 (General/Sprites/Sonic/Anim - Sonic.asm:43-49), and
+28 in AniTails05 (General/Sprites/Tails/Anim - Tails.asm:49-52). These are
+host references, not substitutions for an authored sheet's rewind count.
+Finite S2 BLINK/GET_UP hand off to WALK (native ID 0), as SonAni_Blink
+(s2.asm:38724) and SonAni_GetUp (s2.asm:38726) specify; creators can use
+`next: WALK` for that behavior. `hold` is equivalent to a final-frame-only
+native rewind, used by SonAni_LookUp (s2.asm:38718) and SonAni_Duck
+(s2.asm:38720). Authored scripts retain their chosen timing on every host.
+
 
 Optional WALK/RUN `slopes` contains four equal, even-length cycles in native
 slope-selector order (0, 2, 4, 6), including the flat cycle first. Their length

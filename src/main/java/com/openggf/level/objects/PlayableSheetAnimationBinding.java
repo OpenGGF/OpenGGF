@@ -48,16 +48,21 @@ public final class PlayableSheetAnimationBinding {
             if (id < 0) continue;
             var selected = resolve(canonical, art.animationSet(), host);
             var script = art.animationSet().getScript(selected.ordinal());
-            var nextCanonical = resolve(CanonicalAnimation.values()[script.endParam()], art.animationSet(), host);
-            int next = host.resolveNativeId(host.getAnimationFallbacks().getOrDefault(nextCanonical, nextCanonical));
-            if (next < 0) next = host.resolveNativeId(CanonicalAnimation.WAIT);
-            scripts.addScript(id, new SpriteAnimationScript(script.delay(), script.frames(), script.endAction(), next));
+            int param = script.endParam();
+            if (script.endAction() == SpriteAnimationEndAction.SWITCH) {
+                var nextCanonical = resolve(CanonicalAnimation.values()[param], art.animationSet(), host);
+                param = host.resolveNativeId(host.getAnimationFallbacks().getOrDefault(nextCanonical, nextCanonical));
+                if (param < 0) param = host.resolveNativeId(CanonicalAnimation.WAIT);
+            }
+            scripts.addScript(id, new SpriteAnimationScript(script.delay(), script.frames(), script.endAction(), param));
         }
         // Append-only canonical keys map into a private contiguous strike namespace.
         for (int offset = 0; offset <= 5; offset++) {
             var strike = art.animationSet().getScript(CanonicalAnimation.HOMING_DIVE.ordinal() + offset);
             if (strike != null) scripts.addScript(HOMING_DIVE_ID + offset,
-                    new SpriteAnimationScript(strike.delay(), strike.frames(), SpriteAnimationEndAction.LOOP, 0));
+                    new SpriteAnimationScript(strike.delay(), strike.frames(), strike.endAction(), strike.endAction() == SpriteAnimationEndAction.SWITCH
+                            ? host.resolveNativeId(resolve(CanonicalAnimation.values()[strike.endParam()], art.animationSet(), host))
+                            : strike.endParam()));
         }
         // Native movement keeps the Walk byte even at running speed. A sheet
         // with RUN but no WALK still needs that dispatch to reach its run tier.

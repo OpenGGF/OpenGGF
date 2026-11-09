@@ -18,6 +18,17 @@ class TestPlayableSheetV2 {
             "000100000000001000100001000000010000414e494d000000190001000457414954" +
             "0001000000010100000000045741495400";
 
+    @Test void rejectsInvalidLoopBackCounts() throws Exception {
+        var base = minimal();
+        for (int count : new int[]{0, 2, 65536}) {
+            var animation = new PlayableSheetReader.Animation(base.animations().get("WAIT").steps(),
+                    false, com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP_BACK,
+                    "WAIT", List.of(), count);
+            assertThrows(Exception.class, () -> PlayableSheetWriter.write(new PlayableSheetReader.PlayableSheet(
+                    base.baseSheetV1(), base.meta(), base.frames(), Map.of("WAIT", animation), Map.of())));
+        }
+    }
+
     @Test void canonicalGoldenBytesRoundTrip() throws Exception {
         PlayableSheetReader.PlayableSheet sheet = minimal();
         byte[] encoded = PlayableSheetWriter.write(sheet);

@@ -1850,6 +1850,7 @@ CONSTRUCTOR com.openggf.level.objects.PlatformBobHelper public  <init>(int,int,i
 CONSTRUCTOR com.openggf.level.objects.PlayableSheetMaterializer$MaterializedArt public  <init>(com.openggf.sprites.art.SpriteArtSet,com.openggf.level.Palette)
 CONSTRUCTOR com.openggf.level.objects.PlayableSheetReader$Animation public  <init>(java.util.List<com.openggf.level.objects.PlayableSheetReader$AnimationStep>)
 CONSTRUCTOR com.openggf.level.objects.PlayableSheetReader$Animation public  <init>(java.util.List<com.openggf.level.objects.PlayableSheetReader$AnimationStep>,boolean,com.openggf.sprites.animation.SpriteAnimationEndAction,java.lang.String,java.util.List<java.util.List<java.lang.Integer>>)
+CONSTRUCTOR com.openggf.level.objects.PlayableSheetReader$Animation public  <init>(java.util.List<com.openggf.level.objects.PlayableSheetReader$AnimationStep>,boolean,com.openggf.sprites.animation.SpriteAnimationEndAction,java.lang.String,java.util.List<java.util.List<java.lang.Integer>>,int)
 CONSTRUCTOR com.openggf.level.objects.PlayableSheetReader$AnimationStep public  <init>(int,int,boolean)
 CONSTRUCTOR com.openggf.level.objects.PlayableSheetReader$DplcRun public  <init>(int,int,int)
 CONSTRUCTOR com.openggf.level.objects.PlayableSheetReader$Frame public  <init>(int,int,int,int,java.util.List<com.openggf.level.objects.PlayableSheetReader$DplcRun>)
@@ -11610,6 +11611,7 @@ METHOD com.openggf.level.objects.PlayableSheetReader public,static  com.openggf.
 METHOD com.openggf.level.objects.PlayableSheetReader public,static  com.openggf.level.objects.PlayableSheetReader$PlayableSheet read(byte[],com.openggf.io.ModInputLimits) THROWS java.io.IOException
 METHOD com.openggf.level.objects.PlayableSheetReader$Animation public  boolean speedDriven()
 METHOD com.openggf.level.objects.PlayableSheetReader$Animation public  com.openggf.sprites.animation.SpriteAnimationEndAction endAction()
+METHOD com.openggf.level.objects.PlayableSheetReader$Animation public  int loopBackSteps()
 METHOD com.openggf.level.objects.PlayableSheetReader$Animation public  java.lang.String nextAnimation()
 METHOD com.openggf.level.objects.PlayableSheetReader$Animation public  java.util.List<com.openggf.level.objects.PlayableSheetReader$AnimationStep> steps()
 METHOD com.openggf.level.objects.PlayableSheetReader$Animation public  java.util.List<java.util.List<java.lang.Integer>> slopes()
@@ -19187,6 +19189,7 @@ RECORD-COMPONENT com.openggf.level.objects.PersistentRespawnState stayActiveBits
 RECORD-COMPONENT com.openggf.level.objects.PlayableSheetMaterializer$MaterializedArt art com.openggf.sprites.art.SpriteArtSet
 RECORD-COMPONENT com.openggf.level.objects.PlayableSheetMaterializer$MaterializedArt palette com.openggf.level.Palette
 RECORD-COMPONENT com.openggf.level.objects.PlayableSheetReader$Animation endAction com.openggf.sprites.animation.SpriteAnimationEndAction
+RECORD-COMPONENT com.openggf.level.objects.PlayableSheetReader$Animation loopBackSteps int
 RECORD-COMPONENT com.openggf.level.objects.PlayableSheetReader$Animation nextAnimation java.lang.String
 RECORD-COMPONENT com.openggf.level.objects.PlayableSheetReader$Animation slopes java.util.List<java.util.List<java.lang.Integer>>
 RECORD-COMPONENT com.openggf.level.objects.PlayableSheetReader$Animation speedDriven boolean
