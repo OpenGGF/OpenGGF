@@ -43,7 +43,7 @@ class DebugSonic2CompetitionRouteVideo {
                 .redirectErrorStream(true).redirectOutput(out.resolve("ffmpeg.log").toFile()).start();
         try(var video=new BufferedOutputStream(ffmpeg == null ? OutputStream.nullOutputStream() : ffmpeg.getOutputStream(),1<<20);
             var csv=Files.newBufferedWriter(out.resolve("engine-frames.csv"))) {
-            csv.write("row,mode,phase,lfc,p1x,p1y,p2x,p2y,p1rings,p2rings,p1total,p2total,p1time,p2time,vint,titleState,titleCard\n");
+            csv.write("row,mode,phase,lfc,p1x,p1y,p2x,p2y,p1rings,p2rings,p1total,p2total,p1time,p2time,vint,titleState,titleCard,p1monitors,p2monitors\n");
             var hosts=new StageplayCompetitionRouteHosts(Path.of(System.getProperty("sonic2.rom.path")));
             byte[] frame=new byte[320*448*4];
             var audio=Boolean.getBoolean("s2video.audio") ? GameServices.audio() : null;
@@ -72,7 +72,7 @@ class DebugSonic2CompetitionRouteVideo {
                     csv.write(row+","+hosts.currentGameMode()+","+sample.facts().getOrDefault("competition.phase",-1)+","
                             +sample.clocks().levelFrameCounter()+","+sample.p1().centreX()+","+sample.p1().centreY()+","
                             +sample.p2().map(PlayerView::centreX).orElse(0)+","+sample.p2().map(PlayerView::centreY).orElse(0)
-                            +","+f(sample,"competition.p1.rings")+","+f(sample,"competition.p2.rings")+","+f(sample,"competition.p1.totalRings")+","+f(sample,"competition.p2.totalRings")+","+f(sample,"competition.p1.time")+","+f(sample,"competition.p2.time")+","+sample.clocks().vIntRunCount()+","+f(sample,"title.state")+","+f(sample,"competition.titleCard")+"\n");
+                            +","+f(sample,"competition.p1.rings")+","+f(sample,"competition.p2.rings")+","+f(sample,"competition.p1.totalRings")+","+f(sample,"competition.p2.totalRings")+","+f(sample,"competition.p1.time")+","+f(sample,"competition.p2.time")+","+sample.clocks().vIntRunCount()+","+f(sample,"title.state")+","+f(sample,"competition.titleCard")+","+f(sample,"competition.p1.monitors")+","+f(sample,"competition.p2.monitors")+"\n");
                 } catch(IOException e) { throw new UncheckedIOException(e); }
             });
             if (audio != null) { pcmOut.close(); if (pcm[0] != null) audio.endCaptureMode(); }
