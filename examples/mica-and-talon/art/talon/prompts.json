@@ -161,5 +161,53 @@
     "raw_path": "$HOME/scratch/agent-tmp/talon-flight-20261109/tired2.png",
     "method": "Built-in GPT Image",
     "raw_sha256": "e22218a9c234c846bba2e588328dc7e9a94b863b084fb77afd77a3d4d7f87881"
+  },
+  "consistency20261109": {
+    "tool": "built-in image_gen",
+    "references": {
+      "tired": [
+        "approved fly-strip.png",
+        "native fly_tired-native-8x.png choreography only"
+      ],
+      "spring": [
+        "approved wait-00.png",
+        "approved fly-strip.png (attempts 1/2)",
+        "native spring-native-8x.png choreography only"
+      ]
+    },
+    "generationBriefs": {
+      "tired-1": "Six equal horizontal transparent cells; same SMALL skull, golden goggles, hooked yellow beak, cream chest, navy peregrine feathers, swept crest, diagonal satchel, tiny red/white boots as approved FLY. Fixed head/body/feet. Shallow laboured wings 15/30/50/65/50/30 degrees below horizontal; exhaustion in eyelids, not identity. Dark outlines, Genesis pixel clusters.",
+      "tired-2": "Second attempt with same locked identity, 6 drooping phases 15/30/50/65/50/30, fixed registration, feather hands not gloves.",
+      "spring-1": "Two launch alternatives; preserve WAIT/FLY identity; skull 11px, torso 9px, about 34px tall; native launch pose; do not stretch body.",
+      "spring-2": "Two alternatives; compact WAIT proportions, skull width larger than torso height (11 vs 9); stubby legs, launch upwards, native choreography only.",
+      "spring-3": "Single sprite; native spring posture upright, looking up, wings tucked at chest, boots down; compact torso shorter than skull width; whole pose 32px."
+    },
+    "briefNote": "These are generation briefs, not a verbatim tool transcript. Full prompts remain in the task conversation.",
+    "sources": {
+      "tired-1": {
+        "scratch": "${ART_SCRATCH}/talon-consistency-20261109/tired-1.png",
+        "sha256": "dbc4cf9a242c08bcf92792e7a572827bc3fbf3411e41583f13d69c39215b17a9"
+      },
+      "tired-2": {
+        "scratch": "${ART_SCRATCH}/talon-consistency-20261109/tired-2.png",
+        "sha256": "626acbf2de594b07d2c60f8412da59a86c084a599659e68d91996b0e1339d97f"
+      },
+      "spring-1": {
+        "scratch": "${ART_SCRATCH}/talon-consistency-20261109/spring-1.png",
+        "sha256": "4d0290d2b5ec3f617bc76dbc628f94d7af94a30a21d2c3a4775315f0776b597f"
+      },
+      "spring-2": {
+        "scratch": "${ART_SCRATCH}/talon-consistency-20261109/spring-2.png",
+        "sha256": "8de072146e92e9c80af3286bbb1ed1a19ba3a0d3b32a655022eb815ae2052f30"
+      },
+      "spring-3": {
+        "scratch": "${ART_SCRATCH}/talon-consistency-20261109/spring-3.png",
+        "sha256": "5e5b9a33a417e282b15ce25c56ee09acf6668ce42862731a04b50567ee455c04"
+      }
+    },
+    "selectedExactPrompts": {
+      "tired-1": "Use case: identity-preserve. Asset: six equal-cell horizontal strip of TALON exhausted flight sprites on transparent background, no text. Image 1 is the APPROVED TALON identity and proportions; image 2 is native Tails tired pose choreography ONLY, never copy its orange fox identity. Generate exactly 6 evenly spaced falcon courier sprites facing right. SAME small narrow skull, angular yellow beak, gold aviator goggles, swept dark blue crest, cream throat, brown diagonal satchel strap and small brown satchel, navy feather body and tiny red/white dangling boots as image 1. Critically preserve image 1's small head relative to torso: NOT enlarged round tired head. Head/torso/feet stay fixed across frames. Wings droop in shallow laboured beats: 0 half spread downward 15 degrees, 1 spread downward 30, 2 down 50, 3 down 65, 4 down 50, 5 down 30. Exhaustion in eyelids, not a redesign. No raised high V. Crisp Genesis pixel sprite style with solid dark outline and flat limited palette clusters. Six full bodies, separate cells, no cropping, uniform scale. No text guides, shadows, accessories or backdrop. Preserve the approved FLY design exactly.",
+      "spring-2": "TALON original falcon courier pixel sprite spring action. Two different alternative poses horizontally separated on TRANSPARENT background, no border or text. Follow identity and PROPORTIONS of WAIT image 1 EXACTLY. Use FLY image2 as secondary identity; native Tails image3 supplies launched upward, legs down, arms tucked choreography ONLY. Squat Sonic character proportions: SKULL WIDTH LARGER THAN TORSO HEIGHT, head width 11 game pixels vs torso neck-to-waist height 9 game pixels. Short round chest, stubby legs with red white boots, not tall tubular human body. Navy peregrine crest and plumage, gold goggles, cream muzzle and chest, yellow hooked beak pointing upward, small diagonal brown satchel. Whole sprite about 32 pixels tall. Short body and big skull relative to body like WAIT. Same limited 15 colour pixel style. NO long neck or stretched torso, no trousers, no white backdrop/checkerboard, no text."
+    }
   }
 }

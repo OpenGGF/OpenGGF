@@ -941,5 +941,308 @@
     "selectedFactor": 0.88,
     "alignment": "Beak right edge centre+15; goggle top centre-8, matching run-01/03. Pose-dependent crest and wing bounds excluded.",
     "review": "${ART_SCRATCH}/talon-art-r3-20261109/review.html"
+  },
+  "consistency20261109": {
+    "review": "${ART_SCRATCH}/talon-consistency-20261109/review.html",
+    "landmarks": "consistency-landmarks.json",
+    "scales": {
+      "walk-00": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.237179487179485,
+        "cell": 0,
+        "size": [
+          19,
+          31
+        ]
+      },
+      "walk-01": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.03125,
+        "cell": 1,
+        "size": [
+          22,
+          32
+        ]
+      },
+      "walk-02": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.03125,
+        "cell": 2,
+        "size": [
+          27,
+          32
+        ]
+      },
+      "walk-03": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.237179487179485,
+        "cell": 3,
+        "size": [
+          27,
+          31
+        ]
+      },
+      "walk-04": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.237179487179485,
+        "cell": 4,
+        "size": [
+          19,
+          31
+        ]
+      },
+      "walk-05": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.03125,
+        "cell": 5,
+        "size": [
+          22,
+          32
+        ]
+      },
+      "walk-06": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.453947368421053,
+        "cell": 6,
+        "size": [
+          27,
+          30
+        ]
+      },
+      "walk-07": {
+        "method": "re-reduced",
+        "factor": 0.8,
+        "source": "${ART_SCRATCH}/talon-art-r2-20261109/walk-attempt-3.png",
+        "sha256": "70988345fd08fc9257de7c6c4e43ff50c12275ddeebaed1862ea7f3c92f307ba",
+        "sourcePixelsPerGamePixel": 8.237179487179485,
+        "cell": 7,
+        "size": [
+          26,
+          31
+        ]
+      },
+      "hurt-00": {
+        "method": "re-reduced",
+        "factor": 0.9,
+        "source": "${ART_SCRATCH}/talon-art-20261109/poses-attempt-1.png",
+        "sha256": "137c7b05885aa91358d57982d6e2fc2f10fe8bc6d8e9d3e6965bad7f1af5146f",
+        "sourcePixelsPerGamePixel": 8.125,
+        "cell": 1,
+        "size": [
+          29,
+          28
+        ]
+      },
+      "duck-00": {
+        "method": "re-reduced",
+        "factor": 0.85,
+        "source": "${ART_SCRATCH}/talon-art-20261109/poses-attempt-1.png",
+        "sha256": "137c7b05885aa91358d57982d6e2fc2f10fe8bc6d8e9d3e6965bad7f1af5146f",
+        "sourcePixelsPerGamePixel": 10.411764705882353,
+        "cell": 3,
+        "size": [
+          25,
+          17
+        ]
+      },
+      "skid-00": {
+        "method": "re-reduced",
+        "factor": 0.9,
+        "source": "${ART_SCRATCH}/talon-art-20261109/poses-attempt-1.png",
+        "sha256": "137c7b05885aa91358d57982d6e2fc2f10fe8bc6d8e9d3e6965bad7f1af5146f",
+        "sourcePixelsPerGamePixel": 8.064516129032258,
+        "cell": 5,
+        "size": [
+          33,
+          28
+        ]
+      },
+      "skid-01": {
+        "method": "re-reduced",
+        "factor": 0.9,
+        "source": "${ART_SCRATCH}/talon-art-20261109/poses-attempt-1.png",
+        "sha256": "137c7b05885aa91358d57982d6e2fc2f10fe8bc6d8e9d3e6965bad7f1af5146f",
+        "sourcePixelsPerGamePixel": 7.986111111111111,
+        "cell": 6,
+        "size": [
+          32,
+          29
+        ]
+      },
+      "spindash-00": {
+        "method": "re-reduced",
+        "factor": 0.9,
+        "source": "${ART_SCRATCH}/talon-art-20261109/spindash-attempt-2.png",
+        "sha256": "983a2bad39ee8845ea6be51802cdcfcb91142e82ddd152f731b0e213d27b8936",
+        "sourcePixelsPerGamePixel": 14.67432950191571,
+        "cell": 0,
+        "size": [
+          26,
+          24
+        ]
+      },
+      "spindash-01": {
+        "method": "re-reduced",
+        "factor": 0.9,
+        "source": "${ART_SCRATCH}/talon-art-20261109/spindash-attempt-2.png",
+        "sha256": "983a2bad39ee8845ea6be51802cdcfcb91142e82ddd152f731b0e213d27b8936",
+        "sourcePixelsPerGamePixel": 15.057471264367814,
+        "cell": 1,
+        "size": [
+          26,
+          25
+        ]
+      },
+      "spindash-02": {
+        "method": "re-reduced",
+        "factor": 0.9,
+        "source": "${ART_SCRATCH}/talon-art-20261109/spindash-attempt-2.png",
+        "sha256": "983a2bad39ee8845ea6be51802cdcfcb91142e82ddd152f731b0e213d27b8936",
+        "sourcePixelsPerGamePixel": 15.977011494252872,
+        "cell": 2,
+        "size": [
+          26,
+          23
+        ]
+      },
+      "spindash-03": {
+        "method": "re-reduced",
+        "factor": 0.9,
+        "source": "${ART_SCRATCH}/talon-art-20261109/spindash-attempt-2.png",
+        "sha256": "983a2bad39ee8845ea6be51802cdcfcb91142e82ddd152f731b0e213d27b8936",
+        "sourcePixelsPerGamePixel": 15.095785440613026,
+        "cell": 3,
+        "size": [
+          26,
+          24
+        ]
+      },
+      "fly_tired-00": {
+        "method": "regenerated",
+        "source": "${ART_SCRATCH}/talon-consistency-20261109/tired-1.png",
+        "sha256": "dbc4cf9a242c08bcf92792e7a572827bc3fbf3411e41583f13d69c39215b17a9",
+        "sourcePixelsPerGamePixel": 6.8,
+        "cell": 0,
+        "attempt": 1,
+        "size": [
+          29,
+          32
+        ]
+      },
+      "fly_tired-01": {
+        "method": "regenerated",
+        "source": "${ART_SCRATCH}/talon-consistency-20261109/tired-1.png",
+        "sha256": "dbc4cf9a242c08bcf92792e7a572827bc3fbf3411e41583f13d69c39215b17a9",
+        "sourcePixelsPerGamePixel": 6.8,
+        "cell": 1,
+        "attempt": 1,
+        "size": [
+          32,
+          32
+        ]
+      },
+      "fly_tired-02": {
+        "method": "regenerated",
+        "source": "${ART_SCRATCH}/talon-consistency-20261109/tired-1.png",
+        "sha256": "dbc4cf9a242c08bcf92792e7a572827bc3fbf3411e41583f13d69c39215b17a9",
+        "sourcePixelsPerGamePixel": 6.8,
+        "cell": 2,
+        "attempt": 1,
+        "size": [
+          30,
+          32
+        ]
+      },
+      "fly_tired-03": {
+        "method": "regenerated",
+        "source": "${ART_SCRATCH}/talon-consistency-20261109/tired-1.png",
+        "sha256": "dbc4cf9a242c08bcf92792e7a572827bc3fbf3411e41583f13d69c39215b17a9",
+        "sourcePixelsPerGamePixel": 6.8,
+        "cell": 3,
+        "attempt": 1,
+        "size": [
+          27,
+          33
+        ]
+      },
+      "fly_tired-04": {
+        "method": "regenerated",
+        "source": "${ART_SCRATCH}/talon-consistency-20261109/tired-1.png",
+        "sha256": "dbc4cf9a242c08bcf92792e7a572827bc3fbf3411e41583f13d69c39215b17a9",
+        "sourcePixelsPerGamePixel": 6.8,
+        "cell": 4,
+        "attempt": 1,
+        "size": [
+          31,
+          32
+        ]
+      },
+      "fly_tired-05": {
+        "method": "regenerated",
+        "source": "${ART_SCRATCH}/talon-consistency-20261109/tired-1.png",
+        "sha256": "dbc4cf9a242c08bcf92792e7a572827bc3fbf3411e41583f13d69c39215b17a9",
+        "sourcePixelsPerGamePixel": 6.8,
+        "cell": 5,
+        "attempt": 1,
+        "size": [
+          31,
+          32
+        ]
+      },
+      "spring-00": {
+        "method": "regenerated",
+        "source": "${ART_SCRATCH}/talon-consistency-20261109/spring-2.png",
+        "sha256": "8de072146e92e9c80af3286bbb1ed1a19ba3a0d3b32a655022eb815ae2052f30",
+        "sourcePixelsPerGamePixel": 18,
+        "cell": 1,
+        "attempt": 2,
+        "size": [
+          28,
+          30
+        ]
+      }
+    },
+    "identity": "Approved WAIT + approved FLY; all existing FLY drawings unchanged.",
+    "selection": {
+      "tired": [
+        "attempt 1",
+        "attempt 1",
+        "attempt 1",
+        "attempt 1",
+        "attempt 1",
+        "attempt 1"
+      ],
+      "tiredAttempt2Rejected": "Broader spread and stronger wingbeat; attempt 1 better expresses shallow labour across all six cells. Each phase compared separately.",
+      "spring": "attempt 2, second cell; compact torso and true launch, instead of elongated first attempt or oversized third attempt.",
+      "springLimit": "Raised wings differ from native tucked-arm pose."
+    },
+    "hotspot": "Tired goggles (amber slots 14/15, top ten rows) translated to the approved fly-02 goggle centroid relative to hotspot; no body plate pasted or contour painted.",
+    "scripts": "Preserved exact pre-task scripts, including WAIT loop-back 28 (recipe was stale).",
+    "limits": [
+      "Manual landmarks have about one pixel placement uncertainty.",
+      "Native per-frame anatomy measurements remain uncertified.",
+      "Runtime slope contact remains unverified."
+    ]
   }
 }

@@ -134,3 +134,43 @@ The 27×30 frame uses hotspot [11,11] to align the goggles and beak with the
 other phases. All RUN slopes derive from the selected flats; WALK and the
 six-phase flight sets retain their approved frames and manifest metadata.
 No pixels were painted. Exact source crop, scale and hash are in provenance.json.
+
+## Character-wide consistency (2026-11-09)
+
+WAIT and approved FLY lock the identity. WALK is uniformly re-reduced from its
+round-2 original at 80%; HURT/SKID/SPINDASH at 90%, DUCK at 85% of their
+original reductions. RUN retains its existing round-3 scale (frame 0: 88%;
+others 100%). WALK/RUN slopes derive from final flats using `derive_slopes`.
+ROLL, DEATH, LOOK_UP, WAIT and FLY retain their drawings. SPRING selects the
+compact launch alternative from generation attempt 2 cell 1 (18 source pixels
+per game pixel); tired flight selects attempt 1 individually for all six phases
+(6.8:1). Tired attempt 2 and three spring requests remain in scratch for review.
+No contours were painted and no native pixels enter these assets.
+
+`consistency-landmarks.json` records manual anatomical landmarks for every
+flat frame and source-flat landmarks for derived slopes. Hidden curl/blur
+landmarks are null; crouch/curl torso and upward head pitch are explicit pose
+exceptions. Comparable skull widths narrow from 10–14 to 10–12px; noncrouched
+exposed torsos narrow from 8–21 to 8–10px. Manual placement uncertainty is about
+one pixel. These are TALON identity checks: **per-frame native anatomical
+landmarks are not certified to ±1px**. Native Tails/Sonic remain parallel pose
+references. SPRING's selected raised wings differ from native tucked arms;
+runtime slope contact has not been tested in this design pass.
+
+The handoff remains 82 frames / 13 animations; script timing is preserved.
+The stale WAIT recipe is reconciled with the existing manifest's loop-back 28,
+so rebuilding no longer reverts that previously integrated behavior.
+
+Standard review (native inputs remain outside Git):
+
+```sh
+python3 examples/mica-and-talon/art/talon/consistency_review.py \
+  "$HOME/scratch/agent-tmp/talon-consistency-20261109"
+```
+
+This produces before/after/native 4× lineups, reference-height guides, manual
+landmark tables and full-frame exact-palette 60Hz GIFs. Airborne frames use
+hotspots; grounded flats use a common floor. GIF centisecond rounding may be
+clamped by browsers. Sources, source hashes, reduction factors and selections
+are in provenance/prompts; final original indexed rows live in recipe.json.
+Review: `$HOME/scratch/agent-tmp/talon-consistency-20261109/review.html`.
