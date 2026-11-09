@@ -57,6 +57,9 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
     @FunctionalInterface
     public interface TrackUpdateSink {
         void accept(String roomId, String ownerFingerprint, int zone, int act);
+        default void accept(String roomId, String ownerFingerprint, ControlMessage.RoomDescriptor descriptor) {
+            accept(roomId, ownerFingerprint, descriptor.zone(), descriptor.act());
+        }
     }
 
     @FunctionalInterface
@@ -112,7 +115,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
             this.entry = entry;
             this.access = access;
             this.retirement = retirement;
-            lastTrack = trackKey(entry.descriptor());
+            lastTrack = trackKey(entry.descriptor()) + "|" + entry.descriptor().mode();
             lastChatMode = access.room().descriptor().chatMode();
         }
 
@@ -428,6 +431,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
                         ladder.onDisplayNameClaim(fingerprint, displayName)),
                 com.openggf.net.protocol.ChatMode.parse(policy.chatModeLimit()));
         RoomHost room = new RoomHost(config, masterIdentity, clock, profiles, hooks);
+        RoomRoundAccess.configureIdentity(room, descriptor);
         RoomRoundAccess.onPendingResultExpiry(room, result -> toBroker(lifetime.get(),
                 retainedBytes(entry.roomId(), result.participantId(),
                         result.finish().inputRecordingHashHex()), () ->
@@ -515,13 +519,12 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
                             if (lifetime.current()) chatModeUpdates.accept(roomId, owner, descriptor.chatMode());
                         })) lifetime.lastChatMode = descriptor.chatMode();
                     }
-                    String currentTrack = trackKey(descriptor);
+                    String currentTrack = trackKey(descriptor) + "|" + descriptor.mode();
                     String previousTrack = lifetime.lastTrack;
                     if (previousTrack != null && !previousTrack.equals(currentTrack)) {
                         String owner = lifetime.entry.hostFingerprint();
                         if (toBrokerStatus(lifetime, retainedBytes(roomId, owner), () -> {
-                            if (lifetime.current()) trackUpdates.accept(roomId, owner,
-                                    descriptor.zone(), descriptor.act());
+                            if (lifetime.current()) trackUpdates.accept(roomId, owner, descriptor);
                         })) lifetime.lastTrack = currentTrack;
                     }
                     if (lifetime.countPublishPending.getAndSet(false)) {
@@ -575,6 +578,11 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
                     .filter(result -> result.fingerprint() != null
                             && result.finish() != null)
                     .toList();
+            var swapReceipts = new java.util.HashMap<Integer, List<VerificationJobQueue.SwapReceipt>>();
+            for (var candidate : candidates) swapReceipts.put(candidate.slot(), VerificationJobQueue.swapReceipts(room, candidate.slot()));
+            var launchPolicies = new java.util.HashMap<Integer,VerificationJobQueue.LaunchPolicy>();
+            for(var candidate:candidates) launchPolicies.put(candidate.slot(),VerificationJobQueue.LaunchPolicy.from(
+                    RoomRoundAccess.frozenLaunchForParticipant(room,candidate.slot(),candidate.participantId())));
             String trackKey = trackKey(room.descriptor());
             String fingerprint = room.determinismFingerprint();
             execute(brokerLoop, WorkBudget.Task.reserved(reserved, List.of(reserved), () -> {
@@ -601,7 +609,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
                     submitVerification(roomId, candidate.slot(), candidate.participantId(),
                             candidate.fingerprint(),
                             candidate.finish(), trackKey, candidate.character(),
-                            fingerprint, true);
+                            fingerprint, true, swapReceipts.get(candidate.slot()),launchPolicies.get(candidate.slot()));
                 }
             }, () -> { }));
         } catch (RuntimeException | Error failure) {
@@ -693,10 +701,14 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
         long bytes = retainedBytes(roomId, participantId, identityFingerprint,
                 trackKey, character, determinismFingerprint, finish.inputRecordingHashHex(),
                 finish.ghostStreamHashHex(), finish.inputRecordingRef());
+        var swaps = access == null ? List.<VerificationJobQueue.SwapReceipt>of()
+                : VerificationJobQueue.swapReceipts(access.room(), slot);
+        var launchPolicy = access == null ? null : VerificationJobQueue.LaunchPolicy.from(
+                RoomRoundAccess.frozenLaunchForParticipant(access.room(),slot,participantId));
         Runnable submission = () -> submitVerification(roomId, slot, participantId,
                 identityFingerprint, finish, trackKey, character,
-                determinismFingerprint, spotCheck);
-        if (lifetime != null) toBroker(lifetime, bytes, submission);
+                determinismFingerprint, spotCheck, swaps,launchPolicy);
+        if (lifetime != null) toBroker(lifetime, bytes + swaps.size() * 256L, submission);
         else {
             synchronized (lifetimes) {
                 if (closed) return;
@@ -709,11 +721,19 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
     }
 
     private void submitVerification(String roomId, int slot, String participantId,
+            String identityFingerprint, ControlMessage.AttemptFinish finish, String trackKey,
+            String character, String determinismFingerprint, boolean spotCheck) {
+        submitVerification(roomId,slot,participantId,identityFingerprint,finish,trackKey,character,
+                determinismFingerprint,spotCheck,List.of(),null);
+    }
+
+    private void submitVerification(String roomId, int slot, String participantId,
                                     String identityFingerprint,
                                     ControlMessage.AttemptFinish finish,
                                     String trackKey, String character,
                                     String determinismFingerprint,
-                                    boolean spotCheck) {
+                                    boolean spotCheck, List<VerificationJobQueue.SwapReceipt> swaps,
+                                    VerificationJobQueue.LaunchPolicy launchPolicy) {
         if (closed || verificationConfig == null || verificationJobs == null) {
             return;
         }
@@ -725,9 +745,9 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
                         + (participantId == null ? "" : participantId + "#")
                         + finish.attemptId(),
                 determinismFingerprint, trackKey, character, finish.timeFrames(),
-                finish.firstInputFrame(), finish.finishFrame(),
+                finish.clockStartFrame(), finish.finishFrame(),
                 finish.inputRecordingHashHex(), finish.ghostStreamHashHex(),
-                spotCheck, clock.getAsLong());
+                spotCheck, clock.getAsLong(), swaps, finish.lapFrames(),finish.splitFrames(),launchPolicy);
         RelayLifetime lifetime = rooms.get(roomId);
         WorkBudget.Reservation delivery = null;
         if (!spotCheck && lifetime != null && participantId != null) {
@@ -830,19 +850,15 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory, Au
 
     /** A relay room votes only among eligible Time Attack acts the master holds bounds for. */
     private boolean knownVoteTrack(String key) {
-        String[] parts = key == null ? new String[0] : key.split(":", -1);
-        if (parts.length != 3 || !TimeAttackTrackCatalog.isEligibleKey(key)) {
-            return false;
-        }
         try {
-            return profiles.profileFor(parts[0], Integer.parseInt(parts[1]),
-                    Integer.parseInt(parts[2])).isPresent();
-        } catch (NumberFormatException ignored) {
-            return false;
-        }
+            var track = com.openggf.net.protocol.TrackKey.parse(key);
+            if ("ARENA".equals(track.kind())) return "s3k".equals(track.gameId()) && track.zone() < 5;
+            return TimeAttackTrackCatalog.isEligibleKey(track.format())
+                    && profiles.profileFor(track.gameId(), track.zone(), track.act()).isPresent();
+        } catch (IllegalArgumentException invalid) { return false; }
     }
 
     private static String trackKey(ControlMessage.RoomDescriptor descriptor) {
-        return descriptor.gameId() + ":" + descriptor.zone() + ":" + descriptor.act();
+        return new com.openggf.net.protocol.TrackKey(descriptor.gameId(), descriptor.trackKind(), descriptor.zone(), descriptor.act()).format();
     }
 }

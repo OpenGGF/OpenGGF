@@ -1,8 +1,11 @@
 package openggf.timeattack;
 
+import com.openggf.mods.run.TrackKind;
+import com.openggf.net.protocol.TrackKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Time Attack tracks: the curated default list ({@link #tracksFor}, solo ghost racing phase-1
@@ -38,18 +41,28 @@ import java.util.Optional;
 public final class TimeAttackTrackCatalog {
 
     /** How a track's act ends: the object that launches its results tally. */
-    public enum Finish { SIGNPOST, CAPSULE, BOSS }
+    public enum Finish { SIGNPOST, CAPSULE, BOSS, LAPS }
+
+    public enum Group { ACTS, ARENAS }
 
     /** One selectable Time Attack track. */
     public record Track(String gameId, int zone, int act, String label, List<String> characters,
-                        Finish finish) {
+                        Finish finish, TrackKind kind, int lapCount, Set<CompetitionRoomSettings.Mode> modes) {
+        public Track(String gameId, int zone, int act, String label, List<String> characters, Finish finish) {
+            this(gameId, zone, act, label, characters, finish, TrackKind.ACT, 0,
+                    gameId.equals("s1") ? Set.of(CompetitionRoomSettings.Mode.TIME_ATTACK)
+                            : Set.of(CompetitionRoomSettings.Mode.TIME_ATTACK, CompetitionRoomSettings.Mode.COMPETITION));
+        }
         public Track {
             characters = List.copyOf(characters);
+            modes = Set.copyOf(modes);
         }
 
-        /** The engine-free protocol key ({@code game:zone:act}). */
+        public Group group() { return kind == TrackKind.ARENA ? Group.ARENAS : Group.ACTS; }
+
+        /** The protocol key: {@code game:zone:act} or {@code game:arena:index}. */
         public String key() {
-            return gameId + ":" + zone + ":" + act;
+            return new TrackKey(gameId, kind.name(), zone, act).format();
         }
     }
 
@@ -77,6 +90,24 @@ public final class TimeAttackTrackCatalog {
         };
     }
 
+    /** Mode-aware catalog; the legacy overload remains the solo Time Attack catalog. */
+    public static List<Track> eligibleFor(String gameId, CompetitionRoomSettings.Mode mode) {
+        List<Track> tracks = new ArrayList<>(eligibleFor(gameId));
+        if ("s3k".equals(gameId)) tracks.addAll(arenas());
+        return tracks.stream().filter(t -> t.modes().contains(mode)).toList();
+    }
+
+    /** ROM Comp_ZoneList order; zone is the arena menu index, act is always zero. */
+    public static List<Track> arenas() {
+        List<String> names = List.of("AZURE LAKE", "BALLOON PARK", "CHROME GADGET", "DESERT PALACE", "ENDLESS MINE");
+        List<Track> tracks = new ArrayList<>();
+        for (int index = 0; index < names.size(); index++) {
+            tracks.add(new Track("s3k", index, 0, names.get(index), List.of("sonic", "tails", "knuckles"),
+                    Finish.LAPS, TrackKind.ARENA, 5, Set.of(CompetitionRoomSettings.Mode.COMPETITION)));
+        }
+        return List.copyOf(tracks);
+    }
+
     /** The eligible track for {@code game:zone:act}, if there is one. */
     public static Optional<Track> eligible(String gameId, int zone, int act) {
         for (Track track : eligibleFor(gameId)) {
@@ -87,16 +118,20 @@ public final class TimeAttackTrackCatalog {
         return Optional.empty();
     }
 
-    /** The eligible track for a protocol key ({@code game:zone:act}); empty when malformed. */
+    /** The eligible act or arena for a protocol key; empty when malformed. */
     public static Optional<Track> forKey(String key) {
-        String[] parts = key == null ? new String[0] : key.split(":", -1);
-        if (parts.length != 3 || !parts[1].matches("[0-9]{1,3}") || !parts[2].matches("[0-9]{1,3}")) {
+        try {
+            TrackKey parsed = TrackKey.parse(key);
+            if (parsed.kind().equals("ARENA")) {
+                return arenas().stream().filter(t -> t.key().equals(parsed.format())).findFirst();
+            }
+            return eligible(parsed.gameId(), parsed.zone(), parsed.act());
+        } catch (IllegalArgumentException ex) {
             return Optional.empty();
         }
-        return eligible(parts[0], Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
     }
 
-    /** True when {@code key} names an eligible act. */
+    /** True when {@code key} names a catalog act or arena; mode eligibility is checked separately. */
     public static boolean isEligibleKey(String key) {
         return forKey(key).isPresent();
     }

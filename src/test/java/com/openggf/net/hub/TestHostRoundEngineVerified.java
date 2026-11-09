@@ -149,11 +149,11 @@ class TestHostRoundEngineVerified {
     }
 
     @Test
-    void casualRowsStayNoneAndDoNotHold() {
+    void casualRowsAreUnverifiedAndDoNotHold() {
         long[] now = {0};
         HostRoundEngine engine = running(now);
         engine.onAttemptFinish(1, "a", "sonic", finish(1, 100, "a"), false);
-        assertEquals("NONE", engine.standings().getFirst().verifyState());
+        assertEquals("UNVERIFIED", engine.standings().getFirst().verifyState());
         now[0] = 4_001 + HostRoundEngine.FINISH_GRACE_MILLIS;
         engine.onTick();
         now[0] += HostRoundEngine.ROUND_END_LINGER_MILLIS;
@@ -383,7 +383,7 @@ class TestHostRoundEngineVerified {
         engine.onVerdict(1, 1, true);
         engine.onVerdict(1, 2, false);
         assertEquals(before, sent.size());
-        assertEquals(List.of(row(1, "A", 100, 1, "NONE")), engine.standings());
+        assertEquals(List.of(row(1, "A", 100, 1, "UNVERIFIED")), engine.standings());
         now[0] = 4001 + HostRoundEngine.FINISH_GRACE_MILLIS;
         engine.onTick();
         now[0] += HostRoundEngine.ROUND_END_LINGER_MILLIS;

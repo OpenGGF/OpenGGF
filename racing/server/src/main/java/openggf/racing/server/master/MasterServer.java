@@ -1,5 +1,7 @@
 package openggf.racing.server.master;
 
+import com.openggf.net.protocol.ControlMessage;
+
 import com.openggf.net.host.ConnectionHygiene;
 import openggf.racing.server.master.BundledProfileSource;
 import openggf.timeattack.TimeAttackTrackCatalog;
@@ -134,13 +136,19 @@ public final class MasterServer implements AutoCloseable {
             RelayRoomManager relays = new RelayRoomManager(masterIdentity, ladder,
                     profiles, roomLoops, brokerLoop, clock,
                     registry::heartbeat,
-                    (roomId, owner, zone, act) ->
-                            registry.updateTrack(roomId, owner, zone, act),
+                    new RelayRoomManager.TrackUpdateSink() {
+                        @Override public void accept(String roomId, String owner, int zone, int act) {
+                            registry.updateTrack(roomId, owner, zone, act);
+                        }
+                        @Override public void accept(String roomId, String owner, ControlMessage.RoomDescriptor descriptor) {
+                            registry.updateTrack(roomId, owner, descriptor.zone(), descriptor.act(), descriptor.trackKind(), descriptor.mode());
+                        }
+                    },
                     config, verificationJobs, verdictConsequences, verifiers,
                     registry::updateChatMode);
             RoomBroker broker = new RoomBroker(masterIdentity, config, registry, store,
                     ladder, cache, clock, relays, tunnels,
-                    key -> TimeAttackTrackCatalog.isEligibleKey(key) && profileExists(profiles, key),
+                    key -> ("ARENA".equals(com.openggf.net.protocol.TrackKey.parse(key).kind()) || TimeAttackTrackCatalog.isEligibleKey(key)) && profileExists(profiles, key),
                     verifiers, brokerLoop);
             tunnels.setAccessAdmission(broker::allowRoomText);
             ConnectionHygiene.ConnectionCounter counter =
@@ -316,15 +324,7 @@ public final class MasterServer implements AutoCloseable {
     }
 
     private static boolean profileExists(BundledProfileSource profiles, String key) {
-        String[] parts = key == null ? new String[0] : key.split(":", -1);
-        if (parts.length != 3) {
-            return false;
-        }
-        try {
-            return profiles.profileFor(parts[0], Integer.parseInt(parts[1]),
-                    Integer.parseInt(parts[2])).isPresent();
-        } catch (NumberFormatException ignored) {
-            return false;
-        }
+        try { return profiles.profileFor(com.openggf.net.protocol.TrackKey.parse(key)).isPresent(); }
+        catch (IllegalArgumentException invalid) { return false; }
     }
 }

@@ -875,7 +875,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			observeWindowActivation();
 			if (textInputWindow != null) textInputWindow.focus(focused);
 			if (editorChrome != null) editorChrome.focus(focused);
-			paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume,
+			paused = applyWindowActivation(focused || gameLoop.hostedRuns.continuesWithoutFocus(), inputHandler, gameLoop::pause, gameLoop::resume,
 					() -> gameLoop.modSceneHost.windowFocusChanged(focused),
 					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
 		});
@@ -883,7 +883,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			observeWindowActivation();
 			if (iconified && textInputWindow != null) textInputWindow.focus(false);
 			else if (!iconified && textInputWindow != null) textInputWindow.focus(glfwGetWindowAttrib(window, GLFW_FOCUSED) == GLFW_TRUE);
-			paused = applyWindowActivation(!iconified, inputHandler, gameLoop::pause, gameLoop::resume,
+			paused = applyWindowActivation(!iconified || gameLoop.hostedRuns.continuesWithoutFocus(), inputHandler, gameLoop::pause, gameLoop::resume,
 					() -> gameLoop.modSceneHost.windowIconifyChanged(iconified),
 					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
 		});
@@ -2565,6 +2565,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		if (!preparePresentationForLaunch(module)) {
 			return false;
 		}
+		if (spec.kind() == com.openggf.mods.run.TrackKind.ARENA)
+			return HostedArenaLaunch.open(gameLoop, spec, new com.openggf.game.nativemenu.NativeMenuHostContext(
+					EngineServices.current(), module, gameLoop.getInputHandler(), this::publishHostedArenaMode));
 		GameplayModeContext gameplay = SessionManager.openGameplaySession(
 				rootModule, module, dataSource, saveContext);
 		initializeGameplayRuntime(gameplay, false);
@@ -2579,6 +2582,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		// level for a retry), so announce it explicitly for this fresh launch.
 		gameLoop.announceHostedRunLevelReady(false);
 		return true;
+	}
+
+	private void publishHostedArenaMode(GameplayModeContext gameplay) {
+		initializeGameplayRuntime(gameplay, false);
+		var spec = gameLoop.hostedRuns.spec();
+		gameplay.beginGameplayRun(spec.policy(), spec.zone(), spec.act());
 	}
 
 	/** The determinism fingerprint a hosted run of {@code gameId} reports; empty without its ROM. */
@@ -4495,6 +4504,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void drawLevel() {
+		gameLoop.hostedRuns.drawScene(this::drawLevelScene);
+	}
+
+	private void drawLevelScene() {
 		if (com.openggf.game.mode.ControlledFrameRuntime.isNativeTitlePresentationActive(
 				com.openggf.game.session.SessionManager.getCurrentGameplayMode())) {
 			drawTitleCardMode();

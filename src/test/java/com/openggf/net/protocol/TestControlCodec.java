@@ -38,7 +38,7 @@ class TestControlCodec {
 
     @Test
     void protocolEightRejectsLegacyAuthorityAndLaunchShapes() {
-        assertEquals(8, Protocol.VERSION);
+        assertEquals(9, Protocol.VERSION);
         ControlJsonCodec codec = new ControlJsonCodec();
         String join = codec.encode(null, new ControlMessage.RoomJoinResult("room", "DIRECT",
                 "127.0.0.1", 1234, "host", "build", null, "instance",

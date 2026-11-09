@@ -100,6 +100,7 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     private final CNZPrizeSoundState cnzPrizeSoundState =
             new CNZPrizeSoundState();
     private final Sonic2BadnikChain badnikChain = new Sonic2BadnikChain();
+    private final com.openggf.game.sonic2.objects.Sonic2RaceSwapApplier raceSwaps = new com.openggf.game.sonic2.objects.Sonic2RaceSwapApplier();
     private final GameAudioProfile audioProfile = new Sonic2AudioProfile();
     private final Sonic2LevelEventManager levelEventManager = new Sonic2LevelEventManager();
     private final Sonic2PlayerArtModeAuthority playerArtModeAuthority = () ->
@@ -224,8 +225,8 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     @Override
     public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
         return plcService == null
-                ? List.of(levelMusicScheduler, cnzPrizeSoundState, badnikChain)
-                : List.of(plcService, levelMusicScheduler, cnzPrizeSoundState, badnikChain);
+                ? List.of(levelMusicScheduler, cnzPrizeSoundState, badnikChain, raceSwaps)
+                : List.of(plcService, levelMusicScheduler, cnzPrizeSoundState, badnikChain, raceSwaps);
     }
 
     @Override
@@ -369,6 +370,7 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     @Override
     public <T> T getGameService(Class<T> type) {
         if (type == com.openggf.game.internal.BadnikChainPolicy.class) return type.cast(badnikChain);
+        if (type == com.openggf.game.arena.RaceSwapApplier.class) return type.cast(raceSwaps);
         if (type == com.openggf.game.resources.PlayerArtTransferPlan.class) {
             return type.cast(new com.openggf.game.resources.PlayerArtTransferPlan(java.util.Map.of(
                     "sonic", new com.openggf.game.resources.PlayerArtBank(

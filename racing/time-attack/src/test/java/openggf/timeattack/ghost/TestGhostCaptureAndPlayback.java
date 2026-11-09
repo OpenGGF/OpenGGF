@@ -34,7 +34,7 @@ class TestGhostCaptureAndPlayback {
         buf.capture(new GhostFrame(20, 0, 0, false, false, false, 0, false));
         buf.capture(new GhostFrame(30, 0, 0, false, false, true, 0, false));
         GhostRecording rec = new GhostRecording(
-                new GhostHeader(1, "s3k", 0, 0, "sonic", "x", 0, 2, new int[0], new byte[32]),
+                new GhostHeader(GhostFileCodec.FORMAT_VERSION, "s3k", 0, 0, "sonic", "x", 0, 2, new int[0], new byte[32]),
                 buf.toFrameData());
         GhostPlaybackCursor cursor = new GhostPlaybackCursor(rec);
         assertEquals(10, cursor.frameFor(0).x());

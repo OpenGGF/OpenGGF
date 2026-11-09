@@ -46,11 +46,13 @@ class TestS1S2PlcSessionOwnership {
         assertFalse(s2Service.isBusy(), "the next session must start with an empty PLC FIFO");
         // 50bc64259: Touch_KillEnemy (s2.asm:85514-85534) owns one shared
         // chain word even in 1P; this is not another PLC or competition adapter.
-        assertEquals(4, sonic2.rewindAdapters().size());
+        assertEquals(5, sonic2.rewindAdapters().size());
         assertSame(sonic2.getGameService(com.openggf.game.internal.BadnikChainPolicy.class),
                 sonic2.rewindAdapters().get(3));
         assertSame(sonic2.getGameService(com.openggf.game.sonic2.slotmachine.CNZPrizeSoundState.class),
                 sonic2.rewindAdapters().get(2));
+        assertSame(sonic2.getGameService(com.openggf.game.arena.RaceSwapApplier.class),
+                sonic2.rewindAdapters().get(4), "race swap state is a session-owned rewind adapter");
         assertSame(s2Service, sonic2.rewindAdapters().get(0));
         var scheduler = sonic2.rewindAdapters().get(1);
         assertTrue(scheduler

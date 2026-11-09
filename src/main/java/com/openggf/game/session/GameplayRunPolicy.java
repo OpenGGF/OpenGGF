@@ -25,6 +25,8 @@ import java.util.Objects;
  * @param editorEntry       whether the level editor may be opened during the run
  * @param deathRestart      what a death of the main player leads to
  * @param livesCounter      whether the HUD draws the lives counter
+ * @param swapEnabled frozen round eligibility for server-mediated partner swaps; never inferred
+ *                    from currently connected players
  * @param zoneIntros        whether an act opens with its shipped intro cutscene (S3K Angel
  *                          Island 1's plane intro); false starts where the intro would hand
  *                          the player control, as the engine's skip-intros start does
@@ -37,7 +39,18 @@ public record GameplayRunPolicy(boolean specialStageEntry,
                                 boolean editorEntry,
                                 DeathRestart deathRestart,
                                 boolean livesCounter,
-                                boolean zoneIntros) {
+                                boolean zoneIntros, com.openggf.game.arena.MonitorRule monitors,
+                                boolean swapEnabled) {
+    /** Compatibility construction: a non-networked run never requests a partner swap. */
+    public GameplayRunPolicy(boolean specialStageEntry, boolean bonusStageEntry, ActCompletion actCompletion, boolean liveRewind, boolean editorEntry, DeathRestart deathRestart, boolean livesCounter, boolean zoneIntros, com.openggf.game.arena.MonitorRule monitors) {
+        this(specialStageEntry, bonusStageEntry, actCompletion, liveRewind, editorEntry, deathRestart, livesCounter, zoneIntros, monitors, false);
+    }
+    public GameplayRunPolicy(boolean specialStageEntry, boolean bonusStageEntry, ActCompletion actCompletion, boolean liveRewind, boolean editorEntry, DeathRestart deathRestart, boolean livesCounter, boolean zoneIntros) {
+        this(specialStageEntry, bonusStageEntry, actCompletion, liveRewind, editorEntry, deathRestart, livesCounter, zoneIntros, com.openggf.game.arena.MonitorRule.NORMAL);
+    }
+    public static GameplayRunPolicy competition() {
+        return new GameplayRunPolicy(false, false, ActCompletion.RETURN_TO_HOST, false, false, DeathRestart.FAST_FROM_CHECKPOINT, false, false, com.openggf.game.arena.MonitorRule.NORMAL);
+    }
 
     /** What the engine does when a run's act is complete. */
     @ModApi
@@ -63,7 +76,8 @@ public record GameplayRunPolicy(boolean specialStageEntry,
          * {@link #FAST_RESTART_SKIP_FRAMES} steps), then the act reloads at once from its start,
          * with star-post progress cleared and no title card.
          */
-        FAST_FROM_START
+        FAST_FROM_START,
+        FAST_FROM_CHECKPOINT
     }
 
     /**
@@ -73,6 +87,7 @@ public record GameplayRunPolicy(boolean specialStageEntry,
     public static final int FAST_RESTART_SKIP_FRAMES = 30;
 
     public GameplayRunPolicy {
+        Objects.requireNonNull(monitors, "monitors");
         Objects.requireNonNull(actCompletion, "actCompletion");
         Objects.requireNonNull(deathRestart, "deathRestart");
     }
@@ -98,7 +113,7 @@ public record GameplayRunPolicy(boolean specialStageEntry,
      */
     public GameplayRunPolicy withFastRestarts() {
         return new GameplayRunPolicy(specialStageEntry, bonusStageEntry, actCompletion, liveRewind,
-                editorEntry, DeathRestart.FAST_FROM_START, false, zoneIntros);
+                editorEntry, DeathRestart.FAST_FROM_START, false, zoneIntros, monitors, swapEnabled);
     }
 
     /**
@@ -107,7 +122,7 @@ public record GameplayRunPolicy(boolean specialStageEntry,
      */
     public GameplayRunPolicy withoutZoneIntros() {
         return new GameplayRunPolicy(specialStageEntry, bonusStageEntry, actCompletion, liveRewind,
-                editorEntry, deathRestart, livesCounter, false);
+                editorEntry, deathRestart, livesCounter, false, monitors, swapEnabled);
     }
 
     /** True when a death reloads the act at once instead of following the shipped game. */

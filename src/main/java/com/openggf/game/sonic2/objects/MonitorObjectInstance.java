@@ -111,6 +111,13 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             return;
         }
         initialized = true;
+        if (services().runPolicy().monitors() == com.openggf.game.arena.MonitorRule.OFF) {
+            // Hosted policy: omit the placement without setting its persistent break bit.
+            // Content zero cannot implement OFF: its native reward is Robotnik/Eggman.
+            ObjectLifetimeOps.deleteNoRespawn(this);
+            return;
+        }
+
 
         // Check persistence: if remembered, spawn as broken
         ObjectManager objectManager = services().objectManager();
@@ -122,7 +129,8 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         }
 
         // Obj26_Init uses the question shell in 2P; Obj2E selects the item later.
-        int initialAnim = Sonic2CompetitionObjectAccess.session(services()) != null ? 9 : type.id;
+        int initialAnim = Sonic2CompetitionObjectAccess.session(services()) != null
+                || MonitorContentsObjectInstance.usesHostedRandomContents(services().runPolicy().monitors()) ? 9 : type.id;
         int initialFrame = broken ? BROKEN_FRAME : 0;
         ObjectRenderManager renderManager = services().renderManager();
         this.animationState = new ObjectAnimationState(
@@ -141,6 +149,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
+        if (isDestroyed()) return;
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Handle falling state first (ROM: Obj26_Main routine_secondary check)
         if (falling) {
@@ -687,7 +696,11 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             }
             case SONIC, TAILS -> {
                 services.playMusic(GameMusic.EXTRA_LIFE);
-                services.gameState().addLife();
+                // tails_1up (s2.asm:25855-25861) credits Life_count_2P in the 2P draw.
+                // An isolated hosted act has no spawned P2; never credit that award to P1.
+                if (subtype != MonitorType.TAILS.id
+                        || !MonitorContentsObjectInstance.usesHostedRandomContents(services.runPolicy().monitors()))
+                    services.gameState().addLife();
             }
             case EGGMAN, STATIC -> {
                 // ROM: robotnik_monitor (s2.asm:25834-25836)
@@ -696,9 +709,12 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
                 player.setHurt(true);
             }
             case TELEPORT -> {
-                // ROM: teleport_monitor (s2.asm:25999-26019)
-                // Swaps player positions in 2P mode. No-op in 1P mode.
-                // 2P mode is not yet implemented.
+                // teleport_monitor (s2.asm:26003-26011): hosted request replaces the local swap.
+                // NORMAL 1P contents keep their existing no-partner behavior.
+                if (services.runPolicy().swapEnabled()) {
+                    var applier=services.gameModule().getGameService(com.openggf.game.arena.RaceSwapApplier.class);
+                    if (applier!=null) applier.request(services,player);
+                }
             }
             case RANDOM -> {
                 // ROM: qmark_monitor (s2.asm:26018-26020)

@@ -89,6 +89,42 @@ copies plus shake, refresh derived playable offsets at the existing post-camera
 Render_Sprites boundary, and preserve both native words. See the
 [ending lifecycle evidence](designs/2026-10-13-s3k-ending-lifecycle.md).
 
+Looping arena cameras and actors can occupy different images of the same track.
+In the hosted arena probe, camera X1936 and actor X1072 still placed P1 at screen
+X160 through the native 1024px wrap; raw subtraction put a nearby ghost offscreen.
+Derive the display origin from P1's native wrapped SAT anchor, including its range
+half extent, and keep the native camera unchanged. Check a ghost relative to P1,
+not only a ghost placed relative to the renderer's own camera origin: that latter
+fixture can pass while hiding an image-selection error. The
+[hosted arena validation](validation/2026-11-07-s3k-hosted-arena-lane-b.md) retains
+the failed probes, accepted SAT evidence and RGB-alpha checks (2026-11-07).
+
+A native death's life-loss row is earlier than its reload request. A direct
+checkpoint-reload comparison must wait for and consume the same production
+respawn request as GameLoop. Calling the owner at life loss produced unequal
+`prePhysicsYSpeed` and `prePhysicsCentreY`, even though position, lives and timer
+matched. Compare the full captured player and keep those fields in the oracle;
+fix the invocation boundary instead of excluding them. See the
+[hosted checkpoint evidence](validation/2026-11-07-s3k-hosted-arena-lane-b.md).
+
+Cross-boot rewind comparisons must compare ROM resources by contents, while
+retaining the snapshot's gameplay bytes. A resumed S2 object pass held separate
+`SpriteAnimationSet` instances with equal scripts in the live and replay boots.
+Canonicalize every script field, including trailing ROM bytes, inside compact
+blob opaque values; retain the blob schema, type and every scalar byte. Negative
+controls must change both a resource frame and a scalar byte and fail equality.
+Do not drop the opaque array or compare resource `toString()` values. The
+[Competition engine evidence](validation/2026-11-07-s3k-hosted-arena-lane-b.md)
+records this oracle correction and its bounded replay test.
+
+Clearing the active gameplay session does not reset a cached game module. For a
+cold-boot equivalence test, reset both SessionManager and GameModuleRegistry
+before each side. Reusing S2's module produced PLC load epochs 3/5 and title-card
+frame counts 53/106 while all gameplay owners matched. Keep those lifetime fields
+in the oracle; isolate the boots instead of filtering the fields. The
+[complete checkpoint comparison](validation/2026-11-07-s3k-hosted-arena-lane-b.md)
+compares every registered owner after this fixture correction (2026-11-07).
+
 Capture boot must preserve an existing native camera binding. After ScreenInit
 sets `Scroll_lock`, even `Camera.setFocusedSprite` resets physical and render-copy
 coordinates; guarding only the following forced snap leaves that overwrite.
@@ -2517,6 +2553,19 @@ for detached UI fades. Keep renderer attachment separate: only the actively
 bound palette owner publishes CRAM fades. Origin: 2026-10-17 white-fade
 architecture guard repair; existing native component/22-V-int and immediate-scene
 rewind-release semantics are unchanged.
+
+
+**Scene capture must observe the uploaded palette generation.** CPU palette colors
+may already contain the next cycle while production drawing still uses the
+previous V-int publication. Copying live colors into a scene can rotate only
+animated colors, despite identical tile and player geometry. Keep a defensive
+color copy at the existing upload owner and read it through
+`PaletteUploadPresentation.copyDisplayedPaletteArgb`; never publish pending
+writes just to capture a picture. Headless rows without an upload retain the
+live-palette fallback. Origin: Competition fix lane G, 2026-11-08; exact smoke
+batch 17 reproduced 24,783 waterfall pixel differences, and texture readback
+identified only indices 19,20,30,31. See the
+[lane validation](validation/2026-11-07-s3k-hosted-arena-lane-b.md#fix-lane-g--2026-11-08).
 
 
 **A restored palette owner can rebind without submitting new work.** Whole-world

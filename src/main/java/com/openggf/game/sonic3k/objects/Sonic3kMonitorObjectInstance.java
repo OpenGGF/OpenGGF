@@ -225,6 +225,13 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
             return;
         }
         initialized = true;
+        if (services().runPolicy().monitors() == com.openggf.game.arena.MonitorRule.OFF) {
+            // Hosted policy: omit the placement without setting its persistent break bit.
+            // Content zero cannot implement OFF: its native reward is Robotnik/Eggman.
+            ObjectLifetimeOps.deleteNoRespawn(this);
+            return;
+        }
+
 
         // Check persistence: if previously broken, spawn as broken shell
         ObjectManager objectManager = services().objectManager();
@@ -259,6 +266,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
+        if (isDestroyed()) return;
         expireRecentlyClearedP2Contact(vIntRunCount);
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if ((revealed || fallingFromTouch) && !broken) {
@@ -300,6 +308,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     @Override
     public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
         ensureInitialized();
+        if (isDestroyed()) return;
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (broken || player == null) {
             return;

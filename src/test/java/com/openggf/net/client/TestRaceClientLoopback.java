@@ -82,6 +82,142 @@ class TestRaceClientLoopback {
         throw new AssertionError("timed out");
     }
 
+    @Test
+    void competitionTeleportTravelsThroughTwoLoopbackClientsAndHostReceipts(@TempDir Path dir) throws Exception {
+        controlled = new ControlledRaceHost();
+        server = controlled.start(0,new RoomHostConfig("LAN","s2",0,0,"OPEN",null,8,FP),
+                PlayerIdentity.loadOrCreate(dir.resolve("host")),
+                (com.openggf.net.hub.KeyedTrackValidationProfileSource) key -> java.util.Optional.of(
+                        new com.openggf.net.hub.TrackValidationProfile(4096,1024,32,60,0,0,0,13)));
+        var configured = new java.util.concurrent.CompletableFuture<Void>();
+        server.execute(()-> { server.room().configureTrackIdentity("ACT","COMPETITION"); configured.complete(null); });
+        configured.get(5,TimeUnit.SECONDS);
+        var a = connect(dir.resolve("a"),"A"); var b = connect(dir.resolve("b"),"B");
+        try {
+            controlled.startRound(new ControlMessage.RoundConfig("s2",0,0,600,"OPEN",null,
+                    "ACT","COMPETITION","ITEMS",30));
+            await(a,e -> e instanceof RaceClient.Control c && c.message() instanceof ControlMessage.RoundStart);
+            await(b,e -> e instanceof RaceClient.Control c && c.message() instanceof ControlMessage.RoundStart);
+            controlled.advance(10_000);
+            a.sendControl(new ControlMessage.AttemptStart(1));
+            b.sendControl(new ControlMessage.AttemptStart(1));
+            for (var client:java.util.List.of(a,b)) {
+                client.sendControl(new ControlMessage.CheckpointReached(1,0,1,1100+client.playerSlot()*200,100));
+                byte[] frames = new byte[3*GhostFrameCodec.BYTES];
+                for(int i=0;i<3;i++) GhostFrameCodec.encode(new GhostFrame(1100+client.playerSlot()*200+i,100,0,
+                        false,false,false,2,false,false,1,false,0),frames,i*GhostFrameCodec.BYTES);
+                client.sendBinary(GhostPackets.encodeFrames(1,0,frames));
+            }
+            await(a,e -> e instanceof RaceClient.GhostData);
+            await(b,e -> e instanceof RaceClient.GhostData);
+            a.sendControl(new ControlMessage.TeleportRequest(1,2));
+            var ca = (ControlMessage.TeleportSwap)((RaceClient.Control)await(a,
+                    e -> e instanceof RaceClient.Control c && c.message() instanceof ControlMessage.TeleportSwap)).message();
+            var cb = (ControlMessage.TeleportSwap)((RaceClient.Control)await(b,
+                    e -> e instanceof RaceClient.Control c && c.message() instanceof ControlMessage.TeleportSwap)).message();
+            assertEquals(ca,cb);
+            a.sendControl(new ControlMessage.TeleportOutcome(ca.swapId(),3,"APPLIED"));
+            b.sendControl(new ControlMessage.TeleportOutcome(cb.swapId(),3,"APPLIED"));
+            // A room-thread barrier observes both outcome messages before inspecting the log.
+            a.sendControl(new ControlMessage.Chat("barrier"));
+            await(b,e -> e instanceof RaceClient.Control c && c.message() instanceof ControlMessage.ChatBroadcast);
+            b.sendControl(new ControlMessage.Chat("barrier2"));
+            await(a,e -> e instanceof RaceClient.Control c && c.message() instanceof ControlMessage.ChatBroadcast chat
+                    && chat.text().equals("barrier2"));
+            var receipts = new java.util.concurrent.CompletableFuture<java.util.List<com.openggf.net.hub.HostTeleportSwap.Decision>>();
+            server.execute(()->receipts.complete(com.openggf.net.hub.HostTeleportSwap.logFor(server.room())));
+            var log = receipts.get(5,TimeUnit.SECONDS);
+            assertEquals(1,log.size()); assertEquals(2,log.getFirst().outcomes().size());
+            for(var client:java.util.List.of(a,b)) {
+                var t = ca.slotA()==client.playerSlot()?ca.targetB():ca.targetA();
+                var event = new com.openggf.game.arena.RaceEvent.SwapApply(ca.swapId(),new com.openggf.game.arena.SwapTarget(
+                        t.centreX(),t.centreY(),t.xVel(),t.yVel(),t.facingLeft(),t.secondaryPath(),t.priorityBucket(),
+                        t.highPriority(),t.shoeKind(),t.shoeTimer(),t.progress()));
+                var recording = new openggf.timeattack.AttemptInputRecording(new openggf.timeattack.AttemptStartDescriptor(
+                        "s2",0,0,"sonic",FP,com.openggf.mods.run.TrackKind.ACT,
+                        openggf.timeattack.CompetitionRoomSettings.Mode.COMPETITION,com.openggf.game.arena.MonitorRule.COMPETITION_ITEMS,
+                        com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT,true));
+                recording.appendEvent(3,event);
+                for(int i=0;i<4;i++)recording.appendFrame(8,false);
+                var decoded=openggf.timeattack.AttemptInputRecording.decode(recording.encode());
+                var receiptsForSlot=openggf.racing.server.master.VerificationJobQueue.swapReceipts(log,client.playerSlot());
+                assertTrue(openggf.racing.server.verifier.VerifierSwapLog.matches(decoded,receiptsForSlot));
+                verifySyntheticSwap(dir.resolve("verifier-"+client.playerSlot()),decoded,receiptsForSlot,client.playerSlot(),ca.slotA());
+                byte[] applied=new byte[GhostFrameCodec.BYTES];
+                GhostFrameCodec.encode(new GhostFrame(t.centreX(),t.centreY(),0,false,false,false,2,false,false,1,false,0),applied,0);
+                client.sendBinary(GhostPackets.encodeFrames(1,3,applied));
+            }
+            await(a,e -> e instanceof RaceClient.GhostData g && g.aggregate().entries().stream()
+                    .anyMatch(entry -> entry.playerSlot()==b.playerSlot() && entry.startFrameIndex()+entry.frameCount()>3));
+            await(b,e -> e instanceof RaceClient.GhostData g && g.aggregate().entries().stream()
+                    .anyMatch(entry -> entry.playerSlot()==a.playerSlot() && entry.startFrameIndex()+entry.frameCount()>3));
+        } finally { a.close(); b.close(); }
+    }
+
+    private openggf.racing.server.verifier.AttemptReplayHarness.Result syntheticReplay(
+            openggf.timeattack.AttemptInputRecording input,int slot,int requester) {
+        try {
+            var hash=java.security.MessageDigest.getInstance("SHA-256");
+            byte[] bytes=new byte[GhostFrameCodec.BYTES];
+            int x=1099+slot*200,y=100,priority=2,progress=1,shoes=0;boolean facing=false,path=false,high=false;
+            for(int frame=0;frame<input.frameCount();frame++) {
+                int step=frame;
+                var event=input.events().stream().filter(e->e.step()==step).findFirst();
+                if(event.isPresent()) {
+                    var t=((com.openggf.game.arena.RaceEvent.SwapApply)event.get().event()).target();
+                    x=t.centreX();y=t.centreY();priority=t.priorityBucket();progress=t.progress();
+                    shoes=t.shoeKind();facing=t.facingLeft();path=t.secondaryPath();high=t.highPriority();
+                } else {
+                    int mask=input.heldMaskAt(frame);
+                    if((mask&8)!=0)x++;if((mask&4)!=0)x--;
+                }
+                GhostFrameCodec.encode(new GhostFrame(x,y,0,facing,false,false,priority,high,false,progress,path,shoes),bytes,0);
+                hash.update(bytes);
+            }
+            int finish=input.frameCount()-1;
+            return new openggf.racing.server.verifier.AttemptReplayHarness.Result(true,0,finish,finish,
+                    java.util.HexFormat.of().formatHex(hash.digest()),input.frameCount(),null,java.util.List.of(),java.util.List.of(),
+                    com.openggf.game.arena.RaceClock.Failure.NONE,slot==requester?java.util.List.of(2):java.util.List.of());
+        } catch(Exception e){throw new IllegalStateException(e);}
+    }
+
+    private void verifySyntheticSwap(Path identityDir,openggf.timeattack.AttemptInputRecording recording,
+            java.util.List<openggf.racing.server.master.VerificationJobQueue.SwapReceipt> receipts,
+            int slot,int requester) throws Exception {
+        var json=new com.fasterxml.jackson.databind.ObjectMapper();
+        var expected=syntheticReplay(recording,slot,requester);
+        for(int variant=0;variant<3;variant++) {
+            var submitted=new openggf.timeattack.AttemptInputRecording(recording.start());
+            var original=(com.openggf.game.arena.RaceEvent.SwapApply)recording.events().getFirst().event();
+            var t=original.target();
+            var event=variant==1?new com.openggf.game.arena.RaceEvent.SwapApply(original.swapId(),new com.openggf.game.arena.SwapTarget(
+                    t.centreX()+1,t.centreY(),t.xVel(),t.yVel(),t.facingLeft(),t.secondaryPath(),t.priorityBucket(),
+                    t.highPriority(),t.shoeKind(),t.shoeTimer(),t.progress())):original;
+            submitted.appendEvent(3,event);
+            for(int frame=0;frame<4;frame++)submitted.appendFrame(variant==2 && frame==1?4:recording.heldMaskAt(frame),false);
+            var job=new openggf.racing.server.master.VerificationJobQueue.Job("synthetic-"+slot,"room",slot,"player","attempt",
+                    FP,"s2:0:0","sonic",3,0,3,java.util.HexFormat.of().formatHex(submitted.sha256()),expected.ghostStreamHashHex(),false,0,
+                    receipts,java.util.List.of(),java.util.List.of(),
+                    new openggf.racing.server.master.VerificationJobQueue.LaunchPolicy("COMPETITION","ITEMS",true));
+            var verdict=new java.util.concurrent.atomic.AtomicReference<String>();
+            var api=new openggf.racing.server.verifier.VerifierWorker.MasterApi() {
+                public String register(byte[] key,java.util.Set<String> fingerprints){return "test";}
+                public java.util.Optional<String> pollJobJson(){try{return java.util.Optional.of(json.writeValueAsString(job));}catch(Exception e){throw new RuntimeException(e);}}
+                public void heartbeat(){}
+                public byte[] fetchRecording(String hash){return submitted.encode();}
+                public boolean postVerdict(String id,String result,byte[] signature){verdict.set(result);return true;}
+            };
+            var worker=new openggf.racing.server.verifier.VerifierWorker(api,(input,fp)->syntheticReplay(input,slot,requester),
+                    PlayerIdentity.loadOrCreate(identityDir));
+            assertTrue(worker.pollOnce());
+            assertEquals(switch(variant) {
+                case 0 -> com.openggf.net.protocol.VerdictCodec.RESULT_PASS;
+                case 1 -> com.openggf.net.protocol.VerdictCodec.RESULT_FAIL_DIVERGENT;
+                default -> com.openggf.net.protocol.VerdictCodec.RESULT_FAIL_GHOST_HASH;
+            },verdict.get());
+        }
+    }
+
     @ParameterizedTest
     @EnumSource(RaceHostImpl.class)
     void connectsChatsAndStreamsGhostFrames(RaceHostImpl impl, @TempDir Path dir)

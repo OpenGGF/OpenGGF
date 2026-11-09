@@ -642,7 +642,14 @@ public final class RoomBroker {
             refused.accept("invalid player limit");
             return;
         }
-        String poolProblem = voteTrackPoolProblem(descriptor.gameId(), create.voteTrackKeys());
+        try {
+            if (!com.openggf.net.hub.TrackRules.legal(new com.openggf.net.protocol.TrackKey(descriptor.gameId(), descriptor.trackKind(), descriptor.zone(), descriptor.act()), descriptor.mode())) {
+                refused.accept("track illegal for room mode"); return;
+            }
+        } catch (IllegalArgumentException invalidKey) {
+            refused.accept("invalid track identity"); return;
+        }
+        String poolProblem = voteTrackPoolProblem(descriptor.gameId(), descriptor.mode(), create.voteTrackKeys());
         if (poolProblem != null) {
             refused.accept("invalid vote track pool: " + poolProblem);
             return;
@@ -867,7 +874,7 @@ public final class RoomBroker {
             summaries.add(new ControlMessage.RoomSummary(room.roomId(), descriptor.name(),
                     descriptor.gameId(), descriptor.zone(), descriptor.act(),
                     descriptor.characterPolicy(), room.playerCount(), descriptor.maxPlayers(),
-                    room.routing(), descriptor.verified(), descriptor.chatMode()));
+                    room.routing(), descriptor.verified(), descriptor.chatMode(), descriptor.trackKind(), descriptor.mode()));
         }
         send(member, new ControlMessage.RoomListResult(summaries, page,
                 registry.totalPagesForCount(all.size())), requestId);
@@ -1233,12 +1240,13 @@ public final class RoomBroker {
             strike(member, "unauthorized room track update");
             return;
         }
-        String key = room.descriptor().gameId() + ":" + update.zone() + ":" + update.act();
-        if (!knownTrack.test(key)) {
+        var track = new com.openggf.net.protocol.TrackKey(room.descriptor().gameId(), update.trackKind(), update.zone(), update.act());
+        String key = track.format();
+        if (!knownTrack.test(key) || !com.openggf.net.hub.TrackRules.legal(track, room.descriptor().mode())) {
             strike(member, "unknown room track update");
             return;
         }
-        registry.updateTrack(room.roomId(), member.fingerprint, update.zone(), update.act());
+        registry.updateTrack(room.roomId(), member.fingerprint, update.zone(), update.act(), update.trackKind());
     }
 
     /**
@@ -1246,15 +1254,13 @@ public final class RoomBroker {
      * {@code game:zone:act} of the room's own game that the master knows as an eligible track
      * (custom pools cannot mix games). The 32-key bound is enforced by {@code RoomCreate} itself.
      */
-    private String voteTrackPoolProblem(String gameId, List<String> trackKeys) {
+    private String voteTrackPoolProblem(String gameId, String mode, List<String> trackKeys) {
         for (String key : trackKeys) {
-            String[] parts = key.split(":", -1);
-            if (parts.length != 3 || !parts[1].matches("[0-9]{1,3}") || !parts[2].matches("[0-9]{1,3}")) {
-                return "malformed track key " + key;
-            }
-            if (!parts[0].equals(gameId)) {
-                return key + " is not a " + gameId + " act";
-            }
+            com.openggf.net.protocol.TrackKey track;
+            try { track = com.openggf.net.protocol.TrackKey.parse(key); }
+            catch (IllegalArgumentException invalid) { return "malformed track key " + key; }
+            if (!track.gameId().equals(gameId)) return key + " is not a " + gameId + " track";
+            if (!com.openggf.net.hub.TrackRules.legal(track, mode)) return key + " is illegal for " + mode;
             if (!knownTrack.test(key)) {
                 return key + " is not an eligible Time Attack act";
             }

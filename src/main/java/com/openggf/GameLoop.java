@@ -678,11 +678,11 @@ public class GameLoop {
      * Pauses the game loop due to window losing focus.
      * Audio is also paused to prevent music continuing while game is frozen.
      */
+
     public synchronized void pause() {
+        if (hostedRuns.continuesWithoutFocus()) return;
         if (!paused) {
-            com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
-            hostedRuns.suspendInput();
-            editorMode.finishPendingEdits(currentGameMode);
+            hostedRuns.prepareFocusPause(inputHandler, editorMode, currentGameMode);
             paused = true;
             updateAudioPauseState();
         }
@@ -694,7 +694,7 @@ public class GameLoop {
      */
     public synchronized void resume() {
         if (paused) {
-            com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
+            hostedRuns.discardFocusInput(inputHandler);
             paused = false;
             updateAudioPauseState();
         }
@@ -1958,7 +1958,7 @@ public class GameLoop {
     }
 
     /** Ends the session's hosted run and hands control back to its host. */
-    private void endHostedRun(RunEndReason reason) {
+    void endHostedRun(RunEndReason reason) {
         Consumer<RunEndReason> back = hostedRunReturn;
         hostedRunReturn = ignored -> { };
         hostedRuns.end(reason);
@@ -2704,9 +2704,6 @@ public class GameLoop {
         return nativeMenuFlow.resolveDataSelectPresentation();
     }
 
-    private boolean shouldFadeTitleScreenExit(TitleActionRoute route) {
-        return nativeMenuFlow.shouldFadeTitleScreenExit(route);
-    }
 
     private void executeTitleActionRoute(TitleActionRoute route, int zone, int act) {
         nativeMenuFlow.executeTitleActionRoute(route, zone, act);
@@ -2714,6 +2711,10 @@ public class GameLoop {
 
     private void openNativeTitleMode(boolean options) {
         nativeMenuFlow.openNativeTitleMode(options);
+    }
+
+    void openHostedArenaScreen(com.openggf.game.nativemenu.NativeMenuScreen screen) {
+        nativeMenus.open(screen);
     }
 
     com.openggf.game.nativemenu.NativeMenuScreen getNativeMenuScreen() {

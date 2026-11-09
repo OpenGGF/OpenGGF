@@ -10,6 +10,47 @@ This document tracks **intentional deviations** from the original Sonic 1 / 2 / 
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+## Hosted Competition checkpoint reload and monitor OFF (2026-11-07)
+
+`FAST_FROM_CHECKPOINT` omits the death reload's fades and initial title-card
+presentation. The ordinary native death decision still takes a life and selects
+GAME OVER or TIME OVER. The shared LevelManager reload owner preserves the banked
+star post, its act timer and the game's normal respawn consequences. Hosted attempt
+ordinals continue across this reload; they do not receive the star-post timer refund.
+
+S2 and S3K monitors under the hosted OFF rule delete their placement on initialization,
+without marking it remembered. This is a room rule rather than a ROM content value:
+content zero awards Robotnik/Eggman and cannot represent OFF. S1 is unchanged.
+See the [Competition design](../architecture/designs/2026-11-07-s3k-competition-time-attack-tracks-design.md#6-death-without-restarts).
+
+
+## Hosted S2 monitor draws and streamed Competition swaps (2026-11-07)
+
+Hosted S2 RANDOMISED applies the shipped 2P `Obj2E_Init` content draw,
+`(Level_frame_counter & 7) + 1`, to a one-player act. The draw occurs on the
+contents object's first actual execution. The absent P2's Tails 1-up does not
+credit P1. COMPETITION_ITEMS is an invented room set: bit 0 selects teleport
+when set and Robotnik when clear. Its frame-counter basis follows Obj2E_Init;
+the one-bit draw and Robotnik membership do not occur in the ROM. Teleport
+requires the local timer to run and the attempt's frozen `swapEnabled` policy;
+otherwise its contents become invincibility before rising.
+
+The network swap engine reconstructs centre, velocity, collision path and draw
+priority from a server-relayed pose, then rebuilds local camera/object/ring
+windows. It clears rolling, object standing and movement latches so ordinary
+physics can rederive them. Unlike the ROM's full two-player RAM exchange,
+shield, invincibility, shoes, air timer, rings, lives and score remain local.
+The native 64-pass object freeze and VBlank white flash follow a successful S2
+application. A command is admitted by local bounds, standing-radius terrain
+probes and local alive/control/hurt state. Each client applies independently at
+its next executed step; applications are not atomic across clients. With no
+partner, invincibility is awarded at the delayed fallback command rather than
+at native contents selection. Dead or finished recipients receive no effect.
+These deliberate differences permit independent one-player simulations; host
+logging, recording binding and verifier authorization remain separate owners.
+See the [field and admission contract](../architecture/designs/2026-11-07-s3k-competition-time-attack-tracks-design.md#83-what-is-swapped-and-what-the-command-carries).
+
+
 **TAS mechanism verdicts (2026-10-26):** the
 [executed verdict record](../architecture/validation/2026-10-26-tas-trick-verdicts.md)
 separates supported tricks from reached compatibility gaps. Newly demonstrated
