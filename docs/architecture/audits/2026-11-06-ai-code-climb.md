@@ -4227,3 +4227,136 @@ combined pass. Metadata recovery semantics have independent Opus approval;
 range/registration correctness review and combined broad/domain qualification
 remain pending. Source worktrees and useful evidence are retained. No push,
 destination merge, fresh score or automatic usability credit is claimed here.
+
+
+### Range, registration and carried-entry qualification (2026-11-09)
+
+Independent Opus scrutiny of clean `7908d321064d` found no correctness blocker.
+It independently checked the range arithmetic, fourteen registration brace
+associations, local name binding and complete merge accounting. The moving-block
+witness is a retained-policy control; it does not execute the changed adapter.
+The adapter itself is exercised against the independent arithmetic oracle.
+This records completion of the review marked pending in the integration note.
+The earlier carried-entry boundary re-key is approved, and the intentional abort
+probe now stays in its private temporary directory. No additional recovery
+allowance, guard budget or runtime policy is introduced.
+
+A fresh original-trial assessment on that same head scores A (Buzz lifetime)
+**82.5**, vector `[4,3,3,4,2,4,3,3]`, and F (first-HCZ diagnosis) **72.5**, vector
+`[4,2,3,3,2,3,3,3]`. The eight weights remain 15/15/15/15/10/10/10/10. This is
+a static contributor journey, not runtime certification. No other trial was
+regraded. The target of at least 85 per trial, no axis below 3, and 4 for owner,
+understanding and readability remains unmet. Concept overload, crowded helper
+names and the long replay driver remain concrete work for the next increment.
+
+The required S3K obligation selection ran all five concrete suites selected by
+the four documented short names: **60 unique cases passed, zero failures, errors
+or skips**. The complete change-based smoke then selected **4,627 classes**,
+finished all **94 ordinary batches and one guards batch**, and ran **38,614 cases**.
+Ordinary results are 37,771 cases, 29 inherited failures, zero errors and 49 allowed
+skips; all 843 guards passed without skips. Its original verdict is retained:
+
+```text
+VERDICT FAILED: head=7908d321064d source=71b63bfac277 change-based 4627/4627 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38614 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Against qualified source `893e0568eefc`, all 29 failure identities, kinds and types
+match: 27 full assertion messages are literal, while Sonic and Tails MHZ assertions
+only change their expected Set display order. Each complete expected and actual
+membership is equal; the rest of each full stack is literal. All sixteen failing
+test sources and nine runner/policy sources retain their previous blobs. The
+original c4 comparison remains DIFFERENT: four optional-ROM scene outcomes have
+the earlier matched-catalogue reproduction, three Set displays have explicit
+review, and the absent rendering failure is not claimed fixed. Those original
+comparisons and the complete per-case disposition ledger remain intact. No
+blanket normalization is enabled.
+
+All 49 complete raw skip dictionaries match both c4 and the previous candidate.
+All input, ROM, GL, worker, budget and skip-policy fields match. The only additional
+class since the previous candidate is the 25-case carried-entry diagnostics
+suite; the range selection adds three passing cases. Relative to c4, the existing
+eleven-case contact test rename remains explicitly mapped. No prior selected
+class is missing, and no omission or causal-cap indicator is nonzero. The source,
+configuration and pre-existing ROM entries stayed frozen throughout validation.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py \
+  --base c4ca46472e75a0df6f23dfd410e347ab8ed52a70 \
+  --max-minutes 40 --workers 2 --headless-gl surfaceless-egl \
+  --keep-diagnostics --run
+```
+
+Category timing is 407.000 seconds of reported queue wait across 95 admissions,
+1,789.850 seconds of execution including preparation, 2,210.240 seconds wall,
+zero user wait and 13.390 seconds unseparated overhead. S3K obligations used
+0 seconds queue, 90 seconds Maven (rounded), 91.929 seconds wall, zero user wait
+and 1.929 seconds residual. Investigation and editing were not separately timed.
+Full commands, source identities, full assertions/skips, untouched comparisons
+and explicit dispositions are retained under
+`target/code-climb/combined-7908-category/`; original evidence is not relabelled
+as a passing suite.
+
+The matched EHZ1/HCZ pair used the same pinned profiles, selectors, Java 25/Lua
+5.4 environment, normal memory, MSE-off/EGL settings, single fork and alphabetical
+order as c4. Fresh report paths deliberately contain spaces. EHZ1 passes
+5,852/5,852 rows; first HCZ passes with 3,519 comparisons over 3,574 planned rows.
+HCZ2 retains 14,149 comparisons over 14,208 planned rows and the same 26 errors
+(two physics, 24 animation), beginning at animation frame 6,640. All three gates
+are ALL and reached; there are no counted warnings or bootstrap errors. Both
+HCZ reports still list eight unavailable advertised auxiliary schemas. The
+FAST-without-manifest and blocked SMPS messages remain in the full logs; those
+logs are not described as warning-free.
+
+Each fresh report has exactly the reviewed final `carried_entry_diagnostics`
+field added. First HCZ names segment 9 (`hcz`); HCZ2 names segment 11 (`hcz_2`);
+both have empty disagreement/unresolved lists. EHZ has null provenance and the
+explicit unresolved note “no run manifest names this segment”. A strict checker
+detaches only that one final top-level field from the original byte stream and
+requires every remaining byte to match the actual c4 report. It rejects duplicate
+keys and malformed metadata and detects a changed old counter. All three checks
+pass; all context bytes also match c4. The original new reports are retained,
+so this is not a claim that raw report bytes are unchanged. The canonical owner
+validator verifies all three owner keys, logical keys and actual physical paths.
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Dtrace.print.summary=true -Dtest=TestS2Ehz1TraceReplay test -B
+python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Ptrace-segments \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Dtrace.print.summary=true \
+  '-Dtest=TestS3kSonicTailsHczSegmentTraceReplay,TestS3kSonicTailsHcz2SegmentTraceReplay' \
+  test -B
+```
+
+Those concise commands omit only the fresh Surefire/report-directory properties;
+complete argv, environment, source identity and fresh XML are retained in
+`target/code-climb/combined-7908-domain/control/`. EHZ queue/Maven/wall times are
+0/34.532/35.323 seconds; the HCZ pair uses 186/43.879/230.927 seconds. User wait
+is zero; their residuals are 0.791 and 1.048 seconds. Recorded gate completion
+does not certify route, chain, unclassified runtime paths or the missing auxiliary
+observations. No full-suite or exhaustive audit was run.
+
+Both actual emitted HCZ triage commands were executed unchanged through the
+POSIX shell, including the report paths containing spaces. They return COMPLETE;
+the first-HCZ brief has no divergence, and HCZ2 selects frame 6,640's animation
+error and reads the matching context and compressed auxiliary evidence. Both
+briefs retain coverage limits and the diagnostic-only carried-entry disclaimer.
+The inherited context diagnostic-length truncation remains visible. No Windows
+command-execution or run-chain claim is made. Queue wait is zero for both;
+Maven/wall/residual times are 0.410/1.157/0.747 and 0.517/1.166/0.649 seconds,
+with zero user wait.
+
+All three owned validation units are terminal and retired. The exact completed
+category run was acknowledged only after exporting its full plan, preparation,
+results, 96 command arrays, three original logs, all negative/skip records and
+explicit dispositions. Useful source worktrees, raw domain reports, XML and
+comparison/owner receipts remain retained. The publication commit adds this
+audit section only; its runtime/test/resource blobs remain the tested head.
+Only `feature/ai-code-climb-followup` is authorized for publication to draft
+PR271; no destination branch merge or push is part of this delivery. The wider
+code-climb goal remains active.
