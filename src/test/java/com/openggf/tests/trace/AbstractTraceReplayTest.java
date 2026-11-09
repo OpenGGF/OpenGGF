@@ -480,126 +480,8 @@ public abstract class AbstractTraceReplayTest {
                 hardwareTimingReplayClosed = replayS3kTrace(
                         trace, meta, fixture, binder, replayStart, frontierStopper);
             } else {
-                int startTraceIndex = replayStart.startingTraceIndex();
-                for (int i = startTraceIndex; i < trace.frameCount(); i++) {
-                    TraceFrame expected = trace.getFrame(i);
-                    fixture.beginTraceRow(i, expected.frame());
-
-                    // Drive replay from recorded ROM counters instead of inferring
-                    // lag from unchanged physics state.
-                    int bk2Input;
-                    TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
-                    TraceExecutionPhase phase =
-                        TraceReplayBootstrap.phaseForReplay(trace, previous, expected);
-                    TraceReplayBootstrap.markVblankStarvedIterationForReplay(previous, expected);
-                    int validationTraceIndex = i;
-                    bk2Input = TraceReplayFrameClosureDriver.driveGeneral(
-                            phase,
-                            fixture::stepFrameFromRecording,
-                            fixture::skipFrameFromRecording,
-                            () -> {
-                                if (shouldValidateRewindReferenceClosure(game())) {
-                                    TraceReplayFrameClosureDriver.validateCurrentObjectManager(
-                                            () -> {
-                                                var level = GameServices.levelOrNull();
-                                                return level != null
-                                                        ? new TraceReplayFrameClosureDriver.CurrentLevelContext(
-                                                                level.getObjectManager(),
-                                                                level.getCurrentZone(),
-                                                                level.getCurrentAct())
-                                                        : null;
-                                            },
-                                            meta.game(), meta.zone(), meta.act(),
-                                            validationTraceIndex, expected, phase);
-                                    onRewindReferenceClosureValidated(
-                                            validationTraceIndex, expected, phase);
-                                }
-                            });
-
-                    if (!binder.validateInput(expected, bk2Input)) {
-                        fail(String.format(
-                            "Input alignment error at trace frame %d: " +
-                            "BK2 input=0x%04X, trace input=0x%04X. " +
-                            "Check bk2_frame_offset in metadata.json.",
-                            i, bk2Input, expected.input()));
-                    }
-                    if (slotOccupancyProbe != null && GameServices.level() != null) {
-                        slotOccupancyProbe.observe(
-                                i, GameServices.level().getObjectManager());
-                    }
-                    if (!TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
-                        compareDynamicArtIfAdvertised(
-                                trace, binder, expected.frame());
-                        if (observeFrontierAndShouldStop(
-                                frontierStopper, binder, expected.frame())) {
-                            break;
-                        }
-                        continue;
-                    }
-                    TraceFrame comparisonExpected =
-                            TraceReplayBootstrap.frameForGameplayComparison(
-                                    trace, i, previous, expected, phase);
-
-                    // ROM stores centre coordinates at $D008/$D00C. With startPositionIsCentre(),
-                    // the sprite's xPixel/yPixel are set to the correct top-left position,
-                    // so getCentreX()/getCentreY() now return the actual ROM centre values.
-                    var sprite = comparedSprite(fixture);
-
-                    // Capture engine-side diagnostic state for context window
-                    EngineDiagnostics engineDiag = captureEngineDiagnostics(sprite, comparisonExpected);
-                    TraceCharacterState actualSidekick = captureFirstSidekickState();
-                    String secondaryCharacterLabel = meta.recordedSidekicks().isEmpty()
-                            ? "sidekick"
-                            : meta.recordedSidekicks().getFirst();
-                    String romDiag = combineDiagnostics(
-                            comparisonExpected.hasExtendedData() ? comparisonExpected.formatDiagnostics() : "",
-                            formatCharacterDiagnostics(secondaryCharacterLabel, expected.sidekick()));
-                    romDiag = combineDiagnostics(
-                            romDiag,
-                            TraceEventFormatter.summariseFrameEvents(trace.getEventsForFrame(i)));
-                    String engineDiagText = combineDiagnostics(
-                            engineDiag.format(),
-                            formatCharacterDiagnostics(secondaryCharacterLabel, actualSidekick));
-                    TraceEvent.CpuState expectedSidekickCpu =
-                            trace.cpuStateForFrame(comparisonExpected.frame(), secondaryCharacterLabel);
-                    TraceEvent.TailsCpuNormalStep expectedSidekickNormalStep =
-                            trace.tailsCpuNormalStepForFrame(comparisonExpected.frame(), secondaryCharacterLabel);
-                    EngineSidekickCpuState actualSidekickCpu = captureFirstSidekickCpuState();
-                    binder.compareFrame(comparisonExpected,
-                        sprite.getCentreX(), sprite.getCentreY(),
-                        sprite.getXSpeed(), sprite.getYSpeed(), sprite.getGSpeed(),
-                        sprite.getAngle(),
-                        sprite.getAir(), sprite.getRolling(),
-                        sprite.getGroundMode().ordinal(), romDiag,
-                        EngineDiagnostics.formattedWithCameraAnimationAndRings(
-                                engineDiag.cameraX(), engineDiag.cameraY(),
-                                engineDiag.animationId(), engineDiag.mappingFrame(),
-                                engineDiag.rings(), engineDiagText)
-                                .withLives(engineDiag.lives()),
-                        secondaryCharacterLabel, actualSidekick,
-                        expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
-                    compareLoadQueuesIfAdvertised(
-                            trace, binder, comparisonExpected.frame());
-                    compareCnzSlotMachineIfRecorded(
-                            trace, binder, comparisonExpected.frame());
-                    compareS2TornadoIfRecorded(
-                            trace, binder, comparisonExpected.frame());
-                    compareDynamicArtIfAdvertised(
-                            trace, binder, expected.frame());
-                    recordUnmatchedHardwareCompletions(
-                            fixture, binder, expected.frame());
-                    if (compareObjectNearEvents()) {
-                        binder.compareObjectNear(
-                                comparisonExpected.frame(),
-                                objectNearEventsForPrimary(trace, comparisonExpected.frame()),
-                                captureEngineNearbyObjects(sprite));
-                    }
-                    if (observeFrontierAndShouldStop(
-                            frontierStopper, binder, comparisonExpected.frame())) {
-                        break;
-                    }
-
-                }
+                replayGeneralTrace(
+                        trace, meta, fixture, binder, replayStart, frontierStopper);
             }
 
             finishDynamicArtComparison(
@@ -737,6 +619,132 @@ public abstract class AbstractTraceReplayTest {
         // cases start_x/start_y reflect whatever was left in Player_1 RAM at the
         // recorder start, not the first replayable in-level position.
         return TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace);
+    }
+
+    private void replayGeneralTrace(TraceData trace, TraceMetadata meta,
+                                    HeadlessTestFixture fixture, TraceBinder binder,
+                                    TraceReplayBootstrap.ReplayStartState replayStart,
+                                    FrontierReplayStopper frontierStopper) {
+        int startTraceIndex = replayStart.startingTraceIndex();
+        for (int i = startTraceIndex; i < trace.frameCount(); i++) {
+            TraceFrame expected = trace.getFrame(i);
+            fixture.beginTraceRow(i, expected.frame());
+
+            // Drive replay from recorded ROM counters instead of inferring
+            // lag from unchanged physics state.
+            int bk2Input;
+            TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
+            TraceExecutionPhase phase =
+                TraceReplayBootstrap.phaseForReplay(trace, previous, expected);
+            TraceReplayBootstrap.markVblankStarvedIterationForReplay(previous, expected);
+            int validationTraceIndex = i;
+            bk2Input = TraceReplayFrameClosureDriver.driveGeneral(
+                    phase,
+                    fixture::stepFrameFromRecording,
+                    fixture::skipFrameFromRecording,
+                    () -> {
+                        if (shouldValidateRewindReferenceClosure(game())) {
+                            TraceReplayFrameClosureDriver.validateCurrentObjectManager(
+                                    () -> {
+                                        var level = GameServices.levelOrNull();
+                                        return level != null
+                                                ? new TraceReplayFrameClosureDriver.CurrentLevelContext(
+                                                        level.getObjectManager(),
+                                                        level.getCurrentZone(),
+                                                        level.getCurrentAct())
+                                                : null;
+                                    },
+                                    meta.game(), meta.zone(), meta.act(),
+                                    validationTraceIndex, expected, phase);
+                            onRewindReferenceClosureValidated(
+                                    validationTraceIndex, expected, phase);
+                        }
+                    });
+
+            if (!binder.validateInput(expected, bk2Input)) {
+                fail(String.format(
+                    "Input alignment error at trace frame %d: " +
+                    "BK2 input=0x%04X, trace input=0x%04X. " +
+                    "Check bk2_frame_offset in metadata.json.",
+                    i, bk2Input, expected.input()));
+            }
+            if (slotOccupancyProbe != null && GameServices.level() != null) {
+                slotOccupancyProbe.observe(
+                        i, GameServices.level().getObjectManager());
+            }
+            if (!TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
+                compareDynamicArtIfAdvertised(
+                        trace, binder, expected.frame());
+                if (observeFrontierAndShouldStop(
+                        frontierStopper, binder, expected.frame())) {
+                    break;
+                }
+                continue;
+            }
+            TraceFrame comparisonExpected =
+                    TraceReplayBootstrap.frameForGameplayComparison(
+                            trace, i, previous, expected, phase);
+
+            // ROM stores centre coordinates at $D008/$D00C. With startPositionIsCentre(),
+            // the sprite's xPixel/yPixel are set to the correct top-left position,
+            // so getCentreX()/getCentreY() now return the actual ROM centre values.
+            var sprite = comparedSprite(fixture);
+
+            // Capture engine-side diagnostic state for context window
+            EngineDiagnostics engineDiag = captureEngineDiagnostics(sprite, comparisonExpected);
+            TraceCharacterState actualSidekick = captureFirstSidekickState();
+            String secondaryCharacterLabel = meta.recordedSidekicks().isEmpty()
+                    ? "sidekick"
+                    : meta.recordedSidekicks().getFirst();
+            String romDiag = combineDiagnostics(
+                    comparisonExpected.hasExtendedData() ? comparisonExpected.formatDiagnostics() : "",
+                    formatCharacterDiagnostics(secondaryCharacterLabel, expected.sidekick()));
+            romDiag = combineDiagnostics(
+                    romDiag,
+                    TraceEventFormatter.summariseFrameEvents(trace.getEventsForFrame(i)));
+            String engineDiagText = combineDiagnostics(
+                    engineDiag.format(),
+                    formatCharacterDiagnostics(secondaryCharacterLabel, actualSidekick));
+            TraceEvent.CpuState expectedSidekickCpu =
+                    trace.cpuStateForFrame(comparisonExpected.frame(), secondaryCharacterLabel);
+            TraceEvent.TailsCpuNormalStep expectedSidekickNormalStep =
+                    trace.tailsCpuNormalStepForFrame(comparisonExpected.frame(), secondaryCharacterLabel);
+            EngineSidekickCpuState actualSidekickCpu = captureFirstSidekickCpuState();
+            binder.compareFrame(comparisonExpected,
+                sprite.getCentreX(), sprite.getCentreY(),
+                sprite.getXSpeed(), sprite.getYSpeed(), sprite.getGSpeed(),
+                sprite.getAngle(),
+                sprite.getAir(), sprite.getRolling(),
+                sprite.getGroundMode().ordinal(), romDiag,
+                EngineDiagnostics.formattedWithCameraAnimationAndRings(
+                        engineDiag.cameraX(), engineDiag.cameraY(),
+                        engineDiag.animationId(), engineDiag.mappingFrame(),
+                        engineDiag.rings(), engineDiagText)
+                        .withLives(engineDiag.lives()),
+                secondaryCharacterLabel, actualSidekick,
+                expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
+            compareLoadQueuesIfAdvertised(
+                    trace, binder, comparisonExpected.frame());
+            compareCnzSlotMachineIfRecorded(
+                    trace, binder, comparisonExpected.frame());
+            compareS2TornadoIfRecorded(
+                    trace, binder, comparisonExpected.frame());
+            compareDynamicArtIfAdvertised(
+                    trace, binder, expected.frame());
+            recordUnmatchedHardwareCompletions(
+                    fixture, binder, expected.frame());
+            if (compareObjectNearEvents()) {
+                binder.compareObjectNear(
+                        comparisonExpected.frame(),
+                        objectNearEventsForPrimary(trace, comparisonExpected.frame()),
+                        captureEngineNearbyObjects(sprite));
+            }
+            if (observeFrontierAndShouldStop(
+                    frontierStopper, binder, comparisonExpected.frame())) {
+                break;
+            }
+
+        }
     }
 
     private boolean replayS3kTrace(TraceData trace, TraceMetadata meta,

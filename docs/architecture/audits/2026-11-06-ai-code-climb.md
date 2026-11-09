@@ -4360,3 +4360,75 @@ audit section only; its runtime/test/resource blobs remain the tested head.
 Only `feature/ai-code-climb-followup` is authorized for publication to draft
 PR271; no destination branch merge or push is part of this delivery. The wider
 code-climb goal remains active.
+
+
+### General replay comparison flow (2026-11-09)
+
+From published base `85d9e60ea1c0`, the remaining general-game row loop now lives
+in same-file private `void replayGeneralTrace`, taking the existing trace,
+metadata, fixture, binder, replay start and frontier stopper. The public entry
+shows fixture/bootstrap assembly, binder creation, named comparison dispatch,
+terminal/timing finalization, assertions and final publication in order. Its
+381 lines become 263; that size change alone is not correctness evidence. No
+context, fields, result model, protocol, test identity or public/protected API
+was added. No fixture, tolerance, hydration, snapshot or report format changed.
+
+The moved 120-line block retains every statement, lambda, method reference,
+getter, comparison, branch and row/frame-key use. The S3K helper's boolean still
+means hardware timing was already closed. Both outer `stoppedEarly()` reads,
+binder assignment, final gate assignment, report rebuilds and writer-once
+publication stay at their original lifecycle points. No directly affected
+Javadoc was detached or reattached.
+
+An independent checker reads the immutable base from Git, locates the new
+member by its signature and braces, reinlines its body and removes only that
+member. The reconstructed entire Java file is byte-identical to the base,
+including all 767 moved executable tokens in order, the S3K signature/body and
+the outer catch/finally. Five in-memory negative controls reject changed
+observer, ordinal/frame-key, gate, primary-suppression and S3K-body tokens. The
+expected extra private stack frame remains a diagnostic shape difference; this
+source proof does not assert unmeasured runtime coverage.
+
+One focused normal-memory queued invocation used Java 25, Lua 5.4, MSE off,
+surfaceless EGL, no display variables, one fork and alphabetical order. Its
+comma-joined `-Dtest` selection is exactly:
+
+```text
+TestAbstractTraceReplayDynamicArtTerminal#completedAdvertisedReplayReportsStaleTerminalSnapshot+actualEarlyFrontierStopSuppressesUnproducedTerminalExpectation
+TestTraceReplayInvariantGuard
+TestTraceLifeCountComparisonGuard
+TestTraceReplayReferenceClosureGuard
+TestTraceGateCompletionReport
+TestFrontierReplayStopper
+TestBuildToolingGuard#regeneratedS3kAizFullRunReplayIsReleaseBlocking
+```
+
+The actual command is `python3 tools/testing/maven_queue.py --normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical` followed by the selection above and `test -B`;
+its complete argument array, including the four fresh output-directory
+properties, is retained in
+`target/code-climb/replay-flow-readability/focused-command.json`.
+Fresh XML contains **53 unique cases across seven classes, zero failures,
+errors or skips**. Both real inherited S2 driver completion/frontier methods and
+the exact source-sensitive replay, life-count and delegation guard identities
+are present. All verified ROM properties were found. Compilation deprecation,
+FAST-without-manifest and blocked SMPS presentation warnings remain in the full
+log; it is not warning-free. No failed case required baseline attribution.
+
+The tested Java SHA-256 is
+`0be58b095154d2ce8b1a2ed06e779bbba2026764926b703f7f9ed0dd8b82deac`.
+Queue telemetry reports 0.0 seconds waiting and 39.5 seconds execution hold,
+both rounded; Maven reports 38.650 seconds and command wall is 39.571 seconds.
+User wait is zero; the remaining wall-minus-queue/hold interval is 0.071 seconds,
+with editing/coordination time unmeasured. Independent reconstruction, negative
+controls, full command/environment, original log, per-case XML identities and
+own completed queue telemetry remain under
+`target/code-climb/replay-flow-readability/`; existing evidence is preserved.
+
+This is a bounded source extraction and focused check. Existing completion
+probes intentionally assert divergent/frontier outcomes; these results do not
+certify a clean route or every getter cadence. No new behavior test was needed
+for the literal movement. Independent correctness review, combined smoke,
+matched replay qualification and publication remain root-owned and pending for
+this increment. No push, destination update or PR write was performed here.
