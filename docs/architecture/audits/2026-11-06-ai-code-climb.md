@@ -3605,8 +3605,11 @@ to use the JVM's original working directory. It supplies absolute optional test
 paths, reads the literal `SEGA` header bytes through the scene's `SceneRomLibrary`
 view, verifies the catalogue's actual source paths, and enters GHZ/EHZ with
 ROM-backed terrain. Requiring S1 again must preserve the original restoration
-snapshot; the witness checks resolved configuration and exact caller JVM-property
-restoration. It makes no private absent-key-presence claim.
+snapshot; the resolved-configuration checks detect an overwritten first snapshot.
+They do not independently prove fixture close, because level disposal first resets
+configuration to defaults. The caller JVM properties are restored in a `finally`
+block as test cleanup, without claiming a separate restoration witness. It makes
+no private absent-key-presence claim.
 
 The first attempt had a witness reflection setup error (`Game.art()` instead of
 the public field) and is invalid RED evidence. After correcting that test-only
@@ -3654,3 +3657,47 @@ This is a bounded test-fixture repair, with the inherited gameplay failures
 reported rather than repaired. No category/full-suite run or replacement
 category `VERDICT` was produced; prior raw qualification verdicts are unchanged.
 Root retains review and publication ownership for draft PR271.
+
+
+### Optional-ROM fixture review repairs (2026-11-09)
+
+Opus 5.5 reviewed `78f3ebc2..ce7ef00c` read-only and found no blocker. Its two
+low-severity findings were useful: the custom-audio entry could silently skip
+its donor chapter, and the restoration wording exceeded what the witness
+proved. Root handled these findings without another delegated review round.
+
+Both normal and audio entry now share `open(boolean withAudio)`. The real
+empty-discovery-directory witness executes both paths, always covers required
+S1, and additionally covers S2 when supplied. It compares the scene's full
+256-byte ROM header/title block with the supplied image, checks the actual
+catalogue source and enters decoded GHZ/EHZ fields. S1 is checked first for a
+deterministic missing-binding failure. Optional S2 absence no longer skips the
+S1 witness. The repeated-required-binding checks detect overwriting the first
+fixture snapshot; shared fixture tests own independent close/restoration
+coverage. JVM-property cleanup is a `finally` obligation, not a self-asserted
+restoration test. The tautological post-cleanup assertion was removed.
+
+Final command, with Java 25, Lua 5.4, displays unset and normal queue admission:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dopenggf.surefire.reports=<task-target>/scene-rom-fixture/review-final/surefire \
+  '-Dtest=TestThreeIslandsScene,TestRomCatalogueFixture,TestSceneRomLibrary,TestHeadlessBackendPropertyIsolation' test
+```
+
+Fresh XML contains **33 cases: 25 passed, eight inherited failures, zero errors
+and zero skips**. Both normal/audio witness invocations pass. All twelve original
+scene identities and their outcomes/types remain unchanged. Seven failing
+messages are literal matches; the physical-trail assertion retains its
+FieldScreen/StoryScreen failure with two different JVM identity displays. The
+complete old/new texts are retained in
+`target/code-climb/scene-rom-fixture/review-final-disposition.json`. Every ROM
+property was found, with `missing=none`. Queue wait was 0 seconds, Maven
+execution 38.553 seconds, wall time 39.628 seconds, user wait 0 and residual
+1.075 seconds. Investigation/edit time was not measured.
+
+Only this test class and the existing audit changed. Production, shared fixture,
+selection, skip policy and prior broad/trace evidence are unchanged. This is
+bounded fixture qualification; the earlier raw category verdicts remain FAILED,
+and no new full-smoke, full-suite or contributor-score claim follows from it.
