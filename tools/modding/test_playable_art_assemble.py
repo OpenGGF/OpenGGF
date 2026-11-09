@@ -24,7 +24,7 @@ class PlayableArtAssemblyTest(unittest.TestCase):
             self.assertEqual(before, {name:(committed/name).read_bytes() for name in before})
             assembler.assemble(art, out)
             self.assertEqual(before, {p.name:p.read_bytes() for p in out.iterdir()})
-            self.assertEqual(stats, dict(frames=112, maxTilesPerFrame=36, animations=18))
+            self.assertEqual(stats, dict(frames=116, maxTilesPerFrame=30, animations=18))
             self.assertEqual('hang-00', source[manifest['nativeFrames']['hang/0']]['id'])
             self.assertEqual('wait-03', source[manifest['nativeFrames']['wait/fidget']]['id'])
             self.assertEqual('native-pose-97', source[manifest['nativeFrames']['roll/1']]['id'])
@@ -48,14 +48,18 @@ class PlayableArtAssemblyTest(unittest.TestCase):
                     self.assertTrue(all(source[i]['angle_set']==slope for i in cycle))
             idle = manifest['animations']['WAIT']
             self.assertEqual('loop', idle['end'])
-            self.assertEqual(186, sum(idle['durations'][:8]))
-            self.assertEqual([0,1,0,1,2,0,1,0],
-                             [source[i]['order'] for i in idle['frames'][:8]])
-            self.assertEqual(6, len(set(idle['frames'])))
-            self.assertEqual(len(idle['frames']), len(idle['durations']))
+            native = json.loads((art/'round3/native-scripts.json').read_text())
+            self.assertEqual(native['WAIT']['mappingSequence'],
+                             [source[i]['order']+1 for i in idle['frames']])
+            self.assertEqual([6]*len(idle['frames']), idle['durations'])
+            self.assertEqual(9, len(set(idle['frames'])))
+            for name in ('ROLL', 'SPINDASH'):
+                self.assertEqual(native[name]['ids'],
+                                 [source[i]['id'] for i in manifest['animations'][name]['frames']])
+            self.assertEqual([1]*10, manifest['animations']['SPINDASH']['durations'])
             self.assertEqual('hold',manifest['animations']['DUCK']['end'])
             self.assertEqual('WALK',manifest['animations']['SPRING']['next'])
-            self.assertEqual([24,24],manifest['animations']['SPRING']['durations'])
+            self.assertEqual([48],manifest['animations']['SPRING']['durations'])
 
 
 if __name__ == '__main__':

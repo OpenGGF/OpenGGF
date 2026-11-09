@@ -1,0 +1,741 @@
+{
+  "tool": "Built-in image_gen.imagegen; single image_url result; no animated-output, sequence-output or model/version selector exposed. Used one horizontal strip per attempt, not an animated model output. Exact model/version unavailable.",
+  "base": "1ac35514db0810a10080718a141682781edb69b0",
+  "source_pins": {
+    "s2disasm": "34fc7f130a96db171e1a1c43e28e0bad81cd6ca7"
+  },
+  "concept": "examples/mica-and-talon/concept/mica.png",
+  "cleanup": "Edge-connected magenta key removal tolerance 50; largest connected component; Lanczos fit to native tight box; fixed 15 opaque colours; inside ink outline. Shared native blur/interleave mappings reuse first reduced occurrence. No limb redrawing, bitmap rotation, or head transplant. Geometry fitting is anisotropic and may affect proportions.",
+  "groups": {
+    "walk": {
+      "selected_attempt": 2,
+      "attempt_prompts": [
+        "Use case: stylized-concept. Produce a single horizontal sprite strip of EXACTLY EIGHT evenly spaced frames, one row, left to right, of the WALK cycle. Image 1 is the exact native S2 Sonic eight-frame pose sequence, enlarged nearest-neighbour: copy ONLY each phase's body mechanics, foot alternation, arm swing, head bob, and pose ordering. Image 2 is MICA, an ORIGINAL female pangolin, jade overlapping scales forming a hood, cream muzzle and belly, small ears, white gloves, coral red hiking boots, long tapering scaled tail. Image 3 is approved native-pose MICA sprite art, the rendering/proportion style anchor. Redraw every native pose as MICA: new drawing, never recolour, no Sonic features or spikes. Keep MICA identical in proportions, head, hood, boots, tail across all eight frames. Two legs and two arms; alternate near/far foot after frame four. No duplicates: match reference phase by phase. 16-bit pixel sprite style with crisp blocks and limited jade/cream/coral palette, dark ink contours, no gradients. Each frame occupies one eighth of image, full figure, generous empty margin, no overlap, right-facing side view, constant baseline, no text or borders. Transparent background. This is the complete connected walk cycle, not unrelated character poses.",
+        "Use case: stylized-concept. Original 16-bit pixel sprite art for MICA, the ORIGINAL female pangolin in image 2: jade overlapping scale hood and long tapered tail, cream muzzle/belly, white gloves, coral hiking boots. Image 1 is native S2 Sonic cycle reference in exact script order, corrected player palette, 8x nearest-neighbour. Image 3 is approved MICA native-pose sprite style. Use ONLY the body mechanics and exact phase progression of image 1, redraw as MICA, never recolour; NO Sonic quills, blue, or Sonic facial features. Crisp limited colours, dark outlines, clean readable pixels, no gradients, consistent body proportions and scale details across all frames. Single horizontal evenly spaced strip, full figures, solid flat magenta #ff00ff background, no text/grid/borders, no overlap, identical cell width and baseline, generous margin. EXACTLY EIGHT frames of WALK matching eight reference cells. Frame 1 near foot planted/far foot passing; 2 near foot pushes back/far foot swings forward; 3 near foot back/far foot forward extended; 4 far foot heel strike forward; 5 far foot planted/near foot passing; 6 far foot pushes back/near foot swings forward; 7 far foot back/near foot forward extended; 8 near foot heel strike. Arms counter-swing. Second half swaps the near/far leg, NOT duplicates of first half. Match reference foot positions phase by phase. Do not turn walking into running. IMPORTANT: pure flat MAGENTA #ff00ff background everywhere outside characters; NO transparency, shadows, haze or decorative noise. Every figure completely fits its cell. Near leg must visibly switch with far leg in second half; use darker coral for far boot. No frozen arm swing.",
+        "Use case: stylized-concept. Original 16-bit pixel sprite art for MICA, the ORIGINAL female pangolin in image 2: jade overlapping scale hood and long tapered tail, cream muzzle/belly, white gloves, coral hiking boots. Image 1 is native S2 Sonic cycle reference in exact script order, corrected player palette, 8x nearest-neighbour. Image 3 is approved MICA native-pose sprite style. Use ONLY the body mechanics and exact phase progression of image 1, redraw as MICA, never recolour; NO Sonic quills, blue, or Sonic facial features. Crisp limited colours, dark outlines, clean readable pixels, no gradients, consistent body proportions and scale details across all frames. Single horizontal evenly spaced strip, full figures, solid flat magenta #ff00ff background, no text/grid/borders, no overlap, identical cell width and baseline, generous margin. EXACTLY EIGHT frames of WALK matching eight reference cells. Frame 1 near foot planted/far foot passing; 2 near foot pushes back/far foot swings forward; 3 near foot back/far foot forward extended; 4 far foot heel strike forward; 5 far foot planted/near foot passing; 6 far foot pushes back/near foot swings forward; 7 far foot back/near foot forward extended; 8 near foot heel strike. Arms counter-swing. Second half swaps the near/far leg, NOT duplicates of first half. Match reference foot positions phase by phase. Do not turn walking into running. IMPORTANT: pure flat MAGENTA #ff00ff background everywhere outside characters; NO transparency, shadows, haze or decorative noise. Every figure completely fits its cell. Near leg must visibly switch with far leg in second half; use darker coral for far boot. No frozen arm swing. FINAL CONSTRAINT PASS: Output should look like 32 to 40 pixel tall Genesis sprites enlarged with nearest-neighbour, with broad simple pixel clusters. No tiny detailed illustration. Emphasize smooth, consistent foot alternation and opposed arm swing. Frame 3 shows the far boot forward and frame 7 shows the NEAR boot forward; shade these differently. Preserve identical face and hood."
+      ],
+      "attempt_sha256": [
+        "20427fa2c9fd0e70ca86333c7953f852dd72d1d96af974c6d51f47510298e0ec",
+        "3af31c2c3508ccb58b8f919803297eda31f2fcf3d2f58af78096061e8e9ac7a3",
+        "949685275ea6a22f064434009a0349580803939efdec114f496ada3462e910f3"
+      ],
+      "raw_file": "$HOME/scratch/agent-tmp/mica-cycle-exp-20261108/walk/attempt-2.png",
+      "review": "Attempt 2: steady head/hood/tail. Arm swing changes; near/far boots swap shading in phases 3/7, but phases 4/8 remain too alike. Foot alternation is partially readable, not cleanly solved. Attempt 1 had weaker near/far differentiation; 3 retained similar limb ambiguity.",
+      "ticks_per_step": 5,
+      "inertia_hex": "0400"
+    },
+    "run": {
+      "selected_attempt": 3,
+      "attempt_prompts": [
+        "Use case: stylized-concept. Original 16-bit pixel sprite art for MICA, the ORIGINAL female pangolin in image 2: jade overlapping scale hood and long tapered tail, cream muzzle/belly, white gloves, coral hiking boots. Image 1 is native S2 Sonic cycle reference in exact script order, corrected player palette, 8x nearest-neighbour. Image 3 is approved MICA native-pose sprite style. Use ONLY the body mechanics and exact phase progression of image 1, redraw as MICA, never recolour; NO Sonic quills, blue, or Sonic facial features. Crisp limited colours, dark outlines, clean readable pixels, no gradients, consistent body proportions and scale details across all frames. Single horizontal evenly spaced strip, full figures, transparent background, no text/grid/borders, no overlap, identical cell width and baseline, generous margin. EXACTLY FOUR frames of RUN matching four reference cells phase by phase. Sprint leaned forward, head/hood absolutely identical in every cell, compact boot-wheel blur: alternate the near and far coral boots around the circular running arc. Do not substitute ordinary walking or four identical stand poses. Tail extends backward and moves subtly, same length. Preserve reference's arm and leg blur trajectory.",
+        "Use case: stylized-concept. Original 16-bit pixel sprite art for MICA, the ORIGINAL female pangolin in image 2: jade overlapping scale hood and long tapered tail, cream muzzle/belly, white gloves, coral hiking boots. Image 1 is native S2 Sonic cycle reference in exact script order, corrected player palette, 8x nearest-neighbour. Image 3 is approved MICA native-pose sprite style. Use ONLY the body mechanics and exact phase progression of image 1, redraw as MICA, never recolour; NO Sonic quills, blue, or Sonic facial features. Crisp limited colours, dark outlines, clean readable pixels, no gradients, consistent body proportions and scale details across all frames. Single horizontal evenly spaced strip, full figures, solid flat magenta #ff00ff background, no text/grid/borders, no overlap, identical cell width and baseline, generous margin. EXACTLY FOUR frames of RUN matching four reference cells phase by phase. Sprint leaned forward, head/hood absolutely identical in every cell, compact boot-wheel blur: alternate the near and far coral boots around the circular running arc. Do not substitute ordinary walking or four identical stand poses. Tail extends backward and moves subtly, same length. Preserve reference's arm and leg blur trajectory. IMPORTANT: pure flat MAGENTA #ff00ff background everywhere outside characters; NO transparency, shadows, haze or decorative noise. Every figure completely fits its cell. No fuzzy semitransparent boot trails: use solid coral two-tone boot arcs. Every head and tail identical; feet rotate around the circle.",
+        "Use case: stylized-concept. Original 16-bit pixel sprite art for MICA, the ORIGINAL female pangolin in image 2: jade overlapping scale hood and long tapered tail, cream muzzle/belly, white gloves, coral hiking boots. Image 1 is native S2 Sonic cycle reference in exact script order, corrected player palette, 8x nearest-neighbour. Image 3 is approved MICA native-pose sprite style. Use ONLY the body mechanics and exact phase progression of image 1, redraw as MICA, never recolour; NO Sonic quills, blue, or Sonic facial features. Crisp limited colours, dark outlines, clean readable pixels, no gradients, consistent body proportions and scale details across all frames. Single horizontal evenly spaced strip, full figures, solid flat magenta #ff00ff background, no text/grid/borders, no overlap, identical cell width and baseline, generous margin. EXACTLY FOUR frames of RUN matching four reference cells phase by phase. Sprint leaned forward, head/hood absolutely identical in every cell, compact boot-wheel blur: alternate the near and far coral boots around the circular running arc. Do not substitute ordinary walking or four identical stand poses. Tail extends backward and moves subtly, same length. Preserve reference's arm and leg blur trajectory. IMPORTANT: pure flat MAGENTA #ff00ff background everywhere outside characters; NO transparency, shadows, haze or decorative noise. Every figure completely fits its cell. No fuzzy semitransparent boot trails: use solid coral two-tone boot arcs. Every head and tail identical; feet rotate around the circle. FINAL CONSTRAINT PASS: Output should look like 32 to 40 pixel tall Genesis sprites enlarged with nearest-neighbour, with broad simple pixel clusters. No tiny detailed illustration. The coral arcs are hiking BOOTS in extreme smear animation, not giant red legs or detached ribbons. No white cuffs, only coral boots and jade scales with cream chest. Head angled forward as reference, not upright standing. Exactly four distinct cyclic phases."
+      ],
+      "attempt_sha256": [
+        "b7970780c591dfdfff5d1fad89fdabc0dfe1ef62877019260d2f91aff65d9004",
+        "0bd511ad6c9d89341322b1a3150625e699cec7b46c5bf8b3695ed734203d204d",
+        "4bc87c2378364467e4ca38e484da6ecfb0bda1d9fe0f94e31642a0c79d8bd7a1"
+      ],
+      "raw_file": "$HOME/scratch/agent-tmp/mica-cycle-exp-20261108/run/attempt-3.png",
+      "review": "Attempt 3: crispest pixels, stable hood and tail; four boot arcs form a coherent wheel. Phases 2/4 remain very similar; white boot-cuff accents persist despite prompt. Attempt 1 has broken transparent/background artifacts; 2 softer and more illustrative.",
+      "ticks_per_step": 3,
+      "inertia_hex": "0600"
+    },
+    "roll": {
+      "selected_attempt": 3,
+      "attempt_prompts": [
+        "Use case: stylized-concept. Original 16-bit pixel sprite art for MICA, the ORIGINAL female pangolin in image 2: jade overlapping scale hood and long tapered tail, cream muzzle/belly, white gloves, coral hiking boots. Image 1 is native S2 Sonic cycle reference in exact script order, corrected player palette, 8x nearest-neighbour. Image 3 is approved MICA native-pose sprite style. Use ONLY the body mechanics and exact phase progression of image 1, redraw as MICA, never recolour; NO Sonic quills, blue, or Sonic facial features. Crisp limited colours, dark outlines, clean readable pixels, no gradients, consistent body proportions and scale details across all frames. Single horizontal evenly spaced strip, full figures, transparent background, no text/grid/borders, no overlap, identical cell width and baseline, generous margin. EXACTLY EIGHT frames of ROLL: tucked right-facing spin pose; jade circular fast-motion blur; spin rotated quarter turn; SAME jade circular blur; spin upside down; SAME blur; spin rotated three quarter turn; SAME blur. Four discrete rotating tucked pangolin poses plus one shared blur between each. Match the reference phases. Tuck long tail, head, hands and boots tightly inside round shell. Distinct orientation at cells 1,3,5,7, no spikes. Identical outer shell diameter throughout. Blur is mostly jade with sparse lighter jade arcs, no face or boots.",
+        "Use case: stylized-concept. Original 16-bit pixel sprite art for MICA, the ORIGINAL female pangolin in image 2: jade overlapping scale hood and long tapered tail, cream muzzle/belly, white gloves, coral hiking boots. Image 1 is native S2 Sonic cycle reference in exact script order, corrected player palette, 8x nearest-neighbour. Image 3 is approved MICA native-pose sprite style. Use ONLY the body mechanics and exact phase progression of image 1, redraw as MICA, never recolour; NO Sonic quills, blue, or Sonic facial features. Crisp limited colours, dark outlines, clean readable pixels, no gradients, consistent body proportions and scale details across all frames. Single horizontal evenly spaced strip, full figures, solid flat magenta #ff00ff background, no text/grid/borders, no overlap, identical cell width and baseline, generous margin. EXACTLY EIGHT frames of ROLL: tucked right-facing spin pose; jade circular fast-motion blur; spin rotated quarter turn; SAME jade circular blur; spin upside down; SAME blur; spin rotated three quarter turn; SAME blur. Four discrete rotating tucked pangolin poses plus one shared blur between each. Match the reference phases. Tuck long tail, head, hands and boots tightly inside round shell. Distinct orientation at cells 1,3,5,7, no spikes. Identical outer shell diameter throughout. Blur is mostly jade with sparse lighter jade arcs, no face or boots. IMPORTANT: pure flat MAGENTA #ff00ff background everywhere outside characters; NO transparency, shadows, haze or decorative noise. Every figure completely fits its cell. Keep the tucked spin phases exactly in native orientation, quarter turns each time, not a random spinning illustration.",
+        "Use case: stylized-concept. Original 16-bit pixel sprite art for MICA, the ORIGINAL female pangolin in image 2: jade overlapping scale hood and long tapered tail, cream muzzle/belly, white gloves, coral hiking boots. Image 1 is native S2 Sonic cycle reference in exact script order, corrected player palette, 8x nearest-neighbour. Image 3 is approved MICA native-pose sprite style. Use ONLY the body mechanics and exact phase progression of image 1, redraw as MICA, never recolour; NO Sonic quills, blue, or Sonic facial features. Crisp limited colours, dark outlines, clean readable pixels, no gradients, consistent body proportions and scale details across all frames. Single horizontal evenly spaced strip, full figures, solid flat magenta #ff00ff background, no text/grid/borders, no overlap, identical cell width and baseline, generous margin. EXACTLY EIGHT frames of ROLL: tucked right-facing spin pose; jade circular fast-motion blur; spin rotated quarter turn; SAME jade circular blur; spin upside down; SAME blur; spin rotated three quarter turn; SAME blur. Four discrete rotating tucked pangolin poses plus one shared blur between each. Match the reference phases. Tuck long tail, head, hands and boots tightly inside round shell. Distinct orientation at cells 1,3,5,7, no spikes. Identical outer shell diameter throughout. Blur is mostly jade with sparse lighter jade arcs, no face or boots. IMPORTANT: pure flat MAGENTA #ff00ff background everywhere outside characters; NO transparency, shadows, haze or decorative noise. Every figure completely fits its cell. Keep the tucked spin phases exactly in native orientation, quarter turns each time, not a random spinning illustration. FINAL CONSTRAINT PASS: Output should look like 32 to 40 pixel tall Genesis sprites enlarged with nearest-neighbour, with broad simple pixel clusters. No tiny detailed illustration. Four poses should be exact clockwise quarter-turns of one character identity, consistent shell silhouette; blur frames identical. Keep coral boots small and tucked."
+      ],
+      "attempt_sha256": [
+        "90b0a01016fbf62a0b6c0aadb0a422464caaa9b08b6b5b5ce7f6d5f873d37b64",
+        "8408448a9553d63edcb0b803735d3617d0d42a31b13287523b6ebf9994dae985",
+        "80c300ed5e5840d7ddbaa0636737305ef04dd9e8dd5d3ea0b5550b790c66ab5a"
+      ],
+      "raw_file": "$HOME/scratch/agent-tmp/mica-cycle-exp-20261108/roll/attempt-3.png",
+      "review": "Attempt 3: four readable quarter-turn tucked poses with a jade blur. Blur orientation drift is normalized by aliasing the first blur; no redraw or rotation of spin poses. Attempt 1 has finer noise, 2 softer clusters. Shape/face still varies slightly between quarter turns.",
+      "ticks_per_step": 1,
+      "inertia_hex": "0600"
+    },
+    "spindash": {
+      "selected_attempt": 3,
+      "attempt_prompts": [
+        "Use case: stylized-concept. Original 16-bit pixel sprite art for MICA, the ORIGINAL female pangolin in image 2: jade overlapping scale hood and long tapered tail, cream muzzle/belly, white gloves, coral hiking boots. Image 1 is native S2 Sonic cycle reference in exact script order, corrected player palette, 8x nearest-neighbour. Image 3 is approved MICA native-pose sprite style. Use ONLY the body mechanics and exact phase progression of image 1, redraw as MICA, never recolour; NO Sonic quills, blue, or Sonic facial features. Crisp limited colours, dark outlines, clean readable pixels, no gradients, consistent body proportions and scale details across all frames. Single horizontal evenly spaced strip, full figures, transparent background, no text/grid/borders, no overlap, identical cell width and baseline, generous margin. EXACTLY TEN frames of SPINDASH: common interleaved compact jade diagonal shell; charge variation 1; SAME common shell; charge variation 2; SAME common shell; charge variation 3; SAME common shell; charge variation 4; SAME common shell; charge variation 5. Match reference's diagonal ellipsoid crouched charge silhouette, same scale, consistent tilt and centre. Five subtly progressing scale/rotation phases. Tucked pangolin, no limbs sticking out. Cells 1,3,5,7,9 must be identical. No smoke effects outside cell.",
+        "Use case: stylized-concept. Original 16-bit pixel sprite art for MICA, the ORIGINAL female pangolin in image 2: jade overlapping scale hood and long tapered tail, cream muzzle/belly, white gloves, coral hiking boots. Image 1 is native S2 Sonic cycle reference in exact script order, corrected player palette, 8x nearest-neighbour. Image 3 is approved MICA native-pose sprite style. Use ONLY the body mechanics and exact phase progression of image 1, redraw as MICA, never recolour; NO Sonic quills, blue, or Sonic facial features. Crisp limited colours, dark outlines, clean readable pixels, no gradients, consistent body proportions and scale details across all frames. Single horizontal evenly spaced strip, full figures, solid flat magenta #ff00ff background, no text/grid/borders, no overlap, identical cell width and baseline, generous margin. EXACTLY TEN frames of SPINDASH: common interleaved compact jade diagonal shell; charge variation 1; SAME common shell; charge variation 2; SAME common shell; charge variation 3; SAME common shell; charge variation 4; SAME common shell; charge variation 5. Match reference's diagonal ellipsoid crouched charge silhouette, same scale, consistent tilt and centre. Five subtly progressing scale/rotation phases. Tucked pangolin, no limbs sticking out. Cells 1,3,5,7,9 must be identical. No smoke effects outside cell. IMPORTANT: pure flat MAGENTA #ff00ff background everywhere outside characters; NO transparency, shadows, haze or decorative noise. Every figure completely fits its cell. Charge cells 2,4,6,8,10 must be five visibly DIFFERENT rotated shell-scale patterns, not five identical faces. Match native compact ellipsoid envelope.",
+        "Use case: stylized-concept. Original 16-bit pixel sprite art for MICA, the ORIGINAL female pangolin in image 2: jade overlapping scale hood and long tapered tail, cream muzzle/belly, white gloves, coral hiking boots. Image 1 is native S2 Sonic cycle reference in exact script order, corrected player palette, 8x nearest-neighbour. Image 3 is approved MICA native-pose sprite style. Use ONLY the body mechanics and exact phase progression of image 1, redraw as MICA, never recolour; NO Sonic quills, blue, or Sonic facial features. Crisp limited colours, dark outlines, clean readable pixels, no gradients, consistent body proportions and scale details across all frames. Single horizontal evenly spaced strip, full figures, solid flat magenta #ff00ff background, no text/grid/borders, no overlap, identical cell width and baseline, generous margin. EXACTLY TEN frames of SPINDASH: common interleaved compact jade diagonal shell; charge variation 1; SAME common shell; charge variation 2; SAME common shell; charge variation 3; SAME common shell; charge variation 4; SAME common shell; charge variation 5. Match reference's diagonal ellipsoid crouched charge silhouette, same scale, consistent tilt and centre. Five subtly progressing scale/rotation phases. Tucked pangolin, no limbs sticking out. Cells 1,3,5,7,9 must be identical. No smoke effects outside cell. IMPORTANT: pure flat MAGENTA #ff00ff background everywhere outside characters; NO transparency, shadows, haze or decorative noise. Every figure completely fits its cell. Charge cells 2,4,6,8,10 must be five visibly DIFFERENT rotated shell-scale patterns, not five identical faces. Match native compact ellipsoid envelope. FINAL CONSTRAINT PASS: Output should look like 32 to 40 pixel tall Genesis sprites enlarged with nearest-neighbour, with broad simple pixel clusters. No tiny detailed illustration. Every cell is an opaque closed shell; NO FACE, EYES, HANDS OR BOOTS ANYWHERE. Native reference is an almost featureless spinning ellipsoid, not a seated pose. Cells 2,4,6,8,10 advance the scale swirl clockwise; cells 1,3,5,7,9 repeat the same closed-shell interleave."
+      ],
+      "attempt_sha256": [
+        "5403d7375daf0c4ce2ce3694a32ae2608d8fcd7605b114964030abfadf659afe",
+        "f4e5aebd9f65a34af4de61a736a72512564c268bc158fcbfd0d4102995d9949e",
+        "a187a518e9f9349af0fa8a904d58677a8ca433ad5c0064dc2b23ec0d042bd579"
+      ],
+      "raw_file": "$HOME/scratch/agent-tmp/mica-cycle-exp-20261108/spindash/attempt-3.png",
+      "review": "Attempt 3: closed shell throughout, closer to native reference than the seated face/boots in attempts 1/2. Five scale patterns vary, but the spin is subtle and looks like texture shimmer. Shared interleave aliases the first shell. Not a strong sense of charging acceleration.",
+      "ticks_per_step": 1,
+      "inertia_hex": null
+    }
+  },
+  "frames": [
+    {
+      "id": "walk-00",
+      "reference": {
+        "mapping": 15,
+        "label": "Map_Sonic_0332",
+        "size": [
+          26,
+          39
+        ],
+        "hotspot": [
+          13,
+          19
+        ]
+      },
+      "source_cell": [
+        0,
+        0,
+        271,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "walk-01",
+      "reference": {
+        "mapping": 16,
+        "label": "Map_Sonic_034C",
+        "size": [
+          29,
+          40
+        ],
+        "hotspot": [
+          15,
+          20
+        ]
+      },
+      "source_cell": [
+        271,
+        0,
+        543,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "walk-02",
+      "reference": {
+        "mapping": 17,
+        "label": "Map_Sonic_035E",
+        "size": [
+          39,
+          40
+        ],
+        "hotspot": [
+          18,
+          21
+        ]
+      },
+      "source_cell": [
+        543,
+        0,
+        814,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "walk-03",
+      "reference": {
+        "mapping": 18,
+        "label": "Map_Sonic_0378",
+        "size": [
+          39,
+          39
+        ],
+        "hotspot": [
+          19,
+          20
+        ]
+      },
+      "source_cell": [
+        814,
+        0,
+        1086,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "walk-04",
+      "reference": {
+        "mapping": 19,
+        "label": "Map_Sonic_039A",
+        "size": [
+          26,
+          39
+        ],
+        "hotspot": [
+          13,
+          19
+        ]
+      },
+      "source_cell": [
+        1086,
+        0,
+        1357,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "walk-05",
+      "reference": {
+        "mapping": 20,
+        "label": "Map_Sonic_03B4",
+        "size": [
+          28,
+          40
+        ],
+        "hotspot": [
+          14,
+          20
+        ]
+      },
+      "source_cell": [
+        1357,
+        0,
+        1629,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "walk-06",
+      "reference": {
+        "mapping": 13,
+        "label": "Map_Sonic_02F6",
+        "size": [
+          40,
+          38
+        ],
+        "hotspot": [
+          20,
+          21
+        ]
+      },
+      "source_cell": [
+        1629,
+        0,
+        1900,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "walk-07",
+      "reference": {
+        "mapping": 14,
+        "label": "Map_Sonic_0310",
+        "size": [
+          39,
+          39
+        ],
+        "hotspot": [
+          19,
+          20
+        ]
+      },
+      "source_cell": [
+        1900,
+        0,
+        2172,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "run-00",
+      "reference": {
+        "mapping": 45,
+        "label": "Map_Sonic_06D6",
+        "size": [
+          31,
+          35
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "source_cell": [
+        0,
+        0,
+        543,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "run-01",
+      "reference": {
+        "mapping": 46,
+        "label": "Map_Sonic_06E8",
+        "size": [
+          31,
+          36
+        ],
+        "hotspot": [
+          15,
+          16
+        ]
+      },
+      "source_cell": [
+        543,
+        0,
+        1086,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "run-02",
+      "reference": {
+        "mapping": 47,
+        "label": "Map_Sonic_06FA",
+        "size": [
+          30,
+          35
+        ],
+        "hotspot": [
+          14,
+          15
+        ]
+      },
+      "source_cell": [
+        1086,
+        0,
+        1629,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "run-03",
+      "reference": {
+        "mapping": 48,
+        "label": "Map_Sonic_070C",
+        "size": [
+          31,
+          36
+        ],
+        "hotspot": [
+          15,
+          16
+        ]
+      },
+      "source_cell": [
+        1629,
+        0,
+        2172,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "roll-00",
+      "reference": {
+        "mapping": 61,
+        "label": "Map_Sonic_0836",
+        "size": [
+          29,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "source_cell": [
+        0,
+        0,
+        271,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "roll-01",
+      "reference": {
+        "mapping": 65,
+        "label": "Map_Sonic_085E",
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "source_cell": [
+        271,
+        0,
+        543,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "roll-02",
+      "reference": {
+        "mapping": 62,
+        "label": "Map_Sonic_0840",
+        "size": [
+          30,
+          29
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "source_cell": [
+        543,
+        0,
+        814,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "roll-03",
+      "reference": {
+        "mapping": 65,
+        "label": "Map_Sonic_085E",
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "source_cell": [
+        814,
+        0,
+        1086,
+        724
+      ],
+      "alias_of": "roll-01"
+    },
+    {
+      "id": "roll-04",
+      "reference": {
+        "mapping": 63,
+        "label": "Map_Sonic_084A",
+        "size": [
+          29,
+          30
+        ],
+        "hotspot": [
+          14,
+          15
+        ]
+      },
+      "source_cell": [
+        1086,
+        0,
+        1357,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "roll-05",
+      "reference": {
+        "mapping": 65,
+        "label": "Map_Sonic_085E",
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "source_cell": [
+        1357,
+        0,
+        1629,
+        724
+      ],
+      "alias_of": "roll-01"
+    },
+    {
+      "id": "roll-06",
+      "reference": {
+        "mapping": 64,
+        "label": "Map_Sonic_0854",
+        "size": [
+          30,
+          29
+        ],
+        "hotspot": [
+          15,
+          14
+        ]
+      },
+      "source_cell": [
+        1629,
+        0,
+        1900,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "roll-07",
+      "reference": {
+        "mapping": 65,
+        "label": "Map_Sonic_085E",
+        "size": [
+          30,
+          30
+        ],
+        "hotspot": [
+          15,
+          15
+        ]
+      },
+      "source_cell": [
+        1900,
+        0,
+        2172,
+        724
+      ],
+      "alias_of": "roll-01"
+    },
+    {
+      "id": "spindash-00",
+      "reference": {
+        "mapping": 66,
+        "label": "Map_Sonic_0868",
+        "size": [
+          30,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ]
+      },
+      "source_cell": [
+        0,
+        0,
+        217,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "spindash-01",
+      "reference": {
+        "mapping": 67,
+        "label": "Map_Sonic_0872",
+        "size": [
+          29,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ]
+      },
+      "source_cell": [
+        217,
+        0,
+        434,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "spindash-02",
+      "reference": {
+        "mapping": 66,
+        "label": "Map_Sonic_0868",
+        "size": [
+          30,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ]
+      },
+      "source_cell": [
+        434,
+        0,
+        651,
+        724
+      ],
+      "alias_of": "spindash-00"
+    },
+    {
+      "id": "spindash-03",
+      "reference": {
+        "mapping": 68,
+        "label": "Map_Sonic_087C",
+        "size": [
+          29,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ]
+      },
+      "source_cell": [
+        651,
+        0,
+        868,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "spindash-04",
+      "reference": {
+        "mapping": 66,
+        "label": "Map_Sonic_0868",
+        "size": [
+          30,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ]
+      },
+      "source_cell": [
+        868,
+        0,
+        1086,
+        724
+      ],
+      "alias_of": "spindash-00"
+    },
+    {
+      "id": "spindash-05",
+      "reference": {
+        "mapping": 69,
+        "label": "Map_Sonic_0886",
+        "size": [
+          29,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ]
+      },
+      "source_cell": [
+        1086,
+        0,
+        1303,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "spindash-06",
+      "reference": {
+        "mapping": 66,
+        "label": "Map_Sonic_0868",
+        "size": [
+          30,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ]
+      },
+      "source_cell": [
+        1303,
+        0,
+        1520,
+        724
+      ],
+      "alias_of": "spindash-00"
+    },
+    {
+      "id": "spindash-07",
+      "reference": {
+        "mapping": 70,
+        "label": "Map_Sonic_0890",
+        "size": [
+          29,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ]
+      },
+      "source_cell": [
+        1520,
+        0,
+        1737,
+        724
+      ],
+      "alias_of": null
+    },
+    {
+      "id": "spindash-08",
+      "reference": {
+        "mapping": 66,
+        "label": "Map_Sonic_0868",
+        "size": [
+          30,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ]
+      },
+      "source_cell": [
+        1737,
+        0,
+        1954,
+        724
+      ],
+      "alias_of": "spindash-00"
+    },
+    {
+      "id": "spindash-09",
+      "reference": {
+        "mapping": 71,
+        "label": "Map_Sonic_089A",
+        "size": [
+          29,
+          27
+        ],
+        "hotspot": [
+          11,
+          7
+        ]
+      },
+      "source_cell": [
+        1954,
+        0,
+        2172,
+        724
+      ],
+      "alias_of": null
+    }
+  ]
+}

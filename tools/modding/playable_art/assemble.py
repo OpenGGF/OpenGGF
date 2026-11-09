@@ -75,6 +75,8 @@ def assemble(root, output):
                 spec.update(frames=cycles[0], slopes=cycles)
         else:
             ticks, end = FIXED[name]
+            if name == 'SPRING' and len(indices) == 1:
+                ticks = 48  # SonAni_Spring has one mapping and delay $2F + 1.
             spec.update(durations=[ticks]*len(indices), end=end)
             if end == 'next':
                 spec['next'] = 'WALK'
@@ -98,6 +100,14 @@ def assemble(root, output):
                         spec['next'] = authored['next']
             if name == 'GET_AIR':
                 spec.update(frames=[indices[0], indices[0], indices[1], indices[1]], durations=[12]*4)
+        # Preserve native interleaves using symbolic art IDs after sheet packing.
+        if name in ('ROLL', 'SPINDASH'):
+            authored = handoff.get('scripts', {}).get(name)
+            if authored:
+                by_id = {f['id']: i for f, i in entries}
+                spec['frames'] = [by_id[key] for key in authored['frames']]
+                if name == 'SPINDASH':
+                    spec['durations'] = [1] * len(spec['frames'])
         animations[name] = spec
     for name, indices in custom.items():
         animations[name] = dict(frames=indices, durations=[2]*len(indices), end='loop')

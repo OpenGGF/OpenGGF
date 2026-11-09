@@ -10,12 +10,12 @@
       "order": 0,
       "file": "frames/wait-00.png",
       "hotspot": [
-        16,
+        14,
         19
       ],
       "angle_set": "flat",
       "duration_ticks": 100,
-      "notes": "Rest/exhale, planted boots."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "wait-01",
@@ -23,12 +23,12 @@
       "order": 1,
       "file": "frames/wait-01.png",
       "hotspot": [
-        15,
+        14,
         19
       ],
       "angle_set": "flat",
       "duration_ticks": 7,
-      "notes": "Inhale: chest/shoulders and crest lift 1px; tail rises."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "wait-02",
@@ -36,12 +36,12 @@
       "order": 2,
       "file": "frames/wait-02.png",
       "hotspot": [
-        14,
+        12,
         18
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
-      "notes": "Blink and falling tail."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "wait-03",
@@ -49,12 +49,12 @@
       "order": 3,
       "file": "frames/wait-03.png",
       "hotspot": [
-        14,
+        12,
         18
       ],
       "angle_set": "flat",
       "duration_ticks": 50,
-      "notes": "Camera glance."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "wait-04",
@@ -62,12 +62,12 @@
       "order": 4,
       "file": "frames/wait-04.png",
       "hotspot": [
-        14,
+        13,
         18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Lift boot for fidget."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "wait-05",
@@ -75,12 +75,51 @@
       "order": 5,
       "file": "frames/wait-05.png",
       "hotspot": [
-        14,
+        12,
         18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Toe tap and camera glance."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "wait-06",
+      "animation": "WAIT",
+      "order": 6,
+      "file": "frames/wait-06.png",
+      "hotspot": [
+        15,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 100,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "wait-07",
+      "animation": "WAIT",
+      "order": 7,
+      "file": "frames/wait-07.png",
+      "hotspot": [
+        19,
+        4
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 100,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "wait-08",
+      "animation": "WAIT",
+      "order": 8,
+      "file": "frames/wait-08.png",
+      "hotspot": [
+        18,
+        4
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 100,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "roll-00",
@@ -89,11 +128,11 @@
       "file": "frames/roll-00.png",
       "hotspot": [
         15,
-        15
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": ""
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "roll-01",
@@ -102,11 +141,11 @@
       "file": "frames/roll-01.png",
       "hotspot": [
         15,
-        15
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": ""
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "roll-02",
@@ -115,11 +154,11 @@
       "file": "frames/roll-02.png",
       "hotspot": [
         14,
-        15
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": ""
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "roll-03",
@@ -127,12 +166,12 @@
       "order": 3,
       "file": "frames/roll-03.png",
       "hotspot": [
-        15,
+        14,
         14
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": ""
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "walk-00",
@@ -141,11 +180,11 @@
       "file": "frames/walk-00.png",
       "hotspot": [
         13,
-        19
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "walk-01",
@@ -154,11 +193,11 @@
       "file": "frames/walk-01.png",
       "hotspot": [
         15,
-        20
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "walk-02",
@@ -166,12 +205,12 @@
       "order": 2,
       "file": "frames/walk-02.png",
       "hotspot": [
-        18,
+        17,
         21
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "walk-03",
@@ -179,12 +218,12 @@
       "order": 3,
       "file": "frames/walk-03.png",
       "hotspot": [
-        19,
+        18,
         20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "walk-04",
@@ -193,11 +232,11 @@
       "file": "frames/walk-04.png",
       "hotspot": [
         13,
-        19
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "walk-05",
@@ -206,11 +245,11 @@
       "file": "frames/walk-05.png",
       "hotspot": [
         14,
-        20
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "walk-06",
@@ -218,12 +257,12 @@
       "order": 6,
       "file": "frames/walk-06.png",
       "hotspot": [
-        20,
+        19,
         21
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "walk-07",
@@ -231,12 +270,12 @@
       "order": 7,
       "file": "frames/walk-07.png",
       "hotspot": [
-        19,
+        16,
         20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     },
     {
       "id": "run-00",
@@ -249,7 +288,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Upright WALK-profile sprint; hip-attached coral wheel, alternating bent arms and diagonal bobbing tail. Flat contact centre+18."
+      "notes": "Round3 generated native pose; chosen B2; native aspect padded, no repainting."
     },
     {
       "id": "run-01",
@@ -258,11 +297,11 @@
       "file": "frames/run-01.png",
       "hotspot": [
         15,
-        16
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Upright WALK-profile sprint; hip-attached coral wheel, alternating bent arms and diagonal bobbing tail. Flat contact centre+18."
+      "notes": "Round3 generated native pose; chosen 3; native aspect padded, no repainting."
     },
     {
       "id": "run-02",
@@ -275,7 +314,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Upright WALK-profile sprint; hip-attached coral wheel, alternating bent arms and diagonal bobbing tail. Flat contact centre+18."
+      "notes": "Round3 generated native pose; chosen B2; native aspect padded, no repainting."
     },
     {
       "id": "run-03",
@@ -284,11 +323,11 @@
       "file": "frames/run-03.png",
       "hotspot": [
         15,
-        16
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Upright WALK-profile sprint; hip-attached coral wheel, alternating bent arms and diagonal bobbing tail. Flat contact centre+18."
+      "notes": "Round3 generated native pose; chosen 1; native aspect padded, no repainting."
     },
     {
       "id": "spring-00",
@@ -300,21 +339,8 @@
         22
       ],
       "angle_set": "flat",
-      "duration_ticks": 24,
-      "notes": "Right-profile stretched launch, shared WALK head and delighted grin; staggered overhead gloves, long pointed boots and hanging fluttering tail."
-    },
-    {
-      "id": "spring-01",
-      "animation": "SPRING",
-      "order": 1,
-      "file": "frames/spring-01.png",
-      "hotspot": [
-        12,
-        22
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 24,
-      "notes": "Right-profile stretched launch, shared WALK head and delighted grin; staggered overhead gloves, long pointed boots and hanging fluttering tail."
+      "duration_ticks": 48,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
       "id": "hurt-00",
@@ -327,20 +353,618 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": ""
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
-      "id": "hurt-01",
-      "animation": "HURT",
-      "order": 1,
-      "file": "frames/hurt-01.png",
+      "id": "homing_dive-00",
+      "animation": "HOMING_DIVE",
+      "order": 0,
+      "file": "frames/homing_dive-00.png",
       "hotspot": [
-        20,
-        12
+        15,
+        15
       ],
       "angle_set": "flat",
-      "duration_ticks": 10,
-      "notes": ""
+      "duration_ticks": 4,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+    },
+    {
+      "id": "homing_dive-01",
+      "animation": "HOMING_DIVE",
+      "order": 1,
+      "file": "frames/homing_dive-01.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+    },
+    {
+      "id": "homing_dive-02",
+      "animation": "HOMING_DIVE",
+      "order": 2,
+      "file": "frames/homing_dive-02.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 6; no painted pixel patches."
+    },
+    {
+      "id": "homing_dive-03",
+      "animation": "HOMING_DIVE",
+      "order": 3,
+      "file": "frames/homing_dive-03.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 2; no painted pixel patches."
+    },
+    {
+      "id": "spindash-00",
+      "animation": "SPINDASH",
+      "order": 0,
+      "file": "frames/spindash-00.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+    },
+    {
+      "id": "spindash-01",
+      "animation": "SPINDASH",
+      "order": 1,
+      "file": "frames/spindash-01.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 1; no painted pixel patches."
+    },
+    {
+      "id": "spindash-02",
+      "animation": "SPINDASH",
+      "order": 2,
+      "file": "frames/spindash-02.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+    },
+    {
+      "id": "spindash-03",
+      "animation": "SPINDASH",
+      "order": 3,
+      "file": "frames/spindash-03.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+    },
+    {
+      "id": "walk-up45-00",
+      "animation": "WALK",
+      "order": 8,
+      "file": "frames/walk-up45-00.png",
+      "hotspot": [
+        12,
+        15
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-00; +45 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-up45-01",
+      "animation": "WALK",
+      "order": 9,
+      "file": "frames/walk-up45-01.png",
+      "hotspot": [
+        17,
+        18
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-01; +45 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-up45-02",
+      "animation": "WALK",
+      "order": 10,
+      "file": "frames/walk-up45-02.png",
+      "hotspot": [
+        19,
+        20
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-02; +45 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-up45-03",
+      "animation": "WALK",
+      "order": 11,
+      "file": "frames/walk-up45-03.png",
+      "hotspot": [
+        18,
+        19
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-03; +45 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-up45-04",
+      "animation": "WALK",
+      "order": 12,
+      "file": "frames/walk-up45-04.png",
+      "hotspot": [
+        12,
+        15
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-04; +45 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-up45-05",
+      "animation": "WALK",
+      "order": 13,
+      "file": "frames/walk-up45-05.png",
+      "hotspot": [
+        15,
+        18
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-05; +45 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-up45-06",
+      "animation": "WALK",
+      "order": 14,
+      "file": "frames/walk-up45-06.png",
+      "hotspot": [
+        18,
+        20
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-06; +45 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-up45-07",
+      "animation": "WALK",
+      "order": 15,
+      "file": "frames/walk-up45-07.png",
+      "hotspot": [
+        17,
+        20
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-07; +45 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-00",
+      "animation": "WALK",
+      "order": 16,
+      "file": "frames/walk-steep-00.png",
+      "hotspot": [
+        13,
+        13
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-00; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-01",
+      "animation": "WALK",
+      "order": 17,
+      "file": "frames/walk-steep-01.png",
+      "hotspot": [
+        18,
+        14
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-01; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-02",
+      "animation": "WALK",
+      "order": 18,
+      "file": "frames/walk-steep-02.png",
+      "hotspot": [
+        21,
+        20
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-02; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-03",
+      "animation": "WALK",
+      "order": 19,
+      "file": "frames/walk-steep-03.png",
+      "hotspot": [
+        20,
+        18
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-03; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-04",
+      "animation": "WALK",
+      "order": 20,
+      "file": "frames/walk-steep-04.png",
+      "hotspot": [
+        13,
+        13
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-04; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-05",
+      "animation": "WALK",
+      "order": 21,
+      "file": "frames/walk-steep-05.png",
+      "hotspot": [
+        17,
+        14
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-05; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-06",
+      "animation": "WALK",
+      "order": 22,
+      "file": "frames/walk-steep-06.png",
+      "hotspot": [
+        21,
+        18
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-06; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-07",
+      "animation": "WALK",
+      "order": 23,
+      "file": "frames/walk-steep-07.png",
+      "hotspot": [
+        20,
+        16
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-07; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-00",
+      "animation": "WALK",
+      "order": 24,
+      "file": "frames/walk-inverted-00.png",
+      "hotspot": [
+        15,
+        17
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-00; +135 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-01",
+      "animation": "WALK",
+      "order": 25,
+      "file": "frames/walk-inverted-01.png",
+      "hotspot": [
+        18,
+        21
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-01; +135 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-02",
+      "animation": "WALK",
+      "order": 26,
+      "file": "frames/walk-inverted-02.png",
+      "hotspot": [
+        20,
+        19
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-02; +135 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-03",
+      "animation": "WALK",
+      "order": 27,
+      "file": "frames/walk-inverted-03.png",
+      "hotspot": [
+        19,
+        22
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-03; +135 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-04",
+      "animation": "WALK",
+      "order": 28,
+      "file": "frames/walk-inverted-04.png",
+      "hotspot": [
+        15,
+        18
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-04; +135 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-05",
+      "animation": "WALK",
+      "order": 29,
+      "file": "frames/walk-inverted-05.png",
+      "hotspot": [
+        18,
+        19
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-05; +135 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-06",
+      "animation": "WALK",
+      "order": 30,
+      "file": "frames/walk-inverted-06.png",
+      "hotspot": [
+        19,
+        18
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-06; +135 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-07",
+      "animation": "WALK",
+      "order": 31,
+      "file": "frames/walk-inverted-07.png",
+      "hotspot": [
+        20,
+        21
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-07; +135 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-up45-00",
+      "animation": "RUN",
+      "order": 4,
+      "file": "frames/run-up45-00.png",
+      "hotspot": [
+        12,
+        18
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-00; +45 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-up45-01",
+      "animation": "RUN",
+      "order": 5,
+      "file": "frames/run-up45-01.png",
+      "hotspot": [
+        10,
+        17
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-01; +45 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-up45-02",
+      "animation": "RUN",
+      "order": 6,
+      "file": "frames/run-up45-02.png",
+      "hotspot": [
+        11,
+        18
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-02; +45 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-up45-03",
+      "animation": "RUN",
+      "order": 7,
+      "file": "frames/run-up45-03.png",
+      "hotspot": [
+        11,
+        16
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-03; +45 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-steep-00",
+      "animation": "RUN",
+      "order": 8,
+      "file": "frames/run-steep-00.png",
+      "hotspot": [
+        15,
+        16
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-00; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-steep-01",
+      "animation": "RUN",
+      "order": 9,
+      "file": "frames/run-steep-01.png",
+      "hotspot": [
+        14,
+        16
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-01; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-steep-02",
+      "animation": "RUN",
+      "order": 10,
+      "file": "frames/run-steep-02.png",
+      "hotspot": [
+        15,
+        16
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-02; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-steep-03",
+      "animation": "RUN",
+      "order": 11,
+      "file": "frames/run-steep-03.png",
+      "hotspot": [
+        14,
+        16
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-03; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-inverted-00",
+      "animation": "RUN",
+      "order": 12,
+      "file": "frames/run-inverted-00.png",
+      "hotspot": [
+        18,
+        18
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-00; +135 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-inverted-01",
+      "animation": "RUN",
+      "order": 13,
+      "file": "frames/run-inverted-01.png",
+      "hotspot": [
+        17,
+        17
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-01; +135 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-inverted-02",
+      "animation": "RUN",
+      "order": 14,
+      "file": "frames/run-inverted-02.png",
+      "hotspot": [
+        18,
+        20
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-02; +135 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-inverted-03",
+      "animation": "RUN",
+      "order": 15,
+      "file": "frames/run-inverted-03.png",
+      "hotspot": [
+        16,
+        17
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-03; +135 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "roll-blur",
+      "animation": "ROLL",
+      "order": 4,
+      "file": "frames/roll-blur.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "spindash-04",
+      "animation": "SPINDASH",
+      "order": 4,
+      "file": "frames/spindash-04.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+    },
+    {
+      "id": "spindash-blur",
+      "animation": "SPINDASH",
+      "order": 5,
+      "file": "frames/spindash-blur.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
     },
     {
       "id": "death-00",
@@ -367,58 +991,6 @@
       "angle_set": "flat",
       "duration_ticks": 12,
       "notes": ""
-    },
-    {
-      "id": "homing_dive-00",
-      "animation": "HOMING_DIVE",
-      "order": 0,
-      "file": "frames/homing_dive-00.png",
-      "hotspot": [
-        15,
-        15
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 4,
-      "notes": "Custom ability pose; HOMING_DIVE is a handoff key, not an existing CanonicalAnimation enum. Integration must bind explicitly."
-    },
-    {
-      "id": "homing_dive-01",
-      "animation": "HOMING_DIVE",
-      "order": 1,
-      "file": "frames/homing_dive-01.png",
-      "hotspot": [
-        15,
-        15
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 4,
-      "notes": "Custom ability pose; HOMING_DIVE is a handoff key, not an existing CanonicalAnimation enum. Integration must bind explicitly."
-    },
-    {
-      "id": "homing_dive-02",
-      "animation": "HOMING_DIVE",
-      "order": 2,
-      "file": "frames/homing_dive-02.png",
-      "hotspot": [
-        14,
-        15
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 4,
-      "notes": "Custom ability pose; HOMING_DIVE is a handoff key, not an existing CanonicalAnimation enum. Integration must bind explicitly."
-    },
-    {
-      "id": "homing_dive-03",
-      "animation": "HOMING_DIVE",
-      "order": 3,
-      "file": "frames/homing_dive-03.png",
-      "hotspot": [
-        15,
-        14
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 4,
-      "notes": "Custom ability pose; HOMING_DIVE is a handoff key, not an existing CanonicalAnimation enum. Integration must bind explicitly."
     },
     {
       "id": "push-00",
@@ -603,58 +1175,6 @@
       "notes": ""
     },
     {
-      "id": "spindash-00",
-      "animation": "SPINDASH",
-      "order": 0,
-      "file": "frames/spindash-00.png",
-      "hotspot": [
-        11,
-        7
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 3,
-      "notes": ""
-    },
-    {
-      "id": "spindash-01",
-      "animation": "SPINDASH",
-      "order": 1,
-      "file": "frames/spindash-01.png",
-      "hotspot": [
-        11,
-        7
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 3,
-      "notes": ""
-    },
-    {
-      "id": "spindash-02",
-      "animation": "SPINDASH",
-      "order": 2,
-      "file": "frames/spindash-02.png",
-      "hotspot": [
-        11,
-        7
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 3,
-      "notes": ""
-    },
-    {
-      "id": "spindash-03",
-      "animation": "SPINDASH",
-      "order": 3,
-      "file": "frames/spindash-03.png",
-      "hotspot": [
-        11,
-        7
-      ],
-      "angle_set": "flat",
-      "duration_ticks": 3,
-      "notes": ""
-    },
-    {
       "id": "drown-00",
       "animation": "DROWN",
       "order": 0,
@@ -757,474 +1277,6 @@
       "angle_set": "flat",
       "duration_ticks": 10,
       "notes": " Native pixel cleanup: eye clusters, boot lace accent or removed generated grip bridge as applicable; patches stored in recipe."
-    },
-    {
-      "id": "walk-up45-00",
-      "animation": "WALK",
-      "order": 8,
-      "file": "frames/walk-up45-00.png",
-      "hotspot": [
-        20,
-        18
-      ],
-      "angle_set": "up45",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-up45-01",
-      "animation": "WALK",
-      "order": 9,
-      "file": "frames/walk-up45-01.png",
-      "hotspot": [
-        19,
-        17
-      ],
-      "angle_set": "up45",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-up45-02",
-      "animation": "WALK",
-      "order": 10,
-      "file": "frames/walk-up45-02.png",
-      "hotspot": [
-        20,
-        15
-      ],
-      "angle_set": "up45",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-up45-03",
-      "animation": "WALK",
-      "order": 11,
-      "file": "frames/walk-up45-03.png",
-      "hotspot": [
-        19,
-        18
-      ],
-      "angle_set": "up45",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-up45-04",
-      "animation": "WALK",
-      "order": 12,
-      "file": "frames/walk-up45-04.png",
-      "hotspot": [
-        20,
-        18
-      ],
-      "angle_set": "up45",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-up45-05",
-      "animation": "WALK",
-      "order": 13,
-      "file": "frames/walk-up45-05.png",
-      "hotspot": [
-        21,
-        17
-      ],
-      "angle_set": "up45",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-up45-06",
-      "animation": "WALK",
-      "order": 14,
-      "file": "frames/walk-up45-06.png",
-      "hotspot": [
-        21,
-        14
-      ],
-      "angle_set": "up45",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-up45-07",
-      "animation": "WALK",
-      "order": 15,
-      "file": "frames/walk-up45-07.png",
-      "hotspot": [
-        20,
-        18
-      ],
-      "angle_set": "up45",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-steep-00",
-      "animation": "WALK",
-      "order": 16,
-      "file": "frames/walk-steep-00.png",
-      "hotspot": [
-        22,
-        16
-      ],
-      "angle_set": "steep",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels. Complete tapered tail tip below the former crop; sole support and anchor retained."
-    },
-    {
-      "id": "walk-steep-01",
-      "animation": "WALK",
-      "order": 17,
-      "file": "frames/walk-steep-01.png",
-      "hotspot": [
-        23,
-        14
-      ],
-      "angle_set": "steep",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-steep-02",
-      "animation": "WALK",
-      "order": 18,
-      "file": "frames/walk-steep-02.png",
-      "hotspot": [
-        24,
-        16
-      ],
-      "angle_set": "steep",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-steep-03",
-      "animation": "WALK",
-      "order": 19,
-      "file": "frames/walk-steep-03.png",
-      "hotspot": [
-        23,
-        20
-      ],
-      "angle_set": "steep",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-steep-04",
-      "animation": "WALK",
-      "order": 20,
-      "file": "frames/walk-steep-04.png",
-      "hotspot": [
-        22,
-        16
-      ],
-      "angle_set": "steep",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels. Complete tapered tail tip below the former crop; sole support and anchor retained."
-    },
-    {
-      "id": "walk-steep-05",
-      "animation": "WALK",
-      "order": 21,
-      "file": "frames/walk-steep-05.png",
-      "hotspot": [
-        20,
-        17
-      ],
-      "angle_set": "steep",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-steep-06",
-      "animation": "WALK",
-      "order": 22,
-      "file": "frames/walk-steep-06.png",
-      "hotspot": [
-        24,
-        18
-      ],
-      "angle_set": "steep",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-steep-07",
-      "animation": "WALK",
-      "order": 23,
-      "file": "frames/walk-steep-07.png",
-      "hotspot": [
-        23,
-        20
-      ],
-      "angle_set": "steep",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-inverted-00",
-      "animation": "WALK",
-      "order": 24,
-      "file": "frames/walk-inverted-00.png",
-      "hotspot": [
-        18,
-        17
-      ],
-      "angle_set": "inverted",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-inverted-01",
-      "animation": "WALK",
-      "order": 25,
-      "file": "frames/walk-inverted-01.png",
-      "hotspot": [
-        18,
-        19
-      ],
-      "angle_set": "inverted",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-inverted-02",
-      "animation": "WALK",
-      "order": 26,
-      "file": "frames/walk-inverted-02.png",
-      "hotspot": [
-        12,
-        17
-      ],
-      "angle_set": "inverted",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-inverted-03",
-      "animation": "WALK",
-      "order": 27,
-      "file": "frames/walk-inverted-03.png",
-      "hotspot": [
-        16,
-        18
-      ],
-      "angle_set": "inverted",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-inverted-04",
-      "animation": "WALK",
-      "order": 28,
-      "file": "frames/walk-inverted-04.png",
-      "hotspot": [
-        18,
-        18
-      ],
-      "angle_set": "inverted",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-inverted-05",
-      "animation": "WALK",
-      "order": 29,
-      "file": "frames/walk-inverted-05.png",
-      "hotspot": [
-        16,
-        18
-      ],
-      "angle_set": "inverted",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-inverted-06",
-      "animation": "WALK",
-      "order": 30,
-      "file": "frames/walk-inverted-06.png",
-      "hotspot": [
-        12,
-        17
-      ],
-      "angle_set": "inverted",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "walk-inverted-07",
-      "animation": "WALK",
-      "order": 31,
-      "file": "frames/walk-inverted-07.png",
-      "hotspot": [
-        16,
-        16
-      ],
-      "angle_set": "inverted",
-      "duration_ticks": 6,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "run-up45-00",
-      "animation": "RUN",
-      "order": 4,
-      "file": "frames/run-up45-00.png",
-      "hotspot": [
-        17,
-        19
-      ],
-      "angle_set": "up45",
-      "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "run-up45-01",
-      "animation": "RUN",
-      "order": 5,
-      "file": "frames/run-up45-01.png",
-      "hotspot": [
-        15,
-        20
-      ],
-      "angle_set": "up45",
-      "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "run-up45-02",
-      "animation": "RUN",
-      "order": 6,
-      "file": "frames/run-up45-02.png",
-      "hotspot": [
-        17,
-        19
-      ],
-      "angle_set": "up45",
-      "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "run-up45-03",
-      "animation": "RUN",
-      "order": 7,
-      "file": "frames/run-up45-03.png",
-      "hotspot": [
-        15,
-        20
-      ],
-      "angle_set": "up45",
-      "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "run-steep-00",
-      "animation": "RUN",
-      "order": 8,
-      "file": "frames/run-steep-00.png",
-      "hotspot": [
-        18,
-        19
-      ],
-      "angle_set": "steep",
-      "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "run-steep-01",
-      "animation": "RUN",
-      "order": 9,
-      "file": "frames/run-steep-01.png",
-      "hotspot": [
-        19,
-        19
-      ],
-      "angle_set": "steep",
-      "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels. Complete tapered tail tip below the former crop; sole support and anchor retained."
-    },
-    {
-      "id": "run-steep-02",
-      "animation": "RUN",
-      "order": 10,
-      "file": "frames/run-steep-02.png",
-      "hotspot": [
-        18,
-        19
-      ],
-      "angle_set": "steep",
-      "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels. Complete tapered tail tip below the former crop; sole support and anchor retained."
-    },
-    {
-      "id": "run-steep-03",
-      "animation": "RUN",
-      "order": 11,
-      "file": "frames/run-steep-03.png",
-      "hotspot": [
-        19,
-        19
-      ],
-      "angle_set": "steep",
-      "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "run-inverted-00",
-      "animation": "RUN",
-      "order": 12,
-      "file": "frames/run-inverted-00.png",
-      "hotspot": [
-        19,
-        20
-      ],
-      "angle_set": "inverted",
-      "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "run-inverted-01",
-      "animation": "RUN",
-      "order": 13,
-      "file": "frames/run-inverted-01.png",
-      "hotspot": [
-        20,
-        20
-      ],
-      "angle_set": "inverted",
-      "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "run-inverted-02",
-      "animation": "RUN",
-      "order": 14,
-      "file": "frames/run-inverted-02.png",
-      "hotspot": [
-        19,
-        19
-      ],
-      "angle_set": "inverted",
-      "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
-    },
-    {
-      "id": "run-inverted-03",
-      "animation": "RUN",
-      "order": 15,
-      "file": "frames/run-inverted-03.png",
-      "hotspot": [
-        20,
-        20
-      ],
-      "angle_set": "inverted",
-      "duration_ticks": 4,
-      "notes": "Native S2 phase box/hotspot; integer contour retreat to native support edge, no resampling. Original MICA pixels."
     },
     {
       "id": "stop-00",
@@ -1465,37 +1517,395 @@
     "WAIT": {
       "frames": [
         "wait-00",
-        "wait-01",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
         "wait-00",
         "wait-01",
         "wait-02",
-        "wait-00",
-        "wait-01",
-        "wait-00",
+        "wait-02",
+        "wait-02",
+        "wait-02",
+        "wait-02",
+        "wait-03",
+        "wait-03",
         "wait-03",
         "wait-04",
-        "wait-05",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
         "wait-04",
         "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
         "wait-03",
-        "wait-00"
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-06",
+        "wait-07",
+        "wait-07",
+        "wait-07",
+        "wait-08",
+        "wait-08",
+        "wait-08"
       ],
       "durations": [
-        24,
-        24,
-        24,
-        24,
         6,
-        24,
-        24,
-        36,
-        18,
-        8,
-        8,
-        8,
-        8,
-        18,
-        24
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      "end": "loop",
+      "nativeLoopBackSteps": 6,
+      "limitation": "Converter only supports full loop; exact FE6 repeat requires engine lane. See round3/native-scripts.json."
+    },
+    "ROLL": {
+      "frames": [
+        "roll-00",
+        "roll-blur",
+        "roll-01",
+        "roll-blur",
+        "roll-02",
+        "roll-blur",
+        "roll-03",
+        "roll-blur"
+      ],
+      "end": "loop"
+    },
+    "SPINDASH": {
+      "frames": [
+        "spindash-blur",
+        "spindash-00",
+        "spindash-blur",
+        "spindash-01",
+        "spindash-blur",
+        "spindash-02",
+        "spindash-blur",
+        "spindash-03",
+        "spindash-blur",
+        "spindash-04"
       ],
       "end": "loop"
     }
