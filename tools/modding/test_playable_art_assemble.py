@@ -45,7 +45,7 @@ class PlayableArtAssemblyTest(unittest.TestCase):
             self.assertEqual(before, {name:(committed/name).read_bytes() for name in before})
             assembler.assemble(art, out)
             self.assertEqual(before, {p.name:p.read_bytes() for p in out.iterdir()})
-            self.assertEqual(stats, dict(frames=186, maxTilesPerFrame=30, animations=52))
+            self.assertEqual(stats, dict(frames=226, maxTilesPerFrame=30, animations=52))
             self.assertEqual('hang-00', source[manifest['nativeFrames']['hang/0']]['id'])
             self.assertEqual('wait-03', source[manifest['nativeFrames']['wait/fidget']]['id'])
             self.assertEqual('roll-01', source[manifest['nativeFrames']['roll/1']]['id'])

@@ -45,13 +45,16 @@ under the matching area heading; see the
   single-player physics, native S2/S3K spindash (disabled in S1), character-owned
   homing (including an untargeted forward
   dash), a four-frame HOMING_DIVE pose, and powered Instagib strikes. Its
-  rerunnable original sheet has 112 frames, 18 canonical animations, slope cycles,
+  rerunnable original sheet has 226 frames, 52 canonical animations, slope cycles,
   a shared palette and a breathing/fidget idle. Canonical sheets preserve native
   partial-loop WAIT tails and finite hold/next endings; MICA and TALON skip
   their idle intros after the first pass. Native object mapping bytes can
   bind semantic sheet poses; MICA supplies three native-reference hang poses for
   vines and grapples, reuses fourteen existing native mapping poses for turns, rolls, riding,
-  bar release and crane release, and names canonical fallbacks for remaining raw poses. The
+  bar release and crane release. Forty additional native-pose aliases cover early
+  S3K vine swings, hollow-tree tumbles, twist front/back views, poles and bars;
+  33 generated drawings and seven verified quarter-turns retain the shared palette.
+  Other raw poses keep named canonical fallbacks. The
   AIZ intro retains MICA's own art and powered palette. The 36 rotated WALK/RUN poses
   use native phase coordinates and pixel-edited contact edges; all 12 steep
   WALK/RUN hood contours are completed without changing sole support. S3K transformation

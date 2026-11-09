@@ -1353,11 +1353,11 @@ presentation banks, not this normal-playable table.
 | S2 | Sonic2CompetitionSession reset | $00 | invisible; competitive presentation remains outside MICA coverage |
 | S3K | AIZ plane intro actor (independent renderer) | normal $BA, $96–$9A; Super bank $21/$22 | existing MICA ride/roll art; powered ROLL fallback with owned Gilded palette |
 | S3K | AIZ/MHZ ride vines; LBZ grapple; MHZ pulley | $90–$92 | authored `hang/0`–`hang/2` |
-| S3K | AIZ/MHZ vine swing | $78–$7F | HANG fallback (`swing/0`–`swing/7`) |
-| S3K | AIZ hollow tree; CNZ wire cage; MGZ twisting loop; FBZ wire cages; DEZ gravity tube | $69–$77 / $6C–$77 | ROLL fallback (`tumble/*`) |
-| S3K | CNZ cylinder; HCZ spinning column; LBZ cup/tube elevators; DEZ teleporter | $55–$5B | existing MICA continue-player poses at $55–$57/$59–$5A (`twist/*`); $58/$5B WAIT fallback |
-| S3K | CNZ cage release; FBZ spinning pole; MHZ vertical bar | $5C–$61; vertical initial $62, release $24 | HANG fallback (`pole/*`), existing MICA continue-player $24 on release |
-| S3K | MHZ horizontal bar; HCZ conveyor; LRZ turbine | $63–$68, $94/$95 | HANG fallback (`bar/*`, `bar-end/*`) |
+| S3K | AIZ/MHZ vine swing | $78–$7F | authored batch-3 `swing/0`–`swing/7` |
+| S3K | AIZ hollow tree; CNZ wire cage; MGZ twisting loop; FBZ wire cages; DEZ gravity tube | $69–$77 / $6C–$77 | authored batch-3 `tumble/*` |
+| S3K | CNZ cylinder; HCZ spinning column; LBZ cup/tube elevators; DEZ teleporter | $55–$5B | existing MICA continue-player poses at $55–$57/$59–$5A (`twist/*`); $58/$5B authored batch-3 front/back views |
+| S3K | CNZ cage release; FBZ spinning pole; MHZ vertical bar | $5C–$61; vertical initial $62, release $24 | authored batch-3 `pole/*`, existing MICA continue-player $24 on release |
+| S3K | MHZ horizontal bar; HCZ conveyor; LRZ turbine | $63–$68, $94/$95 | authored batch-3 `bar/*`, `bar-end/*` |
 | S3K | FBZ chain link | $80–$85, $91; release $96 | HANG fallback (`chain/*`), authored hang/1, authored ROLL-00 |
 | S3K | FBZ stationary cage entry | $49, $52–$54 | RUN fallback (`cage-entry/*`) |
 | S3K | DEZ tunnel launcher | $96 | authored ROLL-00 (`roll/0`) |
@@ -1369,7 +1369,7 @@ presentation banks, not this normal-playable table.
 | S3K | HPZ entry/ceremony/theft; LBZ Robotnik ship | $BA / $C4 (Sonic archetype) | existing native MICA ride pose (`ride/stand`) / LOOK_UP fallback (`emerald/look`) |
 | S3K | SSZ crane claw | $CB | existing native MICA $CB art (`hang/crane`) |
 | S3K | SOZ rapel wire | $90–$93 HANG/SWING, $E4–$EA FLIP | authored $90–$92; $93 HANG fallback and `parachute/*` HANG fallback |
-| S3K | DEZ miniboss transport | $55–$5B (verified ROM table $7EF2E, 12 entries) | existing $55–$57/$59–$5A MICA turn art; $58/$5B WAIT fallback (`twist/*`) |
+| S3K | DEZ miniboss transport | $55–$5B (verified ROM table $7EF2E, 12 entries) | existing $55–$57/$59–$5A MICA turn art; $58/$5B authored batch-3 front/back views (`twist/*`) |
 | S3K | SSZ launch / carried-player / crane release | $EF–$FA (table $587A8); $55–$5B (12 pairs at $468C4); $C0/$CA/$CB release | ROLL fallback (`corkscrew/*`), existing turn art except $58/$5B WAIT; release $C0 WAIT fallback; existing native MICA $CA/$CB art |
 | S3K | LBZ1 ground launch / cup initial capture | first frame of installed script | already relocated authored script frame |
 | S3K | LBZ final boss 1 player presentation | installed presentation frame | existing presentation owner; no object-local art copied |
@@ -1733,3 +1733,32 @@ loaded normal/powered scripts and mapping indices: 789 matrix obligations,
 11,945 evidence rows. Python compilation, output/schema checks and scoped
 citation check pass (existing design citations include near/unverifiable
 references; no stale finding). No broad smoke/full-suite or route claim.
+
+### MICA priority-3 art checkpoint (2026-11-09)
+
+Local batch-3 art adds 40 semantic object-byte aliases and drawings (172 total
+core frames; canonical key count remains 22). Native full-palette references
+were enlarged 8× and redrawn by built-in GPT Image, two attempts per base pose.
+The 33 chosen generated poses use uniform reduction and the shared indexed
+palette; seven exact native quarter-turn relationships use the deterministic
+rotation tool. No decoded native art enters Git. Prompts, source hashes,
+selections and scale rectangles are under the MICA `object-poses/` directory.
+
+The external review at
+`$MICA_BATCH3_REVIEW_ROOT/review.html` compares
+lossless native/MICA frames at 60Hz, including observed mapping streams from
+packaged-mod AIZ vine and hollow-tree captures and an HCZ conveyor capture.
+These positioned interactions prove the new aliases are selected; they do not
+certify the intervening route or later-zone owners. Manual head/torso panels
+retain the native hotspot and expose screen-axis foreshortening. Rear tumble
+scale clusters simplify at 1×; new twist front/back views join older side art.
+
+The production audit moves exactly those 40 MICA/S3K obligations from fallback
+to native alias: **91 authored / 58 native alias / 120 fallback / 4 N/A**,
+compared with the historical 91 / 18 / 160 / 4 above. Other host/character
+counts are unchanged. The six-class Java run exercised 97 tests with zero skips;
+the old vine fallback expectation required updating for the new swing aliases.
+The focused MICA rerun passes all 34 tests without skips after that correction;
+together with the unchanged five other classes, all 97 selected tests pass.
+Python assembly and native-method discovery each pass seven tests; indexed
+palette/geometry/regeneration verification and the example jar build pass.
