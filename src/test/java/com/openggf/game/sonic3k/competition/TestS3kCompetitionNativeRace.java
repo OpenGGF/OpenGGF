@@ -5,8 +5,9 @@ import com.openggf.game.arena.MonitorRule;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import openggf.timeattack.TimeAttackRuntime;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -19,12 +20,18 @@ import static org.junit.jupiter.api.Assertions.*;
 @Isolated
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kCompetitionNativeRace {
-    @Test void sonicTraversesFiveDesertPalaceLapsExactlyAsNative() throws Exception {
+    /**
+     * One full native Sonic race per arena; the index is the GRAND_PRIX_ORDER and native track cursor.
+     * Each fixture's provenance: docs/architecture/validation/2026-10-28-tas-support-competition.md.
+     */
+    @ParameterizedTest(name = "{1}")
+    @CsvSource({"3, dpz, 2528"})
+    void sonicTraversesFiveLapsExactlyAsNative(int arenaIndex, String key, int raceRows) throws Exception {
         try (var fixture = new HostedArenaFixture();
-             var stream = getClass().getResourceAsStream("/competition/s3k/dpz-sonic-native.csv.gz");
+             var stream = getClass().getResourceAsStream("/competition/s3k/" + key + "-sonic-native.csv.gz");
              var rows = new BufferedReader(new InputStreamReader(new GZIPInputStream(stream), StandardCharsets.US_ASCII))) {
-            var arena = new S3kHostedArenaSession(fixture.host, new HostedArenaRequest(3, "sonic", false), () -> {});
-            fixture.host.world().context().beginGameplayRun(TimeAttackRuntime.competitionPolicy(MonitorRule.OFF), 3, 0);
+            var arena = new S3kHostedArenaSession(fixture.host, new HostedArenaRequest(arenaIndex, "sonic", false), () -> {});
+            fixture.host.world().context().beginGameplayRun(TimeAttackRuntime.competitionPolicy(MonitorRule.OFF), arenaIndex, 0);
             for (int i = 0; i < 240; i++) fixture.iteration(() -> arena.step(TestS3kArenaZoomFraming.input(0, 0)));
             rows.readLine(); // Named, frozen native RAM columns; see the capture provenance.
             int previous = 0, count = 0;
@@ -44,10 +51,10 @@ class TestS3kCompetitionNativeRace {
                 int[] actual = {p.centreX(),p.xFraction(),p.centreY(),p.yFraction(),p.xVelocity(),p.yVelocity(),
                         p.groundVelocity(),p.angle(),p.status(),p.statusSecondary(),p.routine(),p.objectControl(),
                         p.standingObject(),p.animation(),p.mappingFrame()};
-                assertArrayEquals(expected, actual, "race frame " + count + ": x,xf,y,yf,xv,yv,gsp,angle,status,secondary,routine,control,interact,anim,mapping");
+                assertArrayEquals(expected, actual, key + " race frame " + count + ": x,xf,y,yf,xv,yv,gsp,angle,status,secondary,routine,control,interact,anim,mapping");
                 count++;
             }
-            assertEquals(2528, count);
+            assertEquals(raceRows, count);
             assertTrue(arena.trackFinished(), "full native five-lap traversal must finish");
         }
     }

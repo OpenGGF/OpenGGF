@@ -371,7 +371,10 @@ with `BIZHAWK_HOME` pointing to official 2.11; compile
 BizHawk.Emulation.Cores.dll and Mono's netstandard facade. Set MONO_PATH to the
 built host and BizHawk dll directories, LD_LIBRARY_PATH to the latter. Expand
 the frozen RLE tape to one integer mask per line. Invoke the probe with absolute
-ROM, expanded tape and an existing external output directory. First execution
+ROM, expanded tape and an existing external output directory; an optional
+fourth argument selects track cursor 0..4 (Azure Lake, Balloon Park, Chrome
+Gadget, Desert Palace, Endless Mine; default 3), and `TestS3kCompetitionNativeRace`
+takes one fixture row per arena. First execution
 creates `start.state`; subsequent executions load it. `native.csv` is overwritten
 only in that explicitly supplied diagnostic directory. Compare it byte for byte
 with the decompressed fixture. The host verifies the original ROM identity.
