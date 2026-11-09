@@ -224,6 +224,10 @@ class TestSonic2CompetitionProduct {
 
         screen.initialize(); Sonic2CompetitionTestFlow.finishMenuFade(screen);
         screen.update(input(1, 10, true));
+        assertTrue(screen.capture().fadeToWhite());
+        // SpecialStage (s2.asm:6537-6550): retain the menu/results picture
+        // for all 22 Pal_FadeToWhite waits, before the halfpipe loads.
+        Sonic2CompetitionTestFlow.finishDeparture(screen);
         screen.afterFrame();
         assertEquals(4, halfpipe.loaded);
     }

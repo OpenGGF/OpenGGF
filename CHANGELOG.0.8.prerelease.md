@@ -59,7 +59,9 @@ under the matching area heading; see the
   `MarkObjGone_P1` retire once both cameras are more than `$300` away and
   reload when revisited; the finish-grace countdown runs before players move;
   GAME OVER and TIME OVER cards appear in both views. The competitive special stage runs both players
-  on one halfpipe with its checkpoints and results. Held rewind is off in
+  on one halfpipe with its checkpoints and results. Its entry fades the previous
+  results to white, holds the shared load delay, and runs startup waits; live
+  pacing uses the same lag approximation as the one-player special stage. Held rewind is off in
   Competition; the progressive presentation, seam and lag-frame limits are in
   [known discrepancies](docs/status/known-discrepancies.md#s2-competition-split-screen-native-lag-and-rewind-scope).
 
