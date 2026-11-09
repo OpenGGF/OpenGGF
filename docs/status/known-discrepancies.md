@@ -29,11 +29,13 @@ See the [Competition design](../architecture/designs/2026-11-07-s3k-competition-
 Hosted S2 RANDOMISED applies the shipped 2P `Obj2E_Init` content draw,
 `(Level_frame_counter & 7) + 1`, to a one-player act. The draw occurs on the
 contents object's first actual execution. The absent P2's Tails 1-up does not
-credit P1. COMPETITION_ITEMS is an invented room set: bit 0 selects teleport
-when set and Robotnik when clear. Its frame-counter basis follows Obj2E_Init;
-the one-bit draw and Robotnik membership do not occur in the ROM. Teleport
-requires the local timer to run and the attempt's frozen `swapEnabled` policy;
-otherwise its contents become invincibility before rising.
+credit P1. It is the default for S2 Competition rooms. Rooms offer no other
+item set on S2 acts: the arena-only COMPETITION_ITEMS rule is S3K's own item
+monitor. Teleport requires the local timer to run and the attempt's frozen
+`swapEnabled` policy; otherwise its contents become invincibility before rising.
+When no other racer is still streaming (the ROM's "either player done" case),
+the swap command falls back to invincibility after the box breaks, not at the
+icon draw.
 
 The network swap engine reconstructs centre, velocity, collision path and draw
 priority from a server-relayed pose, then rebuilds local camera/object/ring

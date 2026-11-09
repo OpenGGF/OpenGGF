@@ -59,7 +59,7 @@ monitor setting.
 | D19 | Solo arena practice | **Not in v1.** Arenas are reached only through Competition rooms. A later solo mode would use the native `TIME_ATTACK` mode with mod-owned `.ggfghost` bests, and never cartridge records. |
 | D20 | Death time on Competition-mode acts | Executed steps from release, with **no star-post refund** (§5, §6). |
 | D21 | S3K act monitors | RANDOMISED and COMPETITION_ITEMS are **unavailable** on S3K acts, because the S3K ROM has no 2P monitor rule (§3.2). |
-| D22 | S2 COMPETITION_ITEMS | The user's set, teleport plus Robotnik. It is drawn from `Level_frame_counter` bit 0 on the `Obj2E_Init` pattern (§7). The one-bit draw and the Robotnik member are invented and recorded in known discrepancies. |
+| D22 | S2 COMPETITION_ITEMS | **Superseded 2026-11-09 by the user: keep S2 accurate to the original.** S2 acts offer only the shipped `Obj2E_Init` draw (RANDOMISED, the S2 Competition default), normal monitors or off. The earlier invented set (teleport plus Robotnik on `Level_frame_counter` bit 0) made a guaranteed-style teleport worth camping for in two-player rooms, and is removed. |
 
 Lead decisions 1 and 2 and the retry part of 4 are superseded by D1-D5 and D11. Decision 6 is
 covered by D4 and D19. The first draft's open questions Q1-Q6 are closed by D2, D17, D14, D19,
@@ -425,7 +425,7 @@ steps (`RecordingFrameDriver.java:221-265`) but the live run does not.
 |---|---|---|---|
 | NORMAL (default for acts) | Shipped 1P monitors. | Shipped 1P monitors. | Not offered. |
 | RANDOMISED | `Obj2E_Init`'s 2P rule on the 1P layout: "?" icon, contents `(Level_frame_counter & 7) + 1`. Content 8 (teleport) uses the teleport guard (below), then the server swap (§8). `tails_1up` credits the absent P2. | **Unavailable** (D21): the S3K ROM has no randomiser (§3.2). | Not offered. |
-| COMPETITION_ITEMS | The user's set (D22): content = `Level_frame_counter & 1 ? 8 (teleport) : 3 (Robotnik)`, then the teleport guard.<br>• Nearest ROM basis: `Obj2E_Init` draws from `Level_frame_counter` (`s2.asm:25759-25761`), and "teleport only" overrides the draw with a fixed content (`s2.asm:25762-25764`).<br>• Invented: the one-bit draw and Robotnik's membership. These are recorded in known discrepancies. | **Unavailable** (D21). | `Competition_items = 0`: the ROM item set (speed, slow, swap, ring, rolling Robotnik, slip trap, spring trap). The swap item uses §8. This is the default for arenas. |
+| COMPETITION_ITEMS | **Not offered on S2 acts** (D22, superseded). S2 rooms use the shipped RANDOMISED draw instead. | **Unavailable** (D21). | `Competition_items = 0`: the ROM item set (speed, slow, swap, ring, rolling Robotnik, slip trap, spring trap). The swap item uses §8. This is the default for arenas. |
 | OFF | The monitor deletes itself on init without marking respawn. There is no inert ROM content, because entry 0 is Robotnik. Not a ROM state; recorded in known discrepancies. | Same as S2 (entry 0 is Eggman). | `Competition_items = $FF`: boxes stay inert in anim 7 (`Obj_2PItem (sonic3k.asm:73321-…)`). |
 
 **Teleport guard.** The ROM keeps content 8 only while `Update_HUD_timer + Update_HUD_timer_2P == 2`,
@@ -844,7 +844,7 @@ lean lane can run out of memory during test compile. Run every test command thro
     `SceneRunLauncher` branches (delegates only).
   - `FAST_FROM_CHECKPOINT` (§6).
   - The monitor rules in the S2 and S3K monitor objects (§7), including the teleport guard on
-    `swapEnabled` and the D22 draw. S1 monitors are untouched (D2).
+    `swapEnabled`. S1 monitors are untouched (D2). (The D22 draw was removed on 2026-11-09.)
   - `RaceClock` production for acts (game over, time over).
   - The **swap engine side**:
     - the `SWAP_REQUEST` signal from S2 `teleport_monitor` and the arena `loc_3652A` path;
@@ -882,7 +882,7 @@ lean lane can run out of memory during test compile. Run every test command thro
   - New, ROM-gated: `TestHostedArenaEquivalence` (§13.2), `TestHostedArenaLapCapture`
     (positioned crossings: lap boundaries, `frameTime` parity, backwards crossing, death rollback,
     false start, cap → `TIME_OVER`), `TestCheckpointRespawnPolicy`,
-    `TestS2RandomisedMonitorContents` (`Level_frame_counter` rule, the D22 bit-0 draw, the
+    `TestS2RandomisedMonitorContents` (`Level_frame_counter` rule, the
     teleport guard on `swapEnabled`, `tails_1up`), `TestMonitorOffPolicy`, `TestS2SwapApplier`
     (fields set and not set per §8.3, camera snap, object-window reinit, 64-frame freeze,
     admissibility rejections), `TestS3kArenaSwapApplier` (`loc_3652A` fields, solo empty-slot
@@ -1027,7 +1027,7 @@ first, and report the `VERDICT` line.
   - checkpoint fast reload without fade or title card in Competition-mode acts;
   - monitors OFF;
   - the 2P random-monitor rule applied to 1P acts;
-  - the invented COMPETITION_ITEMS draw (D22);
+  - the invented COMPETITION_ITEMS draw (D22; removed 2026-11-09);
   - the server-mediated swap: reconstruction from streamed pose (§8.3), non-atomic application,
     and invincibility applied at no-partner resolution rather than at icon selection.
 - `docs/S3K_KNOWN_DISCREPANCIES.md` also records the networked arena swap partner. The solo

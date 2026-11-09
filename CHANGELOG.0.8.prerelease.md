@@ -110,8 +110,11 @@ under the matching area heading; see the
   Everyone starts at the same scheduled moment, there are no restarts, and the
   first past the post wins. Placement counts each player's own frames from GO,
   so network lag never changes the order. The host picks the monitor rules
-  (normal, randomised, competition items or off) and a cutoff after the first
-  finisher. Sonic 2 and Sonic 3&K acts can be raced in either mode.
+  and a cutoff after the first finisher. Sonic 2 acts use the original
+  two-player monitors by default: each box gives one of eight items, picked as
+  the original picks them, so teleport is never guaranteed. Normal or no
+  monitors are the alternatives. Sonic 2 and Sonic 3&K acts can be raced in
+  either mode.
   - Sonic 3&K's five Competition arenas (Azure Lake, Balloon Park, Chrome
     Gadget, Desert Palace and Endless Mine) are new Competition-only tracks.
     Each player races them alone in one full-screen view, under the shipped

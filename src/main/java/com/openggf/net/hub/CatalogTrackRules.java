@@ -29,7 +29,7 @@ final class CatalogTrackRules implements TrackRulesProvider {
         if ("NORMAL".equals(config.monitors()) || "OFF".equals(config.monitors())) return true;
         String tracks = facts.getProperty(config.gameId() + ".swapActs", "");
         return java.util.Arrays.asList(tracks.split(",")).contains(config.zone() + ":" + config.act())
-                && ("RANDOM".equals(config.monitors()) || "ITEMS".equals(config.monitors()));
+                && "RANDOM".equals(config.monitors()); // Obj2E_Init's two-player draw; ITEMS is arena-only.
     }
     public int clockStartFrame(TrackKey key) {
         return "ARENA".equals(key.kind()) ? number(key.gameId() + ".arenaClockStart") : 0;

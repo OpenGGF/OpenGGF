@@ -23,7 +23,7 @@ class TestSwapRefusalReceipts {
         host.outcome(0,new ControlMessage.TeleportOutcome(receipt.swapId(),apply,outcome));
         var start = new AttemptStartDescriptor("s2",0,0,"sonic","fp",
                 com.openggf.mods.run.TrackKind.ACT, CompetitionRoomSettings.Mode.COMPETITION,
-                com.openggf.game.arena.MonitorRule.COMPETITION_ITEMS,
+                com.openggf.game.arena.MonitorRule.RANDOMISED,
                 com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT,true);
         var recording = new AttemptInputRecording(start);
         recording.appendEvent(apply,new RaceEvent.SwapFallback(receipt.swapId()));
