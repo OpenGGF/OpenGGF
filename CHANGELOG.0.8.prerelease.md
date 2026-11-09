@@ -36,6 +36,9 @@ under the matching area heading; see the
 ## Modding and tools
 
 - **MICA, an original character framework example:** optional directional homing
+  previews airborne homing targets, locks the reticle during strikes, and draws
+  native ROM spindash/skid dust for canonical-sheet characters. A fault-bounded
+  `onMovementTick()` character hook supports per-tick preview requests. Directional
   strike sheet poses follow current velocity with phase-preserving turns, normal
   facing mirrors and generic/native fallbacks. The maintained
   `examples/mica-and-talon` demo plays in all three stock games with Sonic's

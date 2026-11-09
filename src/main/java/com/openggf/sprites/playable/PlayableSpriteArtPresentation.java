@@ -6,7 +6,11 @@ final class PlayableSpriteArtPresentation {
 
     /** Keep the playable's virtual pose getters and renderer lifetime at their existing draw boundary. */
     static void drawStandardArt(AbstractPlayableSprite sprite) {
-        if (!sprite.isHidden() && sprite.getSpriteRenderer() != null) {
+        // Dust is a separate ROM object, independent of the player's sheet:
+        // InitPlayers (s2.asm:5177-5182), loc_6AB8 (sonic3k.asm:8384-8392).
+        if (sprite.isHidden()) return;
+        if (sprite.getSpindashDustController() != null) sprite.getSpindashDustController().draw();
+        if (sprite.getSpriteRenderer() != null) {
             sprite.getSpriteRenderer().drawFrame(
                     sprite.getMappingFrame(), sprite.getRenderCentreX(), sprite.getRenderCentreY(),
                     sprite.getRenderHFlip(), sprite.getRenderVFlip());

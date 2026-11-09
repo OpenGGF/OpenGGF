@@ -24,6 +24,11 @@ public final class MicaCharacter extends AbstractPlayableSprite {
         // S3K's Character_Speeds init table belongs to Competition mode only.
         return new CharacterPhysicsSpec(PhysicsProfile.SONIC_2_SONIC);
     }
+    @Override protected void onMovementTick() {
+        // The world runtime gates free air movement and the spent-air-action latch,
+        // and retains the selected target while a homing strike is in progress.
+        HomingAttack.requestReticle(this, getAir());
+    }
     @Override protected boolean onAbilityActivate(boolean up, boolean down, boolean left, boolean right) {
         // The S3K form gate owns an eligible transformation press before her strike.
         if (getSuperStateController() != null && getSuperStateController().activateFromAirAbility()) return true;

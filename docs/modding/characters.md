@@ -138,7 +138,8 @@ public final class MyRunner extends AbstractPlayableSprite {
 }
 ```
 
-`drawStandardArt()` submits the installed current pose when visible. The host
+`drawStandardArt()` submits host ROM dust effects and the installed current pose
+when visible. Dust uses its own ROM art, independent of the canonical sheet. The host
 continues to own the renderer and its pattern bank; drawing changes no simulation
 state. Runtime main/sidekick suffixes have no effect on the factory-bound key, and
 the same sprite class can serve several distinct registered definitions. Outside
@@ -421,8 +422,14 @@ the air action for chaining, and retains the existing effects and camera lag.
 Without a target, `start` dashes forward. Use `startIfTarget(this, mode)` to
 return false without dashing when a native air move should get the press instead.
 
-For a flight move, call `HomingAttack.requestReticle(this, downHeld)` from your tick
-hook, and `HomingAttack.divebomb(this, mode)` on the down+jump activation. Release
+Override `protected void onMovementTick()` for per-tick character behavior. It runs
+inside the character owner's fault boundary before movement input and homing preview
+selection (live movement ticks, excluding death). Use the subclass rewind hooks for
+mutable state. For a normal homing preview, call
+`HomingAttack.requestReticle(this, getAir())`; the runtime gates availability and
+keeps the target locked during the strike.
+
+For a flight move, call `HomingAttack.requestReticle(this, downHeld)` from `onMovementTick()`, and `HomingAttack.divebomb(this, mode)` on the down+jump activation. Release
 the request with `false` to hide the reticle, including during a strike. The dive
 uses the previewed live target; without one it dives steeply forward-down. The
 facade accepts a free airborne controlled leader, including flight without native

@@ -255,8 +255,24 @@ class TestMicaCharacterIntegration {
                 var input = new com.openggf.debug.playback.Bk2FrameInput(frame, mask, jump ? 1 : 0, false, "spindash");
                 session.step(input);
                 csv.append(session.stateLine(frame, input)).append('\n');
-                if (frame == 180) {
+                if (frame == 178) {
                     assertTrue(session.player().getSpindash(), "native charge " + game);
+                    var dust = session.player().getSpindashDustController();
+                    assertNotNull(dust, "canonical character gets host ROM dust " + game);
+                    assertNotNull(dust.getRenderer());
+                    // S3K renders the published SAT, so explicitly republish each
+                    // diagnostic draw; changing a live controller cannot change it.
+                    republishSprites();
+                    var withDust = session.render();
+                    session.player().setSpindashDustController(null);
+                    republishSprites();
+                    var withoutDust = session.render();
+                    session.player().setSpindashDustController(dust);
+                    republishSprites();
+                    assertFalse(java.util.Arrays.equals(withDust.pixels(), withoutDust.pixels()),
+                            "charged dust must contribute visible pixels " + game);
+                    assertNotNull(com.openggf.level.objects.SkidDustObjectInstance.create(session.player()),
+                            "skid puffs use the same independent ROM renderer");
                     assertEquals(GameServices.module().getDonorCapabilities().resolveNativeId(CanonicalAnimation.SPINDASH), session.player().getAnimationId());
                 }
                 if (frame == 190) {
@@ -1151,6 +1167,10 @@ class TestMicaCharacterIntegration {
         fixture.stepIdleFrames(2);
         fixture.stepFrame(false, false, false, false, true);
         fixture.stepIdleFrames(6);
+        var preview = com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                com.openggf.game.session.SessionManager.getCurrentWorldSession(),
+                com.openggf.game.mutators.HomingAttackRuntime.class);
+        assertTrue(reticleFlag(preview, "reticleVisible"), "MICA previews an airborne badnik");
         fixture.stepFrame(false, false, false, false, true);
         var runtime = com.openggf.game.session.WorldSessionPolicyAccess.getService(
                 com.openggf.game.session.SessionManager.getCurrentWorldSession(),
@@ -1164,6 +1184,8 @@ class TestMicaCharacterIntegration {
                 "The strike selects the authored forward-up dive pose: " + player.getMappingFrame());
         assertEquals(player.resolveAnimationId(CanonicalAnimation.ROLL), player.getAnimationId(),
                 "The visual dive must retain native roll attack semantics");
+        assertTrue(reticleFlag(runtime, "reticleVisible"));
+        assertTrue(reticleFlag(runtime, "reticleLocked"));
         var strike = registry.capture();
         var expected = new ArrayList<String>();
         for (int i = 0; i < 18; i++) {
@@ -1176,6 +1198,10 @@ class TestMicaCharacterIntegration {
             fixture.stepIdleFrames(1);
             assertEquals(expected.get(i), player.getCentreX() + ":" + player.getCentreY() + ":" + runtime.capture());
         }
+        player.setAir(false);
+        com.openggf.sprites.playable.PlayableSpriteInternalAccess.movementTick(player);
+        runtime.beforeMovement(player);
+        assertFalse(reticleFlag(runtime, "reticleVisible"), "landing hides MICA's reticle");
         registry.restore(original);
     }
 
@@ -1339,6 +1365,19 @@ class TestMicaCharacterIntegration {
             for (int i=0; i<nativeSheet.getPatterns().length; i++)
                 assertSame(nativeSheet.getPatterns()[i], composed.getPatterns()[i]);
         }
+    }
+
+    private static void republishSprites() {
+        com.openggf.level.LevelSpritePresentation.prepare(GameServices.level(), GameServices.sprites());
+        com.openggf.level.LevelSpritePresentation.publishPreparedScene(GameServices.level());
+    }
+
+    private static boolean reticleFlag(com.openggf.game.mutators.HomingAttackRuntime runtime, String name) {
+        try {
+            var field = runtime.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            return field.getBoolean(runtime);
+        } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
     }
 
     private Path buildSample() throws Exception {

@@ -1583,3 +1583,70 @@ The initial AIZ actor PNGs have a black scene background. They verify MICA's
 normal/powered actor and palette, while full intro scene visual parity remains
 unverified. The complete native control handoff is tested. Other unrun object
 routes and the documented canonical pose fallbacks remain coverage/art debt.
+
+## Dust and target preview follow-up (2026-11-09)
+
+Canonical sheets omitted attached dust in `drawStandardArt`; S2 also rejected the
+mod's persisted character key in its native dust loader. Mod playables now select
+the common Sonic dust bank independently of their body art, and standard drawing
+submits the existing dust controller. Skid puffs borrow that same ROM renderer.
+The ROM creates a separate dust object in InitPlayers (s2.asm:5177-5182) and
+loc_6AB8 (sonic3k.asm:8384-8392); its charge paths are
+Obj08_MdSpindashDust (s2.asm:42768-42790) and loc_18C20
+(sonic3k.asm:34066-34096). No body-sheet pixels supply effect art.
+
+The documented tick hook did not exist. The candidate API now provides protected
+`onMovementTick()`, invoked through the character's construction fault boundary
+before input/homing selection. MICA requests a preview while airborne; the world
+runtime owns availability and target selection, and locks the reticle immediately
+when launching. The 0.7 signature pin includes the hook. No new mutable mod state
+or rewind payload is needed.
+
+Focused evidence covers S2/S3K charge pixels with and without the dust controller,
+skid-puff construction, and MICA's airborne preview, launch lock and landing hide.
+The initial dust negative control removed the live controller without rebuilding
+S3K's already published SAT, so both pictures retained dust. The maintained check
+explicitly prepares/publishes both diagnostic sprite tables without stepping
+gameplay, and samples a visible puff. The first AIZ homing filming route
+fell into a pit before reaching an enemy; the replacement starts explicitly at
+(7100,900), approaches the placed Rhinobot, and records native defeat. These are
+bounded presentation/ability witnesses, not whole-route certification; inherited
+route and pose gaps above remain.
+
+The landing visibility assertion runs after the existing strike/replay checks:
+a mid-sequence world restore replaces object identities, while temporarily
+landing before launch clears the native jumping latch. Neither is a neutral
+way to pause the original encounter. No production workaround was added for
+these fixture interactions.
+
+Validation for this follow-up (Java 25, `DISPLAY`/`WAYLAND_DISPLAY` unset):
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestMicaCharacterIntegration,TestHomingAttackMutator,TestHomingStrikePose,TestModApiSignatureSurface' test
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestMicaCharacterIntegration' test
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+```
+
+The combined selection passed all 32 homing/pose/signature tests; the integration
+fixture corrections above required its separate final rerun: 34 passed. The S3K
+selection passed 60 tests. All selected tests ran with zero skips. No full-suite
+or whole-route claim is made. The final integration run waited 125 seconds for
+the queue and executed for 73 seconds; the S3K selection waited 299 seconds and
+executed for 42 seconds. No user wait was required; unmeasured editing/capture
+intervals are not attributed to test execution.
+
+Five headless `GameplayCaptureTool --mod` MP4s and an inspected contact sheet live
+under the external `$MICA_DUST_RETICLE_CAPTURE_ROOT` evidence directory. The short clips
+are `s2-dust.mp4`, `s3k-dust.mp4`, `s1-homing.mp4`, `s2-homing.mp4`, and
+`s3k-approach.mp4`; `README.txt` records source frame ranges, the positioned AIZ
+start and retained input/CSV sources. `ffprobe` confirms H.264, 960×672, 60 fps.
+The source ROM aliases were verified against all three required SHA-1 identities.
+The mod was built by `python3 examples/mica-and-talon/build.py`. Scoped citation
+checks and staged policy checks pass. Delivery owner: implementation agent;
+local branch `feature/ai-mica-dust-reticle`, based on `c88c34cd61`. No live jobs
+or blockers remain; the lead owns subsequent integration. No merge or push.

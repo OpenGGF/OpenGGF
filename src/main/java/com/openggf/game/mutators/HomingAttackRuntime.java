@@ -360,6 +360,7 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
         flameTicks = FLAME_AFTER_TICKS;
         guardTicks = INSTAGIB_GUARD_TICKS;
         aim(sprite, targetX, targetY);
+        updateReticle(sprite);
     }
 
     /**
