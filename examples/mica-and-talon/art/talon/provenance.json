@@ -135,7 +135,8 @@
           19
         ],
         "mapping": 15,
-        "label": "Map_Sonic_0332"
+        "label": "Map_Sonic_0332",
+        "tail": 0
       }
     },
     "walk-01": {
@@ -153,7 +154,8 @@
           20
         ],
         "mapping": 16,
-        "label": "Map_Sonic_034C"
+        "label": "Map_Sonic_034C",
+        "tail": 0
       }
     },
     "walk-02": {
@@ -171,7 +173,8 @@
           21
         ],
         "mapping": 17,
-        "label": "Map_Sonic_035E"
+        "label": "Map_Sonic_035E",
+        "tail": 0
       }
     },
     "walk-03": {
@@ -189,7 +192,8 @@
           20
         ],
         "mapping": 18,
-        "label": "Map_Sonic_0378"
+        "label": "Map_Sonic_0378",
+        "tail": 0
       }
     },
     "walk-04": {
@@ -207,7 +211,8 @@
           19
         ],
         "mapping": 19,
-        "label": "Map_Sonic_039A"
+        "label": "Map_Sonic_039A",
+        "tail": 0
       }
     },
     "walk-05": {
@@ -225,7 +230,8 @@
           20
         ],
         "mapping": 20,
-        "label": "Map_Sonic_03B4"
+        "label": "Map_Sonic_03B4",
+        "tail": 0
       }
     },
     "walk-06": {
@@ -243,7 +249,8 @@
           21
         ],
         "mapping": 13,
-        "label": "Map_Sonic_02F6"
+        "label": "Map_Sonic_02F6",
+        "tail": 0
       }
     },
     "walk-07": {
@@ -261,7 +268,8 @@
           20
         ],
         "mapping": 14,
-        "label": "Map_Sonic_0310"
+        "label": "Map_Sonic_0310",
+        "tail": 0
       }
     },
     "run-00": {
@@ -279,7 +287,8 @@
           15
         ],
         "mapping": 45,
-        "label": "Map_Sonic_06D6"
+        "label": "Map_Sonic_06D6",
+        "tail": 0
       }
     },
     "run-01": {
@@ -297,7 +306,8 @@
           16
         ],
         "mapping": 46,
-        "label": "Map_Sonic_06E8"
+        "label": "Map_Sonic_06E8",
+        "tail": 0
       }
     },
     "run-02": {
@@ -315,7 +325,8 @@
           15
         ],
         "mapping": 47,
-        "label": "Map_Sonic_06FA"
+        "label": "Map_Sonic_06FA",
+        "tail": 0
       }
     },
     "run-03": {
@@ -333,7 +344,8 @@
           16
         ],
         "mapping": 48,
-        "label": "Map_Sonic_070C"
+        "label": "Map_Sonic_070C",
+        "tail": 0
       }
     },
     "roll-00": {
@@ -594,69 +606,97 @@
       "group": "fly",
       "cell": 0,
       "attempt": 2,
-      "native": {
-        "size": [
-          36,
-          32
-        ],
-        "hotspot": [
-          25,
-          20
-        ],
-        "mapping": 160,
-        "tail": 39
-      }
+      "wing_phase": "high V",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly2 cell 0; high V; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
     },
     "fly-01": {
       "group": "fly",
       "cell": 1,
-      "attempt": 2,
-      "native": {
-        "size": [
-          36,
-          32
-        ],
-        "hotspot": [
-          25,
-          20
-        ],
-        "mapping": 160,
-        "tail": 40
-      }
+      "attempt": 1,
+      "wing_phase": "upper downstroke extended",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly1 cell 1; upper downstroke extended; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
     },
     "fly_tired-00": {
       "group": "fly_tired",
       "cell": 0,
       "attempt": 2,
-      "native": {
-        "size": [
-          36,
-          32
-        ],
-        "hotspot": [
-          25,
-          20
-        ],
-        "mapping": 163,
-        "tail": 39
-      }
+      "wing_phase": "shallow raised droop",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 0; shallow raised droop; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
     },
     "fly_tired-01": {
       "group": "fly_tired",
       "cell": 1,
       "attempt": 2,
-      "native": {
-        "size": [
-          36,
-          32
-        ],
-        "hotspot": [
-          25,
-          20
-        ],
-        "mapping": 164,
-        "tail": 40
-      }
+      "wing_phase": "horizontal laboured downstroke",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 1; horizontal laboured downstroke; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly-02": {
+      "group": "fly",
+      "cell": 2,
+      "attempt": 2,
+      "wing_phase": "horizontal power stroke",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly2 cell 2; horizontal power stroke; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly-03": {
+      "group": "fly",
+      "cell": 3,
+      "attempt": 2,
+      "wing_phase": "low fully swept",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly2 cell 3; low fully swept; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly-04": {
+      "group": "fly",
+      "cell": 4,
+      "attempt": 1,
+      "wing_phase": "folded mid upstroke",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly1 cell 4; folded mid upstroke; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly-05": {
+      "group": "fly",
+      "cell": 5,
+      "attempt": 2,
+      "wing_phase": "upper recovery reopening",
+      "native_reference": "S3K body A0 + tails 27/28",
+      "cleanup": "Flight round 2: fly2 cell 5; upper recovery reopening; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly_tired-02": {
+      "group": "fly_tired",
+      "cell": 2,
+      "attempt": 2,
+      "wing_phase": "low shallow beat",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 2; low shallow beat; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly_tired-03": {
+      "group": "fly_tired",
+      "cell": 3,
+      "attempt": 2,
+      "wing_phase": "deep sag",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 3; deep sag; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly_tired-04": {
+      "group": "fly_tired",
+      "cell": 4,
+      "attempt": 2,
+      "wing_phase": "folded low recovery",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 4; folded low recovery; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+    },
+    "fly_tired-05": {
+      "group": "fly_tired",
+      "cell": 5,
+      "attempt": 2,
+      "wing_phase": "bent horizontal recovery",
+      "native_reference": "S3K body A3/A4 + tails 27/28",
+      "cleanup": "Flight round 2: tired2 cell 5; bent horizontal recovery; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
     }
   },
   "nativeScripts": {
@@ -829,5 +869,77 @@
       "RUN 1/3 silhouettes are close, differentiated by near/far shoe shade and wing stroke direction; native run also uses closely related blur silhouettes.",
       "Runtime contact not certified; review only."
     ]
+  },
+  "flightRound2": {
+    "review": "$HOME/scratch/agent-tmp/talon-flight-20261109/review.html",
+    "selection": {
+      "fly": [
+        "fly2",
+        "fly1",
+        "fly2",
+        "fly2",
+        "fly1",
+        "fly2"
+      ],
+      "fly_tired": [
+        "tired2",
+        "tired2",
+        "tired2",
+        "tired2",
+        "tired2",
+        "tired2"
+      ]
+    },
+    "phases": {
+      "fly": [
+        "high V",
+        "upper downstroke extended",
+        "horizontal power stroke",
+        "low fully swept",
+        "folded mid upstroke",
+        "upper recovery reopening"
+      ],
+      "fly_tired": [
+        "shallow raised droop",
+        "horizontal laboured downstroke",
+        "low shallow beat",
+        "deep sag",
+        "folded low recovery",
+        "bent horizontal recovery"
+      ]
+    },
+    "body": "Fixed generated plate per cycle; no bob. Crop 480x480 before uniform 10:1 reduction; goggle translation only.",
+    "timing": "Six frames x2 ticks flight; six x4 tired. Sheet scripts drive host 0x20/0x24 without native count truncation.",
+    "method": "Built-in GPT Image whole strips, two attempts per cycle; tired attempt 1 rejected for white halo. No painted contours."
+  },
+  "round3": {
+    "method": "Uniform re-reduction of original generated source, no regeneration or hand editing. Source alpha crop; Lanczos; existing palette; inside outline.",
+    "source": "${ART_SCRATCH}/talon-art-r2-20261109/run-attempt-2.png",
+    "sourceSha256": "08a8ba5a9cd21c726a428574819913ea09d361416bb2dd66573f29496ffb5cb6",
+    "crop": [
+      86,
+      171,
+      450,
+      569
+    ],
+    "oldSourcePixelsPerNativePixel": 11.741935483870968,
+    "newSourcePixelsPerNativePixel": 13.343108504398828,
+    "outputSize": [
+      27,
+      30
+    ],
+    "hotspot": [
+      11,
+      11
+    ],
+    "attemptedFactors": [
+      0.86,
+      0.88,
+      0.9,
+      0.92
+    ],
+    "selectedFactor": 0.88,
+    "alignment": "Beak right edge centre+15; goggle top centre-8, matching run-01/03. Pose-dependent crest and wing bounds excluded.",
+    "review": "${ART_SCRATCH}/talon-art-r3-20261109/review.html"
   }
 }

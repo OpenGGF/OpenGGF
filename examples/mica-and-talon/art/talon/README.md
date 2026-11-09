@@ -13,17 +13,18 @@ python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/talon
 python3 -m unittest discover -s tools/modding -p test_playable_art_assemble.py
 ```
 
-74 indexed drawings, one transparent plus 15 opaque Mega Drive ladder colours:
+82 indexed drawings, one transparent plus 15 opaque Mega Drive ladder colours:
 WAIT 7; WALK 8×4 orientations; RUN 4×4; ROLL 3 plus blur; SPINDASH 3 plus blur;
-SPRING/HURT/DEATH/DUCK/LOOK_UP one each; SKID 2; TAILS_FLY 2;
-TAILS_FLY_TIRED 2. Canonical names follow `CanonicalAnimation`; `FLY_TIRED` is
+SPRING/HURT/DEATH/DUCK/LOOK_UP one each; SKID 2; TAILS_FLY 6;
+TAILS_FLY_TIRED 6. Canonical names follow `CanonicalAnimation`; `FLY_TIRED` is
 not an accepted enum name. Flight wings are integrated; no tail sprite exists.
 `talon-custom-frames.json` is intentionally empty: all supplied poses are canonical.
 No character-class binding or Java changes are part of this handoff.
 
 Round 1 source selection: WAIT and WALK strip attempt 2; RUN attempt 3; ROLL and
-SPINDASH attempt 2; static poses attempt 1 except spring; flight and tired flight
-attempt 2. Each static pose had two strip attempts. Spring then had two additional
+SPINDASH attempt 2; static poses attempt 1 except spring. Flight and tired flight
+originally used attempt 2, superseded by the six-phase revision below. Each static
+pose had two strip attempts. Spring then had two additional
 alternatives in one generation, with the first selected. Its initial float-like
 reference was rejected and replaced with actual spring mapping $59 (22×47).
 The rejected second WALK request was blocked by the image service before output;
@@ -56,9 +57,22 @@ ticks, DEATH $5D at four ticks. SKID retains the four-step 0/1/0/1 sequence at
 eight ticks before WALK. Duck/look-up hold at 64 ticks.
 
 S3K `AniTails20` and `AniTails24` supply flight/tired-flight body poses, with
-`AniTails_Tail0B` supplying the two-step rotor at two ticks. TALON replaces that
-rotor with two integrated up/down wing poses; tired body timing is 12 ticks.
-Flight flapping is therefore deliberately very fast at native timing.
+`AniTails_Tail0B` supplying the two-step rotor at two ticks. TALON now replaces that rotor with six integrated wing phases: FLY uses 2 ticks
+per frame (12 per beat), tired flight 4 ticks (24 per beat). These are authored
+wingbeat timings, not the native rotor clock. Both cycles have a fixed generated
+body/head/feet plate and zero bob. Two whole-strip attempts were made per cycle;
+FLY uses attempts 2/1/2/2/1/2, tired uses attempt 2 (attempt 1 had a white halo).
+Reduction uses a constant 480×480 crop and uniform 10:1 scale, translation from
+the goggles only, the existing palette and a fixed [24,24] authoring hotspot.
+Cleanup registers the generated body plate and removes tiny detached specks; no
+wing contours were painted.
+
+Flight review: `$HOME/scratch/agent-tmp/talon-flight-20261109/review.html`, with
+full-tick GIFs, labelled strips, onion skin and body-region identity assertions.
+`assemble.py` preserves the authored six-step scripts. `PlayableSheetMaterializer`
+uses duration GCD and `PlayableSheetAnimationBinding` copies the full script
+to native IDs $20/$24; no Tails frame-count limit was found. This is source
+inspection and Python validation, without a Java build or runtime certification.
 
 `presentation/solar.yaml` mirrors MICA's data-table form: six fade tables and
 complete dry S2/S3K cycle tables, preserving non-plumage indices. White-gold
@@ -102,3 +116,21 @@ assumes MICA's 39px standing height and fails on unchanged TALON wait-00 in
 both the baseline and this round; TALON palette/ink, native input geometry,
 unchanged unrelated frames and deterministic regeneration are checked separately.
 No Java build or GGFP bake was performed.
+
+WALK and RUN were inspected frame by frame. Foot contact/lift phases are present,
+but opposite-arm reversal remains too restrained, especially WALK 5–7 and RUN
+2–3. WALK 0/4 passing poses are similar; leg crossings in WALK 6 are still small.
+RUN 0/2 high forward contacts could be exaggerated further. Native envelopes
+and hotspots are retained, so generated head position can move slightly despite
+the steadier compact-wing selection. Flight scale drift is addressed by the fixed-crop revision above. These are reviewable core assets,
+not a claim that the remaining motion issues or runtime slope contact are solved.
+
+## RUN scale correction (round 3)
+
+RUN 0 reuses round 2 generated strip attempt 2, cell 0, uniformly reduced at
+88% of its original scale. Head width (rear goggle strap through beak) is now
+11px instead of 13px; torso height is 8px instead of 9px, matching RUN 1–3.
+The 27×30 frame uses hotspot [11,11] to align the goggles and beak with the
+other phases. All RUN slopes derive from the selected flats; WALK and the
+six-phase flight sets retain their approved frames and manifest metadata.
+No pixels were painted. Exact source crop, scale and hash are in provenance.json.
