@@ -17,7 +17,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Purpose: uncut engine video of a frozen S2 Competition route, one frame per committed row.
- * Inputs: supplied S2 REV01, -Ds2video.route (resource name) and -Ds2video.out (directory).
+ * Inputs: supplied S2 REV01, -Ds2video.route (resource name) and -Ds2video.out (directory);
+ * -Ds2video.audio=true also writes the engine's own mix as audio.pcm (s16le stereo, one
+ * presented outer audio frame per row; rate in audio-rate.txt).
  * Origin: 2026-11-08 PR #270 parity video request. Explicit Debug selector only.
  */
 @Isolated @RequiresRom(SonicGame.SONIC_2)
@@ -44,8 +46,23 @@ class DebugSonic2CompetitionRouteVideo {
             csv.write("row,mode,phase,lfc,p1x,p1y,p2x,p2y,p1rings,p2rings,p1total,p2total,p1time,p2time,vint,titleState,titleCard\n");
             var hosts=new StageplayCompetitionRouteHosts(Path.of(System.getProperty("sonic2.rom.path")));
             byte[] frame=new byte[320*448*4];
+            var audio=Boolean.getBoolean("s2video.audio") ? GameServices.audio() : null;
+            var pcmOut=audio == null ? null : new DataOutputStream(new BufferedOutputStream(
+                    Files.newOutputStream(out.resolve("audio.pcm")),1<<20));
+            short[][] pcm={null};
             var result=new RouteReplay(hosts).replay(route,Cancellation.NONE,(row,sample)->{
                 try {
+                    if (audio != null) {
+                        if (pcm[0] == null) {
+                            int rate=audio.outputSampleRate();
+                            audio.beginCaptureMode(rate,audio.presentationFrameRate());
+                            Files.writeString(out.resolve("audio-rate.txt"),rate+"\n");
+                            pcm[0]=new short[(rate/50+2)*2];
+                        }
+                        com.openggf.tools.HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+                        int frames=audio.drainCaptureFrame(pcm[0]);
+                        for(int i=0;i<frames*2;i++) pcmOut.writeShort(Short.reverseBytes(pcm[0][i]));
+                    }
                     if (ffmpeg != null) {
                     var image=hosts.renderAnyCurrent();
                     int[] px=image.pixels();
@@ -58,6 +75,7 @@ class DebugSonic2CompetitionRouteVideo {
                             +","+f(sample,"competition.p1.rings")+","+f(sample,"competition.p2.rings")+","+f(sample,"competition.p1.totalRings")+","+f(sample,"competition.p2.totalRings")+","+f(sample,"competition.p1.time")+","+f(sample,"competition.p2.time")+","+sample.clocks().vIntRunCount()+","+f(sample,"title.state")+","+f(sample,"competition.titleCard")+"\n");
                 } catch(IOException e) { throw new UncheckedIOException(e); }
             });
+            if (audio != null) { pcmOut.close(); if (pcm[0] != null) audio.endCaptureMode(); }
             Files.writeString(out.resolve("result.txt"),result.toString());
             assertInstanceOf(ReplayResult.Passed.class,result,result.toString());
         } finally {
