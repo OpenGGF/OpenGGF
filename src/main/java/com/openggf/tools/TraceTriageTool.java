@@ -481,10 +481,10 @@ public final class TraceTriageTool {
             case PLAYER_PHYSICS -> List.of("Sonic_Move", "Sonic_Control", "Sonic_ChkRoll");
             case PLAYABLE_ANIMATION -> List.of("Sonic_Animate", "AnimateSprite");
             case OBJECT_SOLID -> List.of("SolidObject", "PlatformObject", "MvSonicOnPtfm");
-            case TOUCH_RESPONSE -> List.of("ReactToItem", "React_Enemy", "Sonic_Hurt");
+            case TOUCH_RESPONSE -> List.of("ReactToItem", "React_Enemy", "HurtSonic");
             case EVENT -> List.of("DynamicLevelEvents", "DeformLayers");
             case PALETTE -> List.of("PaletteCycle", "PalCycle_Sega");
-            case LAYOUT_MUTATION -> List.of("LevelLayoutLoad", "LevelDataLoad");
+            case LAYOUT_MUTATION -> List.of("v_lvllayout");
             case ART_PLC -> List.of("AddPLC", "RunPLC", "NewPLC");
             case TEST_BOOTSTRAP -> List.of("RandomNumber", "OscillateNumInit", "OscillateNumDo");
             case SIDEKICK, UNKNOWN -> List.of();
@@ -514,9 +514,9 @@ public final class TraceTriageTool {
             case SIDEKICK -> List.of("Tails_Control", "Obj_Tails");
             case OBJECT_SOLID -> List.of("SolidObjectFull", "SolidObjectTop", "MvSonicOnPtfm");
             case TOUCH_RESPONSE -> List.of("TouchResponse", "Touch_Loop", "HurtCharacter");
-            case EVENT -> List.of("Do_ResizeEvents", "DeformBgLayer");
+            case EVENT -> List.of("ScreenEvents", "Do_ResizeEvents", "DeformBgLayer");
             case PALETTE -> List.of("Animate_Palette", "AnPal_");
-            case LAYOUT_MUTATION -> List.of("Load_Level", "Layout_");
+            case LAYOUT_MUTATION -> List.of("Level_layout_header", "Level_layout_main");
             case ART_PLC -> List.of("Load_PLC", "Queue_Kos_Module", "Process_Kos_Queue");
             case TEST_BOOTSTRAP -> List.of("Random_Number", "OscillateNumInit", "OscillateNumDo");
             case UNKNOWN -> List.of();

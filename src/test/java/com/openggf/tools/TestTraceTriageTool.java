@@ -483,6 +483,20 @@ class TestTraceTriageTool {
         assertFalse(brief.contains("  - SolidObject\n"));
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "s1, rings, HurtSonic",
+            "s3k, camera_y, ScreenEvents",
+            "s1, layout, v_lvllayout",
+            "s3k, layout, Level_layout_main"
+    })
+    void nativeHintsReachTheBehaviorOrMutableStateOwner(String game, String field, String owner)
+            throws Exception {
+        String brief = TraceTriageTool.renderBrief(game, "zone", hintReport(field), "", "");
+
+        assertTrue(brief.contains("  - " + owner + "\n"));
+    }
+
     private static TraceReport hintReport(String field) throws IOException {
         FieldComparison comparison = field.equals("player_animation_id")
                 ? FieldComparison.animation(field, "0x01", "0x02", Severity.ERROR, 1)

@@ -13,6 +13,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,6 +26,7 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,28 +45,69 @@ class TestAbstractTraceReplayDynamicArtTerminal
     private TraceVerificationScope selectedScope;
     private TraceVerificationScope scopeAfterFixtureBuild;
     private String priorSystemScope;
+    private String priorFrontierOnly;
+    private String priorContextRadius;
     private int reportPublications;
     private int lastValidatedFrame;
 
     @BeforeEach
-    void rememberSystemScope() {
+    void saveAndConfigureReplayProperties() {
         priorSystemScope = System.getProperty("trace.verification");
+        priorFrontierOnly = System.getProperty("trace.frontierOnly");
+        priorContextRadius = System.getProperty("trace.context.radius");
+        System.setProperty("trace.verification", "all");
+        System.setProperty("trace.frontierOnly", "false");
+        System.setProperty("trace.context.radius", "2");
     }
 
     @AfterEach
-    void clearFrontierProperties() {
-        System.clearProperty("trace.frontierOnly");
-        System.clearProperty("trace.context.radius");
-        if (priorSystemScope == null) {
-            System.clearProperty("trace.verification");
+    void restoreReplayProperties() {
+        setOrClearProperty("trace.verification", priorSystemScope);
+        setOrClearProperty("trace.frontierOnly", priorFrontierOnly);
+        setOrClearProperty("trace.context.radius", priorContextRadius);
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "<unset>, <unset>, <unset>",
+            "'', '', ''",
+            "physics, true, 7"
+    }, nullValues = "<unset>")
+    void fixtureRestoresEveryCallerProperty(String scope, String frontier, String radius) {
+        setOrClearProperty("trace.verification", scope);
+        setOrClearProperty("trace.frontierOnly", frontier);
+        setOrClearProperty("trace.context.radius", radius);
+        var nestedFixture = new TestAbstractTraceReplayDynamicArtTerminal();
+        nestedFixture.saveAndConfigureReplayProperties();
+        try {
+            assertAll(
+                    () -> assertEquals("all", System.getProperty("trace.verification")),
+                    () -> assertEquals("false", System.getProperty("trace.frontierOnly")),
+                    () -> assertEquals("2", System.getProperty("trace.context.radius")));
+            System.setProperty("trace.verification", "animation");
+            System.setProperty("trace.frontierOnly", "false");
+            System.setProperty("trace.context.radius", "0");
+        } finally {
+            nestedFixture.restoreReplayProperties();
+        }
+
+        assertAll(
+                () -> assertEquals(scope, System.getProperty("trace.verification")),
+                () -> assertEquals(frontier, System.getProperty("trace.frontierOnly")),
+                () -> assertEquals(radius, System.getProperty("trace.context.radius")));
+    }
+
+    private static void setOrClearProperty(String key, String value) {
+        if (value == null) {
+            System.clearProperty(key);
         } else {
-            System.setProperty("trace.verification", priorSystemScope);
+            System.setProperty(key, value);
         }
     }
 
     @Override
     public void replayMatchesTrace() {
-        // The two tests below call the complete inherited replay explicitly
+        // Replay tests below call the complete inherited replay explicitly
         // after preparing their advertised fixture and policy.
     }
 

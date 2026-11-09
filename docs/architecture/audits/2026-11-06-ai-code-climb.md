@@ -4733,3 +4733,88 @@ combined independent Opus correctness review, appropriate combined qualification
 and publication to the same draft PR271. Published head remains `c42764c8a5`.
 No broad/domain pass or contributor-score increase is inferred from these
 focused results or the reduced required-reading span.
+
+
+### Combined scope/hints/reading review repairs — 2026-11-09
+
+Opus 5.5, maximum effort and fast mode off, reviewed published `c42764c8a5`
+through clean local `6c59972921`, read-only. It ran no builds, tests or JVMs.
+The resolved-scope dataflow and hint routing were correct by source inspection,
+with no blocking runtime defect. It found one medium navigation issue and
+three low issues; root repaired these without adding another reviewer.
+
+The conservation checks had missed a structural reading error: nine newly
+named note sections swallowed unrelated dated notes. Each of the 18 named
+sections now contains exactly its first note paragraph, with neutral headings
+closing the nine spans that contained more notes. Selection, freshness and
+attribution families link the unindexed examples explicitly. The catalogue
+states that these further notes span topics and are selectively indexed. The
+current 37-line/676-word entry remains bounded. All 139 IDs/table occurrences,
+150 old heading targets and 49 original link instances survive; old note text
+and ordering are unchanged. All 76 distinct added local link targets resolve
+under root's static anchor check. New in-file links use the corrected heading
+slugs; explicit legacy anchors remain for old inbound links.
+
+Root verified Surefire 3.2.5's local descriptor and bytecode before correcting
+rule 98. An explicit filename selector with no matching class is governed by
+`surefire.failIfNoSpecifiedTests` (default true). Post-run zero execution,
+including all-tag-excluded classes, is governed by `failIfNoTests` (default
+false); `-DfailIfNoTests=true` catches that empty result. The category runner's
+intentional empty-batch accounting is distinct. No runner, POM, skip policy or
+selection behavior changed.
+
+Four native-hint witnesses were RED before repair. Exact pinned source confirms
+S1 `HurtSonic` performs the ring-loss/hurt transition, S3K `ScreenEvents` dispatches
+zone/act events, and mutable layout owners are S1 `v_lvllayout` and S3K
+`Level_layout_header`/`Level_layout_main`. These replace weaker hurt-state and
+load-time/data hints. The remaining native terms were rechecked at all three
+pins. Existence and owner routing remain search evidence, not causal diagnosis.
+
+Three fixture-lifetime cases cover absent, empty and nonempty values of
+`trace.verification`, `trace.frontierOnly` and `trace.context.radius`. The old
+fixture passes the absent control but fails empty/custom restoration. The
+fixture now saves all three before mutation, pins its own ALL/non-frontier/
+radius-two baseline, and restores exact caller values afterward. The witnesses
+also check that explicit fixture baseline; the original four replay cases
+remain and pass. This isolates test configuration, not production sweep input.
+
+The single RED invocation ran **7 cases: 6 intended failures, one passing
+control, zero errors/skips**. One combined GREEN invocation ran **209 unique
+cases**, zero failures/errors/skips, retaining both earlier focused selections
+and adding the seven repair cases. Fresh XML, complete failures, command arrays
+and matching before/after source hashes are retained. Java 25, Lua 5.4, normal
+memory, MSE off, displays unset and surfaceless EGL were used; missing ROMs=none.
+RED queue/Maven/wall: 0/32.574/33.378 seconds (residual 0.804).
+GREEN queue/Maven/wall: 25/109.000/135.081 seconds (residual 1.081; Maven's
+minute-scale output is rounded). User wait is zero; investigation/editing time
+is unmeasured. Both owned units are terminal and retired.
+
+Before these repairs, the clean `6c59972921` domain pair completed. EHZ1's
+5,852 comparisons and HCZ1's 3,519/3,574 comparisons are clean; HCZ2's
+14,149/14,208 retains all 26 errors (2 physics, 24 animation). All three ALL
+gates are reached. Complete report bytes, including carried-entry metadata,
+and all context bytes exactly match published qualification; no projection or
+normalization was applied. Canonical validation checked all three owner-keyed
+reports. The actual two printed HCZ commands executed unchanged, with paths
+containing spaces, and the HCZ2 brief displayed the S3K animation vocabulary.
+EHZ queue/Maven/wall: 0/36.714/37.568 seconds; HCZ: 0/42.388/43.176.
+CLI commands: 120/0.381/121.083 and 0/0.515/1.257 seconds. User wait is zero;
+residuals are 0.854/0.788/0.702/0.742 respectively. Both domain/CLI units are
+terminal and retired. Missing advertised auxiliary schemas, FAST/SMPS log
+warnings and bounded context remain; neither whole-route nor Windows command
+certification is claimed.
+
+Those domain invocations tested `6c599`, not the later repair commit. Reuse must
+be supported by exact source proof: only two test classes unselected by the domain commands and CLI
+hint tables change executable source during repair; standalone/credits drivers,
+report publication, gameplay, fixtures, timing/input policy and all selected
+domain classes remain exact. The changed native tables are exercised by the
+combined 209-case selection. No fresh final-head domain run is invented.
+
+Evidence: `target/code-climb/scope-hints-review-repairs/`,
+`target/code-climb/scope-hints-reading-domain/control/`, and the retained original
+Opus result under `target/code-climb/native-triage-hints/`. Combined change-based
+smoke plus guards and exact negative/skip comparison remain required before
+pushing the task branch to draft PR271. No new contributor score is inferred.
+The external ordinary-plan preservation prototype remains unapplied for the
+next structural increment after this publication.
