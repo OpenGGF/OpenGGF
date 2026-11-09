@@ -1,0 +1,1226 @@
+{
+  "variant-s1-33": {
+    "group": "poses00",
+    "attempt": 2,
+    "cell": 0,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        40,
+        22
+      ],
+      "hotspot": [
+        20,
+        11
+      ],
+      "label": "MS_Warp1",
+      "id": "variant-s1-33",
+      "host": "S1",
+      "mapping": 51
+    },
+    "raw_sha256": "79d3729c0afc5bf50a52ca1865434167752640af71c6dcf3ee18c5f4b78d2b94"
+  },
+  "variant-s1-3c": {
+    "group": "poses00",
+    "attempt": 2,
+    "cell": 1,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        45,
+        22
+      ],
+      "hotspot": [
+        17,
+        12
+      ],
+      "label": "Map_Sonic_099C",
+      "id": "variant-s1-3c",
+      "host": "S2",
+      "mapping": 84
+    },
+    "raw_sha256": "79d3729c0afc5bf50a52ca1865434167752640af71c6dcf3ee18c5f4b78d2b94"
+  },
+  "variant-s1-3f": {
+    "group": "poses00",
+    "attempt": 2,
+    "cell": 2,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        44,
+        22
+      ],
+      "hotspot": [
+        16,
+        11
+      ],
+      "label": "Map_Sonic_0A26",
+      "id": "variant-s1-3f",
+      "host": "S2",
+      "mapping": 89
+    },
+    "raw_sha256": "79d3729c0afc5bf50a52ca1865434167752640af71c6dcf3ee18c5f4b78d2b94"
+  },
+  "variant-s1-3d": {
+    "group": "poses00",
+    "attempt": 2,
+    "cell": 3,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        44,
+        22
+      ],
+      "hotspot": [
+        22,
+        12
+      ],
+      "label": "Map_Sonic_09B6",
+      "id": "variant-s1-3d",
+      "host": "S2",
+      "mapping": 85
+    },
+    "raw_sha256": "79d3729c0afc5bf50a52ca1865434167752640af71c6dcf3ee18c5f4b78d2b94"
+  },
+  "variant-s1-3e": {
+    "group": "poses00",
+    "attempt": 2,
+    "cell": 4,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        39,
+        23
+      ],
+      "hotspot": [
+        27,
+        12
+      ],
+      "label": "Map_Sonic_09F2",
+      "id": "variant-s1-3e",
+      "host": "S2",
+      "mapping": 87
+    },
+    "raw_sha256": "79d3729c0afc5bf50a52ca1865434167752640af71c6dcf3ee18c5f4b78d2b94"
+  },
+  "variant-s1-53": {
+    "group": "poses00",
+    "attempt": 2,
+    "cell": 5,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        45,
+        22
+      ],
+      "hotspot": [
+        28,
+        12
+      ],
+      "label": "Map_Sonic_09D8",
+      "id": "variant-s1-53",
+      "host": "S2",
+      "mapping": 86
+    },
+    "raw_sha256": "79d3729c0afc5bf50a52ca1865434167752640af71c6dcf3ee18c5f4b78d2b94"
+  },
+  "variant-s1-43": {
+    "group": "poses01",
+    "attempt": 1,
+    "cell": 1,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        33,
+        45
+      ],
+      "hotspot": [
+        16,
+        23
+      ],
+      "label": "MS_Leap1",
+      "id": "variant-s1-43",
+      "host": "S1",
+      "mapping": 67
+    },
+    "raw_sha256": "5e8cb19e55413df6bf1586903e9d6f330501663836fba82e49bd813ab7e403dc"
+  },
+  "variant-s1-44": {
+    "group": "poses01",
+    "attempt": 1,
+    "cell": 2,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        35,
+        46
+      ],
+      "hotspot": [
+        16,
+        24
+      ],
+      "label": "MS_Leap2",
+      "id": "variant-s1-44",
+      "host": "S1",
+      "mapping": 68
+    },
+    "raw_sha256": "5e8cb19e55413df6bf1586903e9d6f330501663836fba82e49bd813ab7e403dc"
+  },
+  "variant-s1-4b": {
+    "group": "poses01",
+    "attempt": 1,
+    "cell": 4,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        34,
+        43
+      ],
+      "hotspot": [
+        14,
+        24
+      ],
+      "label": "MS_Burnt",
+      "id": "variant-s1-4b",
+      "host": "S1",
+      "mapping": 75
+    },
+    "raw_sha256": "5e8cb19e55413df6bf1586903e9d6f330501663836fba82e49bd813ab7e403dc"
+  },
+  "variant-s1-54": {
+    "group": "poses01",
+    "attempt": 2,
+    "cell": 0,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        39,
+        23
+      ],
+      "hotspot": [
+        12,
+        12
+      ],
+      "label": "Map_Sonic_0A0C",
+      "id": "variant-s1-54",
+      "host": "S2",
+      "mapping": 88
+    },
+    "raw_sha256": "56d0ad3984b1882faf194ad0b4ddc182de1039bc64cbce635f0681bfe3cc7e05"
+  },
+  "variant-s1-49": {
+    "group": "poses01",
+    "attempt": 2,
+    "cell": 3,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        32,
+        38
+      ],
+      "hotspot": [
+        16,
+        19
+      ],
+      "label": "MS_Surf",
+      "id": "variant-s1-49",
+      "host": "S1",
+      "mapping": 73
+    },
+    "raw_sha256": "56d0ad3984b1882faf194ad0b4ddc182de1039bc64cbce635f0681bfe3cc7e05"
+  },
+  "variant-s1-4e": {
+    "group": "poses01",
+    "attempt": 2,
+    "cell": 5,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        32,
+        39
+      ],
+      "hotspot": [
+        16,
+        20
+      ],
+      "label": "MS_Shrink1",
+      "id": "variant-s1-4e",
+      "host": "S1",
+      "mapping": 78
+    },
+    "raw_sha256": "56d0ad3984b1882faf194ad0b4ddc182de1039bc64cbce635f0681bfe3cc7e05"
+  },
+  "variant-s2-c8": {
+    "group": "poses02",
+    "attempt": 1,
+    "cell": 2,
+    "scaleCorrection": 0.93,
+    "reference": {
+      "size": [
+        32,
+        37
+      ],
+      "hotspot": [
+        16,
+        17
+      ],
+      "label": "Map_Sonic_175C",
+      "id": "variant-s2-c8",
+      "host": "S2",
+      "mapping": 200
+    },
+    "raw_sha256": "906505340bcd64ba149ddc2d95b88dd5478733e1331096a44be4e85040b44aeb"
+  },
+  "variant-s2-c9": {
+    "group": "poses02",
+    "attempt": 1,
+    "cell": 3,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        29,
+        37
+      ],
+      "hotspot": [
+        13,
+        17
+      ],
+      "label": "Map_Sonic_1776",
+      "id": "variant-s2-c9",
+      "host": "S2",
+      "mapping": 201
+    },
+    "raw_sha256": "906505340bcd64ba149ddc2d95b88dd5478733e1331096a44be4e85040b44aeb"
+  },
+  "variant-s1-55": {
+    "group": "poses02",
+    "attempt": 2,
+    "cell": 0,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        40,
+        28
+      ],
+      "hotspot": [
+        20,
+        12
+      ],
+      "label": "MS_Injury",
+      "id": "variant-s1-55",
+      "host": "S1",
+      "mapping": 85
+    },
+    "raw_sha256": "38974997e8bee4445fccf67976c688b44a18745f432b4cea331509db643612de"
+  },
+  "variant-s1-57": {
+    "group": "poses02",
+    "attempt": 2,
+    "cell": 1,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        39,
+        27
+      ],
+      "hotspot": [
+        20,
+        12
+      ],
+      "label": "MS_WaterSlide",
+      "id": "variant-s1-57",
+      "host": "S1",
+      "mapping": 87
+    },
+    "raw_sha256": "38974997e8bee4445fccf67976c688b44a18745f432b4cea331509db643612de"
+  },
+  "variant-s2-ca": {
+    "group": "poses02",
+    "attempt": 2,
+    "cell": 4,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        29,
+        37
+      ],
+      "hotspot": [
+        13,
+        17
+      ],
+      "label": "Map_Sonic_1790",
+      "id": "variant-s2-ca",
+      "host": "S2",
+      "mapping": 202
+    },
+    "raw_sha256": "38974997e8bee4445fccf67976c688b44a18745f432b4cea331509db643612de"
+  },
+  "variant-s2-cb": {
+    "group": "poses02",
+    "attempt": 2,
+    "cell": 5,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        36,
+        37
+      ],
+      "hotspot": [
+        13,
+        17
+      ],
+      "label": "Map_Sonic_17AA",
+      "id": "variant-s2-cb",
+      "host": "S2",
+      "mapping": 203
+    },
+    "raw_sha256": "38974997e8bee4445fccf67976c688b44a18745f432b4cea331509db643612de"
+  },
+  "variant-s2-5a": {
+    "group": "poses03",
+    "attempt": 1,
+    "cell": 2,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        36,
+        36
+      ],
+      "hotspot": [
+        18,
+        17
+      ],
+      "label": "Map_Sonic_0A40",
+      "id": "variant-s2-5a",
+      "host": "S2",
+      "mapping": 90
+    },
+    "raw_sha256": "e3d25e55787c85dc8a7f0f0bcceeb0fe13ec7530d539d1a3080ff805aae83c25"
+  },
+  "variant-s2-4f": {
+    "group": "poses03",
+    "attempt": 1,
+    "cell": 3,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        39,
+        27
+      ],
+      "hotspot": [
+        20,
+        12
+      ],
+      "label": "Map_Sonic_0932",
+      "id": "variant-s2-4f",
+      "host": "S2",
+      "mapping": 79
+    },
+    "raw_sha256": "e3d25e55787c85dc8a7f0f0bcceeb0fe13ec7530d539d1a3080ff805aae83c25"
+  },
+  "variant-s2-6b": {
+    "group": "poses03",
+    "attempt": 2,
+    "cell": 0,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        37,
+        40
+      ],
+      "hotspot": [
+        16,
+        24
+      ],
+      "label": "Map_Sonic_0BCA",
+      "id": "variant-s2-6b",
+      "host": "S2",
+      "mapping": 107
+    },
+    "raw_sha256": "3f9d271692d202e50c1d9dd09688de44eab4ae11f1988c3ffd8ebf90673c5646"
+  },
+  "variant-s2-6c": {
+    "group": "poses03",
+    "attempt": 2,
+    "cell": 1,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        40,
+        37
+      ],
+      "hotspot": [
+        16,
+        24
+      ],
+      "label": "Map_Sonic_0BE4",
+      "id": "variant-s2-6c",
+      "host": "S2",
+      "mapping": 108
+    },
+    "raw_sha256": "3f9d271692d202e50c1d9dd09688de44eab4ae11f1988c3ffd8ebf90673c5646"
+  },
+  "variant-s2-d0": {
+    "group": "poses03",
+    "attempt": 2,
+    "cell": 4,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        31,
+        37
+      ],
+      "hotspot": [
+        12,
+        17
+      ],
+      "label": "Map_Sonic_1854",
+      "id": "variant-s2-d0",
+      "host": "S2",
+      "mapping": 208
+    },
+    "raw_sha256": "3f9d271692d202e50c1d9dd09688de44eab4ae11f1988c3ffd8ebf90673c5646"
+  },
+  "variant-s2-d1": {
+    "group": "poses03",
+    "attempt": 2,
+    "cell": 5,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        32,
+        37
+      ],
+      "hotspot": [
+        12,
+        17
+      ],
+      "label": "Map_Sonic_186E",
+      "id": "variant-s2-d1",
+      "host": "S2",
+      "mapping": 209
+    },
+    "raw_sha256": "3f9d271692d202e50c1d9dd09688de44eab4ae11f1988c3ffd8ebf90673c5646"
+  },
+  "variant-s2-cf": {
+    "group": "poses04",
+    "attempt": 2,
+    "cell": 0,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        30,
+        37
+      ],
+      "hotspot": [
+        22,
+        17
+      ],
+      "label": "Map_Sonic_183A",
+      "id": "variant-s2-cf",
+      "host": "S2",
+      "mapping": 207
+    },
+    "raw_sha256": "d6cbe0f13a171a64093daf419674222fe52175171bf78c8e37445fe496160e4e"
+  },
+  "variant-s3k-c5": {
+    "group": "poses04",
+    "attempt": 2,
+    "cell": 1,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        29,
+        40
+      ],
+      "hotspot": [
+        16,
+        20
+      ],
+      "label": "word_147934",
+      "id": "variant-s3k-c5",
+      "host": "S3K",
+      "mapping": 197
+    },
+    "raw_sha256": "d6cbe0f13a171a64093daf419674222fe52175171bf78c8e37445fe496160e4e"
+  },
+  "variant-s3k-c6": {
+    "group": "poses04",
+    "attempt": 2,
+    "cell": 2,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        30,
+        40
+      ],
+      "hotspot": [
+        17,
+        20
+      ],
+      "label": "word_147948",
+      "id": "variant-s3k-c6",
+      "host": "S3K",
+      "mapping": 198
+    },
+    "raw_sha256": "d6cbe0f13a171a64093daf419674222fe52175171bf78c8e37445fe496160e4e"
+  },
+  "variant-s3k-c7": {
+    "group": "poses04",
+    "attempt": 2,
+    "cell": 3,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        26,
+        38
+      ],
+      "hotspot": [
+        13,
+        18
+      ],
+      "label": "word_147962",
+      "id": "variant-s3k-c7",
+      "host": "S3K",
+      "mapping": 199
+    },
+    "raw_sha256": "d6cbe0f13a171a64093daf419674222fe52175171bf78c8e37445fe496160e4e"
+  },
+  "variant-s3k-8f": {
+    "group": "poses04",
+    "attempt": 2,
+    "cell": 4,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        38,
+        31
+      ],
+      "hotspot": [
+        22,
+        15
+      ],
+      "label": "word_1474BA",
+      "id": "variant-s3k-8f",
+      "host": "S3K",
+      "mapping": 143
+    },
+    "raw_sha256": "d6cbe0f13a171a64093daf419674222fe52175171bf78c8e37445fe496160e4e"
+  },
+  "variant-s3k-a1": {
+    "group": "poses04",
+    "attempt": 2,
+    "cell": 5,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        36,
+        40
+      ],
+      "hotspot": [
+        21,
+        20
+      ],
+      "label": "word_147610",
+      "id": "variant-s3k-a1",
+      "host": "S3K",
+      "mapping": 161
+    },
+    "raw_sha256": "d6cbe0f13a171a64093daf419674222fe52175171bf78c8e37445fe496160e4e"
+  },
+  "variant-s3k-a2": {
+    "group": "poses05",
+    "attempt": 2,
+    "cell": 0,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        34,
+        42
+      ],
+      "hotspot": [
+        22,
+        22
+      ],
+      "label": "word_147624",
+      "id": "variant-s3k-a2",
+      "host": "S3K",
+      "mapping": 162
+    },
+    "raw_sha256": "43059a1789a05572964317f42e68b4cad716536abe0453ab9c44c94d670d10c2"
+  },
+  "variant-s3k-a3": {
+    "group": "poses05",
+    "attempt": 2,
+    "cell": 1,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        32,
+        42
+      ],
+      "hotspot": [
+        21,
+        22
+      ],
+      "label": "word_14763E",
+      "id": "variant-s3k-a3",
+      "host": "S3K",
+      "mapping": 163
+    },
+    "raw_sha256": "43059a1789a05572964317f42e68b4cad716536abe0453ab9c44c94d670d10c2"
+  },
+  "variant-s3k-c8": {
+    "group": "poses05",
+    "attempt": 2,
+    "cell": 2,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        43,
+        24
+      ],
+      "hotspot": [
+        24,
+        12
+      ],
+      "label": "word_14797C",
+      "id": "variant-s3k-c8",
+      "host": "S3K",
+      "mapping": 200
+    },
+    "raw_sha256": "43059a1789a05572964317f42e68b4cad716536abe0453ab9c44c94d670d10c2"
+  },
+  "variant-s3k-c9": {
+    "group": "poses05",
+    "attempt": 2,
+    "cell": 3,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        37,
+        24
+      ],
+      "hotspot": [
+        17,
+        12
+      ],
+      "label": "word_147990",
+      "id": "variant-s3k-c9",
+      "host": "S3K",
+      "mapping": 201
+    },
+    "raw_sha256": "43059a1789a05572964317f42e68b4cad716536abe0453ab9c44c94d670d10c2"
+  },
+  "variant-s3k-ca": {
+    "group": "poses05",
+    "attempt": 2,
+    "cell": 4,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        29,
+        24
+      ],
+      "hotspot": [
+        14,
+        12
+      ],
+      "label": "word_1479A4",
+      "id": "variant-s3k-ca",
+      "host": "S3K",
+      "mapping": 202
+    },
+    "raw_sha256": "43059a1789a05572964317f42e68b4cad716536abe0453ab9c44c94d670d10c2"
+  },
+  "variant-s3k-cb": {
+    "group": "poses05",
+    "attempt": 2,
+    "cell": 5,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        37,
+        24
+      ],
+      "hotspot": [
+        21,
+        12
+      ],
+      "label": "word_1479B2",
+      "id": "variant-s3k-cb",
+      "host": "S3K",
+      "mapping": 203
+    },
+    "raw_sha256": "43059a1789a05572964317f42e68b4cad716536abe0453ab9c44c94d670d10c2"
+  },
+  "variant-s3k-cc": {
+    "group": "poses06",
+    "attempt": 2,
+    "cell": 0,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        43,
+        24
+      ],
+      "hotspot": [
+        18,
+        12
+      ],
+      "label": "word_1479C6",
+      "id": "variant-s3k-cc",
+      "host": "S3K",
+      "mapping": 204
+    },
+    "raw_sha256": "55e18521aafc21aa8a7c4b0fa7d8f68c788af8f1a969e5993b7aca203cbe63e0"
+  },
+  "variant-s3k-cd": {
+    "group": "poses06",
+    "attempt": 2,
+    "cell": 1,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        34,
+        24
+      ],
+      "hotspot": [
+        16,
+        12
+      ],
+      "label": "word_1479DA",
+      "id": "variant-s3k-cd",
+      "host": "S3K",
+      "mapping": 205
+    },
+    "raw_sha256": "55e18521aafc21aa8a7c4b0fa7d8f68c788af8f1a969e5993b7aca203cbe63e0"
+  },
+  "variant-s3k-ce": {
+    "group": "poses06",
+    "attempt": 2,
+    "cell": 2,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        29,
+        24
+      ],
+      "hotspot": [
+        14,
+        12
+      ],
+      "label": "word_1479E8",
+      "id": "variant-s3k-ce",
+      "host": "S3K",
+      "mapping": 206
+    },
+    "raw_sha256": "55e18521aafc21aa8a7c4b0fa7d8f68c788af8f1a969e5993b7aca203cbe63e0"
+  },
+  "variant-s3k-cf": {
+    "group": "poses06",
+    "attempt": 2,
+    "cell": 3,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        34,
+        24
+      ],
+      "hotspot": [
+        17,
+        12
+      ],
+      "label": "word_1479F6",
+      "id": "variant-s3k-cf",
+      "host": "S3K",
+      "mapping": 207
+    },
+    "raw_sha256": "55e18521aafc21aa8a7c4b0fa7d8f68c788af8f1a969e5993b7aca203cbe63e0"
+  },
+  "variant-s3k-b0": {
+    "group": "poses06",
+    "attempt": 2,
+    "cell": 4,
+    "scaleCorrection": 0.91,
+    "reference": {
+      "size": [
+        27,
+        39
+      ],
+      "hotspot": [
+        17,
+        19
+      ],
+      "label": "word_147766",
+      "id": "variant-s3k-b0",
+      "host": "S3K",
+      "mapping": 176
+    },
+    "raw_sha256": "55e18521aafc21aa8a7c4b0fa7d8f68c788af8f1a969e5993b7aca203cbe63e0"
+  },
+  "variant-s3k-b2": {
+    "group": "poses06",
+    "attempt": 2,
+    "cell": 5,
+    "scaleCorrection": 0.91,
+    "reference": {
+      "size": [
+        30,
+        39
+      ],
+      "hotspot": [
+        17,
+        19
+      ],
+      "label": "word_147788",
+      "id": "variant-s3k-b2",
+      "host": "S3K",
+      "mapping": 178
+    },
+    "raw_sha256": "55e18521aafc21aa8a7c4b0fa7d8f68c788af8f1a969e5993b7aca203cbe63e0"
+  },
+  "variant-s3k-b1": {
+    "group": "poses07",
+    "attempt": 2,
+    "cell": 0,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        31,
+        39
+      ],
+      "hotspot": [
+        17,
+        19
+      ],
+      "label": "word_147774",
+      "id": "variant-s3k-b1",
+      "host": "S3K",
+      "mapping": 177
+    },
+    "raw_sha256": "51700ce8ab1e9c49ae0b0b209493faa239f3a970e25b76f1dc4ac047bf295bb4"
+  },
+  "variant-s3k-b3": {
+    "group": "poses07",
+    "attempt": 2,
+    "cell": 1,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        28,
+        39
+      ],
+      "hotspot": [
+        17,
+        19
+      ],
+      "label": "word_14779C",
+      "id": "variant-s3k-b3",
+      "host": "S3K",
+      "mapping": 179
+    },
+    "raw_sha256": "51700ce8ab1e9c49ae0b0b209493faa239f3a970e25b76f1dc4ac047bf295bb4"
+  },
+  "variant-s3k-ac": {
+    "group": "poses07",
+    "attempt": 2,
+    "cell": 2,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        35,
+        39
+      ],
+      "hotspot": [
+        17,
+        20
+      ],
+      "label": "word_1476FE",
+      "id": "variant-s3k-ac",
+      "host": "S3K",
+      "mapping": 172
+    },
+    "raw_sha256": "51700ce8ab1e9c49ae0b0b209493faa239f3a970e25b76f1dc4ac047bf295bb4"
+  },
+  "variant-s3k-03": {
+    "group": "poses07",
+    "attempt": 2,
+    "cell": 3,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        26,
+        38
+      ],
+      "hotspot": [
+        14,
+        18
+      ],
+      "label": "word_146A36",
+      "id": "variant-s3k-03",
+      "host": "S3K",
+      "mapping": 3
+    },
+    "raw_sha256": "51700ce8ab1e9c49ae0b0b209493faa239f3a970e25b76f1dc4ac047bf295bb4"
+  },
+  "variant-s3k-04": {
+    "group": "poses07",
+    "attempt": 2,
+    "cell": 4,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        28,
+        40
+      ],
+      "hotspot": [
+        14,
+        20
+      ],
+      "label": "word_146A4A",
+      "id": "variant-s3k-04",
+      "host": "S3K",
+      "mapping": 4
+    },
+    "raw_sha256": "51700ce8ab1e9c49ae0b0b209493faa239f3a970e25b76f1dc4ac047bf295bb4"
+  },
+  "variant-s3k-8c": {
+    "group": "poses07",
+    "attempt": 2,
+    "cell": 5,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        38,
+        32
+      ],
+      "hotspot": [
+        19,
+        16
+      ],
+      "label": "word_147484",
+      "id": "variant-s3k-8c",
+      "host": "S3K",
+      "mapping": 140
+    },
+    "raw_sha256": "51700ce8ab1e9c49ae0b0b209493faa239f3a970e25b76f1dc4ac047bf295bb4"
+  },
+  "variant-s3k-8d": {
+    "group": "poses08",
+    "attempt": 2,
+    "cell": 0,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        39,
+        31
+      ],
+      "hotspot": [
+        20,
+        16
+      ],
+      "label": "word_147498",
+      "id": "variant-s3k-8d",
+      "host": "S3K",
+      "mapping": 141
+    },
+    "raw_sha256": "1dbb255de468b7251d402be6196beedc6c23b0ffa659b818bd2f30fe14776f6d"
+  },
+  "variant-s3k-d0": {
+    "group": "poses08",
+    "attempt": 2,
+    "cell": 1,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        38,
+        32
+      ],
+      "hotspot": [
+        19,
+        8
+      ],
+      "label": "word_147A04",
+      "id": "variant-s3k-d0",
+      "host": "S3K",
+      "mapping": 208
+    },
+    "raw_sha256": "1dbb255de468b7251d402be6196beedc6c23b0ffa659b818bd2f30fe14776f6d"
+  },
+  "variant-s3k-d1": {
+    "group": "poses08",
+    "attempt": 2,
+    "cell": 2,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        39,
+        31
+      ],
+      "hotspot": [
+        20,
+        8
+      ],
+      "label": "word_147A18",
+      "id": "variant-s3k-d1",
+      "host": "S3K",
+      "mapping": 209
+    },
+    "raw_sha256": "1dbb255de468b7251d402be6196beedc6c23b0ffa659b818bd2f30fe14776f6d"
+  },
+  "variant-s2-0a": {
+    "group": "poses09",
+    "attempt": 4,
+    "cell": 0,
+    "scaleCorrection": 1,
+    "reference": {
+      "size": [
+        30,
+        35
+      ],
+      "hotspot": [
+        16,
+        15
+      ],
+      "label": "Map_Sonic_02A0",
+      "id": "variant-s2-0a",
+      "host": "S2",
+      "mapping": 10
+    },
+    "raw_sha256": "c3c8eb17249d016c01f4aec9ae1fef48303712889943434fb3a83ff0ec039069"
+  },
+  "variant-s1-33-rot52": {
+    "derivedFrom": "variant-s1-33",
+    "method": "derive_slopes.rotate",
+    "angle": 45,
+    "reference": {
+      "size": [
+        32,
+        32
+      ],
+      "hotspot": [
+        16,
+        16
+      ],
+      "label": "MS_Warp2",
+      "id": "variant-s1-33-rot52",
+      "host": "S1",
+      "mapping": 52
+    }
+  },
+  "variant-s1-33-rot53": {
+    "derivedFrom": "variant-s1-33",
+    "method": "derive_slopes.rotate",
+    "angle": 90,
+    "reference": {
+      "size": [
+        22,
+        40
+      ],
+      "hotspot": [
+        11,
+        20
+      ],
+      "label": "MS_Warp3",
+      "id": "variant-s1-33-rot53",
+      "host": "S1",
+      "mapping": 53
+    }
+  },
+  "variant-s1-33-rot54": {
+    "derivedFrom": "variant-s1-33",
+    "method": "derive_slopes.rotate",
+    "angle": 135,
+    "reference": {
+      "size": [
+        32,
+        32
+      ],
+      "hotspot": [
+        16,
+        16
+      ],
+      "label": "MS_Warp4",
+      "id": "variant-s1-33-rot54",
+      "host": "S1",
+      "mapping": 54
+    }
+  },
+  "variant-s1-4e-scale79": {
+    "derivedFrom": "variant-s1-4e",
+    "method": "original-generation reduction to native shrink size",
+    "reference": {
+      "size": [
+        28,
+        35
+      ],
+      "hotspot": [
+        14,
+        18
+      ],
+      "label": "MS_Shrink2",
+      "id": "variant-s1-4e-scale79",
+      "host": "S1",
+      "mapping": 79
+    }
+  },
+  "variant-s1-4e-scale80": {
+    "derivedFrom": "variant-s1-4e",
+    "method": "original-generation reduction to native shrink size",
+    "reference": {
+      "size": [
+        22,
+        28
+      ],
+      "hotspot": [
+        11,
+        14
+      ],
+      "label": "MS_Shrink3",
+      "id": "variant-s1-4e-scale80",
+      "host": "S1",
+      "mapping": 80
+    }
+  },
+  "variant-s1-4e-scale81": {
+    "derivedFrom": "variant-s1-4e",
+    "method": "original-generation reduction to native shrink size",
+    "reference": {
+      "size": [
+        15,
+        19
+      ],
+      "hotspot": [
+        7,
+        9
+      ],
+      "label": "MS_Shrink4",
+      "id": "variant-s1-4e-scale81",
+      "host": "S1",
+      "mapping": 81
+    }
+  },
+  "variant-s1-4e-scale82": {
+    "derivedFrom": "variant-s1-4e",
+    "method": "original-generation reduction to native shrink size",
+    "reference": {
+      "size": [
+        8,
+        11
+      ],
+      "hotspot": [
+        4,
+        5
+      ],
+      "label": "MS_Shrink5",
+      "id": "variant-s1-4e-scale82",
+      "host": "S1",
+      "mapping": 82
+    }
+  },
+  "variant-blank": {
+    "method": "explicit empty native mapping; no native pixels"
+  }
+}

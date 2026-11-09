@@ -1641,6 +1641,786 @@
       "angle_set": "flat",
       "duration_ticks": 2,
       "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "variant-s1-33",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-33.png",
+      "hotspot": [
+        18,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-3c",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-3c.png",
+      "hotspot": [
+        15,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-3f",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-3f.png",
+      "hotspot": [
+        14,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-3d",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-3d.png",
+      "hotspot": [
+        18,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-3e",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-3e.png",
+      "hotspot": [
+        27,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-53",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-53.png",
+      "hotspot": [
+        26,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-43",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-43.png",
+      "hotspot": [
+        16,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-44",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-44.png",
+      "hotspot": [
+        16,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-4b",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-4b.png",
+      "hotspot": [
+        14,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-54",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-54.png",
+      "hotspot": [
+        10,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-49",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-49.png",
+      "hotspot": [
+        16,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-4e",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-4e.png",
+      "hotspot": [
+        16,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s2-c8",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s2-c8.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s2-c9",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s2-c9.png",
+      "hotspot": [
+        13,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-55",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-55.png",
+      "hotspot": [
+        18,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-57",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-57.png",
+      "hotspot": [
+        18,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s2-ca",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s2-ca.png",
+      "hotspot": [
+        13,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s2-cb",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s2-cb.png",
+      "hotspot": [
+        13,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s2-5a",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s2-5a.png",
+      "hotspot": [
+        18,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s2-4f",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s2-4f.png",
+      "hotspot": [
+        20,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s2-6b",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s2-6b.png",
+      "hotspot": [
+        14,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s2-6c",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s2-6c.png",
+      "hotspot": [
+        12,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s2-d0",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s2-d0.png",
+      "hotspot": [
+        12,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s2-d1",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s2-d1.png",
+      "hotspot": [
+        12,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s2-cf",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s2-cf.png",
+      "hotspot": [
+        22,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-c5",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-c5.png",
+      "hotspot": [
+        14,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-c6",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-c6.png",
+      "hotspot": [
+        17,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-c7",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-c7.png",
+      "hotspot": [
+        13,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-8f",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-8f.png",
+      "hotspot": [
+        21,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-a1",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-a1.png",
+      "hotspot": [
+        21,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-a2",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-a2.png",
+      "hotspot": [
+        22,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-a3",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-a3.png",
+      "hotspot": [
+        21,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-c8",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-c8.png",
+      "hotspot": [
+        22,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-c9",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-c9.png",
+      "hotspot": [
+        15,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-ca",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-ca.png",
+      "hotspot": [
+        13,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-cb",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-cb.png",
+      "hotspot": [
+        20,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-cc",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-cc.png",
+      "hotspot": [
+        15,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-cd",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-cd.png",
+      "hotspot": [
+        15,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-ce",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-ce.png",
+      "hotspot": [
+        14,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-cf",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-cf.png",
+      "hotspot": [
+        17,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-b0",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-b0.png",
+      "hotspot": [
+        16,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-b2",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-b2.png",
+      "hotspot": [
+        16,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-b1",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-b1.png",
+      "hotspot": [
+        17,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-b3",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-b3.png",
+      "hotspot": [
+        17,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-ac",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-ac.png",
+      "hotspot": [
+        17,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-03",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-03.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-04",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-04.png",
+      "hotspot": [
+        14,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-8c",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-8c.png",
+      "hotspot": [
+        17,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-8d",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-8d.png",
+      "hotspot": [
+        18,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-d0",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-d0.png",
+      "hotspot": [
+        17,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-d1",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-d1.png",
+      "hotspot": [
+        18,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s2-0a",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s2-0a.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-33-rot52",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-33-rot52.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-33-rot53",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-33-rot53.png",
+      "hotspot": [
+        11,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-33-rot54",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-33-rot54.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-4e-scale79",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-4e-scale79.png",
+      "hotspot": [
+        14,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-4e-scale80",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-4e-scale80.png",
+      "hotspot": [
+        11,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-4e-scale81",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-4e-scale81.png",
+      "hotspot": [
+        7,
+        9
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-4e-scale82",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-4e-scale82.png",
+      "hotspot": [
+        4,
+        4
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-blank",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-blank.png",
+      "hotspot": [
+        0,
+        0
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
     }
   ],
   "scripts": {
@@ -2037,6 +2817,378 @@
         "spindash-04"
       ],
       "end": "loop"
+    },
+    "ROLL2": {
+      "frames": [
+        "roll-00",
+        "roll-blur",
+        "roll-01",
+        "roll-blur",
+        "roll-02",
+        "roll-blur",
+        "roll-03",
+        "roll-blur"
+      ],
+      "end": "loop",
+      "speedDriven": true
+    },
+    "WARP1": {
+      "frames": [
+        "variant-s1-33"
+      ],
+      "end": "loop",
+      "durations": [
+        64
+      ]
+    },
+    "WARP2": {
+      "frames": [
+        "variant-s1-33-rot52"
+      ],
+      "end": "loop",
+      "durations": [
+        64
+      ]
+    },
+    "WARP3": {
+      "frames": [
+        "variant-s1-33-rot53"
+      ],
+      "end": "loop",
+      "durations": [
+        64
+      ]
+    },
+    "WARP4": {
+      "frames": [
+        "variant-s1-33-rot54"
+      ],
+      "end": "loop",
+      "durations": [
+        64
+      ]
+    },
+    "FLOAT": {
+      "frames": [
+        "variant-s1-3c",
+        "variant-s1-3f"
+      ],
+      "end": "loop",
+      "durations": [
+        8,
+        8
+      ]
+    },
+    "FLOAT2": {
+      "frames": [
+        "variant-s1-3c",
+        "variant-s1-3d",
+        "variant-s1-53",
+        "variant-s1-3e",
+        "variant-s1-54"
+      ],
+      "end": "loop",
+      "durations": [
+        8,
+        8,
+        8,
+        8,
+        8
+      ]
+    },
+    "LEAP1": {
+      "frames": [
+        "variant-s1-43",
+        "variant-s1-43",
+        "variant-s1-43"
+      ],
+      "end": "hold",
+      "durations": [
+        16,
+        16,
+        16
+      ]
+    },
+    "LEAP2": {
+      "frames": [
+        "variant-s1-43",
+        "variant-s1-44"
+      ],
+      "end": "hold",
+      "durations": [
+        16,
+        16
+      ]
+    },
+    "SURF": {
+      "frames": [
+        "variant-s1-49"
+      ],
+      "end": "loop",
+      "durations": [
+        64
+      ]
+    },
+    "BURNT": {
+      "frames": [
+        "variant-s1-4b"
+      ],
+      "end": "loop",
+      "durations": [
+        33
+      ]
+    },
+    "SHRINK": {
+      "frames": [
+        "variant-s1-4e",
+        "variant-s1-4e-scale79",
+        "variant-s1-4e-scale80",
+        "variant-s1-4e-scale81",
+        "variant-s1-4e-scale82",
+        "variant-blank"
+      ],
+      "end": "hold",
+      "durations": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ]
+    },
+    "WATER_SLIDE": {
+      "frames": [
+        "variant-s1-55",
+        "variant-s1-57"
+      ],
+      "end": "loop",
+      "durations": [
+        8,
+        8
+      ]
+    },
+    "NULL_ANIM": {
+      "frames": [
+        "variant-blank"
+      ],
+      "end": "next",
+      "durations": [
+        120
+      ],
+      "next": "WALK"
+    },
+    "FLOAT3": {
+      "frames": [
+        "variant-s1-3c",
+        "variant-s1-3d",
+        "variant-s1-53",
+        "variant-s1-3e",
+        "variant-s1-54"
+      ],
+      "end": "loop",
+      "durations": [
+        4,
+        4,
+        4,
+        4,
+        4
+      ]
+    },
+    "FLOAT4": {
+      "frames": [
+        "variant-s1-3c"
+      ],
+      "end": "next",
+      "durations": [
+        4
+      ],
+      "next": "WALK"
+    },
+    "BLINK": {
+      "frames": [
+        "wait-01"
+      ],
+      "end": "next",
+      "durations": [
+        2
+      ],
+      "next": "WALK"
+    },
+    "GET_UP": {
+      "frames": [
+        "variant-s2-0a"
+      ],
+      "end": "next",
+      "durations": [
+        4
+      ],
+      "next": "WALK"
+    },
+    "BALANCE2": {
+      "frames": [
+        "variant-s2-c8",
+        "variant-s2-c9",
+        "variant-s2-ca",
+        "variant-s2-cb"
+      ],
+      "end": "loop",
+      "durations": [
+        4,
+        4,
+        4,
+        4
+      ]
+    },
+    "VICTORY": {
+      "frames": [
+        "variant-s3k-b0",
+        "variant-s3k-b2",
+        "variant-s3k-b2",
+        "variant-s3k-b2",
+        "variant-s3k-b2",
+        "variant-s3k-b2",
+        "variant-s3k-b2",
+        "variant-s3k-b1",
+        "variant-s3k-b2",
+        "variant-s3k-b3",
+        "variant-s3k-b2"
+      ],
+      "end": "loop",
+      "durations": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ]
+    },
+    "HANG2": {
+      "frames": [
+        "variant-s2-6b",
+        "variant-s2-6c"
+      ],
+      "end": "loop",
+      "durations": [
+        20,
+        20
+      ]
+    },
+    "BUBBLE": {
+      "frames": [
+        "variant-s2-5a",
+        "variant-s2-5a",
+        "walk-02",
+        "walk-03"
+      ],
+      "end": "next",
+      "durations": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "next": "WALK"
+    },
+    "HURT_FALL": {
+      "frames": [
+        "variant-s3k-8c",
+        "variant-s3k-8d"
+      ],
+      "end": "loop",
+      "durations": [
+        10,
+        10
+      ]
+    },
+    "BALANCE3": {
+      "frames": [
+        "variant-s2-d0",
+        "variant-s2-d1"
+      ],
+      "end": "loop",
+      "durations": [
+        20,
+        20
+      ]
+    },
+    "BALANCE4": {
+      "frames": [
+        "variant-s2-cf",
+        "variant-s2-c8",
+        "variant-s2-c9",
+        "variant-s2-ca",
+        "variant-s2-cb"
+      ],
+      "end": "loop",
+      "durations": [
+        4,
+        4,
+        4,
+        4,
+        4
+      ]
+    },
+    "TAILS_CARRIED": {
+      "frames": [
+        "hang-00",
+        "hang-01",
+        "hang-02",
+        "hang-01"
+      ],
+      "end": "loop",
+      "durations": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    "BLANK": {
+      "frames": [
+        "variant-blank"
+      ],
+      "end": "loop",
+      "durations": [
+        120
+      ]
+    },
+    "HURT2": {
+      "frames": [
+        "hurt-00"
+      ],
+      "end": "loop",
+      "durations": [
+        65
+      ]
+    },
+    "SLIDE": {
+      "frames": [
+        "hurt-00",
+        "variant-s2-4f"
+      ],
+      "end": "loop",
+      "durations": [
+        10,
+        10
+      ]
+    },
+    "FLY": {
+      "frames": [
+        "wait-07",
+        "wait-08"
+      ],
+      "end": "loop",
+      "durations": [
+        10,
+        10
+      ]
     }
   },
   "nativeFrames": {

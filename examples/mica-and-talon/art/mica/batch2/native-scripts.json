@@ -1,0 +1,894 @@
+{
+  "scripts": {
+    "S1/ROLL2": {
+      "key": "ROLL2",
+      "host": "S1",
+      "label": "SonAni_Roll2",
+      "mappings": [
+        46,
+        47,
+        50,
+        48,
+        49,
+        50
+      ],
+      "ticks": 1,
+      "speedDriven": true,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "roll-00",
+        "roll-01",
+        "roll-blur",
+        "roll-02",
+        "roll-03",
+        "roll-blur"
+      ]
+    },
+    "S1/WARP1": {
+      "key": "WARP1",
+      "host": "S1",
+      "label": "SonAni_Warp1",
+      "mappings": [
+        51
+      ],
+      "ticks": 64,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s1-33"
+      ]
+    },
+    "S1/WARP2": {
+      "key": "WARP2",
+      "host": "S1",
+      "label": "SonAni_Warp2",
+      "mappings": [
+        52
+      ],
+      "ticks": 64,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s1-33-rot52"
+      ]
+    },
+    "S1/WARP3": {
+      "key": "WARP3",
+      "host": "S1",
+      "label": "SonAni_Warp3",
+      "mappings": [
+        53
+      ],
+      "ticks": 64,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s1-33-rot53"
+      ]
+    },
+    "S1/WARP4": {
+      "key": "WARP4",
+      "host": "S1",
+      "label": "SonAni_Warp4",
+      "mappings": [
+        54
+      ],
+      "ticks": 64,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s1-33-rot54"
+      ]
+    },
+    "S1/FLOAT": {
+      "key": "FLOAT",
+      "host": "S1",
+      "label": "SonAni_Float1",
+      "mappings": [
+        60,
+        63
+      ],
+      "ticks": 8,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s1-3c",
+        "variant-s1-3f"
+      ]
+    },
+    "S1/FLOAT2": {
+      "key": "FLOAT2",
+      "host": "S1",
+      "label": "SonAni_Float2",
+      "mappings": [
+        60,
+        61,
+        83,
+        62,
+        84
+      ],
+      "ticks": 8,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s1-3c",
+        "variant-s1-3d",
+        "variant-s1-53",
+        "variant-s1-3e",
+        "variant-s1-54"
+      ]
+    },
+    "S1/LEAP1": {
+      "key": "LEAP1",
+      "host": "S1",
+      "label": "SonAni_Leap1",
+      "mappings": [
+        67,
+        67,
+        67
+      ],
+      "ticks": 16,
+      "speedDriven": false,
+      "end": "loopBack",
+      "parameter": 1,
+      "ids": [
+        "variant-s1-43",
+        "variant-s1-43",
+        "variant-s1-43"
+      ]
+    },
+    "S1/LEAP2": {
+      "key": "LEAP2",
+      "host": "S1",
+      "label": "SonAni_Leap2",
+      "mappings": [
+        67,
+        68
+      ],
+      "ticks": 16,
+      "speedDriven": false,
+      "end": "loopBack",
+      "parameter": 1,
+      "ids": [
+        "variant-s1-43",
+        "variant-s1-44"
+      ]
+    },
+    "S1/SURF": {
+      "key": "SURF",
+      "host": "S1",
+      "label": "SonAni_Surf",
+      "mappings": [
+        73
+      ],
+      "ticks": 64,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s1-49"
+      ]
+    },
+    "S1/BURNT": {
+      "key": "BURNT",
+      "host": "S1",
+      "label": "SonAni_Burnt",
+      "mappings": [
+        75
+      ],
+      "ticks": 33,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s1-4b"
+      ]
+    },
+    "S1/SHRINK": {
+      "key": "SHRINK",
+      "host": "S1",
+      "label": "SonAni_Shrink",
+      "mappings": [
+        78,
+        79,
+        80,
+        81,
+        82,
+        0
+      ],
+      "ticks": 4,
+      "speedDriven": false,
+      "end": "loopBack",
+      "parameter": 1,
+      "ids": [
+        "variant-s1-4e",
+        "variant-s1-4e-scale79",
+        "variant-s1-4e-scale80",
+        "variant-s1-4e-scale81",
+        "variant-s1-4e-scale82",
+        "variant-blank"
+      ]
+    },
+    "S1/WATER_SLIDE": {
+      "key": "WATER_SLIDE",
+      "host": "S1",
+      "label": "SonAni_Slide",
+      "mappings": [
+        85,
+        87
+      ],
+      "ticks": 8,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s1-55",
+        "variant-s1-57"
+      ]
+    },
+    "S1/NULL_ANIM": {
+      "key": "NULL_ANIM",
+      "host": "S1",
+      "label": "SonAni_Null",
+      "mappings": [
+        0
+      ],
+      "ticks": 120,
+      "speedDriven": false,
+      "end": "next",
+      "parameter": 0,
+      "ids": [
+        "variant-blank"
+      ]
+    },
+    "S1/FLOAT3": {
+      "key": "FLOAT3",
+      "host": "S1",
+      "label": "SonAni_Float3",
+      "mappings": [
+        60,
+        61,
+        83,
+        62,
+        84
+      ],
+      "ticks": 4,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s1-3c",
+        "variant-s1-3d",
+        "variant-s1-53",
+        "variant-s1-3e",
+        "variant-s1-54"
+      ]
+    },
+    "S1/FLOAT4": {
+      "key": "FLOAT4",
+      "host": "S1",
+      "label": "SonAni_Float4",
+      "mappings": [
+        60
+      ],
+      "ticks": 4,
+      "speedDriven": false,
+      "end": "next",
+      "parameter": 0,
+      "ids": [
+        "variant-s1-3c"
+      ]
+    },
+    "S2/ROLL2": {
+      "key": "ROLL2",
+      "host": "S2",
+      "label": "SonAni_Roll2",
+      "mappings": [
+        61,
+        65,
+        62,
+        65,
+        63,
+        65,
+        64,
+        65
+      ],
+      "ticks": 1,
+      "speedDriven": true,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "roll-00",
+        "roll-blur",
+        "roll-01",
+        "roll-blur",
+        "roll-02",
+        "roll-blur",
+        "roll-03",
+        "roll-blur"
+      ]
+    },
+    "S2/BLINK": {
+      "key": "BLINK",
+      "host": "S2",
+      "label": "SonAni_Blink",
+      "mappings": [
+        2
+      ],
+      "ticks": 2,
+      "speedDriven": false,
+      "end": "next",
+      "parameter": 0,
+      "ids": [
+        "wait-01"
+      ]
+    },
+    "S2/GET_UP": {
+      "key": "GET_UP",
+      "host": "S2",
+      "label": "SonAni_GetUp",
+      "mappings": [
+        10
+      ],
+      "ticks": 4,
+      "speedDriven": false,
+      "end": "next",
+      "parameter": 0,
+      "ids": [
+        "variant-s2-0a"
+      ]
+    },
+    "S2/BALANCE2": {
+      "key": "BALANCE2",
+      "host": "S2",
+      "label": "SonAni_Balance2",
+      "mappings": [
+        200,
+        201,
+        202,
+        203
+      ],
+      "ticks": 4,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s2-c8",
+        "variant-s2-c9",
+        "variant-s2-ca",
+        "variant-s2-cb"
+      ]
+    },
+    "S2/FLOAT": {
+      "key": "FLOAT",
+      "host": "S2",
+      "label": "SonAni_Float",
+      "mappings": [
+        84,
+        89
+      ],
+      "ticks": 8,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s1-3c",
+        "variant-s1-3f"
+      ]
+    },
+    "S2/FLOAT2": {
+      "key": "FLOAT2",
+      "host": "S2",
+      "label": "SonAni_Float2",
+      "mappings": [
+        84,
+        85,
+        86,
+        87,
+        88
+      ],
+      "ticks": 8,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s1-3c",
+        "variant-s1-3d",
+        "variant-s1-53",
+        "variant-s1-3e",
+        "variant-s1-54"
+      ]
+    },
+    "S2/HANG2": {
+      "key": "HANG2",
+      "host": "S2",
+      "label": "SonAni_Hang2",
+      "mappings": [
+        107,
+        108
+      ],
+      "ticks": 20,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s2-6b",
+        "variant-s2-6c"
+      ]
+    },
+    "S2/BUBBLE": {
+      "key": "BUBBLE",
+      "host": "S2",
+      "label": "SonAni_Bubble",
+      "mappings": [
+        90,
+        90,
+        17,
+        18
+      ],
+      "ticks": 12,
+      "speedDriven": false,
+      "end": "next",
+      "parameter": 0,
+      "ids": [
+        "variant-s2-5a",
+        "variant-s2-5a",
+        "walk-02",
+        "walk-03"
+      ]
+    },
+    "S2/HURT2": {
+      "key": "HURT2",
+      "host": "S2",
+      "label": "SonAni_Hurt",
+      "mappings": [
+        78
+      ],
+      "ticks": 65,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "hurt-00"
+      ]
+    },
+    "S2/SLIDE": {
+      "key": "SLIDE",
+      "host": "S2",
+      "label": "SonAni_Slide",
+      "mappings": [
+        78,
+        79
+      ],
+      "ticks": 10,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "hurt-00",
+        "variant-s2-4f"
+      ]
+    },
+    "S2/BALANCE3": {
+      "key": "BALANCE3",
+      "host": "S2",
+      "label": "SonAni_Balance3",
+      "mappings": [
+        208,
+        209
+      ],
+      "ticks": 20,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s2-d0",
+        "variant-s2-d1"
+      ]
+    },
+    "S2/BALANCE4": {
+      "key": "BALANCE4",
+      "host": "S2",
+      "label": "SonAni_Balance4",
+      "mappings": [
+        207,
+        200,
+        201,
+        202,
+        203
+      ],
+      "ticks": 4,
+      "speedDriven": false,
+      "end": "loopBack",
+      "parameter": 4,
+      "ids": [
+        "variant-s2-cf",
+        "variant-s2-c8",
+        "variant-s2-c9",
+        "variant-s2-ca",
+        "variant-s2-cb"
+      ]
+    },
+    "S2/FLY": {
+      "key": "FLY",
+      "host": "S2",
+      "label": "SonAni_Lying",
+      "mappings": [
+        8,
+        9
+      ],
+      "ticks": 10,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "wait-07",
+        "wait-08"
+      ]
+    },
+    "S3K/ROLL2": {
+      "key": "ROLL2",
+      "host": "S3K",
+      "label": "AniSonic03",
+      "mappings": [
+        150,
+        151,
+        150,
+        152,
+        150,
+        153,
+        150,
+        154
+      ],
+      "ticks": 1,
+      "speedDriven": true,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "native-pose-96",
+        "native-pose-97",
+        "native-pose-96",
+        "native-pose-98",
+        "native-pose-96",
+        "native-pose-99",
+        "native-pose-96",
+        "native-pose-9a"
+      ]
+    },
+    "S3K/BLINK": {
+      "key": "BLINK",
+      "host": "S3K",
+      "label": "AniSonic0A",
+      "mappings": [
+        186,
+        197,
+        198,
+        198,
+        198,
+        198,
+        198,
+        198,
+        199,
+        199,
+        199,
+        199,
+        199,
+        199,
+        199,
+        199,
+        199,
+        199,
+        199,
+        199
+      ],
+      "ticks": 10,
+      "speedDriven": false,
+      "end": "next",
+      "parameter": 0,
+      "ids": [
+        "wait-00",
+        "variant-s3k-c5",
+        "variant-s3k-c6",
+        "variant-s3k-c6",
+        "variant-s3k-c6",
+        "variant-s3k-c6",
+        "variant-s3k-c6",
+        "variant-s3k-c6",
+        "variant-s3k-c7",
+        "variant-s3k-c7",
+        "variant-s3k-c7",
+        "variant-s3k-c7",
+        "variant-s3k-c7",
+        "variant-s3k-c7",
+        "variant-s3k-c7",
+        "variant-s3k-c7",
+        "variant-s3k-c7",
+        "variant-s3k-c7",
+        "variant-s3k-c7",
+        "variant-s3k-c7"
+      ]
+    },
+    "S3K/GET_UP": {
+      "key": "GET_UP",
+      "host": "S3K",
+      "label": "AniSonic0B",
+      "mappings": [
+        143
+      ],
+      "ticks": 16,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s3k-8f"
+      ]
+    },
+    "S3K/BALANCE2": {
+      "key": "BALANCE2",
+      "host": "S3K",
+      "label": "AniSonic0C",
+      "mappings": [
+        161,
+        162,
+        163
+      ],
+      "ticks": 6,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s3k-a1",
+        "variant-s3k-a2",
+        "variant-s3k-a3"
+      ]
+    },
+    "S3K/FLOAT": {
+      "key": "FLOAT",
+      "host": "S3K",
+      "label": "AniSonic0E",
+      "mappings": [
+        200
+      ],
+      "ticks": 8,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s3k-c8"
+      ]
+    },
+    "S3K/FLOAT2": {
+      "key": "FLOAT2",
+      "host": "S3K",
+      "label": "AniSonic0F",
+      "mappings": [
+        200,
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207
+      ],
+      "ticks": 8,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s3k-c8",
+        "variant-s3k-c9",
+        "variant-s3k-ca",
+        "variant-s3k-cb",
+        "variant-s3k-cc",
+        "variant-s3k-cd",
+        "variant-s3k-ce",
+        "variant-s3k-cf"
+      ]
+    },
+    "S3K/VICTORY": {
+      "key": "VICTORY",
+      "host": "S3K",
+      "label": "AniSonic13",
+      "mappings": [
+        176,
+        178,
+        178,
+        178,
+        178,
+        178,
+        178,
+        177,
+        178,
+        179,
+        178
+      ],
+      "ticks": 8,
+      "speedDriven": false,
+      "end": "loopBack",
+      "parameter": 4,
+      "ids": [
+        "variant-s3k-b0",
+        "variant-s3k-b2",
+        "variant-s3k-b2",
+        "variant-s3k-b2",
+        "variant-s3k-b2",
+        "variant-s3k-b2",
+        "variant-s3k-b2",
+        "variant-s3k-b1",
+        "variant-s3k-b2",
+        "variant-s3k-b3",
+        "variant-s3k-b2"
+      ]
+    },
+    "S3K/HANG2": {
+      "key": "HANG2",
+      "host": "S3K",
+      "label": "AniSonic14",
+      "mappings": [
+        145
+      ],
+      "ticks": 20,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "hang-01"
+      ]
+    },
+    "S3K/BUBBLE": {
+      "key": "BUBBLE",
+      "host": "S3K",
+      "label": "AniSonic15",
+      "mappings": [
+        172,
+        172,
+        3,
+        4
+      ],
+      "ticks": 12,
+      "speedDriven": false,
+      "end": "next",
+      "parameter": 0,
+      "ids": [
+        "variant-s3k-ac",
+        "variant-s3k-ac",
+        "variant-s3k-03",
+        "variant-s3k-04"
+      ]
+    },
+    "S3K/HURT_FALL": {
+      "key": "HURT_FALL",
+      "host": "S3K",
+      "label": "AniSonic1B",
+      "mappings": [
+        140,
+        141
+      ],
+      "ticks": 10,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s3k-8c",
+        "variant-s3k-8d"
+      ]
+    },
+    "S3K/BALANCE3": {
+      "key": "BALANCE3",
+      "host": "S3K",
+      "label": "AniSonic1D",
+      "mappings": [
+        208,
+        209
+      ],
+      "ticks": 20,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-s3k-d0",
+        "variant-s3k-d1"
+      ]
+    },
+    "S3K/BALANCE4": {
+      "key": "BALANCE4",
+      "host": "S3K",
+      "label": "AniSonic1E",
+      "mappings": [
+        207,
+        200,
+        201,
+        202,
+        203
+      ],
+      "ticks": 4,
+      "speedDriven": false,
+      "end": "loopBack",
+      "parameter": 4,
+      "ids": [
+        "variant-s3k-cf",
+        "variant-s3k-c8",
+        "variant-s3k-c9",
+        "variant-s3k-ca",
+        "variant-s3k-cb"
+      ]
+    },
+    "S3K/TAILS_CARRIED": {
+      "key": "TAILS_CARRIED",
+      "host": "S3K",
+      "label": "AniSonic22",
+      "mappings": [
+        144,
+        145,
+        146,
+        145
+      ],
+      "ticks": 12,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "hang-00",
+        "hang-01",
+        "hang-02",
+        "hang-01"
+      ]
+    },
+    "S3K/BLANK": {
+      "key": "BLANK",
+      "host": "S3K",
+      "label": "AniSonic1C",
+      "mappings": [
+        0
+      ],
+      "ticks": 120,
+      "speedDriven": false,
+      "end": "loop",
+      "parameter": null,
+      "ids": [
+        "variant-blank"
+      ]
+    }
+  },
+  "selectedSharedScripts": {
+    "ROLL2": "S2",
+    "WARP1": "S1",
+    "WARP2": "S1",
+    "WARP3": "S1",
+    "WARP4": "S1",
+    "FLOAT": "S2",
+    "FLOAT2": "S2",
+    "LEAP1": "S1",
+    "LEAP2": "S1",
+    "SURF": "S1",
+    "BURNT": "S1",
+    "SHRINK": "S1",
+    "WATER_SLIDE": "S1",
+    "NULL_ANIM": "S1",
+    "FLOAT3": "S1",
+    "FLOAT4": "S1",
+    "BLINK": "S2",
+    "GET_UP": "S2",
+    "BALANCE2": "S2",
+    "VICTORY": "S3K",
+    "HANG2": "S2",
+    "BUBBLE": "S2",
+    "HURT_FALL": "S3K",
+    "BALANCE3": "S2",
+    "BALANCE4": "S2",
+    "TAILS_CARRIED": "S3K",
+    "BLANK": "S3K",
+    "HURT2": "S2",
+    "SLIDE": "S2",
+    "FLY": "S2"
+  },
+  "limits": "Shared canonical scripts cannot select distinct host sequences today. All exact host orders/timers/end actions are retained here. LOOP_BACK uses full loop except one-step tails use HOLD. Speed driven preview uses one tick."
+}

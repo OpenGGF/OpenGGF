@@ -45,7 +45,7 @@ class PlayableArtAssemblyTest(unittest.TestCase):
             self.assertEqual(before, {name:(committed/name).read_bytes() for name in before})
             assembler.assemble(art, out)
             self.assertEqual(before, {p.name:p.read_bytes() for p in out.iterdir()})
-            self.assertEqual(stats, dict(frames=126, maxTilesPerFrame=30, animations=22))
+            self.assertEqual(stats, dict(frames=186, maxTilesPerFrame=30, animations=52))
             self.assertEqual('hang-00', source[manifest['nativeFrames']['hang/0']]['id'])
             self.assertEqual('wait-03', source[manifest['nativeFrames']['wait/fidget']]['id'])
             self.assertEqual('roll-01', source[manifest['nativeFrames']['roll/1']]['id'])
@@ -82,6 +82,31 @@ class PlayableArtAssemblyTest(unittest.TestCase):
             self.assertEqual('hold',manifest['animations']['DUCK']['end'])
             self.assertEqual('WALK',manifest['animations']['SPRING']['next'])
             self.assertEqual([48],manifest['animations']['SPRING']['durations'])
+
+    def test_variant_scripts_reuse_exact_symbolic_order_and_blank(self):
+        art = ROOT/'examples/mica-and-talon/art/mica'
+        handoff = json.loads((art/'frames.yaml').read_text())
+        native = json.loads((art/'batch2/native-scripts.json').read_text())
+        with tempfile.TemporaryDirectory() as directory:
+            manifest, _, _ = assembler.assemble(art, Path(directory))
+        ids = [f['id'] for f in handoff['frames']]
+        for key, host in native['selectedSharedScripts'].items():
+            script = native['scripts'][host+'/'+key]
+            actual = manifest['animations'][key]
+            self.assertEqual(script['ids'], [ids[i] for i in actual['frames']], key)
+            if script['speedDriven']:
+                self.assertTrue(actual['speedDriven'])
+                self.assertNotIn('durations', actual)
+            else:
+                self.assertEqual([script['ticks']]*len(script['ids']), actual['durations'])
+            expected_end = ('hold' if script['parameter'] == 1 else 'loop') if script['end'] == 'loopBack' else script['end']
+            self.assertEqual(expected_end, actual['end'])
+        blank = next(f for f in handoff['frames'] if f['id']=='variant-blank')
+        with Image.open(art/blank['file']) as im:
+            self.assertIsNone(im.getbbox())
+        # The carried cycle preserves its return through the middle pose.
+        self.assertEqual(['hang-00', 'hang-01', 'hang-02', 'hang-01'],
+                         native['scripts']['S3K/TAILS_CARRIED']['ids'])
 
 
 if __name__ == '__main__':

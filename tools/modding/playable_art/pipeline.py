@@ -145,7 +145,7 @@ def build(recipe_path, review=None):
         canvas.info['transparency'] = 0
         images[frame['id']] = canvas
         # Tight crop with explicit hotspot; no 80x80 padding shipped.
-        bbox = canvas.getbbox()
+        bbox = (40, 40, 41, 41) if frame.get('blank') else canvas.getbbox()
         if not bbox or bbox[0] == 0 or bbox[1] == 0 or bbox[2] == 80 or bbox[3] == 80:
             raise ValueError(f"Clipped/empty sprite: {frame['id']}")
         trimmed = canvas.crop(bbox)
