@@ -625,6 +625,18 @@ the copied run-wide notes and the report's initial logical key are insufficient.
 `-Dtrace.verification=all|physics|animation` selects the verification scope
 (default `all`); animation-only requires CSV v7 character-animation fields.
 Standalone reports use a separate scope suffix for physics and animation.
+Triage uses the scope saved in the report's gate for its first divergence,
+bootstrap diagnosis, context/auxiliary focus and frontier-log hint. Bootstrap
+discrepancies belong to physics. The published totals and summary still cover
+all verification groups, so a narrow brief can select a later mismatch or show
+no selected divergence while the global error count remains positive.
+Changing a JVM property while reading a saved report does not change that scope.
+
+Narrow diagnosis requires every published error/warning group to carry a
+canonical `verification_group` (`physics` or `animation`). Unclassifiable groups
+fail evidence reading instead of appearing clean. ALL and absent-gate reports
+retain their global diagnosis and accept older unclassified groups; absence of
+a replay gate still means UNKNOWN completion.
 
 For a shorter diagnostic run, `-Dtrace.frontierOnly=true` stops after the first
 selected error and its context window; an early stop publishes an INCOMPLETE
