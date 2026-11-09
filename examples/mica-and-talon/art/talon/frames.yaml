@@ -117,12 +117,12 @@
       "order": 0,
       "file": "frames/walk-00.png",
       "hotspot": [
-        16,
-        16
+        12,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image walk strip attempt 2, cell 0; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Round 2 GPT Image strip walk attempt 3 cell 0; S2 Sonic native pose; native aspect/box/hotspot. Opposite wing-hand/foot and near/far alternation checked against limb table."
     },
     {
       "id": "walk-01",
@@ -130,12 +130,12 @@
       "order": 1,
       "file": "frames/walk-01.png",
       "hotspot": [
-        18,
-        16
+        15,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image walk strip attempt 2, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Round 2 GPT Image strip walk attempt 3 cell 1; S2 Sonic native pose; native aspect/box/hotspot. Opposite wing-hand/foot and near/far alternation checked against limb table."
     },
     {
       "id": "walk-02",
@@ -143,12 +143,12 @@
       "order": 2,
       "file": "frames/walk-02.png",
       "hotspot": [
-        18,
-        20
+        16,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image walk strip attempt 2, cell 2; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Round 2 GPT Image strip walk attempt 3 cell 2; S2 Sonic native pose; native aspect/box/hotspot. Opposite wing-hand/foot and near/far alternation checked against limb table."
     },
     {
       "id": "walk-03",
@@ -156,12 +156,12 @@
       "order": 3,
       "file": "frames/walk-03.png",
       "hotspot": [
-        17,
-        16
+        16,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image walk strip attempt 2, cell 3; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Round 2 GPT Image strip walk attempt 3 cell 3; S2 Sonic native pose; native aspect/box/hotspot. Opposite wing-hand/foot and near/far alternation checked against limb table."
     },
     {
       "id": "walk-04",
@@ -169,12 +169,12 @@
       "order": 4,
       "file": "frames/walk-04.png",
       "hotspot": [
-        16,
-        16
+        12,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image walk strip attempt 2, cell 4; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Round 2 GPT Image strip walk attempt 3 cell 4; S2 Sonic native pose; native aspect/box/hotspot. Opposite wing-hand/foot and near/far alternation checked against limb table."
     },
     {
       "id": "walk-05",
@@ -182,12 +182,12 @@
       "order": 5,
       "file": "frames/walk-05.png",
       "hotspot": [
-        18,
-        16
+        14,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image walk strip attempt 2, cell 5; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Round 2 GPT Image strip walk attempt 3 cell 5; S2 Sonic native pose; native aspect/box/hotspot. Opposite wing-hand/foot and near/far alternation checked against limb table."
     },
     {
       "id": "walk-06",
@@ -196,11 +196,11 @@
       "file": "frames/walk-06.png",
       "hotspot": [
         17,
-        20
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image walk strip attempt 2, cell 6; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Round 2 GPT Image strip walk attempt 3 cell 6; S2 Sonic native pose; native aspect/box/hotspot. Opposite wing-hand/foot and near/far alternation checked against limb table."
     },
     {
       "id": "walk-07",
@@ -209,11 +209,11 @@
       "file": "frames/walk-07.png",
       "hotspot": [
         16,
-        16
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image walk strip attempt 2, cell 7; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Round 2 GPT Image strip walk attempt 3 cell 7; S2 Sonic native pose; native aspect/box/hotspot. Opposite wing-hand/foot and near/far alternation checked against limb table."
     },
     {
       "id": "run-00",
@@ -222,11 +222,11 @@
       "file": "frames/run-00.png",
       "hotspot": [
         15,
-        16
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image run strip attempt 3, cell 0; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Round 2 GPT Image strip run attempt 2 cell 0; S2 Sonic native pose; native aspect/box/hotspot. Far boot palette-only shading; swept-back up/mid/down/mid wing flutter."
     },
     {
       "id": "run-01",
@@ -234,12 +234,12 @@
       "order": 1,
       "file": "frames/run-01.png",
       "hotspot": [
-        16,
-        16
+        15,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image run strip attempt 3, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Round 2 GPT Image strip run attempt 2 cell 1; S2 Sonic native pose; native aspect/box/hotspot. Far boot palette-only shading; swept-back up/mid/down/mid wing flutter."
     },
     {
       "id": "run-02",
@@ -247,12 +247,12 @@
       "order": 2,
       "file": "frames/run-02.png",
       "hotspot": [
-        15,
-        16
+        14,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image run strip attempt 3, cell 2; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Round 2 GPT Image strip run attempt 2 cell 2; S2 Sonic native pose; native aspect/box/hotspot. Far boot palette-only shading; swept-back up/mid/down/mid wing flutter."
     },
     {
       "id": "run-03",
@@ -260,12 +260,12 @@
       "order": 3,
       "file": "frames/run-03.png",
       "hotspot": [
-        16,
-        16
+        15,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image run strip attempt 3, cell 3; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Round 2 GPT Image strip run attempt 2 cell 3; S2 Sonic native pose; native aspect/box/hotspot. Far boot palette-only shading; swept-back up/mid/down/mid wing flutter."
     },
     {
       "id": "roll-00",
@@ -520,12 +520,12 @@
       "order": 8,
       "file": "frames/walk-up45-00.png",
       "hotspot": [
-        18,
-        12
+        20,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-00, 45 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-00, 45 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-up45-01",
@@ -533,12 +533,12 @@
       "order": 9,
       "file": "frames/walk-up45-01.png",
       "hotspot": [
-        20,
-        10
+        21,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-01, 45 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-01, 45 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-up45-02",
@@ -546,12 +546,12 @@
       "order": 10,
       "file": "frames/walk-up45-02.png",
       "hotspot": [
-        21,
-        15
+        19,
+        20
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-02, 45 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-02, 45 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-up45-03",
@@ -559,12 +559,12 @@
       "order": 11,
       "file": "frames/walk-up45-03.png",
       "hotspot": [
-        19,
-        11
+        18,
+        20
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-03, 45 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-03, 45 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-up45-04",
@@ -572,12 +572,12 @@
       "order": 12,
       "file": "frames/walk-up45-04.png",
       "hotspot": [
-        18,
-        12
+        19,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-04, 45 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-04, 45 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-up45-05",
@@ -585,12 +585,12 @@
       "order": 13,
       "file": "frames/walk-up45-05.png",
       "hotspot": [
-        20,
-        10
+        19,
+        20
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-05, 45 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-05, 45 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-up45-06",
@@ -598,12 +598,12 @@
       "order": 14,
       "file": "frames/walk-up45-06.png",
       "hotspot": [
-        21,
-        14
+        19,
+        20
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-06, 45 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-06, 45 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-up45-07",
@@ -611,12 +611,12 @@
       "order": 15,
       "file": "frames/walk-up45-07.png",
       "hotspot": [
-        18,
-        11
+        19,
+        20
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-07, 45 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-07, 45 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-steep-00",
@@ -624,12 +624,12 @@
       "order": 16,
       "file": "frames/walk-steep-00.png",
       "hotspot": [
-        16,
-        5
+        19,
+        12
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-00, 90 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-00, 90 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-steep-01",
@@ -637,12 +637,12 @@
       "order": 17,
       "file": "frames/walk-steep-01.png",
       "hotspot": [
-        16,
-        4
+        20,
+        13
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-01, 90 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-01, 90 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-steep-02",
@@ -650,12 +650,12 @@
       "order": 18,
       "file": "frames/walk-steep-02.png",
       "hotspot": [
-        20,
-        5
+        21,
+        18
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-02, 90 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-02, 90 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-steep-03",
@@ -663,12 +663,12 @@
       "order": 19,
       "file": "frames/walk-steep-03.png",
       "hotspot": [
-        16,
-        5
+        20,
+        17
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-03, 90 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-03, 90 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-steep-04",
@@ -676,12 +676,12 @@
       "order": 20,
       "file": "frames/walk-steep-04.png",
       "hotspot": [
-        16,
-        5
+        19,
+        12
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-04, 90 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-04, 90 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-steep-05",
@@ -689,12 +689,12 @@
       "order": 21,
       "file": "frames/walk-steep-05.png",
       "hotspot": [
-        16,
-        4
+        20,
+        14
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-05, 90 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-05, 90 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-steep-06",
@@ -702,12 +702,12 @@
       "order": 22,
       "file": "frames/walk-steep-06.png",
       "hotspot": [
-        20,
-        6
+        21,
+        17
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-06, 90 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-06, 90 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-steep-07",
@@ -715,12 +715,12 @@
       "order": 23,
       "file": "frames/walk-steep-07.png",
       "hotspot": [
-        16,
-        5
+        20,
+        17
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-07, 90 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-07, 90 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-inverted-00",
@@ -728,12 +728,12 @@
       "order": 24,
       "file": "frames/walk-inverted-00.png",
       "hotspot": [
-        13,
-        14
+        20,
+        18
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-00, 135 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-00, 135 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-inverted-01",
@@ -741,12 +741,12 @@
       "order": 25,
       "file": "frames/walk-inverted-01.png",
       "hotspot": [
-        11,
-        10
+        20,
+        19
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-01, 135 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-01, 135 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-inverted-02",
@@ -754,12 +754,12 @@
       "order": 26,
       "file": "frames/walk-inverted-02.png",
       "hotspot": [
-        16,
-        9
+        21,
+        17
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-02, 135 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-02, 135 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-inverted-03",
@@ -767,12 +767,12 @@
       "order": 27,
       "file": "frames/walk-inverted-03.png",
       "hotspot": [
-        12,
-        14
+        21,
+        22
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-03, 135 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-03, 135 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-inverted-04",
@@ -780,12 +780,12 @@
       "order": 28,
       "file": "frames/walk-inverted-04.png",
       "hotspot": [
-        13,
-        13
+        20,
+        18
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-04, 135 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-04, 135 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-inverted-05",
@@ -793,12 +793,12 @@
       "order": 29,
       "file": "frames/walk-inverted-05.png",
       "hotspot": [
-        11,
-        8
+        22,
+        18
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-05, 135 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-05, 135 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-inverted-06",
@@ -806,12 +806,12 @@
       "order": 30,
       "file": "frames/walk-inverted-06.png",
       "hotspot": [
-        15,
-        9
+        21,
+        17
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-06, 135 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-06, 135 degrees CCW; integer support alignment."
     },
     {
       "id": "walk-inverted-07",
@@ -819,12 +819,12 @@
       "order": 31,
       "file": "frames/walk-inverted-07.png",
       "hotspot": [
-        12,
-        14
+        21,
+        22
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final walk-07, 135 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 walk-07, 135 degrees CCW; integer support alignment."
     },
     {
       "id": "run-up45-00",
@@ -833,11 +833,11 @@
       "file": "frames/run-up45-00.png",
       "hotspot": [
         17,
-        14
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final run-00, 45 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 run-00, 45 degrees CCW; integer support alignment."
     },
     {
       "id": "run-up45-01",
@@ -845,12 +845,12 @@
       "order": 5,
       "file": "frames/run-up45-01.png",
       "hotspot": [
-        17,
-        13
+        10,
+        16
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final run-01, 45 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 run-01, 45 degrees CCW; integer support alignment."
     },
     {
       "id": "run-up45-02",
@@ -858,12 +858,12 @@
       "order": 6,
       "file": "frames/run-up45-02.png",
       "hotspot": [
-        18,
-        13
+        8,
+        16
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final run-02, 45 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 run-02, 45 degrees CCW; integer support alignment."
     },
     {
       "id": "run-up45-03",
@@ -871,12 +871,12 @@
       "order": 7,
       "file": "frames/run-up45-03.png",
       "hotspot": [
-        18,
-        13
+        11,
+        16
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final run-03, 45 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 run-03, 45 degrees CCW; integer support alignment."
     },
     {
       "id": "run-steep-00",
@@ -884,12 +884,12 @@
       "order": 8,
       "file": "frames/run-steep-00.png",
       "hotspot": [
-        16,
-        9
+        14,
+        16
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final run-00, 90 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 run-00, 90 degrees CCW; integer support alignment."
     },
     {
       "id": "run-steep-01",
@@ -897,12 +897,12 @@
       "order": 9,
       "file": "frames/run-steep-01.png",
       "hotspot": [
-        16,
-        8
+        11,
+        16
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final run-01, 90 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 run-01, 90 degrees CCW; integer support alignment."
     },
     {
       "id": "run-steep-02",
@@ -910,12 +910,12 @@
       "order": 10,
       "file": "frames/run-steep-02.png",
       "hotspot": [
-        16,
-        8
+        11,
+        16
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final run-02, 90 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 run-02, 90 degrees CCW; integer support alignment."
     },
     {
       "id": "run-steep-03",
@@ -923,12 +923,12 @@
       "order": 11,
       "file": "frames/run-steep-03.png",
       "hotspot": [
-        16,
-        8
+        11,
+        16
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final run-03, 90 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 run-03, 90 degrees CCW; integer support alignment."
     },
     {
       "id": "run-inverted-00",
@@ -936,12 +936,12 @@
       "order": 12,
       "file": "frames/run-inverted-00.png",
       "hotspot": [
-        15,
-        10
+        20,
+        20
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final run-00, 135 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 run-00, 135 degrees CCW; integer support alignment."
     },
     {
       "id": "run-inverted-01",
@@ -949,12 +949,12 @@
       "order": 13,
       "file": "frames/run-inverted-01.png",
       "hotspot": [
-        14,
-        16
+        18,
+        20
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final run-01, 135 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 run-01, 135 degrees CCW; integer support alignment."
     },
     {
       "id": "run-inverted-02",
@@ -962,12 +962,12 @@
       "order": 14,
       "file": "frames/run-inverted-02.png",
       "hotspot": [
-        15,
-        10
+        18,
+        20
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final run-02, 135 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 run-02, 135 degrees CCW; integer support alignment."
     },
     {
       "id": "run-inverted-03",
@@ -975,12 +975,12 @@
       "order": 15,
       "file": "frames/run-inverted-03.png",
       "hotspot": [
-        14,
-        16
+        18,
+        20
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "derive_slopes.derive: final run-03, 135 degrees CCW; integer support alignment."
+      "notes": "derive_slopes.derive from round 2 run-03, 135 degrees CCW; integer support alignment."
     }
   ],
   "scripts": {

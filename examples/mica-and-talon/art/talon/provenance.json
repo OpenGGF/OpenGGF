@@ -121,207 +121,219 @@
       }
     },
     "walk-00": {
+      "round": 2,
       "group": "walk",
       "cell": 0,
-      "attempt": 2,
+      "attempt": 3,
       "native": {
         "size": [
-          41,
-          32
+          26,
+          39
         ],
         "hotspot": [
-          26,
-          16
+          13,
+          19
         ],
-        "mapping": 16,
-        "tail": 0
+        "mapping": 15,
+        "label": "Map_Sonic_0332"
       }
     },
     "walk-01": {
+      "round": 2,
       "group": "walk",
       "cell": 1,
-      "attempt": 2,
+      "attempt": 3,
       "native": {
         "size": [
-          34,
-          32
+          29,
+          40
         ],
         "hotspot": [
-          24,
-          16
+          15,
+          20
         ],
-        "mapping": 17,
-        "tail": 0
+        "mapping": 16,
+        "label": "Map_Sonic_034C"
       }
     },
     "walk-02": {
+      "round": 2,
       "group": "walk",
       "cell": 2,
-      "attempt": 2,
+      "attempt": 3,
       "native": {
         "size": [
-          44,
-          32
+          39,
+          40
         ],
         "hotspot": [
-          28,
-          20
+          18,
+          21
         ],
-        "mapping": 18,
-        "tail": 0
+        "mapping": 17,
+        "label": "Map_Sonic_035E"
       }
     },
     "walk-03": {
+      "round": 2,
       "group": "walk",
       "cell": 3,
-      "attempt": 2,
+      "attempt": 3,
       "native": {
         "size": [
-          40,
-          32
+          39,
+          39
         ],
         "hotspot": [
-          26,
-          16
+          19,
+          20
         ],
-        "mapping": 19,
-        "tail": 0
+        "mapping": 18,
+        "label": "Map_Sonic_0378"
       }
     },
     "walk-04": {
+      "round": 2,
       "group": "walk",
       "cell": 4,
-      "attempt": 2,
+      "attempt": 3,
       "native": {
         "size": [
-          41,
-          32
+          26,
+          39
         ],
         "hotspot": [
-          26,
-          16
+          13,
+          19
         ],
-        "mapping": 20,
-        "tail": 0
+        "mapping": 19,
+        "label": "Map_Sonic_039A"
       }
     },
     "walk-05": {
+      "round": 2,
       "group": "walk",
       "cell": 5,
-      "attempt": 2,
+      "attempt": 3,
       "native": {
         "size": [
-          34,
-          32
+          28,
+          40
         ],
         "hotspot": [
-          24,
-          16
+          14,
+          20
         ],
-        "mapping": 21,
-        "tail": 0
+        "mapping": 20,
+        "label": "Map_Sonic_03B4"
       }
     },
     "walk-06": {
+      "round": 2,
       "group": "walk",
       "cell": 6,
-      "attempt": 2,
+      "attempt": 3,
       "native": {
         "size": [
-          44,
-          32
+          40,
+          38
         ],
         "hotspot": [
-          28,
-          20
+          20,
+          21
         ],
-        "mapping": 14,
-        "tail": 0
+        "mapping": 13,
+        "label": "Map_Sonic_02F6"
       }
     },
     "walk-07": {
+      "round": 2,
       "group": "walk",
       "cell": 7,
-      "attempt": 2,
+      "attempt": 3,
       "native": {
         "size": [
-          41,
-          32
+          39,
+          39
         ],
         "hotspot": [
-          26,
-          16
+          19,
+          20
         ],
-        "mapping": 15,
-        "tail": 0
+        "mapping": 14,
+        "label": "Map_Sonic_0310"
       }
     },
     "run-00": {
+      "round": 2,
       "group": "run",
       "cell": 0,
-      "attempt": 3,
+      "attempt": 2,
       "native": {
         "size": [
-          36,
-          32
+          31,
+          35
         ],
         "hotspot": [
-          21,
-          16
+          15,
+          15
         ],
-        "mapping": 46,
-        "tail": 0
+        "mapping": 45,
+        "label": "Map_Sonic_06D6"
       }
     },
     "run-01": {
+      "round": 2,
       "group": "run",
       "cell": 1,
-      "attempt": 3,
+      "attempt": 2,
       "native": {
         "size": [
-          36,
-          32
+          31,
+          36
         ],
         "hotspot": [
-          22,
+          15,
           16
         ],
-        "mapping": 47,
-        "tail": 0
+        "mapping": 46,
+        "label": "Map_Sonic_06E8"
       }
     },
     "run-02": {
+      "round": 2,
       "group": "run",
       "cell": 2,
-      "attempt": 3,
+      "attempt": 2,
       "native": {
         "size": [
-          37,
-          31
+          30,
+          35
         ],
         "hotspot": [
-          22,
-          16
+          14,
+          15
         ],
-        "mapping": 48,
-        "tail": 0
+        "mapping": 47,
+        "label": "Map_Sonic_06FA"
       }
     },
     "run-03": {
+      "round": 2,
       "group": "run",
       "cell": 3,
-      "attempt": 3,
+      "attempt": 2,
       "native": {
         "size": [
-          36,
-          32
+          31,
+          36
         ],
         "hotspot": [
-          22,
+          15,
           16
         ],
-        "mapping": 49,
-        "tail": 0
+        "mapping": 48,
+        "label": "Map_Sonic_070C"
       }
     },
     "roll-00": {
@@ -720,5 +732,102 @@
     "TAILS_FLY maps native single body A0 onto two integrated wing drawings synchronized with tail rotor.",
     "WAIT partial-loop start unsupported by current converter."
   ],
-  "cleanup": "Palette shading only: right/front shoe area on walk5-7 and run0-1 changes red to red-shadow and white to glove-shadow; no limb painting."
+  "cleanup": "Palette shading only: right/front shoe area on walk5-7 and run0-1 changes red to red-shadow and white to glove-shadow; no limb painting.",
+  "round2": {
+    "method": "Built-in GPT Image native-pose transformations, native-aspect crop/reduction, shared existing palette. No hand-painted limbs. Only RUN far-boot palette shading after reduction. Slopes derive_slopes only.",
+    "selection": {
+      "walk": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "run": [
+        2,
+        2,
+        2,
+        2
+      ]
+    },
+    "limbTable": {
+      "WALK": [
+        [
+          "passing: left/near returning",
+          "passing: right/far coming forward",
+          "left near lit; right far shaded"
+        ],
+        [
+          "left/near lifting forward",
+          "right/far forward; left/near back",
+          "left near lit; right far shaded"
+        ],
+        [
+          "left/near extended forward",
+          "right/far forward; left/near back",
+          "left near lit; right far shaded"
+        ],
+        [
+          "left/near heel contact forward",
+          "right/far forward; left/near back",
+          "left near lit; right far shaded"
+        ],
+        [
+          "passing: right/far returning",
+          "passing: left/near coming forward",
+          "left near lit; right far shaded"
+        ],
+        [
+          "right/far lifting forward",
+          "left/near forward; right/far back",
+          "left near lit; right far shaded"
+        ],
+        [
+          "right/far extended forward",
+          "left/near forward; right/far back",
+          "left near lit; right far shaded"
+        ],
+        [
+          "right/far heel contact forward",
+          "left/near forward; right/far back",
+          "left near lit; right far shaded"
+        ]
+      ],
+      "RUN": [
+        [
+          "near shoe back/up; far shoe forward/down, circular blur",
+          "both wings back; upper flutter extreme",
+          "near lit / far shaded"
+        ],
+        [
+          "near shoe forward/up; far shoe down/back, circular blur",
+          "both wings back; mid downstroke",
+          "near lit / far shaded"
+        ],
+        [
+          "near shoe forward/down; far shoe back/up, circular blur",
+          "both wings back; lower flutter extreme",
+          "near lit / far shaded"
+        ],
+        [
+          "near shoe down/back; far shoe forward/up, circular blur",
+          "both wings back; mid upstroke",
+          "near lit / far shaded"
+        ]
+      ]
+    },
+    "review": "$HOME/scratch/agent-tmp/talon-art-r2-20261109/review.html",
+    "rejected": {
+      "walk-1": "Tails reference failed arm reversal",
+      "walk-2": "Sonic arm reversal passed but far boot too bright",
+      "run-1": "Wing amplitude rescales the body; second attempt steadier"
+    },
+    "remaining": [
+      "RUN 1/3 silhouettes are close, differentiated by near/far shoe shade and wing stroke direction; native run also uses closely related blur silhouettes.",
+      "Runtime contact not certified; review only."
+    ]
+  }
 }

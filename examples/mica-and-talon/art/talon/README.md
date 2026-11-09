@@ -1,7 +1,7 @@
 # TALON core playable art
 
 Original peregrine courier art generated with built-in GPT Image against the
-approved `../../concept/talon.png`, using real-palette native Tails poses at 8×
+approved `../../concept/talon.png`, using real-palette native poses (Tails in round 1, Sonic for round 2 WALK/RUN) at 8×
 nearest-neighbour as choreography references. No native art is included here.
 The exact prompts, raw hashes and scratch locations are in `prompts.json`;
 `provenance.json` records selected cells and native mappings. The recipe stores
@@ -21,7 +21,7 @@ not an accepted enum name. Flight wings are integrated; no tail sprite exists.
 `talon-custom-frames.json` is intentionally empty: all supplied poses are canonical.
 No character-class binding or Java changes are part of this handoff.
 
-Source selection: WAIT and WALK strip attempt 2; RUN attempt 3; ROLL and
+Round 1 source selection: WAIT and WALK strip attempt 2; RUN attempt 3; ROLL and
 SPINDASH attempt 2; static poses attempt 1 except spring; flight and tired flight
 attempt 2. Each static pose had two strip attempts. Spring then had two additional
 alternatives in one generation, with the first selected. Its initial float-like
@@ -30,8 +30,8 @@ The rejected second WALK request was blocked by the image service before output;
 there are two usable WALK attempts, three requests. Raw attempts stay in scratch.
 
 The reducer fits each generated cell to the native aspect before reduction;
-it never squeezes a wide pose into a narrow cell. Cleanup changes only front/far
-shoe palette shading on WALK 5–7 and RUN 0–1; no limbs were painted. Slope art is
+it never squeezes a wide pose into a narrow cell. Round 1 used front/far
+shoe palette shading on WALK 5–7 and RUN 0–1; round 2 supersedes those frames. Slope art is
 exclusively `derive_slopes.derive` at +45/+90/+135 degrees around the final flat
 hotspot, with integer support alignment. No slope generation was used.
 
@@ -73,11 +73,32 @@ attempt, exact indexed comparison GIFs and per-frame strips. Each GIF emits all
 60Hz ticks as full frames with an exact union palette and no delta optimization;
 centisecond timing is rounded cumulatively. Browsers may clamp 10ms GIF delays.
 
-WALK and RUN were inspected frame by frame. Foot contact/lift phases are present,
-but opposite-arm reversal remains too restrained, especially WALK 5–7 and RUN
-2–3. WALK 0/4 passing poses are similar; leg crossings in WALK 6 are still small.
-RUN 0/2 high forward contacts could be exaggerated further. Native envelopes
-and hotspots are retained, so generated head position can move slightly despite
-the steadier compact-wing selection. Flight up/down drawings still change body
-scale somewhat when fitted into native bounds. These are reviewable core assets,
-not a claim that the remaining motion issues or runtime slope contact are solved.
+Round 2 replaces only WALK/RUN flats and their derived slopes. Three WALK
+attempts: Tails attempt 1 failed arm reversal; Sonic attempt 2 reversed arms but
+kept the far forward boot too bright; Sonic attempt 3 won all eight cells.
+Two RUN attempts use S2 Sonic's four-phase circular shoe loop; attempt 2 won
+all four cells with swept-back wings in up/mid/down/mid flutter order.
+Exact round 2 prompts, source hashes, selected mapping metadata and limb table
+are recorded in prompts.json/provenance.json. Original generated rows are in
+recipe.json. No decoded reference art is committed.
+
+The per-frame review checks passing poses 0/4, near lit left foot with far shaded
+right hand forward in WALK 1–3, and the reverse in 5–7. RUN far boots receive
+palette-only shadow cleanup after reduction; no limb geometry is painted.
+Native box/hotspot is the reduction input; normal pipeline transparent-margin
+cropping shifts output hotspots while preserving engine-relative position.
+Slopes come exclusively from derive_slopes.py using the new final flats.
+
+Round 2 review: `$HOME/scratch/agent-tmp/talon-art-r2-20261109/review.html`.
+All native ticks are full GIF frames with exact palettes. RUN phases 1/3 retain
+similar blur silhouettes, distinguished by near/far shading and wing direction;
+head height shifts slightly as native-aspect fitting accommodates wing tips.
+Runtime slope contact remains an integration check. Other animations, including
+the previously noted flight body-scale variation, are unchanged.
+
+Validation: Python discovery under tools/modding passes 49 tests. Assembly
+retains 74 frames, 13 animations and the 36-tile maximum. The generic verify.py
+assumes MICA's 39px standing height and fails on unchanged TALON wait-00 in
+both the baseline and this round; TALON palette/ink, native input geometry,
+unchanged unrelated frames and deterministic regeneration are checked separately.
+No Java build or GGFP bake was performed.
