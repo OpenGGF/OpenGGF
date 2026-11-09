@@ -31,13 +31,6 @@ public final class RealValley {
     public static final int SPRING_BLOCK = 3;
     /** The farm gate by the waterfall, where the valley starts (the scene's "farm_gate" place). */
     public static final int FARM_GATE_X = 150;
-    /**
-     * The one palette cell the placeholder claims. The host bridge re-submits the placeholder's
-     * claims every frame, so the re-encoded art never uses this cell (see {@link ValleyEncoder}).
-     */
-    public static final int PLACEHOLDER_LINE = 3;
-    public static final int PLACEHOLDER_COLOR = 15;
-
     private RealValley() {
     }
 

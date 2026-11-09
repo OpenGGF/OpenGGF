@@ -5,6 +5,14 @@ carried by `develop` and `next` after the 0.6 release rollover. No Mod API basel
 has been published yet. The runtime-visible, type-only `com.openggf.game.ModApi`
 annotation marks its roots.
 
+Creator ergonomics adds `LevelPatch.addObject` for verified owned factory placements on
+native levels, `AuxiliaryObjectCollection` for derived non-rewindable visuals, and
+`SceneMenuChrome`/`MenuTheme` for scene menu drawing. Ownership and placement identities
+remain engine-assigned; native geometry/event owners are retained. Auxiliary collections
+reconcile current desired identities after checkpoint removal without restoring model state.
+The descriptor and `ModApiVersion` description remain unpublished candidate `0.7.0`;
+the normalized signature pin includes these additions. No published baseline changes.
+
 The five saved rewind allowance preferences (`REWIND_BUDGET_SCOPE`,
 `REWIND_BUDGET_SECONDS`, `REWIND_REFILL_ON_LIFE_LOSS`, `REWIND_BONUS_STAGES`,
 `REWIND_SPECIAL_STAGES`) are appended to `SonicConfiguration`, preserving existing

@@ -486,7 +486,7 @@ class TestModSceneActBridge {
         List<int[]> originals=new ArrayList<>();
         for(int line=0;line<4;line++) for(int color=0;color<16;color++)
             if("starpost-valley:seasons".equals(registry.ownerAt(com.openggf.game.palette.PaletteSurface.NORMAL,line,color))) {
-                assertTrue(line>0 && !(line==1 && List.of(1,5,12,14,15).contains(color)) && !(line==3 && color==15));
+                assertTrue(line>0 && !(line==1 && List.of(1,5,12,14,15).contains(color)));
                 originals.add(new int[]{line,color,sega(level.getPalette(line).getColor(color))});
             }
         assertFalse(originals.isEmpty(),"runtime must receive the re-encoded ROM claims, not the placeholder");

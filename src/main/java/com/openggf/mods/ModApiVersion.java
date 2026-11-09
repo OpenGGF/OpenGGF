@@ -16,7 +16,8 @@ public final class ModApiVersion {
      * UI_LANGUAGE preference, detached CPU-only title-preview providers and their RGBA
      * image/animation sequence contract, run-scoped native HUD profiles,
      * overlay HUD-origin measurement, and native decoded
-     * factory binding and original-ring retention on class-preserving levels,
+     * factory binding, owned additive placements and original-ring retention on class-preserving levels,
+     * shared creator menu chrome/theme and checkpoint-aware auxiliary presentation collections,
      * bounded S3K boss/special/bonus-stage difficulty policies, and native-owned
      * invitation, brittle-support and finite HCZ/MGZ/CNZ/ICZ/LBZ presets,
      * plus native MHZ wind, LRZ echo-jet, FBZ extra-beat and SOZ light/ghost recipes.

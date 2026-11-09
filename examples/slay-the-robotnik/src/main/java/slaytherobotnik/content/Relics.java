@@ -1030,7 +1030,7 @@ public final class Relics {
         });
     }
 
-    private static void upgradeRandom(RunState run, String type, int count) {
+    private static void upgradeRandom(RunState run, CardType type, int count) {
         List<Card> pool = new ArrayList<>();
         for (Card card : run.upgradableCards()) {
             if (card.type().equals(type)) {

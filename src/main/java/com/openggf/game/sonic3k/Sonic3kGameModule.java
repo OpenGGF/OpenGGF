@@ -233,7 +233,8 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
         }
         return new S3kCustomZonePaletteBridge(
                 contribution.ownerModId(), contribution.ownerModId() + ":" + contribution.localKey(),
-                level.getPalette(0), contribution.levelData().paletteClaims(),
+                level.getPalette(0), ((Sonic3kLevel) com.openggf.level.LevelOrigin.original(level))
+                        .customZonePaletteClaims(),
                 objectArtProvider.getHudFlashPaletteLine(), objectArtProvider.getHudStaticArt(),
                 objectArtProvider.getHudLivesNumbers(), objectArtProvider::getHudLivesPaletteOverride);
     }

@@ -29,6 +29,33 @@ import static org.mockito.Mockito.when;
 class TestS3kCustomZonePaletteBridge {
 
     @Test
+    void moduleUsesLoadedReplacementClaimsInsteadOfRegisteredPlaceholder() {
+        Sonic3kLevel loaded = s3kLevel(false);
+        when(loaded.customZonePaletteClaims()).thenReturn(List.of(new ModPaletteClaim(3, 15, 0x0E00)));
+        var contribution = mock(com.openggf.game.modzone.ModZoneRuntimeContribution.class);
+        when(contribution.ownerModId()).thenReturn("sample");
+        when(contribution.localKey()).thenReturn("level");
+        var placeholder = mock(com.openggf.game.modzone.ModZoneLevelData.class);
+        when(placeholder.paletteClaims()).thenReturn(List.of(new ModPaletteClaim(3, 15, 0x000E)));
+        when(contribution.levelData()).thenReturn(placeholder);
+        var module = new Sonic3kGameModule();
+        var art = mock(com.openggf.game.ObjectArtProvider.class);
+        // Editor snapshots must keep the loaded payload's ownership as well.
+        for (com.openggf.level.Level level : List.of(loaded, MutableLevel.snapshot(loaded))) {
+            var bridge = module.createCustomZonePaletteBridge(contribution, level, art);
+            var registry = new PaletteOwnershipRegistry();
+            Palette[] palettes = blankPalettes();
+            for (int frame = 0; frame < 2; frame++) {
+                registry.beginFrame();
+                bridge.submitFrameClaims(registry);
+                registry.resolveInto(palettes, null, null, palettes[0]);
+                assertEquals(0x0E00, segaWord(palettes[3].getColor(15)));
+                assertEquals("sample:level", registry.ownerAt(PaletteSurface.NORMAL, 3, 15));
+            }
+        }
+    }
+
+    @Test
     void prepublicationRejectsRomIndependentMixedLivesHudReservations() {
         assertThrows(ModZoneRegistrationException.class,
                 () -> S3kCustomZonePaletteBridge.validateCreatorClaims("sample",

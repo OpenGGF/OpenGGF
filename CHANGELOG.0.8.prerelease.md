@@ -119,6 +119,13 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **Simpler creator examples:** decoded native-level patches can add registered
+  objects with engine-assigned placement identities while retaining native level
+  services. Scene menus share the engine's menu theme and public drawing helpers;
+  presentation-only object collections reconcile checkpoint and level changes.
+  Starpost Valley uses its loaded terrain's palette claims, and Slay the Robotnik
+  uses supported immutable card-type enums.
+
 - **Two-player Competition routes in both editors:** the existing Route / Tape
   workspace now authors S2 REV01 title/menu programmes, P1/P2/joint goals and copied
   fact predicates. Isolated workers plan, replay, repair and qualify both pads;

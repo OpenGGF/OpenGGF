@@ -124,7 +124,7 @@ public final class CommonCards {
 
     // ------------------------------------------------------------------ colorless
 
-    private static CardDef.Builder colorless(String id, String name, String type, String rarity) {
+    private static CardDef.Builder colorless(String id, String name, CardType type, String rarity) {
         return CardDef.builder(id, name, CardColor.COLORLESS, type, rarity);
     }
 

@@ -14,8 +14,7 @@ public final class RuinsLevel {
     public static final int ORIGIN = 128;
     private RuinsLevel() {}
     public static EncodedValley encode(S1Terrain source, Chamber chamber) {
-        return ValleyEncoder.encodeGrid(source, new ValleyEncoder.Spec(chamber.cells, 1, -1, -1,
-                1, 2), chamber.cols, chamber.rows);
+        return ValleyEncoder.encodeGrid(source, new ValleyEncoder.Spec(chamber.cells, 1, -1, -1), chamber.cols, chamber.rows);
     }
     public static ModZoneLevelData build(ModZoneLevelData placeholder, S1Terrain source, Chamber chamber) {
         return build(placeholder,source,chamber,null);

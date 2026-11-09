@@ -21,8 +21,7 @@ import java.util.Map;
  *       secondary path is the twin's; PATH_SWAP objects switch planes (see {@link ValleyLevel}).</li>
  *   <li>Palette: lines 1-3 keep their Sonic 1 cells. The S3K host owns line 0 and the HUD's line-1
  *       cells, so art drawn with those cells is moved to free cells holding the same colour (patterns
- *       duplicated with remapped pixels where needed). One extra cell is kept free for the
- *       placeholder's claim, which the host bridge re-submits every frame.</li>
+ *       duplicated with remapped pixels where needed). The host bridge uses the loaded terrain's claims.</li>
  * </ul>
  */
 public final class ValleyEncoder {
@@ -36,10 +35,8 @@ public final class ValleyEncoder {
      * @param skyRows       empty 128-pixel rows above the blocks
      * @param loopBlock     the block whose second collision path comes from {@code loopTwin} (or -1)
      * @param loopTwin      the loop block's low-plane twin
-     * @param freeLine      palette line of the cell the art must not use (the placeholder's claim)
-     * @param freeColor     colour of that cell
      */
-    public record Spec(int[] columns, int skyRows, int loopBlock, int loopTwin, int freeLine, int freeColor) {
+    public record Spec(int[] columns, int skyRows, int loopBlock, int loopTwin) {
     }
 
     /** One remapped use of a source pattern: its new index and palette line. */
@@ -186,8 +183,7 @@ public final class ValleyEncoder {
     }
 
     private boolean reserved(int line, int color) {
-        return line == 0 || line == 1 && (HUD_LINE1_MASK & (1 << color)) != 0
-                || line == spec.freeLine() && color == spec.freeColor();
+        return line == 0 || line == 1 && (HUD_LINE1_MASK & (1 << color)) != 0;
     }
 
     /** Moves a pattern's colours to cells holding the same colours on some line 1-3. */
