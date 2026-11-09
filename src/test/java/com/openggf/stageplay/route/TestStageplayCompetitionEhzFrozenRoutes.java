@@ -45,6 +45,18 @@ class TestStageplayCompetitionEhzFrozenRoutes {
                     route.tape().slice(0, 18944).hash().sha256());
             assertTrue(route.tape().slice(18944, route.tape().size()).rows().stream().allMatch(PadRow.NEUTRAL::equals));
         } else assertTrue(route.manifest().qualification().stream().anyMatch(q->q.scope()==ReplayScope.BIZHAWK && q.passed() && !q.coverage().isEmpty()));
+        replayFlow(name, route);
+    }
+
+    @org.junit.jupiter.api.Test
+    void simultaneousTieHasOverlappingRunsAndReadableResults() throws Exception {
+        replayFlow("ehz-simultaneous-tie-special", resource("ehz-simultaneous-tie-special"));
+    }
+
+    private static void replayFlow(String name, RouteArtifact route) throws Exception {
+        boolean simultaneous=name.equals("ehz-simultaneous-tie-special");
+        int[][] starts={{-1,-1},{-1,-1}}, finishes={{-1,-1},{-1,-1}};
+        int[] neutralBoardRows={0,0};
         boolean[] seen={false,false}, titleSeen={false,false};RouteSample[] previous={null};
         var result=new RouteReplay(new StageplayCompetitionRouteHosts(Path.of(System.getProperty("sonic2.rom.path"))))
                 .replay(route,Cancellation.NONE,(row,sample)->{
@@ -54,6 +66,25 @@ class TestStageplayCompetitionEhzFrozenRoutes {
                             titleSeen[act]=true;
                             assertEquals(0,sample.clocks().levelFrameCounter());
                         } else if(act<2) seen[act]=true;
+                    }
+                    if(simultaneous) {
+                        int act=sample.facts().getOrDefault("competition.act",-1);
+                        int phase=sample.facts().getOrDefault("competition.phase",-1);
+                        if(act>=0 && act<2 && phase==1 && sample.facts().getOrDefault("competition.titleCard",1)==0) {
+                            for(int lane=0;lane<2;lane++) {
+                                var slot=lane==0?PlayerSlot.P1:PlayerSlot.P2;
+                                if(starts[act][lane]<0 && route.tape().row(row).lane(slot)!=0) starts[act][lane]=row;
+                                if(finishes[act][lane]<0 && sample.facts().getOrDefault("competition.p"+(lane+1)+".timerPaused",0)==1)
+                                    finishes[act][lane]=row;
+                            }
+                        }
+                        if(act>=0 && act<2 && phase==2) {
+                            assertEquals(1,sample.facts().get("competition.zoneWins.p1"));
+                            assertEquals(act,sample.facts().get("competition.zoneWins.p2"));
+                            if(route.tape().row(row).equals(PadRow.NEUTRAL)) neutralBoardRows[act]++;
+                            else if(route.tape().row(row).held(PlayerSlot.P1,PhysicalButton.START))
+                                assertTrue(neutralBoardRows[act]>=180,"three readable seconds before confirm");
+                        }
                     }
                     if(row>=1200 && route.tape().row(row).held(PlayerSlot.P1,PhysicalButton.START))
                         assertEquals(1,previous[0].facts().getOrDefault("input.menu",0),"no authored ACT pause/unpause workaround");
@@ -68,5 +99,11 @@ class TestStageplayCompetitionEhzFrozenRoutes {
         assertEquals(special?1:2,facts.get("competition.zoneWins.p1"));
         assertEquals(special?1:0,facts.get("competition.zoneWins.p2"));
         if(special)assertEquals(1,facts.get("competition.specialStage"));
+        if(simultaneous) for(int act=0;act<2;act++) {
+            assertTrue(starts[act][0]>=0 && starts[act][1]>=0);
+            assertTrue(Math.max(starts[act][0],starts[act][1])<Math.min(finishes[act][0],finishes[act][1]),
+                    "both humans run before either finishes act "+act);
+            assertTrue(neutralBoardRows[act]>=180,"readable results for act "+act);
+        }
     }
 }
