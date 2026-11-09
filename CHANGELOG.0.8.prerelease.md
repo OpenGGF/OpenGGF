@@ -48,7 +48,9 @@ under the matching area heading; see the
   the invisible path controller, including simultaneous two-human routes.
   A frozen Stageplay EHZ route now races both humans concurrently in each act,
   with opposite act winners, readable results holds and a tied special-stage
-  inlet. It is ENGINE-qualified only: cold native replay encounters level lag
+  inlet. Eight short frozen Stageplay routes exercise every question-mark monitor
+  outcome, with award assertions and six-second neutral holds for native comparison.
+  The two-act route is ENGINE-qualified only: cold native replay encounters level lag
   before the first finish and does not reach act 2.
   The screen renders at 320x448 progressive resolution with half-height pixels,
   preserving every row of the native 8x16 cells without interlace combing.

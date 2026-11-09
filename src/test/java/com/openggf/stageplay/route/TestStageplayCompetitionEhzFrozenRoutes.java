@@ -106,4 +106,36 @@ class TestStageplayCompetitionEhzFrozenRoutes {
             assertTrue(neutralBoardRows[act]>=180,"readable results for act "+act);
         }
     }
+    @ParameterizedTest @ValueSource(strings={"sonic-1up","tails-1up","robotnik","super-ring",
+            "speed-shoes","shield","invincibility","teleport"})
+    void frozenQuestionMarkOutcomesAreAwardedAndHeld(String name) throws Exception {
+        int content=List.of("sonic-1up","tails-1up","robotnik","super-ring","speed-shoes","shield",
+                "invincibility","teleport").indexOf(name)+1;
+        var route=resource("ehz-qmark-"+name);
+        assertEquals(resource("ehz-qmark-sonic-1up").tape().slice(0,1512),route.tape().slice(0,1512));
+        assertTrue(route.tape().slice(route.tape().size()-360,route.tape().size()).rows().stream()
+                .allMatch(PadRow.NEUTRAL::equals),"six-second neutral display hold");
+        assertTrue(route.manifest().qualification().stream().anyMatch(q->q.scope()==ReplayScope.BIZHAWK
+                && q.passed() && q.coverage().contains("qmark-content-"+content+"-award")));
+        int[] breakRow={-1},initRow={-1},lfc={-1};
+        var result=new RouteReplay(new StageplayCompetitionRouteHosts(Path.of(System.getProperty("sonic2.rom.path"))))
+                .replay(route,Cancellation.NONE,(row,sample)->{
+                    var f=sample.facts();
+                    if(breakRow[0]<0 && f.getOrDefault("competition.monitor.spawned",0)==1)breakRow[0]=row;
+                    if(initRow[0]<0 && f.containsKey("competition.monitor.content")) {
+                        initRow[0]=row;lfc[0]=f.get("competition.monitor.initFrame");
+                        assertEquals(content,f.get("competition.monitor.content"));assertEquals(content,(lfc[0]&7)+1);
+                        assertEquals(1,f.get("competition.monitor.breaker"));
+                    }
+                });
+        var passed=assertInstanceOf(ReplayResult.Passed.class,result,result.toString());
+        assertTrue(breakRow[0]>1512 && initRow[0]>breakRow[0]);
+        var facts=passed.end().facts();assertEquals(1,facts.get("competition.phase"));
+        assertEquals(0,facts.get("competition.p1.timerPaused"));assertEquals(0,facts.get("competition.p2.timerPaused"));
+        assertEquals(1,facts.get("competition."+(content==2?"p2":"p1")+".monitors"));
+        if(content==1)assertEquals(4,facts.get("competition.p1.lives"));
+        if(content==2)assertEquals(4,facts.get("competition.p2.lives"));
+        if(content==8)assertTrue(passed.end().p2().orElseThrow().centreX()-passed.end().p1().centreX()>500);
+        System.out.printf("QMARK %s breakRow=%d initRow=%d initLfc=%d rows=%d%n",name,breakRow[0],initRow[0],lfc[0],route.tape().size());
+    }
 }

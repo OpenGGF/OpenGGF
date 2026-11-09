@@ -32,6 +32,19 @@ class TestGoalFactCounter {
   assertInstanceOf(ReplayResult.Failed.class,new RouteReplay(hosts(false,true)).replay(solved.route().withChecks(goals(1001)),Cancellation.NONE));
  }
 
+ @Test void neutralWaitCountsRowsAcrossLegsAndReplaysItsDuration() throws Exception {
+  var goals=GoalProgram.of(Guard.NONE,Leg.of("first",new RouteGoal.Wait(7),8),
+      new Leg("display",new RouteGoal.Wait(360),Guard.NONE.holding(new SamplePredicate.FactEquals("mode",1)),361));
+  assertEquals(goals,RouteCodec.parseGoals(RouteCodec.formatGoals(goals)));
+  var result=new RoutePlanner(hosts(false)).plan(new RouteTask.Author(SyntheticRouteWorlds.launch(),InputTape.empty(),goals,
+      new SearchBudget(4,500,4,0)),Cancellation.NONE);
+  var solved=assertInstanceOf(PlanResult.Solved.class,result,result.toString());
+  assertEquals(367,solved.route().tape().size());
+  assertTrue(solved.route().tape().rows().stream().allMatch(PadRow.NEUTRAL::equals));
+  var longer=GoalProgram.of(Guard.NONE,Leg.of("longer",new RouteGoal.Wait(368),369));
+  assertInstanceOf(ReplayResult.Failed.class,new RouteReplay(hosts(false)).replay(solved.route().withChecks(longer),Cancellation.NONE));
+ }
+
  static class LockedWorld extends World {
   LockedWorld(){super(false,false);}
   @Override public RecordedStep step(PadRow row){

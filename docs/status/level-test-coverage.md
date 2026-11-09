@@ -1,5 +1,10 @@
 # Level test coverage backlog
 
+S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
+exercise P1 breaking for all eight outcomes and hold the award for six seconds.
+The [bounded matrix](../architecture/plans/2026-11-07-s2-competition-parity.md#question-mark-monitor-outcomes-2026-11-09)
+records engine/native evidence and inherited gaps. This certifies no new act.
+
 S2 EHZ simultaneous jump release (2026-11-09): the
 [bounded investigation](../architecture/plans/2026-11-07-s2-competition-parity.md#simultaneous-ehz-jump-release-2026-11-09)
 adds a cold-ROM two-human spiral-jump prefix and independent-rider unit coverage.

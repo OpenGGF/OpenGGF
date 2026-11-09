@@ -578,3 +578,11 @@ never preserved.
 - Next-line Mod API and multiplayer contracts: [subsystem reference](../architecture/next-line-subsystems.md),
   [creator handbook](../modding/index.md), and
   [API compatibility](../architecture/mod-api-compatibility.md).
+
+- [Competition monitor route probe](../../tools/stageplay/S2CompetitionMonitorRouteProbe.java):
+  replay-only per-row content/init/award/lives/rings/position CSV from a frozen
+  manifest. Run with Java 25 and `-cp target/classes:<engine-dependencies-jar>`
+  followed by the source path, manifest, S2 ROM and new CSV path. The classes
+  directory supplies the compiler plugin provider when using Java source launch.
+  Native confirmation uses the [question-mark validator](../../tools/bizhawk/check_s2_qmark_goals.py).
+  Origin: eight EHZ question-mark outcomes, 2026-11-09.

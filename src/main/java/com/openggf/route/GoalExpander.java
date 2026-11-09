@@ -74,6 +74,12 @@ final class GoalExpander implements PrefixSearch.Expander {
         if (node.rows - state.legStart() >= leg.maxRows()) return null;
         search.materialize(node);
         search.ensureCheckpoint(node);
+        if (leg.goal() instanceof RouteGoal.Wait wait) {
+            PrefixSearch.Node child = trial(search, node, state, leg,
+                    (t, now, previous) -> PadRow.NEUTRAL, wait.rows());
+            if (child != null) search.push(frontier, child);
+            return null;
+        }
         // A production control lock is an observation, not an invitation to
         // navigate. Author neutral input until it releases, preserving button
         // edges when native movie export inserts unsupported physical waits.
@@ -96,6 +102,17 @@ final class GoalExpander implements PrefixSearch.Expander {
         int horizon = encounter ? ENCOUNTER_HORIZON : HORIZON;
         var families = new ArrayList<Policy>();
         for (int hold : HOLDS) families.add(steer(leg, hold, hold));
+        // Bounded approach delays let observed clock predicates choose an input seam.
+        // They are native neutral rows, never a fitted counter or gameplay-state write.
+        if (leg.goal() instanceof RouteGoal.Achieve a && a.condition() instanceof SamplePredicate.All all
+                && all.clauses().stream().anyMatch(p -> p instanceof SamplePredicate.FactEquals)) {
+            for (int delay = 1; delay <= 7; delay++) for (int hold : HOLDS) {
+                int waitRows = delay;
+                Policy travel = steer(leg, hold, hold);
+                families.add((t, now, previous) -> t < waitRows ? PadRow.NEUTRAL
+                        : travel.row(t - waitRows, now, previous));
+            }
+        }
         if (players(leg).size() > 1) {
             for (int h1 : HOLDS) for (int h2 : HOLDS)
                 if (h1 != h2) families.add(steer(leg, h1, h2));
@@ -171,7 +188,8 @@ final class GoalExpander implements PrefixSearch.Expander {
             end = now;
             hurt |= players(leg).stream().anyMatch(slot ->
                     (slot != PlayerSlot.P2 || now.p2().isPresent()) && now.player(slot).hurt());
-            if (achieved(leg, previous, now)) {
+            if (leg.goal() instanceof RouteGoal.Wait wait
+                    ? node.rows + t + 1 - state.legStart() >= wait.rows() : achieved(leg, previous, now)) {
                 completedAt = t;
                 commitSample = now;
                 break;
@@ -206,6 +224,7 @@ final class GoalExpander implements PrefixSearch.Expander {
     private static boolean achieved(Leg leg, RouteSample previous, RouteSample now) {
         return switch (leg.goal()) {
             case RouteGoal.Achieve achieve -> achieve.condition().test(now);
+            case RouteGoal.Wait ignored -> false; // elapsed rows are evaluated by the trial
             case RouteGoal.EnterBoundary ignored -> now.epoch() != previous.epoch();
         };
     }

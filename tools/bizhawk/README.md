@@ -277,3 +277,22 @@ Tiebreaker start additionally requires native `SpecialStage_Started` ($DB23) and
 initialized SonicSS/TailsSS actors ($09/$10, routine at least2), alongside mode,
 ledger, stage, zone and results flags. The mode switch during a black load is not
 sufficient. This is the same REV01 flag owner used by the canonical SS recorder.
+
+### Question-mark monitor outcome captures
+
+`capture_every_frame.lua` now records `monitors.csv` alongside every original
+framebuffer PNG and `frames.csv`. It reads Obj2E content/parent/routine, the first
+EHZ monitor shell, player power flags, lives, rings, timers and monitor banks.
+It sets read-only movie playback. The common host also selects the native
+`MovieEndAction.Finish` policy: the installed user's `Record` policy otherwise
+extends movies even after `movie.setreadonly(true)`. The host rejects any movie
+hash change during capture. No controller or RAM writes are used.
+
+For each frozen `ehz-qmark-<content>` route, export its anchored BK2 with
+`RouteFiles.exportBk2`, observe the shell break in a preliminary cold RAM pass,
+then capture with `return {last=<break native frame + 400>}`. Validate with
+`python3 tools/bizhawk/check_s2_qmark_goals.py --capture DIR --movie FILE.bk2
+--content N --out VERDICT.json`, then use `RouteNativeStampTool` as above.
+The named stamp proves the observed content, award, break before native level
+lag and at least four seconds after the award. It does not certify full pixel
+parity, other monitors, P2 breaking, act finishes or held rewind.

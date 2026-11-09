@@ -113,6 +113,9 @@ def run_capture(args, parser, *, plan_text=None, environment_aliases=None, entry
                 "DisplayInput", "DisplayRerecordCount", "DisplayMessages", "DisplayRamWatch",
                 "DisplaySubtitles"):
         config[key] = False
+    # MovieEndAction.Record overrides read-only playback at EOF in BizHawk 2.11.
+    # Finish keeps the frozen input immutable while a neutral observation tail runs.
+    config.setdefault("Movies", {})["MovieEndAction"] = 3
     config["RunLuaDuringTurbo"] = True
     for entry in config["PathEntries"]["Paths"]:
         path = home / "Firmware" if entry["Type"] == "Firmware" else output / "runtime" / entry["System"] / entry["Type"].replace(" ", "_")
@@ -173,6 +176,9 @@ def run_capture(args, parser, *, plan_text=None, environment_aliases=None, entry
     except OSError as error:
         receipt["launch_error"] = str(error)
         failures.append("launch-error")
+    receipt["bk2_sha256_after"] = digest(movie)
+    if receipt["bk2_sha256_after"] != receipt["bk2_sha256"]:
+        failures.append("movie-mutated-during-capture")
     # BizHawk can exit zero after a Lua assertion. The process exit alone is not
     # evidence that the exporter ran; observed script exceptions must fail closed.
     log_text = (output / "launch.log").read_text(errors="replace")

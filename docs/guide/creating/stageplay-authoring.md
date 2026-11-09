@@ -560,3 +560,17 @@ export controls are disabled, with the full reason in hover/Details; the anchor
 form preserves blockers. The frozen CNZ routes remain provisional pending lane
 F's production pause handoff correction and subsequent planner repair/native
 confirmation. These editor controls do not certify native success.
+
+### Neutral route observation holds
+
+A native goal leg may use `"goal":{"kind":"wait","rows":360}`. The planner
+supplies neutral input on both pads for that many rows and enforces the leg guard;
+replay verifies the duration. Frozen-route acceptance can also assert that the saved
+rows are neutral. This starts the hold relative to the preceding observed goal,
+without targeting an absolute timer value. `maxRows` must admit the full hold.
+S2 Competition exposes `competition.monitor.content`, `.initFrame`, `.breaker`
+and `.spawned` from the actual Obj2E owner, plus `competition.levelFrame` and
+`.levelPhase`. The player `.shield`, `.speedShoes`, `.invincibility`, `.routine`,
+`.monitors`, `.rings` and `.lives` facts can assert the award before the hold.
+The eight `routes/s2/competition/ehz-qmark-*` fixtures share a cold-title approach;
+P1 breaks the first EHZ monitor, while P2 remains near the start.

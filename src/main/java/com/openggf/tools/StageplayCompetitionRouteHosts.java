@@ -151,6 +151,9 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
                     facts.put("competition.p"+(slot+1)+".time",Math.toIntExact(state.playerState(slot).getTimerFrames()));
                     if(state.player(slot)!=null) {
                         facts.put("competition.p"+(slot+1)+".objectControlled",state.player(slot).isObjectControlled()?1:0);
+                        facts.put("competition.p"+(slot+1)+".shield",state.player(slot).hasShield()?1:0);
+                        facts.put("competition.p"+(slot+1)+".speedShoes",state.player(slot).hasSpeedShoes()?1:0);
+                        facts.put("competition.p"+(slot+1)+".invincibility",state.player(slot).getInvincibleFrames()>0?1:0);
                         facts.put("competition.p"+(slot+1)+".dead",state.player(slot).getDead()?1:0);
                         facts.put("competition.p"+(slot+1)+".cameraX",state.camera(slot).getX()&65535);
                         facts.put("competition.p"+(slot+1)+".cameraY",state.camera(slot).getY()&65535);
@@ -167,6 +170,21 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
                 facts.put("competition.firstFinisher", state.firstFinisher());
                 facts.put("competition.specialStage", state.specialStageIndex());
                 if (state.player(0) != null) { p1 = state.player(0); p2 = state.player(1); }
+            }
+            facts.put("competition.levelFrame", lm.getFrameCounter());
+            facts.put("competition.levelPhase", lm.getFrameCounter() & 7);
+            if (context.getObjectManager() != null) {
+                for (var icon : context.getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic2.competition.Sonic2CompetitionMonitorContents.class)) {
+                    if (!icon.isDestroyed()) {
+                        facts.put("competition.monitor.spawned", 1);
+                    }
+                    if (!icon.isDestroyed() && icon.initializedContent() != 0) {
+                        facts.put("competition.monitor.content", icon.initializedContent());
+                        facts.put("competition.monitor.initFrame", icon.initializationFrame());
+                        facts.put("competition.monitor.breaker", icon.breakerSlot() + 1);
+                    }
+                }
             }
             var observed = new ArrayList<ObjectView>();
             var interactions = new ArrayList<InteractionView>();

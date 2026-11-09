@@ -635,3 +635,88 @@ The task selection waited 321 seconds in queue and ran for 1 minute 6 seconds;
 the baseline guard waited 56 seconds. User wait was zero. Search and other task
 wall time were not fully instrumented. All owned search/native jobs have ended;
 no native-qualified simultaneous route or new act-2 inlet is claimed.
+
+
+## Question-mark monitor outcomes (2026-11-09)
+
+Bounded implementation branch: `feature/ai-s2-competition-qmark-routes`, based on
+`origin/feature/ai-s2-competition-presentation-parity` at `4bee178afb`.
+Eight planner-authored cold-title EHZ1 routes share the first 1512 rows. P1
+collects rings and settles beside the first monitor at (960,566); P2 stays near
+(64,661). The planner searches native-button approaches, jumps and bounded neutral
+delays against the actual icon content fact. Obj2E_Init samples the live level
+counter; no native samples, clock writes, fitted offsets or hand-authored tape
+rows enter planning. Each programme asserts both selected content and applied
+award, then holds both pads neutral for 360 rows. Teleport starts with the humans
+roughly 900 pixels apart; Robotnik has rings available to hurt instead of kill.
+
+The host exposes copied Obj2E content, initialization counter and stable breaker
+slot, plus player power flags. A typed `wait` goal counts rows from its leg start;
+search supplies neutral input and linear replay verifies duration and guards.
+Frozen acceptance additionally asserts every one of the final 360 rows is neutral.
+Native exports retain the existing EHZ witness (1329 native rows) and the observed
+production first-ordinary-Level/LFC0 anchor (1261 engine rows).
+
+Read-only BizHawk 2.11/GPGX observations use the original REV01 ROM, software GL,
+xvfb and `EGL_PLATFORM=x11` with WAYLAND_DISPLAY unset. Each final per-frame capture
+uses `capture_every_frame.lua` with exactly `last=breakFrame+400`. Raw 320x448
+framebuffers, `frames.csv`, `monitors.csv`, receipts, movies and verdicts live under
+`~/Videos/OGGF/s2-competition/qmark/`, outside Git. `check_s2_qmark_goals.py`
+checks the selected phase, named award owner, racing timer flags/default options,
+pre-lag break and four-second post-award window; `RouteNativeStampTool` binds the
+result to the exact regenerated anchored movie. The stamp lists these bounded
+observations; it does not certify full pixel/state parity or an entire act.
+
+Rejected capture setup: inheriting installed `MovieEndAction.Record` extended the
+movie at EOF, including with `movie.setreadonly(true)`. Those owned preliminary
+outputs were discarded and movies regenerated from frozen planner routes. The
+common host now sets `MovieEndAction.Finish`, checks the movie hash after exit and
+fails on mutation. The new negative control covers this failure. No source rows
+were edited to compensate for native lag or a differing outcome.
+
+Inherited gaps remain: P2 breaking, other monitors/acts, finish-time teleport
+fallback, route width/configuration breadth, held rewind, and progressive
+engine/native pixel acceptance. Existing act/results/tiebreaker fixture gaps are
+unchanged. This work adds no gameplay algorithm or new act certification.
+
+All eight native verdicts passed, with no ordinary-Level lag in any capture.
+Engine rows below are zero-based; native frames are completed physical frames.
+
+| Content | Route stem | Break engine row | Break native frame | Init LFC | Native capture directory |
+| --- | --- | ---: | ---: | ---: | --- |
+| sonic-1up | `ehz-qmark-sonic-1up` | 1547 | 1616 | 288 | `qmark/native-sonic-1up/` |
+| tails-1up | `ehz-qmark-tails-1up` | 1588 | 1657 | 329 | `qmark/native-tails-1up/` |
+| robotnik | `ehz-qmark-robotnik` | 1589 | 1658 | 330 | `qmark/native-robotnik/` |
+| super-ring | `ehz-qmark-super-ring` | 1590 | 1659 | 331 | `qmark/native-super-ring/` |
+| speed-shoes | `ehz-qmark-speed-shoes` | 1599 | 1668 | 340 | `qmark/native-speed-shoes/` |
+| shield | `ehz-qmark-shield` | 1592 | 1661 | 333 | `qmark/native-shield/` |
+| invincibility | `ehz-qmark-invincibility` | 1593 | 1662 | 334 | `qmark/native-invincibility/` |
+| teleport | `ehz-qmark-teleport` | 1594 | 1663 | 335 | `qmark/native-teleport/` |
+
+All breakers are P1. Every route has a matching `.route.json` and `.script` under
+`src/test/resources/routes/s2/competition/`; capture directories are relative to
+`~/Videos/OGGF/s2-competition/`. Engine replay independently checks the break rows.
+Native image review sampled each icon and award, including the late teleport swap.
+
+Validation on the delivery source tree (base `4bee178afb`): **90 tests across 19
+classes, zero failures/errors/skips**. The eight frozen route invocations
+independently reported exactly the engine break/init rows above. The command was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=TestCommittedRoutesQualifiedGuard,TestExactResyncRepair,TestGoalExpander,TestGoalFactCounter,TestGoalNativeCharge,TestInputScriptCompiler,TestParticipantReferenceRepair,TestPrefixSearch,TestQualificationCoverage,TestRouteFiles,TestRouteNativeAnchors,TestRouteReplayChecks,TestRouteSurfaceGuard,TestRouteTapeCodec,TestStageplayCompetitionEhzFrozenRoutes,TestRouteTapeWorkspace,TestRouteTapeModel,TestRouteTapeJob,TestCompetitionRouteConversion test
+```
+
+This includes the complete `com.openggf.route` test package, the EHZ frozen-route
+class and four affected editor classes. Java 25; queued wrapper; verified S2 ROM
+found; DISPLAY and WAYLAND_DISPLAY unset. This was a bounded focused run, not a
+full-suite or category run (the focused wrapper emits BUILD SUCCESS, no category
+VERDICT line). Queue wait was 476 seconds; Maven execution was 111 seconds. User
+wait was zero; no unclassified validation interval is claimed. Python capture
+host tests: 13 passed; question-mark validator negative controls: 3 passed. Lua
+load, Python compile, staged disassembly citation guard and diff whitespace checks
+passed. New local documentation links resolve; seven inherited links require the
+optional TraceChaser submodule and were not changed.
+
+Delivery retains the isolated branch/worktree for the lead; no destination merge
+or PR creation is part of this implementation handoff. Native evidence is named
+goal coverage, with sampled human image inspection, rather than full pixel parity.
