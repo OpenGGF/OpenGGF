@@ -16,6 +16,16 @@ class TestSonic2NativeMailboxMusicRoutes {
     private final Sonic2AudioProfile profile = new Sonic2AudioProfile();
 
     @Test
+    void translatesEngineMusicAndPreservesCommandsAndUnknownIds() {
+        for (Sonic2Music music : Sonic2Music.values()) {
+            assertEquals(music.nativeId, profile.nativeRequestForMusic(music.id));
+        }
+        for (int id : new int[] {0, 0xA0, 0xE0, 0xF8, 0xF9, 0xFA, 0xFD, 0xFE, 0xFF}) {
+            assertEquals(id, profile.nativeRequestForMusic(id));
+        }
+    }
+
+    @Test
     void translatesRetailRequestsWithoutChangingExistingEngineMusicIds() {
         NativeMailboxMusicRoutes routes = assertInstanceOf(NativeMailboxMusicRoutes.class, profile);
         assertEquals(0x89, Sonic2Music.OPTIONS.id);

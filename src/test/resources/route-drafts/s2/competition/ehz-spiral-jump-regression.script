@@ -1,0 +1,135 @@
+# Route rows for ehz-spiral-jump-regression.route.json; launch, identity and checks live there.
+900 -
+1 D
+49 -
+1 S
+199 -
+1 S
+139 -
+1 R / R
+2 D / D
+1 D+A / D+A
+21 D / D
+2 R / R
+75 -
+1 - / R
+14 R / R
+11 - / R
+18 -
+5 L
+1 L+A / A
+16 L+A / L+A
+14 R / R
+15 D+R / R
+15 R / R
+4 - / R
+12 A / R
+1 - / R
+30 R / R
+4 R / D+R
+12 - / D+R
+1 D / D+R
+12 D+R / D+R
+1 R / R
+6 R+A / R+A
+18 R+A / R
+16 R / R
+2 R
+18 R / R
+11 R / R+A
+5 R+A / R+A
+3 R+A / A
+5 R+A / R+A
+5 R+A / R
+22 R / R
+14 R
+6 -
+1 A
+1 R+A / A
+10 R+A / R+A
+1 R / R+A
+34 R / R
+1 - / R
+6 -
+1 A
+1 A / R
+1 A
+1 A / R
+1 A
+1 A / R
+1 -
+1 R / R
+1 R
+1 R / R
+1 R
+1 R / R
+1 R
+7 R / R
+1 R
+1 R / R
+1 R
+1 R / R
+1 R
+1 R / R
+1 R
+1 R / R
+1 R
+1 R / R
+1 R
+1 R / R
+1 R
+1 R / R
+1 R
+1 R / R
+1 R
+1 R / R
+3 R
+21 -
+1 - / R
+9 R / R
+1 - / R
+2 R / R
+1 - / R
+1 R
+1 - / R
+1 R / R
+1 -
+1 R / R
+1 -
+1 R / R
+1 -
+1 R / R
+1 L
+1 L / R
+1 L
+1 L / R
+12 L / L
+24 -
+5 R
+9 R / R
+2 - / R
+30 -
+1 D
+3 D+R
+1 D+R / D
+1 D+R / D+R
+4 D / D+R
+10 D / D
+22 -
+2 R
+122 R / R
+2 - / R
+19 -
+3 R
+1 D+R / D
+3 R / D+R
+6 D+R / D+R
+1 R / R
+5 R+A / R
+1 R+A
+17 R
+45 R / R
+4 - / R
+11 L / R
+8 R / R
+4 R+A / R

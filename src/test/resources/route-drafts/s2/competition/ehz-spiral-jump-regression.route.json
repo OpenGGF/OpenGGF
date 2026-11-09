@@ -1,0 +1,38 @@
+{
+  "format" : "openggf-route/1",
+  "draft" : true,
+  "launch" : {
+    "rom" : {
+      "game" : "s2",
+      "crc32" : "7B905383",
+      "sha1" : "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9"
+    },
+    "inlet" : {
+      "kind" : "title"
+    },
+    "roster" : {
+      "main" : "sonic",
+      "sidekick" : "tails"
+    },
+    "width" : 320,
+    "donor" : "off",
+    "initial" : {
+      "vIntStart" : 0
+    }
+  },
+  "tape" : {
+    "script" : "ehz-spiral-jump-regression.script",
+    "rows" : 2231,
+    "sha256" : "4029a51534b4cf29e0c3b0c65e081eb9ee911e696b421a2b04cdf884059fe260"
+  },
+  "provenance" : {
+    "producer" : "simultaneous final.route prefix",
+    "engine" : "regression",
+    "source" : "Planner-authored cold title input; no native qualification claimed",
+    "notes" : [ ]
+  },
+  "qualification" : [ ],
+  "native" : {
+    "lag" : [ ]
+  }
+}

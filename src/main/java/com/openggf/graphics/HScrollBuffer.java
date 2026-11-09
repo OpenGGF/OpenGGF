@@ -16,7 +16,8 @@ import static org.lwjgl.opengl.GL30.GL_R32F;
  * Emulates Mega Drive VDP HScroll RAM by storing per-line scroll values
  * in a 1D texture that the parallax shader samples.
  *
- * The texture stores 224 entries (one per visible scanline), with each
+ * The texture stores one entry per logical row (normally 224, or 448 for
+ * progressive double-height presentation), with each
  * entry containing the background X scroll offset normalized to -1..1.
  *
  * IMPORTANT: Uses R32F format (32-bit float) instead of R16F because:
@@ -31,7 +32,13 @@ public final class HScrollBuffer {
     public static final int VISIBLE_LINES = 224;
 
     private int textureId = -1;
-    private final float[] scrollData = new float[VISIBLE_LINES];
+    private float[] scrollData = new float[VISIBLE_LINES];
+    private int allocatedLines = VISIBLE_LINES;
+    public int lineCount() { return scrollData.length; }
+    private void selectLines(int requested) {
+        int lines = requested == 448 ? 448 : VISIBLE_LINES;
+        if (scrollData.length != lines) scrollData = new float[lines];
+    }
     private final boolean foregroundWord;
     private boolean initialized = false;
     // Persistent native staging buffer, reused across frames (BG HScroll uploads
@@ -56,6 +63,7 @@ public final class HScrollBuffer {
             return;
         }
 
+        allocatedLines = VISIBLE_LINES;
         textureId = glGenTextures();
 
         glBindTexture(GL_TEXTURE_1D, textureId);
@@ -100,7 +108,8 @@ public final class HScrollBuffer {
     }
 
     void stageForUpload(int[] hScroll) {
-        for (int i = 0; i < VISIBLE_LINES; i++) {
+        selectLines(hScroll.length);
+        for (int i = 0; i < scrollData.length; i++) {
             scrollData[i] = normalize(i < hScroll.length ? hScroll[i] : 0);
         }
     }
@@ -117,19 +126,24 @@ public final class HScrollBuffer {
     }
 
     private void uploadStagedData() {
-        if (uploadBuffer == null) {
-            uploadBuffer = MemoryUtil.memAllocFloat(VISIBLE_LINES);
+        if (uploadBuffer == null || uploadBuffer.capacity() < scrollData.length) {
+            if (uploadBuffer != null) MemoryUtil.memFree(uploadBuffer);
+            uploadBuffer = MemoryUtil.memAllocFloat(scrollData.length);
         }
         uploadBuffer.clear();
         uploadBuffer.put(scrollData);
         uploadBuffer.flip();
 
         glBindTexture(GL_TEXTURE_1D, textureId);
+        if (allocatedLines != scrollData.length) {
+            glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, scrollData.length, 0, GL_RED, GL_FLOAT, (FloatBuffer) null);
+            allocatedLines = scrollData.length;
+        }
         glTexSubImage1D(
                 GL_TEXTURE_1D,
                 0,
                 0,
-                VISIBLE_LINES,
+                scrollData.length,
                 GL_RED,
                 GL_FLOAT,
                 uploadBuffer);
@@ -141,7 +155,8 @@ public final class HScrollBuffer {
         if (!initialized || hScroll == null) {
             return;
         }
-        for (int i = 0; i < VISIBLE_LINES; i++) {
+        selectLines(hScroll.size());
+        for (int i = 0; i < scrollData.length; i++) {
             int packed = i < hScroll.size() ? hScroll.get(i) : 0;
             scrollData[i] = normalize(packed);
         }

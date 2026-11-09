@@ -85,8 +85,10 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         installDisplayArtOwners();
         initializeDisplay();
     }
-    void initializeHudArt() throws IOException {
+    void initializeTitleArt() throws IOException {
         Sonic2CompetitionTitleCardDisplay.initializeArt(host.rom(), host.profile().romZone(), nativeVramOwner());
+    }
+    void initializeHudArt() throws IOException {
         hudArt = new Sonic2CompetitionHudArt(host.rom(), nativeVramOwner());
         hudArt.initialize(
                 host.session().gameState(0).getLives(), host.session().gameState(1).getLives());
@@ -123,7 +125,6 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         scroll.initialize(host.profile(), session);
         // Level's initial deformation precedes its explicit FG/H-scroll clears,
         // loaded block-map writes and initial BG draw (s2.asm:4930-4941).
-        scroll.completeCameraPass(session, host.initialVintRunCount());
         scroll.owner().clearInitialDisplayScroll();
         var planes = new Sonic2CompetitionPlanes();
         planeScroll.initializeLevel(planeScroll.capture(), session.camera(0).getX(), session.camera(0).getY(),
@@ -143,16 +144,14 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
                     com.openggf.data.RomByteReader.fromRom(host.rom())));
             videoFrame = new Sonic2CompetitionVideoFrame(nativeVramOwner(), planeScroll, planes, draw,
                     pages, registers, this::displaySample);
+            videoFrame.bindTitleOnly(host::titleOnly);
             videoFrame.bindCameraCopies(scroll.owner()::copyBackgroundsAtVInt);
             videoFrame.bindSpriteSource(com.openggf.data.RomByteReader.fromRom(host.rom()));
             var titlePlanes = new Sonic2CompetitionTitleCardPlanes(nativeTitle, planes, draw, planeScroll);
             var titleSprites = new Sonic2CompetitionTitleCardDisplay(nativeTitle,
                     com.openggf.data.RomByteReader.fromRom(host.rom()));
             videoFrame.setTitleCardPlanes(titlePlanes::serviceVBlank);
-            videoFrame.setTitleCardSprites(() -> {
-                titlePlanes.initializeOmittedArrival();
-                return titleSprites.admissions();
-            });
+            videoFrame.setTitleCardSprites(titleSprites::admissions);
             videoFrame.setHudPatterns(()->hudArt.update(session.gameState(0).getLives(),
                     session.gameState(1).getLives(),videoFrame.displayState().gamePaused()));
             videoFrame.bindDisplayState(new Sonic2CompetitionDisplayState() {
@@ -167,6 +166,23 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
                 registry.deregister(owner.key()); registry.register(owner);
             }
         } catch (IOException failure) { throw new java.io.UncheckedIOException(failure); }
+    }
+    void prepareLevelBehindTitle() {
+        // Level_TtlCard (s2.asm:4929-4941): deformation reads the clock after
+        // arrival, not the earlier clock at which the engine decoded terrain.
+        scroll.completeCameraPass(host.session(), host.context().getObjectManager().getVblaCounter());
+        scroll.owner().clearInitialDisplayScroll();
+    }
+    void clearArrivalPlanes() {
+        // ClearScreen precedes Obj34; terrain is revealed only by its own row requests.
+        for (var plane : Sonic2CompetitionPlanes.PlaneId.values())
+            for (int row=0;row<32;row++) for (int col=0;col<64;col++) videoFrame.planes().write(plane,col,row,0);
+    }
+    void prepareBackgroundBehindTitle() {
+        var background = scroll.owner().view(0).background();
+        videoFrame.planes().apply(new Sonic2CompetitionPlaneDraw(host.nativeArt().workRamBytes())
+                .initialBackground(host.profile().romZone(), new Sonic2CompetitionPlaneDraw.CameraCopy(
+                        background.x() >>> 16, background.y() >>> 16)));
     }
     private Sonic2CompetitionVideoFrame.Sample displaySample() {
         var first = scroll.owner().view(0); var second = scroll.owner().view(1);

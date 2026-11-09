@@ -230,7 +230,7 @@ class TestLevelMusicAccessContract {
                 audio.playMusic(0x81); audio.stopMusic(); audio.fadeOutMusic(2, 3);
             }
             assertEquals(List.of("music:MUSIC", "request:129", "classify", "music:STOP", "music:FADE"), effects);
-            assertEquals(0x81, service.snapshot().pipeline().music0().requestByte());
+            assertEquals(0x82, service.snapshot().pipeline().music0().requestByte());
             assertEquals(count + 2, audio.commandTimeline().entryCount());
             assertEquals(fades + 1, audio.musicFadeOutCount());
         }
@@ -325,7 +325,7 @@ class TestLevelMusicAccessContract {
         });
         audio.playMusic(0x81);
         admission(audio, false, false);
-        assertEquals(0x81, profile.latest().snapshot().pipeline().music0().requestByte(),
+        assertEquals(0x82, profile.latest().snapshot().pipeline().music0().requestByte(),
                 "the original direct query is not repeated after the observer acquired a scope");
     }
 

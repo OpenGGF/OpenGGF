@@ -4,6 +4,8 @@ import static com.openggf.stageplay.StageplayDocument.*;
 import static com.openggf.stageplay.route.StageplayRouteResult.Status.*;
 
 import com.openggf.route.Cancellation;
+import com.openggf.route.RouteArtifact;
+
 import com.openggf.route.GoalProgram;
 import com.openggf.route.Guard;
 import com.openggf.route.InitialState;
@@ -54,6 +56,12 @@ public final class StageplayRoutePlanner {
             BooleanSupplier cancelled, PlanProgress.Listener progress) {
         return new RoutePlanner(hosts).plan(new RouteTask.Author(launch, prefix, goals, budget),
                 cancelled::getAsBoolean, progress);
+    }
+
+    /** Preserved-traversal repair remains owned and cold-qualified by the shared route core. */
+    public static PlanResult retimeNativeLocks(com.openggf.route.RouteWorldFactory hosts,
+            RouteArtifact source, int maxLockRows, BooleanSupplier cancelled) {
+        return new RoutePlanner(hosts).retimeLocks(source,maxLockRows,cancelled::getAsBoolean);
     }
 
     /** Repair through the existing source-preserving search; the reference is engine-only scoring data. */

@@ -20,6 +20,7 @@ public class ParallaxShaderProgram extends ShaderProgram {
     private int parallaxPaletteLocation = -1;
 
     // Scroll and dimension uniforms
+    private int logicalHeightLocation = -1;
     private int screenHeightLocation = -1;
     private int screenWidthLocation = -1;
     private int vScrollBGLocation = -1;
@@ -73,6 +74,7 @@ public class ParallaxShaderProgram extends ShaderProgram {
 
         // Scroll and dimensions
         screenHeightLocation = glGetUniformLocation(programId, "ScreenHeight");
+        logicalHeightLocation = glGetUniformLocation(programId, "LogicalHeight");
         screenWidthLocation = glGetUniformLocation(programId, "ScreenWidth");
         vScrollBGLocation = glGetUniformLocation(programId, "VScrollBG");
         bgTextureWidthLocation = glGetUniformLocation(programId, "BGTextureWidth");
@@ -126,6 +128,10 @@ public class ParallaxShaderProgram extends ShaderProgram {
     }
 
     // Dimension and scroll setters
+    void setLogicalHeight(int height) {
+        if (logicalHeightLocation >= 0) glUniform1f(logicalHeightLocation, height);
+    }
+
     public void setScreenDimensions(float width, float height) {
         if (screenWidthLocation >= 0) {
             glUniform1f(screenWidthLocation, width);

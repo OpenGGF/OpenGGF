@@ -23,7 +23,7 @@ class CaptureTest(unittest.TestCase):
         (self.home / 'dll').mkdir(parents=True)
         for name in ('EmuHawk.exe', 'dll/BizHawk.Client.Common.dll', 'dll/gpgx.wbx.zst'):
             (self.home / name).write_bytes(name.encode())
-        (self.home / 'config.ini').write_text(json.dumps({'PathEntries': {'Paths': [
+        (self.home / 'config.ini').write_text(json.dumps({'Movies': {'MovieEndAction': 2}, 'PathEntries': {'Paths': [
             {'System': 'GEN', 'Type': 'Save States', 'Path': 'old'},
             {'System': 'Global', 'Type': 'Firmware', 'Path': 'old'}]}}))
         self.rom = self.root / 'source.rom'
@@ -39,10 +39,11 @@ class CaptureTest(unittest.TestCase):
                      '--rom-sha1', capture.digest(self.rom, 'sha1'), '--movie', str(self.movie),
                      '--exporter', str(self.exporter), '--plan', str(self.plan), '--output', str(self.output)]
 
-    def launch(self, log='', returncode=0, timeout=False, extra=()):
+    def launch(self, log='', returncode=0, timeout=False, extra=(), mutate=False):
         def run(command, **kwargs):
             self.command, self.env = command, kwargs['env']
             kwargs['stdout'].write(log)
+            if mutate: self.movie.write_bytes(b'changed input')
             if timeout:
                 raise subprocess.TimeoutExpired(command, 1)
             return subprocess.CompletedProcess(command, returncode)
@@ -51,6 +52,11 @@ class CaptureTest(unittest.TestCase):
                 patch.object(capture.subprocess, 'run', side_effect=run):
             code = capture.main(self.argv + list(extra))
         return code, json.loads((self.output / 'host.json').read_text())
+
+    def test_movie_mutation_fails_closed(self):
+        code, receipt = self.launch(mutate=True)
+        self.assertEqual(1, code)
+        self.assertIn('movie-mutated-during-capture', receipt['failures'])
 
     def test_explicit_plan_no_zone_defaults_and_source_config_untouched(self):
         before = (self.home / 'config.ini').read_bytes()
@@ -63,6 +69,7 @@ class CaptureTest(unittest.TestCase):
         self.assertEqual(before, (self.home / 'config.ini').read_bytes())
         self.assertEqual('pending-independent-pixel-and-state-review', receipt['acceptance'])
         self.assertFalse(json.loads((self.output / 'config.ini').read_text())['DisplayInput'])
+        self.assertEqual(3, json.loads((self.output / 'config.ini').read_text())['Movies']['MovieEndAction'])
 
     def test_lua_error_with_zero_emulator_exit_is_failure(self):
         code, receipt = self.launch('NLua.Exceptions.LuaScriptException: [string "main"]:5: assertion failed!\n')

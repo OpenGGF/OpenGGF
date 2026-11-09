@@ -53,6 +53,16 @@ class TestSonic2NativeDisplayGroups {
                     .buildPlayer1(input);
             assertEquals(List.of(new Visibility(40,false),new Visibility(42,true)),page.visibility());
             assertEquals(10,page.spriteCount(),"two native mask sprites plus eight child logs");
+            var progressive = Sonic2CompetitionFieldSprites.project(page);
+            assertEquals(page.entries().size(), progressive.size());
+            for (int index = 0; index < progressive.size(); index++) {
+                var nativeEntry = page.entries().get(index);
+                var piece = progressive.get(index);
+                assertEquals(nativeEntry.y(), piece.geometry().piece().y(), "native full-resolution Y");
+                assertEquals(nativeEntry.heightCells() * 16,
+                        piece.geometry().piece().heightTiles() * 8, "ROM 8x16 cell footprint");
+                assertEquals(nativeEntry.widthCells() * nativeEntry.heightCells() * 2, piece.fragments().size());
+            }
             var registry=new com.openggf.game.rewind.RewindRegistry();
             registry.register(manager.rewindSnapshottable());
             var saved=registry.capture();

@@ -493,6 +493,7 @@ public class BackgroundRenderer {
         // Set dimensions and scroll
         // BGTextureWidth = renderWidth (wrap period), FBOAllocationWidth = fboAllocWidth (UV mapping)
         parallaxShader.setScreenDimensions(realWidth, realHeight);
+        com.openggf.graphics.ParallaxShaderInternalAccess.setLogicalHeight(parallaxShader, hScrollBuffer.lineCount());
         parallaxShader.setActiveDisplayWidth((float) GameServices.configuration()
                 .getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
         parallaxShader.setBGTextureDimensions(renderWidth, renderHeight);

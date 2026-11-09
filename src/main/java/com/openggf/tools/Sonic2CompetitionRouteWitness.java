@@ -71,29 +71,34 @@ final class Sonic2CompetitionRouteWitness {
         facts.put("competition.flip.cachedCells",cached);
         var patterns=video.art().fields().live();
         RgbaImage image=null;
+        // Match Sonic2CompetitionViews: full native cell rows, doubled H-scroll samples.
         for(int player=0;player<2;player++) {
-            int top=player==0?0:108, bottom=player==0?108:224;
-            int vscroll=(player==0?state.foreground1():state.foreground2())>>1;
+            int top=player==0?0:216, bottom=player==0?216:448;
+            int vscroll=(player==0?state.foreground1():state.foreground2());
             var plane=video.planes().fieldPlane(player==0?state.upperPlane():Sonic2CompetitionPlanes.PlaneId.FOREGROUND_P2);
             for(int y=top;y<bottom;) {
-                int sy=y+vscroll, nextY=Math.min(bottom,y+8-(sy&7));
-                int horizontal=(short)(state.horizontal().get(y)>>>16);
+                int sy=y+vscroll, nextY=Math.min(bottom,y+16-(sy&15));
+                int horizontal=(short)(state.horizontal().get(y >> 1)>>>16);
                 for(int x=0;x<320;) {
                     int sx=x-horizontal, nextX=Math.min(320,x+8-(sx&7));
-                    int word=plane.descriptorAt(sx,sy), tile=word&0x3ff;
+                    int word=plane.descriptorAt(sx,sy), tile=(word&0x7ff) >> 1;
                     int script=scriptForCell(tile);
-                    // A complete field-projected cell must fit inside this view: a clipped border pixel
-                    // is not a useful authoring/capture witness.
-                    if(script>=0 && intermediate[script] && nextX-x==8 && nextY-y==8) {
+                    // A complete native 8x16 cell must fit inside the progressive view;
+                    // clipped borders and flat resident poses remain negative controls.
+                    if(script>=0 && intermediate[script] && nextX-x==8 && nextY-y==16) {
                         facts.put("competition.flip.planeVisible",1);
                         facts.put("competition.flip.candidateX",x);facts.put("competition.flip.candidateY",y);
-                        var pattern=patterns[word&0x7ff];
                         for(int py=y;py<nextY;py++) for(int px=x;px<nextX;px++) {
-                            int tx=(px-horizontal)&7, ty=(py+vscroll)&7;
-                            if((word&0x800)!=0) tx=7-tx;
-                            if((word&0x1000)!=0) ty=7-ty;
+                            int rowHorizontal=(short)(state.horizontal().get(py >> 1)>>>16);
+                            int sourceX=px-rowHorizontal, sourceY=py+vscroll;
+                            int rowWord=plane.descriptorAt(sourceX,sourceY);
+                            if (((rowWord & 0x7ff) >> 1) != tile) continue;
+                            var pattern=patterns[rowWord&0x7ff];
+                            int tx=sourceX&7, ty=sourceY&7;
+                            if((rowWord&0x800)!=0) tx=7-tx;
+                            if((rowWord&0x1000)!=0) ty=7-ty;
                             int color=pattern.getPixel(tx,ty)&15;if(color==0) continue;
-                            int palette=state.paletteWords().get(((word>>>13)&3)*16+color);
+                            int palette=state.paletteWords().get(((rowWord>>>13)&3)*16+color);
                             var graphics=GameServices.graphics();
                             int rgb=DisplayColorConverter.toPackedRgb((((palette>>>1)&7)*255+3)/7,
                                     (((palette>>>5)&7)*255+3)/7,(((palette>>>9)&7)*255+3)/7,

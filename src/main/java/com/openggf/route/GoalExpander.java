@@ -74,6 +74,21 @@ final class GoalExpander implements PrefixSearch.Expander {
         if (node.rows - state.legStart() >= leg.maxRows()) return null;
         search.materialize(node);
         search.ensureCheckpoint(node);
+        if (leg.goal() instanceof RouteGoal.Wait wait) {
+            PrefixSearch.Node child = trial(search, node, state, leg,
+                    (t, now, previous) -> PadRow.NEUTRAL, wait.rows());
+            if (child != null) search.push(frontier, child);
+            return null;
+        }
+        // A production control lock is an observation, not an invitation to
+        // navigate. Author neutral input until it releases, preserving button
+        // edges when native movie export inserts unsupported physical waits.
+        if (node.sample.facts().getOrDefault("input.locked", 0) != 0) {
+            PrefixSearch.Node child = trial(search, node, state, leg,
+                    (t, now, previous) -> PadRow.NEUTRAL, HORIZON);
+            if (child != null) search.push(frontier, child);
+            return null;
+        }
         // A guarded, fact-only menu observation is a bounded neutral trial, not
         // a request to navigate. Keep its complete observed hold if it succeeds;
         // menu hosts may deliberately refuse checkpoints outside gameplay.
@@ -87,9 +102,31 @@ final class GoalExpander implements PrefixSearch.Expander {
         int horizon = encounter ? ENCOUNTER_HORIZON : HORIZON;
         var families = new ArrayList<Policy>();
         for (int hold : HOLDS) families.add(steer(leg, hold, hold));
+        // Bounded approach delays let observed clock predicates choose an input seam.
+        // They are native neutral rows, never a fitted counter or gameplay-state write.
+        if (leg.goal() instanceof RouteGoal.Achieve a && a.condition() instanceof SamplePredicate.All all
+                && all.clauses().stream().anyMatch(p -> p instanceof SamplePredicate.FactEquals)) {
+            for (int delay = 1; delay <= 7; delay++) for (int hold : HOLDS) {
+                int waitRows = delay;
+                Policy travel = steer(leg, hold, hold);
+                families.add((t, now, previous) -> t < waitRows ? PadRow.NEUTRAL
+                        : travel.row(t - waitRows, now, previous));
+            }
+        }
         if (players(leg).size() > 1) {
             for (int h1 : HOLDS) for (int h2 : HOLDS)
                 if (h1 != h2) families.add(steer(leg, h1, h2));
+        }
+        if (players(leg).size() > 1) {
+            int policyCount = HOLDS.length + 2;
+            for (int i = 0; i < policyCount; i++) for (int j = 0; j < policyCount; j++) {
+                if (i == j || (i < HOLDS.length && j < HOLDS.length)) continue;
+                // Each trial owns its cursors; sharing a steer policy would retain jumpStart
+                // from another lane pairing when t restarts at zero.
+                Policy first = lanePolicy(leg, i), second = lanePolicy(leg, j);
+                families.add((t, now, previous) -> new PadRow(first.row(t, now, previous).p1(),
+                        second.row(t, now, previous).p2()));
+            }
         }
         families.add(charge(leg));
         families.add(rolling(leg));
@@ -110,6 +147,11 @@ final class GoalExpander implements PrefixSearch.Expander {
             if (child != null) search.push(frontier, child);
         }
         return null;
+    }
+
+    private Policy lanePolicy(Leg leg, int index) {
+        if (index < HOLDS.length) return steer(leg, HOLDS[index], HOLDS[index]);
+        return index == HOLDS.length ? charge(leg) : rolling(leg);
     }
 
     /** A row policy over copied observations. */
@@ -144,8 +186,10 @@ final class GoalExpander implements PrefixSearch.Expander {
                 break;
             }
             end = now;
-            hurt |= now.p1().hurt();
-            if (achieved(leg, previous, now)) {
+            hurt |= players(leg).stream().anyMatch(slot ->
+                    (slot != PlayerSlot.P2 || now.p2().isPresent()) && now.player(slot).hurt());
+            if (leg.goal() instanceof RouteGoal.Wait wait
+                    ? node.rows + t + 1 - state.legStart() >= wait.rows() : achieved(leg, previous, now)) {
                 completedAt = t;
                 commitSample = now;
                 break;
@@ -167,15 +211,20 @@ final class GoalExpander implements PrefixSearch.Expander {
             value = score(leg, state, end, hurt);
             next = new State(state.leg(), state.legStart(), state.startHits(), -1);
         }
+        int stuck = completedAt >= 0 || value > score(leg, state, node.sample, false) + 1 ? 0 : node.stuck + 1;
+        // Joint spatial goals must not keep selecting the same blocked lane pairing.
+        // Single-actor waits retain their existing leg/budget limits.
+        if (players(leg).size() > 1 && stuck >= 6) return null;
         long rank = (long) next.leg() * 1_000_000_000_000L + Math.round(value * 1000);
         int k = next.leg() * 1000 + (int) Math.max(0, Math.min(999, value / 1000));
-        return search.node(node, edge, new PrefixSearch.Origin.Authored(keep), k, rank, 0, k, next, commitSample);
+        return search.node(node, edge, new PrefixSearch.Origin.Authored(keep), k, rank, stuck, k, next, commitSample);
     }
 
     /** Whether {@code now} completes the leg (a boundary leg completes on the epoch change). */
     private static boolean achieved(Leg leg, RouteSample previous, RouteSample now) {
         return switch (leg.goal()) {
             case RouteGoal.Achieve achieve -> achieve.condition().test(now);
+            case RouteGoal.Wait ignored -> false; // elapsed rows are evaluated by the trial
             case RouteGoal.EnterBoundary ignored -> now.epoch() != previous.epoch();
         };
     }

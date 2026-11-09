@@ -10,11 +10,13 @@ public final class RouteCompetitionFacts {
     static {
         var keys=new ArrayList<String>(List.of("competition.phase","competition.selection","competition.romZone",
                 "competition.act","competition.presentationFrame","competition.resultsReady","competition.firstFinisher","competition.specialStage",
+                "competition.monitor.content","competition.monitor.initFrame","competition.monitor.breaker",
+                "competition.monitor.spawned","competition.levelFrame","competition.levelPhase",
                 "competition.paused","input.menu","input.gameplayAnchorRows","input.levelAnchorRows","title.state","title.selection",
                 "competition.zoneWins.p1","competition.zoneWins.p2","competition.slot.inUse","competition.slot.routine",
                 "competition.slot.timer","competition.slot.position0","competition.slot.position1","competition.slot.position2"));
         for(String player:List.of("p1","p2")) for(String metric:List.of("rings","totalRings","monitors","lives",
-                "timerPaused","timeOver","score","time","cameraX","cameraY","routine","dead","objectControlled"))
+                "timerPaused","timeOver","score","time","cameraX","cameraY","routine","dead","objectControlled","shield","speedShoes","invincibility"))
             keys.add("competition."+player+"."+metric);
         for(String field:List.of("visible","player","screenX","screenY","word","rgb","frame","displayedFrame0",
                 "displayedFrame1","planeVisible","cachedCells")) keys.add("competition.flip."+field);

@@ -29,7 +29,7 @@ class TestSonic2CompetitionViewsRestore {
         var services = EngineServices.current();
         var root = SessionManager.getCurrentWorldSession().rootGameModule();
         try (var gl = PresentationOffscreenTestContext.openConfigured(
-                     320, 224, PresentationOffscreenTestContext.LegacyProfile.CORE_41);
+                     320, 448, PresentationOffscreenTestContext.LegacyProfile.CORE_41);
                 AutoCloseable cleanup = () -> {
                     try {
                         SessionManager.closeGameplaySession();
@@ -41,8 +41,8 @@ class TestSonic2CompetitionViewsRestore {
             var graphics = services.graphics();
             graphics.setHeadlessMode(false);
             graphics.init(com.openggf.Engine.RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
-            graphics.setViewport(0, 0, 320, 224);
-            glViewport(0, 0, 320, 224);
+            graphics.setViewport(0, 0, 320, 448);
+            glViewport(0, 0, 320, 448);
             var session = new Sonic2CompetitionSession();
             var host = new Sonic2NativeCompetitionHost(root, services,
                     ignored -> {},
@@ -110,7 +110,7 @@ class TestSonic2CompetitionViewsRestore {
     private static int[] draw(
             Sonic2CompetitionViews views, GameplayModeContext context, Sonic2CompetitionSession session) {
         PaletteUploadPresentation.withoutDisplayedFade(GameServices.graphics(), () -> views.draw(context, session));
-        return ScreenshotCapture.captureFramebuffer(320, 224).pixels();
+        return ScreenshotCapture.captureFramebuffer(320, 448).pixels();
     }
     private static void step(Sonic2NativeCompetitionHost host, InputHandler input) {
         var context = host.context();

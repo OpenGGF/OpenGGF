@@ -23,6 +23,27 @@ owner, report success only after real completion, and preserve primary/suppresse
 failure identity. Verify a real return route as well as once-only cleanup; see
 [load ownership evidence](designs/2026-11-03-synchronous-load-vint-accounting.md#enclosing-ownership-corrections).
 
+**Observation anchors can become rewind state.** A host's first gameplay anchor
+looked immutable when synchronous loading always completed before route search.
+Visible title waits let lookahead cross that anchor and restore an earlier leave
+checkpoint. Capture both first-gameplay and latest-level anchors in the host's
+checkpoint, or the earlier observation acquires a future fact and deterministic
+search fails. Refuse planner checkpoints while initialization is still registering
+owners; replay neutral rows through that phase. `TestCompetitionTitleRoute` covers
+restoring a leave checkpoint after lookahead has passed control release.
+
+**A returned native load may still own visible startup waits.** Competition
+positioned probes must drive the real title continuation to control release
+before injecting gameplay effects, counting ordinary frames or capturing a
+stable rewind graph. Structural load return precedes the first native player
+walk and HUD-art registration. Use `Sonic2CompetitionTestFlow` to drive those
+waits through the fixture's admitted-token runner; never replace them with a
+fixed skip or make early gameplay assertions pass by unlocking actors.
+`Level_TtlCard` (s2.asm:4914-4949) and `Level_FromCheckpoint`
+(s2.asm:4980-5086) own the boundary. Read-only pixel witnesses must also use the
+active output geometry and pattern projection: a former field index can read
+unrelated resident art even when the source bytes are correct.
+
 **A counter's name does not establish its native clock.** In S2 continuous
 loads, title object passes and gameplay have distinct clock ownership. Obj2C
 needs the native level word (held at zero during the locked title), not execution

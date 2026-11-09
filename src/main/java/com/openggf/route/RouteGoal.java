@@ -14,6 +14,11 @@ public sealed interface RouteGoal {
         }
     }
 
+    /** Hold neutral input for a bounded number of rows; the leg guard still applies. */
+    record Wait(int rows) implements RouteGoal {
+        public Wait { if (rows < 1) throw new IllegalArgumentException("positive wait required"); }
+    }
+
     /** A boundary (load, seamless transition or mode change) is crossed during the leg. */
     record EnterBoundary() implements RouteGoal { }
 }

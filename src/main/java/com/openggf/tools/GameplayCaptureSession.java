@@ -73,7 +73,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Unsupported capture width "
                         + settings.width() + "; supported: " + Arrays.toString(WidescreenAspect.values())));
-        this.boot = new HeadlessGameBoot(settings.width(), HEIGHT);
+        this.boot = new HeadlessGameBoot(settings.width(), HEIGHT * 2, settings.width(), HEIGHT);
         SonicConfigurationService config = GameServices.configuration();
         config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, aspect.name());
@@ -167,6 +167,8 @@ public final class GameplayCaptureSession implements AutoCloseable {
             throw new IllegalArgumentException("--end-of-level requires direct-level capture, not --title-screen");
         }
         loop = boot.boot(romPath, zone, act);
+        org.lwjgl.opengl.GL11.glViewport(0, 0, width, HEIGHT);
+        GameServices.graphics().setViewport(0, 0, width, HEIGHT);
         if (GameServices.configuration().getBoolean(SonicConfiguration.LIVE_REWIND_VHS_EFFECT)) {
             rewindEffect.prewarm(width, HEIGHT, width, HEIGHT);
         }
@@ -449,7 +451,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
     /** Renders with or without the sprite pass; the tiles-only image is a baseline for pixel checks. */
     public RgbaImage render(boolean includeSprites) {
         drawFrame(includeSprites);
-        return ScreenshotCapture.captureFramebuffer(width, HEIGHT);
+        return ScreenshotCapture.captureFramebuffer(width, presentationHeight());
     }
 
     /**
@@ -461,10 +463,18 @@ public final class GameplayCaptureSession implements AutoCloseable {
         drawFrame(true);
     }
 
+    private int presentationHeight() {
+        var screen = com.openggf.NativeMenuPresentationAccess.screen(loop);
+        return com.openggf.game.nativemenu.NativeMenuController.handles(loop.getCurrentGameMode()) && screen != null
+                ? screen.presentationHeight() : HEIGHT;
+    }
+
     private void drawFrame(boolean includeSprites) {
         requireBooted();
         GraphicsManager graphics = GameServices.graphics();
         LevelManager level = GameServices.level();
+        org.lwjgl.opengl.GL11.glViewport(0, 0, width, presentationHeight());
+        graphics.setViewport(0, 0, width, presentationHeight());
         graphics.runPendingRenderThreadTasks();
         if (loop.getCurrentGameMode() == GameMode.SPECIAL_STAGE_RESULTS) {
             renderSpecialStageResults(graphics, level);

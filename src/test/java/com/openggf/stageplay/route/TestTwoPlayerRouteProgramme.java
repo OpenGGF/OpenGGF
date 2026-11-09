@@ -46,6 +46,42 @@ class TestTwoPlayerRouteProgramme {
         assertTrue(solved.route().tape().rows().stream().anyMatch(r -> r.p1()!=0 && r.p2()!=0));
         assertFalse(both.test(new World().observe()),"negative control: neither actor has reached the goal");
     }
+    @Test void jointSearchCanChargeOneLaneWhileTheOtherKeepsRunning() {
+        class Asymmetric implements RouteWorld {
+            int p1, p2, rows;
+            public RouteSample observe() { return new RouteSample(rows,0,new RouteSample.Level(0,0,0,"ACT"),
+                    new RouteSample.Clocks(rows,rows),player(p1),Optional.of(player(p2)),0,0,0); }
+            public RecordedStep step(PadRow row) {
+                boolean together = row.held(PlayerSlot.P1,PhysicalButton.DOWN)
+                        && row.held(PlayerSlot.P2,PhysicalButton.RIGHT) && !row.held(PlayerSlot.P2,PhysicalButton.DOWN);
+                // Serial charge-then-run cannot advance either actor in this coupled world.
+                if (together) { p1++; p2++; }
+                rows++; return new RecordedStep(row,observe());
+            }
+            record Saved(int p1,int p2,int rows) implements WorldCheckpoint { }
+            public WorldCheckpoint capture() { return new Saved(p1,p2,rows); }
+            public void restore(WorldCheckpoint checkpoint) { var c=(Saved)checkpoint;p1=c.p1();p2=c.p2();rows=c.rows(); }
+            public int rowsOffered() { return rows; }
+            public void close() { }
+        }
+        var factory=new RouteWorldFactory() {
+            public RouteWorld openSearch(LaunchContract launch) { return new Asymmetric(); }
+            public ReplayWorld openColdReplay(LaunchContract launch) { return new Asymmetric(); }
+            public String environment() { return "asymmetric-lanes"; }
+        };
+        var both=new SamplePredicate.All(List.of(
+                new SamplePredicate.PlayerIn(PlayerSlot.P1,new Region(20,90,1000,110)),
+                new SamplePredicate.PlayerIn(PlayerSlot.P2,new Region(20,90,1000,110))));
+        var goals=GoalProgram.of(Guard.NONE,Leg.of("charge-and-run",new RouteGoal.Achieve(both),100));
+        var result=new RoutePlanner(factory).plan(new RouteTask.Author(StageplayCompetitionRouteHosts.launch(),
+                InputTape.empty(),goals,new SearchBudget(50,30000,10,0)),Cancellation.NONE);
+        var solved=assertInstanceOf(PlanResult.Solved.class,result,result.toString());
+        assertTrue(solved.route().tape().rows().stream().anyMatch(r ->
+                r.held(PlayerSlot.P1,PhysicalButton.DOWN) && r.held(PlayerSlot.P2,PhysicalButton.RIGHT)
+                        && !r.held(PlayerSlot.P2,PhysicalButton.DOWN)));
+        assertTrue(both.test(solved.replayEnd()));
+    }
+
     @Test void titleInletAndExportPreservePrefixAndBothLanes(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
         var prefix=com.openggf.tools.StageplayCompetitionRouteHosts.menuPrefix(2);
         var launch=new LaunchContract(RomIdentity.standard("s2"),new Inlet.Title(),new Roster("sonic","tails"),320,"off",new InitialState(0,Seeds.NONE));

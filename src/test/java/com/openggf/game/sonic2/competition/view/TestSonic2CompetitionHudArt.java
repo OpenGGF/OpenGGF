@@ -39,11 +39,13 @@ class TestSonic2CompetitionHudArt {
         art.restore(pending);
         art.serviceVBlank(PlcLifecyclePhase.LEVEL_TITLE_CARD);
         assertEquals(expected, art.capture());
+        // Progressive output retains both 8-row halves of each native 8x16 cell.
+        // loc_410BC (s2.asm:88195-88200) still publishes exactly the same 22 patterns.
         var patterns = art.fields().live();
-        for (int y = 0; y < 8; y++)
+        for (int y = 0; y < 16; y++)
             for (int x = 0; x < 8; x++)
-                assertEquals(Im2FieldOracle.pixel(rom.readBytes(0x4134C, 22 * 32), 10, x, y * 2),
-                        patterns[0x37B].getPixel(x, y), "HUD colon cell must hold Art_Hud, not MilesLife2P");
+                assertEquals(Im2FieldOracle.pixel(rom.readBytes(0x4134C, 22 * 32), 10, x, y),
+                        patterns[0x6F6 + y / 8].getPixel(x, y % 8), "HUD colon cell must hold Art_Hud, not MilesLife2P");
     }
     @Test void livesFlagsRewriteOnlyTheChangedPlayersPatternsAndPauseRetainsTheRequest() throws Exception {
         var rom=TestEnvironment.currentRom();var art=new Sonic2CompetitionArtResidency(rom,new Sonic2PlcService(rom));

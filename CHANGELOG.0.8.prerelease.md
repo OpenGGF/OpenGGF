@@ -43,18 +43,36 @@ under the matching area heading; see the
   controller 1 and Tails on controller 2. Its menu selects Emerald Hill, Mystic
   Cave, Casino Night or the special stage. Each zone plays two acts with
   separate rings, lives, score, time and results, then zone and game results
-  with their own music; a tied zone goes to a special-stage tiebreaker. The
-  screen splits at line 108 through the shared Competition renderer, and each
+  with their own music; a tied zone goes to a special-stage tiebreaker.
+  EHZ spiral jumps now retain airborne state and upward velocity when releasing
+  the invisible path controller, including simultaneous two-human routes.
+  A frozen Stageplay EHZ route now races both humans concurrently in each act,
+  with opposite act winners, readable results holds and a tied special-stage
+  inlet. Eight short frozen Stageplay routes exercise every question-mark monitor
+  outcome, with award assertions and six-second neutral holds for native comparison.
+  The two-act route is ENGINE-qualified only: cold native replay encounters level lag
+  before the first finish and does not reach act 2.
+  The screen renders at 320x448 progressive resolution with half-height pixels,
+  preserving every row of the native 8x16 cells without interlace combing.
+  It splits at progressive line 216 through the shared Competition renderer; each
   half draws its player's planes, sprites and HUD from the ROM's two-player art.
-  Title cards run in both halves. Teleport monitors swap the players' positions,
+  Title and menu transitions fade, and both halves show the complete title card
+  before player control and the level clock start. Stageplay's visible flip checks
+  use the same complete native cells as the progressive display. Signposts publish
+  their native two-player pole and animated face art; act timers spend the interrupt before a
+  finish crossing. Teleport monitors swap the players' positions,
   speeds, cameras and backgrounds. Badnik, bumper, bonus-block and cage
   scores go to the player who earned them, and the Casino Night slot machines
-  and cages serve both players. Enemies whose ROM routine ends in
+  and cages serve both players. Casino Night round bumpers, bonus blocks, slot
+  cages and prizes now enter both sprite pages; plungers retain their moving head
+  and fixed base with the ROM two-player art, palette and priority. Enemies whose ROM routine ends in
   `MarkObjGone_P1` retire once both cameras are more than `$300` away and
   reload when revisited; the finish-grace countdown runs before players move;
   GAME OVER and TIME OVER cards appear in both views. The competitive special stage runs both players
-  on one halfpipe with its checkpoints and results. Held rewind is off in
-  Competition; the interlace field, seam and lag-frame limits are in
+  on one halfpipe with its checkpoints and results. Its entry fades the previous
+  results to white, holds the shared load delay, and runs startup waits; live
+  pacing uses the same lag approximation as the one-player special stage. Held rewind is off in
+  Competition; the progressive presentation, seam and lag-frame limits are in
   [known discrepancies](docs/status/known-discrepancies.md#s2-competition-split-screen-native-lag-and-rewind-scope).
 
 - **S2 and KiS2 badnik chains are shared:** one chain counter serves both
@@ -127,7 +145,9 @@ under the matching area heading; see the
   anchors use the shared BK2 splice. Provisional exports remain visibly blocked;
   engine qualification does not imply native parity. The Stageplay route planner
   behind them plans two-player goals and repairs or continues a route after a
-  frozen prefix. The desktop editor's side of this lives in the separate
+  frozen prefix. Joint search also combines independent charge, roll and jump
+  policies for the two pads, scores damage to either actor, and prunes stalled
+  trials. The desktop editor's side of this lives in the separate
   OpenGGF-Editor repository.
 
 - **Recording audio recovery:** viewport recording retains the real audio lease
@@ -135,6 +155,7 @@ under the matching area heading; see the
   retries that lease before acquiring another, avoiding an orphaned audio tap.
   Closing the controller also ends admission permanently, so a delayed encoder
   finalizer cannot clear resources acquired by a recording started after close.
+  S2 music requests now use native ROM mailbox bytes while retaining playback IDs, fixing CNZ 2P audio crashes and music priority/classification.
 
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the

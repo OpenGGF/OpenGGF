@@ -66,6 +66,7 @@ public final class Sonic2CompetitionVisit implements NativeMenuScreen {
         }
     }
     public Sonic2NativeCompetitionHost host() { return host; }
+    public boolean inputLocked() { return screen.actTransitionPending() || host.titleCardActive(); }
     public Sonic2CompetitionSession session() { return screen.session(); }
     public Sonic2NativeControlState controls() { return controls; }
     @Override public GameMode mode() { return screen.mode(); }
@@ -84,6 +85,7 @@ public final class Sonic2CompetitionVisit implements NativeMenuScreen {
         if (registry == null) return;
         for (var adapter : halfpipe.rewindAdapters()) registry.deregister(adapter.key());
         registry.deregister(controls.key());
+        registry.deregister(screen.key());
         if (registeredSessionDirectly) registry.deregister(session().key());
         registry = null;
         registeredSessionDirectly = false;
@@ -97,6 +99,7 @@ public final class Sonic2CompetitionVisit implements NativeMenuScreen {
         if (standalone) registry.registerOrRefresh(session());
         registeredSessionDirectly = standalone;
         registry.registerOrRefresh(controls);
+        registry.registerOrRefresh(screen);
         for (var adapter : halfpipe.rewindAdapters()) registry.registerOrRefresh(adapter);
     }
     private void advanceBoundWaitClock() {

@@ -57,6 +57,14 @@ class TestS2CompetitionInitialCameraOrder {
             var session=new Sonic2CompetitionSession();session.updateMenu(LogicalInputSnapshot.ofPlayers(
                     PlayerInputState.of(0,0,0,0,true,true),PlayerInputState.neutral()),true);
             host.loadAct(session,0,0);
+            // Level_TtlCard (s2.asm:4914-4949) precedes the visible leave walks.
+            // Level_FromCheckpoint (s2.asm:4980-5086) owns their camera updates.
+            Sonic2CompetitionTestFlow.finishTitle(host, () -> {
+                var titleContext=host.context();
+                titleContext.plcFrameLifecycle().runLogicalIteration(titleContext::updateFade,frame->{
+                    NativeCompetitionIterationAccess.runAdmitted(frame,()->host.step(input,frame));return null;
+                });
+            });
             assertArrayEquals(new boolean[]{true,true,true},seen);assertEquals(559,session.camera(1).getY());
             var context=host.context();LevelFrameStep.updateTimers(LevelFrameContext.from(context));
             context.plcFrameLifecycle().runLogicalIteration(context::updateFade,frame->{

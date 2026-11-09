@@ -12,6 +12,7 @@ import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.sonic2.competition.Sonic2CompetitiveSpecialStageAdapter;
 import com.openggf.game.sonic2.specialstage.CompetitiveSpecialStagePlayerAccess;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageObject;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageLagModel;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePlayer;
 import com.openggf.game.sonic2.specialstage.Sonic2TrackFrameDecoder;
 import com.openggf.graphics.GraphicsManager;
@@ -25,7 +26,7 @@ import java.util.function.IntSupplier;
 /** ROM-backed two-human halfpipe; the host owns mode publication and rewind registration. */
 public final class Sonic2CompetitiveHalfpipe implements Sonic2CompetitiveSpecialStageAdapter.Halfpipe,
         RewindSnapshottable<Sonic2CompetitiveHalfpipe.Snapshot>, AutoCloseable {
-    public enum Phase { EMPTY, FADE_IN, INTRO, RUNNING, COMPLETE }
+    public enum Phase { EMPTY, LOAD_HOLD, STARTUP_DRAW, STARTUP_DURATION, STARTUP_DMA, FADE_IN, INTRO, RUNNING, COMPLETE }
     private final CompetitiveHalfpipeRomData data;
     private final CompetitiveHalfpipeTrack track;
     private final CompetitiveHalfpipeRenderer renderer;
@@ -36,6 +37,8 @@ public final class Sonic2CompetitiveHalfpipe implements Sonic2CompetitiveSpecial
     private CompetitiveHalfpipeObjectMachine machine;
     private Sonic2CompetitiveSpecialStageAdapter.Events events;
     private Phase phase = Phase.EMPTY;
+    private int loadHoldFrames;
+    private boolean liveLagSimulationEnabled = true;
     private int stage = -1, ticks, fadeTicks, perspectiveFrame;
     private int[] tiles;
     private int decodedFrame = -1;
@@ -46,7 +49,7 @@ public final class Sonic2CompetitiveHalfpipe implements Sonic2CompetitiveSpecial
     public record Phrase(int timer, List<CompetitiveHalfpipeRenderer.MessageLetter> letters, List<Integer> angles) {
         public Phrase { letters = List.copyOf(letters); angles = List.copyOf(angles); }
     }
-    public record Snapshot(Phase phase, int stage, int ticks, int fadeTicks, int lastLoadedSegment,
+    public record Snapshot(Phase phase, int stage, int ticks, int fadeTicks, int loadHoldFrames, boolean liveLagSimulationEnabled, int lastLoadedSegment,
                            int objectGroup, int perspectiveFrame, int bannerY, int bannerRoutine,
                            int bannerTimer, int checkpointPhrase, CompetitiveHalfpipeTrack.State track,
                            CompetitiveHalfpipeCheckpoint.State checkpoint, Object players,
@@ -76,20 +79,51 @@ public final class Sonic2CompetitiveHalfpipe implements Sonic2CompetitiveSpecial
         players = CompetitiveSpecialStagePlayerAccess.create();
         machine = new CompetitiveHalfpipeObjectMachine(data, players, audio, events);
         machine.load(index);
-        // SpecialStage prepares the stream before the unconditional hidden message objects,
-        // then executes live Object_RAM once before the frozen 22-pass white fade.
-        do { track.tickPreRoll(); } while (track.drawingIndex() != 0);
-        do { track.tickPreRoll(); machine.prepareSegment(track); } while (track.capture().durationTimer() != 1);
-        track.scrollAfterPreRoll(); perspectiveFrame = track.frame();
-        machine.initializeHiddenMessages(); machine.runPass(track, perspectiveFrame, ignored -> { });
-        fadeTicks = 22; phase = Phase.FADE_IN; audio.playMusic(GameMusic.SPECIAL_STAGE);
+        // SpecialStage (s2.asm:6613-6669): synchronous load precedes the
+        // two S2SS wait loops and the single CtrlDMA wait. No controllers yet.
+        loadHoldFrames = Sonic2SpecialStageLagModel.ENTRY_LOAD_LAG_FRAMES;
+        phase = Phase.LOAD_HOLD;
     }
+    /** Disable only for externally paced callers and logical-pass unit tests. */
+    public void setLiveLagSimulationEnabled(boolean enabled) { liveLagSimulationEnabled = enabled; }
+
     @Override public void step(InputHandler input) {
         Objects.requireNonNull(input, "input");
         if (phase == Phase.EMPTY || phase == Phase.COMPLETE) return;
         ticks++;
+        if (phase == Phase.LOAD_HOLD) {
+            if (--loadHoldFrames == 0) phase = Phase.STARTUP_DRAW;
+            return;
+        }
+        // The presentation/V-int clock advances even when Vint_Lag holds the
+        // picture (VintRet, s2.asm:507-508), as in the one-player manager.
+        if (liveLagSimulationEnabled && (phase == Phase.INTRO || phase == Phase.RUNNING)
+                && Sonic2SpecialStageLagModel.shouldSkipLiveUpdate(
+                ticks, 12, track.geometry())) {
+            previousInput = LogicalInputSnapshot.ofPlayers(withoutEdges(previousInput.player1()),
+                    withoutEdges(previousInput.player2()));
+            return;
+        }
+        if (phase == Phase.STARTUP_DRAW) {
+            track.tickPreRoll();
+            if (track.drawingIndex() == 0) phase = Phase.STARTUP_DURATION;
+            return;
+        }
+        if (phase == Phase.STARTUP_DURATION) {
+            track.tickPreRoll(); machine.prepareSegment(track);
+            if (track.capture().durationTimer() == 1) {
+                track.scrollAfterPreRoll(); perspectiveFrame = track.frame();
+                machine.initializeHiddenMessages(); machine.runPass(track, perspectiveFrame, ignored -> { });
+                phase = Phase.STARTUP_DMA;
+            }
+            return;
+        }
+        if (phase == Phase.STARTUP_DMA) {
+            fadeTicks = 22; phase = Phase.FADE_IN; audio.playMusic(GameMusic.SPECIAL_STAGE);
+            return;
+        }
         if (phase == Phase.FADE_IN) {
-            previousInput = input.logical(); palettes.fadeStep();
+            palettes.fadeStep();
             if (--fadeTicks == 0) phase = Phase.INTRO;
             return;
         }
@@ -107,6 +141,9 @@ public final class Sonic2CompetitiveHalfpipe implements Sonic2CompetitiveSpecial
             // RunObjects has already cleared every native object and displayed slot.
             events.stageComplete();
         }
+    }
+    private static PlayerInputState withoutEdges(PlayerInputState state) {
+        return PlayerInputState.of(state.heldMask(), 0, state.actionHeldMask(), 0, state.startHeld(), false);
     }
     private void tickPlayer(int slot, PlayerInputState input) {
         var player = player(slot);
@@ -128,6 +165,8 @@ public final class Sonic2CompetitiveHalfpipe implements Sonic2CompetitiveSpecial
         }
         renderer.setGeometryOffset(track.offsetX(), track.offsetY()); renderer.setPalettes(palettes.palettes());
         if (phase == Phase.COMPLETE) renderer.drawCleared(tiles, track.bgScroll(), track.vScroll());
+        else if (phase == Phase.LOAD_HOLD || phase == Phase.STARTUP_DRAW
+                || phase == Phase.STARTUP_DURATION || phase == Phase.STARTUP_DMA) renderer.drawCleared(tiles, track.bgScroll(), track.vScroll());
         else renderer.drawNative(tiles, track.bgScroll(), track.vScroll(), players.players(), machine.renderFrame());
     }
     public Phase phase() { return phase; }
@@ -141,7 +180,7 @@ public final class Sonic2CompetitiveHalfpipe implements Sonic2CompetitiveSpecial
     CompetitiveHalfpipeObjectMachine objectMachine() { return machine; }
     @Override public String key() { return "sonic2.competition.halfpipe"; }
     @Override public Snapshot capture() {
-        return new Snapshot(phase, stage, ticks, fadeTicks, machine == null ? -1 : machine.stream().capture().lastSegment(),
+        return new Snapshot(phase, stage, ticks, fadeTicks, loadHoldFrames, liveLagSimulationEnabled, machine == null ? -1 : machine.stream().capture().lastSegment(),
                 machine == null ? 0 : machine.stream().capture().publishedCursor(), perspectiveFrame, 0, 0, 0, -1,
                 track.capture(), machine == null ? null : machine.checkpoint().capture(), players == null ? null : players.capture(),
                 objects().stream().map(CompetitiveHalfpipeItems::capture).toList(), List.of(), List.of(), palettes.capture(), previousInput,
@@ -155,6 +194,7 @@ public final class Sonic2CompetitiveHalfpipe implements Sonic2CompetitiveSpecial
             try { renderer.initialize(snapshot.stage()); } catch (IOException failure) { throw new UncheckedIOException(failure); }
         }
         phase = snapshot.phase(); stage = snapshot.stage(); ticks = snapshot.ticks(); fadeTicks = snapshot.fadeTicks();
+        loadHoldFrames = snapshot.loadHoldFrames(); liveLagSimulationEnabled = snapshot.liveLagSimulationEnabled();
         perspectiveFrame = snapshot.perspectiveFrame(); track.restore(snapshot.track());
         if (players == null) players = CompetitiveSpecialStagePlayerAccess.create(); players.restore(snapshot.players());
         if (machine == null) machine = new CompetitiveHalfpipeObjectMachine(data, players, audio, events);
@@ -162,6 +202,7 @@ public final class Sonic2CompetitiveHalfpipe implements Sonic2CompetitiveSpecial
         palettes.restore(snapshot.palettes()); previousInput = snapshot.previousInput(); decodedFrame = -1;
     }
     @Override public void reset() {
+        loadHoldFrames = 0;
         renderer.reset(); phase = Phase.EMPTY; stage = -1; ticks = fadeTicks = perspectiveFrame = 0;
         players = null; machine = null; events = null; decodedFrame = -1; tiles = null; decodedFlip = false;
         previousInput = LogicalInputSnapshot.neutral();
