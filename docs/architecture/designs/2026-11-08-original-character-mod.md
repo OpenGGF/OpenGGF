@@ -1650,3 +1650,86 @@ The mod was built by `python3 examples/mica-and-talon/build.py`. Scoped citation
 checks and staged policy checks pass. Delivery owner: implementation agent;
 local branch `feature/ai-mica-dust-reticle`, based on `c88c34cd61`. No live jobs
 or blockers remain; the lead owns subsequent integration. No merge or push.
+
+## Coverage audit (2026-11-09)
+
+Research branch `feature/ai-character-art-audit` starts at `24bfe483c7` and merges
+approved TALON art `71fefca894`, independently of the TALON engine lane.
+Current sources: **MICA 132 frames / 22 canonical keys; TALON 82 / 13**.
+TALON's approved round-2 WALK/RUN use Sonic references and derived slopes;
+these are not missing art merely because native Tails has different poses.
+
+The maintained [ROM-gated probe](../../../src/test/java/com/openggf/level/objects/TestCharacterArtCoverageAudit.java)
+uses production conversion/materialization/binding and native ROM loaders,
+recording scripts, all mapping indices, raw targets and 512-clock publication
+samples at four slopes/two speeds. The [report generator](../../../tools/modding/character_art_audit.py)
+joins creator provenance and native labels. Neither writes decoded native art.
+Run the queued test with `-Dmse=off`, surfaceless EGL and
+`-Dart.audit.output=<external-dir>`, then run the report generator on that directory.
+
+External outputs: `$CHARACTER_ART_AUDIT_ROOT/` (task-supplied external scratch directory)
+contains `matrix.csv`, `index.html`, `native-inventory.csv`, numeric probe JSONs,
+`totals.json` and `backlog-native-frames.csv` (exact missing-cycle native unions).
+The HTML lists original thumbnails/provenance; native reference images are omitted.
+
+| Character / host | Authored | Native alias | Fallback | N/A |
+| --- | ---: | ---: | ---: | ---: |
+| MICA/S1 | 49 | 3 | 16 | 2 |
+| MICA/S2 | 76 | 2 | 53 | 2 |
+| MICA/S3K | 91 | 18 | 160 | 4 |
+| TALON/S1 | 0 | 0 | 2 | 2 |
+| TALON/S2 | 11 | 0 | 61 | 51 |
+| TALON/S3K | 13 | 0 | 96 | 77 |
+
+Counts above are **resolution obligations**, combining cycles, object byte slots
+and separate presentation selectors, not unique drawings or completion percentages.
+The loader inventories cover Sonic 88/214/251 mappings (S1/S2/S3K) and Tails
+139/251 (S2/S3K); S1 has no native Tails. Authored canonical cycles can compress
+native phases. TALON binding is diagnostic against Sonic host capabilities.
+
+Generation priority; each family uses its own native reference bank:
+
+| Priority | Native reference / target | Estimated drawings or slots |
+| --- | --- | --- |
+| 1 | TALON S2 then S3K Tails: PUSH, ROLL2, balance/hang/float/bubble/slide, carry/swim/flight variants | 20–35 poses after union/reuse; exact missing-cycle lists in CSV |
+| 2 | MICA S1/S2/S3K canonical variants: float/leap/warp/slide/burn/shrink, balance variants, finite blink/get-up, carried/victory | 20–40 poses before reuse |
+| 3 | MICA early S3K objects: swing $78–$7F; tumble $69–$77; twist $58/$5B; pole $5C–$62; bar $63–$68/$94/$95 | 8+15+2+7+8 = 40 byte slots; AIZ/HCZ first |
+| 4 | TALON identity; S2 half-pipe 0–17; S3K Blue Sphere 0–11 plus result pose | about 5–6 identity images/host; 18+12+1 stage slots, including blank |
+| 5 | MICA later S3K: gravity $31–$3C, cage $49–$54, chain $80–$85, carry $8A–$8D, hang $93, hurt $B4/$B5, wall $DF–$E3, parachute $E4–$EA, corkscrew $EF–$FA, emerald $C4, crane $C0 | 63 byte slots; filter unselected descriptors using owning-object table |
+| 6 | TALON screens/endings: per-host continue/data-select; S2 ending $09–$0B/$0F–$11/$18/$19, pilot $01–$04/$10, photos 1–3; S3K reunion 3/4 | 8 ending + 5 reusable pilot + 3 photos + 2 reunion; other role counts still open |
+| 7 | MICA powered gameplay: separate S2/S3K Super reference banks | roughly 40–80 each before reuse; Hyper shares geometry |
+| 8 | Competition/2P miniature banks | inventory exists; custom bank seam first |
+
+Prerequisites: archetype-specific animation/raw-pose vocabulary and TALON NFRM
+relocation; S2 FLY/TAILS_FLY bridge; S3K Tails transformation $29 versus
+high-speed run $1F; finite BLINK/GET_UP; WAIT partial-loop restart; powered creator
+bank/alternate-slope selection; sidekick pilot art/palette; role-specific
+screen/ending/competition seams. Both creator WAIT cycles use LOOP while ROM
+WAIT uses LOOP_BACK: Sonic parameters 2/6/53 (S1/S2/S3K), Tails 28 (S2/S3K).
+This timing debt needs no new drawing.
+
+Ownership evidence: Tails_pilot_frames (s2.asm:79690-79718) has 24 steps/five
+unique mappings. ObjCE_Init (s2.asm:13928-13941) selects Tails final leap $0F.
+Tails_Transform (sonic3k.asm:28712-28719) selects $29, whose AniTails29
+(General/Sprites/Tails/Anim - Tails.asm:89) uses $EB/$EC/$ED. Tails reunion starts
+at 3 in loc_5E334 (sonic3k.asm:124519-124533), then increments to 4 in
+loc_5E3EE (sonic3k.asm:124575-124587). S2 photos are first-sidekick-owned
+(`ModEndingPresentation.sidekickPhotos`). TALON has integrated wings, so separate
+tail appendage art is N/A; its Tails route skips Sonic's ICZ snowboard bank.
+Gilded/Solar currently reuse normal gameplay geometry; no third Hyper body set
+or Solar Flickies is required.
+
+**Remaining research:** this is a reproducible binding inventory and bounded
+backlog, not definitive all-scene native-pose closure. TALON's remaining
+ending/continue/data-select roles, full direct-writer reachability and exact
+native-to-authored phase correspondence still require investigation. Do not
+budget complete production art from obligation totals alone. No art was generated.
+
+Validation: final queued `TestCharacterArtCoverageAudit` run passed 3 tests,
+zero failures/errors/skips (all verified ROMs found, Java 25, display unset,
+`-Dmse=off -Dopenggf.headless.gl=surfaceless-egl`). Queue wait 325s, Maven
+35.6s, test execution 0.98s; user wait zero. Report closure checks cover all
+loaded normal/powered scripts and mapping indices: 789 matrix obligations,
+11,945 evidence rows. Python compilation, output/schema checks and scoped
+citation check pass (existing design citations include near/unverifiable
+references; no stale finding). No broad smoke/full-suite or route claim.
