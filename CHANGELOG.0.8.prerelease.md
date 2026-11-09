@@ -46,6 +46,10 @@ under the matching area heading; see the
   with their own music; a tied zone goes to a special-stage tiebreaker.
   EHZ spiral jumps now retain airborne state and upward velocity when releasing
   the invisible path controller, including simultaneous two-human routes.
+  A frozen Stageplay EHZ route now races both humans concurrently in each act,
+  with opposite act winners, readable results holds and a tied special-stage
+  inlet. It is ENGINE-qualified only: cold native replay encounters level lag
+  before the first finish and does not reach act 2.
   The screen renders at 320x448 progressive resolution with half-height pixels,
   preserving every row of the native 8x16 cells without interlace combing.
   It splits at progressive line 216 through the shared Competition renderer; each

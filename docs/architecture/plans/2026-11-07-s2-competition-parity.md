@@ -541,3 +541,97 @@ instrumented; user wait was zero. No native/search jobs remain running.
 Detailed diagnostic outputs and the selection are retained under the task
 worktree's `target/` and external scratch directory. No new native qualification
 or act-2 witness is claimed.
+
+
+### Simultaneous EHZ route 2 (2026-11-09)
+
+Implementation lane: `feature/ai-s2-competition-simultaneous-route-2`, based on
+`3250d8b102` (PR #273). The frozen
+`src/test/resources/routes/s2/competition/ehz-simultaneous-tie-special.route.json`
+and companion script are **ENGINE-qualified only**, with a failed BIZHAWK stamp.
+No planner or gameplay implementation changed. All continuation inputs were
+searched by `RoutePlanner`; no tape rows were edited, overlaid or lag-adjusted.
+Scratch, programmes, logs and native evidence live under
+`~/Videos/OGGF/s2-competition/simultaneous-2/`.
+
+The planner retained the previous candidate's first 2,200 authored rows, then
+searched joint lower-line goals at x=4800–5000/y=800–990 and the x=6050–6110
+spring approach. Subsequent joint goals cover the spring exit, both finishes,
+act 2 and its spring/second-half traversal. Explicit `enter-boundary` legs cross
+the results transition. Neutral observation holds maintain phase 2 until copied
+`competition.presentationFrame` reaches 3500 and 6400. These are intentional
+engine-screen dwell goals, not values fitted to native observations. The final
+programme restores the initial joint goals from row 1200 and cold-qualifies all
+8,262 rows. The existing acceptance test's replay helper checks both title cards,
+act flow, menu-only Start edges, neutral locked rows, tie and special stage; the
+new case also checks overlapping run windows, opposite board winners and at
+least 180 neutral results rows before confirmation.
+
+| Act | P1 run window / finish | P2 run window / finish | Results neutral rows | Confirm |
+| --- | --- | --- | --- | --- |
+| EHZ 1 | 1290–3868 | 1290–4076 | 4259–4517 (259 rows) | 4518 |
+| EHZ 2 | 4631–6990 | 4631–6767 | 7173–7439 (267 rows) | 7440 |
+
+Rows are zero-based and include jumps, charge and neutral parts of each run.
+P1 wins act 1, P2 wins act 2; phase 5 / special stage 1 begins at row 7462.
+The result spans include screen arrival/readiness; they deliberately leave more
+than three seconds before Start, rather than skipping either board.
+
+Rejected attempts: the old P1-leading lower route cold-replays but P2 wins its
+combined metrics, despite P1 finishing first. A new lower-line search reached
+both finishes but exhausted 1,800,000 steps / 733 expansions while searching a
+fact-only results transition. Continuing that frozen best draft toward a counter
+beyond the transition encountered strict `CHECKPOINT_MISMATCH: competition
+checkpoint belongs to another epoch/layout`. The explicit boundary leg crosses
+that mode change without attempting to restore the retired act checkpoint; no
+checkpoint checks were weakened. This continuation then cold-qualified the board
+hold and act 2. The earlier 180,000-step spiral repair remains rejected as
+recorded above.
+
+Native export uses only the existing verified 1,329-row entry witness, engine
+anchor 1,261. No old act-2 inlet is attached: its preceding input history differs.
+The 8,330-row cold movie is
+`~/Videos/OGGF/s2-competition/simultaneous-2/ehz-simultaneous-tie-special.bk2`,
+SHA-256 `570b9c6b4597ba629ddefb8f84d1b15662d1596747c7f8607efa82a8c0f9a8ae`.
+Read-only BizHawk 2.11/GPGX under xvfb completed in 31.636 seconds, exit 0,
+no host failures. `check_s2_competition_goals.py --kind tie-special` found only
+`ehz-act1-play` at physical frame 1329; act 2 and competitive special-stage entry
+are missing. `RouteNativeStampTool` stamps that failed result on the frozen route.
+
+Both players' integer centres match engine row + 69 through native frame 2479
+(engine row 2410). Frame 2480 repeats LFC 1150 and both positions while V-int
+advances: native remains P1 (5421,945), P2 (5306,946); engine row 2411 is
+P1 (5429,945), P2 (5312,946), which native reaches at 2481 / LFC 1151.
+This establishes the first position mismatch as a native level-lag boundary,
+not complete state parity or proof that every later difference is solely lag.
+Later the native players stall at x=9448 and x=6479; the engine's board-confirm
+Start pauses ordinary native gameplay instead. Act 1 never completes in this
+movie, so no new act-2 inlet can be derived from it. No fitted input offsets,
+fillers, native values or altered pause rows were used. Native qualification and
+act-2 witness production remain blocked on a cold route reaching those goals
+with the documented native level-lag limitation. This is auxiliary-mode route
+coverage, not act certification; inherited pixel/rewind/width gaps remain.
+
+
+Verification: Java 25; verified ROMs all found. The queued package build with
+`-Dmse=off -DskipTests` passed (1 minute 51 seconds). The focused command
+`env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl "-Dtest=$(cat ~/Videos/OGGF/s2-competition/simultaneous-2/test-selection.txt)" test`
+ran all 31 route/package and frozen-route classes: **132 tests, 1 failure,
+0 errors/skips**. All three frozen EHZ cases passed. The sole failure is
+`TestCommittedRoutesQualifiedGuard.committedRouteManifestsAreNotDrafts` rejecting
+the inherited `ehz-spiral-jump-regression.route.json` draft. A separate clean,
+detached `3250d8b102` worktree ran the same guard through the queue with identical
+EGL/display flags: **1 test, the identical failure message and identity, no
+errors/skips**. No new failure was observed. That unrelated regression fixture
+is preserved. No production classes changed, so no additional referring-class
+selection is needed. These are bounded checks, not a smoke/full-suite verdict.
+JSON parsing, `git diff --check`, and disassembly citation checks passed (8
+verified citations; local optional disassembly checkouts differ from pins, and
+no new citations were added). The test selection and native receipts remain in
+the external scratch directory.
+
+The task selection waited 321 seconds in queue and ran for 1 minute 6 seconds;
+the baseline guard waited 56 seconds. User wait was zero. Search and other task
+wall time were not fully instrumented. All owned search/native jobs have ended;
+no native-qualified simultaneous route or new act-2 inlet is claimed.
