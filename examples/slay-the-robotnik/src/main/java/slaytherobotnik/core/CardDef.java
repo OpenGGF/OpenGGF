@@ -39,7 +39,7 @@ public final class CardDef {
     private final String id;
     private final String name;
     private final String color;
-    private final String type;
+    private final CardType type;
     private final String rarity;
     private final String target;
     private final int cost;
@@ -95,7 +95,7 @@ public final class CardDef {
         this.art = b.art == null ? b.id : b.art;
     }
 
-    public static Builder builder(String id, String name, String color, String type, String rarity) {
+    public static Builder builder(String id, String name, String color, CardType type, String rarity) {
         return new Builder(id, name, color, type, rarity);
     }
 
@@ -104,7 +104,7 @@ public final class CardDef {
     /** One of the {@link CardColor} constants. */
     public String color() { return color; }
     /** One of the {@link CardType} constants. */
-    public String type() { return type; }
+    public CardType type() { return type; }
     /** One of the {@link CardRarity} constants. */
     public String rarity() { return rarity; }
     /** One of the {@link CardTarget} constants. */
@@ -139,7 +139,7 @@ public final class CardDef {
         private final String id;
         private final String name;
         private final String color;
-        private final String type;
+        private final CardType type;
         private final String rarity;
         private String target = CardTarget.NONE;
         private int cost = 1;
@@ -164,7 +164,7 @@ public final class CardDef {
         private boolean upgradable = true;
         private String art;
 
-        private Builder(String id, String name, String color, String type, String rarity) {
+        private Builder(String id, String name, String color, CardType type, String rarity) {
             this.id = Objects.requireNonNull(id);
             this.name = Objects.requireNonNull(name);
             this.color = Objects.requireNonNull(color);

@@ -39,6 +39,13 @@ class TestSonic2NativeTitleControls {
             assertFalse(title.isExiting());
             verify(audio, times(4)).playSfx(Sonic2Sfx.BLIP.id);
             update(title, input, 0, 0, false, 0, 0, true);
+            assertEquals(TitleScreenProvider.State.EXITING,title.getState());
+            // MenuScreen (s2.asm:11717-11724) calls
+            // Pal_FadeToBlack (s2.asm:3370-3383): accept Start now, hand off after22 waits.
+            for(int pass=0;pass<22;pass++) {
+                assertFalse(title.isExiting(), "the outgoing title still owns its fade wait");
+                title.update(input);
+            }
             assertTrue(title.isExiting());
             assertEquals(TitleScreenProvider.TitleScreenAction.TWO_PLAYER, title.consumeExitAction());
             assertEquals(TitleScreenProvider.TitleScreenAction.OTHER, title.consumeExitAction());

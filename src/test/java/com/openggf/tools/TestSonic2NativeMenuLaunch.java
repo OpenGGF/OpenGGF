@@ -93,6 +93,9 @@ class TestSonic2NativeMenuLaunch {
             assertEquals(1, ((TitleScreenManager) session.loop().getTitleScreenProvider()).getNativeMenuSelection());
             assertNonblank(session.render());
             press(session, 0, true);
+            for (int i=0;i<8;i++) session.step(null);
+            assertEquals(GameMode.TITLE_SCREEN,session.loop().getCurrentGameMode(),"2P title stays visible during its 22 ROM fade waits");
+            assertEquals(0,session.render().argb(0,0)&0xffffff,"a pure-blue backdrop fades by its own nonzero channel");
             for (int i = 0; i < 300 && session.loop().getCurrentGameMode() != GameMode.COMPETITION_MENU; i++) {
                 session.step(null);
             }

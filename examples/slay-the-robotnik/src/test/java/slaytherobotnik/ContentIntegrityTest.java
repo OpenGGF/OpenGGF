@@ -27,6 +27,13 @@ class ContentIntegrityTest {
     private final Catalog catalog = Content.build();
 
     @Test
+    void cardKindsKeepTheirOriginalPlayerFacingLabels() {
+        assertEquals(java.util.List.of("Attack", "Skill", "Power", "Status", "Curse"),
+                java.util.Arrays.stream(slaytherobotnik.core.CardType.values()).map(Object::toString).toList());
+        for (CardDef card : catalog.allCards()) assertNotNull(card.type(), card.id());
+    }
+
+    @Test
     void everyHighlightedCardTermIsExplained() {
         int terms = 0;
         for (CardDef def : catalog.allCards()) {
@@ -63,7 +70,7 @@ class ContentIntegrityTest {
     @Test
     void upgradesChangeSomething() {
         for (CardDef def : catalog.allCards()) {
-            if (!def.upgradable() || def.type().equals("Status") || def.type().equals("Curse")) {
+            if (!def.upgradable() || def.type() == slaytherobotnik.core.CardType.STATUS || def.type() == slaytherobotnik.core.CardType.CURSE) {
                 continue;
             }
             boolean changes = def.cost(true) != def.cost(false) || def.damage(true) != def.damage(false)

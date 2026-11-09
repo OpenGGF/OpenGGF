@@ -25,11 +25,21 @@ class TestValleyEncoder {
     }
 
     private EncodedValley encode(S1Terrain terrain, int loop, int twin) {
-        return ValleyEncoder.encode(terrain, new ValleyEncoder.Spec(new int[] {1}, 1, loop, twin, 3, 15));
+        return ValleyEncoder.encode(terrain, new ValleyEncoder.Spec(new int[] {1}, 1, loop, twin));
     }
 
     private int word(byte[] data, int offset) {
         return (data[offset] & 255) << 8 | data[offset + 1] & 255;
+    }
+
+    @Test void loadedTerrainMayUseFormerPlaceholderPaletteCell() {
+        S1Terrain source = terrain();
+        Arrays.fill(source.pixels()[1], (byte) 15);
+        Arrays.fill(source.chunks()[1], 0x6001);
+        source.palette()[63] = 0x0ACE;
+        EncodedValley encoded = encode(source, -1, -1);
+        assertTrue(Arrays.stream(encoded.claims()).anyMatch(c -> c[0] == 3 && c[1] == 15 && c[2] == 0x0ACE));
+        assertEquals(0, encoded.remappedUses());
     }
 
     @Test void splits256BlocksKeepsFlipsCollisionAndPriority() {
@@ -60,7 +70,7 @@ class TestValleyEncoder {
         for (int[] claim : encoded.claims()) {
             assertFalse(claim[0] == 1 && (claim[1] == 1 || claim[1] == 5 || claim[1] == 12
                     || claim[1] == 14 || claim[1] == 15));
-            assertFalse(claim[0] == 0 || claim[0] == 3 && claim[1] == 15);
+            assertFalse(claim[0] == 0);
         }
         int block = encoded.foreground()[2] & 255;
         int chunk = word(encoded.blocks(), block * 128) & 0x3FF;
@@ -127,13 +137,13 @@ class TestValleyEncoder {
     }
 
     @Test void rectangularGridPlacesAllRowsAndPreservesBlankCells() {
-        var encoded=ValleyEncoder.encodeGrid(terrain(),new ValleyEncoder.Spec(new int[]{1,0,0,2},1,-1,-1,1,2),2,2);
+        var encoded=ValleyEncoder.encodeGrid(terrain(),new ValleyEncoder.Spec(new int[]{1,0,0,2},1,-1,-1),2,2);
         assertEquals(4,encoded.width()); assertEquals(5,encoded.height());
         // Each S1 cell becomes 2x2 S3K blocks, after one sky row.
         assertNotEquals(0,encoded.foreground()[4]); assertEquals(0,encoded.foreground()[6]);
         assertEquals(0,encoded.foreground()[12]); assertNotEquals(0,encoded.foreground()[14]);
         assertThrows(IllegalArgumentException.class,()->ValleyEncoder.encodeGrid(terrain(),
-            new ValleyEncoder.Spec(new int[]{1},1,-1,-1,1,2),2,2));
+            new ValleyEncoder.Spec(new int[]{1},1,-1,-1),2,2));
     }
 
     @Test void doesNotAliasCollisionInputAndCompactsRepeatedQuadrants() {

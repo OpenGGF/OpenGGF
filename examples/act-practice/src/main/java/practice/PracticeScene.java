@@ -1,5 +1,8 @@
 package practice;
 
+import com.openggf.mods.ui.SceneMenuChrome;
+import static com.openggf.mods.ui.MenuTheme.*;
+
 import com.openggf.control.ButtonPrompts;
 import com.openggf.control.PhysicalInputEvent;
 import com.openggf.mods.run.RunEndReason;
@@ -21,18 +24,19 @@ import java.util.Map;
  * Picks a game's first act and practises it. The run keeps special stages and rewind (unlike a
  * timed attack) but returns here when the act is complete; the host races your previous attempt.
  *
- * <p>The page echoes the engine's menus with the public canvas and fonts only ({@link PracticePage}):
+ * <p>The page echoes the engine's menus with the public canvas and fonts only ({@link SceneMenuChrome}):
  * a navy page under a gold-ruled header, the choice as one focused card with its best time, a
  * result line whose icon and colour say what happened, and a footer of key caps that name the
  * keyboard or the controller, whichever was pressed last. As in every scene, A, C or Start (Enter
  * on a keyboard) confirms and B (Escape) goes back.
  */
 public final class PracticeScene implements ModScene {
+    private static final int CARD_H = 34;
     private List<String> games = List.of();
     private int selected;
     private final PracticeHost host = new PracticeHost();
     private final Map<String, Integer> bests = new HashMap<>();
-    private PracticePage.Tone resultTone;
+    private SceneMenuChrome.Tone resultTone;
     private String result = "";
     /** Key caps name controller buttons after a pad press, keyboard keys after a key press. */
     private boolean pad;
@@ -117,11 +121,11 @@ public final class PracticeScene implements ModScene {
             case ACT_COMPLETED -> {
                 int time = host.lastTimeFrames();
                 boolean record = time >= 0 && (before < 0 || time < before);
-                resultTone = PracticePage.Tone.GOOD;
+                resultTone = SceneMenuChrome.Tone.GOOD;
                 result = "Act complete in " + PracticeHost.format(time) + (record ? ", a new best" : "");
             }
             case LOAD_FAILED -> {
-                resultTone = PracticePage.Tone.ERROR;
+                resultTone = SceneMenuChrome.Tone.ERROR;
                 result = "That act could not be loaded";
             }
             default -> {
@@ -134,52 +138,52 @@ public final class PracticeScene implements ModScene {
     @Override
     public void draw(SceneContext ctx, SceneCanvas canvas) {
         int width = canvas.width();
-        PracticePage.page(canvas, "ACT PRACTICE");
-        int x = PracticePage.MARGIN + 6;
+        SceneMenuChrome.page(canvas, "ACT PRACTICE");
+        int x = MARGIN + 6;
         int text = width - 2 * x;
         if (games.isEmpty()) {
             // An empty choice is information, not a warning: what is missing, then the next step.
-            int y = PracticePage.BODY_TOP + 6;
-            PracticePage.icon(canvas, PracticePage.Tone.INFO, x, y + 3);
-            NameFont.draw(canvas, "No games to practise yet", x + 10, y, PracticePage.TEXT);
-            PracticePage.paragraph(canvas, "Add your games from the title screen, then come back.", x + 10,
-                    y + NameFont.LINE_HEIGHT + 2, text - 10, PracticePage.MUTED);
-            PracticePage.footer(canvas, hints());
+            int y = BODY_TOP + 6;
+            SceneMenuChrome.icon(canvas, SceneMenuChrome.Tone.INFO, x, y + 3);
+            NameFont.draw(canvas, "No games to practise yet", x + 10, y, TEXT);
+            SceneMenuChrome.paragraph(canvas, "Add your games from the title screen, then come back.", x + 10,
+                    y + NameFont.LINE_HEIGHT + 2, text - 10, MUTED);
+            SceneMenuChrome.footer(canvas, hints());
             return;
         }
-        int y = PracticePage.paragraph(canvas, "Play a game's first act as it shipped. Special stages and rewind stay "
-                + "on, and your previous attempt races beside you.", x, PracticePage.BODY_TOP, text, PracticePage.MUTED);
+        int y = SceneMenuChrome.paragraph(canvas, "Play a game's first act as it shipped. Special stages and rewind stay "
+                + "on, and your previous attempt races beside you.", x, BODY_TOP, text, MUTED);
         // The retry key is the keyboard's R in the act, so it is said here rather than offered as a key cap.
-        y = PracticePage.paragraph(canvas, "During the act, R on the keyboard retries it.", x, y, text, PracticePage.DIM);
+        y = SceneMenuChrome.paragraph(canvas, "During the act, R on the keyboard retries it.", x, y, text, DIM);
         // The choice: one focused card, the game between arrows and its best time under it.
         int cardY = y + 7;
-        int cardX = PracticePage.MARGIN;
-        int cardW = width - 2 * PracticePage.MARGIN;
-        PracticePage.focus(canvas, cardX, cardY, cardW, PracticePage.CARD_H);
-        String game = PracticePage.gameName(games.get(selected));
-        canvas.text(game, (width - canvas.textWidth(game)) / 2, cardY + 6, PracticePage.GOLD);
+        int cardX = MARGIN;
+        int cardW = width - 2 * MARGIN;
+        SceneMenuChrome.focus(canvas, cardX, cardY, cardW, CARD_H);
+        String game = PracticeNames.gameName(games.get(selected));
+        canvas.text(game, (width - canvas.textWidth(game)) / 2, cardY + 6, GOLD);
         int best = bests.getOrDefault(games.get(selected), -1);
         String note = "First act, " + (best >= 0 ? "best " + PracticeHost.format(best) : "no best time yet");
-        NameFont.draw(canvas, note, (width - NameFont.width(note)) / 2, cardY + 19, PracticePage.TEXT);
+        NameFont.draw(canvas, note, (width - NameFont.width(note)) / 2, cardY + 19, TEXT);
         if (games.size() > 1) {
-            PracticePage.arrow(canvas, cardX + 8, cardY + 12, -1);
-            PracticePage.arrow(canvas, cardX + cardW - 12, cardY + 12, 1);
-            PracticePage.dots(canvas, width / 2, cardY + PracticePage.CARD_H + 5, games.size(), selected);
+            SceneMenuChrome.arrow(canvas, cardX + 8, cardY + 12, -1);
+            SceneMenuChrome.arrow(canvas, cardX + cardW - 12, cardY + 12, 1);
+            SceneMenuChrome.dots(canvas, width / 2, cardY + CARD_H + 5, games.size(), selected);
         }
-        y = cardY + PracticePage.CARD_H + 14;
-        if (resultTone != null) y = PracticePage.notice(canvas, resultTone, result, x, y, text) + 2;
+        y = cardY + CARD_H + 14;
+        if (resultTone != null) y = SceneMenuChrome.notice(canvas, resultTone, result, x, y, text) + 2;
         if (!host.persistenceNotice().isEmpty()) {
-            y = PracticePage.notice(canvas, PracticePage.Tone.WARNING, host.persistenceNotice(), x, y, text) + 2;
+            y = SceneMenuChrome.notice(canvas, SceneMenuChrome.Tone.WARNING, host.persistenceNotice(), x, y, text) + 2;
         }
-        PracticePage.footer(canvas, hints());
+        SceneMenuChrome.footer(canvas, hints());
     }
 
     /** What the keys do here, named for the device pressed last (Start and C confirm too). */
-    private List<PracticePage.Hint> hints() {
-        List<PracticePage.Hint> hints = new java.util.ArrayList<>();
-        if (games.size() > 1) hints.add(PracticePage.hint(PracticePage.ARROWS_LR, "Game"));
-        if (!games.isEmpty() && !confirmKey.isEmpty()) hints.add(PracticePage.hint(confirmKey, "Practise"));
-        if (!backKey.isEmpty()) hints.add(PracticePage.hint(backKey, "Back"));
+    private List<SceneMenuChrome.Hint> hints() {
+        List<SceneMenuChrome.Hint> hints = new java.util.ArrayList<>();
+        if (games.size() > 1) hints.add(SceneMenuChrome.hint(ARROWS_LR, "Game"));
+        if (!games.isEmpty() && !confirmKey.isEmpty()) hints.add(SceneMenuChrome.hint(confirmKey, "Practise"));
+        if (!backKey.isEmpty()) hints.add(SceneMenuChrome.hint(backKey, "Back"));
         return hints;
     }
 

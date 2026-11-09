@@ -177,7 +177,7 @@ class TestSonic2CompetitionDisplayInventory {
                 // This isolated owner fixture represents one admitted SST occupant.
                 nativeOwner.setSlotIndex(63);
                 if(owner instanceof Sonic2NativeDisplaySource
-                        && !java.util.Set.of(3,6,0x72,0x74,0x81,0x9E,0xD2,0x11).contains(spawn.objectId())) {
+                        && !java.util.Set.of(3,6,0x72,0x74,0x81,0x9E,0xD2,0x11,0x85).contains(spawn.objectId())) {
                     var display=Sonic2CompetitionObjectDisplay.project(nativeOwner,provider,()->fail("Explicit source must not draw"));
                     assertNotNull(display);
                     var nativeInit=Sonic2CompetitionSpriteArtTable.captureRows().stream()

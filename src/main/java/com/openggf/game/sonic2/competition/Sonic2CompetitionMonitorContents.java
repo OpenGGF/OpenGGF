@@ -35,6 +35,12 @@ public final class Sonic2CompetitionMonitorContents extends AbstractMonitorObjec
     private int content;
     private boolean contentsInitialized;
     private int vIntRunCount;
+    private int initializationFrame = -1;
+
+    /** Read-only Obj2E observation for route outcome goals. */
+    public int initializedContent() { return contentsInitialized ? content : 0; }
+    public int initializationFrame() { return initializationFrame; }
+    public int breakerSlot() { return breakerSlot; }
 
     public Sonic2CompetitionMonitorContents(int x, int y, int breakerSlot, PlayableEntity breaker) {
         this(new ObjectSpawn(x, y, Sonic2ObjectIds.MONITOR_CONTENTS, 9, 0, false, 0), breakerSlot, breaker);
@@ -60,6 +66,7 @@ public final class Sonic2CompetitionMonitorContents extends AbstractMonitorObjec
         if (session == null) throw new IllegalStateException("Native monitor session is unavailable");
         if (!contentsInitialized) {
             // Obj2E_Init (s2.asm:25755-25776) reads Level_frame_counter, never V_int_run_count.
+            initializationFrame = services().levelManager().getFrameCounter();
             content = session.monitorContents(services().levelManager().getFrameCounter(),
                     Sonic2CompetitionObjectAccess.host(services()).teleportOnly());
             contentsInitialized = true;

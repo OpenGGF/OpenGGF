@@ -19,12 +19,14 @@ class TestCompetitionTitleRoute {
     @Test void coldPrefixLaunchesTheProductionCasinonightMenuEntry() throws Exception {
         var launch=new LaunchContract(RomIdentity.standard("s2"),new Inlet.Title(),new Roster("sonic","tails"),
                 320,"off",new InitialState(0,Seeds.NONE));
-        var tape=TestStageplayCompetitionFrozenRoute.resource("cnz1-slot-flip").tape().slice(0,1200);
+        var frozen=TestStageplayCompetitionFrozenRoute.resource("cnz1-slot-flip");
+        int end=frozen.manifest().nativeFacts().entry().orElseThrow().engineAnchorRows()+1;
+        var tape=frozen.tape().slice(0,end);
         var condition=new SamplePredicate.All(java.util.List.of(
                 new SamplePredicate.FactEquals("competition.selection",2),
                 new SamplePredicate.FactEquals("competition.phase",1),
                 new SamplePredicate.PlayerIn(PlayerSlot.P2,new Region(0,0,65535,65535))));
-        var goals=new GoalProgram(Guard.NONE,java.util.List.of(Leg.of("cnz-entry",new RouteGoal.Achieve(condition),1)),1199);
+        var goals=new GoalProgram(Guard.NONE,java.util.List.of(Leg.of("cnz-entry",new RouteGoal.Achieve(condition),1)),tape.size()-1);
         var route=RouteArtifact.of(launch,goals,tape,new Provenance("test","test","test",java.util.List.of()));
         var hosts=new StageplayCompetitionRouteHosts(Path.of(System.getProperty("sonic2.rom.path")));
         var result=new RouteReplay(hosts).replay(route,Cancellation.NONE,(row,sample)->{
@@ -49,4 +51,17 @@ class TestCompetitionTitleRoute {
         assertInstanceOf(ReplayResult.Failed.class,new RouteReplay(hosts).replay(broken,Cancellation.NONE),
                 "negative control: removing the grid edge must fail the same CNZ launch goal");
     }
+    @Test void plannerCanRestoreALeaveCheckpointAfterLookingPastTheGameplayAnchor() throws Exception {
+        var hosts=new StageplayCompetitionRouteHosts(Path.of(System.getProperty("sonic2.rom.path")));
+        var goals=new GoalProgram(Guard.NONE,java.util.List.of(new Leg("ordinary-after-title",
+                new RouteGoal.Achieve(new SamplePredicate.FactEquals("competition.p1.time",200)),
+                Guard.NONE.holding(new SamplePredicate.FactEquals("competition.phase",1)),400)),1200);
+        var result=com.openggf.stageplay.route.StageplayRoutePlanner.planNative(hosts,
+                StageplayCompetitionRouteHosts.launch(),StageplayCompetitionRouteHosts.menuPrefix(2),goals,
+                new SearchBudget(100,100000,32,16),()->false,PlanProgress.Listener.NONE);
+        var solved=assertInstanceOf(PlanResult.Solved.class,result,result.toString());
+        assertEquals(200,solved.replayEnd().facts().get("competition.p1.time"));
+        assertTrue(solved.replayEnd().facts().get("input.gameplayAnchorRows")>1200);
+    }
+
 }

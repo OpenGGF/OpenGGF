@@ -1,12 +1,28 @@
 # Level test coverage backlog
 
+S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
+exercise P1 breaking for all eight outcomes and hold the award for six seconds.
+The [bounded matrix](../architecture/plans/2026-11-07-s2-competition-parity.md#question-mark-monitor-outcomes-2026-11-09)
+records engine/native evidence and inherited gaps. This certifies no new act.
+
+S2 EHZ simultaneous jump release (2026-11-09): the
+[bounded investigation](../architecture/plans/2026-11-07-s2-competition-parity.md#simultaneous-ehz-jump-release-2026-11-09)
+adds a cold-ROM two-human spiral-jump prefix and independent-rider unit coverage.
+Both integer trajectories match native through row 3202; physical lag, a new
+planner-qualified route, act-2 inlet, pictures, viewport breadth and inherited
+rewind/route obligations remain open. No additional act is certified.
+
 S2 Competition (2026-11-08): the [Competition parity plan](../architecture/plans/2026-11-07-s2-competition-parity.md#route-and-act-obligations)
-records the EHZ/MCZ/CNZ and special-stage route obligations as an LTS-08
+records the [CNZ object-display regression](../architecture/plans/2026-11-07-s2-competition-parity.md#cnz-object-display-follow-up-2026-11-09) and the EHZ/MCZ/CNZ and special-stage route obligations as an LTS-08
 auxiliary-mode increment. Native state prefixes match for EHZ 1, MCZ 1, CNZ 1
 and the competitive special stage up to the first native lag frame or open
 frontier; act 2 routes, results, tiebreaker and native pictures beyond the
 sampled cuts remain open. Participants are fixed by the ROM; viewport width is
-unassessed and held rewind is off by decision. No act is certified.
+unassessed and held rewind is off by decision. No act is certified. ROM-backed Competition HUD tests cover signpost pole/face
+uploads and rewind, digit-five SAT mapping selection, and the interrupt-before-goal
+timer boundary. Scattered-ring recollection remains V-int-origin dependent under
+[S2 Whole-Run V-int Clock Cannot Be Made Exact](known-discrepancies.md#s2-whole-run-v-int-clock-cannot-be-made-exact);
+progressive HUD pixels and integrated recollection remain lead qualification work.
 
 LRZ title-owned enemy art (2026-11-07): the [submission audit](../architecture/audits/2026-11-07-lrz-enemy-art-submission.md)
 and [Act1](../architecture/validation/levels/s3k-lrz-act1.md) /

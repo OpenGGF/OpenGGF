@@ -30,6 +30,8 @@ public final class Sonic2CompetitionVideoFrame {
     private final Sonic2CompetitionViewRegisters registers;
     private final Supplier<Sample> source;
     private Sonic2CompetitionDisplaySources spriteSource;
+    private java.util.function.BooleanSupplier titleOnly = () -> false;
+    public void bindTitleOnly(java.util.function.BooleanSupplier source) { titleOnly = Objects.requireNonNull(source); }
     private Sonic2CompetitionDisplayState displayState = Sonic2CompetitionDisplayState.INACTIVE;
     private java.util.function.Consumer<Boolean> cameraCopies = title -> { };
     public void bindCameraCopies(java.util.function.Consumer<Boolean> copies) { cameraCopies = Objects.requireNonNull(copies); }
@@ -61,8 +63,16 @@ public final class Sonic2CompetitionVideoFrame {
         var objects = new java.util.ArrayList<>(titleCardSprites.get());
         objects.addAll(Sonic2CompetitionObjectDisplay.admissions(context.getObjectManager(),
                 context.getWorldSession().getGameModule().getObjectArtProvider()));
-        spritePages.prepare(Objects.requireNonNull(spriteSource, "Native sprite inputs").current(
-                context, session, profile, objects, displayState));
+        var input = Objects.requireNonNull(spriteSource, "Native sprite inputs").current(
+                context, session, profile, objects, displayState);
+        if (titleOnly.getAsBoolean()) {
+            var hud = input.hud();
+            input = new Sonic2CompetitionDisplayInputs.Build(input.firstCamera(), input.secondCamera(),
+                    new Sonic2CompetitionDisplayInputs.Hud(false, 0, hud.first(), hud.second(), 0),
+                    new Sonic2CompetitionDisplayInputs.RingWindow(List.of()),
+                    new Sonic2CompetitionDisplayInputs.RingWindow(List.of()), 0, titleCardSprites.get(), false);
+        }
+        spritePages.prepare(input);
         // BuildSprites_2P merges P1/P2 visibility. Replace the generic primary-
         // camera result for the actual admitted humans; omitted bodies retain it.
         for (var visibility : spritePages.visibility())

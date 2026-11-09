@@ -4,7 +4,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
 import java.util.BitSet;
 
-/** Derived field-projected cells. Both parity banks share the normal level atlas range. */
+/** Full-resolution cell halves. Both halves share the normal level atlas range. */
 public final class Sonic2CompetitionFieldPatterns implements com.openggf.level.animation.AnimatedPatternManager,
         com.openggf.game.rewind.RewindSnapshottable<Sonic2CompetitionFieldPatterns.State> {
     public record State() { }
@@ -32,10 +32,10 @@ public final class Sonic2CompetitionFieldPatterns implements com.openggf.level.a
             byte[] top = residency.slot(cell * 2), bottom = residency.slot(cell * 2 + 1);
             if (seen[cell * 2] == top && seen[cell * 2 + 1] == bottom) continue;
             for (int bank = 0; bank < 2; bank++) {
-                int id = (bank << 10) | cell;
+                int id = cell * 2 + bank;
                 var pattern = patterns[id];
                 for (int y = 0; y < 8; y++) {
-                    int row = y * 2 + bank;
+                    int row = y + bank * 8;
                     byte[] source = row < 8 ? top : bottom;
                     int offset = (row & 7) * 4;
                     for (int x = 0; x < 8; x++)

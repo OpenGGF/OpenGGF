@@ -156,6 +156,16 @@ public final class Sonic2CompetitionObjectDisplay {
         Objects.requireNonNull(owner);
         if (owner instanceof Sonic2NativeDisplaySource source) return source.nativeDisplaySlot();
         if (owner instanceof com.openggf.level.rings.LostRingObjectInstance ring) return projectLostRing(ring);
+        if (owner instanceof com.openggf.game.sonic2.objects.RingPrizeObjectInstance) {
+            // loc_2BD4E (s2.asm:59272-59290): ObjDC uses the ring owner's sheet,
+            // not an ObjectArtProvider renderer. Keep its actual spin/sparkle request.
+            var capture = SpriteFrameCaptureInternalAccess.capture(draw);
+            if (capture.calls().isEmpty()) return null;
+            if (capture.calls().size()!=1 || !(capture.calls().getFirst() instanceof SpriteFrameCaptureInternalAccess.FrameCall call))
+                throw unsupported(owner,0xDC);
+            return new ObjectSlot(0xDC,4,call.originX()&0xFFFF,call.originY()&0xFFFF,8,0,
+                    new Mapping(0x12382,call.frameIndex()),Sonic2CompetitionSpriteArtTable.adjust2PArtPointer(0x26BC),null);
+        }
         return projectCaptured(owner,art,draw,owner.getLiveObjectId()&255);
     }
 

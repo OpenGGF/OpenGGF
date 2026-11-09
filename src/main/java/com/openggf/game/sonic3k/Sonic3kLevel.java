@@ -98,6 +98,7 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
     private final Integer minXOverride;
     private final S3kZoneSet objectZoneSet;
     private final boolean stockRomZoneIdentity;
+    private final List<ModPaletteClaim> customZonePaletteClaims;
     /**
      * False for a level built off the frame thread ahead of its install: the
      * constructor then skips palette/pattern publication and the installer
@@ -344,6 +345,7 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
         this.minXOverride = minXOverride;
         this.objectZoneSet = S3kZoneSet.forZone(zoneIndex);
         this.stockRomZoneIdentity = true;
+        customZonePaletteClaims = List.of();
         this.patternLoadCueSchedule = resourcePlan.getPatternLoadCueSchedule();
 
         loadPalettes(rom, characterPaletteAddr, levelPaletteAddr);
@@ -450,7 +452,8 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
         decodeChunks(source.chunkBytes, source.primaryCollisionIndices, source.secondaryCollisionIndices);
         decodeBlocks(source.blockBytes);
         decodeInMemoryMap(source.mapWidth, source.mapHeight, source.foregroundMap, source.backgroundMap);
-        palettes = composeInMemoryPalettes(source.characterPalette, source.paletteClaims);
+        customZonePaletteClaims = source.paletteClaims;
+        palettes = composeInMemoryPalettes(source.characterPalette, customZonePaletteClaims);
         objects = source.objectSpawns;
         rings = source.ringSpawns;
         ringSpriteSheet = source.ringSpriteSheet;
@@ -472,6 +475,11 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
     /** Whether {@link #getZoneIndex()} is an actual S3K ROM zone id rather than a synthetic index. */
     public boolean hasStockRomZoneIdentity() {
         return stockRomZoneIdentity;
+    }
+
+    /** Immutable claims from the loaded payload, including runtime-generated replacements. */
+    List<ModPaletteClaim> customZonePaletteClaims() {
+        return customZonePaletteClaims;
     }
 
     /** Post-load ROM event scripts require an installed native ROM zone identity. */

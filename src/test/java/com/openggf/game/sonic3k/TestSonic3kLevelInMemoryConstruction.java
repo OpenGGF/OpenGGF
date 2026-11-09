@@ -121,6 +121,7 @@ class TestSonic3kLevelInMemoryConstruction {
         rings.clear();
 
         Sonic3kLevel level = builder.build();
+        assertEquals(List.of(new ModPaletteClaim(2, 3, 0x00E0)), level.customZonePaletteClaims());
         patterns[0] = 0x77;
         foreground[0] = 0;
         heights[SolidTile.TILE_SIZE_IN_ROM] = 0x55;

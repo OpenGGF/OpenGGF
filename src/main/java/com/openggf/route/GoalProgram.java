@@ -80,6 +80,7 @@ public record GoalProgram(Guard routeGuard, List<Leg> legs, int startRow) {
                 if (current != null) {
                     boolean done = switch (current.goal()) {
                         case RouteGoal.Achieve achieve -> achieve.condition().test(sample);
+                        case RouteGoal.Wait wait -> row + 1 - legStart >= wait.rows();
                         case RouteGoal.EnterBoundary ignored -> previous != null && sample.epoch() != previous.epoch();
                     };
                     if (done) {

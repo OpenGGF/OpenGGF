@@ -25,8 +25,7 @@ public final class ValleyLevel {
     /** Encodes {@code terrain} with the valley's layout. */
     public static EncodedValley encode(S1Terrain terrain) {
         return ValleyEncoder.encode(terrain, new ValleyEncoder.Spec(RealValley.blocks(), RealValley.SKY_ROWS,
-                RealValley.LOOP_BLOCK, RealValley.LOOP_TWIN, RealValley.PLACEHOLDER_LINE,
-                RealValley.PLACEHOLDER_COLOR));
+                RealValley.LOOP_BLOCK, RealValley.LOOP_TWIN));
     }
 
     /**

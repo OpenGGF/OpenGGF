@@ -32,6 +32,12 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
         if(current==null) throw new IllegalStateException("no open competition route world");
         return current.render();
     }
+    /** Video demo: renders the current game mode of the open world, including title and menus. */
+    public com.openggf.graphics.RgbaImage renderAnyCurrent() {
+        if(current==null) throw new IllegalStateException("no open competition route world");
+        return current.renderAny();
+    }
+    public String currentGameMode() { return current==null?"none":String.valueOf(current.loop.getCurrentGameMode()); }
 
     /** ROM-backed geometry inventory for editor picking and bounded goal declarations; no controller rows. */
     public java.util.List<Region> flipTileLocations() {
@@ -82,7 +88,7 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
                     throw new RouteHostException(RouteHostException.Reason.ROM_UNAVAILABLE, "S2 ROM SHA-1 mismatch");
             } catch (java.io.IOException e) { throw new java.io.UncheckedIOException(e); }
             if(launch.initial().vIntStart()!=0) throw new RouteHostException(RouteHostException.Reason.UNSUPPORTED_LAUNCH,"title inlet owns its initial clock");
-            boot = new HeadlessGameBoot(launch.width(),224);
+            boot = new HeadlessGameBoot(launch.width(),448,launch.width(),224);
             try {
                 boot.setModuleDecorator(base -> adapter[0] = new Sonic2CompetitionRouteAdapter(base));
                 boot.setBootToTitle(true);
@@ -123,11 +129,13 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
             if (visit != null) {
                 var state = visit.session();
                 facts.put("competition.phase", state.phase().ordinal());
+                facts.put("competition.titleCard", visit.host().titleCardActive()?1:0);
+                facts.put("input.locked", visit.inputLocked()?1:0);
                 // loadAct has returned from its real title owner, before the ordinary LFC increment.
                 if (gameplayAnchorRows < 0 && state.phase()==com.openggf.game.sonic2.competition.Sonic2CompetitionSession.Phase.ACT
-                        && lm.getFrameCounter()==0) gameplayAnchorRows=rows;
+                        && !visit.host().titleCardActive() && lm.getFrameCounter()==0) gameplayAnchorRows=rows;
                 if(state.phase()==com.openggf.game.sonic2.competition.Sonic2CompetitionSession.Phase.ACT
-                        && lm.getFrameCounter()==0)levelAnchorRows=rows;
+                        && !visit.host().titleCardActive() && lm.getFrameCounter()==0)levelAnchorRows=rows;
                 if(levelAnchorRows>=0)facts.put("input.levelAnchorRows",levelAnchorRows);
                 if (gameplayAnchorRows >= 0) facts.put("input.gameplayAnchorRows",gameplayAnchorRows);
                 facts.put("competition.paused",state.gameState(0).isGamePaused()?1:0);
@@ -143,6 +151,9 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
                     facts.put("competition.p"+(slot+1)+".time",Math.toIntExact(state.playerState(slot).getTimerFrames()));
                     if(state.player(slot)!=null) {
                         facts.put("competition.p"+(slot+1)+".objectControlled",state.player(slot).isObjectControlled()?1:0);
+                        facts.put("competition.p"+(slot+1)+".shield",state.player(slot).hasShield()?1:0);
+                        facts.put("competition.p"+(slot+1)+".speedShoes",state.player(slot).hasSpeedShoes()?1:0);
+                        facts.put("competition.p"+(slot+1)+".invincibility",state.player(slot).getInvincibleFrames()>0?1:0);
                         facts.put("competition.p"+(slot+1)+".dead",state.player(slot).getDead()?1:0);
                         facts.put("competition.p"+(slot+1)+".cameraX",state.camera(slot).getX()&65535);
                         facts.put("competition.p"+(slot+1)+".cameraY",state.camera(slot).getY()&65535);
@@ -159,6 +170,21 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
                 facts.put("competition.firstFinisher", state.firstFinisher());
                 facts.put("competition.specialStage", state.specialStageIndex());
                 if (state.player(0) != null) { p1 = state.player(0); p2 = state.player(1); }
+            }
+            facts.put("competition.levelFrame", lm.getFrameCounter());
+            facts.put("competition.levelPhase", lm.getFrameCounter() & 7);
+            if (context.getObjectManager() != null) {
+                for (var icon : context.getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic2.competition.Sonic2CompetitionMonitorContents.class)) {
+                    if (!icon.isDestroyed()) {
+                        facts.put("competition.monitor.spawned", 1);
+                    }
+                    if (!icon.isDestroyed() && icon.initializedContent() != 0) {
+                        facts.put("competition.monitor.content", icon.initializedContent());
+                        facts.put("competition.monitor.initFrame", icon.initializationFrame());
+                        facts.put("competition.monitor.breaker", icon.breakerSlot() + 1);
+                    }
+                }
             }
             var observed = new ArrayList<ObjectView>();
             var interactions = new ArrayList<InteractionView>();
@@ -254,7 +280,33 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
         private com.openggf.graphics.RgbaImage render() {
             if(adapter[0].visit()==null) throw new IllegalStateException("no native visit to draw");
             adapter[0].visit().draw();
-            return com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224);
+            return com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,448);
+        }
+        /** Video-demo draw of whatever the loop shows: title, native menu/competition screens, or black. */
+        private com.openggf.graphics.RgbaImage renderAny() {
+            var graphics=GameServices.graphics();
+            graphics.runPendingRenderThreadTasks();
+            var gameMode=loop.getCurrentGameMode();
+            if(gameMode==com.openggf.game.GameMode.TITLE_SCREEN && !loop.isTitleEntryShowingLevel()) {
+                var title=loop.getTitleScreenProvider();
+                title.setClearColor(); org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT|org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+                title.draw();
+                title.drawOverlay(new com.openggf.mods.ui.LevelOverlayCanvas(graphics,graphics.getProjectionWidth(),graphics.getConfiguredScreenHeightPx()));
+                graphics.flushScreenSpace();
+                if(graphics.getUiRenderPipeline()!=null) graphics.getUiRenderPipeline().renderFadePass();
+            } else if(com.openggf.game.nativemenu.NativeMenuController.handles(gameMode)
+                    && com.openggf.NativeMenuPresentationAccess.screen(loop)!=null) {
+                var screen=com.openggf.NativeMenuPresentationAccess.screen(loop);
+                screen.setClearColor(); org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT|org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+                graphics.resetForFixedFunction();
+                screen.draw();
+                graphics.flushScreenSpace();
+                if(graphics.getUiRenderPipeline()!=null) graphics.getUiRenderPipeline().renderFadePass();
+            } else {
+                org.lwjgl.opengl.GL11.glClearColor(0,0,0,1); org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT);
+            }
+            org.lwjgl.opengl.GL11.glFinish();
+            return com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,448);
         }
 
         private static PlayerView view(com.openggf.sprites.playable.AbstractPlayableSprite p) {
@@ -270,24 +322,25 @@ public final class StageplayCompetitionRouteHosts implements RouteWorldFactory {
         private record Saved(World owner, long epoch, Object level,
                 com.openggf.game.rewind.RewindRegistry registry, long layout,
                 com.openggf.game.rewind.CompositeSnapshot state,
-                com.openggf.debug.playback.Bk2FrameInput previous, int rows, int levelAnchorRows) implements WorldCheckpoint { }
+                com.openggf.debug.playback.Bk2FrameInput previous, int rows, int levelAnchorRows, int gameplayAnchorRows) implements WorldCheckpoint { }
         @Override public WorldCheckpoint capture() {
             var visit = adapter[0].visit();
             var context = SessionManager.getCurrentGameplayMode();
             if(visit==null || visit.session().phase()!=com.openggf.game.sonic2.competition.Sonic2CompetitionSession.Phase.ACT
+                    || visit.host().titleOnly()
                     || loop.getCurrentGameMode()!=com.openggf.game.GameMode.COMPETITION
                     || context.getLevelManager().hasPendingFreshLevelTransitionBoundary()
                     || GameServices.graphics().getFadeManager().isActive())
                 throw new RouteHostException(RouteHostException.Reason.CHECKPOINT_REFUSED,"outside stable competition act");
             var registry=context.getRewindRegistry();
-            return new Saved(this,epoch,level,registry,registry.courseLayoutVersion(),registry.capture(),previous,rows,levelAnchorRows);
+            return new Saved(this,epoch,level,registry,registry.courseLayoutVersion(),registry.capture(),previous,rows,levelAnchorRows,gameplayAnchorRows);
         }
         @Override public void restore(WorldCheckpoint checkpoint) {
             var context=SessionManager.getCurrentGameplayMode();
             if(!(checkpoint instanceof Saved c) || c.owner()!=this || c.epoch()!=epoch || c.level()!=level
                     || c.registry()!=context.getRewindRegistry() || c.layout()!=c.registry().courseLayoutVersion())
                 throw new RouteHostException(RouteHostException.Reason.CHECKPOINT_MISMATCH,"competition checkpoint belongs to another epoch/layout");
-            c.registry().restore(c.state()); previous=c.previous(); rows=c.rows(); levelAnchorRows=c.levelAnchorRows();
+            c.registry().restore(c.state()); previous=c.previous(); rows=c.rows(); levelAnchorRows=c.levelAnchorRows(); gameplayAnchorRows=c.gameplayAnchorRows();
         }
         @Override public void close() {
             try { diagnostic.accept(observe()); }

@@ -6,9 +6,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ModRewindRecreatable;
 import com.openggf.level.objects.MultiBucketRenderable;
-import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectReconstructionContext;
-import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import java.util.List;
@@ -16,42 +14,33 @@ import java.util.List;
 /**
  * Draws one {@link Stagehand.Visual} with the zone's ROM art. It has no behaviour, no
  * collision and no native object slot (it is an auxiliary dynamic object), so its presence never
- * changes the deterministic rail run. It deletes itself when its visual is gone or its
- * generation is stale.
+ * changes the deterministic rail run. It deletes itself when its visual is removed.
  *
  * <p>Puppets stay out of rewind snapshots ({@code addAuxiliaryDynamicObject}): the stagehand,
- * not the engine, owns what is drawn, and the course respawns every puppet after a checkpoint
- * restore, so snapshotting them only added recreation work and drew rewind object ids.
+ * not the engine, owns what is drawn. The auxiliary collection recreates missing puppets
+ * after checkpoint restore without allocating rewind object ids.
  */
 public final class Puppet extends AbstractObjectInstance implements ModRewindRecreatable, MultiBucketRenderable {
     static final String KEY = "puppet";
 
     private int visualId;
-    private int generation;
 
     public Puppet(ObjectSpawn spawn) {
         super(spawn, "Typing puppet");
     }
 
-    Puppet(ObjectSpawn spawn, int visualId, int generation) {
+    Puppet(ObjectSpawn spawn, int visualId) {
         this(spawn);
         this.visualId = visualId;
-        this.generation = generation;
     }
 
     static ObjectSpawn spawnAt(int x, int y) {
         return new ObjectSpawn(x, y, 0, 0, 0, false, y, -1, TypingIds.MOD, TypingIds.MOD + ":" + KEY);
     }
 
-    /** Spawns a puppet for {@code visual} through the non-rewindable auxiliary-object path. */
-    static Puppet spawn(ObjectServices services, Stagehand.Visual visual, int generation) {
-        return ObjectConstructionContext.construct(services, () -> {
-            Puppet puppet = new Puppet(spawnAt(visual.x, visual.y), visual.id(), generation);
-            if (!ObjectConstructionContext.isProbeConstruction()) {
-                services.objectManager().addAuxiliaryDynamicObject(puppet);
-            }
-            return puppet;
-        });
+    /** Construction and auxiliary ownership are supplied by the public collection helper. */
+    static Puppet create(Stagehand.Visual visual) {
+        return new Puppet(spawnAt(visual.x, visual.y), visual.id());
     }
 
     @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
@@ -84,7 +73,7 @@ public final class Puppet extends AbstractObjectInstance implements ModRewindRec
 
     private Stagehand.Visual visual() {
         Stagehand stagehand = stagehand();
-        return stagehand != null && stagehand.current(visualId, generation) ? stagehand.get(visualId) : null;
+        return stagehand == null ? null : stagehand.get(visualId);
     }
 
     @Override public void update(int vIntRunCount, PlayableEntity player) {

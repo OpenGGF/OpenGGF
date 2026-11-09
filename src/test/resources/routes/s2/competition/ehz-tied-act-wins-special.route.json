@@ -537,34 +537,34 @@
         "condition" : {
           "kind" : "fact-equals",
           "key" : "competition.presentationFrame",
-          "value" : 17773
+          "value" : 17904
         }
       }
     } ]
   },
   "tape" : {
     "script" : "ehz-tied-act-wins-special.script",
-    "rows" : 18724,
-    "sha256" : "384c8e1b4c14c67757e230908e355e53ec928e8d5dcd5480c081277bdb50729b"
+    "rows" : 18966,
+    "sha256" : "c8fe6cc138a2e1328103ce6a33fe668d1d359a796017726eeb68bad9ea7fe110"
   },
   "provenance" : {
-    "producer" : "RoutePlanner prefix-search/3 goal program",
-    "engine" : "openggf 0.8.prerelease-fb572165e-dirty stageplay-s2-competition-title/1",
-    "source" : "authored after a 14463-row prefix toward legs [p1-upper-approach, p1-over-lower-wall, p1-act1-finish, p2-early-upper-path, p2-upper-midpoint, p2-upper-wall-approach, p2-over-lower-wall, p2-act1-finish, act1-results-ready, act1-results-finish-grace-hold, act2-native-entry, p2-act2-upper-approach, p2-act2-spring-approach, p2-act2-upper-spring-exit, p2-act2-second-half, p2-act2-finish, p1-act2-approach, p1-act2-spring-approach, p1-act2-upper-spring-exit, p1-act2-second-half, p1-act2-finish, act2-results-ready, act2-results-finish-grace-hold, tied-act-wins-to-special-stage, show-competitive-special-stage-start]",
+    "producer" : "RoutePlanner prefix-search/4 goal program",
+    "engine" : "openggf 0.8.prerelease-fb73ff855-dirty stageplay-s2-competition-title/1",
+    "source" : "authored after a 18944-row prefix toward legs [p1-upper-approach, p1-over-lower-wall, p1-act1-finish, p2-early-upper-path, p2-upper-midpoint, p2-upper-wall-approach, p2-over-lower-wall, p2-act1-finish, act1-results-ready, act1-results-finish-grace-hold, act2-native-entry, p2-act2-upper-approach, p2-act2-spring-approach, p2-act2-upper-spring-exit, p2-act2-second-half, p2-act2-finish, p1-act2-approach, p1-act2-spring-approach, p1-act2-upper-spring-exit, p1-act2-second-half, p1-act2-finish, act2-results-ready, act2-results-finish-grace-hold, tied-act-wins-to-special-stage, show-competitive-special-stage-start]",
     "notes" : [ ]
   },
   "qualification" : [ {
     "scope" : "ENGINE",
     "passed" : true,
-    "content" : "c91661a51bd98c02b01438c2b9b64ec13af88fda9709d03a46ada7d8a67d8d13",
-    "environment" : "openggf 0.8.prerelease-8711ae3cb-dirty stageplay-s2-competition-title/1",
-    "rows" : 18724
+    "content" : "6dc4ffbf5525a1090e798cf85d05bc3606cab18d440a9b8cedccdddf116bc670",
+    "environment" : "openggf 0.8.prerelease-fb73ff855-dirty stageplay-s2-competition-title/1",
+    "rows" : 18966
   }, {
     "scope" : "BIZHAWK",
     "passed" : true,
-    "content" : "c91661a51bd98c02b01438c2b9b64ec13af88fda9709d03a46ada7d8a67d8d13",
-    "environment" : "BizHawk2.11/GPGX cold read-only required-goals movie 2142adf36ff3dc7d11514259310576b1a1cc7a15973d94c2091bd77d73ff0a04; accepted comparison boundary null",
-    "rows" : 18724,
+    "content" : "6dc4ffbf5525a1090e798cf85d05bc3606cab18d440a9b8cedccdddf116bc670",
+    "environment" : "BizHawk2.11/GPGX cold read-only required-goals movie 89777702e15f6c2adddb4fa9b9232b136ef323e4bda01712530377ba249f92cb; accepted comparison boundary null",
+    "rows" : 18966,
     "coverage" : [ "ehz-act1-play", "ehz-act2-play", "tied-act-wins-to-competitive-special-stage" ]
   } ],
   "native" : {
@@ -572,15 +572,15 @@
       "movie" : "src/test/resources/routes/s2/competition/witnesses/ehz-native-prefix.script",
       "prefixRows" : 1329,
       "inputHash" : "8f8669ed648d485c9dfc349e1bdba91d2a29743b76a3be7b5644ade8e3d30c34",
-      "engineAnchorRows" : 1151,
+      "engineAnchorRows" : 1261,
       "anchorBoundary" : "first-ordinary-level-lfc-zero"
     },
     "inlets" : [ {
-      "engineFromRows" : 10009,
+      "engineFromRows" : 10119,
       "movie" : "src/test/resources/routes/s2/competition/witnesses/ehz-act2-native-prefix.script",
       "prefixRows" : 10364,
       "inputHash" : "b3a5948dccabd7dd96a6fcc38bc281c02c37c380d6e26d8c847919b9a550d01b",
-      "engineAnchorRows" : 10010,
+      "engineAnchorRows" : 10230,
       "anchorBoundary" : "first-ordinary-level-lfc-zero"
     } ],
     "lag" : [ ]

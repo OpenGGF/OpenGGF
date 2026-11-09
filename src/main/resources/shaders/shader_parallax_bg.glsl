@@ -25,6 +25,7 @@ uniform float ColumnRemapEndY;
 
 // Screen dimensions (actual viewport pixels)
 uniform float ScreenHeight;
+uniform float LogicalHeight = 224.0;
 uniform float ScreenWidth;
 uniform float ActiveDisplayWidth;
 
@@ -79,13 +80,13 @@ void main()
     // game pixels so per-scanline sampling stays stable under integer upscaling.
     float activeDisplayWidth = ActiveDisplayWidth > 0.0 ? ActiveDisplayWidth : ScreenWidth;
     float gameX = floor((viewportX * activeDisplayWidth) / ScreenWidth);
-    float gameY = floor(((ScreenHeight - viewportY) * 224.0) / ScreenHeight);  // Y=0 at top
+    float gameY = floor(((ScreenHeight - viewportY) * LogicalHeight) / ScreenHeight);  // Y=0 at top
 
     // Get the scroll value for this scanline
     float hScrollThis = 0.0;
     float vScrollThis = 0.0;
     float scanline = clamp(gameY, 0.0, 223.0);  // Clamp to valid scanline range
-    float scanlineTexCoord = (scanline + 0.5) / 224.0;
+    float scanlineTexCoord = (scanline + 0.5) / LogicalHeight;
     if (NoHScroll == 0) {
         // VDP HScroll RAM stores integer pixel words. Restore that integer after
         // normalized R32F transport, before the modulo below: GPU arithmetic can

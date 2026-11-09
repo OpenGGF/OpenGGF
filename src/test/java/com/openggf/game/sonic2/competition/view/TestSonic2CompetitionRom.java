@@ -29,13 +29,15 @@ class TestSonic2CompetitionRom {
             var art = new Sonic2CompetitionArtResidency(rom, new Sonic2PlcService(rom));
             art.loadZoneArt(profile);
             bytes = java.util.Arrays.copyOf(bytes, 65536);
+            // LoadZoneTiles (s2.asm:6471-6524): decoded bytes retain all sixteen
+            // rows; the progressive atlas stores consecutive top/bottom halves.
             var fields = art.fields().live();
             int colored = 0, differingRows = 0;
             for (int cell = 0; cell < bytes.length / 64; cell++)
                 for (int y = 0; y < 16; y++)
                     for (int x = 0; x < 8; x++) {
                         int expected = Im2FieldOracle.pixel(bytes, cell, x, y);
-                        assertEquals(expected, fields[(y % 2) * 1024 + cell].getPixel(x, y / 2));
+                        assertEquals(expected, fields[cell * 2 + y / 8].getPixel(x, y % 8));
                         if (expected != 0)
                             colored++;
                         if ((y & 1) != 0 && expected != Im2FieldOracle.pixel(bytes, cell, x, y - 1))
@@ -49,12 +51,12 @@ class TestSonic2CompetitionRom {
             for (int word : terrain.nativeBlockWords()) {
                 var name = new Sonic2CellWord(word);
                 assertEquals(word & 1023, name.patternIndex());
-                for (int y = 0; y < 8; y++) {
+                for (int y = 0; y < 16; y++) {
                     int expected = Im2FieldOracle.pixel(
-                            bytes, word & 1023, (word & 0x800) == 0 ? 0 : 7, (word & 0x1000) == 0 ? 2 * y : 15 - 2 * y);
-                    int index = ((word & 0x1000) == 0 ? 0 : 1024) | (word & 1023);
+                            bytes, word & 1023, (word & 0x800) == 0 ? 0 : 7, (word & 0x1000) == 0 ? y : 15 - y);
+                    int index = (word & 1023) * 2 + ((word & 0x1000) == 0 ? y / 8 : 1 - y / 8);
                     assertEquals(expected,
-                            fields[index].getPixel((word & 0x800) == 0 ? 0 : 7, (word & 0x1000) == 0 ? y : 7 - y));
+                            fields[index].getPixel((word & 0x800) == 0 ? 0 : 7, (word & 0x1000) == 0 ? y % 8 : 7 - y % 8));
                 }
             }
         }

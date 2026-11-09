@@ -39,7 +39,7 @@ class TestSonic2CompetitionViewsPixels {
         HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
         var services = EngineServices.current();
         var root = SessionManager.getCurrentWorldSession().rootGameModule();
-        try (var gl = PresentationOffscreenTestContext.openConfigured(320, 224,
+        try (var gl = PresentationOffscreenTestContext.openConfigured(320, 448,
                 PresentationOffscreenTestContext.LegacyProfile.CORE_41);
              AutoCloseable cleanup = () -> {
                  try { SessionManager.closeGameplaySession(); }
@@ -49,7 +49,7 @@ class TestSonic2CompetitionViewsPixels {
             var graphics = services.graphics();
             graphics.setHeadlessMode(false);
             graphics.init(com.openggf.Engine.RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
-            graphics.setViewport(0, 0, 320, 224); glViewport(0, 0, 320, 224);
+            graphics.setViewport(0, 0, 320, 448); glViewport(0, 0, 320, 448);
             Files.createDirectories(OUTPUT);
             var session = new Sonic2CompetitionSession();
             var titleCaptured = new boolean[2];
@@ -85,6 +85,7 @@ class TestSonic2CompetitionViewsPixels {
             session.updateMenu(LogicalInputSnapshot.ofPlayers(
                     PlayerInputState.of(menuMask, menuMask, menuMask, menuMask, true, true), PlayerInputState.neutral()), true);
             host.loadAct(session, zone, 0);
+            Sonic2CompetitionTestFlow.finishTitle(host, () -> step(host, input));
             var resident=host.context().getWorldSession().getGameModule().getGameService(Sonic2CompetitionArtResidency.class);
             for (int tile=0;tile<22;tile++) assertArrayEquals(TestEnvironment.currentRom().readBytes(0x4134C+tile*32,32),
                     resident.patternBytes(0x6E2+tile), "Hud_Base field cell source slot "+Integer.toHexString(0x6E2+tile));
@@ -157,6 +158,7 @@ class TestSonic2CompetitionViewsPixels {
             session.updateMenu(LogicalInputSnapshot.ofPlayers(
                     PlayerInputState.of(0, 0, 0, 0, true, true), PlayerInputState.neutral()), true);
             host.loadAct(session, 0, 0);
+            Sonic2CompetitionTestFlow.finishTitle(host, () -> step(host, input));
             var human = session.player(0);
             human.setAir(true); human.setHurt(true); human.setAir(false);
             assertTrue(human.shouldRefreshRenderFlagThisFrame(), "HurtStop owns direct display on landing");
@@ -194,7 +196,7 @@ class TestSonic2CompetitionViewsPixels {
         var video = context.getWorldSession().getGameModule().getGameService(Sonic2CompetitionVideoFrame.class);
         var registers = video.registers().capture();
         PaletteUploadPresentation.withoutDisplayedFade(GameServices.graphics(), () -> views.draw(context, session));
-        var image = ScreenshotCapture.captureFramebuffer(320, 224);
+        var image = ScreenshotCapture.captureFramebuffer(320, 448);
         TestSonic2CompetitionFieldPatternOwnership.assertAtlas(video.art(), GameServices.graphics());
         assertTrue(java.util.Arrays.stream(image.pixels()).distinct().count() > 2, "capture must contain rendered content");
         ScreenshotCapture.savePNG(image, OUTPUT.resolve(name + ".png"));
@@ -211,7 +213,7 @@ class TestSonic2CompetitionViewsPixels {
         for (var page : java.util.List.of(registers.pages().first(), registers.pages().second())) {
             provenance.append("page ").append(page.player()).append('\n');
             for (var entry : page.entries()) provenance.append(entry).append(" projected=")
-                    .append(entry.x()).append(',').append(Math.floorDiv(entry.y()+1,2)).append('\n');
+                    .append(entry.x()).append(',').append(entry.y()).append('\n');
         }
         for (int slot=0;slot<2;slot++) {
             var ringWindow=com.openggf.level.rings.RingNativeDisplayInternalAccess.window(
@@ -219,11 +221,11 @@ class TestSonic2CompetitionViewsPixels {
             provenance.append("ring window ").append(slot).append(' ').append(ringWindow).append('\n');
         }
         for (int[] point : new int[][]{{65,8},{65,118},{70,128},{76,130},{110,147},{115,148}}) {
-            int y=point[1],x=point[0];
-            int h=(short)(registers.horizontal().get(y)>>>16);
-            int v=(y<108?registers.foreground1():registers.foreground2())>>1;
-            var plane=y<108?registers.upperPlane():Sonic2CompetitionPlanes.PlaneId.FOREGROUND_P2;
-            int word=video.planes().cell(plane,(x-h)>>3,(y+v)>>3);
+            int y=point[1]*2,x=point[0];
+            int h=(short)(registers.horizontal().get(y/2)>>>16);
+            int v=(y<216?registers.foreground1():registers.foreground2());
+            var plane=y<216?registers.upperPlane():Sonic2CompetitionPlanes.PlaneId.FOREGROUND_P2;
+            int word=video.planes().cell(plane,(x-h)>>3,(y+v)>>4);
             provenance.append("FG ").append(x).append(',').append(y).append(" h=").append(h).append(" v=").append(v)
                     .append(" word=").append(Integer.toHexString(word)).append('\n');
         }
@@ -238,7 +240,7 @@ class TestSonic2CompetitionViewsPixels {
                 registers.firstCamera(), registers.secondCamera(), empty, registers.paletteWords()));
         try {
             PaletteUploadPresentation.withoutDisplayedFade(GameServices.graphics(), () -> views.draw(context, session));
-            ScreenshotCapture.savePNG(ScreenshotCapture.captureFramebuffer(320,224), OUTPUT.resolve(name+"-planes-only.png"));
+            ScreenshotCapture.savePNG(ScreenshotCapture.captureFramebuffer(320,448), OUTPUT.resolve(name+"-planes-only.png"));
         } finally { video.registers().restore(registers); }
         Files.writeString(OUTPUT.resolve(name+"-provenance.txt"), provenance);
         assertEquals(first, session.camera(0).capture()); assertEquals(second, session.camera(1).capture());

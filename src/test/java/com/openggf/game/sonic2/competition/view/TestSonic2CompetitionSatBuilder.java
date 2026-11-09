@@ -26,6 +26,24 @@ class TestSonic2CompetitionSatBuilder {
     private static final Hud STOPPED = new Hud(false, 0,
             new PlayerHud(0, 0, 0, 0), new PlayerHud(0, 0, 0, 0), 0);
 
+    @Test void fiveSelectsRomFrameFiveForCountdownSecondsAndFinishedPlayersRings() throws Exception {
+        var rom = rom(); var builder = new Sonic2CompetitionSatBuilder(rom);
+        for (int seconds : new int[]{59,57,56}) {
+            var hud = new Hud(true, 8, new PlayerHud(0,0,35,1), new PlayerHud(35,0,34,0), seconds << 8);
+            var input = input(hud, List.of());
+            var p1 = builder.buildPlayer1(input);
+            var p2 = builder.buildPlayer2(p1, input);
+            int five = 0x8371 + rom.readU16BE(frameAddress(rom, DIGITS, 5) + 6);
+            assertEquals(0xA376, five);
+            assertEquals(five, p1.entries().stream().filter(e -> e.rawX()==272).findFirst().orElseThrow().word(),
+                    "countdown tens uses ROM frame 5 at " + seconds);
+            assertEquals(five, p1.entries().stream().filter(e -> e.rawX()==208 && e.rawY()==264).findFirst().orElseThrow().word(),
+                    "0:35 seconds units uses ROM frame 5");
+            assertEquals(five, p2.entries().stream().filter(e -> e.rawX()==208 && e.rawY()==504).findFirst().orElseThrow().word(),
+                    "finished P2 with 35 rings uses ROM frame 5");
+        }
+    }
+
     @Test void realSpringSonicTailsAndBridgePiecesUseNativeWordsAndAllFourFlipBranches() throws Exception {
         var rom = rom(); var builder = new Sonic2CompetitionSatBuilder(rom);
         assertArrayEquals(new byte[]{(byte) 0xF0, 0x0D, 0, 0, 0, 0, (byte) 0xFF, (byte) 0xF0},

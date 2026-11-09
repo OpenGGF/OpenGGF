@@ -313,6 +313,12 @@ Alternatively, `--native-route existing.route.json` continues its frozen rows;
 `--prefix-rows N` selects the immutable prefix and `--goals` optionally supplies a
 replacement programme. Completed prefix goals are evaluated, never reauthored.
 `--nodes` and `--ticks` bound search; `--bk2 NEW_FILE` exports exact two-pad rows.
+For a preserved traversal whose production pre-act locks changed, pass
+`--native-route FILE --retime-locks MAX_ROWS`. The Stageplay planner preserves
+every traversal row, authors bounded neutral waits from the live `input.locked`
+observation, and cold-qualifies the entire original goal program. Previous
+native stamps and anchors are discarded and need independent confirmation.
+
 Use `-Dopenggf.headless.gl=surfaceless-egl` with `DISPLAY` and
 `WAYLAND_DISPLAY` unset on Linux. Compile changed sources before running the tool.
 
@@ -321,6 +327,10 @@ The `.route.json` manifest retains `openggf-route/1` and adds the inlet
 sequence. `PlayerIn`/`Settled`/attachment predicates select P1 or P2; `All` combines
 both. Copied owner facts use `{"kind":"fact-equals","key":"...","value":1}`
 or `{"kind":"facts-equal","left":"...","right":"..."}` for ties.
+A host may publish `input.locked=1` while a production control lock is active.
+The planner authors neutral rows until that lock releases, preserving fresh button
+edges across witnessed native timing inlets. The S2 title card uses this contract.
+
 The S2 adapter publishes `competition.phase`, selection, act, ROM zone, results
 readiness, both ordinary actors' routines/rings/time/score/lives, zone wins, cage
 and slot-machine facts. Ordinary sprite coordinates are not special-stage avatar
@@ -550,3 +560,17 @@ export controls are disabled, with the full reason in hover/Details; the anchor
 form preserves blockers. The frozen CNZ routes remain provisional pending lane
 F's production pause handoff correction and subsequent planner repair/native
 confirmation. These editor controls do not certify native success.
+
+### Neutral route observation holds
+
+A native goal leg may use `"goal":{"kind":"wait","rows":360}`. The planner
+supplies neutral input on both pads for that many rows and enforces the leg guard;
+replay verifies the duration. Frozen-route acceptance can also assert that the saved
+rows are neutral. This starts the hold relative to the preceding observed goal,
+without targeting an absolute timer value. `maxRows` must admit the full hold.
+S2 Competition exposes `competition.monitor.content`, `.initFrame`, `.breaker`
+and `.spawned` from the actual Obj2E owner, plus `competition.levelFrame` and
+`.levelPhase`. The player `.shield`, `.speedShoes`, `.invincibility`, `.routine`,
+`.monitors`, `.rings` and `.lives` facts can assert the award before the hold.
+The eight `routes/s2/competition/ehz-qmark-*` fixtures share a cold-title approach;
+P1 breaks the first EHZ monitor, while P2 remains near the start.

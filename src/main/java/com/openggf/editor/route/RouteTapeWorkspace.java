@@ -564,6 +564,7 @@ public final class RouteTapeWorkspace {
         for (var leg : program.legs()) {
             String goal = switch (leg.goal()) {
                 case com.openggf.route.RouteGoal.Achieve achieve -> predicateText(achieve.condition());
+                case com.openggf.route.RouteGoal.Wait wait -> "Wait " + wait.rows() + " neutral rows";
                 case com.openggf.route.RouteGoal.EnterBoundary ignored -> UiMessages.text("editor.route_tape.goal_boundary");
             };
             lines.add(fact(leg.id(), UiMessages.text("editor.route_tape.goal_within", Map.of("goal", goal,

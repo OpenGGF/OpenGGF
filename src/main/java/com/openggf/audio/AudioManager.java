@@ -1444,8 +1444,11 @@ public class AudioManager implements MusicRestoreSink {
         if (profile != null) {
             presentationBinding.ensureShadowPresentation();
             if (presentationBinding.shadowRequestService != null) {
+                // Observers retain the public caller operand; only the ROM mailbox is translated.
+                int nativeRequestId = profile instanceof NativeMailboxMusicRoutes routes
+                        ? routes.nativeRequestForMusic(musicId) : musicId;
                 presentationBinding.shadowRequestService.submitMusic(
-                        musicId, commandForNativeMusicRequest(source, musicId));
+                        nativeRequestId, commandForNativeMusicRequest(source, musicId));
                 return;
             }
         }

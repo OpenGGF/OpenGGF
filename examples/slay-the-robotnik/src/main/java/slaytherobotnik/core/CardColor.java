@@ -2,7 +2,7 @@ package slaytherobotnik.core;
 
 /**
  * Card frame colour, which also names the card pool a card belongs to.
- * See {@link CardType} for why these are String constants.
+ * These identifiers retain their existing save and content keys.
  */
 public final class CardColor {
     /** Sonic's pool. */

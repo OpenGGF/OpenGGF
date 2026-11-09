@@ -1,4 +1,4 @@
-package practice;
+package com.openggf.mods.ui;
 
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.ui.CompactFont;
@@ -6,61 +6,37 @@ import com.openggf.mods.ui.NameFont;
 import com.openggf.mods.ui.PixelCanvas;
 import com.openggf.mods.ui.TextLayout;
 
+import static com.openggf.mods.ui.MenuTheme.*;
 import java.util.List;
 import java.util.Locale;
 
 /**
- * Act Practice's page look, drawn only through the public scene canvas and fonts so the example
- * reads as part of the product: a navy page, a header band with the bold title over a gold rule,
+ * Native-grid menu chrome for creator scenes: a navy page, a header band with the bold title over a gold rule,
  * light {@link NameFont} sentences wrapped by measured width, a gold-edged focus band, status icons
  * and a footer of key caps in {@link CompactFont} capitals. Every width comes from the face that
- * draws the text. A mod cannot use the engine's own menu classes; this is the creator-side echo of
- * them, as the bundled Time Attack mode keeps its own.
+ * draws the text. Layout and palette roles are shared with the host menu theme.
  */
-final class PracticePage {
-    private PracticePage() { }
-
-    static final int INK = 0xFF02081C;
-    static final int HEAD = 0xFF0A245C;
-    static final int FOCUS_FILL = 0xFF1C4AA8;
-    static final int GOLD = 0xFFFFD64D;
-    static final int CYAN = 0xFF80E8FF;
-    static final int AMBER = 0xFFFFB840;
-    static final int RED = 0xFFFF6B6B;
-    static final int GREEN = 0xFF73EB94;
-    static final int TEXT = 0xFFE8EDFF;
-    static final int MUTED = 0xFFB8C4E6;
-    static final int DIM = 0xFF8794BD;
-
-    private static final int BACKGROUND = 0x030A26;
-    private static final int CHECKER = 0x14000000 | 0x3A5BA8;
-    private static final int BODY = 0xB805123B;
-    private static final int CAP_FACE = 0xFF1A2B5E;
-    private static final int CAP_EDGE = 0xFFC9D4F5;
-    private static final int CAP_SHADOW = 0xFF00050F;
-
-    static final int HEADER_H = 29;
-    static final int FOOTER_Y = 205;
-    static final int BODY_TOP = HEADER_H + 6;
-    static final int MARGIN = 8;
-    static final int CARD_H = 34;
-    static final String ARROWS_LR = "LEFT/RIGHT";
+@com.openggf.game.ModApi
+public final class SceneMenuChrome {
+    private SceneMenuChrome() { }
 
     /** What a notice reports, which picks its icon and colour. */
-    enum Tone { INFO, GOOD, WARNING, ERROR }
+    @com.openggf.game.ModApi
+    public enum Tone { INFO, GOOD, WARNING, ERROR }
 
     /** One footer hint: a key cap and what it does here. */
-    record Hint(String key, String label) { }
+    @com.openggf.game.ModApi
+    public record Hint(String key, String label) { }
 
-    static Hint hint(String key, String label) { return new Hint(key, label); }
+    public static Hint hint(String key, String label) { return new Hint(key, label); }
 
     /** The page background, body plate and header band with {@code title}. */
-    static void page(SceneCanvas canvas, String title) {
+    public static void page(SceneCanvas canvas, String title) {
         int width = canvas.width();
         canvas.clear(BACKGROUND);
-        for (int y = 0; y < 224; y += 32) {
+        for (int y = 0; y < canvas.height(); y += 32) {
             for (int x = ((y / 32) % 2) * 32; x < width; x += 64) {
-                canvas.fill(x, y, Math.min(32, width - x), Math.min(32, 224 - y), CHECKER);
+                canvas.fill(x, y, Math.min(32, width - x), Math.min(32, canvas.height() - y), CHECKER);
             }
         }
         canvas.fill(0, HEADER_H, width, FOOTER_Y - HEADER_H, BODY);
@@ -71,7 +47,7 @@ final class PracticePage {
     }
 
     /** The focus band: a blue fill with a one-pixel gold edge whose corners stay open. */
-    static void focus(PixelCanvas canvas, int x, int y, int w, int h) {
+    public static void focus(PixelCanvas canvas, int x, int y, int w, int h) {
         canvas.fill(x, y, w, h, FOCUS_FILL);
         canvas.fill(x + 1, y - 1, w - 2, 1, GOLD);
         canvas.fill(x + 1, y + h, w - 2, 1, GOLD);
@@ -80,7 +56,7 @@ final class PracticePage {
     }
 
     /** Wrapped {@link NameFont} lines from {@code y}, every word whole; returns the next line's y. */
-    static int paragraph(PixelCanvas canvas, String text, int x, int y, int width, int argb) {
+    public static int paragraph(PixelCanvas canvas, String text, int x, int y, int width, int argb) {
         for (String line : TextLayout.wrap(text, width, NameFont::width)) {
             NameFont.draw(canvas, line, x, y, argb);
             y += NameFont.LINE_HEIGHT;
@@ -88,7 +64,7 @@ final class PracticePage {
         return y;
     }
 
-    static int colour(Tone tone) {
+    public static int colour(Tone tone) {
         return switch (tone) {
             case INFO -> CYAN;
             case GOOD -> GREEN;
@@ -98,13 +74,13 @@ final class PracticePage {
     }
 
     /** An icon and a wrapped sentence in the tone's colour; returns the next line's y. */
-    static int notice(PixelCanvas canvas, Tone tone, String text, int x, int y, int width) {
+    public static int notice(PixelCanvas canvas, Tone tone, String text, int x, int y, int width) {
         icon(canvas, tone, x, y + 3);
         return paragraph(canvas, text, x + 10, y, width - 10, colour(tone));
     }
 
     /** A 7x7 status icon: i (info), a check (good), ! (warning) or a cross (error). */
-    static void icon(PixelCanvas canvas, Tone tone, int x, int y) {
+    public static void icon(PixelCanvas canvas, Tone tone, int x, int y) {
         int c = colour(tone);
         switch (tone) {
             case INFO -> {
@@ -133,7 +109,7 @@ final class PracticePage {
     }
 
     /** A solid 4x7 triangle pointing left ({@code direction < 0}) or right. */
-    static void arrow(PixelCanvas canvas, int x, int y, int direction) {
+    public static void arrow(PixelCanvas canvas, int x, int y, int direction) {
         for (int i = 0; i < 4; i++) {
             canvas.fill(direction < 0 ? x + 3 - i : x + i, y + i, 1, 7 - 2 * i, GOLD);
         }
@@ -143,7 +119,7 @@ final class PracticePage {
      * Which of {@code count} choices shows, centred on {@code centreX}: a dot per choice with a dark
      * ring, the chosen one a wider gold pill.
      */
-    static void dots(PixelCanvas canvas, int centreX, int y, int count, int chosen) {
+    public static void dots(PixelCanvas canvas, int centreX, int y, int count, int chosen) {
         int width = 0;
         for (int i = 0; i < count; i++) width += (i == chosen ? 8 : 3) + (i > 0 ? 4 : 0);
         int x = centreX - width / 2;
@@ -155,20 +131,10 @@ final class PracticePage {
         }
     }
 
-    /** A game's display name for its id. */
-    static String gameName(String gameId) {
-        return switch (gameId) {
-            case "s1" -> "SONIC 1";
-            case "s2" -> "SONIC 2";
-            case "s3k" -> "SONIC 3 & KNUCKLES";
-            default -> gameId.toUpperCase(Locale.ROOT);
-        };
-    }
-
     /** The footer band with key caps at the right, as the engine's menus place them. */
-    static void footer(PixelCanvas canvas, List<Hint> hints) {
+    public static void footer(PixelCanvas canvas, List<Hint> hints) {
         int width = canvas.width();
-        canvas.fill(0, FOOTER_Y, width, 224 - FOOTER_Y, INK);
+        canvas.fill(0, FOOTER_Y, width, canvas.height() - FOOTER_Y, INK);
         canvas.fill(0, FOOTER_Y, width, 1, 0xFF1C2960);
         int x = width - MARGIN - hintsWidth(hints);
         int y = FOOTER_Y + 4;
@@ -180,7 +146,7 @@ final class PracticePage {
         }
     }
 
-    static int hintsWidth(List<Hint> hints) {
+    public static int hintsWidth(List<Hint> hints) {
         int width = 0;
         for (Hint hint : hints) {
             if (width > 0) width += 10;
@@ -189,12 +155,12 @@ final class PracticePage {
         return width;
     }
 
-    static int capWidth(String key) {
+    public static int capWidth(String key) {
         return ARROWS_LR.equals(key) ? 19 : Math.max(11, CompactFont.width(key, 1) + 6);
     }
 
     /** A key cap, 11 pixels tall, with its top-left at (x, y); returns its width. */
-    static int cap(PixelCanvas canvas, int x, int y, String key) {
+    public static int cap(PixelCanvas canvas, int x, int y, String key) {
         int w = capWidth(key);
         canvas.fill(x, y + 1, w, 10, CAP_SHADOW);
         canvas.fill(x, y, w, 10, CAP_FACE);
@@ -215,7 +181,7 @@ final class PracticePage {
         }
     }
 
-    static void outline(PixelCanvas canvas, int x, int y, int w, int h, int argb) {
+    public static void outline(PixelCanvas canvas, int x, int y, int w, int h, int argb) {
         canvas.fill(x, y, w, 1, argb);
         canvas.fill(x, y + h - 1, w, 1, argb);
         canvas.fill(x, y + 1, 1, h - 2, argb);
