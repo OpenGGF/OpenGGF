@@ -1,3 +1,4 @@
+# Reproduction: run two neutral prelude iterations, then the countdown/input rows below.
 # Native-qualified Azure Lake Sonic Time Attack; mask U1 D2 L4 R8 A16, count.
 # 240 countdown rows followed by 2143 native race rows; lead Go-Explore seed 1.
 0 241

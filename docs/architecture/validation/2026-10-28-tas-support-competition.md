@@ -413,7 +413,7 @@ Lane P is based at `617839db8`. It adds locked-on NTSC Sonic solo Time Attack
 fixtures for arena cursor 0 (`alz`, 2143 race rows) and 2 (`cgz`, 3329 race rows).
 Both use the Desert Palace method above: original ROM, BizHawk 2.11/GPGX,
 cold title/controller-only menu entry, ordinary hosted load, 240 neutral
-countdown iterations, and native observations used only as assertions. Every
+countdown iterations plus two neutral prelude iterations, and native observations used only as assertions. Every
 race row matches all 15 compared player fields. Both final rows have lap 6 and
 timer flag $80, with no lag rows. Y is compared as a 16-bit word: the engine's
 signed negative integer and the probe's unsigned word represent the same native
@@ -458,7 +458,7 @@ omission at race row 328 (native status=1/anim=6, engine status=0/anim=7).
 That alternate route is not the frozen qualification and remains an open gap.
 Straight RIGHT extension of seed 2 also failed to complete; repeating its
 successful lap produced the qualified input. The frozen Chrome Gadget route
-stands on the blade for over 900 frames, uses fans and springs, and passes the
+stands on the blade for 1194 frames, uses fans and springs, and passes the
 triangles, floor button, retracting spring and base. Near-object histograms
 alone do not prove every subtype branch was taken.
 
@@ -470,9 +470,9 @@ outputs are not committed. Frozen resources are
 RLE `.tape` files. SHA256 (compressed CSV, then tape):
 
 - ALZ: `0041dcc40e6b8f4e55cd798a530cc52e458f76e3d99c68330062c03c200b5eb0`,
-  `202c89c4a34b179e0ec3a7cd5fb525262482dd119a6e2a8b46ce673970ed3fce`.
+  `4e8cf31832321568d73f17f94bffa5dcec54ce52dbd25a7e0ddf7b95241617ef`.
 - CGZ: `e77002d15ffb7bbc2eb2f1d82b3ad42b9a32e9682a3822b84f182b40f170ddc2`,
-  `683134b6f4e4587345a6a39f1514f0992c952695313ae521524cf541bec83766`.
+  `0e8627ec22def049df8066f8f933418fa8f3a2accba49354705690f63f0bb450`.
 
 This adds two bounded Sonic route witnesses. Original-S3, other characters,
 GP/Match, viewport/donor/roster breadth, native pixels and exhaustive object
@@ -485,3 +485,113 @@ Restoring the original arena object class makes both new spring/push ownership
 regressions fail and the frozen CGZ race fail at row 531 (Y=25 versus native
 Y=23). The production sources are restored for final validation. The preceding
 focused player/object/DPZ/ALZ run passed 55 tests with no skips.
+
+Origin reconciliation: lane B commit `7a8087bf9` is merged, retaining its identical
+acceleration fix and unrolled landing-animation correction. Both frozen routes
+were rechecked with two neutral prelude iterations before the tape's 240
+countdown rows. The native regression now checks the level clock every row
+(first race row 243). ALZ seeds 1/2/3 and CGZ seeds 2/3 still match every native
+row; CGZ seed 1 retains the balance omission described above. Thus these
+push/spring divergences survive the corrected origin. The native CSV bytes and controller masks did not change; the tape header now
+names the prelude. The old-origin final focused request was cancelled while
+still queued when this lead update arrived; it produced no test result.
+
+Final lane P verification after merging lane B: **419 tests, 0 failures,
+0 errors, 0 skips**, across the brief's 40 source classes, including all four
+registered native races (DPZ/BPZ/ALZ/CGZ) and the four required S3K guards.
+The final production source tree is the lane P merge of `7a8087bf9` into
+`28d5c0a41d`; only documentation and tape-header comments changed after tests.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kCompetition*,TestS3kArena*,TestHostedArenaLapCapture,TestHostedCompetitionEndToEnd,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+```
+
+The final job waited 7 seconds and executed for 46.643 seconds, including
+incremental compilation. All configured ROMs were found. No user wait was
+incurred; native probing/search and earlier queue/build time are separate.
+This focused selector has no category-run VERDICT and is not smoke or a full
+suite. Staged citation and whitespace checks pass. A corrected-origin probe
+with the original object class still fails first at CGZ row 531 (Y=25 versus
+23), confirming the object correction is independent of the origin repair.
+The initial task base could not fast-forward the supplied workspace branch,
+so the lane used an isolated cow worktree rooted exactly at `617839db8`.
+
+## Native Balloon Park race qualification (2026-11-09)
+
+Lane B starts at `617839db8`. Calibration of the first three exploratory
+Balloon Park tapes found an input-origin error in the diagnostic comparison:
+Dump2 emitted its first race row after 240 neutral hosted iterations, at level
+frame 241, whereas the native sampler starts after GO, at level frame 243.
+At equal level frames both the elephant extension and idle animation agree.
+`loc_6678` (sonic3k.asm:8019-8026) advances the level clock before the player
+and object pass; `sub_371BE` (sonic3k.asm:74435-74453) enables the timer in the
+neon pass. Compare the actual sampled level-frame origin before interpreting a
+moving-object discrepancy. No engine elephant position, width or solid bound
+was changed. The diagnostic uses two neutral prelude iterations followed by
+the tape's 240 countdown rows; the regression executes 242 neutral iterations.
+The existing DPZ fixture also matches all 2528 rows at this corrected origin.
+
+This removes the reported BPZ seed-1 row-5 mapping difference, seed-2 row-273
+side-contact difference, and seeds 1/3 row-281 ride release difference. At the
+corrected origin the first remaining differences are terrain pushing: seed 2
+row 432, seed 3 row 1207, seed 1 row 2331. `loc_113FE`
+(sonic3k.asm:22827-22832) and `sub_11482` (sonic3k.asm:22893-22900) clear the
+push bit only when changing facing. The miniature acceleration owner cleared
+it unconditionally. A two-direction unit regression fails on that original
+implementation; preserving same-facing pushing repairs the owner directly.
+
+The new controller-only search (seed 1, 32-pixel cells, 60000-iteration cap;
+finished shortly after iteration 4000) completes five laps on both engines.
+Its emitted final action macro was trimmed at the native finish, leaving
+2389 race rows. The original extra 11 controller rows ran after lap 6, so the
+native probe correctly rejected that untrimmed tape. The final frozen tape
+keeps 240 countdown rows and documents the two neutral prelude iterations.
+Cold menu ingress and cached-start replay reproduce identical native CSVs.
+The final native row is level frame 2631, lap 6, timer flag $80. All 2389 rows
+are non-lag. No gameplay state is sourced from these observations.
+
+The first new-route mismatch is pose-only at row 1587: native anim $D, engine
+anim 0 on the second elephant. `RideObject_SetRide`
+(sonic3k.asm:42067-42089) calls `Player_TouchFloor`
+(sonic3k.asm:24375-24412), which clears animation only for rolled landings.
+The miniature `land` owner did so for every landing. Its unrolled branch now
+preserves the animation, including a skid interrupted by a short fall. The
+new elephant unit case fails before this correction. The frozen race also
+provides a deliberate break check against that uncorrected landing owner.
+
+The route activates both balloon and bumper response animations and stands
+on elephants for 77 sampled frames. The diagnostic records 167 balloon-near,
+73 bumper-near and 231 elephant-near frames; those proximity counts alone are
+not contact proof. The activation state and native-equal launch velocities
+corroborate actual balloon/bumper use. It also traverses path swaps, terrain,
+wrap and all five lap crossings. Character/roster/viewport breadth, rewind and
+native pixels remain inherited gaps; this is a single locked-on Sonic route.
+
+Frozen files: `bpz-sonic-native.csv.gz` (66371 bytes, SHA256
+`bea030debd968e403cbaf31d44e31adb63d0524e2d5f8619a6053fa706073502`),
+decompressed CSV SHA256
+`4e7058d621b10bb96dc524dabdefcc5f7725ca86dd71d0dd7edfacc84db7068c`,
+and `bpz-sonic-native.tape` (1312 bytes, SHA256
+`4ec71064d1596922921cf6b476ae04bb7c3b2cf56e7e971c6334c1613921ca5b`).
+
+Final verification on the lane B tree based at `617839db8`: **414 tests,
+0 failures/errors/skips**, including unchanged DPZ and new BPZ native races,
+plus both deliberate unit failures and the BPZ full-fixture failure at row
+1587 before the landing correction. Final engine/native comparisons match all
+15 fields across all 2389 qualified rows. The three original exploratory tapes
+also now match their native observations throughout (2497, 2433 and 2545 rows);
+their native routes still do not finish, which is why they were not frozen.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kCompetition*,TestS3kArena*,TestHostedArenaLapCapture,TestHostedCompetitionEndToEnd,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+```
+
+The selector covers 40 source test classes. Maven execution including compilation
+took 1m44s; queue wait was under the first 30-second reporting interval. User
+wait was zero; probe/search preparation was separate and was not individually
+timed. ROM discovery found every configured input, none missing. Disassembly
+citation checks, fixture continuity/RLE expansion/hash checks and
+`git diff --check` pass. This is the brief's focused selection, not smoke or a
+full-suite verdict; the lead owns broad integration validation.

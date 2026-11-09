@@ -176,6 +176,20 @@ class TestS3kCompetitionArenaObjects {
     }
 
     @Test
+    void elephantLandingPreservesAnUnrolledSkidAnimation() {
+        Fixture f = fixture();
+        var elephant=f.place(Kind.ELEPHANT,0x100,0x100,0x50,0);
+        f.tick();
+        var p=f.players.getFirst();
+        p.setCentre(0x100,0xE8); p.setAirborne(true); p.setYVelocity(0x100);
+        p.setAnimation(0xD);
+        elephant.tickNative(f);
+        assertEquals(elephant.nativeIdentity(),p.standingObject());
+        assertFalse(p.airborne());
+        assertEquals(0xD,p.animation(),"Player_TouchFloor only resets animation for a rolled landing");
+    }
+
+    @Test
     void elephantRenderDescriptorRestoresAndForwardsIndependentlyOfItsVisibilityCentre() {
         Fixture f = fixture();
         f.place(Kind.ELEPHANT, 0x4E7, 0x320, 0x50, 1);

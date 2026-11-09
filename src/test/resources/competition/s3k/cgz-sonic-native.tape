@@ -1,3 +1,4 @@
+# Reproduction: run two neutral prelude iterations, then the countdown/input rows below.
 # Native-qualified Chrome Gadget Sonic Time Attack; mask U1 D2 L4 R8 A16, count.
 # 240 countdown rows followed by 3329 native race rows; seed 2 with a repeated lap.
 0 241
