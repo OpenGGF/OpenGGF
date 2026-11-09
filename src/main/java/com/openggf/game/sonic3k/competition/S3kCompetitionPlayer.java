@@ -18,6 +18,7 @@ public final class S3kCompetitionPlayer {
         public Input { held &= 0xFF; pressed &= 0xFF; }
         public static final Input NONE = new Input(0,0);
     }
+    public record BalanceObject(int x,int width,int status) { }
     public record Speeds(int maxSpeed, int acceleration, int deceleration) { }
     public record Bounds(int xWrapMask, int yWrapMask, boolean wrapY, int cameraMinY) { }
     public record TouchBounds(int left, int top, int width, int height) { }
@@ -29,6 +30,8 @@ public final class S3kCompetitionPlayer {
      */
     public interface Terrain {
         boolean canJump(S3kCompetitionPlayer player, int clearance);
+        default int floorEdgeDistance(S3kCompetitionPlayer player,int x) { return 0; }
+        default BalanceObject balanceObject(int slot) { return null; }
         void resolveGroundWall(S3kCompetitionPlayer player);
         void followGround(S3kCompetitionPlayer player);
         void resolveAir(S3kCompetitionPlayer player);
@@ -50,7 +53,7 @@ public final class S3kCompetitionPlayer {
             int flipsRemaining, int flipSpeed, int speedShoesTimer,
             int invulnerabilityTimer, boolean stickToConvex, boolean highPriority,
             S3kMiniatureAnimation.State animationState, boolean bodyVisible,
-            int nativeRenderFlags, boolean nativeInitialized, int airLeft) { }
+            int nativeRenderFlags, boolean nativeInitialized, int airLeft, int nextTilt, int tilt) { }
 
     private final int slot;
     private final Character character;
@@ -66,6 +69,7 @@ public final class S3kCompetitionPlayer {
     private int nativeRenderFlags;
     private boolean nativeInitialized;
     private int airLeft=30;
+    private int nextTilt,tilt;
     // Runtime binding, deliberately excluded from captured player state and installed on roster rebind.
     private transient NativeDustWrites nativeDustWrites;
     private S3kMiniatureSprite sprite;
@@ -142,7 +146,7 @@ public final class S3kCompetitionPlayer {
             jump(); return; // addq.l #4,sp skips rest of the grounded movement path.
         }
         slopeForce(rolling());
-        if (rolling()) rollSpeed(input); else groundSpeed(input);
+        if (rolling()) rollSpeed(input); else groundSpeed(input,terrain);
         terrain.resolveGroundWall(this);
         if (!rolling() && (statusSecondary&0x80)==0 && Math.abs(groundVelocity)>=0x80
                 && (input.held()&(LEFT|RIGHT))==0 && (input.held()&DOWN)!=0) {
@@ -152,13 +156,14 @@ public final class S3kCompetitionPlayer {
         integrate(); terrain.followGround(this); slopeRepel();
     }
 
-    private void groundSpeed(Input input) {
+    private void groundSpeed(Input input,Terrain terrain) {
         if ((statusSecondary&0x80)==0) {
             if (moveLock==0) {
                 if ((input.held()&LEFT)!=0) accelerate(-1);
                 if ((input.held()&RIGHT)!=0) accelerate(1);
                 if (((angle+0x20)&0xC0)==0 && groundVelocity==0) {
-                    setPushing(false); animation=(input.held()&DOWN)!=0?8:(input.held()&UP)!=0?7:5;
+                    setPushing(false); animation=5;
+                    if (!idleBalance(terrain)) animation=(input.held()&DOWN)!=0?8:(input.held()&UP)!=0?7:5;
                 }
             }
             if ((input.held()&(LEFT|RIGHT))==0)
@@ -166,6 +171,35 @@ public final class S3kCompetitionPlayer {
         }
         groundToVelocity(false);
     }
+
+    /** Sonic_Balance (sonic3k.asm:22566-22627), loc_14A16 (sonic3k.asm:27847-27900),
+     * loc_10844 (sonic3k.asm:21656-21669). Miniature Knuckles shares Sonic_Move;
+     * the campaign Knuckles balance animation reset does not apply. */
+    private boolean idleBalance(Terrain terrain) {
+        boolean left;
+        int pose=6;
+        if ((status&8)!=0) {
+            // Sonic_NotRight (sonic3k.asm:22480-22562): width_pixels is a radius,
+            // not the collision admission width. Negative object status suppresses balance.
+            BalanceObject object=terrain.balanceObject(standingObject);
+            if (object==null || (object.status()&0x80)!=0) return false;
+            int offset=(short)(object.width()+centreX()-object.x());
+            int margin=character==Character.TAILS?4:2;
+            int right=object.width()*2-margin;
+            if (offset<margin) left=true;
+            else if (offset>=right) left=false;
+            else return false;
+            if (character!=Character.TAILS && (left?offset< -4:offset>=right+6)) pose=12;
+        } else {
+            if (terrain.floorEdgeDistance(this,centreX())<12) return false;
+            if (nextTilt==3) left=false;
+            else if (tilt==3) left=true;
+            else return false;
+            if (character!=Character.TAILS && terrain.floorEdgeDistance(this,centreX()+(left?6:-6))>=12) pose=12;
+        }
+        setFacingLeft(left); animation=pose; return true;
+    }
+    void setFloorTilts(int primary,int secondary) { nextTilt=primary&255; tilt=secondary&255; }
 
     private void accelerate(int direction) {
         int value=groundVelocity;
@@ -451,11 +485,12 @@ public final class S3kCompetitionPlayer {
                 angle,topSolidBit,lrbSolidBit,standingObject,jumping,spinDashFlag,spinDashCounter,
                 doubleJumpFlag,doubleJumpProperty,flipAngle,flipType,flipsRemaining,flipSpeed,
                 speedShoesTimer,invulnerabilityTimer,stickToConvex,highPriority,animationState,bodyVisible,
-                nativeRenderFlags,nativeInitialized,airLeft);
+                nativeRenderFlags,nativeInitialized,airLeft,nextTilt,tilt);
     }
     public void restore(State s) {
         if (s.slot()!=slot || s.character()!=character || !s.baseSpeeds().equals(baseSpeeds))
             throw new IllegalArgumentException("Competition actor identity differs from snapshot");
+        nextTilt=s.nextTilt(); tilt=s.tilt();
         speeds=s.speeds(); xFixed=s.xFixed(); yFixed=s.yFixed(); xVelocity=s.xVelocity();
         yVelocity=s.yVelocity(); groundVelocity=s.groundVelocity(); status=s.status(); statusSecondary=s.statusSecondary();
         routine=s.routine(); objectControl=s.objectControl(); moveLock=s.moveLock(); animation=s.animation();

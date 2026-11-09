@@ -407,6 +407,81 @@ wait). No user wait was incurred; intermediate native/probe executions and
 compiler preparation were separate from this Maven duration. Disassembly checks
 found no stale citations in the changed files; `git diff --check` passed.
 
+## Native miniature idle balance qualification (2026-11-09)
+
+Lane E starts at `a5af838e47`. `S3kCompetitionPlayer` now checks idle balance
+before look/duck, after the native slope and zero-inertia gates. It retains the
+previous floor pair's raw angles in rewind state and asks the production terrain
+owner for the centre floor distance and Sonic's second probe six pixels inward.
+`Sonic_Balance` (sonic3k.asm:22566-22627) owns the 12-pixel distance threshold,
+empty-sensor value 3, facing write and animations 6/$C. `Sonic_NotRight`
+(sonic3k.asm:22480-22562) owns object status-bit-7 suppression, width_pixels,
+the two-pixel edge margin and second-pose thresholds (-4 and width*2+4).
+`ChkFloorEdge_Part2` (sonic3k.asm:20016-20041) probes at centre Y plus y_radius,
+using top solidity and the selected collision path. `loc_EC42`
+(sonic3k.asm:18770-18777) clears both angles when riding an object.
+
+Miniature Knuckles shares Sonic_Move via `loc_10844`
+(sonic3k.asm:21656-21669); the campaign Knuckles balance timer/frame resets do
+not apply. Miniature Tails dispatches through `loc_13336`
+(sonic3k.asm:25781-25789) to `loc_14A16`
+(sonic3k.asm:27847-27900): a four-pixel object margin and animation 6 only.
+`CompetitionArenaObjectInstance.balanceSurface` exposes existing object bounds
+and the native suppression bit: `Obj_SinkingMud`
+(sonic3k.asm:68545-68557) sets width from subtype*8 and status bit 7. Omitting that
+bit caused ALZ seed 1 row 1501 and seed 3 row 339 to balance incorrectly; the
+correct descriptor fixes both without changing mud movement/contact code.
+
+Chrome Gadget seed 1's original row-328 status/animation divergence is repaired.
+Its supplied tape matches all 3329 observations but ends at lap 5/timer 1.
+Lane P's alternate search tape matches all 3271 native observations through lap
+6/timer $80 (five laps), including balance. It is supplementary evidence only:
+the existing CGZ fixture remains unchanged; no second arena row was added.
+That route stands on the blade and uses the arena's fans/springs. This does not
+extend qualification to other character routes or exhaustive object branches.
+
+All 12 lead tapes were compared with two neutral prelude iterations before the
+240 tape countdown rows (native race row 0 = level frame 243). All 15 compared
+player fields match every available native row. Some tapes have extra engine
+rows after the native sampler stops; the counts below certify only native rows.
+No physics/aux row initializes gameplay. Endless Mine object code is unchanged.
+
+| Arena | Seed | Native rows | First divergence | Final native lap / timer |
+| --- | --- | ---: | --- | --- |
+| Azure Lake | 1 | 2143 | none | 6 / 128 |
+| Azure Lake | 2 | 2278 | none | 6 / 128 |
+| Azure Lake | 3 | 2229 | none | 6 / 128 |
+| Balloon Park | 1 | 2497 | none | 2 / 1 |
+| Balloon Park | 2 | 2433 | none | 2 / 1 |
+| Balloon Park | 3 | 2545 | none | 1 / 1 |
+| Chrome Gadget | 1 | 3329 | none | 5 / 1 |
+| Chrome Gadget | 2 | 3377 | none | 5 / 1 |
+| Chrome Gadget | 3 | 3505 | none | 3 / 1 |
+| Endless Mine | 1 | 3645 | none | 6 / 128 |
+| Endless Mine | 2 | 3757 | none | 6 / 128 |
+| Endless Mine | 3 | 3581 | none | 6 / 128 |
+
+Unit tests cover both terrain directions, secondary-pose thresholds, both object
+edges and character margins, suppression, previous-angle capture/restore, and
+production terrain probe coordinates. Deliberately bypassing idleBalance fails
+both new player tests (expected balance 6/12, observed duck/look 8/7).
+The initial build exhausted the original filesystem during resource copying;
+only this lane's worktree was moved to a filesystem with capacity and repaired.
+A subsequent run compiled before the mud descriptor correction and failed its
+new descriptor assertion and ALZ row 1501. Final-source validation passed
+**423 tests, zero failures/errors/skips**, including all four registered native
+races and the required AIZ1/load/bootstrap/decoding guards (40 source classes).
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kCompetition*,TestS3kArena*,TestHostedArenaLapCapture,TestHostedCompetitionEndToEnd,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+```
+
+The final job waited 33 seconds and executed for 1 minute 52 seconds, including
+compilation. All configured ROMs were found. User wait was zero; probe execution
+and earlier queue/build time are separate. This is a focused pass, not a full
+suite or smoke verdict. Citation and whitespace checks pass.
+
 ## Native Azure Lake and Chrome Gadget race qualification (2026-11-09)
 
 Lane P is based at `617839db8`. It adds locked-on NTSC Sonic solo Time Attack
@@ -455,7 +530,8 @@ The original seed 2 tape matches all 3377 rows but ends at native lap 5.
 A fresh fixed-engine search (Go-Explore, seed 1, budget 60000, cell size 32)
 finished five native laps but exposed the inherited idle terrain-edge balance
 omission at race row 328 (native status=1/anim=6, engine status=0/anim=7).
-That alternate route is not the frozen qualification and remains an open gap.
+That alternate route was not the frozen qualification; lane E repairs this gap
+in the idle balance qualification above.
 Straight RIGHT extension of seed 2 also failed to complete; repeating its
 successful lap produced the qualified input. The frozen Chrome Gadget route
 stands on the blade for 1194 frames, uses fans and springs, and passes the
@@ -491,7 +567,7 @@ acceleration fix and unrolled landing-animation correction. Both frozen routes
 were rechecked with two neutral prelude iterations before the tape's 240
 countdown rows. The native regression now checks the level clock every row
 (first race row 243). ALZ seeds 1/2/3 and CGZ seeds 2/3 still match every native
-row; CGZ seed 1 retains the balance omission described above. Thus these
+row; CGZ seed 1 then retained the balance omission described above (repaired by lane E). Thus these
 push/spring divergences survive the corrected origin. The native CSV bytes and controller masks did not change; the tape header now
 names the prelude. The old-origin final focused request was cancelled while
 still queued when this lead update arrived; it produced no test result.

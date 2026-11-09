@@ -735,6 +735,11 @@ class TestS3kCompetitionArenaObjects {
         return result;
     }
 
+    @Test void sinkingMudPublishesItsNativeBalanceSuppressionAndWidth() {
+        var mud=fixture().place(Kind.MUD,0x680,0x200,12,1);
+        assertEquals(new S3kCompetitionPlayer.BalanceObject(0x680,96,129),mud.balanceSurface());
+    }
+
     private Fixture fixture() { return new Fixture(animations, rockDebris); }
 
     private record Snapshot(List<CompetitionArenaObjectInstance> objects, List<ObjectSpawn> spawns,
