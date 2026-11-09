@@ -4453,9 +4453,10 @@ cases and source-sensitive replay/life-count guards. Root independently checked
 the source hash and all seven fresh XML hashes/identities. This proves the
 selected paths only; it is not a clean whole-leaf, combined smoke or full-suite
 result. Exact argv, source reconstruction and receipts are retained in
-`target/code-climb/replay-flow-readability/`. Queue/Maven/wall times are
-0/39.500/39.571 seconds, user wait zero and residual 0.071 seconds. Editing and
-coordination time were not measured. Existing warnings remain in the logs.
+`target/code-climb/replay-flow-readability/`. Queue wait is 0.0 seconds; queue execution hold is 39.5 seconds (rounded),
+Maven is 38.650 seconds and wall is 39.571 seconds. The 0.071-second residual is
+wall minus hold; these overlapping labels are not summed. User wait is zero;
+editing and coordination time were not measured. Existing warnings remain in the logs.
 
 The diagnosis guide now presents the normal first-HCZ journey in four steps
 before scope controls and producer/freshness exceptions. The primary route is
@@ -4474,3 +4475,71 @@ caveats remain explicit. No new trace invocation was run for documentation.
 `target/code-climb/replay-flow-route-review/` retains the root verification.
 Independent Opus review and combined qualification remain pending; this local
 increment is not pushed. The same draft PR271 remains the sole destination.
+
+
+### Replay-flow review repairs and named integration evidence (2026-11-09)
+
+Opus independently reconstructed the original 1,639-line class byte-for-byte
+by inlining the new helper. It found no Java correctness blocker and mapped
+every documentation rule to the new route. Its evidence finding was material:
+the 53-case selector ran the reference-closure guard's fourteen unit cases,
+not the package-private S1/S2 integration classes declared in the same file.
+Those earlier 53 passes did not assert the moved observer callback fired.
+
+A fresh normal-memory queued selection now passes **55 unique cases across nine
+suites, zero failures/errors/skips**. It retains every earlier 53 identity and
+adds exactly `TestS1ReplayReferenceClosureIntegration#replayMatchesTrace` and
+`TestS2ReplayReferenceClosureIntegration#replayMatchesTrace`. Both inherited
+GHZ1/EHZ1 replays return successfully, reaching their positive callback assertions.
+This verifies callback execution in both real general replay paths; it does not
+claim a callback count for every possible phase. Root checked both names, all
+fresh XML hashes, all counts and the immutable selected-source receipt. The
+reviewed extraction blob remains unchanged.
+
+The reviewer also found an existing fixture typo: the early-frontier case set
+and cleared `trace.contextRadius`, while the driver reads `trace.context.radius`.
+Root added a behavioral witness recording the last validated raw frame and
+comparing it with the report's first error. With the old property it fails
+exactly once: expected frame 0, actual frame 2. After correcting both setup and
+cleanup keys, that assertion passes in the 55-case selection. An initial witness
+run incorrectly queried JSON `frame` instead of `start_frame`; its failed type
+assertion is retained and explicitly excluded from valid RED evidence. Neither
+that witness error nor the existing property typo was a defect in the extraction.
+
+The guide now asks for gate confirmation when reading the report/brief, after
+fresh Surefire inspection, and explicitly identifies setup/skips before report
+publication as stale-report risks in reused directories. The overlapping timing labels above
+are corrected: queue hold is 39.5 seconds (rounded), Maven 38.650, wall 39.571;
+the 0.071 residual is wall minus hold. Three stale source comments now name
+`replayS3kTrace` or `replayGeneralTrace` rather than a drifting line/old branch.
+Reversing those literal comment changes reconstructs their original files.
+
+Before these bounded test/comment repairs, one matched pair ran on clean
+`0b3ab89ac8`: EHZ1 passes all 5,852 rows, first HCZ compares 3,519 rows cleanly,
+and HCZ2 retains its 26 mismatches. All three complete raw report bytes, including
+carried-entry diagnostics, and all context bytes equal qualified `7908d321064d`.
+No projection or normalization is used. All owner keys/physical paths pass the
+canonical validator; both emitted POSIX triage commands run unchanged with
+paths containing spaces. Existing auxiliary, context-length and log warnings
+remain. This is source-specific evidence at 0b3, not a new invocation at the
+repair commit: production, resources, shared replay driver/helpers and all three
+selected domain classes remain exact; only an unselected test fixture has an
+executable delta. The reuse proof and original outputs are retained.
+
+All commands used Java 25, Lua 5.4, MSE off, displays unset and surfaceless EGL;
+verified ROM discovery reports missing=none. Valid RED queue/Maven/wall times
+are 0/34.254/35.302 seconds; GREEN is 0/41.781/42.522, with residuals 1.048 and
+0.741. The invalid witness run is 0/35.551/36.364, residual 0.813. User wait is
+zero; editing/research time is unmeasured. Exact commands, source hashes, complete
+assertions and fresh XML are in `target/code-climb/replay-flow-review-repairs/`;
+matched reports are under `target/code-climb/replay-flow-route-domain/`.
+All owned focused/domain jobs are terminal and retired. Complete change-based smoke
+and guards remain pending on the final frozen repair head. Nothing after
+published `85d9e60ea1` is pushed, and no new usability score is inferred.
+
+Matched-domain timing (user wait zero throughout):
+
+- ehz1 queue/Maven/wall: 0/37.754/38.579s; residual 0.825s.
+- hcz queue/Maven/wall: 0/40.706/41.565s; residual 0.859s.
+- hcz1 triage queue/Maven/wall: 0/0.310/1.036s; residual 0.726s.
+- hcz2 triage queue/Maven/wall: 0/0.530/1.201s; residual 0.671s.

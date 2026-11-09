@@ -610,8 +610,8 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCou
    verified-ROM discovery line, fixture payload and referenced movie (lookup
    below). Read this class's fresh Surefire result in
    `target/hcz-attempt-1/surefire/`. Confirm the invocation executed without
-   errors or skips and reached its intended gate; setup failures and prerequisite
-   skips may leave an older same-test artifact.
+   errors or skips. Setup failures and prerequisite skips before a new trace
+   report is published may leave an older trace artifact in a reused directory.
 
 3. **Execute the printed triage command.** The standalone
    `AbstractTraceReplayTest` driver prints its concrete test, resolved fixture,
@@ -620,8 +620,9 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCou
    sibling context and fixture's plain or compressed auxiliary evidence without
    finding hashed report names yourself.
 
-4. **Interpret the gate and coverage limits.** The triage brief distinguishes a
-   completed comparison gate, an incomplete prefix and reports with no published
+4. **Interpret the gate and coverage limits.** Confirm in the published report
+   or triage brief that this invocation reached its intended gate. The brief
+   distinguishes a completed comparison gate, an incomplete prefix and reports with no published
    gate, whose completion is UNKNOWN. Triage reads saved evidence and does not
    certify freshness or process success. Planned trace rows and gameplay
    comparisons count different boundaries, so totals need not match. Auxiliary

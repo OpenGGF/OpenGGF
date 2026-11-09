@@ -3,10 +3,12 @@ package com.openggf.tests.trace;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.session.SessionManager;
+import com.openggf.tests.TestSessionOutputPaths.ReportAllocation;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.trace.DivergenceReport.ReplayGate;
+import com.openggf.trace.TraceExecutionPhase;
+import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceVerificationScope;
-import com.openggf.tests.TestSessionOutputPaths.ReportAllocation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -36,11 +38,12 @@ class TestAbstractTraceReplayDynamicArtTerminal
     private Path activeTrace;
     private Path activeReports;
     private int reportPublications;
+    private int lastValidatedFrame;
 
     @AfterEach
     void clearFrontierProperties() {
         System.clearProperty("trace.frontierOnly");
-        System.clearProperty("trace.contextRadius");
+        System.clearProperty("trace.context.radius");
     }
 
     @Override
@@ -71,7 +74,7 @@ class TestAbstractTraceReplayDynamicArtTerminal
             throws Exception {
         prepareAdvertisedFixture();
         System.setProperty("trace.frontierOnly", "true");
-        System.setProperty("trace.contextRadius", "0");
+        System.setProperty("trace.context.radius", "0");
 
         assertThrows(AssertionError.class, super::replayMatchesTrace);
 
@@ -80,6 +83,14 @@ class TestAbstractTraceReplayDynamicArtTerminal
         assertEquals(new ReplayGate(FINAL_FRAME + 1, false, TraceVerificationScope.ALL),
                 ReplayGate.readOptionalFrom(new ObjectMapper().readTree(report)),
                 "the actual frontier stop publishes an incomplete gate");
+        var published = new ObjectMapper().readTree(report);
+        var errors = published.path("errors");
+        assertTrue(errors.isArray() && !errors.isEmpty(),
+                "the frontier has a real per-frame error");
+        var firstErrorFrame = errors.get(0).path("start_frame");
+        assertTrue(firstErrorFrame.canConvertToInt());
+        assertEquals(firstErrorFrame.intValue(), lastValidatedFrame,
+                "zero context stops at the first erroneous row");
         assertTrue(report.contains("\"field\" : \"dynamic_art.frame\""));
         assertFalse(report.contains("\"end_frame\" : " + FINAL_FRAME),
                 "an actually-taken early frontier must not invent terminal data");
@@ -97,6 +108,7 @@ class TestAbstractTraceReplayDynamicArtTerminal
         activeTrace = tempDir.resolve("trace");
         activeReports = tempDir.resolve("reports");
         reportPublications = 0;
+        lastValidatedFrame = -1;
         Files.createDirectories(activeTrace);
         // The committed payload is gzipped -- TestTraceFixtureCompressionGuard
         // forbids an uncompressed physics.csv under src/test/resources/traces,
@@ -164,6 +176,12 @@ class TestAbstractTraceReplayDynamicArtTerminal
     @Override
     protected Path reportOutputDir() {
         return activeReports;
+    }
+
+    @Override
+    protected void onRewindReferenceClosureValidated(
+            int traceIndex, TraceFrame frame, TraceExecutionPhase phase) {
+        lastValidatedFrame = frame.frame();
     }
 
     @Override
