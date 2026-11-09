@@ -151,7 +151,10 @@ continuous stock-start route or reproduce the stock boss's AI.
   once, held, retried and from another clock phase, and compares the native state.
 - **Puppets.** Typing badniks, effects and bosses are records in the course's stagehand,
   drawn by slotless auxiliary objects with the zone's ROM art; they never touch native
-  object slots and stay out of rewind snapshots.
+  object slots and stay out of rewind snapshots. The public `AuxiliaryObjectCollection`
+  retains their presentation ownership, recreates missing puppets after checkpoint restores,
+  and retires them through the original manager on removal or level replacement. The course
+  calls it at presentation boundaries, including while the native world is held.
 - **Cast and bosses as data.** `cast/<game>.txt` lists each zone's badniks with their stock
   art keys and ROM animation frames; `bosses/<game>.txt` builds each boss from ROM sprite
   parts per mood (idle, window open, lunge, hit, laugh, defeat, flee), with pendulums

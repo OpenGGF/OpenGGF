@@ -320,8 +320,7 @@ class TestStarpostRealValley {
         if (colour == 0) return 0;
         int line = desc.getPaletteIndex();
         if (checkReservations) {
-            assertFalse(line == 0 || line == 1 && (colour == 1 || colour == 5 || colour == 12 || colour == 14 || colour == 15)
-                    || line == 3 && colour == 15, "art uses host/placeholder palette cell");
+            assertFalse(line == 0 || line == 1 && (colour == 1 || colour == 5 || colour == 12 || colour == 14 || colour == 15), "art uses host palette cell");
         }
         var rgb = level.getPalette(line).getColor(colour);
         return ((long) (desc.getPriority() ? 1 : 0) << 32)

@@ -781,3 +781,22 @@ terrain is integrated. Its farm gate launches `starpost-valley:valley`; doors op
 existing scene menus and relaunch at the returned centre when they close. The
 `town scene` debug command keeps its earlier scene valley reachable; `town act`
 restores act launches and `town enter` directly exercises the bridge from play.
+
+## Shared menu appearance and derived gameplay visuals
+
+Use `com.openggf.mods.ui.SceneMenuChrome` for native-grid page headers, focus frames,
+notices and footer keycaps. `MenuTheme` supplies the colours and layout dimensions also
+used by host menus. Text remains measured by the face that draws it. Act Practice is
+the maintained example; private host menu classes are unnecessary.
+
+For presentation objects drawn inside a retained native level, use
+`com.openggf.mods.objects.AuxiliaryObjectCollection<T>`. Keep your visual model in session
+state, call `synchronize(services, desired, factory)` at presentation boundaries (including
+while held), and close the collection at teardown. The factory constructs an object;
+the helper injects construction services, registers it as auxiliary, and retires only its
+own objects through their original managers. Checkpoint disappearance, destruction and
+manager replacement trigger reconciliation automatically. Desired values use object
+identity and must be distinct; this helper does not capture or restore your visual model.
+Checkpoint restore may discard auxiliaries without an unload callback, so keep
+external art/resources on the session owner and make the derived objects disposable.
+See Typing of the Hedgehog's `Stagehand`.

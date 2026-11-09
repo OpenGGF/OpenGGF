@@ -1,6 +1,6 @@
 package slaytherobotnik.core;
 
-/** Map node types, as in Slay the Spire. See {@link CardType} for why these are Strings. */
+/** Map node types, as in Slay the Spire. These identifiers retain their existing save and content keys. */
 public final class RoomType {
     /** The Tornado flight that opens each act (Neow in Slay the Spire). */
     public static final String START = "Start";

@@ -17,13 +17,19 @@ public final class LevelPatchOwnership {
 
     /** Engine-only final decode bridge; ordinary patches retain their existing snapshot behavior. */
     public static Level applyDecoded(LevelPatch patch,Level source) {
+        return applyDecoded(patch,source,null);
+    }
+
+    /** Engine-only admission with the source module's native placement encoding. */
+    public static Level applyDecoded(LevelPatch patch,Level source,
+            com.openggf.level.objects.ObjectPlacementEncoding encoding) {
         ClassLoader caller=com.openggf.util.EngineCallerAccess
                 .callerOutside(LevelPatchOwnership.class).getClassLoader();
         if (caller!=LevelPatchOwnership.class.getClassLoader())
             throw new SecurityException("Only the engine may apply admitted native placements");
         Objects.requireNonNull(patch,"patch");
         Objects.requireNonNull(source,"source");
-        if (!patch.usesNativePlacements()) return patch.apply(source);
+        if (!patch.usesNativePlacements()) return patch.apply(source,encoding);
         if (!patch.matchesZone(source)) return source;
         if (!(source instanceof AbstractLevel nativeLevel) || source instanceof MutableLevel
                 || source.getClass().getClassLoader()!=LevelPatchOwnership.class.getClassLoader())
@@ -37,6 +43,6 @@ public final class LevelPatchOwnership {
         } catch (NoSuchMethodException exception) {
             throw new IllegalArgumentException("Native placement accessors are unavailable",exception);
         }
-        return patch.applyNativeDecoded(nativeLevel);
+        return patch.applyNativeDecoded(nativeLevel,encoding);
     }
 }
