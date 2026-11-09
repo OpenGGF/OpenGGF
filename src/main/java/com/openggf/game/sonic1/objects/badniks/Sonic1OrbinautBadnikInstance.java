@@ -339,7 +339,7 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance impleme
 
         @Override
         public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            Sonic1OrbinautBadnikInstance restoredParent = nearestLiveOrbinautParentForRewind(ctx);
+            Sonic1OrbinautBadnikInstance restoredParent = parentForRewind(ctx);
             if (restoredParent == null) {
                 return null;
             }
@@ -348,8 +348,28 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance impleme
             return restored;
         }
 
-        private static Sonic1OrbinautBadnikInstance nearestLiveOrbinautParentForRewind(
+        private static Sonic1OrbinautBadnikInstance parentForRewind(
                 RewindRecreateContext ctx) {
+            var entry = ctx.dynamicEntry();
+            var family = entry == null ? null : entry.constructionFamily();
+            if (family != null && family.known()) {
+                // Never replace a captured owner with a geometrically closer family.
+                if (family.parentId() == null) {
+                    return null;
+                }
+                ObjectManager manager = ctx.objectManager();
+                if (manager == null && ctx.objectServices() != null) {
+                    manager = ctx.objectServices().objectManager();
+                }
+                if (manager == null) {
+                    return null;
+                }
+                var owner = manager.objectQuery().resolve(family.parentId()).orElse(null);
+                if (owner instanceof Sonic1OrbinautBadnikInstance orbinaut) {
+                    return orbinaut;
+                }
+                return null;
+            }
             ObjectServices services = ctx.objectServices();
             ObjectManager objectManager = services != null ? services.objectManager() : null;
             ObjectSpawn capturedSpawn = ctx.spawn();

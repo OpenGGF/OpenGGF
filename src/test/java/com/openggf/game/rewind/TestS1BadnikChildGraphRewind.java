@@ -20,6 +20,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.physics.TrigLookupTable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,6 +64,261 @@ class TestS1BadnikChildGraphRewind {
     @AfterEach
     void tearDown() {
         GraphicsManager.getInstance().resetState();
+    }
+
+    @Test
+    void twoRoutineOrbinautFamiliesKeepTheirCapturedParentsWhenAnotherOrbinautIsCloser() {
+        // Orb_CircleSpikeball uses CalcSine >> 4, so angle zero has a sixteen-pixel radius.
+        int orbitRadius = TrigLookupTable.cosHex(0) >> 4;
+        ObjectSpawn leftSpawn = new ObjectSpawn(0x80, 0x70, Sonic1ObjectIds.ORBINAUT, 0, 0, false, 0x70, 31);
+        ObjectSpawn rightSpawn = new ObjectSpawn(
+                leftSpawn.x() + orbitRadius, leftSpawn.y(), Sonic1ObjectIds.ORBINAUT,
+                0, 0, false, leftSpawn.y(), leftSpawn.layoutIndex() + 1);
+        ObjectManager manager = Harness.create(List.of(leftSpawn, rightSpawn)).objectManager();
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        // Both parents create their satellites from updateMovement via owned spawnFreeChild.
+        // A higher-slot child may execute in that pass; the second pass also covers lower slots.
+        manager.update(0, null, List.of(), 0);
+        manager.update(0, null, List.of(), 1);
+
+        List<Sonic1OrbinautBadnikInstance> parents = liveObjects(manager, Sonic1OrbinautBadnikInstance.class);
+        assertEquals(2, parents.size(), "fixture must have two normally placed Orbinauts");
+        Sonic1OrbinautBadnikInstance left = parents.stream()
+                .filter(parent -> parent.getX() == leftSpawn.x()).findFirst().orElseThrow();
+        Sonic1OrbinautBadnikInstance right = parents.stream()
+                .filter(parent -> parent.getX() == rightSpawn.x()).findFirst().orElseThrow();
+        ObjectInstance rightmostLeftSpike = readObjectList(left, "spikes").getFirst();
+        assertOrbitPositionUsesPreviousAngle(rightmostLeftSpike, left);
+        assertEquals(8, liveObjectsByClassName(manager, ORB_SPIKE_CLASS).size());
+
+        Map<ObjectRefId, ObjectRefId> expectedParents = new LinkedHashMap<>();
+        for (Sonic1OrbinautBadnikInstance parent : List.of(left, right)) {
+            assertEquals(4, readObjectList(parent, "spikes").size());
+            for (ObjectInstance spike : readObjectList(parent, "spikes")) {
+                assertSame(parent, readObject(spike, "parent"), "normal routine birth must use its real parent");
+                assertTrue(!readBoolean(spike, "launched"), "null player must leave this fixture orbiting");
+                expectedParents.put(objectId(manager, spike), objectId(manager, parent));
+            }
+        }
+        var adapter = manager.rewindSnapshottable();
+        ObjectManagerSnapshot snapshot = adapter.capture();
+        assertCapturedOrbinautFamilies(snapshot, expectedParents);
+        var capturedRightmostLeftSpike = snapshot.dynamicObjects().stream()
+                .filter(entry -> objectId(manager, rightmostLeftSpike).equals(entry.objectId()))
+                .findFirst().orElseThrow();
+        assertEquals(rightmostLeftSpike.getX(), capturedRightmostLeftSpike.spawn().x(),
+                "OrbSpike.getSpawn must capture the evaluated orbit x, not its constructor center");
+        assertEquals(rightmostLeftSpike.getY(), capturedRightmostLeftSpike.spawn().y(),
+                "OrbSpike.getSpawn must capture the evaluated orbit y, not its constructor center");
+        assertTrue(distanceSquared(right, capturedRightmostLeftSpike.spawn())
+                        < distanceSquared(left, capturedRightmostLeftSpike.spawn()),
+                "the snapshot spawn passed to the hook must be strictly closer to the other Orbinaut");
+
+        for (int restore = 0; restore < 2; restore++) {
+            Map<ObjectRefId, ObjectInstance> previous = new LinkedHashMap<>();
+            for (var family : expectedParents.entrySet()) {
+                previous.put(family.getKey(), manager.objectQuery().resolve(family.getKey()).orElseThrow());
+                previous.put(family.getValue(), manager.objectQuery().resolve(family.getValue()).orElseThrow());
+            }
+            adapter.restore(snapshot);
+            assertEquals(8, liveObjectsByClassName(manager, ORB_SPIKE_CLASS).size(),
+                    "fresh restore must retain the eight captured satellite ids");
+            for (var family : expectedParents.entrySet()) {
+                ObjectInstance spike = manager.objectQuery().resolve(family.getKey()).orElseThrow();
+                Sonic1OrbinautBadnikInstance parent = (Sonic1OrbinautBadnikInstance)
+                        manager.objectQuery().resolve(family.getValue()).orElseThrow();
+                assertNotSame(previous.get(family.getKey()), spike,
+                        "the satellite must be freshly recreated, not retained from the source graph");
+                assertNotSame(previous.get(family.getValue()), parent,
+                        "the Orbinaut parent must be freshly reconstructed");
+                assertSame(parent, readObject(spike, "parent"),
+                        "satellite must use its captured family parent even when another Orbinaut is closer");
+                assertEquals(1, identityFrequency(readObjectList(parent, "spikes"), spike),
+                        "each restored satellite id must occur once in its own parent's list");
+                assertOrbitPositionUsesPreviousAngle(spike, parent);
+            }
+            for (ObjectRefId parentId : expectedParents.values().stream().distinct().toList()) {
+                Sonic1OrbinautBadnikInstance parent = (Sonic1OrbinautBadnikInstance)
+                        manager.objectQuery().resolve(parentId).orElseThrow();
+                List<ObjectInstance> spikes = readObjectList(parent, "spikes");
+                assertEquals(4, spikes.size(), "each restored parent must retain only its four satellites");
+                for (ObjectInstance spike : spikes) {
+                    assertEquals(parentId, expectedParents.get(objectId(manager, spike)),
+                            "a restored parent list must not borrow another family's captured satellite");
+                }
+            }
+            if (restore == 0) {
+                manager.update(0, null, List.of(), 2);
+                snapshot = adapter.capture();
+                assertCapturedOrbinautFamilies(snapshot, expectedParents);
+            }
+        }
+    }
+
+
+    @Test
+    void orbinautKnownAbsentParentDropsSpikeInsteadOfBorrowingNearestFamily() {
+        OrbinautFamilyBoundary boundary = orbinautFamilyBoundary();
+        ObjectRefId ownerId = boundary.entry().constructionFamily().parentId();
+        ObjectRefId absentId = new ObjectRefId(ownerId.slotIndex(), ownerId.generation() + 1,
+                ownerId.spawnId(), ownerId.dynamicId(), ownerId.kind());
+        assertTrue(boundary.manager().objectQuery().resolve(absentId).isEmpty());
+        assertOrbinautBoundaryDropped(boundary,
+                new ObjectManagerSnapshot.ConstructionFamily(true, absentId), "absent parent");
+    }
+
+    @Test
+    void orbinautKnownWrongTypeParentDropsSpikeInsteadOfBorrowingNearestFamily() {
+        OrbinautFamilyBoundary boundary = orbinautFamilyBoundary();
+        ObjectInstance wrongType = boundary.manager().objectQuery()
+                .resolve(boundary.wrongTypeId()).orElseThrow();
+        assertEquals(ORB_SPIKE_CLASS, wrongType.getClass().getName(),
+                "wrong-type parent identity must resolve to a real managed spike");
+        assertOrbinautBoundaryDropped(boundary,
+                new ObjectManagerSnapshot.ConstructionFamily(true, boundary.wrongTypeId()), "wrong-type parent");
+    }
+
+    @Test
+    void orbinautKnownExplicitNoParentDropsSpikeInsteadOfBorrowingNearestFamily() {
+        assertOrbinautBoundaryDropped(orbinautFamilyBoundary(),
+                new ObjectManagerSnapshot.ConstructionFamily(true, null), "explicit no-parent");
+    }
+
+    @Test
+    void orbinautLegacyFamilyAbsenceKeepsNearestParentCompatibility() {
+        assertOrbinautBoundaryUsesNearest(orbinautFamilyBoundary(), null);
+    }
+
+    @Test
+    void orbinautUnknownFamilyKeepsNearestParentCompatibility() {
+        assertOrbinautBoundaryUsesNearest(orbinautFamilyBoundary(),
+                new ObjectManagerSnapshot.ConstructionFamily(false, null));
+    }
+
+    private static void assertOrbinautBoundaryDropped(OrbinautFamilyBoundary boundary,
+            ObjectManagerSnapshot.ConstructionFamily family, String condition) {
+        // This one metadata edit is an explicit reconstruction boundary input.
+        // The source children and their original known families came from ordinary updates.
+        boundary.manager().rewindSnapshottable().restore(orbinautSnapshotWithFamily(boundary, family));
+        assertTrue(boundary.manager().objectQuery().resolve(boundary.entry().objectId()).isEmpty(),
+                "known Orbinaut family must drop rather than borrow nearest for " + condition);
+        assertEquals(7, liveObjectsByClassName(boundary.manager(), ORB_SPIKE_CLASS).size(),
+                "dropping one invalid family must preserve the other seven captured spikes");
+        assertFreshBoundaryParents(boundary);
+        for (var parent : liveObjects(boundary.manager(), Sonic1OrbinautBadnikInstance.class)) {
+            for (ObjectInstance spike : readObjectList(parent, "spikes")) {
+                assertNotEquals(boundary.entry().objectId(), objectId(boundary.manager(), spike),
+                        "no parent inventory may retain the deliberately dropped captured spike");
+            }
+        }
+    }
+
+    private static void assertOrbinautBoundaryUsesNearest(OrbinautFamilyBoundary boundary,
+            ObjectManagerSnapshot.ConstructionFamily family) {
+        boundary.manager().rewindSnapshottable().restore(orbinautSnapshotWithFamily(boundary, family));
+        ObjectInstance restored = boundary.manager().objectQuery().resolve(boundary.entry().objectId()).orElseThrow();
+        ObjectInstance nearest = boundary.manager().objectQuery().resolve(boundary.nearestId()).orElseThrow();
+        assertNotSame(boundary.sourceSpike(), restored,
+                "legacy/unknown control must execute fresh spike reconstruction");
+        assertSame(nearest, readObject(restored, "parent"),
+                "legacy/unknown Orbinaut family must retain nearest-parent compatibility");
+        assertEquals(1, identityFrequency(readObjectList(nearest, "spikes"), restored));
+        assertEquals(8, liveObjectsByClassName(boundary.manager(), ORB_SPIKE_CLASS).size());
+        assertFreshBoundaryParents(boundary);
+    }
+
+    private static void assertFreshBoundaryParents(OrbinautFamilyBoundary boundary) {
+        assertNotSame(boundary.sourceOwner(), boundary.manager().objectQuery()
+                .resolve(boundary.ownerId()).orElseThrow(), "source owner must be freshly reconstructed");
+        assertNotSame(boundary.sourceNearest(), boundary.manager().objectQuery()
+                .resolve(boundary.nearestId()).orElseThrow(), "nearest unrelated parent must remain live and fresh");
+    }
+
+    private static OrbinautFamilyBoundary orbinautFamilyBoundary() {
+        int orbitRadius = TrigLookupTable.cosHex(0) >> 4;
+        ObjectSpawn leftSpawn = new ObjectSpawn(0x80, 0x70, Sonic1ObjectIds.ORBINAUT, 0, 0, false, 0x70, 31);
+        ObjectSpawn rightSpawn = new ObjectSpawn(leftSpawn.x() + orbitRadius, leftSpawn.y(),
+                Sonic1ObjectIds.ORBINAUT, 0, 0, false, leftSpawn.y(), leftSpawn.layoutIndex() + 1);
+        ObjectManager manager = Harness.create(List.of(leftSpawn, rightSpawn)).objectManager();
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        manager.update(0, null, List.of(), 0);
+        manager.update(0, null, List.of(), 1);
+        Sonic1OrbinautBadnikInstance left = liveObjects(manager, Sonic1OrbinautBadnikInstance.class).stream()
+                .filter(parent -> parent.getX() == leftSpawn.x()).findFirst().orElseThrow();
+        Sonic1OrbinautBadnikInstance right = liveObjects(manager, Sonic1OrbinautBadnikInstance.class).stream()
+                .filter(parent -> parent.getX() == rightSpawn.x()).findFirst().orElseThrow();
+        ObjectInstance target = readObjectList(left, "spikes").getFirst();
+        ObjectInstance wrongType = readObjectList(right, "spikes").getFirst();
+        assertOrbitPositionUsesPreviousAngle(target, left);
+        Map<ObjectRefId, ObjectRefId> expected = new LinkedHashMap<>();
+        for (var parent : List.of(left, right)) {
+            assertEquals(4, readObjectList(parent, "spikes").size());
+            for (ObjectInstance spike : readObjectList(parent, "spikes")) {
+                assertSame(parent, readObject(spike, "parent"), "source must use ordinary owned birth");
+                assertTrue(!readBoolean(spike, "launched"));
+                expected.put(objectId(manager, spike), objectId(manager, parent));
+            }
+        }
+        ObjectManagerSnapshot snapshot = manager.rewindSnapshottable().capture();
+        assertCapturedOrbinautFamilies(snapshot, expected);
+        var entry = snapshot.dynamicObjects().stream()
+                .filter(candidate -> objectId(manager, target).equals(candidate.objectId())).findFirst().orElseThrow();
+        assertEquals(target.getX(), entry.spawn().x());
+        assertEquals(target.getY(), entry.spawn().y());
+        assertTrue(distanceSquared(right, entry.spawn()) < distanceSquared(left, entry.spawn()),
+                "legacy fallback must select the other parent using the actual captured orbit spawn");
+        return new OrbinautFamilyBoundary(manager, snapshot, entry, objectId(manager, left),
+                objectId(manager, right), objectId(manager, wrongType), target, left, right);
+    }
+
+    private record OrbinautFamilyBoundary(ObjectManager manager, ObjectManagerSnapshot snapshot,
+            ObjectManagerSnapshot.DynamicObjectEntry entry, ObjectRefId ownerId, ObjectRefId nearestId,
+            ObjectRefId wrongTypeId, ObjectInstance sourceSpike, ObjectInstance sourceOwner,
+            ObjectInstance sourceNearest) { }
+
+    private static ObjectManagerSnapshot orbinautSnapshotWithFamily(OrbinautFamilyBoundary boundary,
+            ObjectManagerSnapshot.ConstructionFamily family) {
+        ObjectManagerSnapshot s = boundary.snapshot();
+        var entries = s.dynamicObjects().stream().map(entry -> {
+            if (!boundary.entry().objectId().equals(entry.objectId())) return entry;
+            return new ObjectManagerSnapshot.DynamicObjectEntry(entry.className(), entry.spawn(), entry.slotIndex(),
+                    entry.state(), entry.playerOwner(), entry.objectId(), entry.ownerModId(),
+                    entry.rewindableAuxiliary(), entry.playerOwnerId(), family);
+        }).toList();
+        return new ObjectManagerSnapshot(s.usedSlotsBits(), s.slots(), s.frameCounter(), s.vblaCounter(),
+                s.currentExecSlot(), s.peakSlotCount(), s.bucketsDirty(), s.childSpawns(), entries,
+                s.placement(), s.solidContactRiding(), s.solidContactState(), s.planeSwitchers(),
+                s.touchResponseOverlap(), s.dynamicObjectIdCounter(), s.collisionResponseState(),
+                s.sineCosineInputFraction());
+    }
+
+    private static void assertCapturedOrbinautFamilies(
+            ObjectManagerSnapshot snapshot, Map<ObjectRefId, ObjectRefId> expectedParents) {
+        for (var family : expectedParents.entrySet()) {
+            var child = snapshot.dynamicObjects().stream()
+                    .filter(entry -> family.getKey().equals(entry.objectId())).findFirst().orElseThrow();
+            assertEquals(ORB_SPIKE_CLASS, child.className());
+            assertNotNull(child.constructionFamily(), "owned routine satellite birth must record family metadata");
+            assertTrue(child.constructionFamily().known());
+            assertEquals(family.getValue(), child.constructionFamily().parentId(),
+                    "captured satellite family id must already name its normal source owner");
+        }
+    }
+
+    private static void assertOrbitPositionUsesPreviousAngle(
+            ObjectInstance spike, Sonic1OrbinautBadnikInstance parent) {
+        // update() computes x/y from the old angle, THEN increments angle by the parent's step.
+        int positionAngle = (readInt(spike, "angle") - readInt(parent, "angleStep")) & 0xFF;
+        assertEquals(parent.getX() + (TrigLookupTable.cosHex(positionAngle) >> 4), spike.getX(),
+                "orbit x must come from the angle used before its update increment");
+        assertEquals(parent.getY() + (TrigLookupTable.sinHex(positionAngle) >> 4), spike.getY(),
+                "orbit y must come from the angle used before its update increment");
+    }
+
+    private static long distanceSquared(ObjectInstance parent, ObjectSpawn capturedSpawn) {
+        long dx = parent.getX() - capturedSpawn.x();
+        long dy = parent.getY() - capturedSpawn.y();
+        return dx * dx + dy * dy;
     }
 
     @Test

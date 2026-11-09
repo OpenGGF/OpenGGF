@@ -5170,3 +5170,108 @@ terminal and their units retired. Diagnostics, original pixel evidence and retai
 baseline/worker trees remain preserved; unknown work is not discarded. The task
 branch/worktree stays for draft PR271. No destination merge/push or new PR is
 part of this increment. The following publication commit changes audit prose only.
+
+
+## Exact captured parents for routine children — 2026-11-09
+
+This isolated increment starts at `6752c370c5c61d9a7d0787218ea4a0c518e8f1f5`
+(tree `e176236c0957420072ad092ec5acb7057b3c894f`), alongside the separately frozen
+`d314`/`6752` reconciliation qualification. It is local, unintegrated and unpushed.
+No contributor score or shipped-route trigger is established here.
+
+Two normally initialized nearby Clamers or S1 Orbinauts exposed wrong-parent
+reconstruction: the child's actual captured spawn is nearer the other parent.
+The existing owned-spawn capture already stores the correct family identity.
+The two recreate hooks now resolve that typed identity through the restoring
+manager. Known absence, a missing manager/identity or the wrong type returns null;
+it never authorizes a different nearby parent. Null/unknown family metadata keeps
+the existing class-specific nearest-parent compatibility path. Exact identity
+retains the captured owner rather than applying a live-only geometric filter.
+Native update routines, child admission, snapshot/API formats, field codecs and
+shared parent/sibling proximity helpers have no executable changes.
+
+The first prototype attempt stopped at three missing checked-exception declarations
+in new Clamer test readers: zero cases ran, so it is not behavioral RED. After
+that test-only repair, the same two-class selection ran 16 cases: exactly six
+predicted assertion failures, ten passing controls, zero errors/skips. The two
+ordinary-birth graph witnesses reached their wrong-parent identity assertions;
+the other failures rejected borrowing for explicit invalid family metadata.
+Those invalid metadata inputs are contract controls, not shipped gameplay claims.
+Clamer invalid-family controls stop at the real generic hook: a deliberately
+inconsistent parent-side strict child reference may correctly fail later field
+restore. Orbinaut controls exercise the full manager restore and inventories.
+
+After the two-hook repair, 155 cases across 16 exact fresh suites passed with
+zero failures/errors/skips. Every former RED identity is individually present and
+green. Selection includes ordinary constructor families, dynamic retries, two-phase
+references, manager snapshots, creator-owned graphs, pending shields, exact SST
+adoption, S3K child graphs, the architecture guard and all required S3K anchors
+(including both classes named `TestSonic3kLevelLoading`). This is focused evidence,
+not a full-suite, route, pixel, trace or original-D rubric certification.
+
+Command arrays below retain the actual wrapper flags and selectors; `<worktree>`
+replaces only the local invocation root. Original absolute arguments remain in the
+retained command receipts. Environment: Java25,
+Lua5.4, displays and inherited Maven/JVM option variables unset, normal memory;
+GREEN explicitly selected surfaceless EGL. ROM discovery used the main checkout.
+The source seal before/after GREEN was
+`15f13c5aeb18b6489c8e126dc86222bad8cfcf345d821b6296c857b5f0196bf7`.
+Afterward only docs/routing and one context Javadoc paragraph changed: all four
+tested program/test files keep their exact hashes, and removing that paragraph
+reproduces the previous context bytes.
+
+RED2 command:
+
+```json
+[
+  "python3",
+  "tools/testing/maven_queue.py",
+  "--normal",
+  "-Dmse=off",
+  "-Dsurefire.forkCount=1",
+  "-Dsurefire.runOrder=alphabetical",
+  "-Dtest=com.openggf.game.rewind.TestS1BadnikChildGraphRewind,com.openggf.game.rewind.TestS3kClamerGraphRewind",
+  "-Dopenggf.surefire.reports=<worktree>/target/code-climb/parent-family/red2/surefire",
+  "-Dopenggf.trace.reports=<worktree>/target/code-climb/parent-family/red2/trace-reports",
+  "-Dopenggf.test.diagnostics=<worktree>/target/code-climb/parent-family/red2/diagnostics",
+  "test",
+  "-B"
+]
+```
+
+GREEN command:
+
+```json
+[
+  "python3",
+  "tools/testing/maven_queue.py",
+  "--normal",
+  "-Dmse=off",
+  "-Dopenggf.headless.gl=surfaceless-egl",
+  "-Dsurefire.forkCount=1",
+  "-Dsurefire.runOrder=alphabetical",
+  "-Dtest=com.openggf.game.rewind.TestS1BadnikChildGraphRewind,com.openggf.game.rewind.TestS3kClamerGraphRewind,com.openggf.level.objects.TestConstructorChildFamilyRewind,com.openggf.level.objects.TestObjectManagerDynamicChainRewindRestore,com.openggf.level.objects.TestTwoPhaseRestoreOrdering,com.openggf.level.objects.TestObjectManagerRewindSnapshot,com.openggf.mods.code.TestModOwnedDynamicObjectRewind,com.openggf.level.objects.TestShieldRewindPendingRestore,com.openggf.level.objects.TestObjectRewindExactAdoption,com.openggf.game.rewind.TestS3kBadnikChildGraphRewind,com.openggf.game.rewind.TestRewindArchitectureGuard,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils",
+  "-Dopenggf.surefire.reports=<worktree>/target/code-climb/parent-family/green/surefire",
+  "-Dopenggf.trace.reports=<worktree>/target/code-climb/parent-family/green/trace-reports",
+  "-Dopenggf.test.diagnostics=<worktree>/target/code-climb/parent-family/green/diagnostics",
+  "test",
+  "-B"
+]
+```
+
+Timing per command (seconds; user wait zero):
+
+| Attempt | Queue | Maven | Wall | Unseparated overhead/rounding |
+| --- | ---: | ---: | ---: | ---: |
+| Prototype compile failure | 114 | 104 (rounded) | 218.948893 | 0.948893 |
+| Behavioral RED2 | 102 | 32.539 | 135.394063 | 0.855063 |
+| Focused GREEN | 623 | 103 (rounded) | 727.421976 | 1.421976 |
+
+Source preparation, investigation and future review time are not separately
+instrumented; these overlapping command timings are not an end-to-end total.
+All three exact owned supervisors are terminal and retired; command receipts,
+fresh XML, full assertions, source seals and proof are retained under
+`target/code-climb/parent-family/{red,red2,green}`. Current broad qualification
+remains separately owned by root; its diagnostic/pixel obligations are not waived.
+Independent correctness review, combined qualification and PR271 integration of
+this isolated increment remain pending.

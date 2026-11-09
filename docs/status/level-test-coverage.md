@@ -1,5 +1,13 @@
 # Level test coverage backlog
 
+Parent-linked rewind maintenance (2026-11-09): the Clamer and S1 badnik graph
+witnesses named in the [rewind guide](../guide/contributing/rewind-system.md#ordinary-dynamic-objects-and-constructor-children)
+check routine-spawned children against two nearby same-class parents, including
+fresh reconstruction after movement and metadata boundary/legacy controls.
+These injected-service graph checks establish neither a native route trigger nor
+act, viewport, donor/team or whole-route rewind coverage; those obligations remain
+inherited. The snapshot format and native update routines are unchanged.
+
 S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
 exercise P1 breaking for all eight outcomes and hold the award for six seconds.
 The [bounded matrix](../architecture/plans/2026-11-07-s2-competition-parity.md#question-mark-monitor-outcomes-2026-11-09)

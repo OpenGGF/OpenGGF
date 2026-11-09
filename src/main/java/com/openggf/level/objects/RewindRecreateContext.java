@@ -10,6 +10,12 @@ import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
  * This is engine reconstruction plumbing; creator implementations use
  * {@link ModRewindRecreatable} and {@link ObjectReconstructionContext}.
  *
+ * <p>For an owned child, {@code dynamicEntry().constructionFamily()} can identify
+ * its captured parent. Known family metadata is authoritative even when the
+ * parent is absent: a parent-dependent hook must not substitute a nearby object.
+ * Legacy or explicitly unknown families retain their class's compatibility path.
+ * Family ownership is separate from a sibling or predecessor relationship.
+ *
  * <p>Object-reference fields from the compact blob are <em>not</em> available here;
  * they are resolved after recreate returns. Implementations may inspect the
  * restore-time {@link ObjectManager} through {@link #objectServices()} for

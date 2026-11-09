@@ -395,6 +395,16 @@ context. Use `SpawnRewindRecreatable` for an exact `ObjectSpawn` constructor;
 `SpawnConstructionContextRewindRecreatable` is the compatible old name, not a
 second recipe. Parent-linked hooks still supply their actual construction logic.
 
+For a routine-spawned child whose constructor requires its parent, inspect
+`ctx.dynamicEntry()` and its `constructionFamily()` when present, before using
+geometry. When the family is known, resolve its `parentId` through the restoring manager's
+`objectQuery().resolve(...)` and check the expected parent type. Return `null`
+when that known parent is absent, unavailable or the wrong type; the existing
+retry/drop path handles it. A nearby object is not a substitute. The Clamer spring
+in `ClamerObjectInstance` and the satellite in `Sonic1OrbinautBadnikInstance` show
+this path while retaining their nearest-parent lookup for legacy or explicitly
+unknown families. This rule concerns the captured owner, not a sibling relink.
+
 Owned `spawnChild`, `spawnFreeChild`, `spawnChildAfterSlot` and direct child wrappers
 record the actual parent without running external child notifications during
 restore/probes. `DynamicObjectEntry.constructionFamily` captures its stable id
@@ -426,7 +436,7 @@ make an unsupported child appear covered.
 Run the ordinary family witnesses and neighbors through the queue:
 
 ```bash
-python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestConstructorChildFamilyRewind,TestObjectManagerDynamicChainRewindRestore,TestTwoPhaseRestoreOrdering,TestObjectManagerRewindSnapshot,TestModOwnedDynamicObjectRewind' test -B
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestConstructorChildFamilyRewind,TestObjectManagerDynamicChainRewindRestore,TestTwoPhaseRestoreOrdering,TestObjectManagerRewindSnapshot,TestModOwnedDynamicObjectRewind,TestS3kClamerGraphRewind,TestS1BadnikChildGraphRewind' test -B
 ```
 
 `TestObjectRewindExactAdoption` covers the separate FBZ exact-SST adoption surface;

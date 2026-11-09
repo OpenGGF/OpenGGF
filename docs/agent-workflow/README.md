@@ -562,6 +562,8 @@ never preserved.
 - Architecture/services: [engine map](../architecture/engine-map.md).
 - Objects/bosses: matching `s1-`, `s2-`, or `s3k-implement-*` skill and
   [implementation reference](../architecture/object-implementation-reference.md).
+- Object rewind, reconstruction and parent/child ownership:
+  [rewind guide](../guide/contributing/rewind-system.md#ordinary-dynamic-objects-and-constructor-children).
 - Disassembly lookup: matching `s1disasm-guide`, `s2disasm-guide`, or
   `s3k-disasm-guide` skill.
 - Trace failures: `trace-replay-bug-fixing`; multiple independent traces:
