@@ -468,12 +468,12 @@
       "order": 0,
       "file": "frames/fly-00.png",
       "hotspot": [
-        19,
-        20
+        20,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Flight round 2: fly2 cell 0; high V; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+      "notes": "Flight scale: original fly2.png cell 0, uniform 9:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Original wing silhouette; no rotor stub."
     },
     {
       "id": "fly-01",
@@ -481,12 +481,12 @@
       "order": 1,
       "file": "frames/fly-01.png",
       "hotspot": [
-        22,
+        23,
         13
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Flight round 2: fly1 cell 1; upper downstroke extended; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+      "notes": "Flight scale: original fly1.png cell 1, uniform 9:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Original wing silhouette; no rotor stub."
     },
     {
       "id": "fly-02",
@@ -494,12 +494,12 @@
       "order": 2,
       "file": "frames/fly-02.png",
       "hotspot": [
-        21,
-        13
+        22,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Flight round 2: fly2 cell 2; horizontal power stroke; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+      "notes": "Flight scale: original fly2.png cell 2, uniform 9:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Original wing silhouette; no rotor stub."
     },
     {
       "id": "fly-03",
@@ -507,12 +507,12 @@
       "order": 3,
       "file": "frames/fly-03.png",
       "hotspot": [
-        16,
-        13
+        17,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Flight round 2: fly2 cell 3; low fully swept; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+      "notes": "Flight scale: original fly2.png cell 3, uniform 9:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Original wing silhouette; no rotor stub."
     },
     {
       "id": "fly-04",
@@ -520,12 +520,12 @@
       "order": 4,
       "file": "frames/fly-04.png",
       "hotspot": [
-        20,
-        13
+        21,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Flight round 2: fly1 cell 4; folded mid upstroke; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+      "notes": "Flight scale: original fly1.png cell 4, uniform 9:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Original wing silhouette; no rotor stub."
     },
     {
       "id": "fly-05",
@@ -533,12 +533,12 @@
       "order": 5,
       "file": "frames/fly-05.png",
       "hotspot": [
-        19,
-        17
+        20,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Flight round 2: fly2 cell 5; upper recovery reopening; fixed 480px crop / 10 reduction, registered generated body plate, detached speck cleanup only."
+      "notes": "Flight scale: original fly2.png cell 5, uniform 9:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Original wing silhouette; no rotor stub."
     },
     {
       "id": "fly_tired-00",
@@ -551,7 +551,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Consistency built-in image generation: tired-1.png, cell 0; uniform 6.8:1 reduction; no contour painting."
+      "notes": "Flight scale: original tired-1.png cell 0, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86."
     },
     {
       "id": "fly_tired-01",
@@ -560,11 +560,11 @@
       "file": "frames/fly_tired-01.png",
       "hotspot": [
         18,
-        13
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Consistency built-in image generation: tired-1.png, cell 1; uniform 6.8:1 reduction; no contour painting."
+      "notes": "Flight scale: original tired-1.png cell 1, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86."
     },
     {
       "id": "fly_tired-02",
@@ -572,12 +572,12 @@
       "order": 2,
       "file": "frames/fly_tired-02.png",
       "hotspot": [
-        17,
-        13
+        18,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Consistency built-in image generation: tired-1.png, cell 2; uniform 6.8:1 reduction; no contour painting."
+      "notes": "Flight scale: original tired-1.png cell 2, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86."
     },
     {
       "id": "fly_tired-03",
@@ -585,12 +585,12 @@
       "order": 3,
       "file": "frames/fly_tired-03.png",
       "hotspot": [
-        16,
+        15,
         14
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Consistency built-in image generation: tired-1.png, cell 3; uniform 6.8:1 reduction; no contour painting."
+      "notes": "Flight scale: original tired-1.png cell 3, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86."
     },
     {
       "id": "fly_tired-04",
@@ -598,12 +598,12 @@
       "order": 4,
       "file": "frames/fly_tired-04.png",
       "hotspot": [
-        17,
-        13
+        18,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Consistency built-in image generation: tired-1.png, cell 4; uniform 6.8:1 reduction; no contour painting."
+      "notes": "Flight scale: original tired-1.png cell 4, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86."
     },
     {
       "id": "fly_tired-05",
@@ -616,7 +616,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Consistency built-in image generation: tired-1.png, cell 5; uniform 6.8:1 reduction; no contour painting."
+      "notes": "Flight scale: original tired-1.png cell 5, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86."
     },
     {
       "id": "walk-up45-00",
