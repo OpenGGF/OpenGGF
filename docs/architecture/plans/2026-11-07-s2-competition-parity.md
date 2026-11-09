@@ -296,3 +296,71 @@ Held rewind is off (D2).
 All four are indexed in the [agent workflow guide](../../agent-workflow/README.md).
 Native movies, CSVs, screenshots and comparison output stay outside the
 repository.
+
+### Simultaneous EHZ route frontier (2026-11-09)
+
+Owner: simultaneous-route implementation lane, branch
+`feature/ai-s2-competition-simultaneous-route`, base `a41d0c7141`.
+**Blocked: no native-qualified simultaneous frozen route is published.** CNZ is
+owned by another lane and was not changed.
+
+The planner now tries independent charge/roll/steer policies on the two lanes,
+counts damage to either goal participant when ranking trials, and drops a joint spatial line
+after six non-improving trials. Each policy pairing owns its jump cursor. The
+synthetic asymmetric-lane test requires P1 to charge while P2 keeps running;
+shared charge or shared steering cannot satisfy that programme.
+
+External scratch/evidence is under
+`~/Videos/OGGF/s2-competition/simultaneous/`. `final.route.json` and `final.script`
+are an 8,062-row planner-authored, cold ENGINE-qualified candidate with joint
+progress legs. Both lanes begin act 1 at row 1290; P1 finishes at 3587 and P2 at
+3892. Both begin act 2 at 4190; P2 finishes at 6429 and P1 at 6440. Engine results
+are P1's act 1 win, P2's act 2 win, and a 1–1 tie entering special stage 1.
+These are zero-based route rows; held, neutral, charge and jump rows are all
+parts of the run windows.
+
+The candidate's entry-only route export is `entry-only.bk2` in that directory,
+SHA-256 `76b9283d91381c00ac577c40bf55727e13d4eda46b2f787aed7a529aadc722bf`.
+It reuses the existing native entry witness. No act-2 inlet was attached because
+this movie never reaches act 2 natively: the old inlet's complete preceding
+input prefix does not match a simultaneous route. A new witnessed inlet remains
+required; copying the old stamp or its full prefix would be invalid.
+
+`native-entry-x11/host.json` records a successful cold, read-only BizHawk 2.11
+GPGX execution under xvfb. `check_s2_competition_goals.py --kind tie-special`
+reports only `ehz-act1-play` at physical frame 1329; act 2 and the special-stage
+inlet are missing. `RouteNativeStampTool` records this **failed** BIZHAWK result
+on the external candidate. Native and engine positions agree before engine row
+2228 / native frame 2297. There, native P1 continues its platform jump, while the
+engine clears airborne state and cancels upward velocity: the engine sample at
+2227 has y-speed -1664 but `air=false`, then y-speed 0 at 2228. The platform jump
+owner needs a ROM-backed investigation before this candidate can qualify.
+
+Rejected alternatives: overlapping old independently authored lane references
+fails cold engine replay because moving-platform timing changes; routing both
+players through the lower spring avoids that first platform jump but produces
+the wrong act winner and later native divergences. Native no-poll VBlanks were
+also observed (e.g. physical frame 2440 in `native-both-lower/state.csv`). An
+export-only observed-filler experiment remained external and was not retained
+as a production change; native timing never entered engine replay or search.
+Do not use these movies as a qualified replacement for the existing tie route.
+
+The next action is to investigate the platform jump frontier, then re-plan and
+cold-qualify the joint route, derive and verify its act-2 native inlet, run the
+required native goals, and add the successful frozen artifact to the EHZ route
+acceptance test. The implementation lane's final test result is recorded in its
+handoff; no test pass here implies native qualification.
+
+Final lane verification on base `a41d0c7141` plus this branch's planner patch:
+`env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -Dtest=<final-test-selection.txt> test`
+selected 32 classes: all route/editor-route classes, tests referencing the
+changed planner classes, and `TestStageplayCompetitionEhzFrozenRoutes`.
+The exact class list is in the external task directory's
+`final-test-selection.txt`. Result: **177 tests, 0 failures/errors/skips**,
+including the existing two frozen EHZ routes. This is a bounded pass, not a
+full-suite pass, and no new simultaneous frozen-route acceptance test exists.
+Queue wait exceeded 602 seconds; Maven execution took 2 minutes 29 seconds.
+User wait was zero; other task wall time was not instrumented. All owned search
+and native jobs are finished. The branch is a partial implementation handoff;
+the route/native gate remains blocked as described above.
