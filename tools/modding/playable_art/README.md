@@ -415,3 +415,19 @@ ANIM script; that tag is not a `CanonicalAnimation` member. The sheet now has
 `native-pose-core.json` records original asset hashes; verification rejects stale
 reuse after those assets change. The shared palette and visible pixels remain
 unchanged; transparent margins are cropped with the matching hotspot shift.
+
+
+## Authored script endings
+
+`frames.yaml` `scripts` overrides apply to both MICA and TALON, including finite
+BLINK/GET_UP when frames exist. Use `end: loop`, `end: hold`,
+`end: next` plus `next: WALK` (or another authored canonical key), or
+`end: loop-back` plus `loopBackSteps: N`. The latter repeats the final N
+**authored steps**, counting duplicates and retaining each duration. MICA's
+expanded S2 WAIT uses 6 and TALON's Tails WAIT uses 28. No new art is needed.
+Assembly resolves symbolic frame IDs; `ggfmod convert art --playable` writes
+GGFP v2 end tags 0/1/2/3, with an unsigned 16-bit count following tag 3.
+Materialization expands that count with duration normalization; binding preserves
+it while translating only next-animation targets into native IDs. See
+[character timing](../../../docs/modding/characters.md) for native ownership and
+handoff timing. Reassemble each sheet with `assemble.py` after script edits.

@@ -1211,9 +1211,8 @@
         8,
         8
       ],
-      "end": "loop",
-      "nativeLoopBackSteps": 28,
-      "limitation": "Native FE28 partial repeat is data only: converter loops full intro; engine lane must bind exact repeat."
+      "end": "loop-back",
+      "loopBackSteps": 28
     },
     "SPRING": {
       "frames": [

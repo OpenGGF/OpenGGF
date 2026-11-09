@@ -94,9 +94,15 @@ public final class PlayableSheetWriter {
                 }
                 out.writeByte(animation.speedDriven() ? 1 : 0);
                 out.writeByte(switch (animation.endAction()) {
-                    case LOOP -> 0; case HOLD -> 1; case SWITCH -> 2;
+                    case LOOP -> 0; case HOLD -> 1; case SWITCH -> 2; case LOOP_BACK -> 3;
                     default -> throw new IllegalArgumentException("Unsupported playable end action");
                 });
+                if (animation.endAction() == com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP_BACK) {
+                    requirePositiveU16(animation.loopBackSteps(), "loop-back steps");
+                    out.writeShort(animation.loopBackSteps());
+                } else if (animation.loopBackSteps() != 0) {
+                    throw new IllegalArgumentException("loopBackSteps requires loop-back end action");
+                }
                 writeString(out, animation.nextAnimation());
                 out.writeByte(animation.slopes().size());
                 for (var slope : animation.slopes()) {

@@ -2085,9 +2085,8 @@
         6,
         6
       ],
-      "end": "loop",
-      "nativeLoopBackSteps": 6,
-      "limitation": "Converter only supports full loop; exact FE6 repeat requires engine lane. See round3/native-scripts.json."
+      "end": "loop-back",
+      "loopBackSteps": 6
     },
     "ROLL": {
       "frames": [

@@ -139,9 +139,12 @@ public final class PlayableSheetReader {
                 }
                 int speed = in.readUnsignedByte();
                 int end = in.readUnsignedByte();
+                int loopBackSteps = end == 3 ? in.readUnsignedShort() : 0;
                 String next = string(in);
                 int slopeCount = in.readUnsignedByte();
-                if (speed > 1 || end > 2 || (slopeCount != 0 && slopeCount != 4))
+                if (speed > 1 || end > 3
+                        || (end == 3 && (loopBackSteps == 0 || loopBackSteps > steps))
+                        || (slopeCount != 0 && slopeCount != 4))
                     throw invalid("invalid animation metadata");
                 try { com.openggf.game.CanonicalAnimation.valueOf(next); }
                 catch (IllegalArgumentException e) { throw invalid("invalid next animation", e); }
@@ -165,8 +168,14 @@ public final class PlayableSheetReader {
                 if ((speed == 1) != nativeSpeed)
                     throw invalid("locomotion requires native speed timing; other poses require fixed durations");
                 result.put(key, new Animation(values, speed == 1,
-                        com.openggf.sprites.animation.SpriteAnimationEndAction.values()[end == 2 ? 3 : end],
-                        next, slopes));
+                        switch (end) {
+                            case 0 -> com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP;
+                            case 1 -> com.openggf.sprites.animation.SpriteAnimationEndAction.HOLD;
+                            case 2 -> com.openggf.sprites.animation.SpriteAnimationEndAction.SWITCH;
+                            case 3 -> com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP_BACK;
+                            default -> throw invalid("invalid end action");
+                        },
+                        next, slopes, loopBackSteps));
             }
             if (!result.containsKey("WAIT")) throw invalid("animation table requires WAIT");
             for (var animation : result.values()) {
@@ -258,12 +267,18 @@ public final class PlayableSheetReader {
     @ModApi public record DplcRun(int sourceTile, int tileCount, int bankOffset) {}
     @ModApi public record Frame(int originX, int originY, int collisionWidth, int collisionHeight, List<DplcRun> runs) { public Frame { runs = List.copyOf(runs); } }
     @ModApi public record AnimationStep(int frameIndex, int duration, boolean loop) {}
+    /** loopBackSteps counts final authored steps, before duration expansion; zero for other endings. */
     @ModApi public record Animation(List<AnimationStep> steps, boolean speedDriven,
             com.openggf.sprites.animation.SpriteAnimationEndAction endAction,
-            String nextAnimation, List<List<Integer>> slopes) {
+            String nextAnimation, List<List<Integer>> slopes, int loopBackSteps) {
         public Animation {
             steps = List.copyOf(steps);
             slopes = slopes.stream().map(List::copyOf).toList();
+        }
+        public Animation(List<AnimationStep> steps, boolean speedDriven,
+                com.openggf.sprites.animation.SpriteAnimationEndAction endAction,
+                String nextAnimation, List<List<Integer>> slopes) {
+            this(steps, speedDriven, endAction, nextAnimation, slopes, 0);
         }
         public Animation(List<AnimationStep> steps) {
             this(steps, false, steps.getLast().loop()

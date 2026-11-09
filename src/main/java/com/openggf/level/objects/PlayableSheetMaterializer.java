@@ -95,8 +95,18 @@ public final class PlayableSheetMaterializer {
             }
             for (int i = 0; i < repeats; i++) frames.add(step.frameIndex());
         }
+        // $FE subtracts from the position of the terminator: repeat the final N
+        // entries: SAnim_End_FE (s2.asm:38430-38437). Authored steps may
+        // expand to several runtime timer entries.
+        int param = 0;
+        if (animation.endAction() == SpriteAnimationEndAction.LOOP_BACK) {
+            for (int i = animation.steps().size() - animation.loopBackSteps(); i < animation.steps().size(); i++)
+                param += animation.steps().get(i).duration() / quantum;
+        } else if (animation.endAction() == SpriteAnimationEndAction.SWITCH) {
+            param = com.openggf.game.CanonicalAnimation.valueOf(animation.nextAnimation()).ordinal();
+        }
         return new SpriteAnimationScript(Math.max(0, quantum - 1), List.copyOf(frames),
-                animation.endAction(), com.openggf.game.CanonicalAnimation.valueOf(animation.nextAnimation()).ordinal());
+                animation.endAction(), param);
     }
 
     private static Palette materializePalette(BakedSheetReader.BakedSheet base) throws IOException {
