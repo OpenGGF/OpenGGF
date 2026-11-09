@@ -482,7 +482,7 @@
       "file": "frames/fly-01.png",
       "hotspot": [
         22,
-        14
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
@@ -495,7 +495,7 @@
       "file": "frames/fly-02.png",
       "hotspot": [
         21,
-        14
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
@@ -508,7 +508,7 @@
       "file": "frames/fly-03.png",
       "hotspot": [
         16,
-        14
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
@@ -521,7 +521,7 @@
       "file": "frames/fly-04.png",
       "hotspot": [
         20,
-        14
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
@@ -547,7 +547,7 @@
       "file": "frames/fly_tired-00.png",
       "hotspot": [
         17,
-        15
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
@@ -560,7 +560,7 @@
       "file": "frames/fly_tired-01.png",
       "hotspot": [
         18,
-        14
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
@@ -573,7 +573,7 @@
       "file": "frames/fly_tired-02.png",
       "hotspot": [
         17,
-        14
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
@@ -586,7 +586,7 @@
       "file": "frames/fly_tired-03.png",
       "hotspot": [
         16,
-        15
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
@@ -599,7 +599,7 @@
       "file": "frames/fly_tired-04.png",
       "hotspot": [
         17,
-        14
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
@@ -612,7 +612,7 @@
       "file": "frames/fly_tired-05.png",
       "hotspot": [
         17,
-        15
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
