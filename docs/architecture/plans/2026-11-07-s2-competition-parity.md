@@ -138,6 +138,75 @@ results; lane C ran its 7 affected traces (chain and fragment changes) against
 a clean baseline with identical identities. Lane F rounds 3 and 4 changed only
 Competition host paths and did not repeat the run.
 
+## Pre-act semantic flow lane (2026-11-08)
+
+The flow lane starts from `b7076530a`, on local branch
+`feature/ai-s2-competition-flow`; no push or PR is part of its delivery.
+Title-to-menu and menu-to-level transitions now execute their native palette
+passes. The shared Obj34 owner runs visible arrival, upload and leave waits
+for both acts; player control and LFC remain frozen until release. The
+campaign title/card paths are unchanged. Renderer overlap is confined to
+runtime/video-frame wiring for title-only admissions; the renderer, views and
+SAT builder remain owned by the progressive-output lane.
+
+All five frozen routes were re-authored by the Stageplay planner's bounded
+observed-lock repair, preserving traversal inputs and cold-qualifying goals.
+Their native BK2 input tapes and witnesses remain byte-identical. EHZ's
+residual pre-act inlets shrink to 68 and 66 physical frames; CNZ1's to 69.
+BizHawk 2.11 confirms CNZ slot use at 2045 and its visible flip at 2513, EHZ
+zone results at 18628, and tied act wins entering the special stage at 18909.
+These are goal confirmations, not full-route state parity. The final display
+counter goals were rebased by 131 to preserve their original hold durations.
+
+The base V-int surplus reported by the object lane is confirmed: 137 at EHZ1
+LFC 0 and at native 5823. Semantic waits change it to 168 at the first anchor
+and 121 at the second. No fitted clock correction is authorized. The native
+20-frame masked menu initialization, EHZ 41/39-frame assembly spans, further
+decode interruptions and resulting clock limits are recorded in
+[known discrepancies](../../status/known-discrepancies.md#pre-act-physical-timing).
+Before/after phase sheets, boundary clocks, native receipts and focused-check
+results are external under `~/Videos/OGGF/s2-competition/lanes/flow/REPORT.md`.
+The lead owns integration and wider validation.
+
+## Flow integration follow-up (2026-11-08)
+
+The follow-up branch `feature/ai-s2-competition-flow-fix` starts at integrated
+`ce26118f8`. The lead's28 failures comprise23 probes whose load/menu assumptions
+predated visible startup waits, two tests using the retired field projection,
+a timer probe injected before control release, and two CNZ route consumers of
+an outdated read-only pixel witness. Positioned probes now drive actual native
+continuations before setup; exact timer, PLC, SST, art-publication and rewind
+expectations remain. HUD and Kosinski tests compare all16 native cell rows.
+
+The CNZ witness now reads the progressive448-line views and both cell halves.
+Resident ROM payload, non-flat pose, complete-cell and framebuffer-colour checks
+remain, as do wrong-colour and missing-P2-input negative controls. Both CNZ
+routes were requalified through StageplayRoutePlanner with the entire existing
+tape as immutable prefix. Scripts, content identities, native witnesses and
+exported BK2 bytes are unchanged; the flip movie remains SHA-256
+`92070b90f795cdd43a8d6c66634dbc8c6421dbe3f921fddb065457864caf5891`.
+The prior native goal receipt remains applicable to identical input bytes.
+
+No gameplay, HUD/V-int ordering or progressive renderer code changed. The
+follow-up report appends each failure's disposition and the exact integrated
+selection/limits under `~/Videos/OGGF/s2-competition/lanes/flow/REPORT.md`.
+
+## Flow fixture audit follow-up 2 (2026-11-09)
+
+Branch `feature/ai-s2-competition-flow-fix2` starts at integrated `4518d67fe`.
+The lead attributed three additional failures against `86245b77f`. The initial
+camera-order and placement-phase fixtures now drive the existing native title
+continuation before asserting leave samples or injecting ordinary crossings.
+All camera values, the4096 block boundary, Masher976/972 positions and negative
+controls remain. The native title-control fixture distinguishes accepted Start
+from the22-pass palette handoff, retaining both-controller selection and
+once-only action consumption. No production code or route inputs change.
+
+The validation inventory scans file names and source text for S2 Competition,
+two-player/2P, title and options consumers in addition to the requested glob
+patterns. The report's Follow-up2 section records the complete selectors,
+additional matches, results and limits rather than relying on one naming prefix.
+
 ## Rejected approaches
 
 | Approach | Evidence and replacement |
@@ -152,6 +221,8 @@ Competition host paths and did not repeat the run.
 | Independent per-player badnik chains | The ROM shares one `Chain_Bonus_counter`; the salvaged branch's independent-chain expectation was archived as an observation, not committed. |
 | A game-module decorator for the animation owners | Two native-world owners (pattern projection and palette-only, distinct rewind keys) replace the ordinary combined manager in Competition; the 1P manager is unchanged. |
 | Clearing controller state at load transitions to stop the menu-Start pause | The press latch is recomputed at every synchronous wait instead (`9b1e8fc9e`). The planner route's engine-only unpause Start at row 1200 was then removed by a one-row planner repair. |
+| Fitted pre-act delay or V-int reset | Physical initialization lag is outside the semantic reimplementation boundary. Visible ROM loops are represented, and witnessed native input inlets absorb only the measured export residue; no native value enters gameplay. |
+| From-scratch planner replacement of the preserved complex CNZ traversal | Search exhausted two million offered rows before the complex slot leg. Use bounded, cold-qualified observed-lock repair, preserving every traversal row and authoring only live control-lock waits. |
 | Lag admission, re-alignment or a fitted selector after native lag | Comparisons stop before the first lag frame; no timing value is supplied to gameplay. |
 | Image-based object identification at the EHZ 1976 frontier | Picture suggested Coconuts; the engine inventory showed Masher (`$5C`). Identify frontier objects from the object list, not screenshots. |
 
@@ -204,8 +275,9 @@ Held rewind is off (D2).
    mechanisms rather than add a completion kind.
 7. Seam rows 108-112 stay unsupported (U-3, U-4); palette publication on lag
    frames (U-6) and the lives-rewrite flag equivalence (U-8) are unverified.
-8. Display inventory: 41 adopted and 11 deferred of 52 placed object IDs
-   (926 placements); the `Obj3A` capsule's Competition reachability proof is
+8. Display inventory: the historical C2 survey had 41 adopted and 11 deferred
+   of 52 placed object IDs (926 placements). The CNZ follow-up below leaves four
+   explicit deferred IDs in the current 53-ID placed/child inventory; the `Obj3A` capsule's Competition reachability proof is
    deferred. `Obj3C` is not placed in any shipped layout and is not implemented.
 9. The native lag counting script used for the rates above is external; promote
    it under `tools/bizhawk/` if lag rates are needed again.
@@ -225,3 +297,426 @@ Held rewind is off (D2).
 All four are indexed in the [agent workflow guide](../../agent-workflow/README.md).
 Native movies, CSVs, screenshots and comparison output stay outside the
 repository.
+
+## CNZ object display follow-up (2026-11-09)
+
+Base: `a41d0c7141b0c12a06375d98224864dd94c42ca7`. This bounded review uses
+`cnz1-slot-flip.route.json` (2,486 engine rows). A fresh
+`RouteFiles.exportBk2` export equals the prior qualification movie SHA-256
+`92070b90f795cdd43a8d6c66634dbc8c6421dbe3f921fddb065457864caf5891`.
+Its native witness has 1,337 prefix rows and engine anchor 1,268. Cold official
+BizHawk 2.11/GPGX capture with `capture_every_frame.lua`, plan `last=2555`,
+REV01 SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`, completed with
+2,555 PNGs and CSV rows. The first attempt crashed in Mesa EGL; the successful
+xvfb run set `LIBGL_ALWAYS_SOFTWARE=1 EGL_PLATFORM=x11` and unset
+`WAYLAND_DISPLAY`. No RAM writes or fixture saves were used.
+
+Evidence remains under `~/Videos/OGGF/s2-competition/cnz-objects/`:
+`native-software/host.json`, `frames.csv`, original 348x480 PNGs,
+`route-export.bk2`, `before/lfc-*.png`, `before-sheet-*.png` and
+`before-alignment.csv`. Native pictures are cropped by `(14,16,334,464)`;
+engine pictures retain all 320x448 pixels. Pairing is by LFC, restricting the
+native rows to active two-player mode and LFC > 1. There are 1,211 matched
+engine rows through LFC1211; the route's last eight engine rows have no native
+LFC match before movie end because native lag repeats LFC. One retained native
+frame per LFC is diagnostic alignment, not a claim of field/lag timing parity.
+
+| Observation (engine row / native frame, LFC) | Half | Classification and owning evidence |
+| --- | --- | --- |
+| Slot cage missing around spinning Sonic (1989 / 2059, 722) | upper | Fixed: ObjD6 was explicitly deferred. Adopt its ROM Init mapping, art, width and bucket. |
+| Round bumpers missing (2349 / 2426, 1082; also the lower view earlier) | upper and lower | Fixed: Obj44 was explicitly deferred. Adopt its ROM Init mapping, palette 2 and bucket 1. |
+| Prize rings absent during payout (2169 / 2241, 902) | upper | Fixed: ObjDC was explicitly deferred. Project its actual ring-sheet spin/sparkle frame with native ring art and palette 1. |
+| Plunger display exclusion found in ROM audit (no independent route contact witness) | either camera | Fixed: Obj85 was explicitly deferred. Project its single SST, moving head and fixed base child; DisplaySprite3 supplies bucket 4. Both vertical and diagonal ROM variants are checked. |
+| Bonus-block and bomb-prize display exclusions found in ROM audit (no independent route hit/payout witness) | either camera | Fixed display paths for ObjD8 and ObjD3, independently checked against ROM Init operands. Bomb payout is not independently reached by this route, so its regression establishes display operands, not native payout parity. |
+| Interlaced striping, distorted moving sprites and alternating terrain rows | both | Documented U-1. Preserve complete native cells in the engine; do not synthesize field timing. |
+| Rows at the seam and lag-frame sprite tearing | seam/both | Documented U-2/U-3/U-4. Table-memory art and entry overflow remain U-5/U-7. No new hardware timing model is introduced. |
+| Different slot symbols/reward and later P2 path/camera (e.g. LFC962+) | both | Not evidence of missing art: native and engine outcomes/trajectories have diverged. The BIZHAWK route stamp accepts named goals, not full-state parity. Input and gameplay stay unchanged in this display correction. |
+
+The six owners leave the explicit deferred inventory. Invisible forced-spin
+triggers have no native sprite to restore; sliding spikes, sideways platforms
+and the conservative capsule-results child obligation remain outside this CNZ
+route correction. Existing art residency and per-player SAT culling are reused;
+no ordinary atlas pixels or disassembly assets enter the native picture.
+
+Regression owners: `TestSonic2CompetitionSpriteArtTable` independently reads
+raw REV01 mapping/art/width/flags/bucket writes for the four ordinary rows;
+`TestSonic2CompetitionCnzObjectDisplay` covers the native plunger variants and
+ring-sheet spin/sparkle projection; the all-layout display inventory exercises
+placed subtypes. Existing Competition EGL tests and the unchanged frozen route
+cover composition and gameplay acceptance. This is CNZ1 Sonic/human-Tails at
+320 only; act 2, other routes, arbitrary widths/donors, held rewind and complete
+native-state parity remain inherited gaps. No act certification is claimed.
+
+After evidence: `after/engine.mkv`, `after/result.txt`, `after-pairs/lfc-*.png`
+and `after-pairs-sheet-{0,1,2,3}.png` under the same scratch root. The unchanged
+2,486-row route passes, and `cmp` finds its before/after `engine-frames.csv`
+byte-identical. A separate before/after pixel comparison checks every engine
+row: 847 rows change (first 1586, last 2485), 829 in the upper view and 273 in
+the lower view, recorded in `changed-pixels.csv`. At row1989/LFC722 the restored
+cage alone changes 720 pixels within `(120,81)-(168,121)`. At row2169/LFC902
+prize rings and the cage are visible above, with restored round bumpers below.
+Contact sheet 2 shows these directly against the original native images.
+This verifies display repair without re-authoring or requalifying input tapes.
+
+Validation (Java25, `-Dmse=off`, all test execution through `maven_queue.py`,
+`DISPLAY`/`WAYLAND_DISPLAY` unset, `-Dopenggf.headless.gl=surfaceless-egl`):
+
+- Base `a41d0c714`: `-Dtest=com.openggf.game.sonic2.competition.**,TestSonic2Competition*,TestStageplayCompetition* test`:
+  502 tests in104 classes, three failures, zero errors/skips. Queue30s,
+  Maven execution122s.
+- Focused `-Dtest=TestSonic2CompetitionSpriteArtTable,TestSonic2CompetitionObjectDisplay,TestSonic2CompetitionObjectAdmissions,TestSonic2CompetitionCnzObjectDisplay,TestSonic2CompetitionDisplayInventory,DebugSonic2CompetitionRouteVideo`
+  with `-Ds2video.route=cnz1-slot-flip` and `-Ds2video.out=<scratch>/after`:
+  14 tests pass, no skips. Queue109s, execution92s. The first focused attempt
+  stopped at a missing import in the new test, corrected before this pass.
+- Final: the baseline selector plus all25 source-text referencing test classes
+  (`Sonic2CompetitionSpriteArtTable`, `Sonic2CompetitionObjectDisplay`,
+  `LauncherSpringObjectInstance`): 1,154 tests in117 classes; the same three
+  failures, zero errors/skips. Queue389s, execution65s. The exact selector is
+  `final-selector.txt`, the source match list is `referencing-tests.txt`, and
+  outputs are `baseline-tests.log`, `focused2.log`, `final-tests.log` under the
+  external evidence root. Parsed test identity/kind/message JSONs compare equal.
+- Inherited failures: `DebugSonic2CompetitionC2Capture.captureAvailableC2MovieCuts`
+  invocations1/2/3 cannot reach `flowers-1800`, `hud-ring-first-pickup-1908`,
+  `monitor-1875-before` respectively. These optional cut diagnostics fail
+  identically on the exact baseline; no new/worsened failures were observed.
+- Changed-file disassembly citation check: no stale citations. `git diff --check`
+  and local plan links pass. The task is a bounded display correction, not a
+  full-suite/public-release or native-state parity qualification.
+
+### Simultaneous EHZ route frontier (2026-11-09)
+
+Owner: simultaneous-route implementation lane, branch
+`feature/ai-s2-competition-simultaneous-route`, base `a41d0c7141`.
+**Blocked: no native-qualified simultaneous frozen route is published.** CNZ is
+owned by another lane and was not changed.
+
+The planner now tries independent charge/roll/steer policies on the two lanes,
+counts damage to either goal participant when ranking trials, and drops a joint spatial line
+after six non-improving trials. Each policy pairing owns its jump cursor. The
+synthetic asymmetric-lane test requires P1 to charge while P2 keeps running;
+shared charge or shared steering cannot satisfy that programme.
+
+External scratch/evidence is under
+`~/Videos/OGGF/s2-competition/simultaneous/`. `final.route.json` and `final.script`
+are an 8,062-row planner-authored, cold ENGINE-qualified candidate with joint
+progress legs. Both lanes begin act 1 at row 1290; P1 finishes at 3587 and P2 at
+3892. Both begin act 2 at 4190; P2 finishes at 6429 and P1 at 6440. Engine results
+are P1's act 1 win, P2's act 2 win, and a 1–1 tie entering special stage 1.
+These are zero-based route rows; held, neutral, charge and jump rows are all
+parts of the run windows.
+
+The candidate's entry-only route export is `entry-only.bk2` in that directory,
+SHA-256 `76b9283d91381c00ac577c40bf55727e13d4eda46b2f787aed7a529aadc722bf`.
+It reuses the existing native entry witness. No act-2 inlet was attached because
+this movie never reaches act 2 natively: the old inlet's complete preceding
+input prefix does not match a simultaneous route. A new witnessed inlet remains
+required; copying the old stamp or its full prefix would be invalid.
+
+`native-entry-x11/host.json` records a successful cold, read-only BizHawk 2.11
+GPGX execution under xvfb. `check_s2_competition_goals.py --kind tie-special`
+reports only `ehz-act1-play` at physical frame 1329; act 2 and the special-stage
+inlet are missing. `RouteNativeStampTool` records this **failed** BIZHAWK result
+on the external candidate. Native and engine positions agree before engine row
+2228 / native frame 2297. There, native P1 continues its platform jump, while the
+engine clears airborne state and cancels upward velocity: the engine sample at
+2227 has y-speed -1664 but `air=false`, then y-speed 0 at 2228. The platform jump
+owner needs a ROM-backed investigation before this candidate can qualify.
+
+Rejected alternatives: overlapping old independently authored lane references
+fails cold engine replay because moving-platform timing changes; routing both
+players through the lower spring avoids that first platform jump but produces
+the wrong act winner and later native divergences. Native no-poll VBlanks were
+also observed (e.g. physical frame 2440 in `native-both-lower/state.csv`). An
+export-only observed-filler experiment remained external and was not retained
+as a production change; native timing never entered engine replay or search.
+Do not use these movies as a qualified replacement for the existing tie route.
+
+The next action is to investigate the platform jump frontier, then re-plan and
+cold-qualify the joint route, derive and verify its act-2 native inlet, run the
+required native goals, and add the successful frozen artifact to the EHZ route
+acceptance test. The implementation lane's final test result is recorded in its
+handoff; no test pass here implies native qualification.
+
+Final lane verification on base `a41d0c7141` plus this branch's planner patch:
+`env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -Dtest=<final-test-selection.txt> test`
+selected 32 classes: all route/editor-route classes, tests referencing the
+changed planner classes, and `TestStageplayCompetitionEhzFrozenRoutes`.
+The exact class list is in the external task directory's
+`final-test-selection.txt`. Result: **177 tests, 0 failures/errors/skips**,
+including the existing two frozen EHZ routes. This is a bounded pass, not a
+full-suite pass, and no new simultaneous frozen-route acceptance test exists.
+Queue wait exceeded 602 seconds; Maven execution took 2 minutes 29 seconds.
+User wait was zero; other task wall time was not instrumented. All owned search
+and native jobs are finished. The branch is a partial implementation handoff;
+the route/native gate remains blocked as described above.
+
+### Simultaneous EHZ jump release (2026-11-09)
+
+Implementation lane: `bugfix/ai-s2-competition-jump-cancel`, based on PR #273
+head `89ff11b21ce4117899368ad46b8f9a3cf454c588`. Scratch evidence:
+`~/Videos/OGGF/s2-competition/jump-cancel/`. No native/trace state enters gameplay.
+
+The owner is invisible spiral **Obj06**, not a moving platform or another
+player's standing bit. Temporary `setAir` call-stack logging identified
+`SpiralObjectInstance.updateRidingPlayer`: it grounded a latched jumping rider
+before its release test. `loc_215C0 (s2.asm:47205-47216)` tests inertia then
+`in_air`; `Obj06_Spiral_CharacterFallsOff (s2.asm:47219-47225)` clears only the
+selected player's standing/on-object state, sets flip cleanup, and leaves
+`y_vel` intact. Removing the premature airborne clear preserves P1's -$680
+jump velocity. No CPU/video timing simulation or fixBugs=1 behavior is added.
+
+The focused cold-ROM test replays a planner-authored 2,231-row input prefix
+from the title, with both humans traversing EHZ. Its resource is explicitly a
+regression **draft**, with no ENGINE/BIZHAWK qualification claim. The companion
+object test holds both standing bits, jumps P1, and checks P2 stays attached.
+Existing act coverage, viewport breadth and rewind obligations remain inherited;
+this does not certify a new route or act.
+
+Fresh read-only BizHawk 2.11/GPGX capture under xvfb completed 3,300 physical
+frames (`native/host.json`, exit 0). It used the unchanged entry-only movie,
+SHA-256 `76b9283d91381c00ac577c40bf55727e13d4eda46b2f787aed7a529aadc722bf`.
+The exporter also observes every object slot. At native frame 2296 P1 is
+(4604,677), `y_vel=-1664`, status 6; P2 is (4605,574), status 2. Obj06 at
+(4800,640), slot 71, has status 0 after releasing P1. Fixed engine integer
+positions for **both players** match through row 3202 / physical frame 3271
+(row + 69), improving the original first mismatch at row 2228. This is a
+position comparison, not complete state/pixel parity. Frame 3272 is lagged:
+`lfc=1942` and both positions are held. Engine row 3203 matches native frame
+3273 (`lfc=1943`), opening a physical-input/lag admission frontier, not another
+proven shared-object defect. No observed filler or native values were fed into
+engine replay.
+
+The original `final.route.json` no longer passes cold ENGINE replay: P1 dies
+at row 2538, after the now-correct jump; positions still agree with native.
+A Stageplay RoutePlanner repair from its unchanged first 2,200 rows toward
+remaining original goals exhausted 180,000 steps (41 expansions, 1,501 trials,
+best draft 2,226 rows) without qualification. No inputs were edited by hand,
+no replacement was published, and the external original was preserved.
+**Stop boundary:** route re-authoring and physical-lag qualification are now
+open-ended; the original historical ENGINE stamp is stale for this engine,
+BIZHAWK remains failed. Act 1 is not qualified through finish, so no new act-2
+inlet witness was attempted and the old witness remains invalid here.
+
+Verification of this patch against source base `89ff11b21` (Java 25, verified
+S2 REV01 found; no missing ROMs):
+
+- `python3 tools/testing/maven_queue.py -Dmse=off package -DskipTests` passed.
+- `python3 tools/testing/maven_queue.py -Dmse=off
+  -Dopenggf.headless.gl=surfaceless-egl
+  "-Dtest=$(cat target/jump-test-selection.txt)" test`: 104 classes,
+  503 tests, 7 prerequisite failures, 0 errors/skips. Selection covers all
+  Competition package tests, `TestSonic2Competition*`, `TestSpiralObjectInstance`,
+  `TestS2SpiralGraphRewind`, both frozen routes and the new cold-ROM regression.
+  All seven failures were the unchanged baseline `DISPLAY == null` assertions
+  in `TestSonic2NativeCompetitionHost` and `TestCompetitiveHalfpipeEgl`;
+  the initial command inherited `DISPLAY=:0`. No gameplay assertion failed.
+- Corrected launch: `env -u DISPLAY -u WAYLAND_DISPLAY python3
+  tools/testing/maven_queue.py -Dmse=off
+  -Dopenggf.headless.gl=surfaceless-egl
+  -Dtest=TestSonic2NativeCompetitionHost,TestCompetitiveHalfpipeEgl test`:
+  **7 passed, 0 failures/errors/skips**. No baseline gameplay failure remains
+  to attribute; a separate baseline Maven run was not performed.
+- `python3 tools/testing/maven_queue.py -Dmse=off
+  -Dtest=TestSonic2ChainResetOwners,TestObjectPhysicsStandardizationGuard,TestScalarOnlyCodecDeletion,TestRewindSchemaRegistry
+  test`: **581 passed, 0 failures/errors/skips**. These cover the remaining
+  source-text references to the changed object outside the Competition package.
+- `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+  -Dsurefire.forkCount=1
+  -Dtest=TestS2Ehz1TraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay
+  test`: **4 passed, 0 skips**. Fresh JSON comparison gates reached all 44,502
+  planned rows (5,852 + 10,134 + 12,811 + 15,705), with zero errors, warnings
+  or bootstrap errors. This is bounded trace coverage, not a full-suite pass.
+- `git diff --check` and `python3 tools/disasm/disasm_citations.py check
+  src/main/java/com/openggf/game/sonic2/objects/SpiralObjectInstance.java
+  docs/architecture/plans/2026-11-07-s2-competition-parity.md` passed; citation
+  checker reports 10 verified and 6 inherited unverifiable references. New
+  labels/lines were also read directly from pinned S2 commit `34fc7f130a96`.
+
+The 104-class selection waited at least 331 seconds in queue and ran for
+1 minute 51 seconds; trace execution took 50 seconds, the extra references
+40 seconds and corrected EGL launch 39 seconds. Native capture took 15.9
+seconds. Queue time for the other jobs and other task time were not fully
+instrumented; user wait was zero. No native/search jobs remain running.
+Detailed diagnostic outputs and the selection are retained under the task
+worktree's `target/` and external scratch directory. No new native qualification
+or act-2 witness is claimed.
+
+
+### Simultaneous EHZ route 2 (2026-11-09)
+
+Implementation lane: `feature/ai-s2-competition-simultaneous-route-2`, based on
+`3250d8b102` (PR #273). The frozen
+`src/test/resources/routes/s2/competition/ehz-simultaneous-tie-special.route.json`
+and companion script are **ENGINE-qualified only**, with a failed BIZHAWK stamp.
+No planner or gameplay implementation changed. All continuation inputs were
+searched by `RoutePlanner`; no tape rows were edited, overlaid or lag-adjusted.
+Scratch, programmes, logs and native evidence live under
+`~/Videos/OGGF/s2-competition/simultaneous-2/`.
+
+The planner retained the previous candidate's first 2,200 authored rows, then
+searched joint lower-line goals at x=4800–5000/y=800–990 and the x=6050–6110
+spring approach. Subsequent joint goals cover the spring exit, both finishes,
+act 2 and its spring/second-half traversal. Explicit `enter-boundary` legs cross
+the results transition. Neutral observation holds maintain phase 2 until copied
+`competition.presentationFrame` reaches 3500 and 6400. These are intentional
+engine-screen dwell goals, not values fitted to native observations. The final
+programme restores the initial joint goals from row 1200 and cold-qualifies all
+8,262 rows. The existing acceptance test's replay helper checks both title cards,
+act flow, menu-only Start edges, neutral locked rows, tie and special stage; the
+new case also checks overlapping run windows, opposite board winners and at
+least 180 neutral results rows before confirmation.
+
+| Act | P1 run window / finish | P2 run window / finish | Results neutral rows | Confirm |
+| --- | --- | --- | --- | --- |
+| EHZ 1 | 1290–3868 | 1290–4076 | 4259–4517 (259 rows) | 4518 |
+| EHZ 2 | 4631–6990 | 4631–6767 | 7173–7439 (267 rows) | 7440 |
+
+Rows are zero-based and include jumps, charge and neutral parts of each run.
+P1 wins act 1, P2 wins act 2; phase 5 / special stage 1 begins at row 7462.
+The result spans include screen arrival/readiness; they deliberately leave more
+than three seconds before Start, rather than skipping either board.
+
+Rejected attempts: the old P1-leading lower route cold-replays but P2 wins its
+combined metrics, despite P1 finishing first. A new lower-line search reached
+both finishes but exhausted 1,800,000 steps / 733 expansions while searching a
+fact-only results transition. Continuing that frozen best draft toward a counter
+beyond the transition encountered strict `CHECKPOINT_MISMATCH: competition
+checkpoint belongs to another epoch/layout`. The explicit boundary leg crosses
+that mode change without attempting to restore the retired act checkpoint; no
+checkpoint checks were weakened. This continuation then cold-qualified the board
+hold and act 2. The earlier 180,000-step spiral repair remains rejected as
+recorded above.
+
+Native export uses only the existing verified 1,329-row entry witness, engine
+anchor 1,261. No old act-2 inlet is attached: its preceding input history differs.
+The 8,330-row cold movie is
+`~/Videos/OGGF/s2-competition/simultaneous-2/ehz-simultaneous-tie-special.bk2`,
+SHA-256 `570b9c6b4597ba629ddefb8f84d1b15662d1596747c7f8607efa82a8c0f9a8ae`.
+Read-only BizHawk 2.11/GPGX under xvfb completed in 31.636 seconds, exit 0,
+no host failures. `check_s2_competition_goals.py --kind tie-special` found only
+`ehz-act1-play` at physical frame 1329; act 2 and competitive special-stage entry
+are missing. `RouteNativeStampTool` stamps that failed result on the frozen route.
+
+Both players' integer centres match engine row + 69 through native frame 2479
+(engine row 2410). Frame 2480 repeats LFC 1150 and both positions while V-int
+advances: native remains P1 (5421,945), P2 (5306,946); engine row 2411 is
+P1 (5429,945), P2 (5312,946), which native reaches at 2481 / LFC 1151.
+This establishes the first position mismatch as a native level-lag boundary,
+not complete state parity or proof that every later difference is solely lag.
+Later the native players stall at x=9448 and x=6479; the engine's board-confirm
+Start pauses ordinary native gameplay instead. Act 1 never completes in this
+movie, so no new act-2 inlet can be derived from it. No fitted input offsets,
+fillers, native values or altered pause rows were used. Native qualification and
+act-2 witness production remain blocked on a cold route reaching those goals
+with the documented native level-lag limitation. This is auxiliary-mode route
+coverage, not act certification; inherited pixel/rewind/width gaps remain.
+
+
+Verification: Java 25; verified ROMs all found. The queued package build with
+`-Dmse=off -DskipTests` passed (1 minute 51 seconds). The focused command
+`env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl "-Dtest=$(cat ~/Videos/OGGF/s2-competition/simultaneous-2/test-selection.txt)" test`
+ran all 31 route/package and frozen-route classes: **132 tests, 1 failure,
+0 errors/skips**. All three frozen EHZ cases passed. The sole failure is
+`TestCommittedRoutesQualifiedGuard.committedRouteManifestsAreNotDrafts` rejecting
+the inherited `ehz-spiral-jump-regression.route.json` draft. A separate clean,
+detached `3250d8b102` worktree ran the same guard through the queue with identical
+EGL/display flags: **1 test, the identical failure message and identity, no
+errors/skips**. No new failure was observed. That unrelated regression fixture
+is preserved. No production classes changed, so no additional referring-class
+selection is needed. These are bounded checks, not a smoke/full-suite verdict.
+JSON parsing, `git diff --check`, and disassembly citation checks passed (8
+verified citations; local optional disassembly checkouts differ from pins, and
+no new citations were added). The test selection and native receipts remain in
+the external scratch directory.
+
+The task selection waited 321 seconds in queue and ran for 1 minute 6 seconds;
+the baseline guard waited 56 seconds. User wait was zero. Search and other task
+wall time were not fully instrumented. All owned search/native jobs have ended;
+no native-qualified simultaneous route or new act-2 inlet is claimed.
+
+
+## Question-mark monitor outcomes (2026-11-09)
+
+Bounded implementation branch: `feature/ai-s2-competition-qmark-routes`, based on
+`origin/feature/ai-s2-competition-presentation-parity` at `4bee178afb`.
+Eight planner-authored cold-title EHZ1 routes share the first 1512 rows. P1
+collects rings and settles beside the first monitor at (960,566); P2 stays near
+(64,661). The planner searches native-button approaches, jumps and bounded neutral
+delays against the actual icon content fact. Obj2E_Init samples the live level
+counter; no native samples, clock writes, fitted offsets or hand-authored tape
+rows enter planning. Each programme asserts both selected content and applied
+award, then holds both pads neutral for 360 rows. Teleport starts with the humans
+roughly 900 pixels apart; Robotnik has rings available to hurt instead of kill.
+
+The host exposes copied Obj2E content, initialization counter and stable breaker
+slot, plus player power flags. A typed `wait` goal counts rows from its leg start;
+search supplies neutral input and linear replay verifies duration and guards.
+Frozen acceptance additionally asserts every one of the final 360 rows is neutral.
+Native exports retain the existing EHZ witness (1329 native rows) and the observed
+production first-ordinary-Level/LFC0 anchor (1261 engine rows).
+
+Read-only BizHawk 2.11/GPGX observations use the original REV01 ROM, software GL,
+xvfb and `EGL_PLATFORM=x11` with WAYLAND_DISPLAY unset. Each final per-frame capture
+uses `capture_every_frame.lua` with exactly `last=breakFrame+400`. Raw 320x448
+framebuffers, `frames.csv`, `monitors.csv`, receipts, movies and verdicts live under
+`~/Videos/OGGF/s2-competition/qmark/`, outside Git. `check_s2_qmark_goals.py`
+checks the selected phase, named award owner, racing timer flags/default options,
+pre-lag break and four-second post-award window; `RouteNativeStampTool` binds the
+result to the exact regenerated anchored movie. The stamp lists these bounded
+observations; it does not certify full pixel/state parity or an entire act.
+
+Rejected capture setup: inheriting installed `MovieEndAction.Record` extended the
+movie at EOF, including with `movie.setreadonly(true)`. Those owned preliminary
+outputs were discarded and movies regenerated from frozen planner routes. The
+common host now sets `MovieEndAction.Finish`, checks the movie hash after exit and
+fails on mutation. The new negative control covers this failure. No source rows
+were edited to compensate for native lag or a differing outcome.
+
+Inherited gaps remain: P2 breaking, other monitors/acts, finish-time teleport
+fallback, route width/configuration breadth, held rewind, and progressive
+engine/native pixel acceptance. Existing act/results/tiebreaker fixture gaps are
+unchanged. This work adds no gameplay algorithm or new act certification.
+
+All eight native verdicts passed, with no ordinary-Level lag in any capture.
+Engine rows below are zero-based; native frames are completed physical frames.
+
+| Content | Route stem | Break engine row | Break native frame | Init LFC | Native capture directory |
+| --- | --- | ---: | ---: | ---: | --- |
+| sonic-1up | `ehz-qmark-sonic-1up` | 1547 | 1616 | 288 | `qmark/native-sonic-1up/` |
+| tails-1up | `ehz-qmark-tails-1up` | 1588 | 1657 | 329 | `qmark/native-tails-1up/` |
+| robotnik | `ehz-qmark-robotnik` | 1589 | 1658 | 330 | `qmark/native-robotnik/` |
+| super-ring | `ehz-qmark-super-ring` | 1590 | 1659 | 331 | `qmark/native-super-ring/` |
+| speed-shoes | `ehz-qmark-speed-shoes` | 1599 | 1668 | 340 | `qmark/native-speed-shoes/` |
+| shield | `ehz-qmark-shield` | 1592 | 1661 | 333 | `qmark/native-shield/` |
+| invincibility | `ehz-qmark-invincibility` | 1593 | 1662 | 334 | `qmark/native-invincibility/` |
+| teleport | `ehz-qmark-teleport` | 1594 | 1663 | 335 | `qmark/native-teleport/` |
+
+All breakers are P1. Every route has a matching `.route.json` and `.script` under
+`src/test/resources/routes/s2/competition/`; capture directories are relative to
+`~/Videos/OGGF/s2-competition/`. Engine replay independently checks the break rows.
+Native image review sampled each icon and award, including the late teleport swap.
+
+Validation on the delivery source tree (base `4bee178afb`): **90 tests across 19
+classes, zero failures/errors/skips**. The eight frozen route invocations
+independently reported exactly the engine break/init rows above. The command was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=TestCommittedRoutesQualifiedGuard,TestExactResyncRepair,TestGoalExpander,TestGoalFactCounter,TestGoalNativeCharge,TestInputScriptCompiler,TestParticipantReferenceRepair,TestPrefixSearch,TestQualificationCoverage,TestRouteFiles,TestRouteNativeAnchors,TestRouteReplayChecks,TestRouteSurfaceGuard,TestRouteTapeCodec,TestStageplayCompetitionEhzFrozenRoutes,TestRouteTapeWorkspace,TestRouteTapeModel,TestRouteTapeJob,TestCompetitionRouteConversion test
+```
+
+This includes the complete `com.openggf.route` test package, the EHZ frozen-route
+class and four affected editor classes. Java 25; queued wrapper; verified S2 ROM
+found; DISPLAY and WAYLAND_DISPLAY unset. This was a bounded focused run, not a
+full-suite or category run (the focused wrapper emits BUILD SUCCESS, no category
+VERDICT line). Queue wait was 476 seconds; Maven execution was 111 seconds. User
+wait was zero; no unclassified validation interval is claimed. Python capture
+host tests: 13 passed; question-mark validator negative controls: 3 passed. Lua
+load, Python compile, staged disassembly citation guard and diff whitespace checks
+passed. New local documentation links resolve; seven inherited links require the
+optional TraceChaser submodule and were not changed.
+
+Delivery retains the isolated branch/worktree for the lead; no destination merge
+or PR creation is part of this implementation handoff. Native evidence is named
+goal coverage, with sampled human image inspection, rather than full pixel parity.

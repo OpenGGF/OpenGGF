@@ -57,6 +57,9 @@ class TestS2CompetitionPlacementPhase {
             host.bindNativeWaitInput(input::logical,()->false);
             var session=new Sonic2CompetitionSession();session.updateMenu(LogicalInputSnapshot.ofPlayers(
                     PlayerInputState.of(0,0,0,0,true,true),PlayerInputState.neutral()),true);host.loadAct(session,0,0);
+            // Level_FromCheckpoint (s2.asm:4980-5086): wait for native control
+            // release before injecting an ordinary Level_MainLoop block crossing.
+            Sonic2CompetitionTestFlow.finishTitle(host, () -> step(host,input));
             // Advance interests through consecutive 256px blocks. Each setup is
             // derived from the ROM block mask and camera's $A0 right edge, not CSV.
             for(int block=1;block<=16;block++) {

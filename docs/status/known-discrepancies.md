@@ -194,7 +194,7 @@ The shipped game takes `Vint_Lag` when the 68K main loop has not re-armed
 `Vint_routine` before the next VBlank. In a Sonic 2 special stage, that result
 depends on the variable cost of the complete `SS_MainLoop`, the substantial
 `Vint_S2SS` service path, DMA/DPLC work, and hardware contention. OpenGGF does
-not yet model those costs at cycle granularity. Ordinary interactive play
+not yet model those costs at cycle granularity. Ordinary and competitive interactive play
 therefore uses the existing stateless segment/speed approximation to retain the
 special stage's expected slowdown and speed simulation. Its ratios were fitted
 from one Stage 1 recording, not derived from the ROM routine, so it is an interim
@@ -205,7 +205,7 @@ it, and a recorded `lag_state.lagged` outcome admits the already-existing
 `VBlank_Lag` loop through the separate scheduling-only contract. That outcome
 supplies no gameplay value or work.
 
-Ordinary entry now spends the existing measured104-presentation NTSC load hold
+Ordinary and competitive entry spend the shared measured 104-presentation NTSC load hold
 after fade-to-white and before track/player work; recorded startup does not add
 it again. This closes the unwired live entry presentation, while its full CPU/
 device derivation and PAL duration remain unqualified. The recurring bucket
@@ -665,6 +665,44 @@ the V-int counter advances. `Touch_Monitor`'s break branch accepts a second
 player only while `Two_player_mode` is set (s2.asm:85463-85470), so CPU Tails
 cannot break monitors in one-player play and human Tails can in Competition.
 
+### Pre-act physical timing
+
+The frozen tie movie's native capture has synchronous initialization spans
+outside the semantic fade and Obj34 loops. Counts below are observations of
+that movie, not runtime delays.
+
+| Span | Native physical frames | Frames | `V_int_run_count` |
+| --- | --- | ---: | --- |
+| Title-to-menu masked initialization | 974–993 | 20 | unchanged |
+| EHZ1 title asset initialization | 1174–1183 | 10 | unchanged |
+| EHZ1 post-arrival decode | 1240–1254 | 15 | advances |
+| EHZ1 post-upload assembly | 1263–1303 | 41 | advances |
+| EHZ2 title asset initialization | 10211–10220 | 10 | unchanged |
+| EHZ2 post-arrival decode | 10277–10291 | 15 | advances |
+| EHZ2 post-upload assembly | 10300–10338 | 39 | advances |
+
+Each act also has two single counted initialization interruptions outside its
+semantic loops. The exported movie therefore retains a witnessed inlet of
+68 physical frames before EHZ1 ordinary play and 66 before EHZ2, reduced from
+178 and 176 when the whole visible card phase was omitted. CNZ1's corresponding
+inlet is 69, reduced from 186. The separate 20-frame menu span stays in the
+cold-prefix witness. The engine does not simulate CPU/decompression timing.
+The ROM fade passes and title-card waits belong to the semantic engine
+timeline, with gameplay held and `Level_frame_counter` zero until title release.
+`Level_TtlCard` (s2.asm:4914-4949) and `Level_FromCheckpoint`
+(s2.asm:4980-5086) own those waits. No native state is supplied to gameplay.
+
+The global V-int clocks remain different. On the tie route, the base engine
+was 137 ticks ahead at EHZ1 ordinary play; representing the real semantic
+waits makes the surplus 168, rather than preserving the base's accidental
+cancellation between startup overcount and omitted title waits. At EHZ2
+ordinary play the surplus is 121 (base 59). Startup's approximated SEGA/title
+phases and masked native initialization are not a clock authority. Nine
+uncounted native result-initialization frames add another nine ticks of
+surplus between acts. No fitted counter reset or offset is applied. Objects
+that read the global V-int clock can consequently differ after otherwise
+matching movement; this lane does not establish ring-recollection parity.
+
 ### Engine Implementation
 
 S2 Competition is a native two-human product: Sonic on controller 1, Tails on
@@ -675,12 +713,12 @@ blocked. The presentation and timing differences are:
 
 | ID | Engine behaviour |
 | --- | --- |
-| U-1 | Each view shows interlace field 0 (even interlaced lines) on every frame. There is no field alternation or weave; detail present only on odd lines never appears and nothing flickers. Planes are retained 8x16-cell tables presented through field-projected patterns. |
+| U-1 | S2 renders both halves progressively into 320x448 logical pixels, preserving all sixteen rows of each ROM 8x16 cell. The window keeps the native picture aspect with half-height pixels. There is no alternating field clock or interlace combing; this supersedes the earlier single-field scope (user decision, 2026-11-08). S3K retains its 224-line presentation. |
 | U-2 | Each view shows its last completed sprite page, so the lag-frame torn table cannot occur. The `Hint_flag` busy-wait plays no part in timing. |
-| U-3, U-4 | The split is exact at line 108: no blanked band and no sprite carry-over from the upper table. Native pictures differ from the engine on field rows 108-112 at the seam. |
+| U-3, U-4 | The split is exact at progressive line 216 (field line 108): no blanked band and no sprite carry-over from the upper table. Native pictures differ from the engine on field rows 108-112 at the seam. |
 | U-5 | The art residency holds only patterns the game loads. Cell words that point at VDP table memory show loaded art or zeros, not table bytes; DMA source wrap is not modelled. |
 | U-7 | Sprite pieces past the 80th table entry are dropped instead of overwriting the RAM after the table. |
-| Lag | Every logical iteration completes in its frame. Native CPU-overrun lag frames are not reproduced in levels or in the competitive special stage, which also does not use the one-player special stage's slowdown approximation. |
+| Lag | Level iterations still complete in their frames. The competitive special stage now shares the one-player segment/speed lag approximation and 104-frame white entry load hold, with real startup waits and the outgoing results fade to white. This remains an empirical approximation, not exact native CPU-overrun pacing. |
 | Rewind | Held live rewind is off in `COMPETITION_MENU`, `COMPETITION` and `COMPETITION_RESULTS`, as in S3K Competition. Registry capture and restore of the Competition owners work and are tested. |
 
 Modelled ROM quirks, so not differences: the title-card and fade interrupts

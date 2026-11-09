@@ -54,7 +54,7 @@ class TestSonic2CompetitionMusic {
         audio.setRom(TestEnvironment.currentRom()); audio.setAudioProfile(profile); audio.setSoundMap(profile.getSoundMap());
         var session = new Sonic2CompetitionSession();
         var screen = new Sonic2CompetitionScreen(session, mock(Sonic2CompetitionHost.class), null, TestEnvironment.currentRom());
-        screen.initialize();
+        screen.initialize(); Sonic2CompetitionTestFlow.finishMenuFade(screen);
         var rows = TestSonic2CompetitionCompletionSum.ledger(session);
         rows.set(0, new Sonic2CompetitionResults.Wins(1, 0)); rows.set(1, new Sonic2CompetitionResults.Wins(1, 0));
         var input = new com.openggf.control.InputHandler();

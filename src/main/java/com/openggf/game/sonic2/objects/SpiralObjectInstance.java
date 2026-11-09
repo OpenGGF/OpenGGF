@@ -297,13 +297,13 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Rewi
                 && player.getLatchedSolidObjectInstance() == this;
         if (latchedToThisSpiral) {
             // ROM Obj06 keeps the player in loc_215C0 while this object's standing
-            // bit is set (docs/s2disasm/s2.asm:46688-46764), then clears on_object
-            // only from the spiral fall-off path (lines 46767-46772).
+            // bit is set (s2.asm:47140-47141), then clears on_object
+            // in Obj06_Spiral_CharacterFallsOff (s2.asm:47219-47224).
             player.setOnObject(true);
         }
-        if (latchedToThisSpiral && player.getAir()) {
-            player.setAir(false);
-        }
+        // loc_215C0 tests Status_InAir before moving a rider; a jump releases
+        // only this player's standing bit and preserves y_vel. Never ground a
+        // latched rider here (s2.asm:47205-47225; shipped fixBugs=0).
 
         // ROM: loc_215C0
         int inertia = Math.abs(player.getGSpeed());

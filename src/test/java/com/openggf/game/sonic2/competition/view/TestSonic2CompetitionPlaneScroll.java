@@ -35,14 +35,14 @@ class TestSonic2CompetitionPlaneScroll {
         assertEquals(0xABCD, planes.cell(FOREGROUND_P2, 0, 0));
         scroll.restore(before); assertEquals(before, scroll.capture());
     }
-    @Test void descriptorsIgnoreBit10AndExchangeFieldBankForNativeVerticalFlip() {
+    @Test void descriptorsIgnoreBit10AndExchangeCellHalvesForNativeVerticalFlip() {
         var planes = new Sonic2CompetitionPlanes();
         for (int value = 0; value < 65536; value++) {
             planes.write(FOREGROUND_P1, 63, 31, value);
             int word = planes.fieldPlane(FOREGROUND_P1).descriptorAt(-1, -1);
             assertEquals(value & 0xF800, word & 0xF800);
-            assertEquals(value & 1023, word & 1023);
-            assertEquals((value & 0x1000) != 0 ? 1024 : 0, word & 1024);
+            assertEquals((value & 1023) * 2, word & 2046);
+            assertEquals((value & 0x1000) != 0 ? 0 : 1, word & 1);
         }
         var saved = planes.capture();
         planes.write(FOREGROUND_P1, 63, 31, 0);

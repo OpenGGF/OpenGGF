@@ -310,14 +310,19 @@ and decoded-load contract. Golf uses this path for course placement changes
 while preserving stock geometry and loading.
 
 For native campaigns that depend on a concrete decoded level (such as AIZ's fire
-reload), opt into `nativePlacements()`. This path admits verified factory bindings
-and `retainRings((rings, objects) -> ...)` while keeping the same native level.
+reload), opt into `nativePlacements()`. This path admits verified factory bindings,
+`addObject(localKey, x, y, subtype, renderFlags, respawnTracked)` and
+`retainRings((rings, objects) -> ...)` while keeping the same native level.
+Additions use registered local factories and engine-assigned unique identities,
+allocated after the source inventory in declaration order. The source game
+encodes their native placement flags; no stock numeric object ID is needed.
 Retain only an ordered subset of the exact offered ring records: never reconstruct,
 move, duplicate or reorder them. `forZone(index)` and `whenInventory(predicate)`
 gate admission before edits. Binding and retention are validated before either
 table is published, inside the registered owner boundary. Moves/removals/replacements
-remain the legacy snapshot path; native ring-object mappings and creator-defined
-level implementations cannot use this opt-in path. The
+remain the legacy snapshot path. Object-backed ring mappings forbid ring retention,
+while ordinary owned additions preserve those mappings. Creator-defined level
+implementations cannot use this opt-in path. The
 [Second Strike example](../../../examples/second-strike/README.md) shows separate
 forest/fire inventory plans and preserves later Act 2 content.
 

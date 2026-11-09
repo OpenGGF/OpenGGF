@@ -105,7 +105,7 @@ class TestSonic2CompetitionVisit {
                     new Sonic2NativeModeProvider(true,zone -> zone==0).competitionScreen(context));
             assertTrue(menus.open(visit));tick(menus,input,NEUTRAL);
             var select=LogicalInputSnapshot.ofPlayers(PlayerInputState.of(10,10,0,0,true,true),PlayerInputState.neutral());
-            tick(menus,input,select);
+            enter(menus,input,select);
             var phases=new java.util.ArrayList<com.openggf.game.resources.PlcLifecyclePhase>();
             for(int i=0;i<3;i++) phases.add(tick(menus,input,NEUTRAL));
             assertAll(
@@ -113,7 +113,7 @@ class TestSonic2CompetitionVisit {
                 () -> assertEquals(4,visit.session().specialStageIndex()),
                 () -> assertNull(visit.host().profile(),"special-only entry must not fabricate an act load"),
                 () -> assertSame(mode,SessionManager.getCurrentGameplayMode()),
-                () -> assertEquals(clock+5,objects.getVblaCounter()),
+                () -> assertEquals(clock+50,objects.getVblaCounter()),
                 () -> assertEquals(levelFrame,mode.getLevelManager().getFrameCounter()),
                 () -> assertEquals(java.util.Collections.nCopies(3,com.openggf.game.resources.PlcLifecyclePhase.SPECIAL_STAGE),phases));
         } finally { menus.close();TestEnvironment.resetAll(); }
@@ -127,7 +127,7 @@ class TestSonic2CompetitionVisit {
                     SessionManager.getCurrentWorldSession().rootGameModule(),input,ignored -> { });
             var provider=new Sonic2NativeModeProvider(true,zone -> zone==0);
             var visit=assertInstanceOf(Sonic2CompetitionVisit.class,provider.competitionScreen(context));
-            assertTrue(menus.open(visit));tick(menus,input,START);
+            assertTrue(menus.open(visit));enter(menus,input,START);
             assertNotNull(visit.host().profile(),"afterFrame must load the actual native world");
             var mode=visit.host().context();
             var video=mode.getWorldSession().getGameModule().getGameService(
@@ -165,7 +165,7 @@ class TestSonic2CompetitionVisit {
             var visit = assertInstanceOf(Sonic2CompetitionVisit.class,provider.competitionScreen(context));
             assertTrue(menus.open(visit));
             assertTrue(visit.host().nativeState().operational(), "real corrected C object owners must be installed");
-            tick(menus,input,START);
+            enter(menus,input,START);
             assertEquals(Sonic2CompetitionSession.Phase.ACT,visit.session().phase());
             var mode = visit.host().context();
             var video = mode.getWorldSession().getGameModule().getGameService(
@@ -202,6 +202,23 @@ class TestSonic2CompetitionVisit {
             assertEquals(retained.copied().get(1).y(), second.planeScroll().copy(1).y(), "title retains P2 copied Y across acts");
             assertEquals(0,second.displayState().ringsAnimationFrame(),"Level entry clears ring phase");
         } finally { menus.close(); TestEnvironment.resetAll(); }
+    }
+    private static void enter(NativeMenuController menus, InputHandler input, LogicalInputSnapshot select) {
+        for (int i=0;i<23;i++) tick(menus,input,NEUTRAL);
+        tick(menus,input,select);
+        for (int i=0;i<22;i++) tick(menus,input,NEUTRAL);
+        var visit=(Sonic2CompetitionVisit)menus.screen();
+        if (visit.session().phase()!=Sonic2CompetitionSession.Phase.ACT) return;
+        var mode=visit.host().context();
+        int x=visit.session().player(0).getCentreX();
+        int waits=0;
+        while(visit.host().titleCardActive() && waits++<240) {
+            tick(menus,input,LogicalInputSnapshot.ofPlayers(PlayerInputState.of(8,8,0,0,false,false),PlayerInputState.neutral()));
+            assertEquals(0,mode.getLevelManager().getFrameCounter(),"locked title never advances LFC");
+        }
+        assertFalse(visit.host().titleCardActive(),"native loop releases without fitted delay");
+        assertEquals(x,visit.session().player(0).getCentreX(),"held right does not move during title card");
+        assertTrue(waits>25,"arrival and upload waits precede the leave loop");
     }
     private static com.openggf.game.resources.PlcLifecyclePhase tick(NativeMenuController menus,InputHandler input,LogicalInputSnapshot sample) {
         input.setLogicalOverride(sample);

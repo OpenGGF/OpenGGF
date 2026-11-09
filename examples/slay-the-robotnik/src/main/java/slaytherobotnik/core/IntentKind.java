@@ -1,7 +1,7 @@
 package slaytherobotnik.core;
 
 /**
- * Intent icons shown above enemies. See {@link CardType} for why these are String constants.
+ * Intent icons shown above enemies. These identifiers retain their existing save and content keys.
  */
 public final class IntentKind {
     public static final String ATTACK = "Attack";

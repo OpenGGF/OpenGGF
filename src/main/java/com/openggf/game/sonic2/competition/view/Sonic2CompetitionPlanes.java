@@ -16,12 +16,13 @@ public final class Sonic2CompetitionPlanes implements RewindSnapshottable<Sonic2
     public Sonic2CompetitionPlanes() {
         for (var id : PlaneId.values()) fields[id.ordinal()] = new RetainedPlaneDescriptorSource.Plane() {
             public int widthTiles() { return 64; }
-            public int heightTiles() { return 32; }
+            public int heightTiles() { return 64; }
             public long revision() { return displayRevisions[id.ordinal()]; }
             public int descriptorAt(int x, int y) {
-                int word = cell(id, x >> 3, y >> 3);
-                // Fixed field 0; whole-cell V flip also exchanges the sampled row parity.
-                return (word & 0xF800) | ((word & 0x1000) != 0 ? 0x400 : 0) | (word & 0x3FF);
+                int word = cell(id, x >> 3, y >> 4);
+                // Whole-cell V flip exchanges its top and bottom 8-row halves.
+                return (word & 0xF800) | ((word & 0x3FF) * 2)
+                        | (((y >> 3) & 1) ^ ((word >> 12) & 1));
             }
         };
     }

@@ -19,17 +19,17 @@ class TestSonic2CompetitionFieldPatterns {
         var patterns = fields.live();
         for (int bank = 0; bank < 2; bank++) for (int cell = 0; cell < 1024; cell++)
             for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++)
-                assertEquals(Im2FieldOracle.pixel(bytes, cell, x, y * 2 + bank),
-                        patterns[(bank << 10) | cell].getPixel(x, y));
+                assertEquals(Im2FieldOracle.pixel(bytes, cell, x, y + bank * 8),
+                        patterns[cell * 2 + bank].getPixel(x, y));
         // A sentinel detects rewriting an unchanged cell, rather than merely comparing equal content.
         patterns[7].setPixel(0, 0, (byte) 13);
         var replacement = new byte[32]; java.util.Arrays.fill(replacement, (byte) 0xAB);
         residency.writePatterns(18, replacement);
         fields.refresh();
         assertEquals(13, patterns[7].getPixel(0, 0));
-        assertEquals(10, patterns[9].getPixel(0, 0));
-        assertEquals(11, patterns[9].getPixel(1, 0));
-        assertEquals(10, patterns[1033].getPixel(0, 0));
+        assertEquals(10, patterns[18].getPixel(0, 0));
+        assertEquals(11, patterns[18].getPixel(1, 0));
+        assertEquals(10, patterns[18].getPixel(0, 0));
         assertSame(patterns, fields.live(), "level retains one live pattern table");
     }
 }

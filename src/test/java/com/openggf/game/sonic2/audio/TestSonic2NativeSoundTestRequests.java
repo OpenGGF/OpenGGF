@@ -89,7 +89,7 @@ class TestSonic2NativeSoundTestRequests {
         assertEquals(0, audio.commandTimeline().entryCount(),
                 "Ingress must write the source mailbox without immediate playback");
         audio.presentFrame(PresentationMode.FORWARD);
-        assertMailboxDispatch(request);
+        assertMailboxDispatch(nativeIngress ? request : Sonic2Music.fromId(request).nativeId);
         assertEquals(1, audio.commandTimeline().entryCount());
         AudioCommand.PlayMusic played = assertInstanceOf(AudioCommand.PlayMusic.class,
                 audio.commandTimeline().entries().getFirst().command());

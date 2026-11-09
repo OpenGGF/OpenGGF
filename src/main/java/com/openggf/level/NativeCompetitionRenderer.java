@@ -36,8 +36,8 @@ public final class NativeCompetitionRenderer implements AutoCloseable {
         public View {
             Objects.requireNonNull(camera, "camera");
             Objects.requireNonNull(sprites, "sprites");
-            requireRaster(rasterStart, rasterHeight);
-            if (horizontalScroll.length != HEIGHT || backgroundPeriod <= 0) {
+            requireRaster(rasterStart, rasterHeight, horizontalScroll.length);
+            if ((horizontalScroll.length != HEIGHT && horizontalScroll.length != 448) || backgroundPeriod <= 0) {
                 throw new IllegalArgumentException("Native view needs a full packed scroll page and positive BG period");
             }
             horizontalScroll = horizontalScroll.clone();
@@ -52,19 +52,29 @@ public final class NativeCompetitionRenderer implements AutoCloseable {
         @Override public int[] horizontalScroll() { return horizontalScroll.clone(); }
     }
 
+    private final int height;
+    public NativeCompetitionRenderer() { this(HEIGHT); }
+    public NativeCompetitionRenderer(int height) {
+        if (height != HEIGHT && height != 448) throw new IllegalArgumentException("Unsupported view height");
+        this.height = height;
+    }
     private FboHelper.FboHandle scratch;
     private boolean drawing;
-    private final RenderProjection projection = new RenderProjection() {
-        private final float[] matrix = new Matrix4f().ortho2D(0, WIDTH, 0, HEIGHT).get(new float[16]);
+    private RenderProjection projection() { return new RenderProjection() {
+        private final float[] matrix = new Matrix4f().ortho2D(0, WIDTH, 0, height).get(new float[16]);
         @Override public float[] getProjectionMatrixBuffer() { return matrix; }
         @Override public boolean isFBOProjectionActive() { return true; }
-        @Override public int getCurrentDisplayHeight() { return HEIGHT; }
-    };
+        @Override public int getCurrentDisplayHeight() { return height; }
+    }; }
 
     /** Producers use native screen coordinates and whole mapping footprints in SAT order. */
     public static SpritePresentation.Frame prepareSprites(GraphicsManager graphics, int start, int height,
                                                            Runnable producer) {
-        requireRaster(start, height);
+        return prepareSprites(graphics, start, height, HEIGHT, producer);
+    }
+    public static SpritePresentation.Frame prepareSprites(GraphicsManager graphics, int start, int height,
+                                                           int screenHeight, Runnable producer) {
+        requireRaster(start, height, screenHeight);
         return SpritePresentationRenderer.prepare(graphics, 0, 0, () -> {
             SpriteSatInternalAccess.beginCollection(graphics, SpriteSatMaskPostProcessor.Raster.h40(0, start, height));
             producer.run();
@@ -76,6 +86,8 @@ public final class NativeCompetitionRenderer implements AutoCloseable {
     public void draw(GameplayModeContext context, List<View> views, int backdropRgb) {
         Objects.requireNonNull(context, "context");
         views = List.copyOf(views);
+        for (var view : views) if (view.horizontalScroll.length != height)
+            throw new IllegalArgumentException("View scroll page does not match output height");
         var level = Objects.requireNonNull(context.getLevelManager(), "levelManager");
         var graphics = level.graphicsManager;
         if (drawing) throw new IllegalStateException("Nested native competition renderer");
@@ -96,11 +108,11 @@ public final class NativeCompetitionRenderer implements AutoCloseable {
         try {
             ensureScratch();
             glDisable(GL_SCISSOR_TEST);
-            try (var ignored = GraphicsProjectionAccess.openProjection(graphics, projection)) {
-            graphics.setViewport(0, 0, WIDTH, HEIGHT);
+            try (var ignored = GraphicsProjectionAccess.openProjection(graphics, projection())) {
+            graphics.setViewport(0, 0, WIDTH, height);
             for (var view : views) {
                 glBindFramebuffer(GL_FRAMEBUFFER, scratch.fboId());
-                glViewport(0, 0, WIDTH, HEIGHT);
+                glViewport(0, 0, WIDTH, height);
                 glClearColor(((backdropRgb >>> 16) & 255) / 255f,
                         ((backdropRgb >>> 8) & 255) / 255f, (backdropRgb & 255) / 255f, 1);
                 glClear(GL_COLOR_BUFFER_BIT);
@@ -109,16 +121,16 @@ public final class NativeCompetitionRenderer implements AutoCloseable {
                             level.drawWithRenderOptions(context.getSpriteManager(), LevelManager.LevelRenderOptions.tilesOnly());
                             SpritePresentationRenderer.drawNative(graphics, view.sprites(), view.camera().x(),
                                     view.foregroundVScroll(), layer -> true);
-                        }, view.camera().x(), view.foregroundVScroll(), WIDTH, HEIGHT));
+                        }, view.camera().x(), view.foregroundVScroll(), WIDTH, height));
                 // Offscreen terrain passes own their whole FBO. Clip only the
                 // completed view, so a split never truncates priority/BG scratch work.
                 glBindFramebuffer(GL_READ_FRAMEBUFFER, scratch.fboId());
                 glBindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFbo);
-                int bottom = HEIGHT - view.rasterStart() - view.rasterHeight();
-                int top = HEIGHT - view.rasterStart();
+                int bottom = height - view.rasterStart() - view.rasterHeight();
+                int top = height - view.rasterStart();
                 glBlitFramebuffer(0, bottom, WIDTH, top,
-                        viewport[0], viewport[1] + bottom * viewport[3] / HEIGHT,
-                        viewport[0] + viewport[2], viewport[1] + top * viewport[3] / HEIGHT,
+                        viewport[0], viewport[1] + bottom * viewport[3] / height,
+                        viewport[0] + viewport[2], viewport[1] + top * viewport[3] / height,
                         GL_COLOR_BUFFER_BIT, GL_NEAREST);
             }
             }
@@ -138,7 +150,7 @@ public final class NativeCompetitionRenderer implements AutoCloseable {
         if (scratch != null) return;
         int active = glGetInteger(GL_ACTIVE_TEXTURE), texture = glGetInteger(GL_TEXTURE_BINDING_2D);
         try {
-            scratch = FboHelper.createColorOnly(WIDTH, HEIGHT, GL_CLAMP_TO_EDGE);
+            scratch = FboHelper.createColorOnly(WIDTH, height, GL_CLAMP_TO_EDGE);
             if (scratch == null) throw new IllegalStateException("Cannot create native view framebuffer");
         } finally {
             glActiveTexture(active);
@@ -146,9 +158,9 @@ public final class NativeCompetitionRenderer implements AutoCloseable {
         }
     }
 
-    private static void requireRaster(int start, int height) {
-        if (start < 0 || height <= 0 || start + height > HEIGHT) {
-            throw new IllegalArgumentException("Native view raster exceeds the 224-line screen");
+    private static void requireRaster(int start, int height, int screenHeight) {
+        if (start < 0 || height <= 0 || start + height > screenHeight) {
+            throw new IllegalArgumentException("Native view raster exceeds the logical screen");
         }
     }
 

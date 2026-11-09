@@ -2,7 +2,7 @@ package slaytherobotnik.core;
 
 /**
  * Card keywords that change how the card moves between piles, and the glossary behind the
- * tips for every highlighted card term. See {@link CardType} for why these are String constants.
+ * tips for every highlighted card term. These identifiers retain their existing save and content keys.
  */
 public final class Keyword {
     /** After play, the card goes to the exhaust pile for the rest of the combat. */

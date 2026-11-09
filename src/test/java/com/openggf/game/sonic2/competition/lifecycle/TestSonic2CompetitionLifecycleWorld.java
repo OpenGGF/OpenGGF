@@ -180,6 +180,9 @@ class TestSonic2CompetitionLifecycleWorld {
         int x = session.player(1).getCentreX(), y = session.player(1).getCentreY();
         int subX = session.player(1).getXSubpixelRaw(), subY = session.player(1).getYSubpixelRaw();
         int cameraX = session.camera(1).getX(), cameraY = session.camera(1).getY();
+        // This fixture uses HeadlessTestRunner directly, without the production native-wait host.
+        session.playerState(0).updateNativeHudTimer();
+        session.playerState(1).updateNativeHudTimer();
         runner.stepFrame(false, false, false, false, false);
         if (waiting) {
             assertEquals(x, session.player(1).getCentreX(), "Routine A cannot execute ordinary movement");

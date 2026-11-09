@@ -51,6 +51,21 @@ public class Sonic2AudioProfile extends AbstractAudioProfile implements NativeMa
         return -1;
     }
 
+    /**
+     * PlayMusic stores the native d0 byte in Music0/Music1 (s2.asm:1520-1528).
+     * zBGMLoad (s2.sounddriver.asm:1738-1779) indexes the native byte, not the
+     * historical engine id; zMasterPlaylist (s2.sounddriver.asm:3823-3855) owns the order.
+     */
+    @Override
+    public int nativeRequestForMusic(int musicId) {
+        for (Entry music : NATIVE_SOUNDS.music()) {
+            if (music.engineId() == musicId) {
+                return music.soundId();
+            }
+        }
+        return musicId;
+    }
+
     private final Consumer<Sonic2SoundRequestService.Event> requestObserver;
 
     @Override

@@ -45,7 +45,7 @@ public final class ShopRoom implements Room {
         Rng rng = state.rngs().stream(RunRngs.MERCHANT);
         RewardGenerator gen = new RewardGenerator(state);
         List<String> used = new ArrayList<>();
-        String[] types = {CardType.ATTACK, CardType.ATTACK, CardType.SKILL, CardType.SKILL, CardType.POWER};
+        CardType[] types = {CardType.ATTACK, CardType.ATTACK, CardType.SKILL, CardType.SKILL, CardType.POWER};
         int saleSlot = rng.nextInt(types.length);
         for (int i = 0; i < types.length; i++) {
             String rarity = shopRarity(rng);

@@ -35,15 +35,9 @@ public final class Sonic2CompetitionSpriteArtTable {
     /** Qualification blockers until each actual ordinary draw and native SST projection is certified. */
     public static final Map<Integer,Pending> PENDING_ADOPTION = Map.ofEntries(
             Map.entry(0x3A, new Pending("Capsule results (conservative)", "loc_140AC (s2.asm:27803-27815)", "Placed Obj3E can call Load_EndOfAct; prove native 2P lifetime exclusion before removing this conservative child obligation")),
-            Map.entry(0x44, new Pending("Bumper", "Obj44_Init (s2.asm:45088)", "Lane C owns this object; display adoption deferred")),
             Map.entry(0x76, new Pending("SlidingSpikes", "Obj76_Init (s2.asm:55847)", "Lane C has modified this owner relative to60aa1d658; defer to avoid concurrent edits")),
             Map.entry(0x7A, new Pending("SidewaysPform", "Obj7A_Init (s2.asm:56295)", "Lane C has modified this owner relative to60aa1d658; defer to avoid concurrent edits")),
-            Map.entry(0x84, new Pending("ForcedSpin", "Obj84_Init (s2.asm:46775)", "Lane C owns this object; display adoption deferred")),
-            Map.entry(0x85, new Pending("LauncherSpring", "Obj85_Init (s2.asm:58026)", "Lane C owns this object; display adoption deferred")),
-            Map.entry(0xD3, new Pending("BombPrize", "loc_2BC86 (s2.asm:59221-59262)", "Lane C owns this object; display adoption deferred")),
-            Map.entry(0xD6, new Pending("PointPokey", "ObjD6_Init (s2.asm:59142)", "Lane C owns this object; display adoption deferred")),
-            Map.entry(0xD8, new Pending("BonusBlock", "ObjD8_Init (s2.asm:60152)", "Lane C owns this object; display adoption deferred")),
-            Map.entry(0xDC, new Pending("RingPrize", "loc_2BD4E (s2.asm:59272-59313)", "Lane C owns this object; display adoption deferred"))
+            Map.entry(0x84, new Pending("ForcedSpin", "Obj84_Init (s2.asm:46775)", "Lane C owns this object; display adoption deferred"))
     );
 
     /** Fixed player accessories are not object-layout IDs; their existing SST owner supplies identity. */
@@ -101,6 +95,11 @@ public final class Sonic2CompetitionSpriteArtTable {
             new Row("vine-switch",0x7F,new Entry(0x29938,0x640E,0x8,0x4,0x0,"vine_switch","Obj7F_Init (s2.asm:56656-56663)"),4,0x0,0x0),
             new Row("moving-vine",0x80,new Entry(0x29C64,0x641E,0x10,0x14,0x80,"vine_pulley","Obj80_Init (s2.asm:56777-56784); Obj80_MCZ_Init (s2.asm:56814-56834)"),4,0x0,0x0),
             new Row("flipper",0x86,new Entry(0x2B45A,0x43B2,0x18,0x4,0x0,"flipper","Obj86_Init (s2.asm:58433-58445)"),4,0x0,0x0),
+            new Row("round-bumper",0x44,new Entry(0x1F85A,0x439A,16,4,0,"bumper","Obj44_Init (s2.asm:45088-45096)"),1,0,0),
+            new Row("slot-cage",0xD6,new Entry(0x2BEBC,0x0388,24,4,0,"cnz_cage","ObjD6_Init (s2.asm:59142-59149)"),1,0,0),
+            new Row("bonus-block",0xD8,new Entry(0x2C8C4,0x43E6,16,4,0,"bonus_block","ObjD8_Init (s2.asm:60152-60160)"),1,0,0),
+            new Row("ring-prize",0xDC,new Entry(0x12382,0x26BC,8,4,0,"","loc_2BD4E (s2.asm:59272-59290)"),3,0,0),
+            new Row("bomb-prize",0xD3,new Entry(0x2B8D4,0x0380,16,4,0,"cnz_bonus_spike","loc_2BC86 (s2.asm:59221-59244)"),4,0,0),
             new Row("cnz-rect",0xD2,new Entry(0x2B694,0x437C,0x8,0x4,0x0,"cnz_rect_blocks","ObjD2_Init (s2.asm:58702-58716)"),4,0x0,0x0),
             new Row("cnz-big",0xD4,new Entry(0x2B9CA,0x436C,0x20,0x4,0x0,"cnz_big_block","ObjD4_Init (s2.asm:58910-58928)"),4,0x0,0x0),
             new Row("cnz-elevator",0xD5,new Entry(0x2BB40,0x4384,0x10,0x4,0x0,"cnz_elevator","ObjD5_Init (s2.asm:59007-59024)"),4,0x0,0x0),

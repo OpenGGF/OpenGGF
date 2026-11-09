@@ -1,0 +1,198 @@
+{
+  "format" : "openggf-route/1",
+  "launch" : {
+    "rom" : {
+      "game" : "s2",
+      "crc32" : "7B905383",
+      "sha1" : "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9"
+    },
+    "inlet" : {
+      "kind" : "title"
+    },
+    "roster" : {
+      "main" : "sonic",
+      "sidekick" : "tails"
+    },
+    "width" : 320,
+    "donor" : "off",
+    "initial" : {
+      "vIntStart" : 0
+    }
+  },
+  "checks" : {
+    "guard" : {
+      "allowHurt" : true,
+      "allowRingLoss" : true,
+      "allowDeath" : false,
+      "allowBoundary" : false
+    },
+    "startRow" : 1200,
+    "legs" : [ {
+      "id" : "collect-hurt-protection",
+      "maxRows" : 500,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 280, 520, 350, 670 ]
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.p1.rings",
+            "value" : 1
+          } ]
+        }
+      }
+    }, {
+      "id" : "approach-early-monitor",
+      "maxRows" : 1000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 840, 400, 880, 700 ]
+        }
+      }
+    }, {
+      "id" : "settle-before-monitor",
+      "maxRows" : 1000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 820, 400, 900, 700 ]
+          }, {
+            "kind" : "settled",
+            "player" : "P1",
+            "maxSpeed" : 0
+          } ]
+        }
+      }
+    }, {
+      "id" : "break-for-shield",
+      "maxRows" : 1000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 930, 450, 990, 620 ]
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.monitor.content",
+            "value" : 6
+          } ]
+        }
+      }
+    }, {
+      "id" : "observe-award",
+      "maxRows" : 90,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "fact-equals",
+            "key" : "competition.p1.monitors",
+            "value" : 1
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.p1.shield",
+            "value" : 1
+          } ]
+        }
+      }
+    }, {
+      "id" : "hold-visible-outcome",
+      "maxRows" : 361,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false,
+        "holds" : {
+          "kind" : "fact-equals",
+          "key" : "competition.phase",
+          "value" : 1
+        }
+      },
+      "goal" : {
+        "kind" : "wait",
+        "rows" : 360
+      }
+    } ]
+  },
+  "tape" : {
+    "script" : "ehz-qmark-shield.script",
+    "rows" : 1986,
+    "sha256" : "af5e9fedd88ed7f1ff70a5f2113da00131dc1b2909dc16c16ed40f8c75f21a52"
+  },
+  "provenance" : {
+    "producer" : "RoutePlanner prefix-search/5 goal program",
+    "engine" : "openggf 0.8.prerelease-4bee178af-dirty stageplay-s2-competition-title/1",
+    "source" : "authored after a 1512-row prefix toward legs [collect-hurt-protection, approach-early-monitor, settle-before-monitor, break-for-shield, observe-award, hold-visible-outcome]",
+    "notes" : [ ]
+  },
+  "qualification" : [ {
+    "scope" : "ENGINE",
+    "passed" : true,
+    "content" : "4d95fb3a00d44da477f4c8ca9787aa80f5346653bfcf3874dadaab7d3f6b743f",
+    "environment" : "openggf 0.8.prerelease-4bee178af-dirty stageplay-s2-competition-title/1",
+    "rows" : 1986
+  }, {
+    "scope" : "BIZHAWK",
+    "passed" : true,
+    "content" : "4d95fb3a00d44da477f4c8ca9787aa80f5346653bfcf3874dadaab7d3f6b743f",
+    "environment" : "BizHawk2.11/GPGX cold read-only qmark outcomes movie 3a4068885621fe1570bf8d5136a1672e4f9b8ba8554081a45ff12b9cb8ff56dd; accepted comparison boundary null",
+    "rows" : 1986,
+    "coverage" : [ "qmark-content-6-init", "qmark-content-6-award", "p1-break-before-native-lag", "four-second-outcome-hold" ]
+  } ],
+  "native" : {
+    "entry" : {
+      "movie" : "src/test/resources/routes/s2/competition/witnesses/ehz-native-prefix.script",
+      "prefixRows" : 1329,
+      "inputHash" : "8f8669ed648d485c9dfc349e1bdba91d2a29743b76a3be7b5644ade8e3d30c34",
+      "engineAnchorRows" : 1261,
+      "anchorBoundary" : "first-ordinary-level-lfc-zero"
+    },
+    "lag" : [ ]
+  }
+}

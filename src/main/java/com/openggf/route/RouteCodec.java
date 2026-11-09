@@ -336,6 +336,7 @@ public final class RouteCodec {
                     goal.put("kind", "achieve");
                     goal.set("condition", predicate(achieve.condition()));
                 }
+                case RouteGoal.Wait wait -> { goal.put("kind", "wait"); goal.put("rows", wait.rows()); }
                 case RouteGoal.EnterBoundary ignored -> goal.put("kind", "enter-boundary");
             }
         }
@@ -352,6 +353,10 @@ public final class RouteCodec {
                 case "achieve" -> {
                     object(goal, "goal", Set.of("kind", "condition"), Set.of("kind", "condition"));
                     yield new RouteGoal.Achieve(predicate(goal.get("condition")));
+                }
+                case "wait" -> {
+                    object(goal, "goal", Set.of("kind", "rows"), Set.of("kind", "rows"));
+                    yield new RouteGoal.Wait(integer(goal, "rows"));
                 }
                 case "enter-boundary" -> {
                     object(goal, "goal", Set.of("kind"), Set.of("kind"));

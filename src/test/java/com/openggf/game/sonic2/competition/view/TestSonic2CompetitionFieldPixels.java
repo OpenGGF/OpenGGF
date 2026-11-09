@@ -21,7 +21,7 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 
-/** Real ROM rows through the ordinary shared tile/SAT renderer, fixed field zero only. */
+/** Real ROM rows through the ordinary shared tile/SAT renderer, all sixteen rows per cell. */
 @Isolated
 @RequiresRom(SonicGame.SONIC_2)
 class TestSonic2CompetitionFieldPixels {
@@ -32,8 +32,8 @@ class TestSonic2CompetitionFieldPixels {
         var services = EngineServices.current();
         var root = SessionManager.getCurrentWorldSession().rootGameModule();
         try (var gl = PresentationOffscreenTestContext.openConfigured(
-                     320, 224, PresentationOffscreenTestContext.LegacyProfile.CORE_41);
-                var renderer = new NativeCompetitionRenderer(); AutoCloseable cleanup = () -> {
+                     320, 448, PresentationOffscreenTestContext.LegacyProfile.CORE_41);
+                var renderer = new NativeCompetitionRenderer(448); AutoCloseable cleanup = () -> {
                     try {
                         SessionManager.closeGameplaySession();
                     } finally {
@@ -43,8 +43,8 @@ class TestSonic2CompetitionFieldPixels {
             var graphics = GameServices.graphics();
             graphics.setHeadlessMode(false);
             graphics.init(com.openggf.Engine.RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
-            graphics.setViewport(0, 0, 320, 224);
-            glViewport(0, 0, 320, 224);
+            graphics.setViewport(0, 0, 320, 448);
+            glViewport(0, 0, 320, 448);
             var session = new Sonic2CompetitionSession();
             var host = new Sonic2NativeCompetitionHost(root, services,
                     ignored
@@ -95,11 +95,11 @@ class TestSonic2CompetitionFieldPixels {
                 graphics.setBatchingEnabled(batching);
                 graphics.setInstancedBatchingEnabled(batching);
                 var planePixels = draw(renderer, context, planes, SpritePresentation.Frame.empty());
-                for (int y = 0; y < 224; y++)
+                for (int y = 0; y < 448; y++)
                     for (int x = 0; x < 320; x++) {
-                        int word = planes.cell(Sonic2CompetitionPlanes.PlaneId.FOREGROUND_P1, x / 8, y / 8);
+                        int word = planes.cell(Sonic2CompetitionPlanes.PlaneId.FOREGROUND_P1, x / 8, y / 16);
                         int c = Im2FieldOracle.pixel(bytes, word & 1023, (word & 0x800) == 0 ? x % 8 : 7 - x % 8,
-                                (word & 0x1000) == 0 ? 2 * (y % 8) : 15 - 2 * (y % 8));
+                                (word & 0x1000) == 0 ? y % 16 : 15 - y % 16);
                         assertEquals(rgb(c, word >>> 13 & 3), planePixels.argb(x, y), "plane " + x + "," + y);
                     }
                 var entries = new ArrayList<Sonic2CompetitionSatBuilder.SatEntry>();
@@ -110,15 +110,15 @@ class TestSonic2CompetitionFieldPixels {
                                 144 + flip * 72));
                 var page = new Sonic2CompetitionSatBuilder.Page(0, entries, entries.size(), List.of(), false);
                 var sprites = NativeCompetitionRenderer.prepareSprites(
-                        graphics, 0, 224, () -> Sonic2CompetitionFieldSprites.submit(graphics, page));
+                        graphics, 0, 448, 448, () -> Sonic2CompetitionFieldSprites.submit(graphics, page));
                 var pixels = draw(renderer, context, new Sonic2CompetitionPlanes(), sprites);
                 for (var entry : entries) {
-                    int top = Math.floorDiv(entry.y() + 1, 2), width = entry.widthCells() * 8,
+                    int top = entry.y(), width = entry.widthCells() * 8,
                         height = entry.heightCells() * 16;
-                    for (int y = 0; y < entry.heightCells() * 8; y++)
+                    for (int y = 0; y < entry.heightCells() * 16; y++)
                         for (int x = 0; x < width; x++) {
                             int sx = entry.name().hFlip() ? width - 1 - x : x;
-                            int sy = 2 * (top + y) - entry.y();
+                            int sy = y;
                             if (entry.name().vFlip())
                                 sy = height - 1 - sy;
                             int cell = (entry.name().patternIndex() + sx / 8 * entry.heightCells() + sy / 16) & 1023;
@@ -139,10 +139,10 @@ class TestSonic2CompetitionFieldPixels {
     private static RgbaImage draw(NativeCompetitionRenderer renderer,
             com.openggf.game.session.GameplayModeContext context, Sonic2CompetitionPlanes planes,
             SpritePresentation.Frame sprites) {
-        var view = new NativeCompetitionRenderer.View(context.getCamera().capture(), 0, 224, 0, 0, 0, 512, new int[224],
+        var view = new NativeCompetitionRenderer.View(context.getCamera().capture(), 0, 448, 0, 0, 0, 512, new int[448],
                 sprites, planes.source(Sonic2CompetitionPlanes.PlaneId.FOREGROUND_P1));
         PaletteUploadPresentation.withoutDisplayedFade(
                 GameServices.graphics(), () -> renderer.draw(context, List.of(view), 0));
-        return ScreenshotCapture.captureFramebuffer(320, 224);
+        return ScreenshotCapture.captureFramebuffer(320, 448);
     }
 }

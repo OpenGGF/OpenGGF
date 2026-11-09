@@ -18,7 +18,7 @@ class TestSonic2CompetitionGameResultsExit {
         var owner = new java.util.concurrent.atomic.AtomicReference<>(plc);
         var screen = new Sonic2CompetitionScreen(session, mock(Sonic2CompetitionHost.class), null,
                 TestEnvironment.currentRom(), owner::get);
-        screen.initialize();
+        screen.initialize(); Sonic2CompetitionTestFlow.finishMenuFade(screen);
         var phase = Sonic2CompetitionSession.class.getDeclaredField("phase"); phase.setAccessible(true);
         phase.set(session, Sonic2CompetitionSession.Phase.GAME_RESULTS);
         var input = new InputHandler();
@@ -35,7 +35,7 @@ class TestSonic2CompetitionGameResultsExit {
         var session = new Sonic2CompetitionSession();
         var screen = new Sonic2CompetitionScreen(session, mock(Sonic2CompetitionHost.class), null,
                 TestEnvironment.currentRom());
-        screen.initialize();
+        screen.initialize(); Sonic2CompetitionTestFlow.finishMenuFade(screen);
         var phase = Sonic2CompetitionSession.class.getDeclaredField("phase"); phase.setAccessible(true);
         phase.set(session, Sonic2CompetitionSession.Phase.GAME_RESULTS);
         screen.resultsPlcReady();

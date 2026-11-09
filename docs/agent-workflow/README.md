@@ -18,6 +18,15 @@ Zone delivery: [methodology v2](../architecture/designs/2026-09-15-zone-methodol
 retains FBZ's route slices and adds early short native comparisons and compatibility
 checks. Its first target is the [Sandopolis plan](../architecture/plans/2026-09-15-soz-methodology-v2.md).
 
+## Default delivery
+
+Agent work defaults to a PR against the targeted release's `develop` or `next`
+branch. Follow [root guidance](../../AGENTS.md#delivery-and-documentation) for
+release selection, copy-on-write worktrees, verification, task-branch push and
+PR retention. Leave merging to review unless the user authorizes it; direct
+integration is an explicit opt-in. The main checkout keeps its branch and
+unrelated work.
+
 ## Delivery skills
 
 - [Mod authoring](../../.agents/skills/mod-authoring/SKILL.md) routes creator
@@ -484,6 +493,8 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 
 - [S2 competition divergence diagnostic](../../src/test/java/com/openggf/game/sonic2/competition/view/DebugSonic2CompetitionDivergence.java): test-scope production-host replay of original 2P BK2 controllers against completed native CSV rows; `s2comp.refs` (external native-reference directory), `s2comp.route` (one movie stem) and `s2comp.out` (report directory) select inputs and output, `s2comp.instrument=true` adds the touch-response observer and nearby objects to each frontier row, and `s2comp.exclude` lists columns left out of the gameplay comparison (default `vint`). Absent inputs skip cleanly, raw clock offsets remain separate, no hydration; comparison stops before the first native repeated-LFC/advancing-V-int lag row (unsupported CPU overrun), without re-alignment (2026-11-07/08 lane F). Results: [S2 Competition plan](../architecture/plans/2026-11-07-s2-competition-parity.md#native-state-comparisons).
 - [S2 competition C2 picture producer](../../src/test/java/com/openggf/game/sonic2/competition/view/DebugSonic2CompetitionC2Capture.java): runs the production Competition host, views and renderer from the original two-controller EHZ BK2s and writes engine PNGs and state text at named physical cuts to `target/s2comp-c2b` for fixed-field-0 comparison with BizHawk screenshots. The native BK2 directory is a fixed external path in the source; no physics, auxiliary or CSV input (2026-11-07 A2-S C2b).
+- [S2 competition uncut parity video](../../src/test/java/com/openggf/stageplay/route/DebugSonic2CompetitionRouteVideo.java): replays a frozen `routes/s2/competition` programme (`s2video.route`, default the tie route) on the cold title host and writes one FFV1 frame plus a state row (mode, phase, LFC, VInt, title state, title lock, positions, rings, timers) per committed row to `s2video.out`, including title, menu, results and special stage. `s2video.routeFile` selects an external planner-qualified artifact. `s2video.clockOnly=true` records the same state rows without rendering or starting FFmpeg. Pair it with a native capture from [capture_every_frame.lua](../../tools/bizhawk/capture_every_frame.lua) via `capture_native_references.py --dump-wave-frames N`, then compose with [s2_competition_parity_video.py](../../tools/media/s2_competition_parity_video.py), which aligns at each ordinary level entry and marks held engine frames. The native BK2 must be the export of the current route content (2026-11-08 PR #270 video).
+- [S2 competition fixture flow](../../src/test/java/com/openggf/game/sonic2/competition/Sonic2CompetitionTestFlow.java): drives the production menu fades and title continuation before positioned gameplay/rewind probes; retains LFC0 and bounded native waits instead of assuming load return already released control.
 - [Competitive special-stage divergence diagnostic](../../src/test/java/com/openggf/game/sonic2/competition/specialstage/DebugSonic2CompetitiveHalfpipeDivergence.java): original standalone 2P BK2 through the production halfpipe; `s2comp.ss.refs`, `s2comp.ss.movie`, `s2comp.ss.out` select generic read-only native observations/movie/report. FadeWhite callback identifies load completion, native RunObjects entries plus V-int and actual Vint_Lag callbacks bound comparison; both actors, track speed/state, checkpoints/archives and ring/bomb slots are comparison-only, with no re-alignment. Missing external inputs skip; read the report to distinguish execution from parity (2026-11-08 lane F).
 - [Competition native P1 sampler](../../tools/bizhawk/S3kCompetitionNativeProbe.cs): cold title/Time Attack/Desert Palace controller ingress, reusable near-start native save, RAM-owned GO alignment and comparison-only per-frame miniature state. Origin and reproduction: [native race qualification](../architecture/validation/2026-10-28-tas-support-competition.md#native-desert-palace-race-qualification-2026-11-09).
 - [Read-only native execution observer](../../tools/bizhawk/capture_execution_observations.lua): explicit Genesis ROM callbacks, registers, bounded MainRAM fields and owned same-movie checkpoints; required hit counts and cold/warm verification, comparison-only (2026-11-08 S2 Competition). Protocol: [native capture host](../../tools/bizhawk/README.md#read-only-execution-and-ram-observations).
@@ -577,3 +588,11 @@ never preserved.
 - Next-line Mod API and multiplayer contracts: [subsystem reference](../architecture/next-line-subsystems.md),
   [creator handbook](../modding/index.md), and
   [API compatibility](../architecture/mod-api-compatibility.md).
+
+- [Competition monitor route probe](../../tools/stageplay/S2CompetitionMonitorRouteProbe.java):
+  replay-only per-row content/init/award/lives/rings/position CSV from a frozen
+  manifest. Run with Java 25 and `-cp target/classes:<engine-dependencies-jar>`
+  followed by the source path, manifest, S2 ROM and new CSV path. The classes
+  directory supplies the compiler plugin provider when using Java source launch.
+  Native confirmation uses the [question-mark validator](../../tools/bizhawk/check_s2_qmark_goals.py).
+  Origin: eight EHZ question-mark outcomes, 2026-11-09.

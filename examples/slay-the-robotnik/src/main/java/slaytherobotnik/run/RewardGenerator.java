@@ -171,7 +171,7 @@ public final class RewardGenerator {
     }
 
     /** A random card of the player's colour of a given type (shop slots use this). */
-    public CardDef randomCardOfType(String type, String rarity, List<String> exclude, Rng rng) {
+    public CardDef randomCardOfType(CardType type, String rarity, List<String> exclude, Rng rng) {
         List<CardDef> pool = new ArrayList<>();
         for (CardDef def : run.catalog().cards(run.character().color(), rarity)) {
             if (def.type().equals(type) && !exclude.contains(def.id())) {
