@@ -3757,3 +3757,63 @@ report/owner identities, source projection and hashes are retained under
 under `target/code-climb/s3k-comparison-assembly/` records the rejected extraction
 and wider public-consumer boundary. Root owns independent review, final combined
 qualification, integration and publication to the existing draft PR271.
+
+
+### Saved-scope trace diagnosis and private-driver integration (2026-11-09)
+
+The report producer deliberately retains both verification groups and global
+counts/summary. Its context writer uses the selected gate scope, but triage
+previously discarded `verification_group` and selected the earliest global
+mismatch. A physics brief could therefore select animation evidence, miss its
+actual context and focus compressed auxiliary evidence on the wrong frame.
+Animation diagnosis could similarly prioritize a physics bootstrap discrepancy.
+
+The reader now retains the canonical group and derives one private diagnostic
+selection from the published gate. Brief, bootstrap, context/auxiliary focus and
+frontier-log hint use that selection. Bootstrap discrepancies remain physics.
+Global counts, arrays, summary and the public global first-divergence/bootstrap
+accessors remain intact for saved-baseline consumers. Narrow headings explain
+why the selected mismatch can differ from the global summary. Unknown group
+membership fails narrow evidence reading with no brief; ALL and absent-gate
+reports preserve their legacy global behavior. Primary malformed evidence is
+validated before selection. Wire publication, replay completion, comparison
+collection, gameplay and input contracts are unchanged.
+
+The first real producer/writer/CLI RED selection had two failures, one per
+narrow scope: an out-of-scope mismatch at frame 2 incorrectly displaced the
+selected mismatch at frame 9. Those new, unpublished cases moved unchanged into
+`TestTraceTriageVerificationScope`, beside bootstrap, warning, no-selected-error,
+legacy and malformed-group neighbors. The expanded RED run had **30 cases,
+21 intended failures, nine passing controls, zero errors/skips**. GREEN had
+**104 passing cases** across the old 74-case reader suite and the new 30-case
+scope suite. Four report/protocol suites added **53 passing cases**, including
+the non-opt-in saved-baseline reader check. Every selected suite ran; no opt-in
+report-backed baseline audit was claimed.
+
+Component commands use Java 25, Lua 5.4, MSE off, displays unset, surfaceless EGL,
+normal queued memory and distinct fresh reports. Evidence remains in the owned
+triage-scope worktree under `target/code-climb/triage-scope/`: exact command
+arrays, source hashes, fresh XML, complete RED messages and
+`focused-qualification.json`. Timing separates queue/Maven/wall/user/residual:
+
+| Component | Cases | Queue s | Maven s | Wall s | User s | Residual s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Primary RED | 2 failures | 0 | 100 | 101.781 | 0 | 1.781 |
+| Expanded RED | 21 failures / 9 controls | 552 | 36.346 | 589.129 | 0 | 0.783 |
+| Reader GREEN | 104 passed | 52 | 91 | 144.516 | 0 | 1.516 |
+| Report/protocol | 53 passed | 48 | 33.208 | 82.147 | 0 | 0.939 |
+
+The separate Sol retirement in `8fc54d6793` passed 155 cases and is documented
+above. Integration `6c148777e2` kept all four scope-change blobs exact and the
+driver blob exact, with no conflicts. These are **312 component-case passes on
+separately tested source blobs**, not a combined-head smoke or route verdict.
+Root independently reproduced the whole-file projection removing only the
+constant-unreachable seeded branch/ternary arm. Source and receipt proofs remain
+under `target/code-climb/triage-scope-integration/` and
+`target/code-climb/s3k-private-seed-retirement/` in the PR worktree.
+
+Combined independent review and qualification remain pending at this checkpoint.
+No original contributor trial was regraded and no score credit is inferred.
+The sole delivery remains follow-up draft PR271; no destination branch was
+written. Both source trees, their generated resources and original evidence are
+retained pending final accounting.
