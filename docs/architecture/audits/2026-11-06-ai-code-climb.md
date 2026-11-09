@@ -4890,10 +4890,14 @@ Current retained bytecode for 70 classes across the inspected rendering/test
 owners is identical between C4 and candidate; this does not prove which bytes
 the original fork loaded or establish baseline flakiness.
 
-A bounded independent Sol source investigation established that the passing
-plane oracle reads even-bank art while this sprite reads live odd-bank pattern
-1033. It found no demonstrated cause and proposed a passive observer at the
-publication/draw boundary. One observer-assisted C4 run passed all 293 cases, with no observer errors.
+The initial source-only investigation incorrectly treated the passing plane
+oracle as even-bank-only. Whole-cell V flip also exchanges parity in
+`Sonic2CompetitionPlanes.descriptorAt`: row 0/column 1 selects pattern 1033,
+and plane pixel `(11,7)` checks its local `(3,0)` sample, the same art sample
+later checked by sprite pixel `(19,5)`. The successful plane pass therefore
+already witnesses that art in the earlier draw; it does not settle later art
+publication or sprite state/coverage. No cause was demonstrated. One
+observer-assisted C4 run passed all 293 cases, with no observer errors.
 The odd-bank CPU/GPU value remained 12 through every plane pass and sprite
 draw; palette and resulting pixel matched. All 591 comparable initial loaded
 class byte hashes matched the retained C4 files. It does not reproduce the
@@ -4942,3 +4946,25 @@ under `target/code-climb/scope-hints-reading-category/` while attribution is
 open. The external observer handoff and all 150 retained artifact hashes were
 verified before ownership returned to root. No source change is proposed as
 a pixel repair; no root or delegate job remains live. The broader result is a bounded smoke selection, never a full-suite pass.
+
+### 2026-11-09 publication and parity-evidence correction
+
+The user authorized draft-only publication with the unmatched pixel failure
+explicitly retained and merging blocked. Reviewed executable source `2dd`
+plus audit-only commit `171b727f23` was pushed only to the PR271 task branch;
+the exact published head/body were verified OPEN+DRAFT against develop.
+All seven draft checks were skipped and there were no GitHub reviews.
+No destination branch was merged or pushed.
+
+The source-only even-bank explanation in `171b` was incorrect and is corrected
+above after root independently checked the descriptor and oracle arithmetic.
+At plane `(11,7)`, cell 9 is V-flipped: descriptor selects `1024 + 9` and
+field row 0, corresponding to native row 1. The sprite at `(19,5)` samples
+that same native texel with another palette. This correction changes no
+assertion, test result or failure disposition. The original negative and
+original investigation receipt are retained; neither is silently rewritten.
+
+A separate local ordinary-field preservation prototype passed all four cases
+on unchanged `171b` (queue 79s; Maven 43.179s; wall 123.800s; user wait 0s;
+1.621s residual/unknown). This is not an ownership refactor or a pixel repair.
+Its source remains outside this documentation-only publication.
