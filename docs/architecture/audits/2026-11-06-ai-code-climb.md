@@ -4543,3 +4543,72 @@ Matched-domain timing (user wait zero throughout):
 - hcz queue/Maven/wall: 0/40.706/41.565s; residual 0.859s.
 - hcz1 triage queue/Maven/wall: 0/0.310/1.036s; residual 0.726s.
 - hcz2 triage queue/Maven/wall: 0/0.530/1.201s; residual 0.671s.
+
+
+### Replay-flow combined qualification and original-F result (2026-11-09)
+
+Clean `4da34da064d3` completed the one root-owned change-based run against
+pinned develop `c4ca46472e75`: **4,627/4,627 classes**, **94/94 ordinary batches**
+and **1/1 guards batch**, **38,614 cases**. Ordinary has 37,771 cases, 29 inherited
+failures, zero errors and 49 allowed skips. All 843 guards pass without skips.
+The original terminal verdict is retained verbatim:
+
+```text
+VERDICT FAILED: head=4da34da064d3 source=4a73f21abf35 change-based 4627/4627 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38614 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Against qualified `7908d321064d`, all 29 failure identities, kinds and types match.
+**26 complete records are literal**, including their causal details. The other
+three are Sonic/Tails/wide MHZ expected-Set display orders: every expected and
+actual membership is identical, and replacing only the displayed assertion
+reconstructs the remaining complete record exactly. Those test blobs are exact
+c4/7908/current blobs. The strict comparator remains DIFFERENT; no blanket
+normalization is enabled. The original c4 attribution remains explicit: four
+scene outcomes have the prior matched-ROM-catalogue reproduction, three Set
+displays are reviewed, and the absent baseline rendering failure is not claimed
+fixed. Nothing in that older evidence is relabelled.
+
+All 49 complete raw skip dictionaries match both baselines, with zero unexplained
+or required skips, omissions or causal-cap indicators. The selected class set
+is identical to 7908; the existing eleven-case contact rename versus c4 remains
+mapped. All runtime input/worker/GL/ROM/skip/budget fields match. Sixteen known
+failing-test sources and eight runner/policy files are exact 7908 blobs; the
+ninth is the POM's one comment-only queued-command correction, with every byte
+outside comments unchanged. Production, resources and tools remain exact 7908.
+The source, configuration and ten pre-existing ROM entries stayed frozen.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py \
+  --base c4ca46472e75a0df6f23dfd410e347ab8ed52a70 \
+  --max-minutes 40 --workers 2 --headless-gl surfaceless-egl \
+  --keep-diagnostics --run
+```
+
+Queue wait is 93.000 seconds across 95 admissions, execution including
+preparation 1,784.660 seconds, wall 1,890.903 seconds, user wait zero and residual
+overhead 13.243 seconds. This is bounded smoke, not a full-suite or route pass.
+The source-specific 55-case integration/frontier proof and matched EHZ/HCZ
+byte comparisons above remain separate selections; their counts are not added
+to this run. All runtime jobs are terminal and retired. The exact raw run was
+acknowledged only after retaining its complete plan/results/preparation, all
+negative/skip dictionaries, 96 command arrays and three original logs.
+`target/code-climb/replay-flow-route-category/` retains the full comparison,
+source proof, timing and explicit per-case dispositions.
+
+A new blind original-F contributor journey on 4da scores **60.0/100**, vector
+`[3,2,3,2,2,3,2,2]` with weights 15/15/15/15/10/10/10/10. It is a static task
+assessment, not runtime evidence; the other five trials were not regraded.
+The target remains unmet. It identifies the mandatory hazard-catalogue reading,
+misleading game/subsystem hints, split scope authority and the dense S3K driver
+as remaining costs. Those observations are not treated as defects introduced
+by the byte-preserving extraction. The assessor did not inspect execution logs;
+the retained actual POSIX triage executions remain valid, while the source's
+string-only command tests do not themselves prove execution.
+
+The next sweep will address those concrete boundaries after publication, rather
+than infer a score gain from tests, extraction or document reordering. The
+publication commit adds only this evidence. Sole destination remains draft
+PR271 on `feature/ai-code-climb-followup`; no destination branch push or merge
+is authorized by this delivery. Useful worktrees and evidence remain retained.
