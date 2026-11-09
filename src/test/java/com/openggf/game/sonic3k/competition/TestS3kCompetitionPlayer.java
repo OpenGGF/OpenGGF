@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @org.junit.jupiter.api.parallel.Isolated
 class TestS3kCompetitionPlayer {
     private static final Bounds BOUNDS=new Bounds(0x3FF,0x3FF,false,0);
-    private static final class Sensors implements Terrain {
+    private static class Sensors implements Terrain {
         boolean jumpAllowed=true;
         boolean land;
         int floorAngle;
@@ -34,6 +34,46 @@ class TestS3kCompetitionPlayer {
     }
     private static S3kCompetitionPlayer player(int slot,Character c) {
         return new S3kCompetitionPlayer(slot,c,0x600,200);
+    }
+    @Test void idleTerrainBalancePrecedesLookAndDuckAndRestoresItsSensors() {
+        for (Character c:Character.values()) for (boolean left:new boolean[]{false,true}) {
+            var p=player(0,c); p.setFacingLeft(!left); p.setFloorTilts(left?0:3,left?3:0);
+            var restored=S3kCompetitionPlayer.recreate(p.capture());
+            var terrain=new Sensors() {
+                @Override public int floorEdgeDistance(S3kCompetitionPlayer actor,int x) {
+                    return x==actor.centreX()?12:11;
+                }
+            };
+            restored.tick(new Input(UP|DOWN,0),terrain,BOUNDS,0);
+            assertEquals(6,restored.animation()); assertEquals(left,restored.facingLeft());
+            var deep=player(0,c); deep.setFloorTilts(left?0:3,left?3:0);
+            deep.tick(Input.NONE,new Sensors() {
+                @Override public int floorEdgeDistance(S3kCompetitionPlayer actor,int x) { return 12; }
+            },BOUNDS,0);
+            assertEquals(c==Character.TAILS?6:12,deep.animation());
+        }
+    }
+    @Test void idleObjectBalanceUsesNativeWidthMarginsAndStatusGate() {
+        for (Character c:Character.values()) for (boolean left:new boolean[]{false,true}) {
+            for (int offset:new int[]{-5,-4,1,2,3,4,16,17,18,19,23,24}) {
+                var p=player(0,c); p.setStandingObject(7); p.setFacingLeft(!left);
+                int distance=left?offset:20-offset;
+                var surface=new BalanceObject(p.centreX()+10-distance,10,0);
+                var terrain=new Sensors() {
+                    @Override public BalanceObject balanceObject(int slot) { assertEquals(7,slot); return surface; }
+                };
+                int margin=c==Character.TAILS?4:2;
+                boolean edge=distance<margin || distance>=20-margin;
+                p.tick(new Input(UP,0),terrain,BOUNDS,0);
+                assertEquals(edge?(c!=Character.TAILS && (distance< -4 || distance>=24)?12:6):7,p.animation());
+                if(edge) assertEquals(distance<margin,p.facingLeft());
+            }
+            var p=player(0,c); p.setStandingObject(7);
+            p.tick(new Input(UP,0),new Sensors() {
+                @Override public BalanceObject balanceObject(int slot) { return new BalanceObject(p.centreX()+10,10,128); }
+            },BOUNDS,0);
+            assertEquals(7,p.animation());
+        }
     }
     @Test void independentHumanSlotsUseNativeInitSpeedsAndFullFractionWords() {
         var p1=player(0,Character.SONIC); var p2=player(1,Character.TAILS);

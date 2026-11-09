@@ -896,6 +896,12 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
         if (getSlotIndex() < 0) throw new IllegalStateException("Competition objects require an allocated native SST slot");
         return getSlotIndex();
     }
+    public S3kCompetitionPlayer.BalanceObject balanceSurface() {
+        // Obj_SinkingMud (sonic3k.asm:68545-68557) suppresses balance via status bit 7.
+        int nativeWidth=kind==Kind.MUD?(subtype<<3)&255:width;
+        int status=(spawn.renderFlags()&3)|(kind==Kind.MUD?0x80:0);
+        return new S3kCompetitionPlayer.BalanceObject(x,nativeWidth,status);
+    }
     public Kind kind() { return kind; }
     public int mappingFrame() { return frame; }
     public int extensionWord() { return extension; }
