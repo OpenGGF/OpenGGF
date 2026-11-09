@@ -56,7 +56,7 @@ def main():
                 native_names=names.get(sid,[]); authored=any(k in native_names for k in matched)
                 family=d.get('familyBindings',{}).get(sid,{})
                 phase_keys=[f"family-{str(family.get('family','')).lower().replace('_','-')}/{phase}" for phase in family.get('phases',[])]
-                family_authored=c=='mica' and bool(phase_keys) and all(key in d['nativeAliases'] for key in phase_keys)
+                family_authored=bool(phase_keys) and all(key in d['nativeAliases'] for key in phase_keys)
                 if family_authored:
                     authored=True
                     matched=['family:'+family['family']]

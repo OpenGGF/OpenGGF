@@ -1,0 +1,598 @@
+{
+  "method": "Visual readings on the 6x native coordinate panels, rounded to whole pixels. Skull excludes crest and strap; torso is exposed neck-to-waist. Placement uncertainty about one native pixel. Hidden/foreshortened anatomy is null, not an invented measurement. Forehead boxes and exact uniform reductions are in family-generation.json.",
+  "reference": {
+    "id": "wait-00",
+    "skullWidth": 11,
+    "torsoHeight": 9
+  },
+  "frames": {
+    "family-push-00": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 7.5
+    },
+    "family-push-01": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 7.5
+    },
+    "family-push-02": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 7.3
+    },
+    "family-push-03": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 7.1
+    },
+    "family-balance-00": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 8.6
+    },
+    "family-balance-01": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 8.7
+    },
+    "family-balance2-00": {
+      "skullWidth": 10,
+      "torsoHeight": 8,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 7.304347826086957
+    },
+    "family-balance2-01": {
+      "skullWidth": 12,
+      "torsoHeight": 8,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 6.695652173913044
+    },
+    "family-balance2-02": {
+      "skullWidth": 12,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 6.7
+    },
+    "family-balance3-00": {
+      "skullWidth": 12,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 10.2
+    },
+    "family-balance3-01": {
+      "skullWidth": 12,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 10.5
+    },
+    "family-balance4-00": {
+      "skullWidth": 10,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 6.739130434782608
+    },
+    "family-balance4-01": {
+      "skullWidth": 12,
+      "torsoHeight": 10,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 5.760869565217391
+    },
+    "family-balance4-02": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 5.760869565217391
+    },
+    "family-balance4-03": {
+      "skullWidth": 12,
+      "torsoHeight": 10,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 5.5434782608695645
+    },
+    "family-balance4-04": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 6.41304347826087
+    },
+    "family-hang-00": {
+      "skullWidth": 12,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 12.0
+    },
+    "family-hang-01": {
+      "skullWidth": 12,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 11.8
+    },
+    "family-hang2-00": {
+      "skullWidth": 10,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 11.0
+    },
+    "family-hang2-01": {
+      "skullWidth": 10,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 10.9
+    },
+    "family-bubble-00": {
+      "skullWidth": 11,
+      "torsoHeight": 8,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 6.9642857142857135
+    },
+    "family-bubble-01": {
+      "skullWidth": 11,
+      "torsoHeight": 8,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 6.874999999999999
+    },
+    "family-bubble-02": {
+      "skullWidth": 10,
+      "torsoHeight": 8,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 7.053571428571428
+    },
+    "family-hurt-fall-00": {
+      "skullWidth": 10,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 11.339285714285712
+    },
+    "family-hurt-fall-01": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 11.607142857142856
+    },
+    "family-drown-00": {
+      "skullWidth": 11,
+      "torsoHeight": 8,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 20.535714285714285
+    },
+    "family-float2-00": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 8
+    },
+    "family-float2-01": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 8
+    },
+    "family-float2-02": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 8
+    },
+    "family-float2-03": {
+      "skullWidth": 10,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 8
+    },
+    "family-float2-04": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 8
+    },
+    "family-float2-05": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 8
+    },
+    "family-float2-06": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 8
+    },
+    "family-float2-07": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 8
+    },
+    "family-blink-00": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 6.9
+    },
+    "family-blink-01": {
+      "skullWidth": 10,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 7.3
+    },
+    "family-blink-02": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 7.1
+    },
+    "family-get-up-00": {
+      "skullWidth": 12,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 9.4
+    },
+    "family-get-up-01": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 11.0
+    },
+    "family-victory-00": {
+      "skullWidth": 10,
+      "torsoHeight": 10,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 8.5
+    },
+    "family-victory-01": {
+      "skullWidth": 10,
+      "torsoHeight": 10,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 8.6
+    },
+    "family-victory-02": {
+      "skullWidth": 10,
+      "torsoHeight": 10,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 8.7
+    },
+    "family-victory-03": {
+      "skullWidth": 10,
+      "torsoHeight": 10,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 8.5
+    },
+    "family-tails-carried-00": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 6.7
+    },
+    "family-tails-carried-01": {
+      "skullWidth": 11,
+      "torsoHeight": 8,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 6.5
+    },
+    "family-tails-carried-02": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 6.8
+    },
+    "family-super-transform-00": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 6.0227272727272725
+    },
+    "family-super-transform-01": {
+      "skullWidth": 11,
+      "torsoHeight": 10,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 6.1
+    },
+    "family-super-transform-02": {
+      "skullWidth": null,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 6.733333333333333
+    },
+    "family-super-transform-03": {
+      "skullWidth": 11,
+      "torsoHeight": 10,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 7.111111111111112
+    },
+    "family-super-transform-04": {
+      "skullWidth": 10,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 7.222222222222222
+    },
+    "family-tails-fly-ascend-00": {
+      "skullWidth": 10,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 5.6
+    },
+    "family-tails-fly-ascend-01": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 5.6
+    },
+    "family-tails-fly-ascend-02": {
+      "skullWidth": 10,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 5.7
+    },
+    "family-tails-fly-ascend-03": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 5.6
+    },
+    "family-tails-fly-ascend-04": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 5.6
+    },
+    "family-tails-fly-ascend-05": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 5.5
+    },
+    "family-tails-fly-carry-00": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 5.7
+    },
+    "family-tails-fly-carry-01": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 5.3
+    },
+    "family-tails-fly-carry-02": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 5.4
+    },
+    "family-tails-fly-carry-03": {
+      "skullWidth": 10,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 5.6
+    },
+    "family-tails-fly-carry-04": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 5.7
+    },
+    "family-tails-fly-carry-05": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 5.6
+    },
+    "family-tails-fly-carry-ascend-00": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 5.5
+    },
+    "family-tails-fly-carry-ascend-01": {
+      "skullWidth": 10,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 6.0
+    },
+    "family-tails-fly-carry-ascend-02": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 5.5
+    },
+    "family-tails-fly-carry-ascend-03": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 5.5
+    },
+    "family-tails-fly-carry-ascend-04": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 5.5
+    },
+    "family-tails-fly-carry-ascend-05": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 5.6
+    },
+    "family-tails-swim-00": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 7.5
+    },
+    "family-tails-swim-01": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 7.2
+    },
+    "family-tails-swim-02": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 7.3
+    },
+    "family-tails-swim-03": {
+      "skullWidth": 10,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 7.3
+    },
+    "family-tails-swim-04": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 7.3
+    },
+    "family-tails-swim-ascend-00": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 6.3
+    },
+    "family-tails-swim-ascend-01": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 6.5
+    },
+    "family-tails-swim-ascend-02": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 6.4
+    },
+    "family-tails-swim-ascend-03": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 6.3
+    },
+    "family-tails-swim-ascend-04": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 6.4
+    },
+    "family-tails-swim-carry-00": {
+      "skullWidth": 11,
+      "torsoHeight": 10,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 9.1
+    },
+    "family-tails-swim-carry-01": {
+      "skullWidth": 11,
+      "torsoHeight": 10,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 9.2
+    },
+    "family-tails-swim-tired-00": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 10.9
+    },
+    "family-tails-swim-tired-01": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 1,
+      "sourcePixelsPerNativePixel": 11.4
+    },
+    "family-tails-swim-tired-02": {
+      "skullWidth": 11,
+      "torsoHeight": null,
+      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 11.2
+    }
+  }
+}

@@ -133,12 +133,21 @@ class TestCrossGameFeatureProviderRefactor {
                         RomManager.getInstance(), configuration);
                 provider.initialize("s3k");
 
+                var originalFamilies = host.getDonorCapabilities().getAnimationFamilies();
+                host.getDonorCapabilities().forPlayableCharacter(PlayerCharacter.TAILS_ALONE);
+                assertSame(originalFamilies, host.getDonorCapabilities().getAnimationFamilies());
                 SpriteArtSet donated = provider.loadPlayerSpriteArt("tails");
 
                 assertNotNull(donated);
                 assertInstanceOf(ScriptedVelocityAnimationProfile.class, donated.animationProfile());
                 assertNotNull(donated.animationSet());
+                var nativeTails = new com.openggf.game.sonic3k.Sonic3kPlayerArt(
+                        new com.openggf.data.RomByteReader(java.nio.file.Files.readAllBytes(
+                                RomTestUtils.ensureSonic3kRomAvailable().toPath())))
+                        .loadForCharacter("tails");
                 for (int animationId = 0x20; animationId <= 0x28; animationId++) {
+                    assertEquals(nativeTails.animationSet().getScript(animationId),
+                            donated.animationSet().getScript(animationId), "native flight/swim script is unchanged");
                     assertNotNull(donated.animationSet().getScript(animationId),
                             "host " + host.getGameId() + " lost donated Tails script 0x"
                                     + Integer.toHexString(animationId));

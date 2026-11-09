@@ -629,8 +629,26 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     private static final class Sonic2DonorCapabilities implements DonorCapabilities {
 
         static final Sonic2DonorCapabilities INSTANCE = new Sonic2DonorCapabilities();
+        private static final Sonic2DonorCapabilities TAILS = new Sonic2DonorCapabilities(true);
+        private final boolean tails;
+        private Sonic2DonorCapabilities() { this(false); }
+        private Sonic2DonorCapabilities(boolean tails) { this.tails = tails; }
+        @Override public DonorCapabilities forPlayableCharacter(PlayerCharacter archetype) {
+            return archetype == PlayerCharacter.TAILS_ALONE ? TAILS : INSTANCE;
+        }
+        private static final java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> TAILS_FAMILIES =
+                com.openggf.game.AnimationFamilies.load("/animation-families/s2-tails.json");
+        private static final java.util.Map<Integer, NativeFramePose> TAILS_POSES = loadTailsPoses();
+        private static java.util.Map<Integer, NativeFramePose> loadTailsPoses() {
+            try (var input = Sonic2GameModule.class.getResourceAsStream("/animation-families/s2-tails-poses.json")) {
+                return java.util.Map.copyOf(new com.fasterxml.jackson.databind.ObjectMapper().readValue(input,
+                        new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<Integer, NativeFramePose>>() { }));
+            } catch (java.io.IOException e) { throw new IllegalStateException(e); }
+        }
+
 
         @Override public java.util.Map<Integer, NativeFramePose> getNativeFramePoses() {
+            if (tails) return TAILS_POSES;
             return java.util.Map.of(1, new NativeFramePose("wait/stand", CanonicalAnimation.WAIT));
         }
 
@@ -644,7 +662,7 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
                 com.openggf.game.AnimationFamilies.load("/animation-families/s2.json");
 
         @Override public java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> getAnimationFamilies() {
-            return FAMILIES;
+            return tails ? TAILS_FAMILIES : FAMILIES;
         }
 
         private static final java.util.Map<CanonicalAnimation, CanonicalAnimation> FALLBACKS =
@@ -706,14 +724,14 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
 
         @Override
         public java.util.Map<CanonicalAnimation, CanonicalAnimation> getAnimationFallbacks() {
-            return com.openggf.game.AnimationFamilies.fallbacks(FAMILIES, FALLBACKS);
+            return com.openggf.game.AnimationFamilies.fallbacks(getAnimationFamilies(), FALLBACKS);
         }
 
         @Override
         public int resolveNativeId(CanonicalAnimation canonical) {
-            int familyId = com.openggf.game.AnimationFamilies.resolve(FAMILIES, canonical);
+            int familyId = com.openggf.game.AnimationFamilies.resolve(getAnimationFamilies(), canonical);
             if (familyId >= 0) return familyId;
-            return Sonic2AnimationIds.fromCanonical(canonical);
+            return tails ? -1 : Sonic2AnimationIds.fromCanonical(canonical);
         }
 
         @Override

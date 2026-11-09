@@ -149,8 +149,14 @@ class TalonAssemblyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             out = Path(directory)
             manifest, custom, stats = assembler.assemble(art, out)
-            self.assertEqual(82, stats['frames'])
-            self.assertEqual(13, stats['animations'])
+            self.assertEqual(167, stats['frames'])
+            self.assertEqual(47, stats['animations'])
+            self.assertTrue({'TAILS_FLY_ASCEND', 'TAILS_FLY_CARRY', 'TAILS_FLY_CARRY_ASCEND',
+                             'TAILS_SWIM', 'TAILS_SWIM_ASCEND', 'TAILS_SWIM_CARRY',
+                             'TAILS_SWIM_TIRED'} <= manifest['animations'].keys())
+            self.assertEqual('loop-back', manifest['animations']['BLINK']['end'])
+            self.assertEqual(1, manifest['animations']['BLINK']['loopBackSteps'])
+            self.assertEqual('next', manifest['animations']['GET_UP']['end'])
             self.assertEqual('loop-back', manifest['animations']['WAIT']['end'])
             self.assertEqual(28, manifest['animations']['WAIT']['loopBackSteps'])
             self.assertFalse((out/'mica.png').exists())
@@ -159,6 +165,24 @@ class TalonAssemblyTests(unittest.TestCase):
                 self.assertEqual(file.read_bytes(), (committed/file.name).read_bytes())
             self.assertEqual([2]*6,manifest['animations']['TAILS_FLY']['durations'])
             self.assertEqual(6,len(set(manifest['animations']['TAILS_FLY']['frames'])))
+            for key in ('TAILS_FLY_ASCEND', 'TAILS_FLY_CARRY', 'TAILS_FLY_CARRY_ASCEND'):
+                self.assertEqual([2]*6, manifest['animations'][key]['durations'])
+                self.assertEqual(6, len(set(manifest['animations'][key]['frames'])))
+            provenance = json.loads((art/'family-generation.json').read_text())['frames']
+            for frame in source['frames']:
+                if frame['animation'] in ('TAILS_FLY_CARRY', 'TAILS_FLY_CARRY_ASCEND', 'TAILS_SWIM_CARRY'):
+                    native = provenance[frame['id']]['reference']
+                    with Image.open(art/frame['file']) as image:
+                        self.assertEqual(native['size'][1]-native['hotspot'][1],
+                                         image.height-frame['hotspot'][1], frame['id'])
+                elif frame['animation'] == 'TAILS_CARRIED':
+                    native = provenance[frame['id']]['reference']
+                    self.assertEqual(native['hotspot'][1], frame['hotspot'][1], frame['id'])
+                elif frame['animation'] == 'PUSH':
+                    native = provenance[frame['id']]['reference']
+                    with Image.open(art/frame['file']) as image:
+                        self.assertEqual(native['size'][0]-native['hotspot'][0],
+                                         image.width-frame['hotspot'][0], frame['id'])
             self.assertEqual([4]*6,manifest['animations']['TAILS_FLY_TIRED']['durations'])
             self.assertEqual(6,len(set(manifest['animations']['TAILS_FLY_TIRED']['frames'])))
             for name in ('ROLL','SPINDASH'):

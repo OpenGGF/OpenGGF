@@ -1446,8 +1446,8 @@ class TestMicaCharacterIntegration {
             var encoded = Files.readAllBytes(temp.resolve("classes/art/talon.ggfp"));
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(encoded);
             var materialized = com.openggf.level.objects.PlayableSheetMaterializer.read(encoded);
-            assertEquals(82, sheet.frames().size());
-            assertEquals(13, sheet.animations().size());
+            assertEquals(167, sheet.frames().size());
+            assertEquals(47, sheet.animations().size());
             assertEquals(6, sheet.animations().get("TAILS_FLY").steps().size());
             assertEquals(6, sheet.animations().get("TAILS_FLY_TIRED").steps().size());
             assertEquals(materialized.art().dplcFrames(), definition.artSupplier().load(talonCode).dplcFrames());
@@ -1515,16 +1515,35 @@ class TestMicaCharacterIntegration {
             talon.setAir(true); talon.getTailsFlightController().activate();
             talon.setYSpeed((short) -0x80);
             session.step(null); session.step(null);
+            var ascentFrames = new java.util.HashSet<Integer>();
+            var ascentStates = new java.util.ArrayList<String>();
             for (int i = 0; i < 12; i++) {
                 session.step(null);
-                assertTrue(source.getScript(CanonicalAnimation.TAILS_FLY.ordinal()).frames()
-                        .contains(talon.getMappingFrame()), "ascent frame " + talon.getMappingFrame() + " in " + romProperty);
+                ascentFrames.add(talon.getMappingFrame());
+                ascentStates.add(talon.getAnimationId() + "/" + talon.getForcedAnimationId()
+                        + "/" + talon.getAnimationFrameIndex() + "/" + talon.getAnimationTick());
+                assertTrue(source.getScript(CanonicalAnimation.TAILS_FLY_ASCEND.ordinal()).frames().stream()
+                        .map(frame -> frame + 256).toList().contains(talon.getMappingFrame()), "ascent frame " + talon.getMappingFrame() + " in " + romProperty);
+            }
+            assertEquals(6, ascentFrames.size(), "integrated ascent wing cycle in " + romProperty
+                    + " (animation/forced/cursor/timer): " + ascentStates);
+            int nativeAscent = talon.resolveAnimationId(CanonicalAnimation.TAILS_FLY_ASCEND);
+            if (nativeAscent >= 0) {
+                talon.setYSpeed((short) -0x80);
+                talon.setForcedAnimationId(nativeAscent);
+                var forcedFrames = new java.util.HashSet<Integer>();
+                for (int i = 0; i < 12; i++) {
+                    session.step(null);
+                    forcedFrames.add(talon.getMappingFrame());
+                }
+                assertEquals(6, forcedFrames.size(), "forced integrated wing cycle in " + romProperty);
+                talon.setForcedAnimationId(-1);
             }
             talon.setDoubleJumpProperty((byte) 0);
             for (int i = 0; i < 12; i++) {
                 session.step(null);
-                assertTrue(source.getScript(CanonicalAnimation.TAILS_FLY_TIRED.ordinal()).frames()
-                        .contains(talon.getMappingFrame()), "fatigue uses TALON tired wings in " + romProperty);
+                assertTrue(source.getScript(CanonicalAnimation.TAILS_FLY_TIRED.ordinal()).frames().stream()
+                        .map(frame -> frame + 256).toList().contains(talon.getMappingFrame()), "fatigue uses TALON tired wings in " + romProperty);
             }
         }
     }

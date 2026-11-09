@@ -21,12 +21,14 @@ OPTIONAL = {'BLINK': (2, 'next'), 'GET_UP': (4, 'next'), 'FLY': (2, 'loop'), 'TA
             'TAILS_FLY_TIRED': (12, 'loop')}
 
 OPTIONAL |= {name: (8, 'loop') for name in (
+    'SUPER_TRANSFORM', 'TAILS_FLY_ASCEND', 'TAILS_FLY_CARRY', 'TAILS_FLY_CARRY_ASCEND',
+    'TAILS_SWIM', 'TAILS_SWIM_ASCEND', 'TAILS_SWIM_CARRY', 'TAILS_SWIM_TIRED',
     'ROLL2', 'WARP1', 'WARP2', 'WARP3', 'WARP4', 'FLOAT', 'FLOAT2', 'FLOAT3',
     'FLOAT4', 'LEAP1', 'LEAP2', 'SURF', 'BURNT', 'SHRINK', 'WATER_SLIDE',
     'NULL_ANIM', 'BLANK', 'BLINK', 'GET_UP', 'BALANCE2', 'BALANCE3', 'BALANCE4',
     'HANG2', 'BUBBLE', 'HURT2', 'SLIDE', 'VICTORY', 'HURT_FALL', 'TAILS_CARRIED')}
 
-SPEED = {'WALK', 'RUN', 'ROLL', 'PUSH'}
+SPEED = {'WALK', 'RUN', 'ROLL', 'ROLL2', 'PUSH'}
 SLOPES = ('flat', 'up45', 'steep', 'inverted')
 
 
@@ -72,13 +74,13 @@ def assemble(root, output):
             groups[frame['animation']].append((frame, i))
         elif frame['animation'] != 'NATIVE_POSE':
             raise ValueError('Unknown animation: ' + frame['animation'])
-    required = set(handoff.get('requiredAnimations', SPEED | FIXED.keys()))
-    if not required <= SPEED | fixed.keys() or not required <= set(groups):
-        raise ValueError('Missing canonical core animations')
+    required = set(handoff.get('requiredAnimations', (SPEED - {'ROLL2'}) | FIXED.keys()))
     # Scripts may reuse drawings already owned by another canonical cycle.
     for name in handoff.get('scripts', {}):
         if name in fixed:
             groups.setdefault(name, [])
+    if not required <= SPEED | fixed.keys() or not required <= set(groups):
+        raise ValueError('Missing canonical core animations')
     animations = {}
     for name, entries in groups.items():
         entries.sort(key=lambda item: item[0]['order'])
@@ -102,7 +104,7 @@ def assemble(root, output):
                 # Legacy four-pose handoffs retain the 31*6-tick stock wait.
                 # Authored scripts can animate that interval using repeated poses.
                 spec['durations'] = [186, 6, 30, 18]
-            if name == 'GET_AIR':
+            if name == 'GET_AIR' and not handoff.get('scripts', {}).get(name):
                 spec.update(frames=[indices[0], indices[0], indices[1], indices[1]], durations=[12]*4)
         # Preserve native interleaves using symbolic art IDs after sheet packing.
         if name in ('ROLL', 'SPINDASH'):

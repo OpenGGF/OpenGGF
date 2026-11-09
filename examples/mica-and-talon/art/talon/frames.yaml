@@ -2,17 +2,42 @@
   "format": "openggf-playable-art-handoff-1",
   "character": "talon",
   "requiredAnimations": [
+    "BALANCE",
+    "BALANCE2",
+    "BALANCE3",
+    "BALANCE4",
+    "BLANK",
+    "BLINK",
+    "BUBBLE",
+    "BURNT",
     "DEATH",
+    "DROWN",
     "DUCK",
+    "FLOAT2",
+    "GET_UP",
+    "HANG",
+    "HANG2",
     "HURT",
+    "HURT_FALL",
     "LOOK_UP",
+    "PUSH",
     "ROLL",
     "RUN",
     "SKID",
     "SPINDASH",
     "SPRING",
+    "SUPER_TRANSFORM",
+    "TAILS_CARRIED",
     "TAILS_FLY",
+    "TAILS_FLY_ASCEND",
+    "TAILS_FLY_CARRY",
+    "TAILS_FLY_CARRY_ASCEND",
     "TAILS_FLY_TIRED",
+    "TAILS_SWIM",
+    "TAILS_SWIM_ASCEND",
+    "TAILS_SWIM_CARRY",
+    "TAILS_SWIM_TIRED",
+    "VICTORY",
     "WAIT",
     "WALK"
   ],
@@ -1085,6 +1110,1111 @@
       "angle_set": "inverted",
       "duration_ticks": 6,
       "notes": "Consistency derive_slopes.derive: run-03, 135 degrees CCW; integer support alignment."
+    },
+    {
+      "id": "family-push-00",
+      "animation": "PUSH",
+      "order": 0,
+      "file": "frames/family-push-00.png",
+      "hotspot": [
+        18,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image corrected PUSH, alternative row 1 phase 0; uniform anatomical scale 7.5000:1. Native palm/wall plane at centre+16, approved WAIT foot baseline at centre+19; no painted contours."
+    },
+    {
+      "id": "family-push-01",
+      "animation": "PUSH",
+      "order": 1,
+      "file": "frames/family-push-01.png",
+      "hotspot": [
+        10,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image corrected PUSH, alternative row 1 phase 1; uniform anatomical scale 7.5000:1. Native palm/wall plane at centre+16, approved WAIT foot baseline at centre+19; no painted contours."
+    },
+    {
+      "id": "family-push-02",
+      "animation": "PUSH",
+      "order": 2,
+      "file": "frames/family-push-02.png",
+      "hotspot": [
+        12,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image corrected PUSH, alternative row 1 phase 2; uniform anatomical scale 7.3000:1. Native palm/wall plane at centre+16, approved WAIT foot baseline at centre+19; no painted contours."
+    },
+    {
+      "id": "family-push-03",
+      "animation": "PUSH",
+      "order": 3,
+      "file": "frames/family-push-03.png",
+      "hotspot": [
+        13,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image corrected PUSH, alternative row 1 phase 3; uniform anatomical scale 7.1000:1. Native palm/wall plane at centre+16, approved WAIT foot baseline at centre+19; no painted contours."
+    },
+    {
+      "id": "family-balance-00",
+      "animation": "BALANCE",
+      "order": 0,
+      "file": "frames/family-balance-00.png",
+      "hotspot": [
+        13,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BALANCE: attempt row 1, phase 0; uniform anatomical/goggle scale 8.6000:1. No painted contours."
+    },
+    {
+      "id": "family-balance-01",
+      "animation": "BALANCE",
+      "order": 1,
+      "file": "frames/family-balance-01.png",
+      "hotspot": [
+        12,
+        10
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BALANCE: attempt row 3, phase 1; uniform anatomical/goggle scale 8.7000:1. No painted contours."
+    },
+    {
+      "id": "family-balance2-00",
+      "animation": "BALANCE2",
+      "order": 0,
+      "file": "frames/family-balance2-00.png",
+      "hotspot": [
+        14,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BALANCE2: attempt row 2, phase 0; uniform anatomical/goggle scale 8.4000:1. No painted contours. Landmark review uniform correction 1.15."
+    },
+    {
+      "id": "family-balance2-01",
+      "animation": "BALANCE2",
+      "order": 1,
+      "file": "frames/family-balance2-01.png",
+      "hotspot": [
+        14,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BALANCE2: attempt row 1, phase 1; uniform anatomical/goggle scale 7.7000:1. No painted contours. Landmark review uniform correction 1.15."
+    },
+    {
+      "id": "family-balance2-02",
+      "animation": "BALANCE2",
+      "order": 2,
+      "file": "frames/family-balance2-02.png",
+      "hotspot": [
+        13,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BALANCE2: attempt row 3, phase 2; uniform anatomical/goggle scale 6.7000:1. No painted contours."
+    },
+    {
+      "id": "family-balance3-00",
+      "animation": "BALANCE3",
+      "order": 0,
+      "file": "frames/family-balance3-00.png",
+      "hotspot": [
+        16,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BALANCE3: attempt row 2, phase 0; uniform anatomical/goggle scale 10.2000:1. No painted contours."
+    },
+    {
+      "id": "family-balance3-01",
+      "animation": "BALANCE3",
+      "order": 1,
+      "file": "frames/family-balance3-01.png",
+      "hotspot": [
+        17,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BALANCE3: attempt row 2, phase 1; uniform anatomical/goggle scale 10.5000:1. No painted contours."
+    },
+    {
+      "id": "family-balance4-00",
+      "animation": "BALANCE4",
+      "order": 0,
+      "file": "frames/family-balance4-00.png",
+      "hotspot": [
+        10,
+        10
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BALANCE4: attempt row 1, phase 0; uniform anatomical/goggle scale 6.2000:1. No painted contours. Landmark review uniform correction 0.92."
+    },
+    {
+      "id": "family-balance4-01",
+      "animation": "BALANCE4",
+      "order": 1,
+      "file": "frames/family-balance4-01.png",
+      "hotspot": [
+        16,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BALANCE4: attempt row 2, phase 1; uniform anatomical/goggle scale 5.3000:1. No painted contours. Landmark review uniform correction 0.92."
+    },
+    {
+      "id": "family-balance4-02",
+      "animation": "BALANCE4",
+      "order": 2,
+      "file": "frames/family-balance4-02.png",
+      "hotspot": [
+        17,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BALANCE4: attempt row 3, phase 2; uniform anatomical/goggle scale 5.3000:1. No painted contours. Landmark review uniform correction 0.92."
+    },
+    {
+      "id": "family-balance4-03",
+      "animation": "BALANCE4",
+      "order": 3,
+      "file": "frames/family-balance4-03.png",
+      "hotspot": [
+        18,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BALANCE4: attempt row 2, phase 3; uniform anatomical/goggle scale 5.1000:1. No painted contours. Landmark review uniform correction 0.92."
+    },
+    {
+      "id": "family-balance4-04",
+      "animation": "BALANCE4",
+      "order": 4,
+      "file": "frames/family-balance4-04.png",
+      "hotspot": [
+        13,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BALANCE4: attempt row 3, phase 4; uniform anatomical/goggle scale 5.9000:1. No painted contours. Landmark review uniform correction 0.92."
+    },
+    {
+      "id": "family-hang-00",
+      "animation": "HANG",
+      "order": 0,
+      "file": "frames/family-hang-00.png",
+      "hotspot": [
+        22,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image HANG: attempt row 2, phase 0; uniform anatomical/goggle scale 12.0000:1. No painted contours."
+    },
+    {
+      "id": "family-hang-01",
+      "animation": "HANG",
+      "order": 1,
+      "file": "frames/family-hang-01.png",
+      "hotspot": [
+        22,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image HANG: attempt row 3, phase 1; uniform anatomical/goggle scale 11.8000:1. No painted contours."
+    },
+    {
+      "id": "family-hang2-00",
+      "animation": "HANG2",
+      "order": 0,
+      "file": "frames/family-hang2-00.png",
+      "hotspot": [
+        13,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image HANG2: attempt row 1, phase 0; uniform anatomical/goggle scale 11.0000:1. No painted contours."
+    },
+    {
+      "id": "family-hang2-01",
+      "animation": "HANG2",
+      "order": 1,
+      "file": "frames/family-hang2-01.png",
+      "hotspot": [
+        13,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image HANG2: attempt row 2, phase 1; uniform anatomical/goggle scale 10.9000:1. No painted contours."
+    },
+    {
+      "id": "family-bubble-00",
+      "animation": "BUBBLE",
+      "order": 0,
+      "file": "frames/family-bubble-00.png",
+      "hotspot": [
+        16,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BUBBLE: attempt row 1, phase 0; uniform anatomical/goggle scale 7.8000:1. No painted contours. Landmark review uniform correction 1.12."
+    },
+    {
+      "id": "family-bubble-01",
+      "animation": "BUBBLE",
+      "order": 1,
+      "file": "frames/family-bubble-01.png",
+      "hotspot": [
+        16,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BUBBLE: attempt row 2, phase 1; uniform anatomical/goggle scale 7.7000:1. No painted contours. Landmark review uniform correction 1.12."
+    },
+    {
+      "id": "family-bubble-02",
+      "animation": "BUBBLE",
+      "order": 2,
+      "file": "frames/family-bubble-02.png",
+      "hotspot": [
+        16,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BUBBLE: attempt row 3, phase 2; uniform anatomical/goggle scale 7.9000:1. No painted contours. Landmark review uniform correction 1.12."
+    },
+    {
+      "id": "family-hurt-fall-00",
+      "animation": "HURT_FALL",
+      "order": 0,
+      "file": "frames/family-hurt-fall-00.png",
+      "hotspot": [
+        13,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image HURT_FALL: attempt row 2, phase 0; uniform anatomical/goggle scale 12.7000:1. No painted contours. Landmark review uniform correction 1.12."
+    },
+    {
+      "id": "family-hurt-fall-01",
+      "animation": "HURT_FALL",
+      "order": 1,
+      "file": "frames/family-hurt-fall-01.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image HURT_FALL: attempt row 3, phase 1; uniform anatomical/goggle scale 13.0000:1. No painted contours. Landmark review uniform correction 1.12."
+    },
+    {
+      "id": "family-drown-00",
+      "animation": "DROWN",
+      "order": 0,
+      "file": "frames/family-drown-00.png",
+      "hotspot": [
+        12,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image DROWN: attempt row 3, phase 0; uniform anatomical/goggle scale 23.0000:1. No painted contours. Landmark review uniform correction 1.12."
+    },
+    {
+      "id": "family-float2-00",
+      "animation": "FLOAT2",
+      "order": 0,
+      "file": "frames/family-float2-00.png",
+      "hotspot": [
+        13,
+        6
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image FLOAT2: attempt row 1, phase 0; uniform anatomical/goggle scale 8.0000:1. No painted contours."
+    },
+    {
+      "id": "family-float2-01",
+      "animation": "FLOAT2",
+      "order": 1,
+      "file": "frames/family-float2-01.png",
+      "hotspot": [
+        11,
+        6
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image FLOAT2: attempt row 2, phase 1; uniform anatomical/goggle scale 8.0000:1. No painted contours."
+    },
+    {
+      "id": "family-float2-02",
+      "animation": "FLOAT2",
+      "order": 2,
+      "file": "frames/family-float2-02.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image FLOAT2: attempt row 1, phase 2; uniform anatomical/goggle scale 8.0000:1. No painted contours."
+    },
+    {
+      "id": "family-float2-03",
+      "animation": "FLOAT2",
+      "order": 3,
+      "file": "frames/family-float2-03.png",
+      "hotspot": [
+        11,
+        6
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image FLOAT2: attempt row 3, phase 3; uniform anatomical/goggle scale 8.0000:1. No painted contours."
+    },
+    {
+      "id": "family-float2-04",
+      "animation": "FLOAT2",
+      "order": 4,
+      "file": "frames/family-float2-04.png",
+      "hotspot": [
+        12,
+        6
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image FLOAT2: attempt row 2, phase 4; uniform anatomical/goggle scale 8.0000:1. No painted contours."
+    },
+    {
+      "id": "family-float2-05",
+      "animation": "FLOAT2",
+      "order": 5,
+      "file": "frames/family-float2-05.png",
+      "hotspot": [
+        10,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image FLOAT2: attempt row 3, phase 5; uniform anatomical/goggle scale 8.0000:1. No painted contours."
+    },
+    {
+      "id": "family-float2-06",
+      "animation": "FLOAT2",
+      "order": 6,
+      "file": "frames/family-float2-06.png",
+      "hotspot": [
+        10,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image FLOAT2: attempt row 1, phase 6; uniform anatomical/goggle scale 8.0000:1. No painted contours."
+    },
+    {
+      "id": "family-float2-07",
+      "animation": "FLOAT2",
+      "order": 7,
+      "file": "frames/family-float2-07.png",
+      "hotspot": [
+        10,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image FLOAT2: attempt row 2, phase 7; uniform anatomical/goggle scale 8.0000:1. No painted contours."
+    },
+    {
+      "id": "family-blink-00",
+      "animation": "BLINK",
+      "order": 0,
+      "file": "frames/family-blink-00.png",
+      "hotspot": [
+        10,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BLINK: attempt row 1, phase 0; uniform anatomical/goggle scale 6.9000:1. No painted contours."
+    },
+    {
+      "id": "family-blink-01",
+      "animation": "BLINK",
+      "order": 1,
+      "file": "frames/family-blink-01.png",
+      "hotspot": [
+        9,
+        10
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BLINK: attempt row 2, phase 1; uniform anatomical/goggle scale 7.3000:1. No painted contours."
+    },
+    {
+      "id": "family-blink-02",
+      "animation": "BLINK",
+      "order": 2,
+      "file": "frames/family-blink-02.png",
+      "hotspot": [
+        10,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image BLINK: attempt row 3, phase 2; uniform anatomical/goggle scale 7.1000:1. No painted contours."
+    },
+    {
+      "id": "family-get-up-00",
+      "animation": "GET_UP",
+      "order": 0,
+      "file": "frames/family-get-up-00.png",
+      "hotspot": [
+        20,
+        2
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image GET_UP: attempt row 2, phase 0; uniform anatomical/goggle scale 9.4000:1. No painted contours."
+    },
+    {
+      "id": "family-get-up-01",
+      "animation": "GET_UP",
+      "order": 1,
+      "file": "frames/family-get-up-01.png",
+      "hotspot": [
+        9,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image GET_UP: attempt row 3, phase 1; uniform anatomical/goggle scale 11.0000:1. No painted contours."
+    },
+    {
+      "id": "family-victory-00",
+      "animation": "VICTORY",
+      "order": 0,
+      "file": "frames/family-victory-00.png",
+      "hotspot": [
+        9,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image VICTORY: attempt row 1, phase 0; uniform anatomical/goggle scale 8.5000:1. No painted contours."
+    },
+    {
+      "id": "family-victory-01",
+      "animation": "VICTORY",
+      "order": 1,
+      "file": "frames/family-victory-01.png",
+      "hotspot": [
+        10,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image VICTORY: attempt row 2, phase 1; uniform anatomical/goggle scale 8.6000:1. No painted contours."
+    },
+    {
+      "id": "family-victory-02",
+      "animation": "VICTORY",
+      "order": 2,
+      "file": "frames/family-victory-02.png",
+      "hotspot": [
+        11,
+        10
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image VICTORY: attempt row 3, phase 2; uniform anatomical/goggle scale 8.7000:1. No painted contours."
+    },
+    {
+      "id": "family-victory-03",
+      "animation": "VICTORY",
+      "order": 3,
+      "file": "frames/family-victory-03.png",
+      "hotspot": [
+        10,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image VICTORY: attempt row 2, phase 3; uniform anatomical/goggle scale 8.5000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-carried-00",
+      "animation": "TAILS_CARRIED",
+      "order": 0,
+      "file": "frames/family-tails-carried-00.png",
+      "hotspot": [
+        13,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_CARRIED: attempt row 2, phase 0; uniform anatomical/goggle scale 6.7000:1. No painted contours. Raised feather hands registered to native carried grip plane at centre-24."
+    },
+    {
+      "id": "family-tails-carried-01",
+      "animation": "TAILS_CARRIED",
+      "order": 1,
+      "file": "frames/family-tails-carried-01.png",
+      "hotspot": [
+        14,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_CARRIED: attempt row 1, phase 1; uniform anatomical/goggle scale 5.2000:1. No painted contours. Landmark review uniform correction 0.8. Raised feather hands registered to native carried grip plane at centre-24."
+    },
+    {
+      "id": "family-tails-carried-02",
+      "animation": "TAILS_CARRIED",
+      "order": 2,
+      "file": "frames/family-tails-carried-02.png",
+      "hotspot": [
+        16,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_CARRIED: attempt row 3, phase 2; uniform anatomical/goggle scale 5.1000:1. No painted contours. Landmark review uniform correction 0.75. Raised feather hands registered to native carried grip plane at centre-24."
+    },
+    {
+      "id": "family-super-transform-00",
+      "animation": "SUPER_TRANSFORM",
+      "order": 0,
+      "file": "frames/family-super-transform-00.png",
+      "hotspot": [
+        16,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image SUPER_TRANSFORM: attempt row 2, phase 0; uniform anatomical/goggle scale 5.3000:1. No painted contours. Landmark review uniform correction 0.88."
+    },
+    {
+      "id": "family-super-transform-01",
+      "animation": "SUPER_TRANSFORM",
+      "order": 1,
+      "file": "frames/family-super-transform-01.png",
+      "hotspot": [
+        18,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image SUPER_TRANSFORM: attempt row 3, phase 1; uniform anatomical/goggle scale 6.1000:1. No painted contours."
+    },
+    {
+      "id": "family-super-transform-02",
+      "animation": "SUPER_TRANSFORM",
+      "order": 2,
+      "file": "frames/family-super-transform-02.png",
+      "hotspot": [
+        13,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image SUPER_TRANSFORM: attempt row 1, phase 2; uniform anatomical/goggle scale 6.7333:1. No painted contours."
+    },
+    {
+      "id": "family-super-transform-03",
+      "animation": "SUPER_TRANSFORM",
+      "order": 3,
+      "file": "frames/family-super-transform-03.png",
+      "hotspot": [
+        17,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image SUPER_TRANSFORM: attempt row 2, phase 3; uniform anatomical/goggle scale 6.4000:1. No painted contours. Landmark review uniform correction 0.9."
+    },
+    {
+      "id": "family-super-transform-04",
+      "animation": "SUPER_TRANSFORM",
+      "order": 4,
+      "file": "frames/family-super-transform-04.png",
+      "hotspot": [
+        16,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image SUPER_TRANSFORM: attempt row 3, phase 4; uniform anatomical/goggle scale 6.5000:1. No painted contours. Landmark review uniform correction 0.9."
+    },
+    {
+      "id": "family-tails-fly-ascend-00",
+      "animation": "TAILS_FLY_ASCEND",
+      "order": 0,
+      "file": "frames/family-tails-fly-ascend-00.png",
+      "hotspot": [
+        23,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_ASCEND: attempt row 1, phase 0; uniform anatomical/goggle scale 5.6000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-fly-ascend-01",
+      "animation": "TAILS_FLY_ASCEND",
+      "order": 1,
+      "file": "frames/family-tails-fly-ascend-01.png",
+      "hotspot": [
+        22,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_ASCEND: attempt row 2, phase 1; uniform anatomical/goggle scale 5.6000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-fly-ascend-02",
+      "animation": "TAILS_FLY_ASCEND",
+      "order": 2,
+      "file": "frames/family-tails-fly-ascend-02.png",
+      "hotspot": [
+        27,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_ASCEND: attempt row 3, phase 2; uniform anatomical/goggle scale 5.7000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-fly-ascend-03",
+      "animation": "TAILS_FLY_ASCEND",
+      "order": 3,
+      "file": "frames/family-tails-fly-ascend-03.png",
+      "hotspot": [
+        20,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_ASCEND: attempt row 1, phase 3; uniform anatomical/goggle scale 5.6000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-fly-ascend-04",
+      "animation": "TAILS_FLY_ASCEND",
+      "order": 4,
+      "file": "frames/family-tails-fly-ascend-04.png",
+      "hotspot": [
+        21,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_ASCEND: attempt row 2, phase 4; uniform anatomical/goggle scale 5.6000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-fly-ascend-05",
+      "animation": "TAILS_FLY_ASCEND",
+      "order": 5,
+      "file": "frames/family-tails-fly-ascend-05.png",
+      "hotspot": [
+        22,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_ASCEND: attempt row 3, phase 5; uniform anatomical/goggle scale 5.5000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-fly-carry-00",
+      "animation": "TAILS_FLY_CARRY",
+      "order": 0,
+      "file": "frames/family-tails-fly-carry-00.png",
+      "hotspot": [
+        19,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_CARRY: attempt row 2, phase 0; uniform anatomical/goggle scale 5.7000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+    },
+    {
+      "id": "family-tails-fly-carry-01",
+      "animation": "TAILS_FLY_CARRY",
+      "order": 1,
+      "file": "frames/family-tails-fly-carry-01.png",
+      "hotspot": [
+        26,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_CARRY: attempt row 3, phase 1; uniform anatomical/goggle scale 5.3000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+    },
+    {
+      "id": "family-tails-fly-carry-02",
+      "animation": "TAILS_FLY_CARRY",
+      "order": 2,
+      "file": "frames/family-tails-fly-carry-02.png",
+      "hotspot": [
+        26,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_CARRY: attempt row 1, phase 2; uniform anatomical/goggle scale 5.4000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+    },
+    {
+      "id": "family-tails-fly-carry-03",
+      "animation": "TAILS_FLY_CARRY",
+      "order": 3,
+      "file": "frames/family-tails-fly-carry-03.png",
+      "hotspot": [
+        20,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_CARRY: attempt row 2, phase 3; uniform anatomical/goggle scale 5.6000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+    },
+    {
+      "id": "family-tails-fly-carry-04",
+      "animation": "TAILS_FLY_CARRY",
+      "order": 4,
+      "file": "frames/family-tails-fly-carry-04.png",
+      "hotspot": [
+        19,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_CARRY: attempt row 3, phase 4; uniform anatomical/goggle scale 5.7000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+    },
+    {
+      "id": "family-tails-fly-carry-05",
+      "animation": "TAILS_FLY_CARRY",
+      "order": 5,
+      "file": "frames/family-tails-fly-carry-05.png",
+      "hotspot": [
+        21,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_CARRY: attempt row 1, phase 5; uniform anatomical/goggle scale 5.6000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+    },
+    {
+      "id": "family-tails-fly-carry-ascend-00",
+      "animation": "TAILS_FLY_CARRY_ASCEND",
+      "order": 0,
+      "file": "frames/family-tails-fly-carry-ascend-00.png",
+      "hotspot": [
+        16,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_CARRY_ASCEND: attempt row 1, phase 0; uniform anatomical/goggle scale 5.5000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+    },
+    {
+      "id": "family-tails-fly-carry-ascend-01",
+      "animation": "TAILS_FLY_CARRY_ASCEND",
+      "order": 1,
+      "file": "frames/family-tails-fly-carry-ascend-01.png",
+      "hotspot": [
+        20,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_CARRY_ASCEND: attempt row 2, phase 1; uniform anatomical/goggle scale 6.0000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+    },
+    {
+      "id": "family-tails-fly-carry-ascend-02",
+      "animation": "TAILS_FLY_CARRY_ASCEND",
+      "order": 2,
+      "file": "frames/family-tails-fly-carry-ascend-02.png",
+      "hotspot": [
+        25,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_CARRY_ASCEND: attempt row 3, phase 2; uniform anatomical/goggle scale 5.5000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+    },
+    {
+      "id": "family-tails-fly-carry-ascend-03",
+      "animation": "TAILS_FLY_CARRY_ASCEND",
+      "order": 3,
+      "file": "frames/family-tails-fly-carry-ascend-03.png",
+      "hotspot": [
+        25,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_CARRY_ASCEND: attempt row 2, phase 3; uniform anatomical/goggle scale 5.5000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+    },
+    {
+      "id": "family-tails-fly-carry-ascend-04",
+      "animation": "TAILS_FLY_CARRY_ASCEND",
+      "order": 4,
+      "file": "frames/family-tails-fly-carry-ascend-04.png",
+      "hotspot": [
+        22,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_CARRY_ASCEND: attempt row 1, phase 4; uniform anatomical/goggle scale 5.5000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+    },
+    {
+      "id": "family-tails-fly-carry-ascend-05",
+      "animation": "TAILS_FLY_CARRY_ASCEND",
+      "order": 5,
+      "file": "frames/family-tails-fly-carry-ascend-05.png",
+      "hotspot": [
+        16,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_FLY_CARRY_ASCEND: attempt row 3, phase 5; uniform anatomical/goggle scale 5.6000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+    },
+    {
+      "id": "family-tails-swim-00",
+      "animation": "TAILS_SWIM",
+      "order": 0,
+      "file": "frames/family-tails-swim-00.png",
+      "hotspot": [
+        18,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_SWIM: attempt row 1, phase 0; uniform anatomical/goggle scale 7.5000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-swim-01",
+      "animation": "TAILS_SWIM",
+      "order": 1,
+      "file": "frames/family-tails-swim-01.png",
+      "hotspot": [
+        19,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_SWIM: attempt row 3, phase 1; uniform anatomical/goggle scale 7.2000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-swim-02",
+      "animation": "TAILS_SWIM",
+      "order": 2,
+      "file": "frames/family-tails-swim-02.png",
+      "hotspot": [
+        22,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_SWIM: attempt row 2, phase 2; uniform anatomical/goggle scale 7.3000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-swim-03",
+      "animation": "TAILS_SWIM",
+      "order": 3,
+      "file": "frames/family-tails-swim-03.png",
+      "hotspot": [
+        19,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_SWIM: attempt row 3, phase 3; uniform anatomical/goggle scale 7.3000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-swim-04",
+      "animation": "TAILS_SWIM",
+      "order": 4,
+      "file": "frames/family-tails-swim-04.png",
+      "hotspot": [
+        20,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_SWIM: attempt row 2, phase 4; uniform anatomical/goggle scale 7.3000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-swim-ascend-00",
+      "animation": "TAILS_SWIM_ASCEND",
+      "order": 0,
+      "file": "frames/family-tails-swim-ascend-00.png",
+      "hotspot": [
+        22,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_SWIM_ASCEND: attempt row 2, phase 0; uniform anatomical/goggle scale 6.3000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-swim-ascend-01",
+      "animation": "TAILS_SWIM_ASCEND",
+      "order": 1,
+      "file": "frames/family-tails-swim-ascend-01.png",
+      "hotspot": [
+        25,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_SWIM_ASCEND: attempt row 1, phase 1; uniform anatomical/goggle scale 6.5000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-swim-ascend-02",
+      "animation": "TAILS_SWIM_ASCEND",
+      "order": 2,
+      "file": "frames/family-tails-swim-ascend-02.png",
+      "hotspot": [
+        20,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_SWIM_ASCEND: attempt row 3, phase 2; uniform anatomical/goggle scale 6.4000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-swim-ascend-03",
+      "animation": "TAILS_SWIM_ASCEND",
+      "order": 3,
+      "file": "frames/family-tails-swim-ascend-03.png",
+      "hotspot": [
+        22,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_SWIM_ASCEND: attempt row 2, phase 3; uniform anatomical/goggle scale 6.3000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-swim-ascend-04",
+      "animation": "TAILS_SWIM_ASCEND",
+      "order": 4,
+      "file": "frames/family-tails-swim-ascend-04.png",
+      "hotspot": [
+        21,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_SWIM_ASCEND: attempt row 3, phase 4; uniform anatomical/goggle scale 6.4000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-swim-carry-00",
+      "animation": "TAILS_SWIM_CARRY",
+      "order": 0,
+      "file": "frames/family-tails-swim-carry-00.png",
+      "hotspot": [
+        23,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_SWIM_CARRY: attempt row 2, phase 0; uniform anatomical/goggle scale 9.1000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+13."
+    },
+    {
+      "id": "family-tails-swim-carry-01",
+      "animation": "TAILS_SWIM_CARRY",
+      "order": 1,
+      "file": "frames/family-tails-swim-carry-01.png",
+      "hotspot": [
+        24,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_SWIM_CARRY: attempt row 3, phase 1; uniform anatomical/goggle scale 9.2000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+13."
+    },
+    {
+      "id": "family-tails-swim-tired-00",
+      "animation": "TAILS_SWIM_TIRED",
+      "order": 0,
+      "file": "frames/family-tails-swim-tired-00.png",
+      "hotspot": [
+        16,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_SWIM_TIRED: attempt row 2, phase 0; uniform anatomical/goggle scale 10.9000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-swim-tired-01",
+      "animation": "TAILS_SWIM_TIRED",
+      "order": 1,
+      "file": "frames/family-tails-swim-tired-01.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_SWIM_TIRED: attempt row 1, phase 1; uniform anatomical/goggle scale 11.4000:1. No painted contours."
+    },
+    {
+      "id": "family-tails-swim-tired-02",
+      "animation": "TAILS_SWIM_TIRED",
+      "order": 2,
+      "file": "frames/family-tails-swim-tired-02.png",
+      "hotspot": [
+        16,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "GPT Image TAILS_SWIM_TIRED: attempt row 3, phase 2; uniform anatomical/goggle scale 11.2000:1. No painted contours."
+    },
+    {
+      "id": "family-blank-00",
+      "animation": "BLANK",
+      "order": 0,
+      "file": "frames/family-blank-00.png",
+      "hotspot": [
+        0,
+        0
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 120,
+      "notes": "Literal transparent hidden-player phase; no native pixels."
     }
   ],
   "scripts": {
@@ -1343,6 +2473,654 @@
         1,
         1
       ]
+    },
+    "PUSH": {
+      "frames": [
+        "family-push-00",
+        "family-push-01",
+        "family-push-02",
+        "family-push-03"
+      ],
+      "end": "loop",
+      "speedDriven": true
+    },
+    "BALANCE": {
+      "frames": [
+        "family-balance-00",
+        "family-balance-00",
+        "family-balance-01",
+        "family-balance-01",
+        "family-balance-00",
+        "family-balance-00",
+        "family-balance-01",
+        "family-balance-01",
+        "family-balance-00",
+        "family-balance-00",
+        "family-balance-01",
+        "family-balance-01",
+        "family-balance-00",
+        "family-balance-00",
+        "family-balance-01",
+        "family-balance-01",
+        "family-balance-00",
+        "family-balance-00",
+        "family-balance-01",
+        "family-balance-01",
+        "family-balance-00",
+        "family-balance-01"
+      ],
+      "end": "loop",
+      "durations": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ]
+    },
+    "BALANCE2": {
+      "frames": [
+        "family-balance2-00",
+        "family-balance-01"
+      ],
+      "end": "loop",
+      "durations": [
+        10,
+        10
+      ]
+    },
+    "BALANCE3": {
+      "frames": [
+        "family-balance3-00",
+        "family-balance3-01"
+      ],
+      "end": "loop",
+      "durations": [
+        20,
+        20
+      ]
+    },
+    "BALANCE4": {
+      "frames": [
+        "family-balance4-00",
+        "family-balance4-01",
+        "family-balance4-02",
+        "family-balance4-03",
+        "family-balance4-04"
+      ],
+      "end": "loop-back",
+      "loopBackSteps": 4,
+      "durations": [
+        4,
+        4,
+        4,
+        4,
+        4
+      ]
+    },
+    "HANG": {
+      "frames": [
+        "family-hang-00",
+        "family-hang-01"
+      ],
+      "end": "loop",
+      "durations": [
+        6,
+        6
+      ]
+    },
+    "HANG2": {
+      "frames": [
+        "family-hang2-00",
+        "family-hang2-01"
+      ],
+      "end": "loop",
+      "durations": [
+        20,
+        20
+      ]
+    },
+    "BUBBLE": {
+      "frames": [
+        "family-bubble-00",
+        "family-bubble-00",
+        "family-bubble-01",
+        "family-bubble-02"
+      ],
+      "end": "next",
+      "next": "WALK",
+      "durations": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    "HURT_FALL": {
+      "frames": [
+        "family-hurt-fall-00",
+        "family-hurt-fall-01"
+      ],
+      "end": "loop",
+      "durations": [
+        10,
+        10
+      ]
+    },
+    "DROWN": {
+      "frames": [
+        "family-drown-00"
+      ],
+      "end": "loop",
+      "durations": [
+        48
+      ]
+    },
+    "FLOAT2": {
+      "frames": [
+        "family-float2-00",
+        "family-float2-02",
+        "family-float2-04",
+        "family-float2-05",
+        "family-float2-07"
+      ],
+      "end": "loop",
+      "durations": [
+        10,
+        10,
+        10,
+        10,
+        10
+      ]
+    },
+    "BLINK": {
+      "frames": [
+        "family-blink-00",
+        "family-blink-01",
+        "family-blink-02"
+      ],
+      "end": "loop-back",
+      "loopBackSteps": 1,
+      "durations": [
+        16,
+        16,
+        16
+      ]
+    },
+    "GET_UP": {
+      "frames": [
+        "family-get-up-01"
+      ],
+      "end": "next",
+      "next": "WALK",
+      "durations": [
+        4
+      ]
+    },
+    "VICTORY": {
+      "frames": [
+        "family-victory-00",
+        "family-victory-01",
+        "family-victory-01",
+        "family-victory-01",
+        "family-victory-01",
+        "family-victory-01",
+        "family-victory-01",
+        "family-victory-02",
+        "family-victory-01",
+        "family-victory-03",
+        "family-victory-01"
+      ],
+      "end": "loop-back",
+      "loopBackSteps": 4,
+      "durations": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ]
+    },
+    "TAILS_CARRIED": {
+      "frames": [
+        "family-tails-carried-00",
+        "family-tails-carried-01",
+        "family-tails-carried-02",
+        "family-tails-carried-01"
+      ],
+      "end": "loop",
+      "durations": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    "SUPER_TRANSFORM": {
+      "frames": [
+        "family-super-transform-00",
+        "family-super-transform-00",
+        "family-super-transform-01",
+        "family-super-transform-02",
+        "family-super-transform-01",
+        "family-super-transform-02",
+        "family-super-transform-01",
+        "family-super-transform-02",
+        "family-super-transform-01",
+        "family-super-transform-02",
+        "family-super-transform-01",
+        "family-super-transform-02"
+      ],
+      "end": "next",
+      "next": "WALK",
+      "durations": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ]
+    },
+    "TAILS_FLY_ASCEND": {
+      "frames": [
+        "family-tails-fly-ascend-00",
+        "family-tails-fly-ascend-01",
+        "family-tails-fly-ascend-02",
+        "family-tails-fly-ascend-03",
+        "family-tails-fly-ascend-04",
+        "family-tails-fly-ascend-05"
+      ],
+      "durations": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "end": "loop"
+    },
+    "TAILS_FLY_CARRY": {
+      "frames": [
+        "family-tails-fly-carry-00",
+        "family-tails-fly-carry-01",
+        "family-tails-fly-carry-02",
+        "family-tails-fly-carry-03",
+        "family-tails-fly-carry-04",
+        "family-tails-fly-carry-05"
+      ],
+      "durations": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "end": "loop"
+    },
+    "TAILS_FLY_CARRY_ASCEND": {
+      "frames": [
+        "family-tails-fly-carry-ascend-00",
+        "family-tails-fly-carry-ascend-01",
+        "family-tails-fly-carry-ascend-02",
+        "family-tails-fly-carry-ascend-03",
+        "family-tails-fly-carry-ascend-04",
+        "family-tails-fly-carry-ascend-05"
+      ],
+      "durations": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "end": "loop"
+    },
+    "TAILS_SWIM": {
+      "frames": [
+        "family-tails-swim-00",
+        "family-tails-swim-01",
+        "family-tails-swim-02",
+        "family-tails-swim-03",
+        "family-tails-swim-04"
+      ],
+      "end": "loop",
+      "durations": [
+        8,
+        8,
+        8,
+        8,
+        8
+      ]
+    },
+    "TAILS_SWIM_ASCEND": {
+      "frames": [
+        "family-tails-swim-ascend-00",
+        "family-tails-swim-ascend-01",
+        "family-tails-swim-ascend-02",
+        "family-tails-swim-ascend-03",
+        "family-tails-swim-ascend-04"
+      ],
+      "end": "loop",
+      "durations": [
+        4,
+        4,
+        4,
+        4,
+        4
+      ]
+    },
+    "TAILS_SWIM_CARRY": {
+      "frames": [
+        "family-tails-swim-carry-00",
+        "family-tails-swim-carry-01"
+      ],
+      "end": "loop",
+      "durations": [
+        5,
+        5
+      ]
+    },
+    "TAILS_SWIM_TIRED": {
+      "frames": [
+        "family-tails-swim-tired-00",
+        "family-tails-swim-tired-01",
+        "family-tails-swim-tired-02"
+      ],
+      "end": "loop",
+      "durations": [
+        12,
+        12,
+        12
+      ]
+    },
+    "BLANK": {
+      "frames": [
+        "family-blank-00"
+      ],
+      "end": "loop",
+      "durations": [
+        120
+      ]
+    },
+    "BURNT": {
+      "frames": [
+        "family-drown-00"
+      ],
+      "end": "loop",
+      "durations": [
+        33
+      ]
+    },
+    "FLOAT": {
+      "frames": [
+        "family-float2-00",
+        "family-float2-01"
+      ],
+      "end": "loop",
+      "durations": [
+        10,
+        10
+      ]
+    },
+    "FLOAT3": {
+      "frames": [
+        "family-float2-01",
+        "family-float2-02",
+        "family-float2-04",
+        "family-float2-06",
+        "family-float2-07"
+      ],
+      "end": "loop",
+      "durations": [
+        4,
+        4,
+        4,
+        4,
+        4
+      ]
+    },
+    "FLOAT4": {
+      "frames": [
+        "family-float2-01"
+      ],
+      "end": "next",
+      "next": "WALK",
+      "durations": [
+        4
+      ]
+    },
+    "GET_AIR": {
+      "frames": [
+        "family-bubble-00",
+        "family-bubble-00",
+        "family-bubble-01",
+        "family-bubble-02"
+      ],
+      "end": "next",
+      "next": "WALK",
+      "durations": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    "SLIDE": {
+      "frames": [
+        "family-hurt-fall-00",
+        "family-hurt-fall-01"
+      ],
+      "end": "loop",
+      "durations": [
+        10,
+        10
+      ]
+    },
+    "WATER_SLIDE": {
+      "frames": [
+        "family-hurt-fall-01",
+        "family-hurt-fall-00"
+      ],
+      "end": "loop",
+      "durations": [
+        8,
+        8
+      ]
+    },
+    "NULL_ANIM": {
+      "frames": [
+        "family-blank-00"
+      ],
+      "end": "next",
+      "next": "WALK",
+      "durations": [
+        120
+      ]
+    },
+    "ROLL2": {
+      "frames": [
+        "roll-00",
+        "roll-01",
+        "roll-02"
+      ],
+      "end": "loop",
+      "speedDriven": true
+    },
+    "HURT2": {
+      "frames": [
+        "hurt-00"
+      ],
+      "end": "loop",
+      "durations": [
+        4
+      ]
     }
+  },
+  "nativeFrames": {
+    "family-push/0": "family-push-00",
+    "family-push/1": "family-push-01",
+    "family-push/2": "family-push-02",
+    "family-push/3": "family-push-03",
+    "family-balance/0": "family-balance-00",
+    "family-balance/1": "family-balance-01",
+    "family-balance2/0": "family-balance2-00",
+    "family-balance2/1": "family-balance2-01",
+    "family-balance2/2": "family-balance2-02",
+    "family-balance3/0": "family-balance3-00",
+    "family-balance3/1": "family-balance3-01",
+    "family-balance4/0": "family-balance4-00",
+    "family-balance4/1": "family-balance4-01",
+    "family-balance4/2": "family-balance4-02",
+    "family-balance4/3": "family-balance4-03",
+    "family-balance4/4": "family-balance4-04",
+    "family-hang/0": "family-hang-00",
+    "family-hang/1": "family-hang-01",
+    "family-hang2/0": "family-hang2-00",
+    "family-hang2/1": "family-hang2-01",
+    "family-bubble/0": "family-bubble-00",
+    "family-bubble/1": "family-bubble-01",
+    "family-bubble/2": "family-bubble-02",
+    "family-hurt-fall/0": "family-hurt-fall-00",
+    "family-hurt-fall/1": "family-hurt-fall-01",
+    "family-drown/0": "family-drown-00",
+    "family-float2/0": "family-float2-00",
+    "family-float2/1": "family-float2-01",
+    "family-float2/2": "family-float2-02",
+    "family-float2/3": "family-float2-03",
+    "family-float2/4": "family-float2-04",
+    "family-float2/5": "family-float2-05",
+    "family-float2/6": "family-float2-06",
+    "family-float2/7": "family-float2-07",
+    "family-blink/0": "family-blink-00",
+    "family-blink/1": "family-blink-01",
+    "family-blink/2": "family-blink-02",
+    "family-get-up/0": "family-get-up-00",
+    "family-get-up/1": "family-get-up-01",
+    "family-victory/0": "family-victory-00",
+    "family-victory/1": "family-victory-01",
+    "family-victory/2": "family-victory-02",
+    "family-victory/3": "family-victory-03",
+    "family-tails-carried/0": "family-tails-carried-00",
+    "family-tails-carried/1": "family-tails-carried-01",
+    "family-tails-carried/2": "family-tails-carried-02",
+    "family-super-transform/0": "family-super-transform-00",
+    "family-super-transform/1": "family-super-transform-01",
+    "family-super-transform/2": "family-super-transform-02",
+    "family-super-transform/3": "family-super-transform-03",
+    "family-super-transform/4": "family-super-transform-04",
+    "family-tails-fly-ascend/0": "family-tails-fly-ascend-00",
+    "family-tails-fly-ascend/1": "family-tails-fly-ascend-01",
+    "family-tails-fly-ascend/2": "family-tails-fly-ascend-02",
+    "family-tails-fly-ascend/3": "family-tails-fly-ascend-03",
+    "family-tails-fly-ascend/4": "family-tails-fly-ascend-04",
+    "family-tails-fly-ascend/5": "family-tails-fly-ascend-05",
+    "family-tails-fly-carry/0": "family-tails-fly-carry-00",
+    "family-tails-fly-carry/1": "family-tails-fly-carry-01",
+    "family-tails-fly-carry/2": "family-tails-fly-carry-02",
+    "family-tails-fly-carry/3": "family-tails-fly-carry-03",
+    "family-tails-fly-carry/4": "family-tails-fly-carry-04",
+    "family-tails-fly-carry/5": "family-tails-fly-carry-05",
+    "family-tails-fly-carry-ascend/0": "family-tails-fly-carry-ascend-00",
+    "family-tails-fly-carry-ascend/1": "family-tails-fly-carry-ascend-01",
+    "family-tails-fly-carry-ascend/2": "family-tails-fly-carry-ascend-02",
+    "family-tails-fly-carry-ascend/3": "family-tails-fly-carry-ascend-03",
+    "family-tails-fly-carry-ascend/4": "family-tails-fly-carry-ascend-04",
+    "family-tails-fly-carry-ascend/5": "family-tails-fly-carry-ascend-05",
+    "family-tails-swim/0": "family-tails-swim-00",
+    "family-tails-swim/1": "family-tails-swim-01",
+    "family-tails-swim/2": "family-tails-swim-02",
+    "family-tails-swim/3": "family-tails-swim-03",
+    "family-tails-swim/4": "family-tails-swim-04",
+    "family-tails-swim-ascend/0": "family-tails-swim-ascend-00",
+    "family-tails-swim-ascend/1": "family-tails-swim-ascend-01",
+    "family-tails-swim-ascend/2": "family-tails-swim-ascend-02",
+    "family-tails-swim-ascend/3": "family-tails-swim-ascend-03",
+    "family-tails-swim-ascend/4": "family-tails-swim-ascend-04",
+    "family-tails-swim-carry/0": "family-tails-swim-carry-00",
+    "family-tails-swim-carry/1": "family-tails-swim-carry-01",
+    "family-tails-swim-tired/0": "family-tails-swim-tired-00",
+    "family-tails-swim-tired/1": "family-tails-swim-tired-01",
+    "family-tails-swim-tired/2": "family-tails-swim-tired-02",
+    "family-blank/0": "family-blank-00",
+    "family-burnt/0": "family-drown-00",
+    "family-walk/0": "walk-00",
+    "family-walk/1": "walk-01",
+    "family-walk/2": "walk-02",
+    "family-walk/3": "walk-03",
+    "family-walk/4": "walk-04",
+    "family-walk/5": "walk-05",
+    "family-walk/6": "walk-06",
+    "family-walk/7": "walk-07",
+    "family-run/0": "run-00",
+    "family-run/1": "run-01",
+    "family-run/2": "run-02",
+    "family-run/3": "run-03",
+    "family-wait/0": "wait-00",
+    "family-wait/1": "wait-01",
+    "family-wait/2": "wait-02",
+    "family-wait/3": "wait-03",
+    "family-wait/4": "wait-04",
+    "family-wait/5": "wait-05",
+    "family-wait/6": "wait-06",
+    "family-skid/0": "skid-00",
+    "family-skid/1": "skid-01",
+    "family-spindash/0": "spindash-03",
+    "family-spindash/1": "spindash-00",
+    "family-spindash/2": "spindash-01",
+    "family-spindash/3": "spindash-02",
+    "family-spring/0": "spring-00",
+    "family-hurt/0": "hurt-00",
+    "family-death/0": "death-00",
+    "family-duck/0": "duck-00",
+    "family-look-up/0": "look_up-00",
+    "family-roll/0": "roll-03",
+    "family-roll/1": "roll-00",
+    "family-roll/2": "roll-01",
+    "family-roll/3": "roll-02",
+    "family-roll/4": "roll-03",
+    "family-spindash/4": "spindash-00",
+    "family-spindash/5": "spindash-02",
+    "family-wait/7": "wait-05",
+    "family-wait/8": "wait-06",
+    "family-balance/2": "family-balance2-00",
+    "family-skid/2": "skid-00",
+    "family-skid/3": "skid-01",
+    "family-duck/1": "duck-00",
+    "family-look-up/1": "look_up-00",
+    "family-hurt/1": "hurt-00",
+    "family-spring/1": "spring-00"
   }
 }

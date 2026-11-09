@@ -22,9 +22,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * Inputs: verified host ROM, example packed PNG/YAML; output directory via art.audit.output.
  * Origin: original-character art audit requested 2026-11-09. No decoded ROM pixels are written.
  * Limits: frame publication sampled for 512 clocks at four slopes/two speeds; this is not a
- * route test. TALON binds the native Tails profile but host capabilities still name Sonic IDs;
- * its result is diagnostic, not proof of a Tails character integration. Raw targets report
- * actual binding, including unsafe unrelocated TALON indices. Presentation banks are separate.
+ * route test. TALON requests the host's native Tails vocabulary; MICA retains Sonic's.
+ * Raw targets report actual relocated alias binding. Presentation banks are separate.
  */
 @ExtendWith(SingletonResetExtension.class) @FullReset
 class TestCharacterArtCoverageAudit {
@@ -41,7 +40,7 @@ class TestCharacterArtCoverageAudit {
         var bytes=Files.readAllBytes(encoded);
         var sheet=PlayableSheetReader.read(bytes);
         var source=PlayableSheetMaterializer.read(bytes).art();
-        var host=module.getDonorCapabilities();
+        var host=module.getDonorCapabilities().forPlayableCharacter(nativeCharacter.equals("tails") ? PlayerCharacter.TAILS_ALONE : PlayerCharacter.SONIC_ALONE);
         var nativeArt=host.getPlayerArtProvider(RomByteReader.fromRom(TestEnvironment.currentRom())).loadPlayerSpriteArt(nativeCharacter);
         assertNotNull(nativeArt);
         var bound=PlayableSheetAnimationBinding.bind(source,host,nativeArt);
@@ -104,6 +103,6 @@ class TestCharacterArtCoverageAudit {
         Files.createDirectories(output);
         new ObjectMapper().writerWithDefaultPrettyPrinter().writeValue(output.resolve(character+"-"+game+".json").toFile(),result);
         assertFalse(resolutions.isEmpty());
-        assertEquals(character.equals("mica")?256:0,relocation,"explicitly track unsafe unrelocated Tails raw namespace");
+        assertEquals(256,relocation,"creator raw poses occupy a disjoint namespace");
     }
 }

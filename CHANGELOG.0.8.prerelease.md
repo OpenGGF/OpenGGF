@@ -38,8 +38,11 @@ under the matching area heading; see the
 - **MICA, an original character framework example:** TALON now joins as her
   default sidekick and is selectable solo. His Tails archetype uses native S3K
   flight and explicitly declared S1/S2 flight; Solar doubles flap acceleration
-  without Flickies. His own 82-frame sheet and palette replace the placeholder;
-  generated Solar tables use white-gold plumage and flame wingtips. Airborne
+  without Flickies. His own 167-frame sheet and palette replace the placeholder;
+  generated Solar tables use white-gold plumage and flame wingtips. Shared family
+  art adds ledge, hanging, tumble, air pickup, recoil, recovery and flight/swim
+  variants; TALON's private flight scripts select the native pose branch and
+  preserve relocated mapping indices. Airborne
   down previews targets; down+jump divebombs (Instagib in Solar), while ordinary
   jump retains flight/flaps. S2 spells TALON on the HUD; S1 glyph supplements
   and wider S3K names remain open. The candidate API adds default sidekick
@@ -57,7 +60,8 @@ under the matching area heading; see the
   rerunnable original sheet has 208 frames, 52 canonical animations, slope cycles,
   a shared palette and a breathing/fidget idle. Canonical sheets preserve native
   partial-loop WAIT tails and finite hold/next endings. Shared module animation
-  families bind MICA phase art at host ROM timing and supply equivalent missing
+  families bind MICA and TALON phase art at host ROM timing, using separate
+  Sonic/Tails archetype vocabularies, and supply equivalent missing
   cross-game Sonic donation scripts; 18 redundant drawings are removed without
   generating art. Ordinary art bindings keep donated animation profiles stable
   across native-scene rewind. MICA and TALON skip

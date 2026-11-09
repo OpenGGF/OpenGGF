@@ -732,8 +732,26 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
     private static final class Sonic3kDonorCapabilities implements DonorCapabilities {
 
         static final Sonic3kDonorCapabilities INSTANCE = new Sonic3kDonorCapabilities();
+        private static final Sonic3kDonorCapabilities TAILS = new Sonic3kDonorCapabilities(true);
+        private final boolean tails;
+        private Sonic3kDonorCapabilities() { this(false); }
+        private Sonic3kDonorCapabilities(boolean tails) { this.tails = tails; }
+        @Override public DonorCapabilities forPlayableCharacter(PlayerCharacter archetype) {
+            return archetype == PlayerCharacter.TAILS_ALONE ? TAILS : INSTANCE;
+        }
+        private static final java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> TAILS_FAMILIES =
+                com.openggf.game.AnimationFamilies.load("/animation-families/s3k-tails.json");
+        private static final java.util.Map<Integer, NativeFramePose> TAILS_POSES = loadTailsPoses();
+        private static java.util.Map<Integer, NativeFramePose> loadTailsPoses() {
+            try (var input = Sonic3kGameModule.class.getResourceAsStream("/animation-families/s3k-tails-poses.json")) {
+                return java.util.Map.copyOf(new com.fasterxml.jackson.databind.ObjectMapper().readValue(input,
+                        new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<Integer, NativeFramePose>>() { }));
+            } catch (java.io.IOException e) { throw new IllegalStateException(e); }
+        }
+
 
         @Override public java.util.Map<Integer, NativeFramePose> getNativeFramePoses() {
+            if (tails) return TAILS_POSES;
             var poses = new java.util.LinkedHashMap<Integer, NativeFramePose>();
             for (int f = 0x55; f <= 0x5B; f++) poses.put(f, new NativeFramePose("twist/" + (f - 0x55), CanonicalAnimation.WAIT));
             for (int f = 0x69; f <= 0x77; f++) poses.put(f, new NativeFramePose("tumble/" + (f - 0x69), CanonicalAnimation.ROLL));
@@ -771,7 +789,7 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
                 com.openggf.game.AnimationFamilies.load("/animation-families/s3k.json");
 
         @Override public java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> getAnimationFamilies() {
-            return FAMILIES;
+            return tails ? TAILS_FAMILIES : FAMILIES;
         }
 
         private static final java.util.Map<CanonicalAnimation, CanonicalAnimation> FALLBACKS =
@@ -829,14 +847,14 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
 
         @Override
         public java.util.Map<CanonicalAnimation, CanonicalAnimation> getAnimationFallbacks() {
-            return com.openggf.game.AnimationFamilies.fallbacks(FAMILIES, FALLBACKS);
+            return com.openggf.game.AnimationFamilies.fallbacks(getAnimationFamilies(), FALLBACKS);
         }
 
         @Override
         public int resolveNativeId(CanonicalAnimation canonical) {
-            int familyId = com.openggf.game.AnimationFamilies.resolve(FAMILIES, canonical);
+            int familyId = com.openggf.game.AnimationFamilies.resolve(getAnimationFamilies(), canonical);
             if (familyId >= 0) return familyId;
-            return Sonic3kAnimationIds.fromCanonical(canonical);
+            return tails ? -1 : Sonic3kAnimationIds.fromCanonical(canonical);
         }
 
         @Override
