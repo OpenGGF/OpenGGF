@@ -23,8 +23,10 @@ class TestCatalogTrackRules {
             assertEquals(monitors.equals("ITEMS") || monitors.equals("OFF"),
                     rules.monitorsLegal(config("s3k", "ARENA", "COMPETITION", monitors, 0, 0)));
         }
-        assertTrue(rules.monitorsLegal(config("s2", "ACT", "COMPETITION", "ITEMS", 7, 1)));
-        assertFalse(rules.monitorsLegal(config("s2", "ACT", "COMPETITION", "ITEMS", 8, 0)));
+        assertTrue(rules.monitorsLegal(config("s2", "ACT", "COMPETITION", "RANDOM", 7, 1)));
+        assertFalse(rules.monitorsLegal(config("s2", "ACT", "COMPETITION", "RANDOM", 8, 0)));
+        assertFalse(rules.monitorsLegal(config("s2", "ACT", "COMPETITION", "ITEMS", 7, 1)),
+                "S2 acts have only the shipped two-player draw; the items set is arena-only");
         assertFalse(rules.monitorsLegal(config("s3k", "ACT", "COMPETITION", "RANDOM", 0, 0)));
     }
     private ControlMessage.RoundConfig config(String game, String kind, String mode, String monitors, int zone, int act) {

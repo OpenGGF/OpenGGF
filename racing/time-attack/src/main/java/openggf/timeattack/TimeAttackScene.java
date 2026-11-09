@@ -564,14 +564,17 @@ public final class TimeAttackScene implements ModScene {
         if (session == null) {
             return false;
         }
-        if (accessView != null || codeEditor != null) return true;
+        // The access form claims the keyboard only while its password field is edited; the
+        // claim hides the arrows from the form's own navigation.
+        if (codeEditor != null) return true;
+        if (accessView != null) return accessView.isEditingText();
         return switch (session.state()) {
             case LOBBY -> invites != null && invites.isEditingText() || lobby != null && lobby.isEditingText();
             case IDLE -> namePrompt != null || inviteEditor != null
                     || (settingsView != null && settingsView.isEditingText())
                     || (poolEditor != null && poolEditor.isEditingText());
             case PASSWORD_REQUIRED -> true;
-            case BROWSING -> codeEditor != null || accessView != null;
+            case BROWSING -> false;
             case CONNECTING, RACING -> false;
         };
     }

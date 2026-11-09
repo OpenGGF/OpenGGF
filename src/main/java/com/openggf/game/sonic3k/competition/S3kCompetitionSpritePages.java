@@ -53,7 +53,21 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
     private record Mapping(String key,int frame,int onlyPiece,int x,int y,boolean hFlip,boolean vFlip,
                            Boolean forcedPriority,boolean multi) { }
     private record Source(int x,int y,int halfWidth,int halfHeight,int flags,List<Mapping> mappings,
-                          Consumer<Boolean> visibility) { }
+                          Consumer<Boolean> visibility,S3kCompetitionPlayer actor,boolean tail) { }
+    /**
+     * An admitted playable body, or Tails' separately admitted tail (Obj_Tails2P_Tail), in the
+     * hosted zoom window; window pixels of the owner's centre.
+     */
+    public record Actor(int bucket,S3kCompetitionPlayer player,boolean tail,int windowX,int windowY) {
+        public Actor { Objects.requireNonNull(player); }
+    }
+    /**
+     * Hosted zoom projection of P1's window: world sprites without the playable bodies,
+     * the screen-space HUD pieces at their full-screen positions, and the admitted bodies.
+     */
+    public record Zoomed(Frame world,Frame screen,List<Actor> actors) {
+        public Zoomed { Objects.requireNonNull(world);Objects.requireNonNull(screen);actors=List.copyOf(actors); }
+    }
     private final Function<String,ObjectSpriteSheet> sheets;
     // Native Sprite_table_input count bytes are drained after building; pointer words are not cleared.
     private final int[][] inputPointers=new int[8][63];
@@ -101,16 +115,37 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
         return build(slot,count,owners,scroll,inputPointers,scroll.view(slot).camera().y(),112,true);
     }
 
-    /** No native pointer words, SAT pages or object visibility are changed by this projection. */
-    public Frame projectSolo(ObjectManager objects,List<S3kCompetitionPlayer> players,
-            S3kCompetitionScroll scroll,int displayY) {
+    /**
+     * No native pointer words, SAT pages or object visibility are changed by this projection:
+     * P1's camera and {@code windowHeight} rows, the same sources, bucket order and range tests.
+     */
+    public Zoomed projectZoomed(ObjectManager objects,List<S3kCompetitionPlayer> players,
+            S3kCompetitionScroll scroll,int windowHeight) {
         int[] count = new int[8];
         int[][] pointers = new int[8][63];
         for (var admission : NativeSpriteSubmissionAccess.admissions(objects)) {
             if (count[admission.bucket()] >= 63) throw new IllegalStateException("Native input bucket overflow");
             pointers[admission.bucket()][count[admission.bucket()]++] = admission.slot();
         }
-        return build(0,count,currentSources(objects,players),scroll,pointers,displayY,224,false);
+        var owners = currentSources(objects,players);
+        var world = new HashMap<Integer,Source>();
+        var screen = new HashMap<Integer,Source>();
+        owners.forEach((pointer,source) -> {
+            if (source.actor() == null) ((source.flags()&0x44)!=0 ? world : screen).put(pointer,source);
+        });
+        var camera = scroll.view(0).camera();
+        int xMask = scroll.profile().xWrapMask(), yMask = scroll.profile().yWrapMask();
+        var actors = new ArrayList<Actor>();
+        for (int bucket=0;bucket<8;bucket++) for (int i=0;i<count[bucket];i++) {
+            Source source = owners.get(pointers[bucket][i]);
+            if (source == null || source.actor() == null || (source.flags()&0x10)!=0) continue;
+            int hw = source.halfWidth()&255, hh = source.halfHeight()&255;
+            int qx = (source.x()-camera.x()+hw)&xMask, qy = (source.y()-camera.y()+hh)&yMask;
+            if (qx>=320+2*hw || qy>=windowHeight+2*hh) continue;
+            actors.add(new Actor(bucket,source.actor(),source.tail(),qx-hw,qy-hh));
+        }
+        return new Zoomed(build(0,count,world,scroll,pointers,camera.y(),windowHeight,false),
+                build(0,count,screen,scroll,pointers,camera.y(),224,false),actors);
     }
 
     private Frame build(int slot,int[] count,Map<Integer,Source> owners,S3kCompetitionScroll scroll,
@@ -188,7 +223,7 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
             int flags=player.nativeRenderFlags();
             sources.put(player.slot(),new Source(player.centreX(),player.centreY(),12,12,flags,
                     List.of(mapping(key,player.mappingFrame(),(flags&1)!=0,(flags&2)!=0,player.highPriority())),
-                    player::refreshNativeVisibility));
+                    player::refreshNativeVisibility,player,false));
         }
         // Presentation-only late lookup. Gameplay touch uses the canonical previous pointer list.
         for(var object:objects.getActiveObjects()) {
@@ -196,6 +231,9 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
             int pointer=current.getSlotIndex();
             if((current.getLiveObjectId()&255)==0) { sources.remove(pointer);continue; }
             Source source=source(current);
+            if(source!=null && current instanceof S3kMiniatureTail tail && tail.parentSlot()<players.size())
+                source=new Source(source.x(),source.y(),source.halfWidth(),source.halfHeight(),source.flags(),
+                        source.mappings(),source.visibility(),players.get(tail.parentSlot()),true);
             if(source!=null)sources.put(pointer,source);
         }
         return sources;
@@ -235,7 +273,7 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
             mappings.add(mapping(S3kCompetitionRingLoss.ART_KEY,ring.mappingFrame(),(flags&1)!=0,(flags&2)!=0,null));
         } else return null;
         return new Source(object.getX(),object.getY(),object.getOnScreenHalfWidth(),object.getOnScreenHalfHeight(),flags,
-                List.copyOf(mappings),visibility);
+                List.copyOf(mappings),visibility,null,false);
     }
 
     /**

@@ -33,12 +33,19 @@ public final class S3kCompetitionTerrain implements S3kCompetitionPlayer.Terrain
         int otherDistance(){return secondary.distance()<=primary.distance()?primary.distance():secondary.distance();}
     }
     private final Geometry geometry;
+    private java.util.function.IntFunction<S3kCompetitionPlayer.BalanceObject> balanceObjects=slot->null;
     private final Consumer<S3kCompetitionPlayer> death;
 
     public S3kCompetitionTerrain(LevelManager level,int layoutYMask,
             Supplier<S3kCompetitionSession> session,IntSupplier playerOneCameraY) {
         this(new LevelGeometry(level,layoutYMask),player->Objects.requireNonNull(session.get(),"competition session")
                 .resolveDeadPlayer(player.slot(),playerOneCameraY.getAsInt()));
+        balanceObjects=slot->{
+            for (var object:level.getObjectManager().getActiveObjects())
+                if (object instanceof com.openggf.game.sonic3k.competition.objects.CompetitionArenaObjectInstance arena
+                        && arena.getSlotIndex()==slot) return arena.balanceSurface();
+            return null;
+        };
     }
     public S3kCompetitionTerrain(Geometry geometry,Consumer<S3kCompetitionPlayer> death) {
         this.geometry=Objects.requireNonNull(geometry);this.death=Objects.requireNonNull(death);
@@ -46,6 +53,11 @@ public final class S3kCompetitionTerrain implements S3kCompetitionPlayer.Terrain
     public Probe probe(Direction direction,int x,int y,int solidityBit,boolean secondaryCollisionPath) {
         return Objects.requireNonNull(geometry.probe(direction,x&0xFFFF,y&0xFFFF,solidityBit,secondaryCollisionPath),"native terrain probe");
     }
+    @Override public int floorEdgeDistance(S3kCompetitionPlayer p,int x) {
+        // ChkFloorEdge_Part2 (sonic3k.asm:20016-20041).
+        return probe(Direction.DOWN,x,p.centreY()+p.yRadius(),p.topSolidBit(),secondary(p)).distance();
+    }
+    @Override public S3kCompetitionPlayer.BalanceObject balanceObject(int slot) { return balanceObjects.apply(slot); }
     @Override public void resolveDeath(S3kCompetitionPlayer player){death.accept(player);}
 
     @Override public boolean canJump(S3kCompetitionPlayer p,int clearance) {
@@ -117,9 +129,10 @@ public final class S3kCompetitionTerrain implements S3kCompetitionPlayer.Terrain
         };
     }
     @Override public void followGround(S3kCompetitionPlayer p) {
-        if((p.status()&8)!=0) return; // Player_AnglePos's standing-object gate.
+        if((p.status()&8)!=0) { p.setFloorTilts(0,0); return; } // loc_EC42 (sonic3k.asm:18770-18777).
         Direction direction=direction(attachmentQuadrant(p.angle()));
         Pair pair=pair(p,direction,p.topSolidBit());Probe selected=pair.selected();
+        p.setFloorTilts(pair.primary().angle(),pair.secondary().angle());
         int angle=selected.angle()&255;
         if((angle&1)!=0 || Math.abs((byte)(angle-p.angle()))>=0x20) angle=(p.angle()+0x20)&0xC0;
         p.setAngle(angle);

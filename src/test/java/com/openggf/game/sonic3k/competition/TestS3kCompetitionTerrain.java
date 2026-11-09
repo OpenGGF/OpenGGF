@@ -50,6 +50,23 @@ class TestS3kCompetitionTerrain {
     private static S3kCompetitionPlayer player(int slot,Character character){return new S3kCompetitionPlayer(slot,character,0x600,200);}
     private static S3kCompetitionTerrain terrain(Probes probes){return new S3kCompetitionTerrain(probes,p->{});}
 
+    @Test void idleBalanceUsesPreviousPairAndCentreThenSixPixelProbe() {
+        for(boolean left:new boolean[]{false,true}) {
+            var p=player(0,Character.SONIC); p.setFacingLeft(!left);
+            var terrain=new S3kCompetitionTerrain((direction,x,y,bit,secondary)-> {
+                int dx=(short)(x-p.centreX());
+                assertEquals(Direction.DOWN,direction); assertEquals(p.centreY()+11,y);
+                assertEquals(12,bit);
+                return new Probe(dx==0?12:(left?dx>0:dx<0)?0:15,
+                        (left?dx<0:dx>0)?3:0,1);
+            },actor->{});
+            terrain.followGround(p);
+            p.tick(new S3kCompetitionPlayer.Input(S3kCompetitionPlayer.UP,0),terrain,
+                    new S3kCompetitionPlayer.Bounds(0x3FF,0x3FF,false,0),0);
+            assertEquals(6,p.animation()); assertEquals(left,p.facingLeft());
+        }
+    }
+
     @Test void miniatureFloorPairUsesActualRadiiNearestSensorAndPreservesSubpixels() {
         var probes=new Probes();probes.add(Direction.DOWN,result(-2,0x10),result(-4,0x18));
         var p=player(0,Character.SONIC);p.setAngle(0x10);p.setFractions(0x1234,0x5678);

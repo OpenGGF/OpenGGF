@@ -71,6 +71,38 @@ class TestHostedArenaEquivalence {
         }
     }
 
+    @Test void aHeldArenaPresentsNothingUntilItsFirstStep() throws Exception {
+        try (var fixture = new HostedArenaFixture()) {
+            var base = GameplayRunPolicy.competition();
+            var policy = new GameplayRunPolicy(false,false,base.actCompletion(),false,false,base.deathRestart(),
+                    false,false,MonitorRule.OFF);
+            var spec = new RunSpec("s3k",0,0,"sonic",policy,null,TrackKind.ARENA);
+            var released = new java.util.concurrent.atomic.AtomicBoolean();
+            var steps = new ArrayList<RunStep>();
+            var loop = new GameLoop(fixture.input);
+            loop.beginHostedRun(spec,new RunHost() {
+                @Override public boolean admitStep(RunInput input) { return released.get(); }
+                @Override public void afterStep(RunStep step) { steps.add(step); }
+            },ignored -> {});
+            HostedArenaLaunch.open(loop,spec,new NativeMenuHostContext(EngineServices.current(),
+                    new Sonic3kGameModule(),fixture.input,loop::setGameplayMode));
+            var launch = (HostedArenaLaunch) loop.getNativeMenuScreen();
+            fixture.host = (S3kCompetitionNativeHost) NativeCompetitionRoster.from(
+                    SessionManager.getCurrentGameplayMode().getWorldSession());
+            var loaded = fixture.host.session().capture();
+            fixture.input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.neutral());
+            for (int frame=0;frame<30;frame++)
+                fixture.iteration(() -> loop.getNativeMenuScreen().update(fixture.input));
+            assertEquals(loaded,fixture.host.session().capture(),"the mass start holds the native session");
+            assertTrue(steps.isEmpty());
+            assertFalse(launch.presentsNativeFrame(),"loc_665A: black until the level loop's first frame");
+            released.set(true);
+            fixture.iteration(() -> loop.getNativeMenuScreen().update(fixture.input));
+            assertEquals(1,steps.size());
+            assertTrue(launch.presentsNativeFrame());
+        }
+    }
+
     @Test void nativeMenuAndHostedSoloMatchRaceHaveIdenticalStateAcrossFalseStartAndDeath() throws Exception {
         for (boolean items : new boolean[]{false,true}) {
             var expected = new ArrayList<S3kCompetitionSession.State>();

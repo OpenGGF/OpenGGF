@@ -119,6 +119,7 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
     private final List<NativeSpriteSubmissionAccess.Admission> pendingActorDraws = new ArrayList<>();
     private int newRecordIndex = -1;
     private boolean stepping, closeRequested, closing;
+    private S3kArenaFullSizeArt fullSizeArt;
 
     /** Production composition receives its admitted iteration through the shared native loop scope. */
     public S3kCompetitionNativeHost(EngineContext engine, GameModule rootModule, InputHandler input,
@@ -146,6 +147,15 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
     }
 
     public S3kCompetitionScreen screen() { return screen; }
+    public Views views() { return views; }
+    /** Presentation-only main-game art and pose map for the hosted zoomed view, decoded on first use. */
+    public S3kArenaFullSizeArt fullSizeArt() {
+        if (fullSizeArt == null) {
+            try { fullSizeArt = new S3kArenaFullSizeArt(rom, resources, animator.bank(), assets); }
+            catch (IOException failure) { throw new java.io.UncheckedIOException("Cannot decode full-size player art", failure); }
+        }
+        return fullSizeArt;
+    }
     public NativeCompetitionWorld world() { return world; }
     public S3kCompetitionSession session() { return session; }
     public S3kCompetitionScroll scroll() { return scroll; }

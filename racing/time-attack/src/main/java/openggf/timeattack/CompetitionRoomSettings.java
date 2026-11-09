@@ -25,11 +25,15 @@ public record CompetitionRoomSettings(Mode mode, MonitorRule monitors, int cutof
         return new CompetitionRoomSettings(Mode.TIME_ATTACK, MonitorRule.NORMAL, 60, 10);
     }
 
-    /** Normal monitors on acts, Competition items on arena-only pools, common choice on mixed pools. */
+    /**
+     * The original two-player draw on S2 act pools, Competition items on arena-only pools,
+     * otherwise the first common choice (normal monitors on acts).
+     */
     public static CompetitionRoomSettings defaultsFor(Mode mode, List<TimeAttackTrackCatalog.Track> pool) {
         List<MonitorRule> choices = legalMonitors(mode, pool);
         if (choices.isEmpty()) throw new IllegalArgumentException("no legal settings for pool");
-        return new CompetitionRoomSettings(mode, choices.getFirst(), 60, 10);
+        MonitorRule monitors = choices.contains(MonitorRule.RANDOMISED) ? MonitorRule.RANDOMISED : choices.getFirst();
+        return new CompetitionRoomSettings(mode, monitors, 60, 10);
     }
 
     public static List<Integer> cutoffChoices() { return List.of(30, 60, 90, 120); }
@@ -52,7 +56,9 @@ public record CompetitionRoomSettings(Mode mode, MonitorRule monitors, int cutof
         if (track.kind() == TrackKind.ARENA) {
             return rule == MonitorRule.COMPETITION_ITEMS || rule == MonitorRule.OFF;
         }
+        // S2 acts add the shipped two-player draw (Obj2E_Init, s2.asm:25755-25776) and nothing invented.
         return rule == MonitorRule.NORMAL || rule == MonitorRule.OFF
-                || (track.gameId().equals("s2") && track.finish() == TimeAttackTrackCatalog.Finish.SIGNPOST);
+                || rule == MonitorRule.RANDOMISED && track.gameId().equals("s2")
+                && track.finish() == TimeAttackTrackCatalog.Finish.SIGNPOST;
     }
 }

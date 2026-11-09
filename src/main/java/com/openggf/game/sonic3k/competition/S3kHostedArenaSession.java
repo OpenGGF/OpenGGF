@@ -79,6 +79,8 @@ public final class S3kHostedArenaSession implements HostedArenaSession {
     @Override public boolean respawned() { return respawned; }
     @Override public boolean resultsRequested() { return host.session().resultsRequested(); }
     @Override public com.openggf.game.arena.GhostArtSource ghostArtSource() {
+        // The hosted zoom draws ghosts with the full-size art; a native split view keeps miniatures.
+        if (host.views() instanceof S3kSoloArenaViews zoom) return zoom.ghostArtSource(host);
         return new com.openggf.game.arena.GhostArtSource() {
             @Override public com.openggf.sprites.art.SpriteArtSet art(String character) {
                 var sheet = host.assets().miniature(S3kCompetitionPlayer.Character.valueOf(character.toUpperCase(Locale.ROOT)));
@@ -103,7 +105,7 @@ public final class S3kHostedArenaSession implements HostedArenaSession {
                         host.scroll().profile().xWrapMask());
             }
             @Override public int cameraY() {
-                return projectedOrigin(host.session().player(0).centreY(),S3kSoloArenaViews.displayY(host.scroll()),
+                return projectedOrigin(host.session().player(0).centreY(),host.scroll().view(0).camera().y(),
                         host.scroll().profile().yWrapMask());
             }
         };

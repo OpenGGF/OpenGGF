@@ -30,7 +30,7 @@ class TestTeleportSwapApply {
         var mode=SessionManager.getCurrentGameplayMode();
         var base=GameplayRunPolicy.competition();
         var policy=new GameplayRunPolicy(false,false,base.actCompletion(),false,false,base.deathRestart(),
-                false,false,MonitorRule.COMPETITION_ITEMS,true);
+                false,false,MonitorRule.RANDOMISED,true);
         mode.beginGameplayRun(policy,0,0);
         var player=(AbstractPlayableSprite)mode.getCamera().getFocusedSprite();
         var swaps=(Sonic2RaceSwapApplier)mode.getWorldSession().getGameModule().getGameService(RaceSwapApplier.class);
@@ -169,7 +169,7 @@ class TestTeleportSwapApply {
     }
     @Test void risingTeleportRequestsAndDelayedNoPartnerUsesInvincibility() {
         var run=open(true); var level=run.mode().getLevelManager();
-        if ((level.getFrameCounter()&1)!=0) step(run);
+        while ((level.getFrameCounter()&7)!=6) step(run); // Obj2E_Init samples the next frame: (7&7)+1 = teleport.
         var icon=new MonitorContentsObjectInstance(run.player().getCentreX(),run.player().getCentreY(),4,run.player());
         level.getObjectManager().addDynamicObject(icon);
         for(int frame=0;frame<33;frame++) {
@@ -231,7 +231,7 @@ class TestTeleportSwapApply {
     }
     private void nativeRequestPrelude(Run run) {
         var level=run.mode().getLevelManager();
-        if ((level.getFrameCounter()&1)!=0) step(run);
+        while ((level.getFrameCounter()&7)!=6) step(run); // Obj2E_Init samples the next frame: (7&7)+1 = teleport.
         level.getObjectManager().addDynamicObject(new MonitorContentsObjectInstance(
                 run.player().getCentreX(),run.player().getCentreY(),4,run.player()));
         for(int frame=0;frame<33;frame++) {

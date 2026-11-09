@@ -71,21 +71,16 @@ public final class MonitorContentsObjectInstance extends AbstractMonitorObjectIn
     }
 
     static boolean usesHostedRandomContents(com.openggf.game.arena.MonitorRule rule) {
-        return rule == com.openggf.game.arena.MonitorRule.RANDOMISED
-                || rule == com.openggf.game.arena.MonitorRule.COMPETITION_ITEMS;
+        return rule == com.openggf.game.arena.MonitorRule.RANDOMISED;
     }
 
     static int selectHostedContents(com.openggf.game.arena.MonitorRule rule,int levelFrame,
             boolean timerRunning,boolean swapEnabled) {
         // Obj2E_Init (s2.asm:25755-25776) samples Level_frame_counter at this SST's init,
         // rather than V_int_run_count or the frame when its parent shell broke.
-        int content = switch (rule) {
-            case RANDOMISED -> (levelFrame & 7) + 1;
-            // D22 invention: use bit 0 for teleport/Robotnik, based on the ROM timer draw.
-            // Robotnik's membership and this one-bit set are room rules, not shipped S2.
-            case COMPETITION_ITEMS -> (levelFrame & 1) != 0 ? 8 : 3;
-            default -> throw new IllegalArgumentException("No hosted content draw for " + rule);
-        };
+        if (rule != com.openggf.game.arena.MonitorRule.RANDOMISED)
+            throw new IllegalArgumentException("No hosted content draw for " + rule);
+        int content = (levelFrame & 7) + 1;
         // Obj2E_Init's two timer flags must both be one. The frozen launch flag stands
         // in for the partner's flag; live roster changes cannot affect this draw.
         return content == 8 && (!timerRunning || !swapEnabled) ? 7 : content;

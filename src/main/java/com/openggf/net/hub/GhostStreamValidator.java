@@ -213,10 +213,12 @@ public final class GhostStreamValidator {
                             "delta " + dx + "," + dy + " exceeds " + maxSpeed);
                 }
             }
+            // Signed words: Player_LevelBound (sonic3k.asm:23170-23215) bounds x and the
+            // bottom only, so a player can rise above the top edge (y_pos $FFxx); speed bounds the climb.
             if (profile != null
-                    && (frame.x() > profile.levelWidthPx()
+                    && ((short) frame.x() > profile.levelWidthPx()
                     + TrackValidationProfile.BOUNDS_MARGIN_PX
-                    || frame.y() > profile.levelHeightPx()
+                    || (short) frame.y() > profile.levelHeightPx()
                     + TrackValidationProfile.BOUNDS_MARGIN_PX)) {
                 return violate("bounds",
                         "position " + frame.x() + "," + frame.y() + " outside level");

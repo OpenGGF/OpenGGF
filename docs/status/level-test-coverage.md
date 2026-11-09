@@ -239,7 +239,17 @@ adds representative pause/reset, art and occurrence-ownership evidence. The
 covers both original-S3 and locked-on act-zero bindings for all five arenas,
 both human input lanes, destructive state/pixel replay and authored goal-boundary
 Match/Time Attack consumers. Its [obligation matrix](../architecture/validation/2026-10-28-tas-support-competition.md#act-obligations-in-this-bounded-host-increment)
-keeps full traversal/GP, viewport, donor, roster and native-pixel obligations open;
+now includes [a full native DPZ Sonic Time Attack race](../architecture/validation/2026-10-28-tas-support-competition.md#native-desert-palace-race-qualification-2026-11-09):
+2528 input-driven race frames, five laps and exact P1 state comparison including
+subpixels and animation, with native curve-tangent steps corroborated.
+[Azure Lake and Chrome Gadget](../architecture/validation/2026-10-28-tas-support-competition.md#native-azure-lake-and-chrome-gadget-race-qualification-2026-11-09)
+add 2143 and 3329 exact native Sonic race rows with spring/push ownership and
+bounded rewind regression checks. A [native BPZ Sonic race](../architecture/validation/2026-10-28-tas-support-competition.md#native-balloon-park-race-qualification-2026-11-09)
+adds 2389 race rows through balloons, bumpers and elephants, five completed
+laps, and focused pushing/landing-pose regressions. The
+[Endless Mine native qualification](../architecture/validation/2026-10-28-tas-support-competition.md#native-endless-mine-race-qualification-2026-11-09)
+adds a five-lap Sonic route through springs, rocks and the invisible platform. Other
+arena/character traversals, GP, viewport, donor, roster and native-pixel obligations remain open;
 this is an LTS-08 auxiliary-mode increment, not completed act certification.
 
 Hosted Competition lane F (2026-11-07): positioned BPZ crossings now exercise five
@@ -250,8 +260,8 @@ monitor placements. The input-only BPZ planner fallback is a compressed 327-row
 controller tape: the [bounded input author](../../racing/server/src/main/java/openggf/racing/server/tools/ArenaRouteAuthor.java)
 made two attempts with no completed lap. It covers GO
 at frame 240, the start crossing and a backward crossing, and replays to the
-live native ghost hash with no booked laps. **Arena verified finishes remain
-uncovered. The fallback does not contain a death**, so arena death-to-ghost-reset
+live native ghost hash with no booked laps. **That fallback does not cover arena finishes; the native BPZ race above
+now covers a five-lap hosted traversal. The fallback does not contain a death**, so arena death-to-ghost-reset
 replay remains an explicit gap. A positioned native death separately verifies
 ARENA_DEATH_RESPAWN, clock continuation and the single ghost reset marker.
 The two-attempt kill condition forbids further

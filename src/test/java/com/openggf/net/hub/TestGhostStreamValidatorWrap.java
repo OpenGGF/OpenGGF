@@ -58,6 +58,15 @@ class TestGhostStreamValidatorWrap {
   assertEquals(GhostStreamValidator.Verdict.DROP,v.onBatch(new GhostPackets.FramesBatch(1,1,2,data)));
   assertEquals(GhostStreamValidator.Verdict.ACCEPT,batch(v,1,500,100));
  }
+ @Test void climbAboveAnUnwrappedTopEdgeIsAWordStepNotAJump() {
+  var violations=new java.util.ArrayList<String>();
+  var v=new GhostStreamValidator(new TrackValidationProfile(1024,512,32,60),()->0,(k,d)->violations.add(k));
+  v.onAttemptStart(1);
+  int[] ys={2,1,0,0xFFFF,0xFFFE,0xFFF0,0xFFFF,3};
+  for(int i=0;i<ys.length;i++) assertEquals(GhostStreamValidator.Verdict.ACCEPT,batch(v,i,100+i,ys[i]),"y="+ys[i]);
+  assertEquals(java.util.List.of(),violations);
+  assertEquals(GhostStreamValidator.Verdict.DROP,batch(v,ys.length,100,0xFF00),"a 259 px climb is still a jump");
+ }
  GhostStreamValidator.Verdict batch(GhostStreamValidator v,int index,int x,int y) {
   byte[] data=new byte[GhostFrameCodec.BYTES]; GhostFrameCodec.encode(new GhostFrame(x,y,0,false,false,false,0,false),data,0);
   return v.onBatch(new GhostPackets.FramesBatch(1,index,1,data));

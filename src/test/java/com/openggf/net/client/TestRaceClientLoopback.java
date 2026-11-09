@@ -95,7 +95,7 @@ class TestRaceClientLoopback {
         var a = connect(dir.resolve("a"),"A"); var b = connect(dir.resolve("b"),"B");
         try {
             controlled.startRound(new ControlMessage.RoundConfig("s2",0,0,600,"OPEN",null,
-                    "ACT","COMPETITION","ITEMS",30));
+                    "ACT","COMPETITION","RANDOM",30));
             await(a,e -> e instanceof RaceClient.Control c && c.message() instanceof ControlMessage.RoundStart);
             await(b,e -> e instanceof RaceClient.Control c && c.message() instanceof ControlMessage.RoundStart);
             controlled.advance(10_000);
@@ -135,7 +135,7 @@ class TestRaceClientLoopback {
                         t.highPriority(),t.shoeKind(),t.shoeTimer(),t.progress()));
                 var recording = new openggf.timeattack.AttemptInputRecording(new openggf.timeattack.AttemptStartDescriptor(
                         "s2",0,0,"sonic",FP,com.openggf.mods.run.TrackKind.ACT,
-                        openggf.timeattack.CompetitionRoomSettings.Mode.COMPETITION,com.openggf.game.arena.MonitorRule.COMPETITION_ITEMS,
+                        openggf.timeattack.CompetitionRoomSettings.Mode.COMPETITION,com.openggf.game.arena.MonitorRule.RANDOMISED,
                         com.openggf.game.session.GameplayRunPolicy.DeathRestart.FAST_FROM_CHECKPOINT,true));
                 recording.appendEvent(3,event);
                 for(int i=0;i<4;i++)recording.appendFrame(8,false);
@@ -198,7 +198,7 @@ class TestRaceClientLoopback {
             var job=new openggf.racing.server.master.VerificationJobQueue.Job("synthetic-"+slot,"room",slot,"player","attempt",
                     FP,"s2:0:0","sonic",3,0,3,java.util.HexFormat.of().formatHex(submitted.sha256()),expected.ghostStreamHashHex(),false,0,
                     receipts,java.util.List.of(),java.util.List.of(),
-                    new openggf.racing.server.master.VerificationJobQueue.LaunchPolicy("COMPETITION","ITEMS",true));
+                    new openggf.racing.server.master.VerificationJobQueue.LaunchPolicy("COMPETITION","RANDOM",true));
             var verdict=new java.util.concurrent.atomic.AtomicReference<String>();
             var api=new openggf.racing.server.verifier.VerifierWorker.MasterApi() {
                 public String register(byte[] key,java.util.Set<String> fingerprints){return "test";}
