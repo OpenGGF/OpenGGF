@@ -102,17 +102,27 @@ final class ObjectPopulation {
         if (directedAdmission.get() != null) {
             callbacks.run(instance, () -> directedAdmission.get().noteNativeAdmission(instance));
         }
+        publishPlaced(spawn, instance);
+    }
+
+    private void publishPlaced(ObjectSpawn spawn, ObjectInstance instance) {
         placed.put(spawn, instance);
         invalidateMembership.run();
         spawnByInstance.put(instance, spawn);
         publishIdentity(instance, spawn);
     }
 
-    /** Captured identity precedes normal admission so restoring never burns a new ordinal. */
+    /**
+     * Publishes the captured roster, rather than requesting fresh scene admission.
+     * Creator registration remains required; Stageplay restores target authorship
+     * after the population exists. Current instance claims cannot decide membership.
+     * Captured identity comes first so restoration never burns a new ordinal.
+     */
     void admitRestoredPlaced(ObjectSpawn spawn, ObjectInstance instance, ObjectRefId capturedId,
                              RewindIdentityTable restoreTable) {
         if (capturedId != null) identities.put(instance, capturedId);
-        admitPlaced(spawn, instance);
+        callbacks.register(instance, spawn);
+        publishPlaced(spawn, instance);
         if (capturedId != null) restoreTable.registerObject(instance, capturedId);
         if (instance instanceof AbstractObjectInstance object) publishExecutionSlot(object);
     }

@@ -235,7 +235,9 @@ under the matching area heading; see the
   links. Routine-spawned Clamer springs, Orbinaut satellites and Shellcracker claws
   share exact captured-parent lookup in the admitted population; legacy and unknown
   families retain their existing proximity lookup. Detached claws preserve their
-  independent falling state after parent retirement. Independent children can
+  independent falling state after parent retirement. Restoring captured placed
+  actors publishes their saved membership before child reconstruction, retaining
+  authored families even when fresh scene admission is closed. Independent children can
   recreate when a parent defers to player refresh, and CNZ defeat candidates retain
   their ship family. Generic recreation installs
   construction services centrally; supported exact-spawn recipes rebuild once,

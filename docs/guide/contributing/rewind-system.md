@@ -395,10 +395,17 @@ context. Use `SpawnRewindRecreatable` for an exact `ObjectSpawn` constructor;
 `SpawnConstructionContextRewindRecreatable` is the compatible old name, not a
 second recipe. Parent-linked hooks still supply their actual construction logic.
 
+Captured placed and dynamic actors restore the saved population; they do not
+request fresh scene admission. Factory and creator-provenance checks still run.
+Stageplay restores the target's authored names and graph after the population
+exists, so future claims cannot decide which captured actors return.
+[TestCapturedPlacedPopulationRestore](../../../src/test/java/com/openggf/level/objects/TestCapturedPlacedPopulationRestore.java)
+checks real routine and constructor families, recapture and confirmed warm reuse.
+
 For a routine-spawned child, first check `ctx.hasKnownConstructionFamily()`.
 When true, `ctx.capturedParent(ExpectedParent.class)` resolves only that captured
-identity in the admitted population. A parent refused by scene admission is
-unavailable even if its identity remains in the reconstruction table. Do not
+identity in the admitted population. A reconstruction-table identity alone does
+not establish live membership. Do not
 replace a null result with a nearby object or filter a parent's destroyed flag
 before its captured fields restore. Only legacy or explicitly
 unknown families retain the concrete hook's compatibility lookup. This rule

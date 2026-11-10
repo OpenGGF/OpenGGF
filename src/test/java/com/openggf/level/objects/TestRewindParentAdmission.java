@@ -27,7 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -47,38 +46,17 @@ class TestRewindParentAdmission {
         ShellcrackerBadnikInstance rebuilt = fixture.restoreFresh();
 
         List<ShellcrackerClawInstance> claws = fixture.claws();
-        assertEquals(8, claws.size(), "captured claws retain their independent lifetime");
-        if (!clearObjects) {
-            assertSame(rebuilt, fixture.objects.objectQuery().resolve(fixture.parentId).orElse(null));
-        }
+        assertEquals(8, claws.size(), "captured claws retain their restored family");
+        assertSame(rebuilt, fixture.objects.objectQuery().resolve(fixture.parentId).orElse(null));
         for (ShellcrackerClawInstance claw : claws) {
             assertTrue(fixture.direction.allowsObject(claw),
                     "a surviving authored claw remains eligible for a native routine");
             Object parent = parentOf(claw);
-            if (clearObjects) {
-                assertNull(parent, "a refused body must not remain the claw's parent");
-            } else {
-                assertSame(rebuilt, parent, "ordinary scene admission must retain the exact rebuilt owner");
-                assertTrue(fixture.objects.getActiveObjects().contains(parent),
-                        "active claw retains an inactive parent: clearObjects=" + clearObjects
-                                + ", activeClaws=" + claws.size()
-                                + ", parentDestroyed=" + ((ObjectInstance) parent).isDestroyed());
-            }
-        }
-        if (clearObjects) {
-            var state = ShellcrackerClawInstance.class.getDeclaredField("state");
-            state.setAccessible(true);
-            for (ShellcrackerClawInstance claw : claws) {
-                assertFalse(claw.isDestroyed());
-                claw.update(0, null); // Consume the captured init-only execution.
-                claw.update(1, null); // Ordinary parent loss enters independent fall.
-                assertEquals("FALLING", state.get(claw).toString());
-                // Bounded liveness, without pinning transition-row motion or gravity order.
-                for (int vIntRunCount = 2; vIntRunCount < 82 && !claw.isDestroyed(); vIntRunCount++) {
-                    claw.update(vIntRunCount, null);
-                }
-                assertTrue(claw.isDestroyed(), "a null-parent piece must expire through its falling lifetime");
-            }
+            assertSame(rebuilt, parent, "captured membership must retain the exact rebuilt owner");
+            assertTrue(fixture.objects.getActiveObjects().contains(parent),
+                    "active claw retains an inactive parent: clearObjects=" + clearObjects
+                            + ", activeClaws=" + claws.size()
+                            + ", parentDestroyed=" + ((ObjectInstance) parent).isDestroyed());
         }
     }
 

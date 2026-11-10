@@ -6270,3 +6270,72 @@ The original 2dd competition pixel failure remains unattributed and merge-blocki
 its unavailable raw-frame/fork evidence is not reconstructed by later passes.
 Only this final audit prose follows the tested source. Task-branch-only publication
 to existing draft PR271 is authorized; no destination push or merge is authorized.
+
+
+## Captured placed-population restoration — 2026-11-10
+
+Published `346ad0afd4` remained clean for the original-E assessment. The next
+increment used a separate root-owned cow worktree at that head, with 17,054
+reflinked files, no copied build tree and no new ROM links. The worktree resource
+hook was excluded only from creation because it would create those links; normal
+commit/push hooks were installed. The existing config is an explicit relative
+symlink to the same resolved input, not a copied or substituted configuration.
+
+A current-source causal RED selected the new captured-placement witness and the
+existing scene-parent safety class: six cases, exactly two intended assertion
+failures, zero errors/skips, four passing controls. The real Shellcracker body
+was absent under `clearObjects`. The constructor-family case first resolved the
+actual adopted child and both constructor links, then failed because its alive
+placed parent was absent from live membership. The previously source-only
+constructor-adoption consequence is therefore now reproduced. No family metadata
+or admission response was fabricated. RED queue/Maven/wall were 0/98/99.364281
+seconds; user wait 0 and residual 1.364281 seconds. Maven time is rounded as logged.
+
+`ObjectPopulation` now distinguishes captured publication from fresh admission,
+as its existing dynamic restore path already does. A private helper shares only
+the four placed membership/reverse-association/native-identity writes, in their
+old order. The ordinary admission body is text-identical after inlining that
+helper. Captured placement retains identity installation, creator registration,
+restore-table registration and execution-slot order, but does not request the
+fresh Stageplay gate, refusal/removal or new-admission authorship notification.
+The factory/provenance boundary, snapshot formats, reconstruction/adoption,
+phase-2 field restore and late target-direction restore are unchanged. Raw manager
+snapshots are not authenticated credentials; this change adds no public bypass
+or authored claim and makes no stronger security claim about that existing API.
+
+The new checks retain actual parent membership, exact child links, IDs, slots,
+identity ordinal and target names across repeated restore/recapture. A separate
+side-effect-free placement is rebuilt once, then the second restore asserts the
+same instance and unchanged factory count, proving real warm reuse. Future actor
+claims/roster disappear and a fresh unclaimed placement is still refused. The old
+scene safety cases now require the captured parent instead of accepting its loss.
+Independent null-parent/falling expiry remains covered by the existing real
+retired-body S2 graph witness; this is distinct from losing a captured parent.
+The ordinary constructor-family retired-child/drop neighbor also remains selected;
+no new placed unmatched-child cleanup breadth is claimed.
+
+Focused GREEN passed 335 cases in all 25 requested fresh suites, zero failures,
+errors or skips, including both loading classes, four S3K keep-green checks,
+creator/host ownership, Stageplay, graph/reference/deferred-effect neighbors and
+selected source guards. Actual tested head was `346ad0afd4` plus tracked fingerprint
+`17f67b7071afbbc5f26961b006bd475bd59de102715a08b1cddd01e25b5317e2`
+and new test SHA-256
+`cb87c33a4689bdf5992670d61d61685c5362f47839cea76d0240363fb8083437`.
+Source seals match before/after. Queue/Maven/wall were 0/110/111.308972 seconds,
+user wait 0 and residual 1.308972 seconds; Maven time is rounded as logged.
+Exact commands, XML identities, full negatives, configuration and preservation
+proofs remain under `target/code-climb/authored-readmission/` in the isolated
+readmission tree. Independent correctness review, combined qualification and
+publication remain pending; this is not a full guards, smoke or domain result.
+
+The completed original-E assessment at clean published `346ad0afd4` scored
+55.625/100: [3.25, 2, 1.5, 2.25, 1.5, 1.75, 2.75, 2.75], with the original weights.
+It is a static contributor journey, not a runtime or regression verdict. Preloaded
+memory-index/main instructions and incidental dated matrix/status exposure were
+disclosed; no historical claim was credited. Its timing/shake concerns received a
+separate source-and-pinned-ROM fact check. That identifies a coherent HCZ frame,
+clock and publication ownership boundary, but requires native phase evidence
+before moving collision/event generations. No HCZ source or test expectations
+were changed, and the earlier tiny end-helper proposal is not substituted for
+that full journey. All six original trial targets remain unmet or unproven.
+The unexplained Original2dd Competition pixel failure remains a merge blocker.
