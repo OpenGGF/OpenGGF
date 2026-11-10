@@ -54,7 +54,7 @@ slots cycle to gold while the normal sheet and homing move remain her own.
 Enable **Gilded form settings** in the host overlay to override the per-game form
 switches, S1 emerald requirement, ring requirement and S1 music at the next full
 load. S1's six-emerald/50-ring default is mod-defined and requires no donor ROM.
-S2 and S3K retain their native default emerald gates. TALON uses his own 167-frame, 47-animation sheet and palette. His native flight
+S2 and S3K retain their native default emerald gates. TALON uses his own 169-frame, 47-animation sheet and palette. His native flight
 flaps normally; airborne down previews a target and down+jump dives onto it.
 Solar uses white-gold plumage with flame wingtips, Instagib dives and twice the
 native flap lift, with no Flickies or Hyper tier. Regenerate Solar Java tables
