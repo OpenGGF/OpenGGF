@@ -8,7 +8,15 @@ import java.util.Objects;
 public record CharacterPresentation(String displayName, String hudName,
         Map<Host, Art> art, Map<Font, Map<Character, Image>> supplementaryGlyphs,
         Map<StageSpriteSet.Surface, StageSpriteSet> stages,
-        Map<EndingSpriteSet.Surface, EndingSpriteSet> endings) {
+        Map<EndingSpriteSet.Surface, EndingSpriteSet> endings, Map<Host, ReelFace> reelFaces) {
+    public CharacterPresentation(String displayName, String hudName, Map<Host, Art> art,
+            Map<Font, Map<Character, Image>> supplementaryGlyphs, Map<StageSpriteSet.Surface, StageSpriteSet> stages,
+            Map<EndingSpriteSet.Surface, EndingSpriteSet> endings) {
+        this(displayName, hudName, art, supplementaryGlyphs, stages, endings, Map.of());
+    }
+    public CharacterPresentation withReelFaces(Map<Host, ReelFace> faces) {
+        return new CharacterPresentation(displayName, hudName, art, supplementaryGlyphs, stages, endings, faces);
+    }
     public CharacterPresentation(String displayName, String hudName, Map<Host, Art> art,
             Map<Font, Map<Character, Image>> supplementaryGlyphs, Map<StageSpriteSet.Surface, StageSpriteSet> stages) {
         this(displayName, hudName, art, supplementaryGlyphs, stages, Map.of());
@@ -46,6 +54,23 @@ public record CharacterPresentation(String displayName, String hudName,
                 throw new IllegalArgumentException("HUD life icon must be 16 by 16 pixels");
         }
     }
+    /** Head portraits in native 32 by 32 reel cells. Palette is local to these portraits.
+     * A null powered face retains the native powered symbol; rewards remain host-owned. */
+    @ModApi public record ReelFace(Image face, Image poweredFace, int[] rgb, int[] poweredRgb) {
+        public ReelFace {
+            Objects.requireNonNull(face, "face");
+            for (Image image : new Image[] {face, poweredFace})
+                if (image != null && (image.width() != 32 || image.height() != 32))
+                    throw new IllegalArgumentException("Reel faces must be 32 by 32 pixels");
+            if (rgb.length != 16) throw new IllegalArgumentException("Sixteen reel colours required");
+            rgb = rgb.clone();
+            if (poweredFace != null && (poweredRgb == null || poweredRgb.length != 16))
+                throw new IllegalArgumentException("Sixteen powered reel colours required");
+            poweredRgb = poweredRgb == null ? null : poweredRgb.clone();
+        }
+        @Override public int[] rgb() { return rgb.clone(); }
+        @Override public int[] poweredRgb() { return poweredRgb == null ? null : poweredRgb.clone(); }
+    }
     /** Semantic sign poses; null poses retain the native frame. Spin images are already oriented. */
     @ModApi public record Sign(SignFrame face, SignFrame alternate, SignFrame spin1,
             SignFrame edge, SignFrame spin3) { }
@@ -77,6 +102,7 @@ public record CharacterPresentation(String displayName, String hudName,
         art = Map.copyOf(art);
         stages = Map.copyOf(stages);
         endings = Map.copyOf(endings);
+        reelFaces = Map.copyOf(reelFaces);
         var copy = new java.util.LinkedHashMap<Font, Map<Character, Image>>();
         supplementaryGlyphs.forEach((font, glyphs) -> copy.put(Objects.requireNonNull(font), Map.copyOf(glyphs)));
         supplementaryGlyphs = Map.copyOf(copy);

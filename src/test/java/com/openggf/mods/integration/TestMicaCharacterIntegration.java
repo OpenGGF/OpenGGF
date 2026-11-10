@@ -1629,6 +1629,14 @@ class TestMicaCharacterIntegration {
         try(var files=Files.list(presentation)) {
             for(var file:files.toList()) Files.copy(file,classes.resolve("art/mica/presentation").resolve(file.getFileName()));
         }
+        for (String character : List.of("mica", "talon")) {
+            Path reels = project.resolve("art/" + character + "/reels");
+            Files.createDirectories(classes.resolve("art/" + character + "/reels"));
+            try (var files = Files.list(reels)) {
+                for (var file : files.toList()) Files.copy(file,
+                        classes.resolve("art/" + character + "/reels").resolve(file.getFileName()));
+            }
+        }
         Path stages = project.resolve("art/mica/wave3");
         Files.createDirectories(classes.resolve("art/mica/wave3"));
         try(var files=Files.list(stages)) {

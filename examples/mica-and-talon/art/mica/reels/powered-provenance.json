@@ -1,0 +1,28 @@
+{
+  "method": "built-in GPT Image native-pose transformation",
+  "native": "ArtUnc_SlotOptions (sonic3k.asm:201630), symbol 7, 32x32 column-major, Pal_Slot_Special line 0",
+  "references": [
+    "s3k-native-7-8x.png",
+    "concept/mica.png (Gilded form)"
+  ],
+  "raw_sha256": "1edc70ff0be54f571d3a0d5c5a9c0c394102076093d7956123be663a5bf48bb9",
+  "raw_scratch": "$HOME/scratch/agent-tmp/mt-reels-title-20261110/gilded-attempts.png",
+  "selection": 0,
+  "rejection": "Open mouth alternative less legible at native size",
+  "reduction": "Remove outer generation panel border; Lanczos to 96% of native 32x32 head box; alpha 128; existing Gilded S3K steady 16-colour palette; no geometry repaint",
+  "native_area": 730,
+  "authored_area": 727,
+  "sqrt_area_ratio": 0.9979430900401606,
+  "native_cell": [
+    32,
+    32
+  ],
+  "hotspot": [
+    16,
+    16
+  ],
+  "host_alias": "S3K uses the same head portrait in its 32x32 cell; no animation phases exist within a symbol",
+  "limits": "Gilded static portrait; no extra symbol animation or reward change.",
+  "generation_requests": 1,
+  "alternatives": 2
+}

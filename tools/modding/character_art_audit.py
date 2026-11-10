@@ -106,6 +106,22 @@ def main():
         else:
             g=d.get('game','s3k')
             for f in d.get('frames',[]):surface(g,f.get('frame_set',rel.split('/')[0]),f,base,d)
+    # Reel symbol obligations are independent of bonus-stage player poses.
+    for c in ['mica', 'talon']:
+        for g in ['S2', 'S3K']:
+            path = ART/c/'reels/normal.png'
+            add(c,g,'slot reel portrait','lead/sidekick face','authored' if path.is_file() else 'fallback',
+                str(path.relative_to(ROOT)),str((path.parent/'provenance.json').relative_to(ROOT)),
+                evidence='SlotMachine_GetPixelRow (docs/s2disasm/s2.asm:59778-59790)' if g=='S2' else 'sub_4C77C (docs/skdisasm/sonic3k.asm:100060-100075)',
+                notes='Selected character in native Sonic/Tails symbol; TALON solo owns lead and Tails symbols; rewards unchanged.')
+        for g in ['S1', 'S2', 'S3K']:
+            add(c,g,'title mascot','native composition','fallback',notes='No title art supplied: native split sprite/plane/palette owners require a separate title bank; launch default can be known before title, so selection order is not a blanket blocker.')
+    powered=ART/'mica/reels/powered.png'
+    add('mica','S3K','slot reel portrait','Super Sonic symbol 7','authored' if powered.is_file() else 'fallback',
+        str(powered.relative_to(ROOT)),str((powered.parent/'powered-provenance.json').relative_to(ROOT)),
+        evidence='ArtUnc_SlotOptions (docs/skdisasm/sonic3k.asm:201630)',notes='Original Gilded portrait; static symbol, native reward retained.')
+    powered=ART/'talon/reels/powered.png'
+    add('talon','S3K','slot reel portrait','Super Sonic symbol 7','authored' if powered.is_file() else 'fallback', str(powered.relative_to(ROOT)), str((powered.parent/'powered-provenance.json').relative_to(ROOT)), notes='Solar palette alias of generated TALON portrait when leading solo; no hedgehog spikes.')
     for g in ['S1','S2','S3K']:
         for c in ['mica','talon']:
             add(c,g,'HUD/results names','composed text','authored' if c=='mica' else 'fallback','ROM glyph composition + supplements' if c=='mica' else 'native name until TALON presentation is wired',rank='normal early-zone play',evidence='MicaPresentation.java; CharacterPresentation consumers',notes='text composition is not an animation frame')
