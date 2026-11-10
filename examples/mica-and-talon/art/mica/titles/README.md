@@ -90,9 +90,8 @@ copied into the authored hand.
 The complete pointing glove, including warm lighting and its contour, now lives
 in sprites0/1/4. A fresh generated handless cape fills the old plane footprint.
 All three sprites own identical backing context there, so moved fingers reveal
-cape instead of a second baked thumb or a black cutout. Original wag anatomy,
-hotspots and selector clocks stay unchanged. The rest pose is consolidated from
-the approved plane plus sprite, rather than redrawn at another scale.
+cape instead of a second baked thumb or a black cutout. Hotspots and selector clocks stay unchanged. The subsequent anatomy correction
+uses one fresh upright glove for all three poses (see below).
 
 Native `Obj_TitleSonicFinger (sonic3k.asm:6239-6258)` uses the normal sprite clock.
 `word_4F96 (General/Title/Map - S3 Sonic Anim.asm:7-11)` and
@@ -282,3 +281,26 @@ SEGA checks preserve100,763 native pixels and reject any residual blue body.
 Input anatomy stays approved; extra low-opacity ghost support expands the raw
 visible silhouette area. Colour budget stays15 opaque entries, with4×4 ordered
 shade/coverage dithering. No runtime blur, API, palette or clock changes.
+
+## Fixed S3K wag anatomy
+
+`s3k-hand-master.png` is one fresh generated upright glove: thumb towards the
+face, index raised, three curled fingers on the opposite side. The annotated
+real-capture strip labels each digit. `s3k-hand-anatomy.json` fixes all five
+landmarks and the wrist. `s3k_hand_anatomy.py` derives selectors0/1 by Scale2x
+to8×, rotation about the wrist, then majority reduction into the same palette.
+Native fingertip/wrist measurements give relative angles−11.304° and+6.562°;
+rest4 remains zero. No independent pose generation can change the anatomy.
+The complete cape context, planes and ownership mask from the preceding fix
+remain unchanged. Six-tick native wag timing is unchanged.
+
+The independent glove-area scale ratios against native are rest4 0.964,
+left0 0.979 and right1 0.964, excluding the replacement context. Provenance,
+four fresh attempts, selection and reduction are recorded in
+`s3k-hand-anatomy-provenance.json`. Regression tests enforce exact derivation,
+five material landmarks on their correct sides, and reject an independent
+finger mutation. These are structural checks; anatomy is also inspected.
+Review: `$HOME/scratch/agent-tmp/title-s3k-anatomy/review.html`, including the
+6× stock/mod strip, five-digit annotated copy and60Hz film. Across900 frames,
+967608 ownership checks and900812 visible pixel checks pass; every pixel
+outside the hand is byte-identical to integration2447194fa1.

@@ -89,7 +89,9 @@ for the concept-to-capture workflow and source map.
 
 S3K’s wagging glove now has complete sprite ownership, including its handless
 cape backing; no thumb remains baked beneath a moving pose. Native selector
-timing and the approved glove proportions are retained.
+timing and the approved glove proportions are retained. One fresh five-digit
+upright glove now supplies every wag pose through native-angle wrist rotations,
+so the thumb and three curled fingers remain consistent.
 
 ## Acceptance
 
