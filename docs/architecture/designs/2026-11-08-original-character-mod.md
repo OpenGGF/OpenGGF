@@ -3060,3 +3060,38 @@ unchanged. Provenance and final indexed rows are under `art/mica/wave3/`.
 
 These rows were already authored at the integration base. Audit counts therefore
 remain unchanged; this is an art-quality correction, not fallback closure.
+
+#### Blue Sphere production-path correction
+
+The first art-only gate (`7cb2009310`) missed a renderer defect: native tiles
+passed through the special-stage indexed ownership layer, but creator bodies
+used direct `PlayerSpriteRenderer.drawFrame`. Their pixels were unclaimed when
+the later shadow arrived. Native ordering is `loc_84C2`
+(sonic3k.asm:10773-10786): `Render_Sprites`, `Draw_SSSprites`, `Draw_SSShadows`.
+Creator tiles now enter that same sink at the existing actor slot with native
+priority and private logical line 0. The small internal tile bridge reuses the
+ordinary DPLC/residency preparation and adds no creator API surface.
+
+PNG indices use the already-bound packed playable palette; no special-stage RGB
+palette is supplied by the PNG. The native stage keeps scene line 0 (also used by
+red spheres), while private character line 0 participates in the same stage fade
+owner and rewind. Capture frame 300 matches all 879 opaque MICA pixels exactly,
+including coral shoes, white gloves, cream and jade. All 870 failure and 1,200
+clear-take ticks match stock mapping/motion/fade state. Seven native foot-contact
+phases match, and all 60 native failure-exit ticks apply identical palette fade
+passes to the private bank. The animation rate was already native; the assumed
+0x1000 preview is superseded by real 60 fps capture clips at 3×.
+
+S2 uses native slot/SAT assembly for both MICA and TALON already: body priority
+and shadows share the ordinary list, and white fade covers the completed frame,
+including private rows. `DisplaySprite` (s2.asm:30358-30363) and `BuildSprites`
+(s2.asm:30523-30636) own its native ordering. The paired 1,200-tick audit has no
+main/sidekick mapping difference and matching shared-scene transition luminance;
+no S2 fix was needed. Different base character colours naturally have different
+luminance until white; that is not a fade-timing difference.
+
+Current capture-only checkpoint:
+`$HOME/scratch/agent-tmp/mica-blue-fix-20261110/review.html`.
+S3K failure is ordinary red-sphere contact; its clear take declares debug
+completion at 465. S2 declares native stage admission at 240 and completion at
+780. These observations do not certify a route. Coverage and size are unchanged.

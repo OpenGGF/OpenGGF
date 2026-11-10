@@ -31,3 +31,9 @@ set with native per-frame colour budgets, exact native script previews, aligned
 style gates and a positioned run/turn/jump capture. See [the wave3 handoff](wave3/README.md#blue-sphere-native-style-redraw-2026-11-10).
 The set's independent area ratio is 0.983; native selectors and hotspots stay
 unchanged. Coverage remains authored rather than claiming new fallback closure.
+
+The Blue Sphere runtime follow-up fixes creator pixel ownership before the later
+shadow pass; the PNG palette was already supplied correctly. The current review
+uses real stock/creator lockstep captures, not the superseded source-PNG style
+gate. Exact capture sampling matches all 879 opaque standing pixels; native
+mapping selections and white-fade passes match. See the wave3 runtime checkpoint.

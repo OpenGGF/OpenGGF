@@ -577,3 +577,35 @@ python3 tools/modding/playable_art/title_masks.py --mascot /scratch/frame-c.png 
 Native renders and raw generations remain outside Git. Authored title banks,
 local palettes, selector/hotspot bindings and provenance live under each
 character's `titles/` directory in the maintained example.
+
+## Production special-stage character probe
+
+`tools/modding/SpecialStageCharacterProbe.java` records real capture PNGs and a
+separate per-tick `stage.csv` containing the native player mapping, motion,
+palette rows/content and displayed fade. Unlike the level `state.csv` mapping,
+this reads the special-stage actor itself. It never feeds comparison values into
+simulation. Build the example first, then compile the probe against that checkout:
+
+```bash
+python3 examples/mica-and-talon/build.py
+javac --release 25 -cp "target/classes:$(cat target/mica-classpath.txt)" \
+  -d target/character-probe tools/modding/SpecialStageCharacterProbe.java
+# Use Java's same classpath plus target/character-probe. Eight arguments:
+# game main sidekick jar-or-dash input output frame-count debug-complete
+```
+
+Unset DISPLAY/WAYLAND_DISPLAY, select surfaceless EGL, and set an owned saveRoot,
+as required by gameplay-capture. S3K uses the positioned CNZ act 1 giant-ring
+recipe (11616,1612), rings 42, timer 9600; supply the same input to both actors.
+An empty sidekick argument preserves the original solo-stage recipe. S2 declares
+production stage admission at tick 240 from EHZ act 1; give both teams identical
+input. Optional debug completion is declared at tick 465 (S3K) or 780 (S2).
+These modes are presentation probes, not route certification. Native `boot` act
+indices are zero-based. `overlay_alpha` is the black-fade alpha; white fades may
+use RGB addition or palette presentation instead, so inspect the real frames and
+palette columns rather than inferring white-fade progress from that field alone.
+
+Acceptance media must use the actual captured ticks at 60 fps, with nearest
+scaling and lossless RGB if palette equality matters (`libx264rgb -crf 0`). Gate
+colours by sampling unobscured actor pixels in real captures. A source PNG review
+cannot detect later shadows, priority or fade errors.

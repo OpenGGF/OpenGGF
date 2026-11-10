@@ -223,3 +223,8 @@ and per-frame colour budgets, with distinct ears, cream cheek edges, a tapered
 scale tail and alternating shoes. The [art checkpoint](art/mica/wave3/README.md#blue-sphere-native-style-redraw-2026-11-10)
 records all selectors, native-timed 60 fps previews and positioned run/turn/jump
 capture evidence. TALON's stage art and native stage mechanics are unchanged.
+
+Blue Sphere creator bodies share native sprite ownership before spheres/shadows,
+with their own indexed palette included in native white fades. The runtime review
+samples actual capture colours and compares stock/creator mapping IDs every tick;
+S2's existing native sprite list already covers MICA and TALON correctly.

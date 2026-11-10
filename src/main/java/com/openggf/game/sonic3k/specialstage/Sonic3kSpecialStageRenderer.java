@@ -1276,7 +1276,7 @@ public class Sonic3kSpecialStageRenderer {
         int tailsY = projectedPlayerY(manager.getTailsJumpHeight(), -0x20);
 
         if (tailsStageRenderer != null) {
-            tailsStageRenderer.drawFrame(manager.getTailsMappingFrame(), centerX, tailsY, false, false);
+            renderCreatorSprite(tailsStageRenderer, manager.getTailsMappingFrame(), centerX, tailsY);
             return;
         }
         // Render Tails' tails before the sidekick body in native SAT order
@@ -1301,12 +1301,32 @@ public class Sonic3kSpecialStageRenderer {
         if (!artLoaded || playerPatternBase <= 0 || sonicMappingData == null) return;
         int centerY = projectedPlayerY(player.getJumpHeight(), 0);
         if (characterStageRenderer != null) {
-            characterStageRenderer.drawFrame(player.getMappingFrame(),centerX,centerY,false,false);
+            renderCreatorSprite(characterStageRenderer, player.getMappingFrame(), centerX, centerY);
             return;
         }
         int paletteIndex = playerCharacter == PlayerCharacter.TAILS_ALONE ? 1 : 0;
         renderCharacterSprite(sonicMappingData, sonicMappingFrameCount,
                 playerPatternBase, paletteIndex, player.getMappingFrame(), centerX, centerY);
+    }
+
+    /**
+     * loc_84C2 (sonic3k.asm:10773-10786): player pieces belong to Render_Sprites,
+     * before Draw_SSSprites and Draw_SSShadows. All actors must claim indexed
+     * pixels through that same native-order layer, including private-colour art.
+     * Its logical line remains zero in the character context already bound to
+     * the stage palette/fade owner; scene lines used by spheres stay untouched.
+     */
+    private void renderCreatorSprite(com.openggf.sprites.render.PlayerSpriteRenderer renderer,
+                                     int frame, int x, int y) {
+        com.openggf.sprites.render.NativeStageSpriteDraw.draw(renderer, frame, x, y,
+                (pattern, hFlip, vFlip, palette, drawX, drawY) -> {
+                    reusableDesc.set(0);
+                    reusableDesc.setHFlip(hFlip);
+                    reusableDesc.setVFlip(vFlip);
+                    reusableDesc.setPaletteIndex(palette);
+                    reusableDesc.setPriority(true); // Obj_SStage_8FAA art_tile high bit.
+                    renderNativePattern(pattern, reusableDesc, drawX, drawY);
+                });
     }
 
     /**
