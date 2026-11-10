@@ -6435,3 +6435,52 @@ publication comparisons. Phase execution/queue/wall were
 No native jobs remain. These observations certify neither trace parity nor a
 contributor score. The Original2dd Competition pixel blocker and six-trial goal
 remain open; PR271 stays draft and unmerged.
+
+### Preserve the native HCZ diagnostic method
+
+The recurring phase question now has a repository-owned diagnostic profile:
+`tools/bizhawk/S3kHczPhaseProbe.cs`, its exact checked site manifest and an
+offline raw-evidence comparator, indexed in the existing workflow map. The
+initially promoted phase C# has 2,437 identical non-comment tokens under root's
+tokenizer after the sole public-class rename; independent tokenizers differ in
+counts but confirm equality. Formatting changes no strings, callbacks, input
+application, sampling, cleanup or exit behavior. The first formatter attempt split a string literal;
+string splitting was disabled before deriving the exact preservation proof.
+The compiled promoted source passes the same pinned compiler/API check, with
+no host rebuild and no new native execution. Build activity wait was 0.003895
+seconds, execution 0.843058 and wall 0.908772; user wait was zero.
+
+Independent Opus review found no observer-preservation blocker but identified
+three medium evidence gaps: window-wide discrimination hid constant read fields,
+terminal event completeness/provenance was unchecked, and the cold producer was
+not promoted. Root repaired these without another reviewer. The exact cold
+producer is now preserved too, including its optional serialization-only native
+checkpoint. The phase producer adds only a pre-core movie-hash summary field;
+removing that metadata entry restores token identity to the executed prototype.
+
+The comparator now requires both terminal summaries, actual JSONL/site hashes,
+matching declared window/sample/event/site counts, positive hits at all eight
+sites, registration/disposal and callback-free cold/movie provenance. An older
+phase summary requires its explicit original movie provenance; no identity is
+defaulted. Fifteen focused controls pass, including truncated events even after
+their content hash is recomputed, incomplete frame windows, separate registered
+and observed PCs, actor/order/raw schema checks, both producer identities and
+actual CLI/overwrite controls. Source/API compilation of both producers passes
+with unchanged runtime binding and no host rebuild: activity wait 0.005053 seconds,
+execution 1.408274, wall 1.502739, user wait zero. No core was run again.
+
+The retained data still has 2,417 samples, 26,179 events, 11,979 collision reads
+and 155,727 equal raw-decoded values. Those facts do not discriminate the timing
+of every field. This narrows the preceding published `310de62` wording that
+all reads use the preceding camera/diff publication: EE40 (`camera_y_diff`) never
+changes at these reads, so Y generation is not discriminated by value equality.
+Floor X changes on 4,995/5,991 reads; the other 996 floor reads and all 5,988
+wall-Y reads do not distinguish their instruction-read values' generation.
+Changes in unrelated wall/shake/camera fields do not supply that control. The
+comparison prints every field's count, including zeros, and reports
+`values_match_timing_partial`. Native event sequence and pinned instruction
+ordering remain separate evidence. The 16-dispatch end transition is described
+and root-cross-checked, not silently asserted by a matching-value exit status.
+This is saved-evidence validation, not another native run or an engine fix.
+Commands, source equivalence, compile and analysis receipts remain under
+`target/code-climb/hcz-publication/` in the isolated HCZ publication worktree.
