@@ -526,3 +526,12 @@ the S2 five-view float cycle needs `[0,2,4,5,7]` in the S3K eight-view family.
 Register functional contacts (PUSH palms, carrier boots, carried grip) independently
 of skull/torso scale. Anatomical scale is measured against approved WAIT, never
 against wingspan or sprite bounds.
+
+## Powered pose inventory research
+
+`examples/mica-and-talon/art/mica/powered/inventory.py` expands the native S2/S3K
+powered scripts, movement slope selection and S2 alternate walk frames before
+counting references. Its [checkpoint notes](../../../examples/mica-and-talon/art/mica/powered/README.md)
+distinguish native frame indices, shared scripts and actual accepted creator art.
+The optional native-pixel export writes only to scratch; it is not a playable-sheet
+assembler and does not change the 70 powered audit obligations.

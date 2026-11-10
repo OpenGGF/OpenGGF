@@ -1656,6 +1656,10 @@ or blockers remain; the lead owns subsequent integration. No merge or push.
 
 ## Coverage audit (2026-11-09)
 
+The [2026-11-10 powered-sheet checkpoint](#powered-sheet-design-checkpoint-2026-11-10-not-implemented)
+adds a native frame inventory and optional-bank design only. All 70 powered
+rows remain fallback; its uninstalled stance pilot does not advance coverage.
+
 Research branch `feature/ai-character-art-audit` starts at `24bfe483c7` and merges
 approved TALON art `71fefca894`, independently of the TALON engine lane.
 Current sources: **MICA 132 frames / 22 canonical keys; TALON 82 / 13**.
@@ -2443,3 +2447,112 @@ wing cadence; full carrying-route contact is not certified.
 
 Review and exact logs:
 `$HOME/scratch/agent-tmp/talon-families-20261109/review.html`.
+
+### Powered sheet design checkpoint (2026-11-10; not implemented)
+
+Gilded currently has authored palettes and canonical script overrides, but no
+separate playable art bank. The 34 S2 and 36 S3K powered audit rows therefore
+remain fallback. This checkpoint does not change that coverage or certify
+powered movement. Research inputs and the reproducible inventory live in
+`examples/mica-and-talon/art/mica/powered/`.
+
+**Native evidence.** `SuperSonicAniData (s2.asm:38773-38819)` has 32 entries;
+six replace the normal script pointer (walk, run, push, stand, balance, duck).
+Transformation is a seventh dedicated powered script, already referenced by
+the normal table. The engine's merged set retains normal `$20/$21` after the
+32-entry powered table; the audit correctly counts 34 obligations rather than
+32. `SupSonAni_Stand (s2.asm:38813)` uses `$72,$73,$74,$73` with delay 7.
+`SupSonAni_Transform (s2.asm:38819)` repeats `$6D` and `$6E`, then `$6F`, then
+alternates `$70/$71`, and switches to WALK; the duplicate timer entries matter.
+`SAnim_Super (s2.asm:38517-38527)` selects the powered walk/run scripts at
+speed `$800`; `SAnim_SuperWalk (s2.asm:38529-38551)` adds the angle displacement
+and adds `$20` to walk frames on every fourth level frame. The inventory includes
+those implicit frames rather than counting script literals alone.
+
+S3K `AniSuperSonic` in `General/Sprites/Sonic/Anim - Sonic.asm:81-119`
+also supplies 32 entries over the 36-entry normal set. Its six table overrides
+use different geometry/order from S2: WALK `$01..$08`, RUN `$21/$22`, PUSH
+`$B6..$B9`, WAIT `$BA/$BB`, BALANCE `$A1..$A3`, DUCK `$9B`. The shared
+`AniSonic1F` transformation is `$D2..$D6` with repeated timing entries.
+`Map_SuperSonic` in `General/Sprites/Sonic/Map - Sonic.asm:253-505` and
+`PLC_SuperSonic` in `General/Sprites/Sonic/DPLC - Sonic.asm:253-505`
+are distinct pointer tables even where scripts share normal pointers.
+`loc_12766 (sonic3k.asm:24925-24937)` and
+`loc_12780 (sonic3k.asm:24939-24963)` own powered slope displacement and
+speed-derived timer reloads. Script-pointer sharing alone is not an art alias.
+
+The first inventory expands to 140 S2 and 106 S3K reachable frame indices,
+including 86 and 50 in the six overridden scripts respectively. These are
+bounded script/movement inventories, not every object-owned direct mapping.
+The native render pass produces 140 distinct complete S2 RGBA/hotspot references
+and 102 distinct complete S3K references after deduplication; one S3K reference
+requires previous-bank state. These counts must not be presented as the number
+of finished creator drawings. Compare per-frame mapping/DPLC identity and
+existing creator art before deciding which frames need new generations.
+
+**Chosen seam for implementation.** Add optional powered playable art to each
+`SuperFormProfile.Form`, loaded through bounded mod assets by the existing
+owner-bound profile supplier. Use a second ordinary GGFP sheet, with canonical
+animation/family phase keys, rather than adding an unrelated format or putting
+Super-specific conditions in MICA's sprite update. Keep the existing constructor
+as an overload that supplies no powered bank. A Form-level bank lets Hyper
+share Super geometry and allows another creator to use different tiers without
+adding global or character-name gates. This is a proposed API change; no public
+signature or descriptor has changed in this checkpoint.
+
+Reuse the GGFP tile/mapping/DPLC validation and native-phase family binding.
+The host must supply its powered animation scripts/profile through a semantic
+provider, beside its existing normal art provider. Shared binding must not switch
+on a host name to choose Sonic constants. Bind complete powered animations to
+that host's exact script entries, delays, repeats and terminators, including
+speed/slope selection and S2's alternate walk bank. Native frame numbers stay
+inside the host provider; creators supply canonical family phases. Extend the
+family vocabulary where a current native animation is unmapped; do not silently
+map an unrecognised powered script to WAIT and call it authored.
+
+Merge normal and powered tile sources/mapping namespaces once during art
+initialization, relocating both DPLC source tiles and script mapping indices.
+Use the larger required pattern-bank capacity. This avoids runtime atlas swaps
+or a frame where the active renderer and scripts disagree. Keep normal and
+powered animation/profile views over that same immutable combined art. Missing
+powered animations select the entire already-bound normal animation and its
+normal profile settings; do not fill missing phases with unrelated poses. A
+normal-frame reuse is an explicit alias to existing mapping/DPLC data and adds
+no duplicate PNG. Existing `Form.animations` overrides retain their documented
+addressing and precedence; validate bounds against the combined bank.
+
+The existing profile controller owns transition and rewind: install the powered
+view before the transformation script, retain it for Super/Hyper, restore the
+normal view on revert/reset, and reconstruct the view from restored form tier
+and phase after renderer refresh. Test restore **during transformation** as well
+as active Super/Hyper: current code's `isSuper()` check alone does not establish
+that the transforming phase is reconciled. No-bank forms retain exactly their
+current scripts, rendering, palette and transform behavior. S1 has no native
+powered animation bank: it uses authored canonical timings, the mod's existing
+six-emerald/ring rule and no donor-ROM dependency.
+
+Update the release-policy descriptor, `ModApiVersion` documentation and normalized
+0.7 candidate signature pin together with the actual implementation. Preserve
+all old constructors. The candidate API version remains governed by the policy;
+this design alone does not authorize publication or a version bump.
+
+**Art and acceptance.** Use native 8× references, the approved model sheet and
+`wait-00` head/torso scale for each new powered pose. Record attempts, selection,
+raw hashes, reduction and final indexed rows. Gold scales and pale-gold face/
+belly retain stable semantic palette slots so the existing Gilded cycle can
+animate on top; it must update the pale-gold slots in the powered view as well
+as scale slots. Do not recolour the normal cream slots globally. Review every
+native contact phase and implicit movement variant at 60 Hz and compute
+`sqrt(mean authored opaque area / mean native opaque area)` per pose family.
+Values below about 0.95 require correction, alongside landmark inspection.
+
+Acceptance needs all 70 audit rows resolved by observed production binding,
+including explicit aliases and justified empty/native-unreachable N/A cases.
+Required focused tests: optional bank/no-bank compatibility, each powered host
+script's order/delay/end action and frame bounds, mixed per-animation fallback,
+S1 authored timing without a second ROM, transform/Super/Hyper/revert rewind and
+renderer refresh, MICA normal and powered palette/physics/ability integration,
+API signature surface, and the four standard S3K bootstrap/loading tests.
+Capture real headless S2/S3K stand/run/jump and S3K Hyper beside native Super
+Sonic; annotate positioned versus route-driven captures. Neither a static pilot
+nor an inventory JSON is in-game acceptance.
