@@ -8,14 +8,20 @@ import java.util.Objects;
 public record CharacterPresentation(String displayName, String hudName,
         Map<Host, Art> art, Map<Font, Map<Character, Image>> supplementaryGlyphs,
         Map<StageSpriteSet.Surface, StageSpriteSet> stages,
-        Map<EndingSpriteSet.Surface, EndingSpriteSet> endings, Map<Host, ReelFace> reelFaces, Map<CompetitionSurface, CompetitionPortrait> competitionPortraits) {
+        Map<EndingSpriteSet.Surface, EndingSpriteSet> endings, Map<Host, ReelFace> reelFaces,
+        Map<CompetitionSurface, CompetitionPortrait> competitionPortraits, Map<Host, TitleMascot> titleMascots) {
     public CharacterPresentation(String displayName, String hudName, Map<Host, Art> art,
             Map<Font, Map<Character, Image>> supplementaryGlyphs, Map<StageSpriteSet.Surface, StageSpriteSet> stages,
             Map<EndingSpriteSet.Surface, EndingSpriteSet> endings, Map<Host, ReelFace> reelFaces) {
-        this(displayName, hudName, art, supplementaryGlyphs, stages, endings, reelFaces, Map.of());
+        this(displayName, hudName, art, supplementaryGlyphs, stages, endings, reelFaces, Map.of(), Map.of());
+    }
+    public CharacterPresentation withTitleMascots(Map<Host, TitleMascot> mascots) {
+        return new CharacterPresentation(displayName, hudName, art, supplementaryGlyphs, stages, endings, reelFaces,
+                competitionPortraits, mascots);
     }
     public CharacterPresentation withCompetitionPortraits(Map<CompetitionSurface, CompetitionPortrait> portraits) {
-        return new CharacterPresentation(displayName, hudName, art, supplementaryGlyphs, stages, endings, reelFaces, portraits);
+        return new CharacterPresentation(displayName, hudName, art, supplementaryGlyphs, stages, endings, reelFaces, portraits,
+                titleMascots);
     }
     @ModApi public enum CompetitionSurface { S3K_PLAYER, S3K_RECORD }
     /** Native origin relative to image top-left; an independent sixteen-colour palette. */
@@ -35,7 +41,8 @@ public record CharacterPresentation(String displayName, String hudName,
         this(displayName, hudName, art, supplementaryGlyphs, stages, endings, Map.of());
     }
     public CharacterPresentation withReelFaces(Map<Host, ReelFace> faces) {
-        return new CharacterPresentation(displayName, hudName, art, supplementaryGlyphs, stages, endings, faces, competitionPortraits);
+        return new CharacterPresentation(displayName, hudName, art, supplementaryGlyphs, stages, endings, faces,
+                competitionPortraits, titleMascots);
     }
     public CharacterPresentation(String displayName, String hudName, Map<Host, Art> art,
             Map<Font, Map<Character, Image>> supplementaryGlyphs, Map<StageSpriteSet.Surface, StageSpriteSet> stages) {
@@ -91,6 +98,30 @@ public record CharacterPresentation(String displayName, String hudName,
         @Override public int[] rgb() { return rgb.clone(); }
         @Override public int[] poweredRgb() { return poweredRgb == null ? null : poweredRgb.clone(); }
     }
+    /** Native title selectors and hotspots; timing, logo and occlusion stay host-owned.
+     * S1 uses BODY 0..7. S2 uses BODY and HAND with native Map_0E selectors.
+     * S3K uses PLANE_LEFT/PLANE_RIGHT 1..13 (160x224 halves) and FINGER/WINK native sprite selectors. */
+    @ModApi public enum TitlePart { BODY, HAND, PLANE_LEFT, PLANE_RIGHT, FINGER, WINK }
+    @ModApi public record TitleMascot(Map<TitlePart, StageSpriteSet> parts, Map<Integer, TitlePlaneMask> planeMasks, int[] rgb) {
+        public TitleMascot {
+            parts = Map.copyOf(parts);
+            planeMasks = Map.copyOf(planeMasks);
+            if (rgb.length != 16) throw new IllegalArgumentException("Sixteen title colours required");
+            rgb = rgb.clone();
+        }
+        @Override public int[] rgb() { return rgb.clone(); }
+    }
+    /** Native pixels to clear in a 320x224 title plane; zero keeps host art.
+     * The replacement halves must leave logo/emblem pixels transparent. */
+    @ModApi public record TitlePlaneMask(byte[] pixels) {
+        public TitlePlaneMask {
+            if (pixels.length != 320*224) throw new IllegalArgumentException("Title mask must be 320x224");
+            pixels = pixels.clone();
+            for (byte pixel : pixels) if (pixel != 0 && pixel != 1)
+                throw new IllegalArgumentException("Title mask is binary");
+        }
+        @Override public byte[] pixels() { return pixels.clone(); }
+    }
     /** Semantic sign poses; null poses retain the native frame. Spin images are already oriented. */
     @ModApi public record Sign(SignFrame face, SignFrame alternate, SignFrame spin1,
             SignFrame edge, SignFrame spin3) { }
@@ -124,6 +155,7 @@ public record CharacterPresentation(String displayName, String hudName,
         endings = Map.copyOf(endings);
         reelFaces = Map.copyOf(reelFaces);
         competitionPortraits = Map.copyOf(competitionPortraits);
+        titleMascots = Map.copyOf(titleMascots);
         var copy = new java.util.LinkedHashMap<Font, Map<Character, Image>>();
         supplementaryGlyphs.forEach((font, glyphs) -> copy.put(Objects.requireNonNull(font), Map.copyOf(glyphs)));
         supplementaryGlyphs = Map.copyOf(copy);

@@ -558,3 +558,22 @@ Source manifests retain native dimensions/hotspots for independent area/placemen
 checks. Atlas previews can clip protrusions at cell edges; use the individual
 native PNGs for exact geometry. The TALON presentation handoff records original
 reduced rows, prompts/selections and aliases under `art/talon/presentation/`.
+
+
+## Title-plane mascot masks
+
+`title_masks.py` preserves host branding when the same mascot pixels occur in a
+preceding mascot-only plane and a composed emblem plane. It compares exact RGBA
+pixels inside an explicit native vertical bound and emits binary ownership only.
+The MICA/TALON title lane uses the exported S3K C/D planes, with the portrait ending
+at native row 136. Review the resulting mask over both native planes; equality is
+an input-specific ownership probe, not automatic semantic segmentation.
+
+```sh
+python3 tools/modding/playable_art/title_masks.py --mascot /scratch/frame-c.png \
+  --composition /scratch/frame-d.png --height 136 --out /scratch/title.mask
+```
+
+Native renders and raw generations remain outside Git. Authored title banks,
+local palettes, selector/hotspot bindings and provenance live under each
+character's `titles/` directory in the maintained example.

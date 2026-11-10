@@ -829,3 +829,33 @@ headshots. Native Time Attack records reuse `Map_Results` frames $29..$2B.
 MICA/TALON supply original transformed poses at both sizes. This inventory covers
 the native Competition flow; campaign and special-stage results use their own
 existing presentation contracts.
+
+
+### Native title mascots
+
+`CharacterPresentation.withTitleMascots(Map<Host, TitleMascot>)` optionally replaces
+mascot art for the configured launch-default leader. S2 resolves the configured
+sidekick separately; selection never comes from the previous level's team.
+Missing hosts or selectors retain their exact native drawing path.
+
+`TitleMascot.parts` maps `TitlePart` to indexed `StageSpriteSet` frames, carrying
+source-local hotspots relative to the native object origin. `rgb` supplies sixteen
+local colours; roles have independent palette contexts and each part has its own
+texture residency. Host controllers continue to own clocks, placement and occlusion.
+
+| Host | Parts and selectors |
+| --- | --- |
+| S1 | `BODY` 0–7 |
+| S2 | Lead `BODY` 5/6/7/18, `HAND` 9; sidekick `BODY` 0–4, `HAND` 19 |
+| S3K | `PLANE_LEFT`/`PLANE_RIGHT` 1–13, `FINGER` 0/1 (optional resting patch 4), `WINK` 2/3 |
+
+S3K plane halves are 160×224 at zero hotspots. A `TitlePlaneMask` contains exactly
+320×224 binary bytes: one removes the native mascot pixel, zero retains the host
+pixel. Masks must exclude the logo/emblem; replacement pixels must also leave that
+branding transparent. The engine masks per-cell copies, so shared native tiles
+used elsewhere in the logo remain intact. Without an authored resting patch, empty sprite selector 4 stays native.
+A bank that splits the resting hand out of its plane can supply `FINGER` 4.
+The host composes that patch during the native empty/wait selector and uses the
+native finger selectors 0/1 during a wag; it does not add another clock.
+This is presentation only: it supplies no title script, music, gameplay or timing.
+See the maintained example's `TitlePresentation.java` and `art/*/titles/` banks.

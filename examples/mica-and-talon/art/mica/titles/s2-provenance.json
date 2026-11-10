@@ -1,0 +1,33 @@
+{
+  "method": "GPT Image native-pose transformation; native title palette, 8x nearest reference; take A selected, take B rejected (identity/pose differences); fixed character palette reduction",
+  "source_sha256": "e721ef032fbc719c17043dfc7462852ca578993b429fc581a3d88850ecc1cdb5",
+  "reference": "$HOME/scratch/agent-tmp/mt-titles-20261110/mica-s2-reference.png",
+  "native_areas": [
+    2226,
+    2482,
+    2468,
+    2759,
+    2930,
+    3605,
+    4161,
+    3798,
+    3744,
+    724,
+    192
+  ],
+  "authored_areas": [
+    2350,
+    3319,
+    3452,
+    3411,
+    3743,
+    2822,
+    4261,
+    3932,
+    3999,
+    751,
+    191
+  ],
+  "sqrt_mean_area_ratio": 1.0526221251595136,
+  "scratch": "$HOME/scratch/agent-tmp/mt-titles-20261110"
+}

@@ -2931,3 +2931,94 @@ Selected final verification logs account for 1,004 seconds of queue admission
 wait and 836 seconds of Maven execution (including the baseline guard check).
 User-input wait is zero; other work and earlier retries are unmeasured. Exact
 logs, source-image comparisons and per-job timings remain beside `review.html`.
+
+### Native title mascot implementation (2026-11-10)
+
+The title lane on `feature/ai-mt-titles`, based on `e98a93c6d7`, closes the six
+fallback obligations recorded above. `CharacterPresentation.titleMascots` is an
+optional unpublished 0.7 candidate seam with per-host native selector banks,
+source-local hotspots, independent RGB palettes and binary S3K plane ownership
+masks. Earlier constructor signatures and `withReelFaces` preserve title banks.
+The normalized signature pin and `ModApiVersion` notes are updated; the release
+policy descriptor remains unchanged, as required for ordinary candidate pin
+regeneration. `TestModApiSignatureSurface` and the release hooks enforce this.
+
+Selection reads `MAIN_CHARACTER_CODE` and `SIDEKICK_CHARACTER_CODE` from the
+configured launch defaults and uses the active module's owned registry. It does
+not resolve the previous gameplay team's character. Missing owners/hosts/selectors
+retain their original native draw branches. S1 supplies all eight mascot frames;
+S2 supplies lead selectors 5/6/7/18 and hand 9, sidekick 0–4 and hand 19. TALON
+solo supplies the lead bank. TALON's body-connected wings carry S2's former
+separate-tail motion; there are no rotor/tail attachments.
+
+S3K supplies thirteen 320×224 plane frames as 160×224 halves, finger 0/1 and wink
+2/3. The resting hand is split from the final authored plane into selector 4,
+so native empty/wait and wag selectors compose one hand rather than overlaying
+two. The native controllers still own every delay, flash, page selection and
+placement origin. Wink hotspots follow each character's near-eye landmark. All
+branding, emblem art, native animation clocks, water/backgrounds and host
+occlusion passes remain native. The Sega transition's first seven plane frames
+retain their logo region; subsequent close-up frames are mascot art. The final
+mask uses exact pixels shared with the preceding mascot-only composition, bounded
+at native row 136. Per-cell copies preserve shared logo tiles. The reusable
+`tools/modding/playable_art/title_masks.py` records this ownership probe.
+
+Built-in GPT Image generated two alternatives for each bank against real-palette
+native title frames enlarged 8× and the approved character models/core frames.
+Corrective portrait generations establish S3K facing, hand scale and matching
+wink variants. Take A is selected; raw attempts and native renders stay outside
+Git. MICA's sixth approaching-ball image aliases the fifth generated ball at its
+native approaching size. Per-character `titles/` records prompts, source hashes,
+selector/file inventories, palette reduction and area measurements. S3K area
+measurements exclude external black backing and recompose the split resting hand.
+
+| Bank | MICA sqrt(mean area ratio) | TALON sqrt(mean area ratio) |
+| --- | ---: | ---: |
+| S1 mascot | 1.032 | 1.060 |
+| S2 bodies/hands | 1.053 | 1.062 |
+| S3K plane bank | 1.107 | 1.068 |
+| S3K finger patches | 1.016 | 0.968 |
+| S3K wink patches | 1.051 | 1.051 |
+
+| Character/host | Authored before → after | Fallback before → after |
+| --- | ---: | ---: |
+| MICA S1 | 65 → 66 | 1 → 0 |
+| MICA S2 | 92 → 93 | 39 → 38 |
+| MICA S3K | 111 → 112 | 103 → 102 |
+| TALON S1 | 0 → 1 | 3 → 2 |
+| TALON S2 | 29 → 30 | 45 → 44 |
+| TALON S3K | 40 → 41 | 72 → 71 |
+
+Validation uses 900-presentation, 60-Hz `GameplayCaptureTool --title-screen`
+films for stock, MICA with TALON, and TALON solo on each host, with surfaceless
+EGL and no display connection. The scratch review includes synchronized films,
+3× native-box lineups, head/torso guides and the independent size table. Protected
+lower branding matches stock frame by frame; S2 comparisons use foreground alpha
+because native gaps legitimately show the rising mascot. The final S3K visible
+gold comparison also has no changed frames. The films and exact PNG frames are
+in `$HOME/scratch/agent-tmp/mt-titles-20261110/`, along with `review.html`, the
+coverage audit, capture artifact hash, comparison JSON and logs. Embedded review
+movies are streaming copies; original captures and PNGs remain available there.
+
+Relevant queued Java checks pass: 138 tests, no failures/errors/skips, including
+`TestTitleCharacterPresentation`, `TestNativeTitleMascotFallbackPixels` (900
+presentations per host against bypassing the seam), `TestMicaCharacterIntegration`,
+`TestCharacterArtCoverageAudit`, `TestModApiSignatureSurface`, atlas registration,
+incomplete-plane native fallback, existing title timing/fade checks and the four required S3K loading/bootstrap
+classes. After the final art adjustment the packaged integration/audit/signature
+selection passes 55 tests without skips. `python3 -m unittest discover -s
+tools/modding -p 'test_*.py'` passes 53 tests. These are focused checks, not a
+full-suite or gameplay-route certification. The global citation inventory still
+contains inherited stale entries; changed-citation enforcement is separate.
+Queue and execution times are recorded separately in scratch `timing.json`;
+there was no user-input wait, and other overlapping work was not instrumented.
+
+Rejected approaches: a shared scratch texture bank let deferred S2 draws sample
+another role's later upload and duplicated S3K plane halves. Each role/part now
+owns a disjoint registered title bank. A wag sprite over a static authored hand
+produced a second hand; decomposition into resting selector 4 removes that
+composition error. Oversized combined S3K reference sheets were rejected by the
+image tool; five separate native 8× reference sheets succeeded. No fallback art
+was counted authored during those failures. The inline HTML preview has a 512 KB
+limit, so the compact overview is separate from the complete portable film review.
+This lane commits locally only; no push or merge is performed.

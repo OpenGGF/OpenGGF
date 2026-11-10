@@ -116,7 +116,14 @@ def main():
                 evidence='SlotMachine_GetPixelRow (docs/s2disasm/s2.asm:59778-59790)' if g=='S2' else 'sub_4C77C (docs/skdisasm/sonic3k.asm:100060-100075)',
                 notes='Selected character in native Sonic/Tails symbol; TALON solo owns lead and Tails symbols; rewards unchanged.')
         for g in ['S1', 'S2', 'S3K']:
-            add(c,g,'title mascot','native composition','fallback',notes='No title art supplied: native split sprite/plane/palette owners require a separate title bank; launch default can be known before title, so selection order is not a blanket blocker.')
+            title_root = ART/c/'titles'
+            manifest = title_root/'manifest.json'
+            bank = load(manifest).get('hosts', {}).get(g) if manifest.is_file() else None
+            complete = bank is not None and bool(bank.get('files')) and all((title_root/f).is_file() for f in bank['files'])
+            image = title_root/('s1-6.png' if g=='S1' else 's2-18.png' if g=='S2' else 's3k-plane-13-left.png')
+            add(c,g,'title mascot','native composition','authored' if complete else 'fallback',
+                str(image.relative_to(ROOT)),str((title_root/(g.lower()+'-provenance.json')).relative_to(ROOT)),
+                notes='Configured launch default owns native mascot selectors, hotspots and local palettes; S3K plane masks retain logo/emblem; native timing/occlusion remain host-owned.' if complete else 'Incomplete or missing native title bank.')
     powered=ART/'mica/reels/powered.png'
     add('mica','S3K','slot reel portrait','Super Sonic symbol 7','authored' if powered.is_file() else 'fallback',
         str(powered.relative_to(ROOT)),str((powered.parent/'powered-provenance.json').relative_to(ROOT)),

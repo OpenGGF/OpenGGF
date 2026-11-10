@@ -58,6 +58,7 @@ def main():
         shutil.copytree(PROJECT / "art" / character / "competition-menu", classes / "art" / character / "competition-menu", dirs_exist_ok=True)
         shutil.copytree(PROJECT / "art" / character / "reels", classes / "art" / character / "reels", dirs_exist_ok=True)
         shutil.copytree(PROJECT / f"art/{character}/competition", classes / f"art/{character}/competition", dirs_exist_ok=True)
+        shutil.copytree(PROJECT / "art" / character / "titles", classes / "art" / character / "titles", dirs_exist_ok=True)
     shutil.copytree(PROJECT / "art/talon/endings", classes / "art/talon/endings", dirs_exist_ok=True)
     stage_assets = classes / "art/mica/wave3"
     stage_assets.mkdir(parents=True, exist_ok=True)
