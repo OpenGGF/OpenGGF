@@ -71,15 +71,15 @@
       219
     ],
     [
-      182,
-      36,
-      36
+      219,
+      109,
+      109
     ],
     [
       255,
-      73,
-      73
+      146,
+      146
     ]
   ],
-  "style": "Native 15-opaque-colour budget: seven jade light/shadow entries, three warm cream entries, three glove greys, two coral entries; shared black ink. Upper-left specular shading and 2x2 ordered dithering."
+  "style": "Baked 3D; private static title palette. Coral-pink ear ramp14/15, cream rim8..10; no native cycle writes this row."
 }

@@ -1678,6 +1678,8 @@ Carrier `AniTails22` / `AniTails23` select $A2 / $A1, each a held body
 with delay $1F (General/Sprites/Tails/Anim - Tails.asm:82-83); TALON retains
 his authored six-phase, two-tick integrated wingbeat.
 
+**S3K title revision, 2026-11-10:** the final portrait, resting glove, finger and wink patches are freshly generated and registered to MICA’s own eye/wrist. Her title-local ear ramp is coral-pink with cream rim; it is independent of native banner palette cycling. The final silhouette is no longer perforated by clipping generated pixels against the native emblem. Preserved native pixels outside replacement ownership are compared on every real capture; removing Sonic necessarily changes some pixels outside MICA’s smaller contour, and the checker reports those literal differences separately. No coverage rows change. The approach poses retain their approved round-one art with the corrected local palette.
+
 **Title polish, 2026-11-10:** no coverage row changes: all six existing title
 obligations remain authored, with zero fallback obligations in the current audit.
 S2 stages MICA left (thumbs-up), TALON right (connected wings; separate hand 19

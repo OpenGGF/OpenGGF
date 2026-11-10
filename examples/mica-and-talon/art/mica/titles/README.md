@@ -84,3 +84,39 @@ the entire rectangular context to a transparent isolated hand would give 0.654.
 context ramp. The anatomical check uses the glove/forearm, while production native
 coverage independently preserves the aperture. No native context pixels are
 copied into the authored hand.
+
+## S3K owner revision, round 2
+
+Fresh built-in GPT Image attempts replace the final portrait and its finger/wink
+patches. Take A keeps the more compact glove and broad rounded scales; take B is
+retained in scratch. Approach selectors 1–12 retain their existing generated art.
+The private title palette itself previously defined red at 14/15: the corrected
+ramp is `#DB6D6D` / `#FF9292`, independent of the native banner cycle and fade.
+The cream rim retains 8–10. Material-constrained reduction avoids quantizing
+cream shadows into the ear ramp.
+
+The final portrait no longer clips each generated pixel against native emblem
+ownership: that produced speckled holes along the silhouette. Native mask and
+clear arrays remain unchanged. Every uncovered native ring pixel remains stock.
+Finger selectors share a wrist at (160,60), with a 39×49 motion envelope.
+Wink borders copy the new plane at (108,40); only its own eye-shaped region changes.
+This keeps the head, original outline and eyelashes registered in both wink states.
+The lower glove is a rounded generated volume with no rectangular backing.
+
+Rebuild from raw selected generations (scratch only):
+
+```sh
+python3 examples/mica-and-talon/art/mica/titles/s3k_polish.py \
+  --body /scratch/body-source.png --patches /scratch/patch-attempts.png \
+  --scratch /scratch/reduction
+python3 examples/mica-and-talon/art/mica/titles/s3k_capture_review.py \
+  --captures /scratch/title-r2-s3k --native /scratch/native-title-exports
+```
+
+Review and raw attempts: `$HOME/scratch/agent-tmp/title-r2-s3k/review.html`.
+The checker records literal differences outside the new contour separately from
+native-preservation failures; clearing the old Sonic silhouette cannot literally
+equal stock. Native animated sprite context exclusions are explicit. This is a
+bounded 900-presentation title check, not gameplay parity. Plane12 remains a
+separate component view because ordinary timing never exposes it. Coverage rows
+stay authored; no fallback obligations move.

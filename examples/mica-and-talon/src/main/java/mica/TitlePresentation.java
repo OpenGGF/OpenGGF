@@ -46,12 +46,12 @@ final class TitlePresentation {
                 }
                 case S3K -> {
                     parts.put(TitlePart.FINGER,new StageSpriteSet(Map.ofEntries(
-                        Map.entry(0,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s3k-sprite-0.png"),character.equals("mica") ? 40 : 24,character.equals("mica") ? 29 : 36)),
-                        Map.entry(1,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s3k-sprite-1.png"),character.equals("mica") ? 40 : 24,character.equals("mica") ? 29 : 36)),
-                        Map.entry(4,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s3k-sprite-4.png"),character.equals("mica") ? 40 : 24,character.equals("mica") ? 29 : 36)))));
+                        Map.entry(0,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s3k-sprite-0.png"),character.equals("mica") ? 40 : 24,character.equals("mica") ? 32 : 36)),
+                        Map.entry(1,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s3k-sprite-1.png"),character.equals("mica") ? 40 : 24,character.equals("mica") ? 32 : 36)),
+                        Map.entry(4,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s3k-sprite-4.png"),character.equals("mica") ? 40 : 24,character.equals("mica") ? 32 : 36)))));
                     parts.put(TitlePart.WINK,new StageSpriteSet(Map.ofEntries(
-                        Map.entry(2,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s3k-sprite-2.png"),character.equals("mica") ? -8 : -16,character.equals("mica") ? 32 : 40)),
-                        Map.entry(3,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s3k-sprite-3.png"),character.equals("mica") ? -8 : -16,character.equals("mica") ? 32 : 40)))));
+                        Map.entry(2,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s3k-sprite-2.png"),character.equals("mica") ? 12 : -16,character.equals("mica") ? 32 : 40)),
+                        Map.entry(3,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s3k-sprite-3.png"),character.equals("mica") ? 12 : -16,character.equals("mica") ? 32 : 40)))));
                     for(var part:List.of(TitlePart.PLANE_LEFT,TitlePart.PLANE_RIGHT)) {
                         var frames=new LinkedHashMap<Integer,StageSpriteSet.Frame>();
                         String half=part==TitlePart.PLANE_LEFT ? "left" : "right";
