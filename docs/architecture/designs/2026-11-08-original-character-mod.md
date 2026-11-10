@@ -3039,3 +3039,24 @@ image tool; five separate native 8× reference sheets succeeded. No fallback art
 was counted authored during those failures. The inline HTML preview has a 512 KB
 limit, so the compact overview is separate from the complete portable film review.
 This lane commits locally only; no push or merge is performed.
+
+### MICA Blue Sphere style checkpoint — 2026-11-10
+
+Fresh GPT Image generations replace all eleven nonblank `S3K_BLUE_SPHERE`
+selectors; the blank, mapping origins and native animation owners stay unchanged.
+The native special-stage palette references measure 8–9 visible colours for
+standing/running, six for detailed balls and five for the blur. The new indexed
+frames observe those budgets with deep jade edges, upper-left faceted highlights
+and shade-defined scales. Unlabelled native/new gates and native-origin head/torso
+panels accompany exact 60 Hz constant-velocity script movies. Turning shares the
+body bank while the stage rotates; this actor has no extra start/clear drawing.
+
+The independent square-root area ratios are standing 0.969, running 0.988,
+jumping 0.971 and overall 0.983. The external picture checkpoint is
+`$HOME/scratch/agent-tmp/mica-blue-redo-20261110/review.html`; production CNZ entry
+at (11616,1612) shows running, turning and jumping, followed by a red-sphere
+failure. This verifies presentation, not all-layout completion. TALON's art is
+unchanged. Provenance and final indexed rows are under `art/mica/wave3/`.
+
+These rows were already authored at the integration base. Audit counts therefore
+remain unchanged; this is an art-quality correction, not fallback closure.

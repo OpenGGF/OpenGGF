@@ -1744,8 +1744,10 @@
       "frame_count_correction": "Pinned S3K has 12 mapping entries (0 blank, 1 standing, 2-8 run, 9-11 curl), not 24. The run sequence has 12 steps and jumping another 12 steps, reusing these entries. Turning rotates the stage via Special_stage_angle; no additional player turn art.",
       "timing": {
         "source": "loc_907E / loc_90A8 / byte_91E8 / byte_91F6 / sub_9580",
-        "run": "anim_frame_timer += Special_stage_velocity >> 5; wrap 12; preview ticks illustrative",
-        "jump": "same phase timer; stationary jump uses Level_frame_counter & 3"
+        "run": "8.8 phase += signed Special_stage_velocity >> 5; high byte wraps at 12; review velocity 0x1000 gives exactly 2 ticks per phase",
+        "jump": "same phase timer; stationary jump uses Level_frame_counter & 3",
+        "preview_velocity": 4096,
+        "preview_fps": 60
       },
       "sequences": [
         {
@@ -1764,7 +1766,7 @@
             4,
             3
           ],
-          "preview_ticks": 5
+          "preview_ticks": 2
         },
         {
           "name": "jump",
@@ -1774,14 +1776,14 @@
             10,
             11
           ],
-          "preview_ticks": 5
+          "preview_ticks": 2
         },
         {
           "name": "stationary",
           "frames": [
             1
           ],
-          "preview_ticks": 20
+          "preview_ticks": 60
         }
       ],
       "frames": [
