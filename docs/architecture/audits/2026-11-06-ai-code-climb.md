@@ -6209,3 +6209,64 @@ or publication gate. All owned units are terminal. One complete 4,643-class
 candidate smoke/guards run and full negative/skip/input comparison remain required
 before task-branch-only draft PR271 publication. Original pixel attribution and
 the wider six-trial goal remain unresolved.
+
+
+### Final admitted-parent batch qualification — 2026-11-10
+
+The single frozen candidate run `20261110T043251Z-3060cb0c` tested clean
+`ec29ef9300e1cafc2c163f1218f6b943d4e8d2c0`, fingerprint
+`a9c5bb4bf5d4bc1f7b85c724aae5edea506ec1cdfcbe428ae2067088112997bd`.
+It completed 4,643/4,643 selected source classes, 94/94 ordinary batches and the
+full guard lane. Ordinary: 37,975 cases, 29 failures, 0 errors, 49 allowed skips.
+Guards: 846 cases in 103 suites, no failures/errors/skips. The raw final line is:
+
+```text
+VERDICT FAILED: head=ec29ef9300e1 source=a9c5bb4bf5d4 change-based 4643/4643 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38821 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Command: `env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 118a26ca9966fe9b39b6c004cc3cd4a65abf1e81 --workers 2 --headless-gl surfaceless-egl --max-minutes 40 --keep-diagnostics --run`.
+The sealed effective environment also clears Maven/Java argument overrides.
+The existing `config.yaml` link and its baseline-matching content were preserved;
+an initial preparation check wrongly assumed it was not a link and stopped before
+launch. Only the private config snapshot is a new regular file; no live config
+or ROM was altered.
+
+The actual baseline remains `4d5e592165`, program-identical to pre-task `118a`.
+All 29 failure identities/kinds/types match. Twenty-five full negative dictionaries
+are literal matches. The remaining four were individually source-reviewed:
+Three Islands differs only in default FieldScreen/StoryScreen identity suffixes;
+MHZ Sonic/Tails/Wide differ only in the display order of the expected `Set.of`.
+Their complete actual strings, expected members/multiplicity and trailing stacks
+match. Every implicated test and screen source blob is identical between tested
+sources. The strict comparator still reports those four display differences;
+its output and both full texts are retained, with no blanket normalization.
+All 49 complete skip dictionaries, including classification metadata, match.
+No omitted identities, unexplained/required skips or capped causal records exist.
+
+All 4,641 baseline classes remain in relative order, plus the two new boundary
+classes. Actual runtime selection, ROM discovery, backend, worker, budget and skip
+inputs match. Runner, comparator, POM and skip policy are unchanged. The stronger
+11-case focus XML and prior 303-case scope are retained separately; category
+compaction does not preserve every per-class positive XML/log line. No such raw
+positive-XML retention is claimed. Complete exported negatives/skips and raw final
+verdicts remain authoritative for this comparison.
+
+Queue was 472 seconds across 95 admissions; execution plus preparation 1,957.7
+seconds; job wall 2,447.869154 seconds; user wait during the job 0; residual/unknown
+18.169154 seconds. Later terminal-to-observation residence and investigation are
+outside that job timing, with no cause assigned. The owned unit is terminal and
+retired, all diagnostics retained. Domain evidence remains actual `1f84`, with
+reviewed relevant main/trace/fixture/tool/POM inputs unchanged through `ec29`.
+The fetched develop tip is still `c06efe67da`; no reconciliation was needed.
+
+Exact comparisons, full source-specific display reviews, timing, source/config
+seals and terminal export are in
+`target/code-climb/shellcracker-parent-contract/admission-candidate-category/`.
+The export SHA-256 is
+`da35734e55cdf122e65cada9225e5ae613214553292d8d99e88e5fd01a3ed11c`.
+Within this bounded scope no new or worsened outcome blocks draft publication.
+This is not a full-suite, whole-route or usability-target completion claim.
+The original 2dd competition pixel failure remains unattributed and merge-blocking;
+its unavailable raw-frame/fork evidence is not reconstructed by later passes.
+Only this final audit prose follows the tested source. Task-branch-only publication
+to existing draft PR271 is authorized; no destination push or merge is authorized.
