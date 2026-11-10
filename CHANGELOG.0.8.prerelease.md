@@ -52,8 +52,8 @@ under the matching area heading; see the
   portraits now cover S2 CNZ and S3K Slots lead/sidekick symbols, TALON solo
   and Gilded/Solar symbols through optional candidate character presentation;
   slot rewards and other symbols remain native. MICA’s S3K title now
-  adds native-style baked jade roll-in smears while preserving the approved later
-  sequence, and keeps a coral-pink ear, a wink registered to her own eye,
+  adds baked jade roll-in smears and heavy radial/turn ghosts through the large
+  close-ups while preserving the settling pose, ring and final portrait, and keeps a coral-pink ear, a wink registered to her own eye,
   short gloved finger poses and a rounded lower glove, with an unperforated silhouette over the ring. Optional per-host title mascot banks
   now supply native-selector body/hand frames and masked S3K plane art, with
   independent role palettes and native fallback; MICA and TALON supply all three

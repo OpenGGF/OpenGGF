@@ -145,7 +145,7 @@ strips, 60fps paired films and a real-capture palm before/after zoom. S3K is
 unchanged by this lane. Alternate-role/solo art is inherited and not visually
 certified here. Coverage counts stay unchanged: this corrects authored banks.
 
-## Optional S3K roll-in trail
+## Initial S3K roll-in trail (4a69cb17, rejected)
 
 Selectors2–7 use fresh native-pose GPT Image motion-smear generations: broad
 lit jade cores with short darker overlapping echoes, not separate particles.
@@ -182,3 +182,38 @@ frames267–899 are byte-identical PNGs to a fresh5278d637cd integration capture
 all non-roll-in frames0–233 are also byte-identical. This is a bounded title
 presentation check, not hardware timing parity. Title audit obligations stay
 six authored; none moves from fallback.
+
+## Heavy-blur retry
+
+The lead’s254/267/279/289 evidence corresponds to engine selectors7/8/9/10.
+Pass1 changed only the small ball and missed the large blurred close-ups.
+Current art covers2–10; settling11/12, ring13, portrait, wink and finger are
+unchanged by this blur commit. All607 frames293–899, including all604 ring
+frames296–899, remain byte-identical to integration5278d637cd.
+
+Both fresh built-in GPT Image and deterministic shutter candidates were made
+for every selector2–10. Unlabelled1×/3× comparisons select GPT2–7 and the
+image-space radial/turn exposures8–10. The latter dissolve lashes, plates,
+gloves and laces into multiple ghost contours instead of a sharp model with
+an added trail. Native measurements and sampling rectangles, exposure kernels,
+selection reasons, raw area ratios and limitations are recorded in
+`s3k-heavy-blur-provenance.json`. The native flattened art does not uniquely
+reveal its original3D shutter; visible copy counts/landmarks are estimates,
+while dither/light coverage and source-detail metrics are measured separately.
+Native large planes use their own descriptors in
+`TitleSonic_Frames (sonic3k.asm:5943-5973)`; timing stays host-owned.
+
+All tools require Pillow; the offline candidate/measurement tools also require
+NumPy (install in a scratch virtualenv, not the runtime). From a scratch set
+containing approved `sharp/2..13.png`, native exports and `gpt-small.png` /
+`gpt-7..10.png`, run these scripts with `--scratch <dir> --native <exports>`:
+`s3k_heavy_blur.py`, `s3k_gpt_blur_reduce.py`, `s3k_blur_measure.py`, then
+`s3k_heavy_review.py` after real stock/baseline/mod captures. The selected
+320×224 candidate planes split at x160 into existing left/right assets.
+
+Review: `$HOME/scratch/agent-tmp/title-s3k-heavy/review.html`; it includes the
+requested3-way real-capture strips at1×/3× and a360-frame60Hz three-way film.
+SEGA checks preserve100,763 native pixels and reject any residual blue body.
+Input anatomy stays approved; extra low-opacity ghost support expands the raw
+visible silhouette area. Colour budget stays15 opaque entries, with4×4 ordered
+shade/coverage dithering. No runtime blur, API, palette or clock changes.
