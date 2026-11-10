@@ -144,3 +144,41 @@ and size checks. Raw generations and real stock/mod capture frames remain at
 strips, 60fps paired films and a real-capture palm before/after zoom. S3K is
 unchanged by this lane. Alternate-role/solo art is inherited and not visually
 certified here. Coverage counts stay unchanged: this corrects authored banks.
+
+## Optional S3K roll-in trail
+
+Selectors2–7 use fresh native-pose GPT Image motion-smear generations: broad
+lit jade cores with short darker overlapping echoes, not separate particles.
+`TitleSonic_Frames (sonic3k.asm:5943-5964)` binds these native frames to shared
+Kosinski art and individual Enigma maps/palettes. `TitleSonic_LoadFrame (sonic3k.asm:5850-5940)` installs complete planes; no sprite mapping or DPLC
+participates. `TitleAnim_FlipBuffer (sonic3k.asm:5775-5804)` reloads3 and
+`Iterate_TitleSonicFrame (sonic3k.asm:5824-5847)` advances at delay1: four
+native loop iterations. The engine capture observes selectors2–6 at234–253,
+then7 at254–266 while the next load completes; timing is unchanged.
+
+`MapEni_S3TitleSonic1 (s3.asm:118484-118504)` introduces the first seven plane
+maps; `ArtKos_S3TitleSonic1 (s3.asm:118531-118533)` owns their shared tile art.
+`s3k-rollin-provenance.json` records owning labels, mapped tile IDs, attempts,
+rejected first small-ball set and native-box area checks. The existing private
+palette supplies six jade shades within the native15 opaque-colour budget.
+Only selector7’s binary clear ownership also changes: the old extractor truncated
+at row80, leaving1107 blue native trail pixels in SEGA letter gaps through row131.
+The full native7 contribution is isolated against the preceding logo plane;
+new art is clipped behind those original glyphs. No native RGB/tile bytes ship.
+No approved later image/mask, palette, binding or host code changes.
+
+```sh
+python3 examples/mica-and-talon/art/mica/titles/s3k_rollin.py \
+  --generation /scratch/large-complete-attempts.png --small-generation /scratch/small-attempts.png \
+  --native /scratch/native-title-exports
+python3 examples/mica-and-talon/art/mica/titles/s3k_rollin_review.py \
+  --captures /scratch/title-s3k-rollin --native /scratch/native-title-exports \
+  --baseline-sha 5278d637cd
+```
+
+Review: `$HOME/scratch/agent-tmp/title-s3k-rollin/review.html`: every one of33
+real roll-in presentations at3×, and a360-frame60Hz side-by-side film. All633
+frames267–899 are byte-identical PNGs to a fresh5278d637cd integration capture;
+all non-roll-in frames0–233 are also byte-identical. This is a bounded title
+presentation check, not hardware timing parity. Title audit obligations stay
+six authored; none moves from fallback.
