@@ -1684,6 +1684,8 @@ his authored six-phase, two-tick integrated wingbeat.
 
 **S3K title revision, 2026-11-10:** the final portrait, resting glove, finger and wink patches are freshly generated and registered to MICA’s own eye/wrist. Her title-local ear ramp is coral-pink with cream rim; it is independent of native banner palette cycling. The final silhouette is no longer perforated by clipping generated pixels against the native emblem. Preserved native pixels outside replacement ownership are compared on every real capture; removing Sonic necessarily changes some pixels outside MICA’s smaller contour, and the checker reports those literal differences separately. No coverage rows change. The approach poses retain their approved round-one art with the corrected local palette.
 
+**S3K hand ownership correction, 2026-11-10:** the old grey-only split left warm thumb pixels and a cutout halo in the plane. Complete anatomical ownership moves all glove materials/contour into the authored rest4 sprite, with fresh handless cape backing shared by0/1/4. Native context replacement, origins and delay5 clock remain unchanged. Automatic source/capture guards and missing-context/baked-thumb negative controls enforce the correction; every distinct real wag pose is inspected at4×. No coverage rows move. This change is independently applicable without the optional blur work.
+
 **Title polish, 2026-11-10:** no coverage row changes: all six existing title
 obligations remain authored, with zero fallback obligations in the current audit.
 S2 stages MICA left (thumbs-up), TALON right (connected wings; separate hand 19

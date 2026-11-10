@@ -86,6 +86,10 @@ scrolling remain host-owned. See each character’s `art/*/reels/README.md`.
 Follow the [creator tutorial](../../docs/modding/guides/original-character.md)
 for the concept-to-capture workflow and source map.
 
+S3K’s wagging glove now has complete sprite ownership, including its handless
+cape backing; no thumb remains baked beneath a moving pose. Native selector
+timing and the approved glove proportions are retained.
+
 ## Acceptance
 
 `TestMicaCharacterIntegration` compiles and packages these exact sources, then

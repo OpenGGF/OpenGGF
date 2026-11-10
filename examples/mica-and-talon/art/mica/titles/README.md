@@ -85,6 +85,37 @@ context ramp. The anatomical check uses the glove/forearm, while production nati
 coverage independently preserves the aperture. No native context pixels are
 copied into the authored hand.
 
+## Complete S3K hand ownership
+
+The complete pointing glove, including warm lighting and its contour, now lives
+in sprites0/1/4. A fresh generated handless cape fills the old plane footprint.
+All three sprites own identical backing context there, so moved fingers reveal
+cape instead of a second baked thumb or a black cutout. Original wag anatomy,
+hotspots and selector clocks stay unchanged. The rest pose is consolidated from
+the approved plane plus sprite, rather than redrawn at another scale.
+
+Native `Obj_TitleSonicFinger (sonic3k.asm:6239-6258)` uses the normal sprite clock.
+`word_4F96 (General/Title/Map - S3 Sonic Anim.asm:7-11)` and
+`word_4FB0 (General/Title/Map - S3 Sonic Anim.asm:12-16)` compose48×56 context
+around the hand. Native rest selector4 is empty:
+`word_4FE6 (General/Title/Map - S3 Sonic Anim.asm:23-23)`; its hand stays in the
+plane. MICA uses the already-supported authored rest4 slot to remove its plane
+hand entirely and retain the same contextual replacement principle.
+`byte_4B36 (General/Title/Anim - S3 Sonic Finger.asm:3-4)` supplies delay5 and the
+unchanged0/4/1 sequence, six presentations per phase.
+
+`s3k_hand_ownership.py` rebuilds from approved plane13 and sprite0/1/4 snapshots
+plus the fresh backing sheet (`--source`, `--background`). The binary-alpha
+coverage contract is recorded as row spans in `s3k-hand-ownership.json`.
+`s3k_hand_review.py --captures <dir> --before <prior-mod-capture>` checks it on
+every real presentation, verifies unobscured rendered pixels and preserves all
+pixels outside the hand rectangle. It emits all distinct wag poses and the
+lead’s sample frames at4×. The regression tests also reject a missing sprite
+context pixel and a surviving warm plane-thumb pixel.
+
+Review: `$HOME/scratch/agent-tmp/title-s3k-finger/review.html`.
+This hand correction is independent of any roll-in blur changes.
+
 ## S3K owner revision, round 2
 
 Fresh built-in GPT Image attempts replace the final portrait and its finger/wink
