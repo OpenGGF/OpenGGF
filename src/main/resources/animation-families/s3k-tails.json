@@ -286,9 +286,9 @@
     "animation": "BLINK",
     "family": "BLINK",
     "phases": [
-      0,
-      1,
-      2
+      5,
+      6,
+      7
     ],
     "offsetX": 0,
     "offsetY": 0
@@ -297,8 +297,8 @@
     "animation": null,
     "family": "BLINK",
     "phases": [
-      0,
-      1
+      3,
+      4
     ],
     "offsetX": 0,
     "offsetY": 0
@@ -531,15 +531,15 @@
       0,
       0,
       3,
-      4,
+      2,
       3,
-      4,
+      2,
       3,
-      4,
+      2,
       3,
-      4,
+      2,
       3,
-      4
+      2
     ],
     "offsetX": 0,
     "offsetY": 0

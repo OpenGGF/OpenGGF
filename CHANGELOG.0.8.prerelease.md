@@ -61,7 +61,9 @@ under the matching area heading; see the
   a shared palette and a breathing/fidget idle. Canonical sheets preserve native
   partial-loop WAIT tails and finite hold/next endings. Shared module animation
   families bind MICA and TALON phase art at host ROM timing, using separate
-  Sonic/Tails archetype vocabularies, and supply equivalent missing
+  Sonic/Tails archetype vocabularies. TALON families share the approved core
+  character scale, with distinct S3K yawning/stretch poses and transformation
+  flash phases. The profiles supply equivalent missing
   cross-game Sonic donation scripts; 18 redundant drawings are removed without
   generating art. Ordinary art bindings keep donated animation profiles stable
   across native-scene rewind. MICA and TALON skip

@@ -523,8 +523,8 @@
       ],
       "attempt": 2,
       "hotspot": [
-        14,
-        11
+        15,
+        13
       ],
       "sha256": "223e32a675b377eabdb7855eb0b49bc178ab83eb5a310924e6281ad4d0e1e349",
       "reference": {
@@ -541,7 +541,11 @@
         "label": "Map_Sonic_175C"
       },
       "landmarkCorrection": 1.15,
-      "finalScale": 7.304347826086957
+      "finalScale": 6.640316205533597,
+      "scaleCorrection20261110": {
+        "previousReduction": 7.304347826086957,
+        "factor": 1.1
+      }
     },
     "family-balance2-01": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-8fe0e03f-caa3-433f-b075-eda0a6a3e553.png",
@@ -566,8 +570,8 @@
       ],
       "attempt": 1,
       "hotspot": [
-        14,
-        13
+        15,
+        15
       ],
       "sha256": "223e32a675b377eabdb7855eb0b49bc178ab83eb5a310924e6281ad4d0e1e349",
       "reference": {
@@ -584,7 +588,11 @@
         "label": "Map_Sonic_17AA"
       },
       "landmarkCorrection": 1.15,
-      "finalScale": 6.695652173913044
+      "finalScale": 6.08695652173913,
+      "scaleCorrection20261110": {
+        "previousReduction": 6.695652173913044,
+        "factor": 1.1
+      }
     },
     "family-balance2-02": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-8fe0e03f-caa3-433f-b075-eda0a6a3e553.png",
@@ -609,8 +617,8 @@
       ],
       "attempt": 3,
       "hotspot": [
-        13,
-        11
+        14,
+        13
       ],
       "sha256": "223e32a675b377eabdb7855eb0b49bc178ab83eb5a310924e6281ad4d0e1e349",
       "reference": {
@@ -625,7 +633,12 @@
         "mapping": 202,
         "host": "s2-sonic",
         "label": "Map_Sonic_1790"
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 6.7,
+        "factor": 1.1
+      },
+      "finalScale": 6.090909090909091
     },
     "family-balance3-00": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-2d6efd07-3006-4be0-9b8d-bc05e3eb0d49.png",
@@ -732,8 +745,8 @@
       ],
       "attempt": 1,
       "hotspot": [
-        10,
-        10
+        11,
+        12
       ],
       "sha256": "b3a776951284e0a5224e7a7b05016c254db741d6d1eb88896d41b0a2eb084682",
       "reference": {
@@ -750,7 +763,11 @@
         "label": "Map_Sonic_183A"
       },
       "landmarkCorrection": 0.92,
-      "finalScale": 6.739130434782608
+      "finalScale": 6.071288679984331,
+      "scaleCorrection20261110": {
+        "previousReduction": 6.739130434782608,
+        "factor": 1.11
+      }
     },
     "family-balance4-01": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-a09acb58-8161-4b3e-8782-16503dea3aab.png",
@@ -775,8 +792,8 @@
       ],
       "attempt": 2,
       "hotspot": [
-        16,
-        15
+        18,
+        17
       ],
       "sha256": "b3a776951284e0a5224e7a7b05016c254db741d6d1eb88896d41b0a2eb084682",
       "reference": {
@@ -793,7 +810,11 @@
         "label": "Map_Sonic_175C"
       },
       "landmarkCorrection": 0.92,
-      "finalScale": 5.760869565217391
+      "finalScale": 5.189972581276928,
+      "scaleCorrection20261110": {
+        "previousReduction": 5.760869565217391,
+        "factor": 1.11
+      }
     },
     "family-balance4-02": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-a09acb58-8161-4b3e-8782-16503dea3aab.png",
@@ -818,8 +839,8 @@
       ],
       "attempt": 3,
       "hotspot": [
-        17,
-        13
+        19,
+        15
       ],
       "sha256": "b3a776951284e0a5224e7a7b05016c254db741d6d1eb88896d41b0a2eb084682",
       "reference": {
@@ -836,7 +857,11 @@
         "label": "Map_Sonic_1776"
       },
       "landmarkCorrection": 0.92,
-      "finalScale": 5.760869565217391
+      "finalScale": 5.189972581276928,
+      "scaleCorrection20261110": {
+        "previousReduction": 5.760869565217391,
+        "factor": 1.11
+      }
     },
     "family-balance4-03": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-a09acb58-8161-4b3e-8782-16503dea3aab.png",
@@ -861,8 +886,8 @@
       ],
       "attempt": 2,
       "hotspot": [
-        18,
-        14
+        20,
+        17
       ],
       "sha256": "b3a776951284e0a5224e7a7b05016c254db741d6d1eb88896d41b0a2eb084682",
       "reference": {
@@ -879,7 +904,11 @@
         "label": "Map_Sonic_1790"
       },
       "landmarkCorrection": 0.92,
-      "finalScale": 5.5434782608695645
+      "finalScale": 4.99412455934195,
+      "scaleCorrection20261110": {
+        "previousReduction": 5.5434782608695645,
+        "factor": 1.11
+      }
     },
     "family-balance4-04": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-a09acb58-8161-4b3e-8782-16503dea3aab.png",
@@ -904,8 +933,8 @@
       ],
       "attempt": 3,
       "hotspot": [
-        13,
-        11
+        14,
+        13
       ],
       "sha256": "b3a776951284e0a5224e7a7b05016c254db741d6d1eb88896d41b0a2eb084682",
       "reference": {
@@ -922,7 +951,11 @@
         "label": "Map_Sonic_17AA"
       },
       "landmarkCorrection": 0.92,
-      "finalScale": 6.41304347826087
+      "finalScale": 5.777516647081865,
+      "scaleCorrection20261110": {
+        "previousReduction": 6.41304347826087,
+        "factor": 1.11
+      }
     },
     "family-hang-00": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-f188dbf4-910f-4d3f-863c-2ba49b04ddfb.png",
@@ -1149,8 +1182,8 @@
       ],
       "attempt": 1,
       "hotspot": [
-        16,
-        15
+        20,
+        19
       ],
       "sha256": "aea5b9aa0258f72ab51330a5879ceee27151f02f9fc12672f3658d5fa501d557",
       "reference": {
@@ -1167,7 +1200,11 @@
         "tailExcluded": true
       },
       "landmarkCorrection": 1.12,
-      "finalScale": 6.9642857142857135
+      "finalScale": 5.616359447004608,
+      "scaleCorrection20261110": {
+        "previousReduction": 6.9642857142857135,
+        "factor": 1.24
+      }
     },
     "family-bubble-01": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-dad3482b-3c61-4b37-8d07-f6f88d6f9230.png",
@@ -1192,8 +1229,8 @@
       ],
       "attempt": 2,
       "hotspot": [
-        16,
-        15
+        20,
+        19
       ],
       "sha256": "aea5b9aa0258f72ab51330a5879ceee27151f02f9fc12672f3658d5fa501d557",
       "reference": {
@@ -1210,7 +1247,11 @@
         "tailExcluded": true
       },
       "landmarkCorrection": 1.12,
-      "finalScale": 6.874999999999999
+      "finalScale": 5.544354838709677,
+      "scaleCorrection20261110": {
+        "previousReduction": 6.874999999999999,
+        "factor": 1.24
+      }
     },
     "family-bubble-02": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-dad3482b-3c61-4b37-8d07-f6f88d6f9230.png",
@@ -1235,8 +1276,8 @@
       ],
       "attempt": 3,
       "hotspot": [
-        16,
-        15
+        20,
+        19
       ],
       "sha256": "aea5b9aa0258f72ab51330a5879ceee27151f02f9fc12672f3658d5fa501d557",
       "reference": {
@@ -1253,7 +1294,11 @@
         "tailExcluded": true
       },
       "landmarkCorrection": 1.12,
-      "finalScale": 7.053571428571428
+      "finalScale": 5.688364055299538,
+      "scaleCorrection20261110": {
+        "previousReduction": 7.053571428571428,
+        "factor": 1.24
+      }
     },
     "family-hurt-fall-00": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-1437e090-e65c-4c79-b581-3613ba20afcf.png",
@@ -1278,8 +1323,8 @@
       ],
       "attempt": 2,
       "hotspot": [
-        13,
-        16
+        17,
+        21
       ],
       "sha256": "99cc2c75ee0fc204b1968f8d65fda3b9a7d2c3e68c6e88b10b07eb76e9e5e10b",
       "reference": {
@@ -1296,7 +1341,11 @@
         "tailExcluded": true
       },
       "landmarkCorrection": 1.12,
-      "finalScale": 11.339285714285712
+      "finalScale": 8.790143964562567,
+      "scaleCorrection20261110": {
+        "previousReduction": 11.339285714285712,
+        "factor": 1.29
+      }
     },
     "family-hurt-fall-01": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-1437e090-e65c-4c79-b581-3613ba20afcf.png",
@@ -1321,8 +1370,8 @@
       ],
       "attempt": 3,
       "hotspot": [
-        15,
-        15
+        19,
+        19
       ],
       "sha256": "99cc2c75ee0fc204b1968f8d65fda3b9a7d2c3e68c6e88b10b07eb76e9e5e10b",
       "reference": {
@@ -1339,7 +1388,11 @@
         "tailExcluded": true
       },
       "landmarkCorrection": 1.12,
-      "finalScale": 11.607142857142856
+      "finalScale": 8.997785160575857,
+      "scaleCorrection20261110": {
+        "previousReduction": 11.607142857142856,
+        "factor": 1.29
+      }
     },
     "family-drown-00": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-94563843-e6e0-4fcc-bcb1-276629c3ed90.png",
@@ -1364,8 +1417,8 @@
       ],
       "attempt": 3,
       "hotspot": [
-        12,
-        15
+        16,
+        20
       ],
       "sha256": "970c19389e14ef28a32f5a8ce54d96b9860a7fe3d98dafd7ce4609b84fd5c104",
       "reference": {
@@ -1382,7 +1435,11 @@
         "tailExcluded": true
       },
       "landmarkCorrection": 1.12,
-      "finalScale": 20.535714285714285
+      "finalScale": 15.796703296703296,
+      "scaleCorrection20261110": {
+        "previousReduction": 20.535714285714285,
+        "factor": 1.3
+      }
     },
     "family-float2-00": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
@@ -1407,8 +1464,8 @@
       ],
       "attempt": 1,
       "hotspot": [
-        13,
-        6
+        19,
+        9
       ],
       "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
       "reference": {
@@ -1423,7 +1480,12 @@
         "host": "s3",
         "mapping": 181,
         "tailExcluded": true
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 8,
+        "factor": 1.47
+      },
+      "finalScale": 5.442176870748299
     },
     "family-float2-01": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
@@ -1448,8 +1510,8 @@
       ],
       "attempt": 2,
       "hotspot": [
-        11,
-        6
+        16,
+        9
       ],
       "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
       "reference": {
@@ -1464,7 +1526,12 @@
         "host": "s3",
         "mapping": 182,
         "tailExcluded": true
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 8,
+        "factor": 1.47
+      },
+      "finalScale": 5.442176870748299
     },
     "family-float2-02": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
@@ -1489,8 +1556,8 @@
       ],
       "attempt": 1,
       "hotspot": [
-        11,
-        7
+        16,
+        10
       ],
       "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
       "reference": {
@@ -1505,7 +1572,12 @@
         "host": "s3",
         "mapping": 183,
         "tailExcluded": true
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 8,
+        "factor": 1.47
+      },
+      "finalScale": 5.442176870748299
     },
     "family-float2-03": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
@@ -1530,8 +1602,8 @@
       ],
       "attempt": 3,
       "hotspot": [
-        11,
-        6
+        16,
+        9
       ],
       "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
       "reference": {
@@ -1546,7 +1618,12 @@
         "host": "s3",
         "mapping": 184,
         "tailExcluded": true
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 8,
+        "factor": 1.47
+      },
+      "finalScale": 5.442176870748299
     },
     "family-float2-04": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
@@ -1571,8 +1648,8 @@
       ],
       "attempt": 2,
       "hotspot": [
-        12,
-        6
+        18,
+        9
       ],
       "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
       "reference": {
@@ -1587,7 +1664,12 @@
         "host": "s3",
         "mapping": 185,
         "tailExcluded": true
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 8,
+        "factor": 1.47
+      },
+      "finalScale": 5.442176870748299
     },
     "family-float2-05": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
@@ -1612,8 +1694,8 @@
       ],
       "attempt": 3,
       "hotspot": [
-        10,
-        8
+        15,
+        12
       ],
       "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
       "reference": {
@@ -1628,7 +1710,12 @@
         "host": "s3",
         "mapping": 186,
         "tailExcluded": true
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 8,
+        "factor": 1.47
+      },
+      "finalScale": 5.442176870748299
     },
     "family-float2-06": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
@@ -1653,8 +1740,8 @@
       ],
       "attempt": 1,
       "hotspot": [
-        10,
-        8
+        15,
+        12
       ],
       "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
       "reference": {
@@ -1669,7 +1756,12 @@
         "host": "s3",
         "mapping": 187,
         "tailExcluded": true
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 8,
+        "factor": 1.47
+      },
+      "finalScale": 5.442176870748299
     },
     "family-float2-07": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png",
@@ -1694,8 +1786,8 @@
       ],
       "attempt": 2,
       "hotspot": [
-        10,
-        8
+        15,
+        12
       ],
       "sha256": "810e75fa69f4efe4e82f6253751077e59ca6b078d618cbbe4f8152f801dd5298",
       "reference": {
@@ -1710,7 +1802,12 @@
         "host": "s3",
         "mapping": 188,
         "tailExcluded": true
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 8,
+        "factor": 1.47
+      },
+      "finalScale": 5.442176870748299
     },
     "family-blink-00": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-beb6fcbe-f986-4f49-987a-451cd766b6fe.png",
@@ -1940,8 +2037,8 @@
       ],
       "attempt": 1,
       "hotspot": [
-        9,
-        11
+        12,
+        19
       ],
       "sha256": "058c64a6cb238c8b5b68c8a867355c7f433d4122c52bf88841c6e3a34d63c066",
       "reference": {
@@ -1956,7 +2053,12 @@
         ],
         "mapping": 176,
         "host": "s3k-sonic"
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 8.5,
+        "factor": 1.3
+      },
+      "finalScale": 6.538461538461538
     },
     "family-victory-01": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-18976a5b-4615-41a3-8bb9-a70757087963.png",
@@ -1981,8 +2083,8 @@
       ],
       "attempt": 2,
       "hotspot": [
-        10,
-        11
+        13,
+        18
       ],
       "sha256": "058c64a6cb238c8b5b68c8a867355c7f433d4122c52bf88841c6e3a34d63c066",
       "reference": {
@@ -1997,7 +2099,12 @@
         ],
         "mapping": 178,
         "host": "s3k-sonic"
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 8.6,
+        "factor": 1.3
+      },
+      "finalScale": 6.615384615384615
     },
     "family-victory-02": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-18976a5b-4615-41a3-8bb9-a70757087963.png",
@@ -2022,8 +2129,8 @@
       ],
       "attempt": 3,
       "hotspot": [
-        11,
-        10
+        14,
+        18
       ],
       "sha256": "058c64a6cb238c8b5b68c8a867355c7f433d4122c52bf88841c6e3a34d63c066",
       "reference": {
@@ -2038,7 +2145,12 @@
         ],
         "mapping": 177,
         "host": "s3k-sonic"
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 8.7,
+        "factor": 1.3
+      },
+      "finalScale": 6.692307692307692
     },
     "family-victory-03": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-18976a5b-4615-41a3-8bb9-a70757087963.png",
@@ -2063,8 +2175,8 @@
       ],
       "attempt": 2,
       "hotspot": [
-        10,
-        11
+        13,
+        19
       ],
       "sha256": "058c64a6cb238c8b5b68c8a867355c7f433d4122c52bf88841c6e3a34d63c066",
       "reference": {
@@ -2079,7 +2191,12 @@
         ],
         "mapping": 179,
         "host": "s3k-sonic"
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 8.5,
+        "factor": 1.3
+      },
+      "finalScale": 6.538461538461538
     },
     "family-tails-carried-00": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-7445efdf-4c1f-43fd-9b08-3f4f55a101f9.png",
@@ -2104,7 +2221,7 @@
       ],
       "attempt": 2,
       "hotspot": [
-        13,
+        15,
         24
       ],
       "sha256": "7354cb05ddc2a27100756badeb30039d6d5ff1bb0b7a3553fcba916d3f787487",
@@ -2122,7 +2239,12 @@
         "host": "s3k-sonic"
       },
       "nativeGripTop": -24,
-      "anchorCorrectionY": 7
+      "anchorCorrectionY": 7,
+      "scaleCorrection20261110": {
+        "previousReduction": 6.7,
+        "factor": 1.16
+      },
+      "finalScale": 5.775862068965518
     },
     "family-tails-carried-01": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-7445efdf-4c1f-43fd-9b08-3f4f55a101f9.png",
@@ -2147,7 +2269,7 @@
       ],
       "attempt": 1,
       "hotspot": [
-        14,
+        16,
         24
       ],
       "sha256": "7354cb05ddc2a27100756badeb30039d6d5ff1bb0b7a3553fcba916d3f787487",
@@ -2165,9 +2287,13 @@
         "host": "s3k-sonic"
       },
       "landmarkCorrection": 0.8,
-      "finalScale": 6.5,
+      "finalScale": 5.603448275862069,
       "nativeGripTop": -24,
-      "anchorCorrectionY": 8
+      "anchorCorrectionY": 8,
+      "scaleCorrection20261110": {
+        "previousReduction": 6.5,
+        "factor": 1.16
+      }
     },
     "family-tails-carried-02": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-7445efdf-4c1f-43fd-9b08-3f4f55a101f9.png",
@@ -2192,7 +2318,7 @@
       ],
       "attempt": 3,
       "hotspot": [
-        16,
+        19,
         24
       ],
       "sha256": "7354cb05ddc2a27100756badeb30039d6d5ff1bb0b7a3553fcba916d3f787487",
@@ -2210,9 +2336,13 @@
         "host": "s3k-sonic"
       },
       "landmarkCorrection": 0.75,
-      "finalScale": 6.8,
+      "finalScale": 5.862068965517242,
       "nativeGripTop": -24,
-      "anchorCorrectionY": 10
+      "anchorCorrectionY": 10,
+      "scaleCorrection20261110": {
+        "previousReduction": 6.8,
+        "factor": 1.16
+      }
     },
     "family-super-transform-00": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-59094ff4-11f4-476e-a664-2170cfa75563.png",
@@ -2237,8 +2367,8 @@
       ],
       "attempt": 2,
       "hotspot": [
-        16,
-        13
+        20,
+        17
       ],
       "sha256": "553c7474b7b64197a1606d996cb3318be93f2f04a3ba7d22bfd70fa63be8cfb4",
       "reference": {
@@ -2255,7 +2385,11 @@
         "label": "Map_Sonic_0BFE"
       },
       "landmarkCorrection": 0.88,
-      "finalScale": 6.0227272727272725
+      "finalScale": 4.742304939155333,
+      "scaleCorrection20261110": {
+        "previousReduction": 6.0227272727272725,
+        "factor": 1.27
+      }
     },
     "family-super-transform-01": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-59094ff4-11f4-476e-a664-2170cfa75563.png",
@@ -2280,8 +2414,8 @@
       ],
       "attempt": 3,
       "hotspot": [
-        18,
-        15
+        23,
+        19
       ],
       "sha256": "553c7474b7b64197a1606d996cb3318be93f2f04a3ba7d22bfd70fa63be8cfb4",
       "reference": {
@@ -2296,7 +2430,12 @@
         "mapping": 110,
         "host": "s2-sonic",
         "label": "Map_Sonic_0C08"
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 6.1,
+        "factor": 1.27
+      },
+      "finalScale": 4.803149606299212
     },
     "family-super-transform-02": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-59094ff4-11f4-476e-a664-2170cfa75563.png",
@@ -2316,8 +2455,8 @@
       ],
       "attempt": 1,
       "hotspot": [
-        13,
-        15
+        17,
+        19
       ],
       "sha256": "553c7474b7b64197a1606d996cb3318be93f2f04a3ba7d22bfd70fa63be8cfb4",
       "reference": {
@@ -2332,7 +2471,12 @@
         "mapping": 111,
         "host": "s2-sonic",
         "label": "Map_Sonic_0C22"
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 6.733333333333333,
+        "factor": 1.27
+      },
+      "finalScale": 5.301837270341207
     },
     "family-super-transform-03": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-59094ff4-11f4-476e-a664-2170cfa75563.png",
@@ -2357,8 +2501,8 @@
       ],
       "attempt": 2,
       "hotspot": [
-        17,
-        13
+        22,
+        17
       ],
       "sha256": "553c7474b7b64197a1606d996cb3318be93f2f04a3ba7d22bfd70fa63be8cfb4",
       "reference": {
@@ -2375,7 +2519,11 @@
         "label": "Map_Sonic_0C3C"
       },
       "landmarkCorrection": 0.9,
-      "finalScale": 7.111111111111112
+      "finalScale": 5.599300087489064,
+      "scaleCorrection20261110": {
+        "previousReduction": 7.111111111111112,
+        "factor": 1.27
+      }
     },
     "family-super-transform-04": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-59094ff4-11f4-476e-a664-2170cfa75563.png",
@@ -2400,8 +2548,8 @@
       ],
       "attempt": 3,
       "hotspot": [
-        16,
-        13
+        20,
+        17
       ],
       "sha256": "553c7474b7b64197a1606d996cb3318be93f2f04a3ba7d22bfd70fa63be8cfb4",
       "reference": {
@@ -2418,7 +2566,11 @@
         "label": "Map_Sonic_0C66"
       },
       "landmarkCorrection": 0.9,
-      "finalScale": 7.222222222222222
+      "finalScale": 5.686789151356081,
+      "scaleCorrection20261110": {
+        "previousReduction": 7.222222222222222,
+        "factor": 1.27
+      }
     },
     "family-tails-fly-ascend-00": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-ed94187e-b0c5-4952-bd10-20cded10ed43.png",
@@ -3205,8 +3357,8 @@
       ],
       "attempt": 1,
       "hotspot": [
-        18,
-        15
+        22,
+        18
       ],
       "sha256": "a5cd2e713a87ed426c85889aca7f2363674e8070452261833c1d53af03e3b9de",
       "reference": {
@@ -3221,7 +3373,12 @@
         "host": "s3",
         "mapping": 189,
         "tailExcluded": true
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 7.5,
+        "factor": 1.22
+      },
+      "finalScale": 6.147540983606557
     },
     "family-tails-swim-01": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-aa894fde-81a9-4ab7-9330-e9dbffcc4e82.png",
@@ -3246,8 +3403,8 @@
       ],
       "attempt": 3,
       "hotspot": [
-        19,
-        15
+        23,
+        18
       ],
       "sha256": "a5cd2e713a87ed426c85889aca7f2363674e8070452261833c1d53af03e3b9de",
       "reference": {
@@ -3262,7 +3419,12 @@
         "host": "s3",
         "mapping": 190,
         "tailExcluded": true
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 7.2,
+        "factor": 1.22
+      },
+      "finalScale": 5.901639344262295
     },
     "family-tails-swim-02": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-aa894fde-81a9-4ab7-9330-e9dbffcc4e82.png",
@@ -3287,8 +3449,8 @@
       ],
       "attempt": 2,
       "hotspot": [
-        22,
-        15
+        27,
+        18
       ],
       "sha256": "a5cd2e713a87ed426c85889aca7f2363674e8070452261833c1d53af03e3b9de",
       "reference": {
@@ -3303,7 +3465,12 @@
         "host": "s3",
         "mapping": 191,
         "tailExcluded": true
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 7.3,
+        "factor": 1.22
+      },
+      "finalScale": 5.983606557377049
     },
     "family-tails-swim-03": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-aa894fde-81a9-4ab7-9330-e9dbffcc4e82.png",
@@ -3328,8 +3495,8 @@
       ],
       "attempt": 3,
       "hotspot": [
-        19,
-        15
+        23,
+        18
       ],
       "sha256": "a5cd2e713a87ed426c85889aca7f2363674e8070452261833c1d53af03e3b9de",
       "reference": {
@@ -3344,7 +3511,12 @@
         "host": "s3",
         "mapping": 192,
         "tailExcluded": true
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 7.3,
+        "factor": 1.22
+      },
+      "finalScale": 5.983606557377049
     },
     "family-tails-swim-04": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-aa894fde-81a9-4ab7-9330-e9dbffcc4e82.png",
@@ -3369,8 +3541,8 @@
       ],
       "attempt": 2,
       "hotspot": [
-        20,
-        15
+        24,
+        18
       ],
       "sha256": "a5cd2e713a87ed426c85889aca7f2363674e8070452261833c1d53af03e3b9de",
       "reference": {
@@ -3385,7 +3557,12 @@
         "host": "s3",
         "mapping": 193,
         "tailExcluded": true
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 7.3,
+        "factor": 1.22
+      },
+      "finalScale": 5.983606557377049
     },
     "family-tails-swim-ascend-00": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-b8831b88-cf4d-4daa-a422-64d888f3484f.png",
@@ -3701,8 +3878,8 @@
       ],
       "attempt": 2,
       "hotspot": [
-        16,
-        15
+        21,
+        20
       ],
       "sha256": "454813711a6a420f931ed850f1961f4d08b3fb3d0d931c698cf99f757b643f31",
       "reference": {
@@ -3717,7 +3894,12 @@
         "host": "s3",
         "mapping": 194,
         "tailExcluded": true
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 10.9,
+        "factor": 1.3
+      },
+      "finalScale": 8.384615384615385
     },
     "family-tails-swim-tired-01": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-d1691db4-a478-46b4-951c-268db539b2ed.png",
@@ -3742,8 +3924,8 @@
       ],
       "attempt": 1,
       "hotspot": [
-        15,
-        14
+        20,
+        18
       ],
       "sha256": "454813711a6a420f931ed850f1961f4d08b3fb3d0d931c698cf99f757b643f31",
       "reference": {
@@ -3758,7 +3940,12 @@
         "host": "s3",
         "mapping": 205,
         "tailExcluded": true
-      }
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 11.4,
+        "factor": 1.3
+      },
+      "finalScale": 8.76923076923077
     },
     "family-tails-swim-tired-02": {
       "source": "$HOME/.codex/generated_images/01a1c217-bd9d-7192-b27b-41c6efc4bc54/exec-d1691db4-a478-46b4-951c-268db539b2ed.png",
@@ -3783,8 +3970,8 @@
       ],
       "attempt": 3,
       "hotspot": [
-        16,
-        13
+        21,
+        17
       ],
       "sha256": "454813711a6a420f931ed850f1961f4d08b3fb3d0d931c698cf99f757b643f31",
       "reference": {
@@ -3799,6 +3986,75 @@
         "host": "s3",
         "mapping": 206,
         "tailExcluded": true
+      },
+      "scaleCorrection20261110": {
+        "previousReduction": 11.2,
+        "factor": 1.3
+      },
+      "finalScale": 8.615384615384615
+    },
+    "family-blink-03": {
+      "source": "$HOME/.codex/generated_images/01a1c2cd-f4b1-7d60-9060-82689c81ff01/exec-dae65ab0-ec5b-4f51-8aa5-136b8df6a21d.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        0,
+        1
+      ],
+      "scale": 13.5,
+      "finalScale": 13.5,
+      "goggleSourceBox": null,
+      "attempt": 2,
+      "hotspot": [
+        10,
+        17
+      ],
+      "sha256": "8f5d7a5680a6bfd6c8cbf4275774197d6d7f440b823901b8e5010ae6292dc7e5",
+      "reference": {
+        "host": "s3k-tails",
+        "mapping": 165,
+        "size": [
+          22,
+          31
+        ],
+        "hotspot": [
+          10,
+          15
+        ]
+      }
+    },
+    "family-blink-04": {
+      "source": "$HOME/.codex/generated_images/01a1c2cd-f4b1-7d60-9060-82689c81ff01/exec-dae65ab0-ec5b-4f51-8aa5-136b8df6a21d.png",
+      "grid": [
+        2,
+        3
+      ],
+      "cell": [
+        1,
+        1
+      ],
+      "scale": 13.5,
+      "finalScale": 13.5,
+      "goggleSourceBox": null,
+      "attempt": 2,
+      "hotspot": [
+        14,
+        10
+      ],
+      "sha256": "8f5d7a5680a6bfd6c8cbf4275774197d6d7f440b823901b8e5010ae6292dc7e5",
+      "reference": {
+        "host": "s3k-tails",
+        "mapping": 166,
+        "size": [
+          36,
+          35
+        ],
+        "hotspot": [
+          22,
+          19
+        ]
       }
     }
   },
@@ -3830,5 +4086,289 @@
       7
     ],
     "evidence": "Native Tails pose union: S2 $6E/$73 are two right-facing limb poses; $6F front, $70 left, $71 back-left, $72 back-right. S3K $B5-$BC supplies eight directional views. Local unique-frame ordinals are inventory labels, never cross-host correspondence."
+  },
+  "scaleReview20261110": {
+    "reference": "Approved wait-00: 31px tall, skull 11px, torso 9px; approved FLY retained.",
+    "method": "Uniform re-reduction of original generation, palette quantization and inside outline only. No finished sprite resize or painted contour. Manual anatomy review with +/-1 pixel uncertainty; area comparison is independent sanity check.",
+    "areaComparison": {
+      "BALANCE2": [
+        {
+          "id": "family-balance2-00",
+          "beforeArea": 527,
+          "afterArea": 632,
+          "nativeArea": 630
+        },
+        {
+          "id": "family-balance2-01",
+          "beforeArea": 547,
+          "afterArea": 668,
+          "nativeArea": 583
+        },
+        {
+          "id": "family-balance2-02",
+          "beforeArea": 558,
+          "afterArea": 688,
+          "nativeArea": 602
+        }
+      ],
+      "BALANCE4": [
+        {
+          "id": "family-balance4-00",
+          "beforeArea": 391,
+          "afterArea": 476,
+          "nativeArea": 632
+        },
+        {
+          "id": "family-balance4-01",
+          "beforeArea": 582,
+          "afterArea": 713,
+          "nativeArea": 630
+        },
+        {
+          "id": "family-balance4-02",
+          "beforeArea": 549,
+          "afterArea": 672,
+          "nativeArea": 572
+        },
+        {
+          "id": "family-balance4-03",
+          "beforeArea": 670,
+          "afterArea": 826,
+          "nativeArea": 602
+        },
+        {
+          "id": "family-balance4-04",
+          "beforeArea": 450,
+          "afterArea": 543,
+          "nativeArea": 583
+        }
+      ],
+      "BUBBLE": [
+        {
+          "id": "family-bubble-00",
+          "beforeArea": 404,
+          "afterArea": 628,
+          "nativeArea": 542
+        },
+        {
+          "id": "family-bubble-01",
+          "beforeArea": 431,
+          "afterArea": 679,
+          "nativeArea": 546
+        },
+        {
+          "id": "family-bubble-02",
+          "beforeArea": 379,
+          "afterArea": 602,
+          "nativeArea": 604
+        }
+      ],
+      "HURT_FALL": [
+        {
+          "id": "family-hurt-fall-00",
+          "beforeArea": 449,
+          "afterArea": 752,
+          "nativeArea": 678
+        },
+        {
+          "id": "family-hurt-fall-01",
+          "beforeArea": 435,
+          "afterArea": 737,
+          "nativeArea": 667
+        }
+      ],
+      "DROWN": [
+        {
+          "id": "family-drown-00",
+          "beforeArea": 373,
+          "afterArea": 644,
+          "nativeArea": 584
+        }
+      ],
+      "FLOAT2": [
+        {
+          "id": "family-float2-00",
+          "beforeArea": 206,
+          "afterArea": 442,
+          "nativeArea": 429
+        },
+        {
+          "id": "family-float2-01",
+          "beforeArea": 189,
+          "afterArea": 401,
+          "nativeArea": 465
+        },
+        {
+          "id": "family-float2-02",
+          "beforeArea": 188,
+          "afterArea": 407,
+          "nativeArea": 368
+        },
+        {
+          "id": "family-float2-03",
+          "beforeArea": 193,
+          "afterArea": 445,
+          "nativeArea": 465
+        },
+        {
+          "id": "family-float2-04",
+          "beforeArea": 187,
+          "afterArea": 409,
+          "nativeArea": 429
+        },
+        {
+          "id": "family-float2-05",
+          "beforeArea": 211,
+          "afterArea": 438,
+          "nativeArea": 385
+        },
+        {
+          "id": "family-float2-06",
+          "beforeArea": 204,
+          "afterArea": 452,
+          "nativeArea": 345
+        },
+        {
+          "id": "family-float2-07",
+          "beforeArea": 203,
+          "afterArea": 428,
+          "nativeArea": 385
+        }
+      ],
+      "VICTORY": [
+        {
+          "id": "family-victory-00",
+          "beforeArea": 398,
+          "afterArea": 685,
+          "nativeArea": 614
+        },
+        {
+          "id": "family-victory-01",
+          "beforeArea": 411,
+          "afterArea": 703,
+          "nativeArea": 655
+        },
+        {
+          "id": "family-victory-02",
+          "beforeArea": 408,
+          "afterArea": 701,
+          "nativeArea": 656
+        },
+        {
+          "id": "family-victory-03",
+          "beforeArea": 417,
+          "afterArea": 743,
+          "nativeArea": 652
+        }
+      ],
+      "TAILS_CARRIED": [
+        {
+          "id": "family-tails-carried-00",
+          "beforeArea": 512,
+          "afterArea": 665,
+          "nativeArea": 686
+        },
+        {
+          "id": "family-tails-carried-01",
+          "beforeArea": 544,
+          "afterArea": 738,
+          "nativeArea": 639
+        },
+        {
+          "id": "family-tails-carried-02",
+          "beforeArea": 531,
+          "afterArea": 743,
+          "nativeArea": 634
+        }
+      ],
+      "SUPER_TRANSFORM": [
+        {
+          "id": "family-super-transform-00",
+          "beforeArea": 463,
+          "afterArea": 712,
+          "nativeArea": 512
+        },
+        {
+          "id": "family-super-transform-01",
+          "beforeArea": 551,
+          "afterArea": 884,
+          "nativeArea": 754
+        },
+        {
+          "id": "family-super-transform-02",
+          "beforeArea": 476,
+          "afterArea": 757,
+          "nativeArea": 743
+        },
+        {
+          "id": "family-super-transform-03",
+          "beforeArea": 472,
+          "afterArea": 746,
+          "nativeArea": 743
+        },
+        {
+          "id": "family-super-transform-04",
+          "beforeArea": 453,
+          "afterArea": 719,
+          "nativeArea": 743
+        }
+      ],
+      "TAILS_SWIM": [
+        {
+          "id": "family-tails-swim-00",
+          "beforeArea": 395,
+          "afterArea": 600,
+          "nativeArea": 560
+        },
+        {
+          "id": "family-tails-swim-01",
+          "beforeArea": 401,
+          "afterArea": 606,
+          "nativeArea": 519
+        },
+        {
+          "id": "family-tails-swim-02",
+          "beforeArea": 417,
+          "afterArea": 617,
+          "nativeArea": 576
+        },
+        {
+          "id": "family-tails-swim-03",
+          "beforeArea": 414,
+          "afterArea": 622,
+          "nativeArea": 566
+        },
+        {
+          "id": "family-tails-swim-04",
+          "beforeArea": 460,
+          "afterArea": 649,
+          "nativeArea": 542
+        }
+      ],
+      "TAILS_SWIM_TIRED": [
+        {
+          "id": "family-tails-swim-tired-00",
+          "beforeArea": 376,
+          "afterArea": 631,
+          "nativeArea": 584
+        },
+        {
+          "id": "family-tails-swim-tired-01",
+          "beforeArea": 353,
+          "afterArea": 601,
+          "nativeArea": 569
+        },
+        {
+          "id": "family-tails-swim-tired-02",
+          "beforeArea": 368,
+          "afterArea": 619,
+          "nativeArea": 555
+        }
+      ]
+    },
+    "poseReview": {
+      "SUPER_TRANSFORM": "Tails_Load_PLC2 selects Tails Extra art at mapping >= $D1; review decoder corrected. $EB curled anticipation retains TALON wing-wrap adaptation. $EC opens upright; $ED is white flash, now bound to existing white silhouette phase 2 instead of ordinary phase 4. Other hosts retain their separate correspondence.",
+      "BLINK": "Standing S2/S3K $01-$03 unchanged; new phases 3/4 match S3K $A5 upright yawn and $A6 seated stretch. Three GPT Image alternatives per phase; attempt 2 selected, uniform 13.5:1 reduction and unchanged palette. No painted contours. S3K $12 actually references walk mappings $01-$03 (already classified as WALK phases 2/3/4 in the raw-pose profile); script-local BLINK phases 5/6/7 now reuse those approved WALK drawings without changing pixels."
+    }
   }
 }

@@ -13,8 +13,8 @@ python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/talon
 python3 -m unittest discover -s tools/modding -p test_playable_art_assemble.py
 ```
 
-The sheet has 167 indexed drawings and 47 animation keys: the 82 core drawings
-below plus 85 shared-family drawings (see the end of this file). All use one
+The sheet has 169 indexed drawings and 47 animation keys: the 82 core drawings
+below plus 87 shared-family drawings (see the end of this file). All use one
 transparent plus 15 opaque Mega Drive ladder colours. Core set:
 WAIT 7; WALK 8×4 orientations; RUN 4×4; ROLL 3 plus blur; SPINDASH 3 plus blur;
 SPRING/HURT/DEATH/DUCK/LOOK_UP one each; SKID 2; TAILS_FLY 6;
@@ -179,7 +179,7 @@ Review: `$HOME/scratch/agent-tmp/talon-consistency-20261109/review.html`.
 
 ## Shared families (2026-11-09)
 
-The sheet now has **167 drawings and 47 canonical keys**: 85 additions, including
+The sheet now has **169 drawings and 47 canonical keys**: 87 additions, including
 one transparent BLANK. `family-generation.json` records each selected generated
 attempt, source hash, reference mapping, reduction factor and landmark correction.
 There are three generated alternatives per phase, selected individually; PUSH,
@@ -214,3 +214,66 @@ new flight variants play all six integrated wing phases at two ticks per phase,
 like approved FLY. Host-native body bindings and terminators remain unchanged.
 The review verifies every full GIF tick after encoding; speed-driven samples are
 labelled, including stationary PUSH at 33 ticks per phase.
+
+
+## Family scale correction (2026-11-10)
+
+The eleven flagged families were re-reduced from their original GPT Image sources
+at uniform anatomical scale, retaining palette/inside-outline cleanup only.
+Approved WAIT (31px tall, 11px skull, 9px torso), all 82 core drawings and the
+families accepted by the owner are unchanged. Skull readings below are manual
+coordinate-panel measurements excluding crest and goggle strap, with about 1px
+uncertainty. Torso folds/foreshortening are recorded as unmeasurable rather than
+filled with the standing reference. The previous family landmark annotations
+are retained only as explicitly unreliable history.
+
+The independent size check is sqrt(mean TALON opaque area / mean reference opaque
+area), using the exact original source-pose references, without the separate tail.
+Some families use Sonic references (balances, victory, carried, transformation);
+the table does not mislabel those as Tails. Anatomy, not area, controls reduction.
+
+| Family | Before | After | Skull width (px) |
+|---|---:|---:|---|
+| BALANCE2 | 0.948 | 1.047 | 12 |
+| BALANCE4 | 0.935 | 1.034 | 11–12 |
+| BUBBLE | 0.847 | 1.062 | 12 |
+| HURT_FALL | 0.811 | 1.052 | 12 |
+| DROWN | 0.799 | 1.050 | 12 |
+| FLOAT2 | 0.695 | 1.023 | 11–13 |
+| VICTORY | 0.796 | 1.048 | 11 |
+| TAILS_CARRIED | 0.900 | 1.047 | 11 |
+| SUPER_TRANSFORM | 0.831 | 1.045 | 11–12 (flash hidden) |
+| TAILS_SWIM | 0.869 | 1.058 | 11 |
+| TAILS_SWIM_TIRED | 0.801 | 1.041 | 11–12 |
+
+Two new BLINK drawings supply S3K $A5 upright yawn and $A6 seated stretch.
+Built-in GPT Image supplied three alternatives per pose; the second row wins both,
+with uniform 13.5:1 reduction. Exact prompt/source hash and selection are in
+`scale-generation-20261110.json` and `family-generation.json`. The three approved
+standing blink drawings remain unchanged. S3K's reserved $12 script references
+walk mappings $01–$03, so its script-local aliases reuse approved WALK 2/3/4,
+consistent with the existing raw-pose profile; S2 keeps its standing blink.
+
+SUPER_TRANSFORM retains the curled wing-wrap anticipation: native S3K Tails $EB
+also curls. Native $EC/$ED alternate upright/white flash, now selecting TALON's
+existing upright/white drawings. The review decoder now obeys Tails_Load_PLC2's
+extra-art bank switch at $D1; its previous main-bank decode was corrupt.
+Animation order and timing are unchanged. Carried hands retain the native grip
+plane; grounded corrected families use their native foot plane. No native pixels
+are committed.
+
+Review: `$HOME/scratch/agent-tmp/talon-scale-20261110/review.html`.
+All GIF ticks are full frames, exact-palette RGB checked after encoding, at native
+60Hz timing with cumulative centisecond rounding. `lineup-all.png` includes every
+canonical animation; `lineup-source.png` includes every source phase, including
+slope banks and extra blink poses. Both share engine-centre placement, baseline
+and fixed WAIT skull/torso guide boxes. Browsers may clamp 10ms GIF delays.
+This is an art/registration review, not gameplay carrying or route certification.
+
+Validation: pipeline + assembly rebuild twice with identical output hashes
+(169 drawings, 47 keys, maximum 30 tiles/frame); Python discovery
+`python3 -m unittest discover -s tools/modding -p 'test_*.py'`: 52 passed.
+Queued Java selection `TestAnimationFamilies,TestCanonicalPlayableSheet,TestMicaCharacterIntegration,TestCharacterArtCoverageAudit,TestNativeImageResourceGuard`
+with `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl` and DISPLAY/WAYLAND_DISPLAY
+unset: 53 passed, zero failures/errors/skips, all ROM properties found.
+This is the requested focused selection, not a full-suite claim.
