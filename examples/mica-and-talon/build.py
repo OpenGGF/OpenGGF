@@ -49,6 +49,10 @@ def main():
          str(PROJECT / "art/talon"), str(PROJECT / "src/main/mod")])
     run([*cli, "convert", "art", "--playable", "--image", str(PROJECT / "src/main/mod/talon.png"),
          "--sheet", str(PROJECT / "src/main/mod/talon-sheet.yaml"), "--out", str(classes / "art/talon.ggfp")])
+    for host in ("s2", "s3k"):
+        run([sys.executable, "tools/modding/playable_art/assemble.py", str(PROJECT / "art/mica/powered" / host), str(PROJECT / "src/main/mod")])
+        run([*cli, "convert", "art", "--playable", "--image", str(PROJECT / f"src/main/mod/mica_powered_{host}.png"),
+             "--sheet", str(PROJECT / f"src/main/mod/mica_powered_{host}-sheet.yaml"), "--out", str(classes / f"art/mica-powered-{host}.ggfp")])
     shutil.copytree(PROJECT / "art/mica/presentation", classes / "art/mica/presentation", dirs_exist_ok=True)
     for character in ("mica", "talon"):
         shutil.copytree(PROJECT / "art" / character / "reels", classes / "art" / character / "reels", dirs_exist_ok=True)

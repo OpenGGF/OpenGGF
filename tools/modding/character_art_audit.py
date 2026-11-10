@@ -84,7 +84,8 @@ def main():
                 add(c,g,'direct mapping namespace','all','fallback','unrelocated packed indices',rank='zone-specific',evidence=p.name,
                     notes='ENGINE BLOCKER: no Tails native pose vocabulary and no NFRM aliases; accidental packed-frame hits are not authored coverage.')
             for sid,s in d.get('superScripts',{}).items():
-                add(c,g,'Super/Hyper animation',f'{int(sid):02X}','fallback','normal creator canonical sheet / owned palette',rank='rare/powered play',evidence=f'{p.name}: superScripts.{sid}',notes='native powered frames='+str(s['frames'])+'; separate native Super bank is not a creator Super sheet. Hyper shares powered geometry.')
+                row=d.get('poweredCoverage',{}).get(sid,{})
+                add(c,g,'Super/Hyper animation',f'{int(sid):02X}',row.get('status','fallback'),row.get('reason','normal creator canonical sheet / owned palette'),rank='rare/powered play',evidence=f'{p.name}: poweredCoverage.{sid}',notes='native powered frames='+str(s['frames'])+'; bound frames='+str(row.get('frames',[]))+'; Hyper shares powered geometry.')
         # Source drawings are listed separately, excluding them from obligation totals.
         for i,f in enumerate(manifest['frames']):
             inventory.append(dict(character=c.upper(),game='shared',bank='authored source',frame=i,script_ids=f.get('animation',''),evidence='; '.join(prov.get(f['id'],['older/other method; frames.yaml notes'])),actual_raw_targets=f['id'],image=str((ART/c/f['file']).relative_to(ROOT))))

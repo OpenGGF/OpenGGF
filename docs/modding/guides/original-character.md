@@ -158,8 +158,9 @@ Read [MicaGilded.java](../../../examples/mica-and-talon/src/main/java/mica/MicaG
 Set `supportsSuperForm` and supply a `SuperFormProfile` keyed by game and tier.
 Each form needs sixteen-word palette rows, fade and dry cycles, ticks, physics
 and a canonical transformation animation; water cycles, animation overrides,
-after-images and stars are optional. MICA changes only jade indices 2–6, uses
-WAIT for transformation, and enables neither after-images nor stars. S1/S2 use
+after-images and stars are optional. MICA cycles jade indices 2–6 and uses
+pale-gold 7–8 in powered banks. S2/S3K alias her existing SUPER_TRANSFORM family;
+S1 retains the authored WAIT transformation. Neither after-images nor stars is enabled. S1/S2 use
 the nine-row cycle at 8 ticks and six fade rows at 4; S3K uses three cycle rows at
 7 ticks and fades at 2. Hyper deliberately retains the gold look and homing.
 
@@ -168,6 +169,25 @@ invincibility music. S2 defaults to seven emeralds; S3K keeps the Chaos/Super
 Emerald gates. [GildedSettings.java](../../../examples/mica-and-talon/src/main/java/mica/GildedSettings.java)
 uses existing LOAD-scoped widgets and an owner-matched `CharacterSuperFormPolicy`:
 enable the override before changing game switches, S1 emeralds, rings or S1 music.
+
+A `Form` can optionally carry a `PoweredPlayableSheet` loaded with
+`PlayableSheetMaterializer.read(assets.readBounded(...)).art()` during registration.
+Return the prepared profile from the owner-bound supplier: registration asset
+roots close afterwards and must not be captured for later reads. Keep the old constructor for normal-sheet forms.
+Use canonical `family-<name>/<phase>` keys in the powered GGFP and generated
+`up45-`, `steep-`, `inverted-` movement phases. Host providers own native frame
+numbers, clocks, repeated steps and terminators. `normalAliases` names complete
+normal animations; `normalPhaseAliases` maps an otherwise powered phase key to
+an existing normal phase key without copying its PNG or tiles. Missing complete
+families fall back as a whole. With no native powered script provider, canonical
+GGFP timings apply using only that host's vocabulary.
+
+Normal and powered art share one initialized bank; the profile controller switches
+script/profile views before transformation and reconciles them on rewind and
+renderer refresh. Existing `Form.animations` overrides still take precedence and
+address the combined mapping namespace. Hyper may share the same powered value.
+See MICA's [powered handoffs](../../../examples/mica-and-talon/art/mica/powered/README.md)
+for native reference comparisons, slope generation and explicit aliases.
 
 ## 7. Package, play and collect evidence
 

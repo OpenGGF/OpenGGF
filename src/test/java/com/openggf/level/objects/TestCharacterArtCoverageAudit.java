@@ -69,6 +69,72 @@ class TestCharacterArtCoverageAudit {
             assertFalse(powered.isEmpty()); result.put("superScripts",powered);
             result.put("superMappingCount",s3.loadSuperSonicArtSet().mappingFrames().size());
         }
+        if (character.equals("mica") && !game.equals("S1")) {
+            String suffix = game.toLowerCase(java.util.Locale.ROOT);
+            Path poweredEncoded = temporary.resolve("powered-"+suffix+".ggfp");
+            assertEquals(0,GgfModCli.run(new String[]{"convert","art","--playable","--image",project.resolve("mica_powered_"+suffix+".png").toString(),
+                    "--sheet",project.resolve("mica_powered_"+suffix+"-sheet.yaml").toString(),"--out",poweredEncoded.toString()},System.out));
+            var poweredArt = PlayableSheetMaterializer.read(Files.readAllBytes(poweredEncoded)).art();
+            var aliases = java.util.EnumSet.allOf(CanonicalAnimation.class);
+            aliases.removeAll(Set.of(CanonicalAnimation.WALK, CanonicalAnimation.RUN, CanonicalAnimation.PUSH, CanonicalAnimation.WAIT, CanonicalAnimation.BALANCE, CanonicalAnimation.DUCK));
+            var palette=List.of(Collections.nCopies(16,0));
+            if (game.equals("S3K")) aliases.removeAll(Set.of(CanonicalAnimation.BLINK,CanonicalAnimation.BALANCE2,CanonicalAnimation.BUBBLE,CanonicalAnimation.FLY));
+            var phaseAliases = new ObjectMapper().readValue(Files.readAllBytes(Path.of("examples/mica-and-talon/art/mica/powered",suffix,"normal-phase-aliases.json")),new com.fasterxml.jackson.core.type.TypeReference<Map<String,String>>(){});
+            for(int phase=0;phase<2;phase++) phaseAliases.put("family-hurt-fall/"+phase,"family-hurt-fall/"+phase);
+            var form = new SuperFormProfile.Form(palette,palette,List.of(),1,1,PhysicsProfile.SONIC_2_SUPER_SONIC,CanonicalAnimation.SUPER_TRANSFORM,Map.of(),false,false,new PoweredPlayableSheet(poweredArt,aliases,phaseAliases));
+            var nativeScripts = (Map<Integer,SpriteAnimationScript>) result.get("superScripts");
+            var nativeSet = new SpriteAnimationSet(); nativeScripts.forEach(nativeSet::addScript);
+            var poweredFamilies = new HashMap<>(host.getAnimationFamilies());
+            poweredFamilies.put(33,new AnimationFamilies.Binding(null,CanonicalAnimation.WAIT,List.of(6)));
+            var poweredSource = new com.openggf.game.internal.PoweredAnimationSource(nativeSet,poweredFamilies,8,game.equals("S2")?1:4,game.equals("S2")?3:0,game.equals("S2")?32:0,game.equals("S2")?181:0);
+            var combined = PoweredPlayableArtBinding.combine(bound,Map.of(SuperFormProfile.Tier.SUPER,form),poweredSource);
+            var view = combined.powered().get(SuperFormProfile.Tier.SUPER);
+            var coverage = new TreeMap<Integer,Object>();
+            for (var entry : nativeScripts.entrySet()) {
+                int id = entry.getKey(); var script = view.animationSet().getScript(id);
+                var family = host.getAnimationFamilies().get(id);
+                boolean authored = script != null && script != bound.animationSet().getScript(id);
+                boolean alias = family != null && family.animation() != null && aliases.contains(family.animation()) && script != null;
+                boolean empty = entry.getValue().frames().stream().allMatch(f -> f == 0);
+                boolean reserved = id == 18 || game.equals("S2") && id == 19;
+                boolean unreachableBlink = game.equals("S3K") && id == 10;
+                boolean phaseAlias = !poweredSource.poses(id).isEmpty() && poweredSource.poses(id).values().stream().allMatch(phaseAliases::containsKey);
+                String status = unreachableBlink ? "N/A" : phaseAlias ? "alias" : authored ? "authored" : alias ? "alias" : empty || reserved ? "N/A" : "fallback";
+                coverage.put(id,Map.of("status",status,"reason",unreachableBlink?"Blink interrupt is competition control; single-player powered WAIT never selects it, and C7 lacks isolated bank context":phaseAlias?"explicit normal phase alias; native timing retained":authored?"complete powered GGFP family with native timing":alias?"normal pose identity; explicit whole-animation alias":empty?"native blank script":reserved?"retained Dash2/Dash3 table data has no live Sonic selector":"missing powered family", "frames",script == null ? List.of() : script.frames()));
+                if (authored) {
+                    assertEquals(entry.getValue().delay(),script.delay());
+                    assertEquals(entry.getValue().endAction(),script.endAction());
+                    assertEquals(entry.getValue().endParam(),script.endParam());
+                    assertEquals(entry.getValue().frames().size(),script.frames().size());
+                }
+                assertNotEquals("fallback",status,"Unresolved powered script "+game+"/"+id);
+            }
+            for (int id : List.of(0,1)) {
+                var script=view.animationSet().getScript(id); var poses=poweredSource.poses(id);
+                int relocationBase=script.frames().getFirst()-nativeScripts.get(id).frames().getFirst();
+                for(int nativeFrame:poses.keySet()) assertFalse(view.mappingFrames().get(nativeFrame+relocationBase).pieces().isEmpty(),"implicit movement mapping "+id+"/"+nativeFrame);
+            }
+            var movement=(ScriptedVelocityAnimationProfile)view.animationProfile();
+            assertEquals(0x800,movement.getRunSpeedThreshold());
+            if(game.equals("S2")) {
+                int walkBase=view.animationSet().getScript(0).frames().getFirst()-nativeScripts.get(0).frames().getFirst();
+                int runFrame=view.animationSet().getScript(1).frames().getFirst();
+                assertEquals(32,movement.applySuperAlternateFrame(walkBase+0x75,true,0)-(walkBase+0x75));
+                assertEquals(walkBase+0x75,movement.applySuperAlternateFrame(walkBase+0x75,true,1));
+                assertEquals(runFrame,movement.applySuperAlternateFrame(runFrame,true,0));
+            }
+            for(int speed : List.of(0x300,0x900)) {
+                var sprite=new TestablePlayableSprite("sonic",(short)0,(short)0);
+                sprite.setGameRulesForTest(module.getRules()); sprite.setAnimationProfile(view.animationProfile());
+                sprite.setAnimationSet(view.animationSet()); sprite.setAnimationFrameCount(view.mappingFrames().size());
+                sprite.setSuperSonic(true); sprite.setAir(false); sprite.setMovementInputActive(true);
+                sprite.setDirection(com.openggf.physics.Direction.RIGHT); sprite.setGSpeed((short)speed); sprite.setAnimationId(0);
+                sprite.getAnimationManager().update(0);
+                var selected=view.animationSet().getScript(speed<0x800?0:1).frames();
+                assertTrue(selected.contains(sprite.getMappingFrame()) || game.equals("S2") && speed<0x800 && selected.contains(sprite.getMappingFrame()-32),"speed selection "+game+"/"+speed+" frame "+sprite.getMappingFrame());
+            }
+            result.put("poweredCoverage",coverage);
+        }
         var names=new TreeMap<Integer,List<String>>();
         for(var canonical:CanonicalAnimation.values()) {
             int id=host.resolveNativeId(canonical);

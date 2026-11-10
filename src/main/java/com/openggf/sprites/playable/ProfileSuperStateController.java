@@ -22,7 +22,20 @@ public final class ProfileSuperStateController extends SuperStateController impl
     private final PhysicsProfile normalPhysics;
     private final Palette normalPalette;
     private final com.openggf.graphics.PaletteView normalWater;
-    private final SpriteAnimationSet normalAnimations;
+    private SpriteAnimationSet normalAnimations;
+    private com.openggf.sprites.animation.SpriteAnimationProfile normalArtProfile;
+    private java.util.Map<SuperFormProfile.Tier, com.openggf.sprites.art.SpriteArtSet> poweredViews = java.util.Map.of();
+
+    public void bindPoweredArt(com.openggf.level.objects.PoweredPlayableArtBinding.Result result) {
+        if (result == null) return;
+        normalAnimations = result.normal().animationSet();
+        normalArtProfile = result.normal().animationProfile();
+        poweredViews = result.powered();
+    }
+    private void restoreNormalArt() {
+        player.setAnimationSet(normalAnimations);
+        if (normalArtProfile != null) player.setAnimationProfile(normalArtProfile);
+    }
     private final ProfileSuperSettings options;
     private SuperFormProfile.Tier tier = SuperFormProfile.Tier.SUPER;
     private int phase, frame, timer;
@@ -64,7 +77,7 @@ public final class ProfileSuperStateController extends SuperStateController impl
         phase = 0; frame = 0; timer = 0; displayFrame = -1; doomsday = false; endingScene = endingReunion = false;
         if (normalPalette != null) {
             applyPalette(normalPalette, null);
-            player.setAnimationSet(normalAnimations);
+            restoreNormalArt();
         }
     }
 
@@ -130,7 +143,9 @@ public final class ProfileSuperStateController extends SuperStateController impl
     }
     private void installAnimations() {
         var scripts = new SpriteAnimationSet();
-        normalAnimations.getAllScripts().forEach(scripts::addScript);
+        var view = poweredViews.get(tier);
+        (view == null ? normalAnimations : view.animationSet()).getAllScripts().forEach(scripts::addScript);
+        if (view != null) player.setAnimationProfile(view.animationProfile());
         form().animations().forEach((canonical, script) -> {
             int id = player.resolveAnimationId(canonical);
             if (id >= 0) {
@@ -156,6 +171,7 @@ public final class ProfileSuperStateController extends SuperStateController impl
         return phase == -1;
     }
     @Override protected void onSuperActivated() {
+        if (poweredViews.containsKey(tier)) installAnimations();
         if (rules.explicitAirTrigger()) { timer = form().cycleTicks() - 1; if (!doomsday) playMusic(); }
         player.setShieldVisible(false);
     }
@@ -169,7 +185,7 @@ public final class ProfileSuperStateController extends SuperStateController impl
     }
     @Override protected void onRevertStarted() {
         phase = 2; frame = form().fade().size() - 1; timer = 3;
-        player.setAnimationSet(normalAnimations); player.setShieldVisible(true); player.setInvincibleFrames(1);
+        restoreNormalArt(); player.setShieldVisible(true); player.setInvincibleFrames(1);
     }
     @Override protected void updatePostRevertEffects() {
         if (phase != 2 || --timer >= 0) return;
@@ -188,7 +204,7 @@ public final class ProfileSuperStateController extends SuperStateController impl
         endingScene = (state.presentationTier() & 4) != 0; endingReunion = (state.presentationTier() & 8) != 0;
         if (!endingScene) reconcileRewindPhysicsAndAnimationProfile(isSuper());
         if (endingScene && endingAnimations != null) player.setAnimationSet(endingAnimations);
-        else if (isSuper()) installAnimations(); else player.setAnimationSet(normalAnimations);
+        else if (isSuper() || getState() == SuperState.TRANSFORMING) installAnimations(); else restoreNormalArt();
         displayFrame = state.transformFramesRemaining();
         if (displayFrame >= 256) {
             int index = displayFrame - 256;

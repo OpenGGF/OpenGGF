@@ -4,19 +4,42 @@ import com.openggf.game.*;
 import java.util.List;
 import java.util.Map;
 
-/** Gilded tables from art/mica/presentation/gilded.yaml; only jade slots 2..6 change. */
+/** Gilded tables from art/mica/presentation/gilded.yaml; jade slots 2..6 cycle; powered banks also use pale-gold face/belly slots 7..8. */
 final class MicaGilded {
     private MicaGilded() { }
-    static SuperFormProfile profile() {
+    static SuperFormProfile profile(com.openggf.io.ModAssetRoot assets) throws java.io.IOException {
+        var s2Bank = bank(assets,"s2"); var s3kBank = bank(assets,"s3k");
         var fade = fade();
-        var s2 = new SuperFormProfile.Form(fade, s2(), List.of(), 8, 4,
-                PhysicsProfile.SONIC_2_SUPER_SONIC, CanonicalAnimation.WAIT, Map.of(), false, false);
-        var s3k = new SuperFormProfile.Form(fade, s3k(), List.of(), 7, 2,
-                PhysicsProfile.SONIC_3K_SUPER_SONIC, CanonicalAnimation.WAIT, Map.of(), false, false);
+        var s2 = new SuperFormProfile.Form(gold(fade), gold(s2()), List.of(), 8, 4,
+                PhysicsProfile.SONIC_2_SUPER_SONIC, CanonicalAnimation.SUPER_TRANSFORM, Map.of(), false, false, s2Bank);
+        var s3k = new SuperFormProfile.Form(gold(fade), gold(s3k()), List.of(), 7, 2,
+                PhysicsProfile.SONIC_3K_SUPER_SONIC, CanonicalAnimation.SUPER_TRANSFORM, Map.of(), false, false, s3kBank);
         // Hyper Gilded deliberately retains her gold palette and homing ability; no Sonic stars.
-        return new SuperFormProfile(Map.of(GameId.S1, Map.of(SuperFormProfile.Tier.SUPER, s2),
+        return new SuperFormProfile(Map.of(GameId.S1, Map.of(SuperFormProfile.Tier.SUPER, new SuperFormProfile.Form(fade, s2(), List.of(), 8, 4, PhysicsProfile.SONIC_2_SUPER_SONIC, CanonicalAnimation.WAIT, Map.of(), false, false)),
                 GameId.S2, Map.of(SuperFormProfile.Tier.SUPER, s2),
                 GameId.S3K, Map.of(SuperFormProfile.Tier.SUPER, s3k, SuperFormProfile.Tier.HYPER, s3k)));
+    }
+    private static PoweredPlayableSheet bank(com.openggf.io.ModAssetRoot assets, String game) throws java.io.IOException {
+        var art = com.openggf.level.objects.PlayableSheetMaterializer.read(assets.readBounded(
+                "art/mica-powered-"+game+".ggfp", assets.limits().maxAssetBytes())).art();
+        var aliases = java.util.EnumSet.allOf(CanonicalAnimation.class);
+        aliases.removeAll(java.util.Set.of(CanonicalAnimation.WALK, CanonicalAnimation.RUN, CanonicalAnimation.PUSH,
+                CanonicalAnimation.WAIT, CanonicalAnimation.BALANCE, CanonicalAnimation.DUCK));
+        if (game.equals("s3k")) aliases.removeAll(java.util.Set.of(CanonicalAnimation.BLINK, CanonicalAnimation.BALANCE2, CanonicalAnimation.BUBBLE, CanonicalAnimation.FLY));
+        var phaseAliases = new java.util.HashMap<String,String>();
+        phaseAliases.put("family-wait/6", "family-wait/6");
+        if (game.equals("s3k")) {
+            phaseAliases.remove("family-wait/6");
+            phaseAliases.put("family-bubble/0", "family-bubble/0");
+        }
+        for (int phase=0; phase<2; phase++) phaseAliases.put("family-hurt-fall/"+phase,"family-hurt-fall/"+phase);
+        for (int phase=0; phase<3; phase++) phaseAliases.put("family-tails-carried/"+phase,"family-tails-carried/"+phase);
+        return new PoweredPlayableSheet(art, aliases, phaseAliases);
+    }
+    /** Pale gold belongs to the powered view; normal MICA cream slots stay unchanged. */
+    private static List<List<Integer>> gold(List<List<Integer>> rows) {
+        return rows.stream().map(row -> { var copy = new java.util.ArrayList<>(row);
+            copy.set(7, 0xAEE); copy.set(8, 0x8CC); return List.copyOf(copy); }).toList();
     }
     private static List<List<Integer>> fade() { return List.of(List.of(0x0,0x222,0x440,0x660,0x680,0x8a2,0xac6,0x8ce,0x6ac,0x68a,0x44e,0x22a,0xeee,0xccc,0x88e,0x24),
             List.of(0x0,0x222,0x442,0x462,0x682,0x8a4,0xac8,0x8ce,0x6ac,0x68a,0x44e,0x22a,0xeee,0xccc,0x88e,0x24),

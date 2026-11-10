@@ -23,7 +23,16 @@ public record SuperFormProfile(Map<GameId, Map<Tier, Form>> games) {
             List<List<Integer>> underwaterCycle, int cycleTicks, int fadeTicks,
             PhysicsProfile physics, CanonicalAnimation transformationAnimation,
             Map<CanonicalAnimation, com.openggf.sprites.animation.SpriteAnimationScript> animations,
-            boolean afterImages, boolean stars) {
+            boolean afterImages, boolean stars, PoweredPlayableSheet poweredArt) {
+        /** Compatibility constructor: retain the normal bank and existing animation overrides. */
+        public Form(List<List<Integer>> fade, List<List<Integer>> dryCycle,
+                List<List<Integer>> underwaterCycle, int cycleTicks, int fadeTicks,
+                PhysicsProfile physics, CanonicalAnimation transformationAnimation,
+                Map<CanonicalAnimation, com.openggf.sprites.animation.SpriteAnimationScript> animations,
+                boolean afterImages, boolean stars) {
+            this(fade, dryCycle, underwaterCycle, cycleTicks, fadeTicks, physics,
+                    transformationAnimation, animations, afterImages, stars, null);
+        }
         public Form {
             fade = rows(fade); dryCycle = rows(dryCycle); underwaterCycle = rows(underwaterCycle);
             if (fade.isEmpty() || dryCycle.isEmpty() || cycleTicks < 1 || cycleTicks > 256

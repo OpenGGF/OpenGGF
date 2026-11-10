@@ -116,7 +116,7 @@ def export_references(out, rows):
                     required = max(t + w * h for x, y, w, h, t, *_ in pieces)
                     if required * 32 > len(data):
                         records.append(dict(id=f'{game.lower()}-{frame:02x}', game=game, frame=frame,
-                                            label=label, normal_geometry_shared=True,
+                                            label=label, normal_geometry_shared=(maps[frame][1] == normal_maps[frame][1] and plcs[frame][1] == normal_plcs[frame][1]),
                                             contextual_bank_required=True, identical_reference=None,
                                             note='Mapping addresses beyond the supplied DPLC bank; contextual rendering required, isolated render omitted.'))
                         continue
@@ -139,16 +139,68 @@ def export_references(out, rows):
             for game in ('S2', 'S3K')}
 
 
+def compare_shared_poses(out):
+    """Compare shared-script silhouettes at the native hotspot; no native pixels enter Git."""
+    from PIL import Image
+    ending = load('examples/mica-and-talon/art/mica/endings/s3k/build.py', 'identity_ending')
+    native = load('tools/modding/playable_art/native_pose.py', 'identity_native')
+    maps = ending.r.mapping(ending.MAP, 'Map_Sonic_')
+    plcs = ending.r.dplc(ending.DPLC, 'PLC_Sonic_')
+    raw = (ROOT / 'docs/skdisasm/General/Sprites/Sonic/Art/Sonic.unc').read_bytes()
+    colors = native.palette(ROOT / 'docs/skdisasm/General/Sprites/Sonic/Palettes/SonicAndTails.bin')
+    refs = {r['id']: r for r in json.loads((out / 'references.json').read_text())}
+
+    def silhouette(image, hotspot):
+        return {(x - hotspot[0], y - hotspot[1])
+                for y in range(image.height) for x in range(image.width)
+                if image.getpixel((x, y))[3] >= 128}
+
+    result = []
+    for row in inventory():
+        if not row['script_shared']:
+            continue
+        frames = []
+        for frame in row['reachable_frames']:
+            ref = refs[f'{row["game"].lower()}-{frame:02x}']
+            same = ref['normal_geometry_shared']
+            if ref.get('contextual_bank_required'):
+                same = False
+                equal = None
+                reason = 'Retained bank tile required; isolated reference omitted. Not verified as a normal pose alias.'
+            elif same:
+                equal = True
+                reason = ('Identical mapping and DPLC (S2 also shares source art bank); '
+                          'same hotspot and silhouette by identity.')
+            else:
+                pieces = maps[frame][1]
+                data = b''.join(raw[t * 32:(t + n) * 32] for n, t in plcs[frame][1])
+                image = ending.native(pieces, data, colors).convert('RGBA')
+                box = ending.bounds(pieces)
+                hotspot = [-box[0], -box[1]]
+                powered = Image.open(out / f's3k-{frame:02x}.png').convert('RGBA')
+                equal = silhouette(image, hotspot) == silhouette(powered, ref['hotspot'])
+                reason = 'Rendered alpha coordinates compared relative to the native centre hotspot.'
+            frames.append(dict(frame=frame, normal_geometry_identity=same,
+                               silhouette_hotspot_equal=equal, evidence=reason))
+        result.append(dict(game=row['game'], animation=row['animation'],
+                           label=row['label'], frames=frames))
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--references', action='store_true')
+    parser.add_argument('--compare-poses', action='store_true')
     args = parser.parse_args()
     out = args.output.resolve()
     if not out.is_relative_to(Path.home() / 'scratch/agent-tmp'):
         raise ValueError('Native comparison data belongs in scratch/agent-tmp')
     out.mkdir(parents=True, exist_ok=True)
     rows = inventory()
+    if args.compare_poses:
+        print(json.dumps(compare_shared_poses(out), indent=2))
+        return
     summary = {}
     for game in ('S2', 'S3K'):
         subset = [r for r in rows if r['game'] == game]
