@@ -3251,7 +3251,7 @@ palette, full-60-Hz lossless RGB lockstep movies at 3×, every-tick two-cycle st
 centroid plots and per-tick selector diffs. The positioned probes certify these
 presentation encounters, not complete special-stage routes.
 
-#### Special-stage temporal identity correction (2026-11-10)
+#### Special-stage temporal identity correction (2026-11-10; motion superseded below)
 
 Owner review rejected `176d974b06` as integrated in `f25459be47`: the independent
 fresh generations still changed head size, ears, texture and large shadow masses
@@ -3357,3 +3357,170 @@ no skips, 74 Python tests passed, and example validation 0 findings. These are
 positioned solo presentation encounters, not complete special-stage routes.
 S2 admission is declared at 240; the separate S3K exit take declares completion
 at 465. Work is committed locally only, without merging or pushing.
+
+#### Special-stage native body-motion correction (2026-11-10)
+
+Owner review rejected `7190f49ae4`, merged as `9318420b42`: locking identity had
+made the upright body static. Lead evidence is
+`$HOME/scratch/agent-tmp/mt-polish-20261110/evidence/bs-cycle-6x-after.png`.
+This follow-up retains every generated canonical head/torso/curl byte and poses
+the upright layer instead. The preceding zero-span head-centroid result is
+historical evidence of the rejected static solution, not the current motion goal.
+No fresh identity generations or edit chains are used: the owner explicitly
+requested deterministic transforms of the locked drawing.
+
+**Native measurement.** `measure_stage_body.py` consumes the same verified-ROM
+indexed references and mapping hotspots, kept external. PCA uses primary-material
+pixels (S3K8–11, S2 2–7) in the headward half-plane at the hips, with pixel-centre
+coordinates. This reproducible material region can include raised upper-leg
+pixels crossing the plane; it is not hand-labelled anatomical segmentation.
+Tails' separate rotor appendage is excluded here and retained in capture strips.
+Positive angle is head-right; S2 angles unwrap around their pipe-sector heading.
+Sway/bob and major/minor standard-deviation ratios are relative to run2 in S3K
+and each sector's first normal selector in S2. Stand1 has a lower hip plane.
+
+`loc_907E` (sonic3k.asm:11504-11538), `byte_91E8` and `byte_91F6`
+(sonic3k.asm:11628-11633) still own the run/turn/jump selections. Body lean is
+baked into selected art, not an extra native rotation timer. The cycle remains
+`2,6H,7H,8H,7H,6H,2,3,4,5,4,3`; turning uses that cycle too. S2's
+`SSPlayer_Animate` (s2.asm:69746-69789) retains its script duration, angle-sector
+mapping and H/V flags. Native Tails is a morphological cross-check; both creators
+track Sonic's contact/axis targets, as requested.
+
+| Native upright selector | Sonic axis ° | Tails axis ° | Sonic sway/bob px | Sonic major/minor spread |
+| --- | ---: | ---: | --- | --- |
+| S3K 1 | +3.018 | +0.034 | -0.214/+8.272 | 1.030/1.061 |
+| S3K 2 | +0.000 | +0.594 | +0.000/+0.000 | 1.000/1.000 |
+| S3K 3 | +6.165 | +7.776 | -0.658/-0.108 | 1.004/0.962 |
+| S3K 4 | +7.184 | +8.551 | -1.631/+0.413 | 0.974/0.946 |
+| S3K 5 | +12.753 | +20.527 | -2.148/+0.301 | 1.001/0.988 |
+| S3K 6 | -8.694 | -7.776 | +0.771/-0.108 | 1.006/0.959 |
+| S3K 7 | -9.850 | -8.551 | +1.748/+0.413 | 0.977/0.939 |
+| S3K 8 | -12.753 | -20.527 | +1.148/+0.301 | 1.001/0.988 |
+| S2 0 | +11.059 | +6.965 | +0.000/+0.000 | 1.000/1.000 |
+| S2 1 | +3.677 | +7.737 | +0.323/+0.934 | 0.985/0.964 |
+| S2 2 | +0.932 | -0.459 | +0.785/+0.780 | 1.003/0.976 |
+| S2 3 | -3.822 | -2.830 | +2.392/+0.894 | 0.983/0.964 |
+| S2 4 | +54.858 | +35.347 | +0.000/+0.000 | 1.000/1.000 |
+| S2 5 | +36.669 | +32.938 | +0.661/+1.356 | 0.987/0.937 |
+| S2 6 | +34.356 | +49.745 | +1.216/+1.593 | 0.990/0.954 |
+| S2 7 | +24.107 | +26.277 | +1.634/+2.406 | 1.011/0.900 |
+| S2 8 | +11.697 | +25.525 | +3.515/+3.906 | 1.113/0.886 |
+| S2 9 | +30.583 | +19.887 | +2.144/+3.122 | 0.987/0.890 |
+| S2 10 | +30.946 | +25.730 | +3.086/+2.798 | 1.020/0.940 |
+| S2 11 | +37.300 | +21.640 | +1.632/+2.973 | 0.956/0.942 |
+| S2 12 | +120.175 | +111.863 | +0.000/+0.000 | 1.000/1.000 |
+| S2 13 | +99.479 | +117.766 | -0.857/-0.926 | 0.930/1.015 |
+| S2 14 | +93.312 | +96.644 | -0.757/-0.377 | 0.947/1.014 |
+| S2 15 | +81.828 | +112.043 | -0.898/-0.291 | 0.930/1.031 |
+
+The manifest records all 134 upright orientation measurements, including explicit
+S3K6–8H and every S2 H/V/HV. Native S3K mirrored mappings are already assembled
+in final orientation; double-flipping those reference images would invert the
+measurement. Mirror magnitudes are not forced symmetric: Sonic's piece placement
+makes6/7 differ slightly from3/4. Second moments vary with quill pose; the running
+major/minor spreads change by up to2.6%/6.1%, without a coherent matching whole-body
+squash in Tails. Keep scale1.0 and shear0 rather than fitting an extra deformation.
+
+**Posing and limbs.** `stage_body_motion.py` runs two Scale2x passes, rotates about
+the hip pivot and reduces with nearest sampling. Source-labelled head/torso masks
+rotate alongside colour indices. Broad material light fields are reprojected in
+screen coordinates while texture details rotate; the original compact specular
+glyph is placed unrotated in the upper-left head region. All134 specular centroids
+stay upper-left. No new colours are introduced. Arms/calves join rotated shoulder/
+hip roots to the measured wrists/feet. Forearms and rear shoes use ordinary torso
+occlusion, gloves and camera-facing feet remain in front, and the short tail or
+folded tips stay behind legs. All10 root curl PNGs and canonical source hashes
+are unchanged from9318420b42. Native selectors, timing, palette ownership and draw
+path are unchanged; only example art, hotspots and offline tools change. No API,
+version, descriptor or signature-pin change is needed.
+
+| Bank | Max layer/visible lean error ° | Max sway/bob error px | Max shoe contact px | Max joint gap px |
+| --- | ---: | ---: | ---: | ---: |
+| S3K MICA | 1.011/1.161 | 0.164/0.167 | 1.803 | 1.000 |
+| S2 MICA | 1.660/1.513 | 0.235/0.214 | 2.500 | 0.854 |
+| S3K TALON | 1.257/1.197 | 0.139/0.156 | 2.236 | 0.707 |
+| S2 TALON | 0.489/1.596 | 0.275/0.192 | 2.236 | 1.000 |
+
+Every full-layer and visible-composite angle is within±2° of the target and has
+matching sign. Per-frame head/ear and torso IoU against the **posed** locked layer
+is1.000 with zero indexed RGB differences after ordinary limb occlusion. This
+identity comparison does not assert equality to the unrotated drawing. Glove
+centroid error remains at most1.000px; measured component edges at most3px.
+Final compiled PNGs reassemble byte for byte from committed recipes.
+
+| Bank | Native mean opaque area | Creator mean | Square-root ratio |
+| --- | ---: | ---: | ---: |
+| S3K MICA | 878.91 | 876.73 | 0.9988 |
+| S2 MICA | 932.06 | 950.89 | 1.0101 |
+| S3K TALON | 658.00 | 658.91 | 1.0007 |
+| S2 TALON | 691.50 | 727.61 | 1.0258 |
+
+**Real capture proof.** The checkpoint is
+`$HOME/scratch/agent-tmp/mt-bluesphere-tilt-20261110/review.html`, with native/creator
+per-frame tables, all144 unlabelled gates at3× (86 real capture crops and58
+exact sampled-palette renders), shared-origin posed guide/onion
+panels, real four-row6× two-cycle/turn/jump/fade strips, per-tick lean plots and
+four lossless RGB60fps stock/mod MP4s at3×. Eight decoded frames per movie match
+the original captures byte for byte. Every pair uses the identical input hash.
+Per-tick CSVs join actual published mappings to measurements, with no assumed
+velocity preview. Full and visible-composite axis errors are shown separately.
+The exact-palette fallback gates do not replace real motion/fade captures.
+
+The creator's logical player row still resolves to its owned physical row8; native
+Sonic remains on native row0 (S2 row1), native Tails on row1 (S2 row2). All48 occupied
+slot samples match captured RGB. Representative live S3K values:
+
+| Material | Slot | Expected/captured RGB | Tick and pixel |
+| --- | ---: | --- | --- |
+| MICA jade | 4 | #00926D / #00926D | 467:(156,125) |
+| MICA coral shoe | 10 | #FF4949 / #FF4949 | 467:(154,160) |
+| MICA white glove | 12 | #FFFFFF / #FFFFFF | 467:(172,135) |
+| MICA cream | 7 | #FFDB92 / #FFDB92 | 467:(147,138) |
+| TALON slate | 4 | #6D6D92 / #6D6D92 | 467:(157,123) |
+| TALON coral shoe | 10 | #FF4949 / #FF4949 | 467:(152,161) |
+| TALON white glove | 12 | #FFFFFF / #FFFFFF | 467:(172,135) |
+
+Stock-versus-mod mappings, position, native H/V and motion/fade state differ on
+zero ticks:507 published S3K actor ticks and946 S2 ticks per pair. Before/after
+mod state also differs on zero ticks; every stock PNG hash is unchanged. There
+are95 explicit S3K orientation-override ticks and559 S2 override ticks per pair;
+these change the selected drawing, never the native phase/timing.
+
+All47,702 creator foot pixels retain expected palette colours above the shadow
+(25,737 S3K and21,965 S2). All414,327 S3K actor pixels across508 entry/exit/failure
+observations match the live palette plus displayed native fade. Native Tails'
+earlier appendage is included; all-white frames retain appendage ambiguity.
+S2 white exit uses full-frame additive RGB while `overlay_alpha` stays0 and
+`display_fade` staysNONE. The probe now logs `overlay_r/g/b`; all6,021,120 pixels
+across84 full-frame observations equal the same-tick ordinary capture plus that
+addition, saturated at255. Residual is0, including luminance. Different base
+materials naturally have different pre-white luminance.
+
+Body capture checks test481,870 pixels:1772 match stock scene occlusion,124
+match the unchanged creator HUD, and the remaining479,974 match the live palette.
+There are zero unexplained differences. These retain normal scene/HUD occlusion
+rather than pretending all covered pixels are body colours. The detailed pixel report separates exact
+stock-scene matches and unchanged creator-HUD matches during top-of-pipe clipping;
+all fully unobscured comparisons use the live palette. Unmasked strips retain
+these real rendering interactions for inspection.
+
+**Audit and validation.** Rows moved0; this improves already-authored art. Before
+and after remain1310 obligations,674 authored,0 fallback. Authored totals by game:
+MICA66/143/174 and TALON30/133/128. S3K/S2 budgets stay9/15 opaque colours. The
+ordinary focused queued command selected `TestStageSpriteCompiler`,
+`TestSonic2SpecialStageSpriteAssembly`, `TestS3kSpecialStageSpritePixels`,
+`TestMicaCharacterIntegration` and `TestCharacterArtCoverageAudit`:76 passed,
+0 failures/errors/skips, verified ROMs found, surfaceless EGL. Python discovery
+`python3 -m unittest discover -s tools/modding -p 'test_*.py'` passes76 with no
+skips; example build reports0 validation findings. The bounded tests cover
+reassembly, source hashes, native-sign lean tolerances, visible axes, hip math,
+light quadrants, joint gaps, actual component contacts, curls and palettes. No
+engine/API code changed, so the engine quartet/signature suite is not selected.
+
+Limits: positioned solo encounters at320×224 with native scanline limits and
+no displayed window. S3K uses production CNZ1 giant-ring admission; S2 admission
+is declared at240. Exit takes declare debug completion at465 S3K /470 S2 to keep
+actors visible through the fade. These are presentation and selection checks,
+not complete-stage routes or exhaustive team-role certification. Commit locally;
+do not merge or push. Delete this worktree's `target/` after the commit.

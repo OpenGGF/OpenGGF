@@ -603,8 +603,8 @@ simulation. Build the example first, then compile the probe against that checkou
 python3 examples/mica-and-talon/build.py
 javac --release 25 -cp "target/classes:$(cat target/mica-classpath.txt)" \
   -d target/character-probe tools/modding/SpecialStageCharacterProbe.java
-# Use Java's same classpath plus target/character-probe. Eight arguments:
-# game main sidekick jar-or-dash input output frame-count debug-complete
+# Use Java's same classpath plus target/character-probe. Eight required arguments:
+# game main sidekick jar-or-dash input output frame-count debug-complete [complete-tick]
 ```
 
 Unset DISPLAY/WAYLAND_DISPLAY, select surfaceless EGL, and set an owned saveRoot,
@@ -612,11 +612,15 @@ as required by gameplay-capture. S3K uses the positioned CNZ act 1 giant-ring
 recipe (11616,1612), rings 42, timer 9600; supply the same input to both actors.
 An empty sidekick argument preserves the original solo-stage recipe. S2 declares
 production stage admission at tick 240 from EHZ act 1; give both teams identical
-input. Optional debug completion is declared at tick 465 (S3K) or 780 (S2).
+input. Optional debug completion defaults to tick 465 (S3K) or 780 (S2); the ninth
+argument overrides that declared trigger (470 keeps S2 actors visible during
+the RGB fade).
 These modes are presentation probes, not route certification. Native `boot` act
 indices are zero-based. `overlay_alpha` is the black-fade alpha; white fades may
 use RGB addition or palette presentation instead, so inspect the real frames and
 palette columns rather than inferring white-fade progress from that field alone.
+The appended `overlay_r/g/b` columns record `FadeManager.getFadeColor()`; S2
+white fades add these RGB values to the whole frame with saturation.
 
 Acceptance media must use the actual captured ticks at 60 fps, with nearest
 scaling and lossless RGB if palette equality matters (`libx264rgb -crf 0`). Gate
@@ -665,35 +669,54 @@ joined with `/`. Python3/Pillow and FFmpeg are required. This is presentation
 verification of the captured team, not gameplay-route or alternate-role
 certification. Provenance and limits live in each character's title README.
 
-## Locked special-stage identity and native limb phases
+## Locked special-stage identity, body motion and native limb phases
 
-`locked_stage.py` reproduces the original generated-part compositions under
-`art/{mica,talon}/consistent-stage/`; it does not regenerate character identities
-per frame. Each surface has one indexed head, torso and curl. Upright S3K phases
-translate those exact head/torso pixels by measured native offsets. S2 angles
-rotate the same geometry and detail, reprojecting its own broad material light
-field into screen coordinates. Native-observed ball envelopes and glint position/
-area changes derive from one generated curl and a generated highlight component.
-Native pixels are never composited into creator art. Raw generations/references
-remain external; prompts, attempts, selections, component PNGs and recipes ship.
+`locked_stage.py` reproduces the generated-part compositions under
+`art/{mica,talon}/consistent-stage/`. Each surface has one canonical head, torso
+and curl. The body-motion correction retains those source hashes: it does not
+regenerate identities or repaint native pixels. `stage_body_motion.py` performs
+two Scale2x passes, hip-pivot rotation and nearest reduction, propagating anatomical
+labels alongside indexed pixels. Geometry, screen-space broad-material relighting
+and the unchanged upper-left specular glyph are separate operations. All colours
+remain in the native surface's indexed budget. No extra shear/squash is applied.
+Native ball envelopes/glint phases still derive from their separate locked curl.
 
 ```bash
+python3 tools/modding/playable_art/measure_stage_body.py --references /scratch/native --inventory /scratch/inventory.json --out /scratch/native-motion.json
 python3 tools/modding/playable_art/locked_stage.py examples/mica-and-talon/art/mica/consistent-stage --check
-python3 tools/modding/playable_art/locked_stage_review.py examples/mica-and-talon/art/mica/consistent-stage --out /scratch/mica-consistency.csv
+python3 tools/modding/playable_art/locked_stage_review.py examples/mica-and-talon/art/mica/consistent-stage --out /scratch/mica-motion.csv
 ```
 
-The sampler checks head/ear layer IoU and indexed RGB equality before ordinary
-limb occlusion, then independently measures generated glove-white centroids,
-component edges and shoe-contact boundaries against the native numeric
-landmarks. Fitted boxes alone would misleadingly report zero error. Tests also
-rederive every angle and curl phase from its canonical source. The production
-native mapping clock and draw path remain unchanged.
+The native measurement consumes external indexed ROM-derived reference PNGs and
+mapping hotspots; only numeric observations enter original-art manifests. PCA
+uses primary-material pixels (S3K8–11, S2 2–7) in the headward half-plane at the
+hip pivot, with pixel-centre coordinates. Same-colour upper-leg material crossing
+the hip plane can enter this reproducible region; it is not hand segmentation.
+Native Tails' separate appendage is excluded from body PCA. Positive angle means
+the head leans right. S2 angles unwrap around their pipe-sector heading; native
+second-moment major/minor spreads describe art morphology, not a squash timer.
+S3K mappings6–8 already contain final mirrored piece geometry: never flip those
+reference PNGs again. S2 H/V variants do require transforming image and hotspot.
 
-For capture centroids, use the same head material mask visible in all compared
-stride phases. A moving glove can share the light-grey plumage index; counting
-it as head shading creates a false jump. Measure real RGB in that common mask,
-retain the unmasked four-row strips, and report the exclusion. Native Tails also
-has a separate earlier appendage sprite; body-only pixel comparison mistakes
-its legitimate occlusion for a draw-order defect. Compare their native SAT union.
+The review sampler measures full and visible-composite body axes, sway/bob,
+head/ear and torso IoU/RGB against the posed canonical, joint attachment gaps,
+generated glove-white centroids and shoe-contact boundaries against native
+landmarks. Arms/calves connect rotated shoulder/hip roots to tracked wrists/feet;
+rear shoes/forearms may be behind the torso. Fitted boxes alone would misleadingly
+report zero limb error. Tests rederive every pose/curl and bound measured errors.
+The production native mapping clock, orientation API and draw path are unchanged.
+
+Use real captures for motion and palette acceptance. A common fixed head mask
+is appropriate only for an unchanged translated layer; after body rotation,
+compare the posed anatomical labels in screen coordinates and retain unmasked
+four-row strips. Moving gloves can share the plumage palette. Native Tails has
+an earlier independent appendage; compare the native SAT union for fade pixels.
+Stage objects can occlude S2 bodies during turns: classify a covered pixel only
+when it exactly equals the stock capture at the same coordinate, and report that
+count separately. Do not hide such differences as palette failures or discard them.
+
 `SpecialStageCharacterProbe` explicitly enables the native scanline budget inside
-its capture-session configuration scope and restores the caller on close.
+its capture-session configuration scope and restores the caller on close. S2
+white-fade proof compares same-tick completion and ordinary captures using the
+logged additive RGB, not the black-overlay alpha. Preserve explicit declarations
+of stage admission and debug completion in capture provenance.

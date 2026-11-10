@@ -89,8 +89,9 @@ under the matching area heading; see the
   API selects explicit mirrored phases in Blue Sphere and H/V/HV phases in the
   S2 half-pipe while preserving native selectors, clocks and draw ownership.
   Both special-stage banks now reuse locked generated head/torso layers across
-  upright phases, with native-tracked limbs and separately locked curl/glint
-  phases. Real 60 Hz captures verify stable lighting, colours, shadows and fades.
+  upright phases, posed with native-measured hip-pivot lean, sway and bob,
+  screen-space lighting, reattached limbs and separately locked curl/glint phases.
+  Real 60 Hz captures verify body motion, colours, shadows and fades.
   S1 supplements spell TALON; S3K uses the longest native-cell prefix TALO;
   results retain his full name. The candidate API adds default sidekick
   selection, flight declarations and the native Tails respawn factory.

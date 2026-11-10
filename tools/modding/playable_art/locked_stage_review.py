@@ -28,6 +28,72 @@ def bounds(ps):
             max(x for x, y in ps) + 1, max(y for x, y in ps) + 1]
 
 
+def motion_identity(folder, document, frame):
+    try:
+        from .stage_body_motion import render_body, principal_axis, mask_points
+    except ImportError:
+        from stage_body_motion import render_body, principal_axis, mask_points
+    from PIL import Image
+    motion = frame["body_motion"]
+    body, labels, light = render_body(folder, document, motion)
+    actual = Image.new("P", body.size)
+    image = read_indexed(folder / frame["file"])
+    actual.paste(image, (64 - frame["hotspot"][0], 64 - frame["hotspot"][1]))
+    occlusion = Image.new("L", body.size)
+    seen_body = False
+    for placement in frame["placements"]:
+        if placement.get("kind") == "locked_body":
+            seen_body = True
+            continue
+        if seen_body:
+            part = transformed(read_indexed(folder / placement["part"]), placement["size"],
+                               placement.get("rotation", 0))
+            mask = part.point(lambda value: 255 if value else 0, "L")
+            occlusion.paste(255, (64 + placement["position"][0], 64 + placement["position"][1],
+                                 64 + placement["position"][0] + part.width,
+                                 64 + placement["position"][1] + part.height), mask)
+    result = {}
+    for role, prefix in [(2, "head_ear"), (1, "torso")]:
+        expected = {(x, y) for y in range(128) for x in range(128)
+                    if labels.getpixel((x, y)) & 3 == role and not occlusion.getpixel((x, y))}
+        observed = {p for p in expected if actual.getpixel(p)}
+        result[f"{prefix}_iou"] = len(expected & observed) / len(expected | observed)
+        result["head_rgb_differences" if role == 2 else "torso_rgb_differences"] = sum(
+            actual.getpixel(p) != body.getpixel(p) for p in expected)
+    measured = principal_axis(mask_points(labels), motion["heading"])
+    visible = [(x - 64 + .5, y - 64 + .5) for y in range(128) for x in range(128)
+               if labels.getpixel((x, y)) & 8 and not occlusion.getpixel((x, y))
+               and actual.getpixel((x, y))]
+    visible_axis = principal_axis(visible, motion["heading"])
+    native = motion["native"]
+    native_lean, mod_lean = native["angle"] - motion["heading"], measured["angle"] - motion["heading"]
+    result.update(native_angle=native["angle"], mod_angle=measured["angle"],
+                  visible_mod_angle=visible_axis["angle"],
+                  lean_error=measured["angle"] - native["angle"],
+                  visible_lean_error=visible_axis["angle"] - native["angle"],
+                  matching_sign=abs(native_lean) < .05 or native_lean * mod_lean > 0,
+                  visible_matching_sign=abs(native_lean) < .05 or
+                      native_lean * (visible_axis["angle"] - motion["heading"]) > 0,
+                  head_dx=motion["shift"][0], head_dy=motion["shift"][1],
+                  sway_error=measured["centroid"][0] - motion["desired_centroid"][0],
+                  bob_error=measured["centroid"][1] - motion["desired_centroid"][1],
+                  native_sway=native["centroid"][0] - motion["native_reference_centroid"][0],
+                  native_bob=native["centroid"][1] - motion["native_reference_centroid"][1],
+                  mod_sway=measured["centroid"][0] - motion["baseline_centroid"][0],
+                  mod_bob=measured["centroid"][1] - motion["baseline_centroid"][1],
+                  specular_dx=light["specular_delta"][0], specular_dy=light["specular_delta"][1])
+    gaps = []
+    for placement in frame["placements"]:
+        if placement.get("role") not in ["calf", "upper_arm"]:
+            continue
+        part = transformed(read_indexed(folder / placement["part"]), placement["size"], placement.get("rotation", 0))
+        ps = [(x + placement["position"][0] + .5, y + placement["position"][1] + .5)
+              for x, y in points(part)]
+        gaps.extend(min(math.dist(p, joint) for p in ps) for joint in placement["joints"])
+    result["joint_gap_max"] = max(gaps, default=0)
+    return result
+
+
 def measure(folder):
     document = json.loads((folder / "native-pose-generation.json").read_text())
     rows = []
@@ -35,32 +101,17 @@ def measure(folder):
         row = {k: frame[k] for k in ["game", "char", "id", "orientation", "layer"]}
         if frame["layer"] == "upright":
             canonical = document["canonical"][frame["game"]]
-            head = next(p for p in frame["placements"] if "-head-angle" in p["part"])
-            source = read_indexed(folder / head["part"])
-            reference = read_indexed(folder / canonical["head"])
-            # S2 orientation templates are deterministic derivatives of this
-            # same canonical; compare reuse within the corresponding angle.
-            if frame["head_angle"]:
-                reference = read_indexed(folder / f'parts/{frame["game"]}-head-angle{frame["head_angle"]}.png')
-            actual = transformed(source, head["size"], head.get("rotation", 0))
-            a, b = set(points(actual)), set(points(reference))
-            row["head_ear_iou"] = len(a & b) / len(a | b)
-            row["head_rgb_differences"] = sum(x != y for x, y in zip(actual.get_flattened_data(), reference.get_flattened_data()))
-            torso = next(p for p in frame["placements"] if "-torso-angle" in p["part"])
-            actual_torso = transformed(read_indexed(folder / torso["part"]), torso["size"])
-            reference_torso = read_indexed(folder / canonical["torso"] if not frame["head_angle"] else
-                folder / f'parts/{frame["game"]}-torso-angle{frame["head_angle"]}.png')
-            a, b = set(points(actual_torso)), set(points(reference_torso))
-            row["torso_iou"] = len(a & b) / len(a | b)
-            row["torso_rgb_differences"] = sum(x != y for x, y in zip(
-                actual_torso.get_flattened_data(), reference_torso.get_flattened_data()))
-            row["head_dx"], row["head_dy"] = frame["head_offset"]
+            if "body_motion" in frame:
+                row.update(motion_identity(folder, document, frame))
+            else:
+                row.update(legacy_identity(folder, document, frame))
             errors, hand_errors, contacts = [], [], []
             for limb in frame["limb_landmarks"]:
                 target = limb["native_bbox"]
                 creator_box = limb["creator_bbox"]
                 placement = next(p for p in frame["placements"]
-                                 if ("glove-" in p["part"] if limb["kind"] == "glove" else
+                                 if p.get("part") is not None
+                                 and ("glove-" in p["part"] if limb["kind"] == "glove" else
                                      any(s in p["part"] for s in ["-boot.", "-boot-", "-sole.", "-sole-"]))
                                  and p["position"] == creator_box[:2]
                                  and p["size"] == [target[2] - target[0], target[3] - target[1]])
@@ -86,6 +137,31 @@ def measure(folder):
         rows.append(row)
     return rows
 
+
+def legacy_identity(folder, document, frame):
+    row = {}
+    canonical = document["canonical"][frame["game"]]
+    head = next(p for p in frame["placements"] if "-head-angle" in p["part"])
+    source = read_indexed(folder / head["part"])
+    reference = read_indexed(folder / canonical["head"])
+    # S2 orientation templates are deterministic derivatives of this
+    # same canonical; compare reuse within the corresponding angle.
+    if frame["head_angle"]:
+        reference = read_indexed(folder / f'parts/{frame["game"]}-head-angle{frame["head_angle"]}.png')
+    actual = transformed(source, head["size"], head.get("rotation", 0))
+    a, b = set(points(actual)), set(points(reference))
+    row["head_ear_iou"] = len(a & b) / len(a | b)
+    row["head_rgb_differences"] = sum(x != y for x, y in zip(actual.get_flattened_data(), reference.get_flattened_data()))
+    torso = next(p for p in frame["placements"] if "-torso-angle" in p["part"])
+    actual_torso = transformed(read_indexed(folder / torso["part"]), torso["size"])
+    reference_torso = read_indexed(folder / canonical["torso"] if not frame["head_angle"] else
+        folder / f'parts/{frame["game"]}-torso-angle{frame["head_angle"]}.png')
+    a, b = set(points(actual_torso)), set(points(reference_torso))
+    row["torso_iou"] = len(a & b) / len(a | b)
+    row["torso_rgb_differences"] = sum(x != y for x, y in zip(
+        actual_torso.get_flattened_data(), reference_torso.get_flattened_data()))
+    row["head_dx"], row["head_dy"] = frame["head_offset"]
+    return row
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)

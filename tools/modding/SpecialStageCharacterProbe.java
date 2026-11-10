@@ -17,7 +17,8 @@ import java.util.*;
  * orientation.csv observes the published mapping, native flags and selected creator slot after rendering.
  * It never changes a selector, timer, flip, palette or gameplay value.
  * S2 declares native stage admission at tick 240. Optional debug completion is declared at
- * tick 465 (S3K) / 780 (S2); no route-completion claim. Game act passed to boot is zero-based.
+ * tick 465 (S3K) / 780 (S2), or the optional ninth argument; no route-completion
+ * claim. Game act passed to boot is zero-based.
  */
 public final class SpecialStageCharacterProbe {
   static Object field(Object o,String n) throws Exception {
@@ -27,12 +28,13 @@ public final class SpecialStageCharacterProbe {
     if(p==null)return "";var out=new StringJoiner(";");for(int i=0;i<16;i++){var c=p.getColor(i);out.add(String.format("%02x%02x%02x",c.r&255,c.g&255,c.b&255));}return out.toString();
   }
   public static void main(String[] args) throws Exception {
-    if (args.length != 8) throw new IllegalArgumentException(
-        "game main sidekick jar-or-dash input output frames debug-complete");
+    if (args.length != 8 && args.length != 9) throw new IllegalArgumentException(
+        "game main sidekick jar-or-dash input output frames debug-complete [complete-tick]");
     // game, main, sidekick, jar-or-dash, input, output, frames, complete
     String game=args[0],main=args[1],side=args[2];Path out=Path.of(args[5]);Files.createDirectories(out.resolve("frames"));
     var movie=new Bk2MovieLoader().loadMovieOrInputLog(Path.of(args[4]));
     boolean s3=game.equals("s3k");
+    int completeTick = args.length == 9 ? Integer.parseInt(args[8]) : s3 ? 465 : 780;
     var settings=new GameplayCaptureSession.Settings(320,main,side,"off",null,
       s3?11616:3500,s3?1612:150,null,false,false,null,null,false, s3?42:70);
     Path rom=TraceToolRomLocations.resolve(game,GameServices.configuration(),Path.of(""));
@@ -45,11 +47,11 @@ public final class SpecialStageCharacterProbe {
       session.boot(rom,GameplayCaptureTool.ZoneIds.resolve(game,s3?"cnz":"ehz"),0,settings);session.declareTimer(s3?9600:6600);
       legacy.write(GameplayCaptureSession.stateHeader()+"\n");
       orientation.write("frame,actor,mapping,x,y,native_h,native_v,render_frame,render_h,render_v\n");
-      csv.write("frame,mode,mapping,velocity,angle,turning,jumping,jump_height,fade_timer,stage_counter,clear_routine,logical_palette,physical_palette,palette,display_fade,display_steps,display_mask,overlay_alpha,overlay_type,sidekick_mapping,sidekick_physical_palette,sidekick_palette\n");
+      csv.write("frame,mode,mapping,velocity,angle,turning,jumping,jump_height,fade_timer,stage_counter,clear_routine,logical_palette,physical_palette,palette,display_fade,display_steps,display_mask,overlay_alpha,overlay_type,sidekick_mapping,sidekick_physical_palette,sidekick_palette,overlay_r,overlay_g,overlay_b\n");
       for(int i=0;i<Integer.parseInt(args[6]);i++) {
         var input=i<movie.getFrameCount()?movie.getFrame(i):null;session.step(input);
         if(!s3 && i==240)session.loop().enterSpecialStage();
-        if(Boolean.parseBoolean(args[7]) && i==(s3?465:780))session.loop().debugCompleteSpecialStageWithEmerald();
+        if(Boolean.parseBoolean(args[7]) && i==completeTick)session.loop().debugCompleteSpecialStageWithEmerald();
         var image=session.render();
         ScreenshotCapture.savePNG(image,out.resolve(String.format("frames/%05d.png",i)));
         legacy.write(session.stateLine(i,input)+"\n");
@@ -100,7 +102,8 @@ public final class SpecialStageCharacterProbe {
           }
         }
         var f=PaletteUploadPresentation.captureDisplayedFade(GameServices.graphics());var overlay=GameServices.graphics().getFadeManager();
-        csv.write(i+","+session.loop().getCurrentGameMode()+","+details+","+f.mode()+","+f.steps()+","+f.lineMask()+","+overlay.getFadeAlpha()+","+overlay.getFadeType()+","+sk+"\n");
+        var color=overlay.getFadeColor();
+        csv.write(i+","+session.loop().getCurrentGameMode()+","+details+","+f.mode()+","+f.steps()+","+f.lineMask()+","+overlay.getFadeAlpha()+","+overlay.getFadeType()+","+sk+","+color[0]+","+color[1]+","+color[2]+"\n");
       }
     }
   }

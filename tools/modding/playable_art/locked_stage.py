@@ -96,8 +96,15 @@ def derive_curl(source, palette, allowed, transform, glint):
 def assemble(folder, document, frame):
     canvas = indexed((128, 128), document["palette"])
     for placement in frame["placements"]:
-        source = read_indexed(folder / placement["part"])
-        image = transformed(source, placement["size"], placement.get("rotation", 0))
+        if placement.get("kind") == "locked_body":
+            try:
+                from .stage_body_motion import render_body
+            except ImportError:
+                from stage_body_motion import render_body
+            image, _, _ = render_body(folder, document, frame["body_motion"])
+        else:
+            source = read_indexed(folder / placement["part"])
+            image = transformed(source, placement["size"], placement.get("rotation", 0))
         mask = image.point(lambda value: 255 if value else 0, "L")
         x, y = placement["position"]
         canvas.paste(image, (64 + x, 64 + y), mask)
