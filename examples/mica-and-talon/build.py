@@ -78,6 +78,11 @@ def main():
     ending_assets.mkdir(parents=True, exist_ok=True)
     for frame in (PROJECT / "art/mica/endings/s3k").glob("*.png"):
         shutil.copy2(frame, ending_assets / frame.name)
+    for surface in ("presentation", "continue", "portrait", "wave3"):
+        for frame in (PROJECT / "art/talon" / surface).glob("*.png"):
+            destination = classes / "art/talon" / surface / frame.name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(frame, destination)
     jar = OUTPUT / "mica-and-talon.jar"
     jar.unlink(missing_ok=True)
     cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath,

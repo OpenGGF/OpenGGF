@@ -31,6 +31,22 @@ class TestStageSpriteCompiler {
         assertEquals(7,art.artTiles()[17].getPixel(0,7));
         assertThrows(UnsupportedOperationException.class,()->set.frames().clear());
     }
+    @Test void independentlyOwnedStageBanksDoNotSharePatternAddresses() {
+        var image = new CharacterPresentation.Image(8, 8, new byte[64]);
+        var set = new StageSpriteSet(Map.of(1, new StageSpriteSet.Frame(image, 4, 8)));
+        int base = com.openggf.graphics.PatternAtlasRange.CHARACTER_STAGE_PRESENTATION.base();
+        var leader = StageSpriteCompiler.compile(set, null, base);
+        var follower = StageSpriteCompiler.compile(set, null, base + 0x8000);
+        assertTrue(leader.basePatternIndex() + leader.artTiles().length < follower.basePatternIndex());
+        assertEquals(leader.mappingFrames(), follower.mappingFrames());
+        assertEquals(leader.dplcFrames(), follower.dplcFrames());
+    }
+    @Test void oversizedStageBankCannotOverwriteTheOtherActor() {
+        var frame = new StageSpriteSet.Frame(new CharacterPresentation.Image(256, 256, new byte[256*256]), 128, 128);
+        var frames = new java.util.HashMap<Integer, StageSpriteSet.Frame>();
+        for (int i = 0; i < 33; i++) frames.put(i, frame);
+        assertThrows(IllegalArgumentException.class, () -> StageSpriteCompiler.compile(new StageSpriteSet(frames), null));
+    }
     @Test void slotsRejectInvalidNativeIdsAndUnboundedHotspots() {
         var frame=new StageSpriteSet.Frame(new CharacterPresentation.Image(1,1,new byte[1]),0,0);
         assertThrows(IllegalArgumentException.class,()->new StageSpriteSet(Map.of(256,frame)));

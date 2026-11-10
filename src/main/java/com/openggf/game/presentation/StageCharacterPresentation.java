@@ -21,6 +21,28 @@ public final class StageCharacterPresentation {
         return definition == null || definition.key().isBuiltin() ? null : definition;
     }
 
+    /** Native Tails actor ownership: solo Tails-role main, otherwise the selected follower. */
+    public static CharacterDefinition tailsDefinition() {
+        var main = activeDefinition();
+        if (main != null && main.behavesLike() == PlayerCharacter.TAILS_ALONE) return main;
+        var world = SessionManager.getCurrentWorldSession();
+        if (world == null) return null;
+        var codes = ActiveGameplayTeamResolver.resolveSidekicks(GameServices.configuration());
+        if (codes.isEmpty()) return null;
+        var definition = world.getPlayableCharacterRegistry().find(CharacterKey.parsePersisted(codes.getFirst())).orElse(null);
+        return definition == null || definition.key().isBuiltin() ? null : definition;
+    }
+
+    public static CharacterDefinition sonicDefinition() {
+        var main = activeDefinition();
+        return main != null && main.behavesLike() == PlayerCharacter.TAILS_ALONE ? null : main;
+    }
+
+    public static CharacterPresentation presentation(CharacterDefinition definition, GameId host) throws IOException {
+        return definition == null || definition.presentationSupplier() == null ? null
+                : definition.presentationSupplier().load(definition.key().persisted(), host);
+    }
+
     public static CharacterPresentation active() throws IOException {
         var definition = activeDefinition();
         return definition == null || definition.presentationSupplier() == null ? null
@@ -39,7 +61,10 @@ public final class StageCharacterPresentation {
     }
 
     public static StageSpriteSet stage(StageSpriteSet.Surface surface) throws IOException {
-        var definition = activeDefinition();
+        return stage(surface, activeDefinition());
+    }
+
+    public static StageSpriteSet stage(StageSpriteSet.Surface surface, CharacterDefinition definition) throws IOException {
         if (definition == null || definition.presentationSupplier() == null) return null;
         var presentation = definition.presentationSupplier().load(definition.key().persisted());
         return presentation == null ? null : presentation.stages().get(surface);

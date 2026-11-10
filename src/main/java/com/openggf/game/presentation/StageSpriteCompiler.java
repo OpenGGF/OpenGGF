@@ -10,6 +10,13 @@ import java.util.*;
 public final class StageSpriteCompiler {
     private StageSpriteCompiler() { }
     public static SpriteArtSet compile(StageSpriteSet set, SpriteArtSet animationSource) {
+        return compile(set, animationSource, com.openggf.graphics.PatternAtlasRange.CHARACTER_STAGE_PRESENTATION.base());
+    }
+    public static SpriteArtSet compile(StageSpriteSet set, SpriteArtSet animationSource, int patternBase) {
+        int perActorBudget = com.openggf.graphics.PatternAtlasRange.CHARACTER_STAGE_PRESENTATION.size() / 2;
+        long tileCount = set.frames().values().stream().mapToLong(frame ->
+                ((frame.image().width() + 7L) / 8) * ((frame.image().height() + 7L) / 8)).sum();
+        if (tileCount > perActorBudget) throw new IllegalArgumentException("Character stage art exceeds per-actor pattern budget");
         int size = set.frames().keySet().stream().mapToInt(Integer::intValue).max().orElseThrow() + 1;
         var tiles = new ArrayList<Pattern>();
         var maps = new ArrayList<SpriteMappingFrame>();
@@ -46,7 +53,7 @@ public final class StageSpriteCompiler {
             cues.add(new SpriteDplcFrame(count==0 ? List.of() : List.of(new TileLoadRequest(start,count))));
         }
         return new SpriteArtSet(tiles.toArray(Pattern[]::new),List.copyOf(maps),List.copyOf(cues),
-                0,com.openggf.graphics.PatternAtlasRange.CHARACTER_STAGE_PRESENTATION.base(),1,bank,animationSource==null?null:animationSource.animationProfile(),
+                0,patternBase,1,bank,animationSource==null?null:animationSource.animationProfile(),
                 animationSource==null?null:animationSource.animationSet());
     }
 }

@@ -16,7 +16,7 @@ public final class TalonCharacter extends AbstractPlayableSprite {
                 new CharacterPhysicsSpec(PhysicsProfile.SONIC_2_TAILS));
     }
 
-    static CharacterDefinition definition(String owner, PlayableSheetMaterializer.MaterializedArt materialized) {
+    static CharacterDefinition definition(String owner, PlayableSheetMaterializer.MaterializedArt materialized, CharacterPresentation presentation) {
         return new CharacterDefinition(CharacterKey.mod(owner, "talon"), "TALON", (code, x, y) -> {
                     var talon = new TalonCharacter(code, x, y);
                     talon.authoredAnimations = materialized.art().animationSet();
@@ -31,8 +31,8 @@ public final class TalonCharacter extends AbstractPlayableSprite {
                 new CharacterDefinition.PresentationSupplier() {
                     public CharacterPresentation load(String code) { return load(code, GameId.S3K); }
                     public CharacterPresentation load(String code, GameId host) {
-                        return new CharacterPresentation("TALON", host == GameId.S2 ? "TALON" : "TAL",
-                                java.util.Map.of(), java.util.Map.of());
+                        return new CharacterPresentation("TALON", host == GameId.S3K ? "TALO" : "TALON",
+                                presentation.art(), presentation.supplementaryGlyphs(), presentation.stages());
                     }
                 },
                 ignored -> TalonSolar.profile());

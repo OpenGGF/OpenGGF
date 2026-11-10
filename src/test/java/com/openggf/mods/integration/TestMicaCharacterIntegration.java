@@ -554,7 +554,6 @@ class TestMicaCharacterIntegration {
         try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
             session.applyMod(buildSample());
             session.boot(com.openggf.tests.RomTestUtils.ensureSonic2RomAvailable().toPath(),10,0,settings);
-            if (sidekick.equals("mica-and-talon:talon")) installTalonEndings();
             session.loop().closePresence();
             var engine=new com.openggf.Engine();
             engine.setInputHandler(new com.openggf.control.InputHandler());
@@ -1463,7 +1462,7 @@ class TestMicaCharacterIntegration {
             var solar = definition.superFormSupplier().load(talonCode).games().get(base.getGameId());
             assertEquals(Set.of(SuperFormProfile.Tier.SUPER), solar.keySet());
             assertEquals(PhysicsProfile.SONIC_3K_SUPER_TAILS, solar.get(SuperFormProfile.Tier.SUPER).physics());
-            assertEquals(game.equals("s2") ? "TALON" : "TAL", definition.presentationSupplier().load(talonCode, base.getGameId()).hudName());
+            assertEquals(game.equals("s3k") ? "TALO" : "TALON", definition.presentationSupplier().load(talonCode, base.getGameId()).hudName());
             talon.setCentreY((short) 120);
             talon.setAir(true); talon.setJumping(true); talon.setRolling(true); talon.setRollingJump(true);
             var movement = new com.openggf.sprites.managers.PlayableSpriteMovement(talon);
@@ -1783,35 +1782,6 @@ class TestMicaCharacterIntegration {
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
     void talonS2SuperEndingCapture() throws Exception { captureS2Ending(true, "mica-and-talon:talon"); }
 
-    /** Test-only direct presentation assembly until the parallel presentation lane wires it. */
-    private void installTalonEndings() throws Exception {
-        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
-        var old = world.getPlayableCharacterRegistry();
-        var key = CharacterKey.parsePersisted("mica-and-talon:talon");
-        var d = old.find(key).orElseThrow();
-        var loader = new java.net.URLClassLoader(new java.net.URL[]{temp.resolve("classes").toUri().toURL()}, getClass().getClassLoader());
-        var method = Class.forName("mica.TalonEndings", true, loader).getDeclaredMethod("load", com.openggf.io.ModAssetRoot.class);
-        method.setAccessible(true);
-        var assets = com.openggf.io.ModAssetRoot.directory(Path.of("examples/mica-and-talon").toAbsolutePath(),
-                Path.of("examples/mica-and-talon").toAbsolutePath(), ModInputLimits.production(),
-                com.openggf.io.DirectoryAccess.TEST);
-        @SuppressWarnings("unchecked")
-        var sets = (Map<EndingSpriteSet.Surface, EndingSpriteSet>)method.invoke(null, assets);
-        assets.close(); loader.close();
-        assertEquals(8, sets.get(EndingSpriteSet.Surface.S2_ENDING).sprites().frames().size());
-        assertEquals(Set.of(1,2,3,4,16), sets.get(EndingSpriteSet.Surface.S2_TORNADO_PILOT).sprites().frames().keySet());
-        var replacement = new CharacterDefinition(d.key(), d.displayName(), d.spriteFactory(), d.respawnStrategyFactory(),
-                d.behavesLike(), d.secondaryAbility(), d.supportsSuperForm(), d.artSupplier(), d.paletteSupplier(),
-                d.movementAbilities(), d.underwaterPaletteSupplier(), ignored -> new CharacterPresentation("TALON", "TALON",
-                Map.of(), Map.of(), Map.of(), sets), d.superFormSupplier(), d.defaultSidekick());
-        var field = PlayableCharacterRegistry.class.getDeclaredField("definitions"); field.setAccessible(true);
-        @SuppressWarnings("unchecked") var entries = (Map<CharacterKey,CharacterDefinition>)field.get(old);
-        var registry = PlayableCharacterRegistry.empty();
-        for (var entry : entries.entrySet()) registry = registry.register(entry.getKey(), entry.getKey().equals(key) ? replacement : entry.getValue());
-        var registryField = world.getClass().getDeclaredField("playableCharacterRegistry"); registryField.setAccessible(true);
-        registryField.set(world, registry);
-    }
-
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
     void talonS3kReunionCapture() throws Exception {
         Path output = Path.of(System.getProperty("talon.captureRoot", "target/talon-endings"));
@@ -1821,7 +1791,6 @@ class TestMicaCharacterIntegration {
             try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
                 session.applyMod(buildSample());
                 session.boot(com.openggf.tests.RomTestUtils.ensureSonic3kRomAvailable().toPath(),13,1,settings);
-                installTalonEndings();
                 var manager = GameServices.level().getObjectManager();
                 for (var object : List.copyOf(manager.getActiveObjects())) manager.removeDynamicObject(object);
                 var director=manager.createDynamicObject(() -> new com.openggf.game.sonic3k.ending.EndingRescueDirectorObjectInstance(
@@ -1863,6 +1832,255 @@ class TestMicaCharacterIntegration {
             // buildSample owns this disposable test build and expects an empty destination.
             try (var files = Files.walk(temp.resolve("classes"))) { for (var file : files.sorted(Comparator.reverseOrder()).toList()) Files.delete(file); }
         }
+    }
+
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
+    void talonSurfacesS1() throws Exception { captureTalonSurfaces("s1", "sonic1.rom.path"); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void talonSurfacesS2() throws Exception { captureTalonSurfaces("s2", "sonic2.rom.path"); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void talonSurfacesS3k() throws Exception { captureTalonSurfaces("s3k", "s3k.rom.path"); }
+
+    private void captureTalonSurfaces(String game, String romProperty) throws Exception {
+        String priorSaveRoot = System.getProperty("openggf.saveRoot");
+        System.setProperty("openggf.saveRoot", temp.resolve("talon-capture-saves").toString());
+        try {
+        Path jar = buildSample();
+        String talon = "mica-and-talon:talon";
+        Path output = Path.of(System.getProperty("talon.presentation.captureRoot", "target/talon-presentation"));
+        Files.createDirectories(output);
+        for (String mode : List.of("solo", "team", "native", "native-solo")) {
+            String main = mode.equals("solo") ? talon : mode.equals("team") ? CODE : mode.equals("native-solo") && !game.equals("s1") ? "tails" : "sonic";
+            String follower = mode.equals("team") ? talon : mode.equals("native") && !game.equals("s1") ? "tails" : "";
+            var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320, main, follower, "off", null, null, null);
+            try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+                session.applyMod(jar); session.boot(Path.of(System.getProperty(romProperty)), 0, 0, settings);
+                for (int i = 0; i < 120; i++) session.step(null);
+                var definition = com.openggf.game.presentation.StageCharacterPresentation.tailsDefinition();
+                if (!mode.startsWith("native")) {
+                    assertNotNull(definition); assertEquals(talon, definition.key().persisted());
+                    var presentation = definition.presentationSupplier().load(talon, GameId.valueOf(game.toUpperCase(Locale.ROOT)));
+                    assertEquals("TALON", presentation.displayName());
+                    var host = CharacterPresentation.Host.valueOf(game.toUpperCase(Locale.ROOT));
+                    var art = presentation.art().get(host);
+                    assertEquals(16, art.hudLifeIcon().width()); assertEquals(16, art.oneUpFace().height());
+                    assertNotNull(art.sign().face().backing()); assertNotNull(art.sign().spin3());
+                    assertEquals(18, presentation.stages().get(StageSpriteSet.Surface.S2_HALF_PIPE).frames().size());
+                    assertEquals(11, presentation.stages().get(StageSpriteSet.Surface.S3K_BLUE_SPHERE).frames().size());
+                    assertTrue(com.openggf.game.presentation.StageSpriteCompiler.compile(presentation.stages().get(StageSpriteSet.Surface.S3K_BLUE_SPHERE), null).mappingFrames().getFirst().pieces().isEmpty());
+                    if (game.equals("s1")) {
+                        var name = com.openggf.game.sonic1.Sonic1CharacterPresentation.name(GameServices.rom().getRom(), presentation, CharacterPresentation.Style.HUD);
+                        assertTrue(name.complete()); assertEquals(32, name.image().width());
+                    }
+                    if (mode.equals("team")) assertEquals(CODE,
+                            com.openggf.game.presentation.StageCharacterPresentation.activeDefinition().key().persisted());
+                }
+                var spawn = new com.openggf.level.objects.ObjectSpawn(session.player().getCentreX() + 80,
+                        session.player().getCentreY(), 0x26, game.equals("s1") ? 2 : 1, 0, false, 0);
+                assertNotNull(GameServices.level().getObjectManager().createDynamicObject(() -> switch (game) {
+                    case "s1" -> new com.openggf.game.sonic1.objects.Sonic1MonitorObjectInstance(spawn);
+                    case "s2" -> new com.openggf.game.sonic2.objects.MonitorObjectInstance(spawn, "presentation 1-up");
+                    default -> new com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance(spawn);
+                }));
+                for (int i = 0; i < 30; i++) session.step(null);
+                com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve(game + "-" + mode + "-hud-monitor.png"));
+                captureTalonSignComposition(game, mode, output);
+                var state = GameServices.gameState();
+                while (state.getLives() > 0) state.loseLife();
+                state.addContinue(); state.addContinue(); state.addContinue();
+                GameServices.level().requestGameOverExit(GameOverExit.CONTINUE_SCREEN);
+                for (int i = 0; i < 120 && session.loop().getCurrentGameMode() != GameMode.CONTINUE_SCREEN; i++) session.step(null);
+                assertEquals(GameMode.CONTINUE_SCREEN, session.loop().getCurrentGameMode());
+                for (int i = 0; i < 140; i++) session.step(null);
+                com.openggf.graphics.ScreenshotCapture.savePNG(drawContinue(session), output.resolve(game + "-" + mode + "-continue-wait.png"));
+                var screen = session.loop().getContinueScreenProvider(); screen.update(true, false);
+                for (int i = 0; i < 50; i++) screen.update(false, false);
+                com.openggf.graphics.ScreenshotCapture.savePNG(drawContinue(session), output.resolve(game + "-" + mode + "-continue-run.png"));
+                if (game.equals("s3k") && mode.equals("team")) captureTalonPortraits();
+            }
+            try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+                session.applyMod(jar); session.boot(Path.of(System.getProperty(romProperty)), 0, 0, settings);
+                for (int i = 0; i < 120; i++) { session.step(null); session.renderFrame(); }
+                session.loop().enterSpecialStage();
+                for (int i = 0; i < 240; i++) { session.step(null); session.renderFrame(); }
+                assertEquals(GameMode.SPECIAL_STAGE, session.loop().getCurrentGameMode());
+                var manager = privateField(session.loop().getActiveSpecialStageProvider(), "manager");
+                var renderer = privateField(manager, game.equals("s1") ? "sonicSpriteRenderer" : "renderer");
+                if (game.equals("s2")) {
+                    var stage = (com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager) manager;
+                    assertNotNull(stage.getTailsPlayer(), "Tails-role solo and follower actors must actually be spawned");
+                    assertEquals(mode.endsWith("solo"), stage.getSonicPlayer() == null);
+                } else if (game.equals("s3k")) {
+                    var stage = (com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageManager) manager;
+                    assertEquals(!mode.endsWith("solo"), stage.isTailsEnabled());
+                }
+                if (!mode.startsWith("native")) {
+                    Object tails = game.equals("s1") ? ((PlayerSpriteRenderer) renderer).getRenderContext() : privateField(renderer, game.equals("s2") ? "tailsStageArt" : mode.equals("solo") ? "characterStageRenderer" : "tailsStageRenderer");
+                    assertNotNull(tails, "native Tails actor receives its own character art");
+                    if (game.equals("s2") && mode.equals("solo")) assertNull(privateField(renderer, "characterStageArt"));
+                }
+                com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve(game + "-" + mode + "-special.png"));
+                Files.writeString(output.resolve(game + "-" + mode + "-special-state.csv"),
+                        com.openggf.tools.GameplayCaptureSession.stateHeader() + "\n" + session.stateLine(240, null) + "\n");
+                // Declared review setup: production debug completion, not a played emerald route.
+                var lifecycle = privateField(session.loop(), "specialStageLifecycle");
+                var finish = lifecycle.getClass().getDeclaredMethod("enterResultsScreenWithDebugRings", boolean.class, int.class);
+                finish.setAccessible(true); finish.invoke(lifecycle, true, 50);
+                for (int i = 0; i < 240; i++) { session.step(null); session.renderFrame(); }
+                assertEquals(GameMode.SPECIAL_STAGE_RESULTS, session.loop().getCurrentGameMode());
+                com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve(game + "-" + mode + "-special-results.png"));
+            }
+            if (game.equals("s3k") && mode.endsWith("solo")) {
+                try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+                    session.applyMod(jar); session.boot(Path.of(System.getProperty(romProperty)), 0, 0, settings);
+                    for (int i = 0; i < 120; i++) session.step(null);
+                    GameServices.level().requestBonusStageEntry(BonusStageType.SLOT_MACHINE);
+                    for (int i = 0; i < 240; i++) { session.step(null); session.renderFrame(); }
+                    assertEquals(GameMode.BONUS_STAGE, session.loop().getCurrentGameMode());
+                    var player = GameServices.sprites().getMainPlayable();
+                    assertInstanceOf(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusPlayer.TailsSlotBonusPlayer.class, player);
+                    if (mode.equals("solo")) {
+                        assertNotNull(player.getSpriteRenderer().getRenderContext());
+                        assertNull(player.getTailsTailsController(), "TALON has no separate tail actor");
+                    }
+                    com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve(game + "-" + mode + "-slots.png"));
+                }
+            }
+            try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+                session.applyMod(jar); session.boot(Path.of(System.getProperty(romProperty)), 0, 0, settings);
+                for (int i = 0; i < 120; i++) session.step(null);
+                var route = com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(GameServices.configuration());
+                assertNotNull(GameServices.level().getObjectManager().createDynamicObject(() -> switch (game) {
+                    case "s1" -> new com.openggf.game.sonic1.objects.Sonic1ResultsScreenObjectInstance(2, 50, 1);
+                    case "s2" -> new com.openggf.game.sonic2.objects.ResultsScreenObjectInstance(2, 50, 1, false);
+                    default -> new com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance(route, 0);
+                }));
+                for (int i = 0; i < 180; i++) { session.step(null); session.renderFrame(); }
+                com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve(game + "-" + mode + "-act-results.png"));
+            }
+        }
+        } finally {
+            if (priorSaveRoot == null) System.clearProperty("openggf.saveRoot");
+            else System.setProperty("openggf.saveRoot", priorSaveRoot);
+        }
+    }
+
+    private void captureTalonSignComposition(String game, String mode, Path output) throws Exception {
+        var graphics = GameServices.graphics();
+        var render = GameServices.level().getObjectRenderManager();
+        var nativeSheet = game.equals("s3k") ? render.getSheet(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.END_SIGN) : render.getSignpostSheet();
+        assertNotNull(nativeSheet);
+        var active = com.openggf.game.presentation.StageCharacterPresentation.activeDefinition();
+        var presentation = active == null ? null : active.presentationSupplier().load(active.key().persisted());
+        var host = CharacterPresentation.Host.valueOf(game.toUpperCase(Locale.ROOT));
+        var art = presentation == null ? null : presentation.art().get(host);
+        int[] frames = game.equals("s1") ? new int[]{4, -1, 1, 2, 3} : game.equals("s2") ? new int[]{0, 1, 3, 4, 5} : new int[]{0, -1, 4, 5, 6};
+        int line = active == null ? 0 : GameServices.sprites().getMainPlayable().getSpriteRenderer().getRenderContext().getEffectivePaletteLine(0);
+        org.lwjgl.opengl.GL11.glClearColor(0, 0, 0, 1);
+        org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+        graphics.resetForFixedFunction(); GameServices.camera().setX((short) 0); GameServices.camera().setY((short) 0);
+        for (int i = 0; i < frames.length; i++) {
+            if (frames[i] < 0) continue;
+            var pose = com.openggf.game.presentation.CharacterSignRenderer.select(art, frames[i], frames[0], frames[1], frames[2], frames[3], frames[4]);
+            var sheet = pose == null ? nativeSheet : com.openggf.game.presentation.CharacterSignRenderer.compose(nativeSheet, frames[i], pose, line, GameServices.level().getCurrentLevel().getPalette(0));
+            var renderer = new com.openggf.level.render.PatternSpriteRenderer(sheet, graphics);
+            renderer.ensurePatternsCached(graphics, com.openggf.graphics.PatternAtlasRange.CONTINUE_SCREEN.base() + i * 0x200);
+            renderer.drawFrameIndex(pose == null ? frames[i] : 0, 32 + i * 60, 80, false, false);
+        }
+        graphics.flushScreenSpace(); org.lwjgl.opengl.GL11.glFinish();
+        com.openggf.graphics.ScreenshotCapture.savePNG(com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320, 224), output.resolve(game + "-" + mode + "-sign-composition.png"));
+        if (presentation != null) {
+            var rom = GameServices.rom().getRom();
+            if (game.equals("s1")) assertTrue(com.openggf.game.sonic1.Sonic1CharacterPresentation.name(rom, presentation, CharacterPresentation.Style.RESULTS).complete());
+            else if (game.equals("s2")) assertNotNull(com.openggf.game.sonic2.Sonic2CharacterPresentation.name(rom, presentation, CharacterPresentation.Style.RESULTS));
+            else {
+                var font = new LinkedHashMap<>(com.openggf.game.sonic3k.Sonic3kCharacterFont.results(rom));
+                com.openggf.game.sonic3k.Sonic3kCharacterFont.title(rom).forEach(font::putIfAbsent);
+                assertTrue(com.openggf.game.presentation.CharacterNameComposer.compose(presentation.displayName(), font, Map.of(), 0).complete());
+            }
+        }
+    }
+
+    private void captureTalonPortraits() throws Exception {
+        Path saves=temp.resolve("portrait-saves");
+        var manager=new SaveManager(saves);
+        String talon = "mica-and-talon:talon";
+        var teams = List.of(new com.openggf.game.save.SelectedTeam(talon, List.of()),
+                new com.openggf.game.save.SelectedTeam(CODE, List.of(talon)));
+        for(int slot=1;slot<=3;slot++) {
+            Map<String,Object> payload=new LinkedHashMap<>();
+            payload.put("act",0);payload.put("zone",0);payload.put("lives",3);
+            payload.put("mainCharacter",slot==3?"tails":teams.get(slot-1).mainCharacter());
+            payload.put("sidekicks",slot==3?List.of():teams.get(slot-1).sidekicks());
+            payload.put("chaosEmeralds",List.of());payload.put("clear",false);
+            payload.put("progressCode",1);payload.put("clearState",0);
+            manager.writeSlot("s3k",slot,payload);
+        }
+        var presentation=new com.openggf.game.sonic3k.dataselect.S3kDataSelectPresentation(saves,GameServices.configuration());
+        GameServices.graphics().clearPaletteFadePresentation();
+        com.openggf.graphics.PaletteUploadPresentation.release(GameServices.graphics());
+        presentation.initialize();
+        assertEquals(DataSelectProvider.State.FADE_IN,presentation.getState());
+        var continueIcon = presentation.getClass().getDeclaredMethod("characterContinueIcon", String.class);
+        continueIcon.setAccessible(true);
+        assertNotNull(continueIcon.invoke(presentation, "mica-and-talon:talon"), "TALON miniature fits the native 16 by 24 menu cell");
+        var method=presentation.getClass().getDeclaredMethod("resolveCustomPortraitFrame",com.openggf.game.save.SelectedTeam.class);
+        method.setAccessible(true);
+        for(var team:teams) {
+            var frame=(com.openggf.level.render.SpriteMappingFrame)method.invoke(presentation,team);
+            assertTrue(frame.pieces().stream().anyMatch(piece->piece.tileIndex()>=0x2000));
+            if(!team.sidekicks().isEmpty()) assertTrue(frame.pieces().stream().anyMatch(piece->piece.tileIndex()>=0x2000),"Both mod portraits are authored");
+        }
+        var stateMethod=presentation.getClass().getDeclaredMethod("buildObjectState");
+        stateMethod.setAccessible(true);
+        var objectState=(com.openggf.game.sonic3k.dataselect.S3kSaveScreenObjectState)stateMethod.invoke(presentation);
+        for(int slot=0;slot<2;slot++) {
+            var icon=objectState.visualState().slotStates().get(slot).customLifeIcon();
+            assertNotNull(objectState.visualState().slotStates().get(slot).customContinueIcon(),
+                    "Each leader keeps its own continue miniature");
+            assertNotNull(icon,"Each leader keeps its own HUD life face");
+            assertTrue(icon.pieces().stream().allMatch(piece->piece.tileIndex()>=0x2000));
+        }
+        for(int i=0;i<24;i++) presentation.update(new com.openggf.control.InputHandler());
+        GameServices.camera().setX((short)0); GameServices.camera().setY((short)0);
+        presentation.setClearColor();
+        org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+        GameServices.graphics().resetForFixedFunction();
+        presentation.draw();GameServices.graphics().flushScreenSpace();
+        org.lwjgl.opengl.GL11.glFinish();
+        var saveImage = com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224);
+        var definition = GameServices.module().getPlayableCharacterRegistry().find(CharacterKey.parsePersisted("mica-and-talon:talon")).orElseThrow();
+        var iconArt = definition.presentationSupplier().load("mica-and-talon:talon").art().get(CharacterPresentation.Host.S3K).hudLifeIcon();
+        var iconTiles = com.openggf.game.presentation.CharacterNameComposer.tiles(iconArt);
+        var iconPalette = definition.paletteSupplier().load("mica-and-talon:talon");
+        int matches = 0;
+        for (int y = 0; y <= 208; y++) for (int x = 0; x <= 304; x++)
+            if (matchesIcon(saveImage, iconTiles, 0, iconPalette, x, y)) matches++;
+        assertTrue(matches >= 1, "TALON solo slot uses his private life-icon colours");
+        writeCapture(saveImage,"talon-s3k-data-select-solo-and-mica-team");
+        var controller=presentation.getSessionController();
+        controller.moveSelection(-controller.menuModel().getSelectedRow());
+        controller.loadAvailableTeams("" );
+        var stock=(com.openggf.game.sonic3k.dataselect.S3kSaveScreenObjectState)stateMethod.invoke(presentation);
+        assertNull(stock.visualState().noSaveCustomFrame(),"Stock NO SAVE portrait retains native mappings");
+        controller.loadAvailableTeams(talon+";"+CODE+","+talon);
+        for(var wanted:teams) {
+            int target=controller.availableTeams().indexOf(wanted);
+            assertTrue(target>=0,"Solo TALON and MICA with TALON must be selectable in NO SAVE");
+            controller.cycleTeam(target-controller.menuModel().getSelectedTeamIndex());
+            // No animation tick: changing the team must invalidate the cached visual immediately.
+            var selected=(com.openggf.game.sonic3k.dataselect.S3kSaveScreenObjectState)stateMethod.invoke(presentation);
+            assertNotNull(selected.visualState().noSaveCustomFrame());
+            assertTrue(selected.visualState().noSaveCustomFrame().pieces().stream().anyMatch(piece->piece.tileIndex()>=0x2000));
+            if(!wanted.sidekicks().isEmpty()) assertTrue(selected.visualState().noSaveCustomFrame().pieces().stream().anyMatch(piece->piece.tileIndex()>=0x2000));
+            presentation.setClearColor();
+            org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+            presentation.draw();GameServices.graphics().flushScreenSpace();
+            org.lwjgl.opengl.GL11.glFinish();
+            writeCapture(com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224),
+                    wanted.sidekicks().isEmpty()?"talon-s3k-no-save-solo":"mica-talon-s3k-no-save-team");
+        }
+        presentation.reset();
     }
 
     private Path buildSample() throws Exception {
@@ -1943,6 +2161,15 @@ class TestMicaCharacterIntegration {
             for(var file:files.filter(p -> p.toString().endsWith(".png")).toList()) {
                 Path destination=classes.resolve("art/mica/endings").resolve(endings.relativize(file));
                 Files.createDirectories(destination.getParent()); Files.copy(file,destination);
+            }
+        }
+        for (String surface : List.of("presentation", "continue", "portrait", "wave3")) {
+            Path source = project.resolve("art/talon/" + surface);
+            try (var files = Files.list(source)) {
+                for (var file : files.filter(p -> p.toString().endsWith(".png")).toList()) {
+                    Path destination = classes.resolve("art/talon/" + surface).resolve(file.getFileName());
+                    Files.createDirectories(destination.getParent()); Files.copy(file, destination);
+                }
             }
         }
         Path jar = temp.resolve("mica-and-talon.jar");

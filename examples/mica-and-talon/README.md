@@ -63,8 +63,10 @@ flaps normally; airborne down previews a target and down+jump dives onto it.
 Solar uses white-gold plumage with flame wingtips, Instagib dives and twice the
 native flap lift, with no Flickies or Hyper tier. Regenerate Solar Java tables
 with `python3 tools/modding/playable_art/solar_java.py`; `--check` verifies sync.
-The S2 HUD spells TALON; S3K retains TAL because the native glyphs exceed its
-32-pixel cell. S1 keeps native fallback until T/A/L supplementary art exists.
+TALON owns his HUD/life and 1-up portraits, signs, continue actors, save portrait
+and Tails-role special-stage banks. S1 generated T/A/L glyphs and S2 native small
+glyphs spell TALON. S3K displays TALO (28 pixels); full TALON requires 35 pixels
+in its 32-pixel cell. Results use the full name.
 
 The build copies presentation, wave3 stage, continue, portrait, snowboard and
 ending PNGs into the jar alongside `art/mica.ggfp`. Presentation is currently a
@@ -193,3 +195,6 @@ Attack top-three records use a smaller independent pose. Saved native archetype
 records show the current configured creator character. See the inventory in
 [characters](../../docs/modding/characters.md#s3k-competition-menu-identity) and
 `art/<character>/competition-menu/README.md` for art and size evidence.
+
+presentation data. Presentation ownership and remaining standalone Blue Sphere hosting limits are
+listed in `art/talon/README.md`.

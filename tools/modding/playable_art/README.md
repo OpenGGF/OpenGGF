@@ -537,3 +537,24 @@ The optional native-pixel export writes only to scratch. `--compare-poses` verif
 shared-script silhouettes at their hotspots; `powered/pose-identity.json` records
 the non-pixel evidence. Installed powered handoffs and normal-phase aliases live
 beside that inventory; the Java coverage audit probes their production binding.
+
+## TALON presentation reference probe
+
+`talon_presentation_reference.py` exports Tails' half-pipe, Blue Sphere, continue,
+portrait and completion-pose native banks with labels, boxes/hotspots and 8× pose
+sheets, plus life/sign/font references. S1's mod-defined continue uses the native
+Sonic-host choreography. It reuses the existing reference decoders and requires
+the optional pinned disassemblies; it is never a runtime or mod asset source.
+
+```sh
+python3 -I tools/modding/playable_art/talon_presentation_reference.py --output "$HOME/scratch/agent-tmp/talon-presentation-references"
+```
+
+Keep all output outside Git. The S2 sign uses S2's own player palette, not the
+similarly named S3K palette (their index meanings differ). Native Tails' separate
+stage appendage banks are deliberately excluded. Continue references still show
+ordinary native fox tails; transformation prompts must explicitly exclude them.
+Source manifests retain native dimensions/hotspots for independent area/placement
+checks. Atlas previews can clip protrusions at cell edges; use the individual
+native PNGs for exact geometry. The TALON presentation handoff records original
+reduced rows, prompts/selections and aliases under `art/talon/presentation/`.

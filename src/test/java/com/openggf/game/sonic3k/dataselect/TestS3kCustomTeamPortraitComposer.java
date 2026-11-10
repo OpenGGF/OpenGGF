@@ -15,6 +15,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestS3kCustomTeamPortraitComposer {
 
     @Test
+    void canonicalCustomFollowerFacesInwardWithoutMirroringSoloOrLeader() {
+        var composer = new S3kCustomTeamPortraitComposer(stubFrames());
+        var layers = composer.layoutLayers(new SelectedTeam("mica-and-talon:mica", List.of("mica-and-talon:talon")));
+        assertFalse(layers.getFirst().hFlip());
+        assertTrue(layers.getLast().hFlip());
+        assertFalse(composer.layoutLayers(new SelectedTeam("mica-and-talon:talon", List.of())).getFirst().hFlip());
+    }
+    @Test
     void suppliedPortraitComposesWithUntouchedNativeTails() {
         var nativeFrames=stubFrames();
         var custom=new SpriteMappingFrame(List.of(new SpriteMappingPiece(-18,-40,4,4,0x2000,false,false,1,true)));

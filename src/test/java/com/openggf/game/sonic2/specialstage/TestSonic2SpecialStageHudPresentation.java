@@ -10,6 +10,21 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_2)
 class TestSonic2SpecialStageHudPresentation {
+    @Test void leaderAndTailsRoleNamesHaveIndependentDomesticAndOverseasBanks() throws Exception {
+        var loader = new Sonic2SpecialStageDataLoader(TestEnvironment.currentRom());
+        var hud = loader.getHudArtPatterns(); var tails = loader.getTailsTextArtPatterns();
+        var both = Sonic2SpecialStageHudPresentation.applyBanks(hud, tails,
+                new CharacterPresentation("MICA"), new CharacterPresentation("TALON"));
+        var mica = Sonic2SpecialStageHudPresentation.apply(hud, tails, new CharacterPresentation("MICA"));
+        var talon = Sonic2SpecialStageHudPresentation.apply(hud, tails, new CharacterPresentation("TALON"));
+        for (int i = 0; i < 5; i++) for (int x = 0; x < 8; x++) for (int y = 0; y < 8; y++) {
+            assertEquals(mica[i].getPixel(x,y), both.hud()[i].getPixel(x,y));
+            assertEquals(talon[i].getPixel(x,y), both.hud()[i+5].getPixel(x,y));
+            assertEquals(talon[i].getPixel(x,y), both.tails()[i].getPixel(x,y));
+        }
+        var stock = Sonic2SpecialStageHudPresentation.applyBanks(hud, tails, null, null);
+        assertSame(hud, stock.hud()); assertSame(tails, stock.tails());
+    }
     @Test void micaUsesNativeGlyphCellsWithoutNeighbourPixels() throws Exception {
         var loader = new Sonic2SpecialStageDataLoader(TestEnvironment.currentRom());
         var font = Sonic2SpecialStageHudPresentation.font(loader.getHudArtPatterns(), loader.getTailsTextArtPatterns());

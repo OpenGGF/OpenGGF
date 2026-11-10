@@ -2851,3 +2851,83 @@ inventoried obligations before authoring gives MICA 153/59/107/7 →
 157/59/103/7 and TALON 84/1/30/80 → 88/1/26/80: eight fallback obligations
 resolved, with four explicit N/A inventory rows. Existing gameplay coverage
 and inherited route gaps are unchanged.
+
+
+### TALON presentation lane — 2026-11-10
+
+TALON now has a `CharacterPresentation` and packed original presentation PNGs.
+HUD/1-up portraits and complete sign face/spin/backing sets cover S1/S2/S3K;
+S1 supplements T/A/L, S2 composes full TALON from native small glyphs, and S3K
+uses TALO (28 pixels). The five native glyph advances total 35 pixels against
+the fixed 32-pixel HUD cell; native glyph precedence prevents supplement-based
+font replacement. Full results names remain TALON.
+
+Existing `StageSpriteSet` ownership is sufficient; internal routing now selects
+the native Tails actor independently from the Sonic leader. Separate pattern
+and palette banks prevent TALON from replacing MICA in team play. S2 setup now
+resolves declared archetypes rather than literal built-in character codes; the
+domestic MILES and overseas TAILS word banks receive the follower name separately
+from the leader word. S3K's two
+character palettes participate independently in white fade and rewind capture.
+Continue likewise binds the native Tails actor in solo/team choreography;
+S1 uses its mod-defined Sonic-host continue selectors. Data Select keeps both
+custom portraits and mirrors the right member inward.
+
+The 18 half-pipe mappings, 11 nonblank Blue Sphere mappings plus its blank
+sentinel, and two S3K team-idle mappings are supplied. S1 maze presentation aliases
+canonical ROLL; the S3K slot bonus aliases approved ROLL drawings into native
+Tails mappings $96–$98 plus duck/balance aliases at $99/$9A for the shipped
+`FixBugs=0` goal-fade selector, retaining Tails actor/DPLC behavior and foreground
+occlusion. No separate wing/tail actor is installed. Independent appendage
+banks remain N/A because wings are integrated. A Blue Sphere completion pose
+is authored reserve art: there is no standalone Blue Sphere completion-screen
+host in the current engine, so that native-only audit row is N/A with a reason,
+not a claim of runtime screen coverage. Endings/competition remain outside this
+lane. Source rows and provenance live under `art/talon/presentation/`; disposable
+native references and the picture checkpoint are in
+`$HOME/scratch/agent-tmp/talon-presentation-20261110/`.
+
+
+Presentation-lane audit totals (authored / native alias / fallback / N/A):
+
+| Host | Before | After |
+| --- | --- | --- |
+| S1 | 0 / 0 / 2 / 2 | 29 / 1 / 1 / 2 |
+| S2 | 28 / 0 / 44 / 51 | 70 / 0 / 24 / 51 |
+| S3K | 38 / 0 / 71 / 77 | 68 / 5 / 54 / 79 |
+
+All requested presentation, continue and special-stage obligations are authored,
+aliased or explicitly N/A. Other-lane core, pilot, credits, ending and competition
+fallbacks remain. MICA's audit totals are unchanged. The 113 PNGs have one
+lossless indexed source and pass `presentation/rebuild.py --check`.
+
+Independent sqrt mean-area ratios: life/monitor 1.000; composed sign boards
+0.964; half-pipe 1.066; Blue Sphere 1.007; continue S1/S2/S3K
+1.053/1.005/0.998; portrait 0.999; reserved Blue Sphere completion pose 1.003;
+slot aliases 1.054. Miniatures use their native surface proportions rather than
+a gameplay bounding-box scale. The sign measure includes backing geometry;
+head/torso guides and the fixed-WAIT lineup remain separate visual checks.
+
+Final focused verification passes 273 Java tests with zero failures/errors/skips,
+including the full example integration, audit and signature selections. After
+the last renderer-lifetime edit, the 64-test S3K selection passes with zero
+failures/errors/skips. The final capture/native-image selection passes five
+tests; 52 Python modding tests pass. Packaging reports zero findings. Captures
+include both solo TALON and MICA-led teams with native controls; act results
+and sign sheets are staged composition probes, and special results use the
+production debug-completion transition. These are presentation observations,
+not route or full-suite certification. The existing S2 native solo HUD capture
+still shows its Sonic stock counter; the head comparison uses directly decoded
+native Tails counter art instead. No native runtime art is committed.
+
+
+The guards profile runs 837 tests: 836 pass, one fails, zero skip. The failing
+`TestDrawPathFieldWriteGuard.productionDrawPathsMatchReviewedCachesAndFrozenLogicalDebt`
+reproduces on baseline `3aac15eb45`: the same seven AIZ plane draw-cache inventory
+differences, including five creator fields and two renderer counts. The isolated
+baseline selection runs three tests: two pass, one fails, zero skip. Exact
+assertions match; no guard inventory or unrelated AIZ logic was changed.
+Selected final verification logs account for 1,004 seconds of queue admission
+wait and 836 seconds of Maven execution (including the baseline guard check).
+User-input wait is zero; other work and earlier retries are unmeasured. Exact
+logs, source-image comparisons and per-job timings remain beside `review.html`.

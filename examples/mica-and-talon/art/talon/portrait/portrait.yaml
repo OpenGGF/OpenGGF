@@ -1,0 +1,22 @@
+{
+  "game": "s3k",
+  "frames": [
+    {
+      "id": 5,
+      "file": "talon-00.png",
+      "dimensions": [
+        31,
+        37
+      ],
+      "hotspot": [
+        19,
+        37
+      ],
+      "native_source_label": "word_CF6A",
+      "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/portrait.json"
+    }
+  ],
+  "native_source_label": "Map_SaveScreen_ / word_CF5C",
+  "mapping_source": "docs/skdisasm/General/Save Menu/Map - Save Screen General.asm",
+  "composition": "Canonical right-facing portrait; engine mirrors the right team member inward."
+}

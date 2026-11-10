@@ -477,6 +477,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         // Player art (Sonic by default)
         renderer.loadCharacterStageArt();
         palette.bindCharacterContext(renderer.characterPaletteContext());
+        palette.bindTailsContext(renderer.tailsPaletteContext());
         Pattern[] playerPatterns = loadPlayerArt();
         renderer.setPlayerPatternBase(nextBase);
         for (int i = 0; i < playerPatterns.length; i++) {

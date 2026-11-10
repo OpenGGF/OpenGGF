@@ -349,8 +349,8 @@ public class SignpostObjectInstance extends BoxObjectInstance implements RewindR
     }
 
     private int resolveFinalAnimId() {
-        String mainCharacter = ActiveGameplayTeamResolver.resolveMainCharacterCode(services().configuration());
-        return "tails".equalsIgnoreCase(mainCharacter) ? ANIM_FINAL_TAILS : ANIM_FINAL_SONIC;
+        return ActiveGameplayTeamResolver.resolvePlayerCharacter(services().configuration())
+                == PlayerCharacter.TAILS_ALONE ? ANIM_FINAL_TAILS : ANIM_FINAL_SONIC;
     }
 
     /**
