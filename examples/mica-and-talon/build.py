@@ -51,6 +51,7 @@ def main():
          "--sheet", str(PROJECT / "src/main/mod/talon-sheet.yaml"), "--out", str(classes / "art/talon.ggfp")])
     shutil.copytree(PROJECT / "art/mica/presentation", classes / "art/mica/presentation", dirs_exist_ok=True)
     for character in ("mica", "talon"):
+        shutil.copytree(PROJECT / "art" / character / "competition-menu", classes / "art" / character / "competition-menu", dirs_exist_ok=True)
         shutil.copytree(PROJECT / "art" / character / "reels", classes / "art" / character / "reels", dirs_exist_ok=True)
         shutil.copytree(PROJECT / f"art/{character}/competition", classes / f"art/{character}/competition", dirs_exist_ok=True)
     stage_assets = classes / "art/mica/wave3"

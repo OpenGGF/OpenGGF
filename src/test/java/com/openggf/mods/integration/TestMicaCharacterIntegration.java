@@ -1651,6 +1651,56 @@ class TestMicaCharacterIntegration {
             com.openggf.tests.TestEnvironment.resetAll();
         }
     }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void competitionMenusRenderAuthoredPortraitsBesideNative() throws Exception {
+        Path output=Path.of(System.getProperty("competition.menu.capture.output","target/competition-menu-capture"));
+        Files.createDirectories(output);
+        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"mica-and-talon:talon","off",null,null,null);
+        try(var capture=new com.openggf.tools.GameplayCaptureSession(settings)) {
+            capture.applyMod(buildSample());
+            capture.boot(Path.of(System.getProperty("s3k.rom.path")),0,0,settings);
+            capture.step(null);capture.step(null);
+            var registry=com.openggf.game.session.SessionManager.getCurrentWorldSession().getPlayableCharacterRegistry();
+            var portraits=new java.util.HashMap<Integer,CharacterPresentation>();
+            for(var entry:Map.of(0,"mica-and-talon:mica",1,"mica-and-talon:talon").entrySet()) {
+                var d=registry.find(CharacterKey.parsePersisted(entry.getValue())).orElseThrow();
+                var p=d.presentationSupplier().load(entry.getValue(),GameId.S3K);
+                assertEquals(2,p.competitionPortraits().size());portraits.put(entry.getKey(),p);
+            }
+            var rom=GameServices.rom().getRom();
+            var assets=new com.openggf.game.sonic3k.competition.S3kCompetitionAssets(rom);
+            byte[] block=new byte[80];for(int z=0;z<5;z++)for(int r=0;r<3;r++)block[z*16+12+r]=(byte)r;
+            var records=new com.openggf.game.sonic3k.competition.S3kCompetitionRecords(block);
+            var mode=com.openggf.game.sonic3k.competition.S3kCompetitionSession.Mode.GRAND_PRIX;
+            var times=List.of(101,202,303,404,505);
+            var first=new com.openggf.game.sonic3k.competition.S3kCompetitionSession.PlayerResult(0,com.openggf.game.sonic3k.competition.S3kCompetitionPlayer.Character.SONIC,5,times,1515,true,0);
+            var second=new com.openggf.game.sonic3k.competition.S3kCompetitionSession.PlayerResult(1,com.openggf.game.sonic3k.competition.S3kCompetitionPlayer.Character.TAILS,5,times,1515,true,0);
+            for(var phase:List.of(com.openggf.game.sonic3k.competition.S3kCompetitionScreen.Phase.PLAYER_SELECT,
+                    com.openggf.game.sonic3k.competition.S3kCompetitionScreen.Phase.ARENA_SELECT,
+                    com.openggf.game.sonic3k.competition.S3kCompetitionScreen.Phase.RESULTS,
+                    com.openggf.game.sonic3k.competition.S3kCompetitionScreen.Phase.TIME_ATTACK_RESULTS)) {
+                var result=new com.openggf.game.sonic3k.competition.S3kCompetitionSession.Result(mode,com.openggf.game.sonic3k.competition.S3kCompetitionSession.Arena.AZURE_LAKE,List.of(first,second),List.of(times,times));
+                var view=new com.openggf.game.sonic3k.competition.S3kCompetitionScreen.MenuView(phase,8,0,true,mode,0,2,List.of(0,1),List.of(0x40,0x95),List.of(false,false),0,0,result);
+                int[] baseline=null;
+                for(boolean authored:new boolean[]{false,true}) {
+                    var composer=new com.openggf.game.sonic3k.competition.S3kCompetitionMenuScene(rom,assets,authored?portraits:Map.of());
+                    var scene=composer.compose(view,records);
+                    int[] rgb=com.openggf.game.sonic3k.competition.S3kCompetitionMenuRenderer.rasterize(scene).rgb(scene.palettes(),new com.openggf.graphics.PaletteFadePresentation(),com.openggf.graphics.color.DisplayColorProfile.RAW_RGB,com.openggf.graphics.color.DisplayColorExpansion.FULL);
+                    if(!authored)baseline=rgb;else assertFalse(java.util.Arrays.equals(baseline,rgb));
+                    var graphics=GameServices.graphics();
+                    graphics.setDisplayColorProfile(com.openggf.graphics.color.DisplayColorProfile.RAW_RGB);
+                    graphics.setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.FULL);
+                    try(var renderer=new com.openggf.game.sonic3k.competition.S3kCompetitionMenuRenderer(graphics)) {
+                        com.openggf.graphics.PaletteUploadPresentation.withoutDisplayedFade(graphics,()->{renderer.draw(scene);graphics.flushScreenSpace();});
+                        var image=com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224);
+                        for(int y=0;y<224;y++)for(int x=0;x<320;x++)assertEquals(0xff000000|rgb[y*320+x],image.argb(x,y));
+                        com.openggf.graphics.ScreenshotCapture.savePNG(image,output.resolve(phase.name().toLowerCase()+ (authored?"-authored.png":"-native.png")));
+                    }
+                }
+            }
+        }
+    }
+
     private static void competitionStep(com.openggf.game.sonic3k.competition.S3kCompetitionNativeHost host,
             com.openggf.control.InputHandler input,com.openggf.control.LogicalInputSnapshot logical) {
         input.setLogicalOverride(logical);
@@ -1701,6 +1751,12 @@ class TestMicaCharacterIntegration {
             for(var file:files.toList()) Files.copy(file,classes.resolve("art/mica/presentation").resolve(file.getFileName()));
         }
         for (String character : List.of("mica", "talon")) {
+            Path menu = project.resolve("art/" + character + "/competition-menu");
+            Files.createDirectories(classes.resolve("art/" + character + "/competition-menu"));
+            try (var files = Files.list(menu)) {
+                for (var file : files.filter(Files::isRegularFile).toList()) Files.copy(file,
+                        classes.resolve("art/" + character + "/competition-menu").resolve(file.getFileName()));
+            }
             Path reels = project.resolve("art/" + character + "/reels");
             Files.createDirectories(classes.resolve("art/" + character + "/reels"));
             try (var files = Files.list(reels)) {

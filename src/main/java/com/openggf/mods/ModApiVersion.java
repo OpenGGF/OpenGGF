@@ -7,6 +7,7 @@ import java.util.Objects;
 
 public final class ModApiVersion {
     /**
+     * Optional S3K Competition player/record portrait surfaces extend the unpublished candidate.
      * Optional per-host normal/powered 32x32 reel portraits extend the unpublished candidate.
      * S3K Competition miniature body/tail surfaces extend indexed presentation frames.
      * Host-aware character presentation suppliers extend the unpublished 0.7 candidate.

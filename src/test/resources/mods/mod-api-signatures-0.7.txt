@@ -184,6 +184,8 @@ CF-ANNOTATION TYPE com.openggf.game.CharacterKey visible @com.openggf.game.ModAp
 CF-ANNOTATION TYPE com.openggf.game.CharacterPresentation visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.CharacterPresentation$Art visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.CharacterPresentation$Backing visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.CharacterPresentation$CompetitionPortrait visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.CharacterPresentation$CompetitionSurface visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.CharacterPresentation$Font visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.CharacterPresentation$Host visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.CharacterPresentation$Image visible @com.openggf.game.ModApi
@@ -1505,10 +1507,12 @@ CONSTRUCTOR com.openggf.game.CharacterPresentation public  <init>(java.lang.Stri
 CONSTRUCTOR com.openggf.game.CharacterPresentation public  <init>(java.lang.String,java.lang.String,java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$Art>,java.util.Map<com.openggf.game.CharacterPresentation$Font,java.util.Map<java.lang.Character,com.openggf.game.CharacterPresentation$Image>>,java.util.Map<com.openggf.game.StageSpriteSet$Surface,com.openggf.game.StageSpriteSet>)
 CONSTRUCTOR com.openggf.game.CharacterPresentation public  <init>(java.lang.String,java.lang.String,java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$Art>,java.util.Map<com.openggf.game.CharacterPresentation$Font,java.util.Map<java.lang.Character,com.openggf.game.CharacterPresentation$Image>>,java.util.Map<com.openggf.game.StageSpriteSet$Surface,com.openggf.game.StageSpriteSet>,java.util.Map<com.openggf.game.EndingSpriteSet$Surface,com.openggf.game.EndingSpriteSet>)
 CONSTRUCTOR com.openggf.game.CharacterPresentation public  <init>(java.lang.String,java.lang.String,java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$Art>,java.util.Map<com.openggf.game.CharacterPresentation$Font,java.util.Map<java.lang.Character,com.openggf.game.CharacterPresentation$Image>>,java.util.Map<com.openggf.game.StageSpriteSet$Surface,com.openggf.game.StageSpriteSet>,java.util.Map<com.openggf.game.EndingSpriteSet$Surface,com.openggf.game.EndingSpriteSet>,java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$ReelFace>)
+CONSTRUCTOR com.openggf.game.CharacterPresentation public  <init>(java.lang.String,java.lang.String,java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$Art>,java.util.Map<com.openggf.game.CharacterPresentation$Font,java.util.Map<java.lang.Character,com.openggf.game.CharacterPresentation$Image>>,java.util.Map<com.openggf.game.StageSpriteSet$Surface,com.openggf.game.StageSpriteSet>,java.util.Map<com.openggf.game.EndingSpriteSet$Surface,com.openggf.game.EndingSpriteSet>,java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$ReelFace>,java.util.Map<com.openggf.game.CharacterPresentation$CompetitionSurface,com.openggf.game.CharacterPresentation$CompetitionPortrait>)
 CONSTRUCTOR com.openggf.game.CharacterPresentation$Art public  <init>(com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image)
 CONSTRUCTOR com.openggf.game.CharacterPresentation$Art public  <init>(com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Sign)
 CONSTRUCTOR com.openggf.game.CharacterPresentation$Art public  <init>(com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Sign,com.openggf.game.PresentationFrameSet)
 CONSTRUCTOR com.openggf.game.CharacterPresentation$Backing public  <init>(com.openggf.game.CharacterPresentation$Image,int,int[])
+CONSTRUCTOR com.openggf.game.CharacterPresentation$CompetitionPortrait public  <init>(com.openggf.game.PresentationFrameSet$Pose,int[])
 CONSTRUCTOR com.openggf.game.CharacterPresentation$Font public  <init>(com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$Style)
 CONSTRUCTOR com.openggf.game.CharacterPresentation$Image public  <init>(int,int,byte[])
 CONSTRUCTOR com.openggf.game.CharacterPresentation$ReelFace public  <init>(com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Image,int[],int[])
@@ -2876,6 +2880,8 @@ FIELD com.openggf.game.CharacterDefinition$MovementAbility public,static,final c
 FIELD com.openggf.game.CharacterKey public,static,final com.openggf.game.CharacterKey KNUCKLES
 FIELD com.openggf.game.CharacterKey public,static,final com.openggf.game.CharacterKey SONIC
 FIELD com.openggf.game.CharacterKey public,static,final com.openggf.game.CharacterKey TAILS
+FIELD com.openggf.game.CharacterPresentation$CompetitionSurface public,static,final com.openggf.game.CharacterPresentation$CompetitionSurface S3K_PLAYER
+FIELD com.openggf.game.CharacterPresentation$CompetitionSurface public,static,final com.openggf.game.CharacterPresentation$CompetitionSurface S3K_RECORD
 FIELD com.openggf.game.CharacterPresentation$Host public,static,final com.openggf.game.CharacterPresentation$Host S1
 FIELD com.openggf.game.CharacterPresentation$Host public,static,final com.openggf.game.CharacterPresentation$Host S2
 FIELD com.openggf.game.CharacterPresentation$Host public,static,final com.openggf.game.CharacterPresentation$Host S3K
@@ -6005,9 +6011,11 @@ METHOD com.openggf.game.CharacterKey public  java.util.Optional<java.lang.String
 METHOD com.openggf.game.CharacterKey public,static  com.openggf.game.CharacterKey builtin(java.lang.String)
 METHOD com.openggf.game.CharacterKey public,static  com.openggf.game.CharacterKey mod(java.lang.String,java.lang.String)
 METHOD com.openggf.game.CharacterKey public,static  com.openggf.game.CharacterKey parsePersisted(java.lang.String)
+METHOD com.openggf.game.CharacterPresentation public  com.openggf.game.CharacterPresentation withCompetitionPortraits(java.util.Map<com.openggf.game.CharacterPresentation$CompetitionSurface,com.openggf.game.CharacterPresentation$CompetitionPortrait>)
 METHOD com.openggf.game.CharacterPresentation public  com.openggf.game.CharacterPresentation withReelFaces(java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$ReelFace>)
 METHOD com.openggf.game.CharacterPresentation public  java.lang.String displayName()
 METHOD com.openggf.game.CharacterPresentation public  java.lang.String hudName()
+METHOD com.openggf.game.CharacterPresentation public  java.util.Map<com.openggf.game.CharacterPresentation$CompetitionSurface,com.openggf.game.CharacterPresentation$CompetitionPortrait> competitionPortraits()
 METHOD com.openggf.game.CharacterPresentation public  java.util.Map<com.openggf.game.CharacterPresentation$Font,java.util.Map<java.lang.Character,com.openggf.game.CharacterPresentation$Image>> supplementaryGlyphs()
 METHOD com.openggf.game.CharacterPresentation public  java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$Art> art()
 METHOD com.openggf.game.CharacterPresentation public  java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$ReelFace> reelFaces()
@@ -6031,6 +6039,13 @@ METHOD com.openggf.game.CharacterPresentation$Backing public  int[] rgb()
 METHOD com.openggf.game.CharacterPresentation$Backing public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.CharacterPresentation$Backing public,final  int hashCode()
 METHOD com.openggf.game.CharacterPresentation$Backing public,final  java.lang.String toString()
+METHOD com.openggf.game.CharacterPresentation$CompetitionPortrait public  com.openggf.game.PresentationFrameSet$Pose pose()
+METHOD com.openggf.game.CharacterPresentation$CompetitionPortrait public  int[] rgb()
+METHOD com.openggf.game.CharacterPresentation$CompetitionPortrait public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.CharacterPresentation$CompetitionPortrait public,final  int hashCode()
+METHOD com.openggf.game.CharacterPresentation$CompetitionPortrait public,final  java.lang.String toString()
+METHOD com.openggf.game.CharacterPresentation$CompetitionSurface public,static  com.openggf.game.CharacterPresentation$CompetitionSurface valueOf(java.lang.String)
+METHOD com.openggf.game.CharacterPresentation$CompetitionSurface public,static  com.openggf.game.CharacterPresentation$CompetitionSurface[] values()
 METHOD com.openggf.game.CharacterPresentation$Font public  com.openggf.game.CharacterPresentation$Host host()
 METHOD com.openggf.game.CharacterPresentation$Font public  com.openggf.game.CharacterPresentation$Style style()
 METHOD com.openggf.game.CharacterPresentation$Font public,final  boolean equals(java.lang.Object)
@@ -17067,6 +17082,8 @@ NESTED com.openggf.game.CharacterDefinition com.openggf.game.CharacterDefinition
 NESTED com.openggf.game.CharacterDefinition com.openggf.game.CharacterDefinition$SuperFormSupplier
 NESTED com.openggf.game.CharacterPresentation com.openggf.game.CharacterPresentation$Art
 NESTED com.openggf.game.CharacterPresentation com.openggf.game.CharacterPresentation$Backing
+NESTED com.openggf.game.CharacterPresentation com.openggf.game.CharacterPresentation$CompetitionPortrait
+NESTED com.openggf.game.CharacterPresentation com.openggf.game.CharacterPresentation$CompetitionSurface
 NESTED com.openggf.game.CharacterPresentation com.openggf.game.CharacterPresentation$Font
 NESTED com.openggf.game.CharacterPresentation com.openggf.game.CharacterPresentation$Host
 NESTED com.openggf.game.CharacterPresentation com.openggf.game.CharacterPresentation$Image
@@ -18017,6 +18034,7 @@ RECORD-COMPONENT com.openggf.game.CharacterDefinition superFormSupplier com.open
 RECORD-COMPONENT com.openggf.game.CharacterDefinition supportsSuperForm boolean
 RECORD-COMPONENT com.openggf.game.CharacterDefinition underwaterPaletteSupplier com.openggf.game.CharacterDefinition$PaletteSupplier
 RECORD-COMPONENT com.openggf.game.CharacterPresentation art java.util.Map<com.openggf.game.CharacterPresentation$Host,com.openggf.game.CharacterPresentation$Art>
+RECORD-COMPONENT com.openggf.game.CharacterPresentation competitionPortraits java.util.Map<com.openggf.game.CharacterPresentation$CompetitionSurface,com.openggf.game.CharacterPresentation$CompetitionPortrait>
 RECORD-COMPONENT com.openggf.game.CharacterPresentation displayName java.lang.String
 RECORD-COMPONENT com.openggf.game.CharacterPresentation endings java.util.Map<com.openggf.game.EndingSpriteSet$Surface,com.openggf.game.EndingSpriteSet>
 RECORD-COMPONENT com.openggf.game.CharacterPresentation hudName java.lang.String
@@ -18032,6 +18050,8 @@ RECORD-COMPONENT com.openggf.game.CharacterPresentation$Art signpostFace com.ope
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$Backing image com.openggf.game.CharacterPresentation$Image
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$Backing paletteLine int
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$Backing rgb int[]
+RECORD-COMPONENT com.openggf.game.CharacterPresentation$CompetitionPortrait pose com.openggf.game.PresentationFrameSet$Pose
+RECORD-COMPONENT com.openggf.game.CharacterPresentation$CompetitionPortrait rgb int[]
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$Font host com.openggf.game.CharacterPresentation$Host
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$Font style com.openggf.game.CharacterPresentation$Style
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$Image height int
@@ -21441,6 +21461,7 @@ TYPE enum public,static,final com.openggf.control.ButtonPrompts$Button SUPER jav
 TYPE enum public,static,final com.openggf.control.PhysicalInputEvent$Kind SUPER java.lang.Enum<com.openggf.control.PhysicalInputEvent$Kind>
 TYPE enum public,static,final com.openggf.editor.persistence.EditorSaveManager$ApplyResult SUPER java.lang.Enum<com.openggf.editor.persistence.EditorSaveManager$ApplyResult>
 TYPE enum public,static,final com.openggf.game.CharacterDefinition$MovementAbility SUPER java.lang.Enum<com.openggf.game.CharacterDefinition$MovementAbility>
+TYPE enum public,static,final com.openggf.game.CharacterPresentation$CompetitionSurface SUPER java.lang.Enum<com.openggf.game.CharacterPresentation$CompetitionSurface>
 TYPE enum public,static,final com.openggf.game.CharacterPresentation$Host SUPER java.lang.Enum<com.openggf.game.CharacterPresentation$Host>
 TYPE enum public,static,final com.openggf.game.CharacterPresentation$Style SUPER java.lang.Enum<com.openggf.game.CharacterPresentation$Style>
 TYPE enum public,static,final com.openggf.game.DataSelectProvider$State SUPER java.lang.Enum<com.openggf.game.DataSelectProvider$State>
@@ -22010,6 +22031,7 @@ TYPE record public,static,final com.openggf.game.BonusStageProvider$BonusStageRe
 TYPE record public,static,final com.openggf.game.BonusStageProvider$BootstrapObject SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.CharacterPresentation$Art SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.CharacterPresentation$Backing SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.CharacterPresentation$CompetitionPortrait SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.CharacterPresentation$Font SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.CharacterPresentation$Image SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.CharacterPresentation$ReelFace SUPER java.lang.Record
@@ -22521,6 +22543,8 @@ TYPE-ANNOTATION com.openggf.game.CharacterKey @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.CharacterPresentation @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.CharacterPresentation$Art @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.CharacterPresentation$Backing @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.CharacterPresentation$CompetitionPortrait @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.CharacterPresentation$CompetitionSurface @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.CharacterPresentation$Font @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.CharacterPresentation$Host @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.CharacterPresentation$Image @com.openggf.game.ModApi
