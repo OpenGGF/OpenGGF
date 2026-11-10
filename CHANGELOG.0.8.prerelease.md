@@ -7,6 +7,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Sonic 1 end-of-act PLC replacement:** NewPLC and ClearPLC cancel the active
+  decoder as well as waiting cues, matching the ROM. Positioned GHZ starts near
+  the signpost no longer fail when the signpost art replaces unfinished work.
+
 - **Sonic 1's Sonic on Sonic 3&K tumble objects:** Sonic 1 has no tumble frames,
   so a donated Sonic 1 Sonic riding a Flying Battery wire cage or another tumble
   object vanished. He now keeps his own walk and run frames there, and a donor's
@@ -66,7 +70,8 @@ under the matching area heading; see the
   flash phases. The profiles supply equivalent missing
   cross-game Sonic donation scripts; 18 redundant drawings are removed without
   generating art. Ordinary art bindings keep donated animation profiles stable
-  across native-scene rewind. MICA and TALON skip
+  across native-scene rewind. Flight carry keeps creator leaders on their own
+  carried-family sheet while native Sonic retains the ROM carry frames. MICA and TALON skip
   their idle intros after the first pass. Native object mapping bytes can
   bind semantic sheet poses; MICA supplies three native-reference hang poses for
   vines and grapples, reuses fourteen existing native mapping poses for turns, rolls, riding,

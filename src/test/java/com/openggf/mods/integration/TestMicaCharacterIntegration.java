@@ -887,6 +887,38 @@ class TestMicaCharacterIntegration {
         }
     }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void micaCarriedByTalonRetainsOwnSheetAndCarriedFrames() throws Exception {
+        var settings = new com.openggf.tools.GameplayCaptureSession.Settings(
+                320, CODE, "mica-and-talon:talon", "off", null, null, null);
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            session.boot(Path.of(System.getProperty("s3k.rom.path")), 0, 0, settings);
+            for (int i = 0; i < 60; i++) session.step(null);
+            var mica = session.player();
+            var talon = GameServices.sprites().getSidekicks().getFirst();
+            var renderer = mica.getSpriteRenderer();
+            var frames = mica.getAnimationSet().getScript(
+                    mica.resolveAnimationId(CanonicalAnimation.TAILS_CARRIED)).frames();
+            talon.setCentreX((short) 6200); talon.setCentreY((short) 800);
+            talon.setAir(true); talon.getTailsFlightController().activate();
+            mica.setCentreX(talon.getCentreX());
+            mica.setCentreY((short) (talon.getCentreY() + 0x20));
+            mica.setAir(true);
+            var carry = talon.getTailsCarryController();
+            assertTrue(carry.tryEncounterCarry());
+            var seen = new java.util.HashSet<Integer>();
+            for (int i = 0; i < 60; i++) {
+                carry.updateAfterTailsCollision(0);
+                assertTrue(carry.isCarrying(mica));
+                assertSame(renderer, mica.getSpriteRenderer());
+                assertTrue(frames.contains(mica.getMappingFrame()), "own carried family frame");
+                seen.add(mica.getMappingFrame());
+            }
+            assertEquals(new java.util.HashSet<>(frames), seen);
+        }
+    }
+
     private void captureContinue(String game, String romProperty) throws Exception {
         Path jar=buildSample();
         var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"tails","off",null,null,null);
