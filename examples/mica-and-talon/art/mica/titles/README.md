@@ -76,3 +76,11 @@ visible ring/aperture pixels with zero box frames. The ordinary capture exposes
 12 plane selectors; plane 12 is also rendered through the engine in a separate
 13-plane component fixture and ring strip. This is a stated capture limit, not a claim of observing it
 in the ordinary animation. Raw attempts/native renders remain in scratch.
+
+Patch area checks: finger/forearm **0.982**, wink patch **1.003**. The native
+finger cells also contain blue hood and opaque black aperture pixels; comparing
+the entire rectangular context to a transparent isolated hand would give 0.654.
+`style-patches.json` records both raw and anatomical counts and the exact excluded
+context ramp. The anatomical check uses the glove/forearm, while production native
+coverage independently preserves the aperture. No native context pixels are
+copied into the authored hand.
