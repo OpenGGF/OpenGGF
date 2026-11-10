@@ -85,6 +85,37 @@ context ramp. The anatomical check uses the glove/forearm, while production nati
 coverage independently preserves the aperture. No native context pixels are
 copied into the authored hand.
 
+## Complete S3K hand ownership
+
+The complete pointing glove, including warm lighting and its contour, now lives
+in sprites0/1/4. A fresh generated handless cape fills the old plane footprint.
+All three sprites own identical backing context there, so moved fingers reveal
+cape instead of a second baked thumb or a black cutout. Original wag anatomy,
+hotspots and selector clocks stay unchanged. The rest pose is consolidated from
+the approved plane plus sprite, rather than redrawn at another scale.
+
+Native `Obj_TitleSonicFinger (sonic3k.asm:6239-6258)` uses the normal sprite clock.
+`word_4F96 (General/Title/Map - S3 Sonic Anim.asm:7-11)` and
+`word_4FB0 (General/Title/Map - S3 Sonic Anim.asm:12-16)` compose48×56 context
+around the hand. Native rest selector4 is empty:
+`word_4FE6 (General/Title/Map - S3 Sonic Anim.asm:23-23)`; its hand stays in the
+plane. MICA uses the already-supported authored rest4 slot to remove its plane
+hand entirely and retain the same contextual replacement principle.
+`byte_4B36 (General/Title/Anim - S3 Sonic Finger.asm:3-4)` supplies delay5 and the
+unchanged0/4/1 sequence, six presentations per phase.
+
+`s3k_hand_ownership.py` rebuilds from approved plane13 and sprite0/1/4 snapshots
+plus the fresh backing sheet (`--source`, `--background`). The binary-alpha
+coverage contract is recorded as row spans in `s3k-hand-ownership.json`.
+`s3k_hand_review.py --captures <dir> --before <prior-mod-capture>` checks it on
+every real presentation, verifies unobscured rendered pixels and preserves all
+pixels outside the hand rectangle. It emits all distinct wag poses and the
+lead’s sample frames at4×. The regression tests also reject a missing sprite
+context pixel and a surviving warm plane-thumb pixel.
+
+Review: `$HOME/scratch/agent-tmp/title-s3k-finger/review.html`.
+This hand correction is independent of any roll-in blur changes.
+
 ## S3K owner revision, round 2
 
 Fresh built-in GPT Image attempts replace the final portrait and its finger/wink
@@ -178,3 +209,76 @@ art are unchanged. Coverage rows stay authored, with no fallback delta.
 The reusable review recipe is MICA's `s2_capture_review.py`. It accepts the
 paired capture directory and an external native logo alpha mask; neither
 the input native pixels nor its regenerable strips/movies belong in Git.
+
+## Initial S3K roll-in trail (4a69cb17, rejected)
+
+Selectors2–7 use fresh native-pose GPT Image motion-smear generations: broad
+lit jade cores with short darker overlapping echoes, not separate particles.
+`TitleSonic_Frames (sonic3k.asm:5943-5964)` binds these native frames to shared
+Kosinski art and individual Enigma maps/palettes. `TitleSonic_LoadFrame (sonic3k.asm:5850-5940)` installs complete planes; no sprite mapping or DPLC
+participates. `TitleAnim_FlipBuffer (sonic3k.asm:5775-5804)` reloads3 and
+`Iterate_TitleSonicFrame (sonic3k.asm:5824-5847)` advances at delay1: four
+native loop iterations. The engine capture observes selectors2–6 at234–253,
+then7 at254–266 while the next load completes; timing is unchanged.
+
+`MapEni_S3TitleSonic1 (s3.asm:118484-118504)` introduces the first seven plane
+maps; `ArtKos_S3TitleSonic1 (s3.asm:118531-118533)` owns their shared tile art.
+`s3k-rollin-provenance.json` records owning labels, mapped tile IDs, attempts,
+rejected first small-ball set and native-box area checks. The existing private
+palette supplies six jade shades within the native15 opaque-colour budget.
+Only selector7’s binary clear ownership also changes: the old extractor truncated
+at row80, leaving1107 blue native trail pixels in SEGA letter gaps through row131.
+The full native7 contribution is isolated against the preceding logo plane;
+new art is clipped behind those original glyphs. No native RGB/tile bytes ship.
+No approved later image/mask, palette, binding or host code changes.
+
+```sh
+python3 examples/mica-and-talon/art/mica/titles/s3k_rollin.py \
+  --generation /scratch/large-complete-attempts.png --small-generation /scratch/small-attempts.png \
+  --native /scratch/native-title-exports
+python3 examples/mica-and-talon/art/mica/titles/s3k_rollin_review.py \
+  --captures /scratch/title-s3k-rollin --native /scratch/native-title-exports \
+  --baseline-sha 5278d637cd
+```
+
+Review: `$HOME/scratch/agent-tmp/title-s3k-rollin/review.html`: every one of33
+real roll-in presentations at3×, and a360-frame60Hz side-by-side film. All633
+frames267–899 are byte-identical PNGs to a fresh5278d637cd integration capture;
+all non-roll-in frames0–233 are also byte-identical. This is a bounded title
+presentation check, not hardware timing parity. Title audit obligations stay
+six authored; none moves from fallback.
+
+## Heavy-blur retry
+
+The lead’s254/267/279/289 evidence corresponds to engine selectors7/8/9/10.
+Pass1 changed only the small ball and missed the large blurred close-ups.
+Current art covers2–10; settling11/12, ring13, portrait, wink and finger are
+unchanged by this blur commit. All607 frames293–899, including all604 ring
+frames296–899, remain byte-identical to integration5278d637cd.
+
+Both fresh built-in GPT Image and deterministic shutter candidates were made
+for every selector2–10. Unlabelled1×/3× comparisons select GPT2–7 and the
+image-space radial/turn exposures8–10. The latter dissolve lashes, plates,
+gloves and laces into multiple ghost contours instead of a sharp model with
+an added trail. Native measurements and sampling rectangles, exposure kernels,
+selection reasons, raw area ratios and limitations are recorded in
+`s3k-heavy-blur-provenance.json`. The native flattened art does not uniquely
+reveal its original3D shutter; visible copy counts/landmarks are estimates,
+while dither/light coverage and source-detail metrics are measured separately.
+Native large planes use their own descriptors in
+`TitleSonic_Frames (sonic3k.asm:5943-5973)`; timing stays host-owned.
+
+All tools require Pillow; the offline candidate/measurement tools also require
+NumPy (install in a scratch virtualenv, not the runtime). From a scratch set
+containing approved `sharp/2..13.png`, native exports and `gpt-small.png` /
+`gpt-7..10.png`, run these scripts with `--scratch <dir> --native <exports>`:
+`s3k_heavy_blur.py`, `s3k_gpt_blur_reduce.py`, `s3k_blur_measure.py`, then
+`s3k_heavy_review.py` after real stock/baseline/mod captures. The selected
+320×224 candidate planes split at x160 into existing left/right assets.
+
+Review: `$HOME/scratch/agent-tmp/title-s3k-heavy/review.html`; it includes the
+requested3-way real-capture strips at1×/3× and a360-frame60Hz three-way film.
+SEGA checks preserve100,763 native pixels and reject any residual blue body.
+Input anatomy stays approved; extra low-opacity ghost support expands the raw
+visible silhouette area. Colour budget stays15 opaque entries, with4×4 ordered
+shade/coverage dithering. No runtime blur, API, palette or clock changes.

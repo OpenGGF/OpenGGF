@@ -79,13 +79,17 @@ animation clocks and occlusion remain host-owned. S2 keeps MICA in the centre-ri
 thumbs-up, and TALON in the left Tails slot with connected wings and no glove.
 The optional API slot exchange remains available but disabled in this example; all S1
 poses follow the native geometry, and MICA's S3K bank uses baked3D shading with
-opaque native aperture coverage through the hand/wink patches. See `art/*/titles/README.md`. MICA’s S3K final portrait now has a coral-pink ear ramp, a contour-owned wink derived from her own eye, registered short finger poses and a rounded lower glove. The 60 Hz lockstep capture checker reports native-preservation and literal silhouette differences separately. Optional 32×32 reel
+opaque native aperture coverage through the hand/wink patches. See `art/*/titles/README.md`. MICA’s S3K roll-in now has native-style baked jade motion smears and heavy radial/turn ghosting through selectors2–10; the settling pose, ring and final portrait remain unchanged. MICA’s S3K final portrait now has a coral-pink ear ramp, a contour-owned wink derived from her own eye, registered short finger poses and a rounded lower glove. The 60 Hz lockstep capture checker reports native-preservation and literal silhouette differences separately. Optional 32×32 reel
 portraits replace lead/sidekick symbols in S2 CNZ and S3K Slots, including
 TALON solo and the Gilded/Solar symbol. Native rewards, other symbols and
 scrolling remain host-owned. See each character’s `art/*/reels/README.md`.
 
 Follow the [creator tutorial](../../docs/modding/guides/original-character.md)
 for the concept-to-capture workflow and source map.
+
+S3K’s wagging glove now has complete sprite ownership, including its handless
+cape backing; no thumb remains baked beneath a moving pose. Native selector
+timing and the approved glove proportions are retained.
 
 ## Acceptance
 

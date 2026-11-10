@@ -43,6 +43,8 @@ under the matching area heading; see the
   default sidekick and is selectable solo. Joint native-pose carry redraws now
   keep MICA’s raised gloves against TALON’s shoes throughout his wingbeat,
   with native-style material contours and the complete S3K hanging sequence.
+  S3K title wag sprites now own the complete glove and backing context,
+  removing doubled thumbs and the cutout halo while retaining native timing.
   TALON's S2/S3K native mapping namespaces now bind all declared poses through
   archetype-owned NFRM aliases, including S2 object tumble, S3K gravity loops,
   corkscrews, swing/grip/chain/carry and later object turns. The audit exposes
@@ -51,9 +53,10 @@ under the matching area heading; see the
   goggles-down ending/SCZ/WFZ cockpit crops, a shared S3K reunion pilot and solo S3K reunion poses. Native-cell, locally paletted reel
   portraits now cover S2 CNZ and S3K Slots lead/sidekick symbols, TALON solo
   and Gilded/Solar symbols through optional candidate character presentation;
-  slot rewards and other symbols remain native. MICA’s S3K title portrait now
-  keeps a coral-pink ear, a wink registered to her own eye, short gloved finger
-  poses and a rounded lower glove, with an unperforated silhouette over the ring. Optional per-host title mascot banks
+  slot rewards and other symbols remain native. MICA’s S3K title now
+  adds baked jade roll-in smears and heavy radial/turn ghosts through the large
+  close-ups while preserving the settling pose, ring and final portrait, and keeps a coral-pink ear, a wink registered to her own eye,
+  short gloved finger poses and a rounded lower glove, with an unperforated silhouette over the ring. Optional per-host title mascot banks
   now supply native-selector body/hand frames and masked S3K plane art, with
   independent role palettes and native fallback; MICA and TALON supply all three
   hosts while title timing, branding and occlusion remain native. The S2 duo
