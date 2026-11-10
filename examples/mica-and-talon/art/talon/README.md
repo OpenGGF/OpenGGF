@@ -277,3 +277,12 @@ Queued Java selection `TestAnimationFamilies,TestCanonicalPlayableSheet,TestMica
 with `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl` and DISPLAY/WAYLAND_DISPLAY
 unset: 53 passed, zero failures/errors/skips, all ROM properties found.
 This is the requested focused selection, not a full-suite claim.
+
+## Competition miniature bank (2026-11-10)
+
+The independent [Competition bank](competition/README.md) covers all 46 native
+Tails 2P selectors: 44 authored, one alias and one empty sentinel. Integrated
+wings replace the separate rotor/tail bank, whose 16 rows remain N/A. The native
+miniature proportions and actual Competition palette are the reference; the
+opaque-area size ratio is 1.045. The shared review includes native and custom
+split-screen race captures and full-frame 60Hz motion comparisons.

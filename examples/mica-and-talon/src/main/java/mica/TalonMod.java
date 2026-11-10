@@ -9,6 +9,8 @@ final class TalonMod {
         byte[] bytes = context.modAssets().readBounded(
                 "art/talon.ggfp", context.modAssets().limits().maxAssetBytes());
         var materialized = PlayableSheetMaterializer.read(bytes);
-        context.registerCharacter("talon", TalonCharacter.definition(context.ownerModId(), materialized));
+        var definition=TalonCharacter.definition(context.ownerModId(), materialized);
+        var competition=CompetitionPresentation.talon(context.modAssets());
+        context.registerCharacter("talon", CompetitionPresentation.withStages(definition,competition));
     }
 }

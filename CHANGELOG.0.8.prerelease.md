@@ -35,7 +35,12 @@ under the matching area heading; see the
 
 ## Modding and tools
 
-- **MICA, an original character framework example:** TALON now joins as her
+- **MICA, an original character framework example:** S3K Competition now
+  renders MICA/TALON with independent native-ID miniature banks and hotspots,
+  per-frame native fallback and private palettes. Configured creator team members
+  occupy their native archetype wheel slots; the miniature simulation stays native.
+  MICA covers 44 selectors and TALON 46, including native blank/alias rows.
+  TALON now joins as her
   default sidekick and is selectable solo. His Tails archetype uses native S3K
   flight and explicitly declared S1/S2 flight; Solar doubles flap acceleration
   without Flickies. His own 167-frame sheet and palette replace the placeholder;

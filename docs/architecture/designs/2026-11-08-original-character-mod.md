@@ -1701,7 +1701,7 @@ Generation priority; each family uses its own native reference bank:
 | 5 | MICA later S3K: gravity $31–$3C, cage $49–$54, chain $80–$85, carry $8A–$8D, hang $93, hurt $B4/$B5, wall $DF–$E3, parachute $E4–$EA, corkscrew $EF–$FA, emerald $C4, crane $C0 | 63 byte slots; filter unselected descriptors using owning-object table |
 | 6 | TALON screens/endings: per-host continue/data-select; S2 ending $09–$0B/$0F–$11/$18/$19, pilot $01–$04/$10, photos 1–3; S3K reunion 3/4 | 8 ending + 5 reusable pilot + 3 photos + 2 reunion; other role counts still open |
 | 7 | MICA powered gameplay: separate S2/S3K Super reference banks | roughly 40–80 each before reuse; Hyper shares geometry |
-| 8 | Competition/2P miniature banks | inventory exists; custom bank seam first |
+| 8 | Competition/2P miniature banks | S3K complete: MICA 44 / TALON 46 selectors; S2 remains separate |
 
 Prerequisites: archetype-specific animation/raw-pose vocabulary and TALON NFRM
 relocation; S2 FLY/TAILS_FLY bridge; S3K Tails transformation $29 versus
@@ -2443,3 +2443,54 @@ wing cadence; full carrying-route contact is not certified.
 
 Review and exact logs:
 `$HOME/scratch/agent-tmp/talon-families-20261109/review.html`.
+
+### S3K Competition miniatures (2026-11-10)
+
+The official indexed-frame presentation contract adds `S3K_COMPETITION` and
+`S3K_COMPETITION_TAIL`. Missing banks/IDs retain the native archetype mapping;
+authored transparent frames explicitly suppress appendages. Per-frame hotspots
+survive static DPLC compilation. Each custom bank uses a private palette row, so
+partial fallback and arena art retain native colours. Presentation callbacks run
+through the existing character-owner fault boundary. The unpublished descriptor
+remains candidate 0.7.0; runtime description and mutable signature pins move with it.
+
+The configured lead/sidekick team supplies the first registered creator per native
+archetype to the three-slot Competition wheel. Selecting the Sonic/Tails slots
+with MICA/TALON configured draws their miniature banks. Native teams retain stock
+art. Wheel portraits, record identities and all miniature movement/animation,
+collision, item and race logic remain native; this is an archetype-slot seam,
+not arbitrary campaign sprite factories in Competition. `TalonCharacter.java` is
+untouched; the example's separate `CompetitionPresentation` adapter composes with
+the concurrently maintained TALON presentation supplier.
+
+The audit now includes MICA's independent Sonic 2P bank. Before authorship the
+new inventory has 44 MICA and 46 TALON fallback rows. After: MICA 42 authored,
+1 native alias, 1 N/A; TALON 44 authored, 1 native alias, 1 N/A. $00 is blank;
+$27 aliases $26 in both banks. TALON's 16 separate tail rows remain N/A.
+Native-pose GPT Image transformations use the real Competition body palette.
+The independent opaque-area ratios are MICA 1.009 and TALON 1.045; source hashes,
+prompts, attempts, native dimensions and hotspots live in each competition art
+directory. The full-frame 60Hz review and paired Azure Lake race rendering witness
+are in `$HOME/scratch/agent-tmp/talon-competition-20261110/review.html`.
+This does not certify S2 competition, all S3K arenas or native menu portrait art.
+
+Verification on the task tree based at `3aac15eb45`: queued
+`TestS3kCompetitionCharacterArt,TestS3kCompetitionArtProvider,TestS3kCompetitionSpritePages,TestModApiSignatureSurface`
+passed 33 tests with zero skips. The queued integration/audit plus four required
+S3K classes ran 104 tests: 100 passed, and four existing stage-capture assertions
+incorrectly required every enum surface, including MICA's intentionally absent
+Tails appendage bank. They now explicitly enumerate MICA's four supported
+surfaces; all four passed on focused rerun, with zero skips. Python modding
+discovery passed 52 tests. All required ROMs were found. The 120-frame, 60Hz Azure
+Lake captures rendered both humans; GIF readback verifies every full frame and
+exact RGB palette. This is bounded verification, not a full-suite claim.
+
+Overall audit with the newly inventoried MICA miniature rows included:
+MICA/S3K authored/alias/fallback/N/A **109/58/146/4 → 151/59/102/5**;
+TALON/S3K **38/0/71/77 → 82/1/25/78**. Other hosts retain their inherited gaps.
+
+A final focused `TestS3kCompetitionArtProvider` run passed 9 tests, zero skips,
+including explicit per-ID fallback versus transparent appendage override.
+Integration queue wait was at least 121 seconds; execution was 74 seconds.
+The four-test correction queued at least 30 seconds and executed in 41 seconds.
+No user wait occurred; image-generation and review time was not separately metered.

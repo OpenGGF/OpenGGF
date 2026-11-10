@@ -1,0 +1,1046 @@
+{
+  "character": "MICA",
+  "surface": "S3K_COMPETITION",
+  "native_bank": "Sonic 2P",
+  "frames": [
+    {
+      "id": 0,
+      "file": "00.png",
+      "hotspot": [
+        0,
+        0
+      ],
+      "status": "N/A",
+      "native_size": [
+        1,
+        1
+      ],
+      "native_area": 0,
+      "opaque_area": 0
+    },
+    {
+      "id": 1,
+      "file": "01.png",
+      "hotspot": [
+        12,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        24,
+        24
+      ],
+      "native_area": 272,
+      "opaque_area": 277,
+      "batch": 0,
+      "cell": 0,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.09857108455652132,
+      "source_crop": [
+        230,
+        217
+      ]
+    },
+    {
+      "id": 2,
+      "file": "02.png",
+      "hotspot": [
+        9,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        16,
+        23
+      ],
+      "native_area": 216,
+      "opaque_area": 216,
+      "batch": 0,
+      "cell": 1,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.09578309592839707,
+      "source_crop": [
+        170,
+        221
+      ]
+    },
+    {
+      "id": 3,
+      "file": "03.png",
+      "hotspot": [
+        9,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        17,
+        24
+      ],
+      "native_area": 256,
+      "opaque_area": 267,
+      "batch": 0,
+      "cell": 2,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.09832114074052112,
+      "source_crop": [
+        171,
+        223
+      ]
+    },
+    {
+      "id": 4,
+      "file": "04.png",
+      "hotspot": [
+        10,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        24,
+        26
+      ],
+      "native_area": 258,
+      "opaque_area": 258,
+      "batch": 0,
+      "cell": 3,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.0997267551296914,
+      "source_crop": [
+        203,
+        233
+      ]
+    },
+    {
+      "id": 5,
+      "file": "05.png",
+      "hotspot": [
+        10,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        23,
+        23
+      ],
+      "native_area": 214,
+      "opaque_area": 208,
+      "batch": 0,
+      "cell": 4,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.10020940400754766,
+      "source_crop": [
+        204,
+        200
+      ]
+    },
+    {
+      "id": 6,
+      "file": "06.png",
+      "hotspot": [
+        11,
+        11
+      ],
+      "status": "authored",
+      "native_size": [
+        23,
+        25
+      ],
+      "native_area": 266,
+      "opaque_area": 271,
+      "batch": 0,
+      "cell": 5,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.10306453272419511,
+      "source_crop": [
+        213,
+        222
+      ]
+    },
+    {
+      "id": 7,
+      "file": "07.png",
+      "hotspot": [
+        11,
+        11
+      ],
+      "status": "authored",
+      "native_size": [
+        24,
+        24
+      ],
+      "native_area": 272,
+      "opaque_area": 281,
+      "batch": 0,
+      "cell": 6,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.10767086013480759,
+      "source_crop": [
+        206,
+        200
+      ]
+    },
+    {
+      "id": 8,
+      "file": "08.png",
+      "hotspot": [
+        10,
+        7
+      ],
+      "status": "authored",
+      "native_size": [
+        23,
+        16
+      ],
+      "native_area": 216,
+      "opaque_area": 223,
+      "batch": 0,
+      "cell": 7,
+      "variant": 1,
+      "source_sha256": "3460599e5a2501a50fb4d9962257df692de281940898f07b767a500b5e542ac4",
+      "uniform_reduction": 0.10205433806713482,
+      "source_crop": [
+        207,
+        145
+      ]
+    },
+    {
+      "id": 9,
+      "file": "09.png",
+      "hotspot": [
+        12,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        24,
+        17
+      ],
+      "native_area": 256,
+      "opaque_area": 255,
+      "batch": 1,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.10524393669536489,
+      "source_crop": [
+        216,
+        166
+      ]
+    },
+    {
+      "id": 10,
+      "file": "0a.png",
+      "hotspot": [
+        9,
+        12
+      ],
+      "status": "authored",
+      "native_size": [
+        26,
+        24
+      ],
+      "native_area": 258,
+      "opaque_area": 266,
+      "batch": 1,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.11004273996720638,
+      "source_crop": [
+        199,
+        209
+      ]
+    },
+    {
+      "id": 11,
+      "file": "0b.png",
+      "hotspot": [
+        10,
+        11
+      ],
+      "status": "authored",
+      "native_size": [
+        23,
+        23
+      ],
+      "native_area": 214,
+      "opaque_area": 225,
+      "batch": 1,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.10589308275978881,
+      "source_crop": [
+        197,
+        195
+      ]
+    },
+    {
+      "id": 12,
+      "file": "0c.png",
+      "hotspot": [
+        11,
+        12
+      ],
+      "status": "authored",
+      "native_size": [
+        25,
+        23
+      ],
+      "native_area": 266,
+      "opaque_area": 274,
+      "batch": 1,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.11120494169557064,
+      "source_crop": [
+        196,
+        206
+      ]
+    },
+    {
+      "id": 13,
+      "file": "0d.png",
+      "hotspot": [
+        10,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        19,
+        22
+      ],
+      "native_area": 239,
+      "opaque_area": 235,
+      "batch": 1,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.10097254258149368,
+      "source_crop": [
+        192,
+        210
+      ]
+    },
+    {
+      "id": 14,
+      "file": "0e.png",
+      "hotspot": [
+        9,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        19,
+        22
+      ],
+      "native_area": 221,
+      "opaque_area": 221,
+      "batch": 1,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.0993525385848058,
+      "source_crop": [
+        184,
+        211
+      ]
+    },
+    {
+      "id": 15,
+      "file": "0f.png",
+      "hotspot": [
+        10,
+        11
+      ],
+      "status": "authored",
+      "native_size": [
+        21,
+        24
+      ],
+      "native_area": 251,
+      "opaque_area": 254,
+      "batch": 1,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.10321342060734089,
+      "source_crop": [
+        194,
+        212
+      ]
+    },
+    {
+      "id": 16,
+      "file": "10.png",
+      "hotspot": [
+        9,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        19,
+        24
+      ],
+      "native_area": 242,
+      "opaque_area": 237,
+      "batch": 1,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "326141195579eb9d191ef2b39e2dd501c89a28dbf31242d03bda0c5ee009e9b7",
+      "uniform_reduction": 0.10032446240859348,
+      "source_crop": [
+        183,
+        211
+      ]
+    },
+    {
+      "id": 17,
+      "file": "11.png",
+      "hotspot": [
+        9,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        22,
+        19
+      ],
+      "native_area": 239,
+      "opaque_area": 244,
+      "batch": 2,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.109785213749388,
+      "source_crop": [
+        186,
+        171
+      ]
+    },
+    {
+      "id": 18,
+      "file": "12.png",
+      "hotspot": [
+        9,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        22,
+        19
+      ],
+      "native_area": 221,
+      "opaque_area": 219,
+      "batch": 2,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.10890537103406489,
+      "source_crop": [
+        187,
+        168
+      ]
+    },
+    {
+      "id": 19,
+      "file": "13.png",
+      "hotspot": [
+        12,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        24,
+        21
+      ],
+      "native_area": 251,
+      "opaque_area": 254,
+      "batch": 2,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.1135137243163694,
+      "source_crop": [
+        207,
+        175
+      ]
+    },
+    {
+      "id": 20,
+      "file": "14.png",
+      "hotspot": [
+        11,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        24,
+        19
+      ],
+      "native_area": 242,
+      "opaque_area": 238,
+      "batch": 2,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.10901591387565238,
+      "source_crop": [
+        206,
+        175
+      ]
+    },
+    {
+      "id": 21,
+      "file": "15.png",
+      "hotspot": [
+        8,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        16,
+        22
+      ],
+      "native_area": 221,
+      "opaque_area": 219,
+      "batch": 2,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.09745715832160655,
+      "source_crop": [
+        179,
+        209
+      ]
+    },
+    {
+      "id": 22,
+      "file": "16.png",
+      "hotspot": [
+        7,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        15,
+        16
+      ],
+      "native_area": 152,
+      "opaque_area": 148,
+      "batch": 2,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.10110315122855791,
+      "source_crop": [
+        141,
+        141
+      ]
+    },
+    {
+      "id": 23,
+      "file": "17.png",
+      "hotspot": [
+        7,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        15,
+        18
+      ],
+      "native_area": 160,
+      "opaque_area": 161,
+      "batch": 2,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.09761188141244893,
+      "source_crop": [
+        146,
+        175
+      ]
+    },
+    {
+      "id": 24,
+      "file": "18.png",
+      "hotspot": [
+        8,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        18,
+        23
+      ],
+      "native_area": 247,
+      "opaque_area": 249,
+      "batch": 2,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "1ef64b23a73c0ad94825189e1a3ca67efae671ffdea80f23780dee4259354c16",
+      "uniform_reduction": 0.10441442029358773,
+      "source_crop": [
+        178,
+        196
+      ]
+    },
+    {
+      "id": 25,
+      "file": "19.png",
+      "hotspot": [
+        7,
+        11
+      ],
+      "status": "authored",
+      "native_size": [
+        19,
+        20
+      ],
+      "native_area": 185,
+      "opaque_area": 189,
+      "batch": 3,
+      "cell": 0,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.09985947854733855,
+      "source_crop": [
+        174,
+        180
+      ]
+    },
+    {
+      "id": 26,
+      "file": "1a.png",
+      "hotspot": [
+        7,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        16,
+        20
+      ],
+      "native_area": 164,
+      "opaque_area": 175,
+      "batch": 3,
+      "cell": 1,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.09275304095831195,
+      "source_crop": [
+        180,
+        191
+      ]
+    },
+    {
+      "id": 27,
+      "file": "1b.png",
+      "hotspot": [
+        8,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        17,
+        23
+      ],
+      "native_area": 216,
+      "opaque_area": 219,
+      "batch": 3,
+      "cell": 2,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.10103976884657698,
+      "source_crop": [
+        149,
+        208
+      ]
+    },
+    {
+      "id": 28,
+      "file": "1c.png",
+      "hotspot": [
+        8,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        17,
+        22
+      ],
+      "native_area": 217,
+      "opaque_area": 216,
+      "batch": 3,
+      "cell": 3,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.10091168279600576,
+      "source_crop": [
+        153,
+        205
+      ]
+    },
+    {
+      "id": 29,
+      "file": "1d.png",
+      "hotspot": [
+        8,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        17,
+        22
+      ],
+      "native_area": 217,
+      "opaque_area": 214,
+      "batch": 3,
+      "cell": 4,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.10273560014854656,
+      "source_crop": [
+        150,
+        198
+      ]
+    },
+    {
+      "id": 30,
+      "file": "1e.png",
+      "hotspot": [
+        9,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        17,
+        22
+      ],
+      "native_area": 218,
+      "opaque_area": 226,
+      "batch": 3,
+      "cell": 5,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.10128847895854746,
+      "source_crop": [
+        165,
+        199
+      ]
+    },
+    {
+      "id": 31,
+      "file": "1f.png",
+      "hotspot": [
+        10,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        19,
+        24
+      ],
+      "native_area": 240,
+      "opaque_area": 247,
+      "batch": 3,
+      "cell": 6,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.10945066942923916,
+      "source_crop": [
+        155,
+        199
+      ]
+    },
+    {
+      "id": 32,
+      "file": "20.png",
+      "hotspot": [
+        10,
+        11
+      ],
+      "status": "authored",
+      "native_size": [
+        21,
+        26
+      ],
+      "native_area": 256,
+      "opaque_area": 266,
+      "batch": 3,
+      "cell": 7,
+      "variant": 1,
+      "source_sha256": "0e4e9f51704419bac151369b8af7196db3063f918a244ac07664c101acf4aa22",
+      "uniform_reduction": 0.11257293026533638,
+      "source_crop": [
+        187,
+        212
+      ]
+    },
+    {
+      "id": 33,
+      "file": "21.png",
+      "hotspot": [
+        9,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        23,
+        19
+      ],
+      "native_area": 238,
+      "opaque_area": 252,
+      "batch": 4,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.09719864035481092,
+      "source_crop": [
+        182,
+        201
+      ]
+    },
+    {
+      "id": 34,
+      "file": "22.png",
+      "hotspot": [
+        10,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        19,
+        21
+      ],
+      "native_area": 231,
+      "opaque_area": 248,
+      "batch": 4,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.1065633460013427,
+      "source_crop": [
+        148,
+        203
+      ]
+    },
+    {
+      "id": 35,
+      "file": "23.png",
+      "hotspot": [
+        6,
+        4
+      ],
+      "status": "authored",
+      "native_size": [
+        19,
+        16
+      ],
+      "native_area": 213,
+      "opaque_area": 217,
+      "batch": 4,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.12079102364843616,
+      "source_crop": [
+        135,
+        138
+      ]
+    },
+    {
+      "id": 36,
+      "file": "24.png",
+      "hotspot": [
+        7,
+        4
+      ],
+      "status": "authored",
+      "native_size": [
+        18,
+        16
+      ],
+      "native_area": 211,
+      "opaque_area": 209,
+      "batch": 4,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.11371235561616215,
+      "source_crop": [
+        148,
+        145
+      ]
+    },
+    {
+      "id": 37,
+      "file": "25.png",
+      "hotspot": [
+        10,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        17,
+        23
+      ],
+      "native_area": 214,
+      "opaque_area": 227,
+      "batch": 4,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.0935428058890146,
+      "source_crop": [
+        183,
+        209
+      ]
+    },
+    {
+      "id": 38,
+      "file": "26.png",
+      "hotspot": [
+        7,
+        7
+      ],
+      "status": "authored",
+      "native_size": [
+        14,
+        23
+      ],
+      "native_area": 192,
+      "opaque_area": 195,
+      "batch": 4,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.09706099598106821,
+      "source_crop": [
+        146,
+        197
+      ]
+    },
+    {
+      "id": 39,
+      "file": "27.png",
+      "hotspot": [
+        7,
+        7
+      ],
+      "status": "native alias",
+      "native_size": [
+        14,
+        23
+      ],
+      "native_area": 192,
+      "opaque_area": 195,
+      "alias": 38
+    },
+    {
+      "id": 40,
+      "file": "28.png",
+      "hotspot": [
+        9,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        18,
+        18
+      ],
+      "native_area": 256,
+      "opaque_area": 268,
+      "batch": 4,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.1149952223118304,
+      "source_crop": [
+        155,
+        161
+      ]
+    },
+    {
+      "id": 41,
+      "file": "29.png",
+      "hotspot": [
+        9,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        17,
+        17
+      ],
+      "native_area": 198,
+      "opaque_area": 208,
+      "batch": 4,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "97e5d20069e7eb4c9a4eb42b00de1919031e720caed4a3750978029cd174026e",
+      "uniform_reduction": 0.10316413658256342,
+      "source_crop": [
+        165,
+        163
+      ]
+    },
+    {
+      "id": 42,
+      "file": "2a.png",
+      "hotspot": [
+        8,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        17,
+        18
+      ],
+      "native_area": 206,
+      "opaque_area": 206,
+      "batch": 5,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "4e1b9f224b024fef6f6d83488a88e7b0aa01517455b51334dfbded5b69e46f90",
+      "uniform_reduction": 0.09151578276928529,
+      "source_crop": [
+        190,
+        197
+      ]
+    },
+    {
+      "id": 43,
+      "file": "2b.png",
+      "hotspot": [
+        6,
+        2
+      ],
+      "status": "authored",
+      "native_size": [
+        15,
+        15
+      ],
+      "native_area": 160,
+      "opaque_area": 165,
+      "batch": 5,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "4e1b9f224b024fef6f6d83488a88e7b0aa01517455b51334dfbded5b69e46f90",
+      "uniform_reduction": 0.07877773517267021,
+      "source_crop": [
+        187,
+        183
+      ]
+    }
+  ]
+}

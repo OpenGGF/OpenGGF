@@ -55,6 +55,7 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
     private record Source(int x,int y,int halfWidth,int halfHeight,int flags,List<Mapping> mappings,
                           Consumer<Boolean> visibility) { }
     private final Function<String,ObjectSpriteSheet> sheets;
+    private java.util.function.BiFunction<String,Integer,String> artKey=(key,frame)->key;
     // Native Sprite_table_input count bytes are drained after building; pointer words are not cleared.
     private final int[][] inputPointers=new int[8][63];
     private final Pair[] pages={emptyPair(),emptyPair()};
@@ -62,7 +63,7 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
     private int currentPageWord;
     private boolean flipPending;
 
-    public S3kCompetitionSpritePages(S3kCompetitionArtProvider art) { this(Objects.requireNonNull(art)::getSheet); }
+    public S3kCompetitionSpritePages(S3kCompetitionArtProvider art) { this(Objects.requireNonNull(art)::getSheet); artKey=art::resolveKey; }
     /** Injected immutable ROM sheets; useful to exercise native admission without a GL context. */
     public S3kCompetitionSpritePages(Function<String,ObjectSpriteSheet> sheets) {
         this.sheets=Objects.requireNonNull(sheets);
@@ -170,7 +171,7 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
             };
             int flags=player.nativeRenderFlags();
             sources.put(player.slot(),new Source(player.centreX(),player.centreY(),12,12,flags,
-                    List.of(mapping(key,player.mappingFrame(),(flags&1)!=0,(flags&2)!=0,player.highPriority())),
+                    List.of(mapping(artKey.apply(key,player.mappingFrame()),player.mappingFrame(),(flags&1)!=0,(flags&2)!=0,player.highPriority())),
                     player::refreshNativeVisibility));
         }
         // Presentation-only late lookup. Gameplay touch uses the canonical previous pointer list.
@@ -179,6 +180,15 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
             int pointer=current.getSlotIndex();
             if((current.getLiveObjectId()&255)==0) { sources.remove(pointer);continue; }
             Source source=source(current);
+            if(source!=null && current instanceof S3kMiniatureTail tail) {
+                var parent=players.stream().filter(p->p.slot()==tail.parentSlot()).findFirst().orElse(null);
+                if(parent!=null) {
+                    String nativeKey=S3kCompetitionCharacterArt.nativeKey(parent.character())+"_tail";
+                    String key=artKey.apply(nativeKey,tail.mappingFrame());
+                    if(!key.equals(nativeKey)) source=new Source(source.x(),source.y(),source.halfWidth(),source.halfHeight(),source.flags(),
+                        List.of(mapping(key,tail.mappingFrame(),(source.flags()&1)!=0,(source.flags()&2)!=0,tail.isHighPriority())),source.visibility());
+                }
+            }
             if(source!=null)sources.put(pointer,source);
         }
         return sources;

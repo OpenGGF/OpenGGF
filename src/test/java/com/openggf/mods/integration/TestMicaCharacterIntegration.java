@@ -824,7 +824,8 @@ class TestMicaCharacterIntegration {
                 }
             }
             var presentation=definition.presentationSupplier().load(CODE);
-            for(var surface:StageSpriteSet.Surface.values()) {
+            for(var surface:List.of(StageSpriteSet.Surface.S2_HALF_PIPE,StageSpriteSet.Surface.S3K_BLUE_SPHERE,
+                    StageSpriteSet.Surface.S3K_SLOT_MACHINE,StageSpriteSet.Surface.S3K_COMPETITION)) {
                 var set=presentation.stages().get(surface);
                 assertNotNull(set);
                 var art=com.openggf.game.presentation.StageSpriteCompiler.compile(set,null);
@@ -1596,6 +1597,68 @@ class TestMicaCharacterIntegration {
         }
     }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void competitionMiniaturesRenderBothCharactersAndNativeReference() throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(com.openggf.tools.PresentationOffscreenTestContext.requested());
+        Path output=Path.of(System.getProperty("competition.capture.output","target/competition-capture"));
+        Files.createDirectories(output);
+        for(boolean custom:List.of(false,true)) {
+            var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,custom?CODE:"sonic",
+                    custom?"mica-and-talon:talon":"tails","off",null,null,null);
+            try(var capture=new com.openggf.tools.GameplayCaptureSession(settings)) {
+                if(custom) capture.applyMod(buildSample());
+                capture.boot(Path.of(System.getProperty("s3k.rom.path")),0,0,settings);
+                capture.step(null);
+                var engine=com.openggf.game.session.EngineServices.current();
+                engine.graphics().setDisplayColorProfile(com.openggf.graphics.color.DisplayColorProfile.RAW_RGB);
+                engine.graphics().setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.FULL);
+                var input=new com.openggf.control.InputHandler();
+                try(var views=new com.openggf.game.sonic3k.competition.S3kCompetitionViews(engine.graphics())) {
+                    var host=new com.openggf.game.sonic3k.competition.S3kCompetitionNativeHost(engine,GameServices.module(),input,
+                            capture.loop()::setGameplayMode,new com.openggf.game.sonic3k.competition.S3kCompetitionRecords(new byte[80]),
+                            ignored->{},views,com.openggf.level.LevelArtInternalAccess::initializeObjectArt);
+                    try {
+                        host.openArena(new com.openggf.game.sonic3k.competition.S3kCompetitionScreen.Launch(
+                                new com.openggf.game.sonic3k.competition.S3kCompetitionSession.Config(
+                                com.openggf.game.sonic3k.competition.S3kCompetitionSession.Mode.MATCH_RACE,
+                                com.openggf.game.sonic3k.competition.S3kCompetitionSession.Arena.AZURE_LAKE,true,2),
+                                List.of(com.openggf.game.sonic3k.competition.S3kCompetitionPlayer.Character.SONIC,
+                                        com.openggf.game.sonic3k.competition.S3kCompetitionPlayer.Character.TAILS)));
+                        if(custom) {
+                            assertNotNull(host.artProvider().getSheet("competition_sonic_creator"));
+                            assertNotNull(host.artProvider().getSheet("competition_tails_creator"));
+                        }
+                        int ticks=0;
+                        while(!host.session().started() && ticks++<1200) competitionStep(host,input,com.openggf.control.LogicalInputSnapshot.neutral());
+                        assertTrue(host.session().started());
+                        var right=com.openggf.control.PlayerInputState.of(8,0,0,0,false,false);
+                        var logical=com.openggf.control.LogicalInputSnapshot.ofPlayers(right,right);
+                        String prefix=custom?"mica-talon":"sonic-tails";
+                        var csv=new StringBuilder("frame,p1x,p1y,p1map,p2x,p2y,p2map\n");
+                        for(int frame=0;frame<120;frame++) {
+                            competitionStep(host,input,logical);
+                            org.lwjgl.opengl.GL11.glViewport(0,0,320,224);
+                            views.drawArena(host.world().context(),host,host.scroll());
+                            com.openggf.graphics.ScreenshotCapture.savePNG(com.openggf.graphics.ScreenshotCapture.captureFramebuffer(320,224),
+                                    output.resolve(prefix+String.format("-%03d.png",frame)));
+                            var p1=host.players().get(0); var p2=host.players().get(1);
+                            csv.append(frame+","+p1.centreX()+","+p1.centreY()+","+p1.mappingFrame()+","+p2.centreX()+","+p2.centreY()+","+p2.mappingFrame()+"\n");
+                        }
+                        Files.writeString(output.resolve(prefix+".csv"),csv);
+                    } finally {host.closeArena();}
+                }
+            }
+            com.openggf.tests.TestEnvironment.resetAll();
+        }
+    }
+    private static void competitionStep(com.openggf.game.sonic3k.competition.S3kCompetitionNativeHost host,
+            com.openggf.control.InputHandler input,com.openggf.control.LogicalInputSnapshot logical) {
+        input.setLogicalOverride(logical);
+        var frame=host.world().context().plcFrameLifecycle().latchBeforeFadeUpdate();
+        try { com.openggf.game.competition.NativeCompetitionIterationAccess.runAdmitted(frame,()->host.stepArena(logical,host.session())); }
+        finally {frame.finish();}
+    }
+
     private Path buildSample() throws Exception {
         Path project = Path.of("examples/mica-and-talon"), classes = temp.resolve("classes");
         Files.createDirectories(classes.resolve("art"));
@@ -1622,6 +1685,14 @@ class TestMicaCharacterIntegration {
             Files.createDirectories(destination);
             try (var files = Files.list(source)) {
                 for (var file : files.toList()) Files.copy(file, destination.resolve(file.getFileName()));
+            }
+        }
+        for(String character:List.of("mica","talon")) {
+            Path source=project.resolve("art/"+character+"/competition");
+            Path destination=classes.resolve("art/"+character+"/competition");
+            Files.createDirectories(destination);
+            try(var files=Files.list(source)) {
+                for(var file:files.filter(f->f.toString().endsWith(".png")).toList()) Files.copy(file,destination.resolve(file.getFileName()));
             }
         }
         Path presentation = project.resolve("art/mica/presentation");

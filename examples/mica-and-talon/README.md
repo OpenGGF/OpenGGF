@@ -110,3 +110,23 @@ vocabulary. S3K uses its native flight IDs. Airborne down requests the target
 reticle; down+jump takes over flight with a targeted divebomb. Without down,
 jump retains native flight/flaps. Solar palettes are generated from his own
 presentation data. HUD glyph and missing presentation limits are listed above.
+
+## S3K Competition miniatures
+
+Select MICA as lead and TALON in the sidekick row before entering Competition.
+The existing Sonic and Tails wheel slots then use their configured creator
+character's miniature banks. With a native team, the slots retain native art.
+This is a presentation substitution over native Competition mechanics: names,
+wheel portraits, records, abilities and race rules remain native archetype-owned.
+The first configured character for an archetype wins; this does not add wheel
+positions or admit arbitrary creator movement into the miniature simulation.
+
+Both banks use independent native 2P IDs and per-frame hotspots through
+`StageSpriteSet.Surface.S3K_COMPETITION`. An absent bank or omitted ID retains
+that archetype's native frame. `S3K_COMPETITION_TAIL` independently overrides the
+native appendage bank; TALON explicitly supplies transparent frames for all 16
+IDs because his wings are integrated. The body banks cover MICA's 44 and TALON's
+46 selectors, including the blank $00 and shared $27/$26 mapping. Their palettes
+use private presentation rows, preserving native arena colours and partial-bank
+fallback. Art, selection and capture evidence are described in each
+`art/<character>/competition/README.md`.

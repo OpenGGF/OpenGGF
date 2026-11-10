@@ -138,7 +138,12 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
         this.binding = Objects.requireNonNull(binding); rom = engine.roms().getRom();
         S3kCompetitionRuntimeModule.requireS3kModule(rootModule, "S3K module required");
         resources = S3kCompetitionResources.identify(rom);
-        assets = new S3kCompetitionAssets(rom,resources); art = new S3kCompetitionArtProvider(assets);
+        assets = new S3kCompetitionAssets(rom,resources);
+        var selected=new java.util.ArrayList<String>();
+        selected.add(com.openggf.game.session.ActiveGameplayTeamResolver.resolveMainCharacterCode(engine.configuration()));
+        selected.addAll(com.openggf.game.session.ActiveGameplayTeamResolver.resolveSidekicks(engine.configuration()));
+        var slots=S3kCompetitionCharacterArt.slots(rootModule.getPlayableCharacterRegistry(),selected);
+        art = new S3kCompetitionArtProvider(assets,S3kCompetitionCharacterArt.load(slots));
         spritePages = new S3kCompetitionSpritePages(art);
         menus = new S3kCompetitionMenuScene(rom, assets); animator = S3kMiniatureAnimation.fromRom(rom,resources);
         cameras = new Camera[]{new Camera(engine.configuration()), new Camera(engine.configuration())};

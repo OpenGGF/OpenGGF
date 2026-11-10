@@ -1286,3 +1286,10 @@ The unpublished playable-sheet v2 animation record now carries canonical timing,
 end-action, next-animation and slope-set metadata. The 0.7 candidate signature
 pin is regenerated from the compiled surface; the API version remains 0.7.0.
 Host animation binding remains engine-owned and art suppliers need no game context.
+
+S3K Competition miniature body/tail surfaces reuse `StageSpriteSet` native IDs
+and hotspots, with missing-ID native fallback. Configured registered creator
+characters substitute their archetype wheel slot without supplying miniature
+physics. This additive change updates the mutable 0.7 signatures and runtime
+description under the release descriptor's unchanged unpublished candidate
+0.7.0 policy. No published baseline changes.
