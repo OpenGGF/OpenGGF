@@ -40,6 +40,10 @@ final class Sonic2SpecialStageSpriteAssembly {
     private int characterPalette;
     private com.openggf.sprites.art.SpriteArtSet tailsArt;
     private int tailsPalette;
+    private com.openggf.game.StageSpriteSet characterSource, tailsSource;
+    void setOrientationSources(com.openggf.game.StageSpriteSet character, com.openggf.game.StageSpriteSet tails) {
+        characterSource = character; tailsSource = tails;
+    }
     void setTailsArt(com.openggf.sprites.art.SpriteArtSet art, int palette) {
         tailsArt = art; tailsPalette = palette;
     }
@@ -185,22 +189,27 @@ final class Sonic2SpecialStageSpriteAssembly {
         var selectedArt = state.artRole() == ArtRole.SONIC ? characterArt : tailsArt;
         int selectedPalette = state.artRole() == ArtRole.SONIC ? characterPalette : tailsPalette;
         if (selectedArt != null && (state.artRole() == ArtRole.SONIC || state.artRole() == ArtRole.TAILS)) {
-            int frameId=state.mappingFrame();
+            var sourceSet = state.artRole() == ArtRole.SONIC ? characterSource : tailsSource;
+            int frameId = com.openggf.game.presentation.StageSpriteCompiler.orientedFrameIndex(
+                    sourceSet, state.mappingFrame(), state.xFlip(), state.yFlip());
+            boolean explicitOrientation = frameId != state.mappingFrame();
+            boolean xFlip = !explicitOrientation && state.xFlip();
+            boolean yFlip = !explicitOrientation && state.yFlip();
             if (frameId >= selectedArt.mappingFrames().size()) return;
             var frame=selectedArt.mappingFrames().get(frameId);
             var cues=selectedArt.dplcFrames().get(frameId).requests();
             if (cues.isEmpty()) return;
             int source=selectedArt.basePatternIndex()+cues.getFirst().startTile();
             for(var piece:frame.pieces()) {
-                int px=originX+state.x()+(state.xFlip() ? -piece.xOffset()-piece.widthTiles()*8 : piece.xOffset());
-                int py=state.y()+(state.yFlip() ? -piece.yOffset()-piece.heightTiles()*8 : piece.yOffset());
+                int px=originX+state.x()+(xFlip ? -piece.xOffset()-piece.widthTiles()*8 : piece.xOffset());
+                int py=state.y()+(yFlip ? -piece.yOffset()-piece.heightTiles()*8 : piece.yOffset());
                 var geometry=entry(state,px,py,piece.widthTiles(),piece.heightTiles(),source+piece.tileIndex(),
-                        piece.tileIndex(),selectedPalette,state.xFlip(),state.yFlip(),true);
+                        piece.tileIndex(),selectedPalette,xFlip,yFlip,true);
                 var fragments=new ArrayList<PreparedPiece>();
                 for(int x=0;x<piece.widthTiles();x++) for(int y=0;y<piece.heightTiles();y++) {
-                    int tile=piece.tileIndex()+(state.xFlip()?piece.widthTiles()-1-x:x)*piece.heightTiles()
-                            +(state.yFlip()?piece.heightTiles()-1-y:y);
-                    fragments.add(prepared(px+x*8,py+y*8,source+tile,tile,selectedPalette,state.xFlip(),state.yFlip(),true));
+                    int tile=piece.tileIndex()+(xFlip?piece.widthTiles()-1-x:x)*piece.heightTiles()
+                            +(yFlip?piece.heightTiles()-1-y:y);
+                    fragments.add(prepared(px+x*8,py+y*8,source+tile,tile,selectedPalette,xFlip,yFlip,true));
                 }
                 result.add(new Group(state.identity().handle(),false,List.of(geometry),fragments));
             }

@@ -447,3 +447,28 @@ External review: `$HOME/scratch/agent-tmp/mt-carry-20261110/review.html`, includ
 unlabelled native/pair gates, onion skins, WAIT anatomy guides and before/after
 60 fps lossless RGB AIZ carry clips. These verify a positioned encounter and
 art binding, not complete routes or identical species anatomy.
+
+
+## Native special-stage orientation (2026-11-10)
+
+MICA and TALON now supply dedicated final-orientation drawings for Blue Sphere's
+mirrored selectors 6–8 and all 40 S2 half-pipe H/V/HV combinations per character.
+The host retains the native mapping sequence, motion, clocks and flip flags;
+only the selected creator pixels change. Native Sonic/Tails still flip their
+ROM art. The original sprite-list order, priority, palette and fades remain in
+use. The additive unpublished-candidate API preserves the original one-component
+`StageSpriteSet` record and adds immutable orientation helpers.
+
+There are 86 explicit orientation drawings and 25 refreshed base poses. The
+new orientation audit rows are separate from existing native-ID coverage:
+86 ordinary-selector fallbacks become authored; no native IDs are added.
+Fresh real-palette 8× native-pose generations, rejected attempts, indexed rows,
+landmark/native origins and independent area measurements live in each
+character's `oriented-stage/native-pose-generation.json`. Rebuild/check with
+`python3 tools/modding/playable_art/oriented_stage.py <art-directory> --check`.
+
+The external review is `$HOME/scratch/agent-tmp/mt-bluesphere-flip-20261110/review.html`.
+Its acceptance gates use real capture pixels or the exact sampled capture
+palette, full-60-Hz lossless RGB lockstep movies at 3×, every-tick two-cycle strips,
+centroid plots and per-tick selector diffs. The positioned probes certify these
+presentation encounters, not complete special-stage routes.

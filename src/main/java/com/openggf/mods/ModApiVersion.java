@@ -7,6 +7,7 @@ import java.util.Objects;
 
 public final class ModApiVersion {
     /**
+     * Optional final-orientation stage drawings preserve native selectors, timing, priority and fades.
      * Sidekick-owned S2/S3K Tornado cockpit crops extend the unpublished candidate.
      * Optional S3K Competition player/record portrait surfaces extend the unpublished candidate.
      * Optional per-host title mascot banks include hotspots, independent palettes and plane masks.

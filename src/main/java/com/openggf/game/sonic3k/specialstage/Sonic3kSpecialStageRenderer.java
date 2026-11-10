@@ -43,6 +43,7 @@ public class Sonic3kSpecialStageRenderer {
     private int iconsPatternBase;
     private int playerPatternBase;
     private com.openggf.sprites.render.PlayerSpriteRenderer characterStageRenderer, tailsStageRenderer;
+    private com.openggf.game.StageSpriteSet characterStageSet, tailsStageSet;
     com.openggf.graphics.RenderContext characterPaletteContext() {
         return characterStageRenderer == null ? null : characterStageRenderer.getRenderContext();
     }
@@ -51,14 +52,22 @@ public class Sonic3kSpecialStageRenderer {
     }
     void loadCharacterStageArt() throws java.io.IOException {
         tailsStageRenderer = null;
-        characterStageRenderer = com.openggf.game.presentation.StageCharacterPresentation.renderer(
-                com.openggf.game.StageSpriteSet.Surface.S3K_BLUE_SPHERE);
+        tailsStageSet = null;
+        var active = com.openggf.game.presentation.StageCharacterPresentation.activeDefinition();
+        characterStageSet = com.openggf.game.presentation.StageCharacterPresentation.stage(
+                com.openggf.game.StageSpriteSet.Surface.S3K_BLUE_SPHERE, active);
+        characterStageRenderer = characterStageSet == null ? null
+                : new com.openggf.sprites.render.PlayerSpriteRenderer(
+                        com.openggf.game.presentation.StageSpriteCompiler.compile(characterStageSet, null));
+        if (characterStageRenderer != null)
+            com.openggf.game.presentation.StageCharacterPresentation.bindPalette(characterStageRenderer, active);
         var definition = com.openggf.game.presentation.StageCharacterPresentation.tailsDefinition();
         // A Tails-role solo player is already owned by characterStageRenderer.
         if (definition == com.openggf.game.presentation.StageCharacterPresentation.activeDefinition()) return;
         var set = com.openggf.game.presentation.StageCharacterPresentation.stage(
                 com.openggf.game.StageSpriteSet.Surface.S3K_BLUE_SPHERE, definition);
         if (set != null) {
+            tailsStageSet = set;
             tailsStageRenderer = new com.openggf.sprites.render.PlayerSpriteRenderer(
                     com.openggf.game.presentation.StageSpriteCompiler.compile(set, null,
                     com.openggf.graphics.PatternAtlasRange.CHARACTER_STAGE_PRESENTATION.base() + 0x8000));
@@ -1276,7 +1285,7 @@ public class Sonic3kSpecialStageRenderer {
         int tailsY = projectedPlayerY(manager.getTailsJumpHeight(), -0x20);
 
         if (tailsStageRenderer != null) {
-            renderCreatorSprite(tailsStageRenderer, manager.getTailsMappingFrame(), centerX, tailsY);
+            renderCreatorSprite(tailsStageRenderer, tailsStageSet, tailsMappingData, manager.getTailsMappingFrame(), centerX, tailsY);
             return;
         }
         // Render Tails' tails before the sidekick body in native SAT order
@@ -1301,7 +1310,7 @@ public class Sonic3kSpecialStageRenderer {
         if (!artLoaded || playerPatternBase <= 0 || sonicMappingData == null) return;
         int centerY = projectedPlayerY(player.getJumpHeight(), 0);
         if (characterStageRenderer != null) {
-            renderCreatorSprite(characterStageRenderer, player.getMappingFrame(), centerX, centerY);
+            renderCreatorSprite(characterStageRenderer, characterStageSet, sonicMappingData, player.getMappingFrame(), centerX, centerY);
             return;
         }
         int paletteIndex = playerCharacter == PlayerCharacter.TAILS_ALONE ? 1 : 0;
@@ -1317,8 +1326,12 @@ public class Sonic3kSpecialStageRenderer {
      * the stage palette/fade owner; scene lines used by spheres stay untouched.
      */
     private void renderCreatorSprite(com.openggf.sprites.render.PlayerSpriteRenderer renderer,
+                                     com.openggf.game.StageSpriteSet source, byte[] nativeMapping,
                                      int frame, int x, int y) {
-        com.openggf.sprites.render.NativeStageSpriteDraw.draw(renderer, frame, x, y,
+        int orientation = nativeFrameOrientation(nativeMapping, frame);
+        int drawing = com.openggf.game.presentation.StageSpriteCompiler.orientedFrameIndex(
+                source, frame, (orientation & 1) != 0, (orientation & 2) != 0);
+        com.openggf.sprites.render.NativeStageSpriteDraw.draw(renderer, drawing, x, y,
                 (pattern, hFlip, vFlip, palette, drawX, drawY) -> {
                     reusableDesc.set(0);
                     reusableDesc.setHFlip(hFlip);
@@ -1327,6 +1340,24 @@ public class Sonic3kSpecialStageRenderer {
                     reusableDesc.setPriority(true); // Obj_SStage_8FAA art_tile high bit.
                     renderNativePattern(pattern, reusableDesc, drawX, drawY);
                 });
+    }
+
+    /**
+     * Native mappings 6–8 reuse 3–5's DPLC art with whole-frame piece flips;
+     * word_ABE86 (docs/skdisasm/General/Sprites/Sonic/Map - SStage Sonic.asm:47-50)
+     * and the following two mappings.
+     * Mixed-piece mappings have no whole-frame orientation override.
+     */
+    static int nativeFrameOrientation(byte[] mappings, int frame) {
+        if (mappings == null || frame < 0 || frame * 2 + 1 >= mappings.length) return 0;
+        int offset = readWord(mappings, frame * 2);
+        if (offset + 1 >= mappings.length) return 0;
+        int count = readWord(mappings, offset);
+        if (count == 0 || offset + 2L + count * 6L > mappings.length) return 0;
+        int flags = (readWord(mappings, offset + 4) >>> 11) & 3;
+        for (int i = 1; i < count; i++)
+            if (((readWord(mappings, offset + 4 + i * 6) >>> 11) & 3) != flags) return 0;
+        return flags;
     }
 
     /**

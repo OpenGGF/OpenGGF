@@ -128,6 +128,42 @@ class TestS3kSpecialStageSpritePixels {
     }
 
     @Test
+    void explicitCreatorMirroredPhaseUsesUnflippedPixelsWhileNativeStillMirrors() throws Exception {
+        withGraphics((graphics, width) -> {
+            var renderer = renderer(graphics, width, mapping(0), 0, 0, 40);
+            var manager = manager();
+            var nativeMap = character(); nativeMap[60] = 8;
+            assertEquals(1, Sonic3kSpecialStageRenderer.nativeFrameOrientation(nativeMap, 0));
+            renderer.setPlayerPatternBase(REAR);
+            renderer.setSonicMappingData(nativeMap, nativeMap);
+            byte[] scalars = new byte[512];
+            word(scalars, 0xE0 * 2, -11585); word(scalars, 0x20 * 2, 11585);
+            renderer.setPlayerProjectionScalars(scalars);
+            var nativeTile = solid(2);
+            for (int y = 0; y < 8; y++) for (int x = 4; x < 8; x++) nativeTile.setPixel(x, y, (byte) 3);
+            graphics.cachePatternTexture(nativeTile, REAR);
+            draw(graphics, renderer, manager, width);
+            assertPixel(width / 2 + 1, 43, BLUE, "native H mapping still mirrors source right half");
+            assertPixel(width / 2 + 6, 43, RED, "native source left half stays mirrored");
+            byte[] pixels = new byte[64]; java.util.Arrays.fill(pixels, (byte) 3);
+            byte[] oriented = new byte[64];
+            for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) oriented[y*8+x] = (byte) (x < 4 ? 1 : 2);
+            var set = new com.openggf.game.StageSpriteSet(java.util.Map.of(0,
+                    new com.openggf.game.StageSpriteSet.Frame(new com.openggf.game.CharacterPresentation.Image(8,8,pixels),0,122)))
+                    .withMirroredFrames(java.util.Map.of(0,
+                            new com.openggf.game.StageSpriteSet.Frame(new com.openggf.game.CharacterPresentation.Image(8,8,oriented),0,122)));
+            var creator = new com.openggf.sprites.render.PlayerSpriteRenderer(
+                    com.openggf.game.presentation.StageSpriteCompiler.compile(set, null), graphics);
+            set(renderer, "characterStageRenderer", creator);
+            set(renderer, "characterStageSet", set);
+            draw(graphics, renderer, manager, width);
+            assertPixel(width / 2 + 1, 43, GREEN, "creator authored left highlight remains on left");
+            assertPixel(width / 2 + 6, 43, RED, "creator variant is selected without another H flip");
+            assertEquals(0, manager.getPlayer().getMappingFrame(), "native selector is untouched");
+        });
+    }
+
+    @Test
     void creatorPlayerClaimsNativePixelsBeforeGridAndShadowAndUsesTheStageFade() throws Exception {
         withGraphics((graphics, width) -> {
             var renderer = renderer(graphics, width, mapping(0), 0x54, 0, 150);

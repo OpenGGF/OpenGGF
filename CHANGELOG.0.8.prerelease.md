@@ -84,6 +84,10 @@ under the matching area heading; see the
   Blue Sphere creator bodies share native pixel ownership before spheres and
   shadows, preserving their colours and stage fades; real stock/creator captures
   verify native mapping selections and timing.
+  Dedicated final-orientation special-stage drawings keep both characters'
+  highlights and asymmetric features from jumping sides. The additive candidate
+  API selects explicit mirrored phases in Blue Sphere and H/V/HV phases in the
+  S2 half-pipe while preserving native selectors, clocks and draw ownership.
   S1 supplements spell TALON; S3K uses the longest native-cell prefix TALO;
   results retain his full name. The candidate API adds default sidekick
   selection, flight declarations and the native Tails respawn factory.

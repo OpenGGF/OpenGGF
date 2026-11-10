@@ -623,6 +623,23 @@ scaling and lossless RGB if palette equality matters (`libx264rgb -crf 0`). Gate
 colours by sampling unobscured actor pixels in real captures. A source PNG review
 cannot detect later shadows, priority or fade errors.
 
+`orientation.csv` additionally records every published mapping, native H/V flags,
+selected creator compiler slot and remaining render flips. Pair captures by tick
+and diff mapping, position, flags and stage motion before inspecting the pixels.
+S3K native Tails solo uses palette line 1; creator logical line 0 is mapped to its
+owned physical palette row. The probe records this distinction explicitly.
+
+MICA/TALON's `oriented-stage/` banks contain fresh drawings for all native flipped
+run orientations (S3K selectors 6–8; S2 upright/diagonal H/V/HV and horizontal H).
+They are never offline flipped copies. `oriented_stage.py <directory> --check`
+compares each packaged indexed image/palette/alpha against its selected generation
+rows; omit `--check` to rebuild those original pixels. The generation manifest
+retains prompts, alternatives, native inventory and size measurements. Never
+ship the decoded native references or raw GPT Image outputs. A new orientation
+bank still requires real-palette 8× native references, model/proportion guides,
+fresh attempts, native head/torso scale, an unlabelled visual gate and real
+60-Hz lockstep captures. Rebuilding rows is not a replacement for those gates.
+
 ## S2 native-role title capture review
 
 `examples/mica-and-talon/art/mica/titles/s2_capture_review.py` builds the

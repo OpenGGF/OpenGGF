@@ -12,8 +12,10 @@ import java.util.*;
 /**
  * Purpose: read-only special-stage mapping, palette and fade observations alongside real pixels.
  * Inputs: built engine/example classpath, verified ROM resolver, native controller log, owned output.
- * Origin: MICA Blue Sphere draw-path correction, 2026-11-10.
+ * Origin: MICA Blue Sphere draw-path and MICA/TALON native-orientation correction, 2026-11-10.
  * Compile into target/character-probe; see playable_art/README.md. No comparison values drive gameplay.
+ * orientation.csv observes the published mapping, native flags and selected creator slot after rendering.
+ * It never changes a selector, timer, flip, palette or gameplay value.
  * S2 declares native stage admission at tick 240. Optional debug completion is declared at
  * tick 465 (S3K) / 780 (S2); no route-completion claim. Game act passed to boot is zero-based.
  */
@@ -34,10 +36,11 @@ public final class SpecialStageCharacterProbe {
     var settings=new GameplayCaptureSession.Settings(320,main,side,"off",null,
       s3?11616:3500,s3?1612:150,null,false,false,null,null,false, s3?42:70);
     Path rom=TraceToolRomLocations.resolve(game,GameServices.configuration(),Path.of(""));
-    try(var session=new GameplayCaptureSession(settings);var csv=Files.newBufferedWriter(out.resolve("stage.csv"));var legacy=Files.newBufferedWriter(out.resolve("state.csv"))) {
+    try(var session=new GameplayCaptureSession(settings);var csv=Files.newBufferedWriter(out.resolve("stage.csv"));var orientation=Files.newBufferedWriter(out.resolve("orientation.csv"));var legacy=Files.newBufferedWriter(out.resolve("state.csv"))) {
       if(!args[3].equals("-"))session.applyMod(Path.of(args[3]));
       session.boot(rom,GameplayCaptureTool.ZoneIds.resolve(game,s3?"cnz":"ehz"),0,settings);session.declareTimer(s3?9600:6600);
       legacy.write(GameplayCaptureSession.stateHeader()+"\n");
+      orientation.write("frame,actor,mapping,x,y,native_h,native_v,render_frame,render_h,render_v\n");
       csv.write("frame,mode,mapping,velocity,angle,turning,jumping,jump_height,fade_timer,stage_counter,clear_routine,logical_palette,physical_palette,palette,display_fade,display_steps,display_mask,overlay_alpha,overlay_type,sidekick_mapping,sidekick_physical_palette,sidekick_palette\n");
       for(int i=0;i<Integer.parseInt(args[6]);i++) {
         var input=i<movie.getFrameCount()?movie.getFrame(i):null;session.step(input);
@@ -50,18 +53,39 @@ public final class SpecialStageCharacterProbe {
         String details=",,,,,,,,,,,"; String sk=",,";
         if(provider instanceof Sonic3kSpecialStageProvider p) {
           var manager=p.getManager();var player=manager.getPlayer();var snap=manager.captureComparisonState();
-          var renderer=field(manager,"renderer");var cr=renderer==null?null:field(renderer,"characterStageRenderer");
+          var renderer=field(manager,"renderer");
+          if(renderer!=null && session.loop().getCurrentGameMode()==GameMode.SPECIAL_STAGE) {
+            var data=(byte[])field(renderer,"sonicMappingData");int f0=player.getMappingFrame();boolean hx=false,vy=false;
+            if(data!=null && f0*2+1<data.length){int off=((data[f0*2]&255)<<8)|(data[f0*2+1]&255);if(off+5<data.length){hx=(data[off+4]&8)!=0;vy=(data[off+4]&16)!=0;}}
+            var m=renderer.getClass().getDeclaredMethod("projectedPlayerY",long.class,int.class);m.setAccessible(true);int y=(int)m.invoke(renderer,player.getJumpHeight(),0);
+            var source=(StageSpriteSet)field(renderer,"characterStageSet");int code=(hx?256:0)+(vy?512:0)+f0;int rf=source!=null && source.frames().containsKey(code)?code:f0;
+            orientation.write(i+",main,"+f0+",160,"+y+","+hx+","+vy+","+rf+","+(field(renderer,"characterStageRenderer")==null && hx)+","+(field(renderer,"characterStageRenderer")==null && vy)+"\n");
+          }
+          var cr=renderer==null?null:field(renderer,"characterStageRenderer");
           var context=cr==null?null:((com.openggf.sprites.render.PlayerSpriteRenderer)cr).getRenderContext();
           var palette=(Sonic3kSpecialStagePalette)field(manager,"palette");
+          int nativeLine=manager.getPlayerCharacter()==PlayerCharacter.TAILS_ALONE?1:0;
           var tr=renderer==null?null:field(renderer,"tailsStageRenderer");
           var tc=tr==null?null:((com.openggf.sprites.render.PlayerSpriteRenderer)tr).getRenderContext();
           sk=manager.getTailsMappingFrame()+","+(tc==null?1:tc.getEffectivePaletteLine(0))+","+rgb(tc==null?(palette==null?null:palette.getPalette(1)):tc.getPalette(0));
-          details=player.getMappingFrame()+","+player.getVelocity()+","+player.getAngle()+","+player.getTurning()+","+player.getJumping()+","+player.getJumpHeight()+","+player.getFadeTimer()+","+snap.frameCounter()+","+snap.clearRoutine()+",0,"+(context==null?0:context.getEffectivePaletteLine(0))+","+rgb(context==null?(palette==null?null:palette.getPalette(0)):context.getPalette(0));
+          details=player.getMappingFrame()+","+player.getVelocity()+","+player.getAngle()+","+player.getTurning()+","+player.getJumping()+","+player.getJumpHeight()+","+player.getFadeTimer()+","+snap.frameCounter()+","+snap.clearRoutine()+","+(context==null?nativeLine:0)+","+(context==null?nativeLine:context.getEffectivePaletteLine(0))+","+rgb(context==null?(palette==null?null:palette.getPalette(nativeLine)):context.getPalette(0));
         } else if(provider!=null && game.equals("s2")) {
           var manager=field(provider,"manager");var player=field(manager,"sonicPlayer");
           boolean tailsSolo=player==null; if(player==null)player=field(manager,"tailsPlayer");
           var renderer=field(manager,"renderer");
           var palettes=(Palette[])field(manager,"palettes");
+          if(renderer!=null && session.loop().getCurrentGameMode()==GameMode.SPECIAL_STAGE) {
+            var states=(java.util.List<?>)manager.getClass().getMethod("getNativeRenderStates").invoke(manager);
+            for(Object state:states) {
+              var type=state.getClass();String role=type.getMethod("artRole").invoke(state).toString();
+              if(!role.equals("SONIC") && !role.equals("TAILS"))continue;
+              int f0=(int)type.getMethod("mappingFrame").invoke(state),x=(int)type.getMethod("x").invoke(state)+32,y=(int)type.getMethod("y").invoke(state);
+              boolean hx=(boolean)type.getMethod("xFlip").invoke(state),vy=(boolean)type.getMethod("yFlip").invoke(state);
+              var source=(StageSpriteSet)field(renderer,role.equals("SONIC")?"characterStageSet":"tailsStageSet");
+              int code=f0+(hx?256:0)+(vy?512:0);int rf=source!=null && source.frames().containsKey(code)?code:f0;
+              orientation.write(i+","+role+","+f0+","+x+","+y+","+hx+","+vy+","+rf+","+(rf==f0&&hx)+","+(rf==f0&&vy)+"\n");
+            }
+          }
           if(player!=null && renderer!=null && palettes!=null) {
             int line=(int)field(renderer,tailsSolo?"tailsStagePalette":"characterStagePalette");
             var context=RenderContext.getSidekickContexts().stream().filter(c->c.getEffectivePaletteLine(0)==line).findFirst().orElse(null);

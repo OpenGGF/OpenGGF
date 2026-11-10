@@ -9,6 +9,14 @@ import java.util.*;
 /** Converts bounded indexed stage frames to ordinary engine mappings and DPLCs. */
 public final class StageSpriteCompiler {
     private StageSpriteCompiler() { }
+    /** Compiler slot only; never write this value into a native player selector. */
+    public static int orientedFrameIndex(StageSpriteSet set, int nativeFrame,
+                                         boolean horizontalFlip, boolean verticalFlip) {
+        if (set == null || nativeFrame < 0 || nativeFrame > 255) return nativeFrame;
+        int slot = nativeFrame + (horizontalFlip ? 256 : 0) + (verticalFlip ? 512 : 0);
+        return set.frames().containsKey(slot) ? slot : nativeFrame;
+    }
+
     public static SpriteArtSet compile(StageSpriteSet set, SpriteArtSet animationSource) {
         return compile(set, animationSource, com.openggf.graphics.PatternAtlasRange.CHARACTER_STAGE_PRESENTATION.base());
     }

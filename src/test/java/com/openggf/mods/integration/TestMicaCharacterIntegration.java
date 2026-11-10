@@ -832,6 +832,11 @@ class TestMicaCharacterIntegration {
                     StageSpriteSet.Surface.S3K_SLOT_MACHINE,StageSpriteSet.Surface.S3K_COMPETITION)) {
                 var set=presentation.stages().get(surface);
                 assertNotNull(set);
+                if (surface == StageSpriteSet.Surface.S2_HALF_PIPE || surface == StageSpriteSet.Surface.S3K_BLUE_SPHERE) {
+                    int expectedVariants = surface == StageSpriteSet.Surface.S2_HALF_PIPE ? 40 : 3;
+                    assertEquals(expectedVariants, set.frames().keySet().stream().filter(id -> id >= 256).count(),
+                            "All native flipped special-stage orientations have explicit original drawings");
+                }
                 var art=com.openggf.game.presentation.StageSpriteCompiler.compile(set,null);
                 for(var entry:set.frames().entrySet()) {
                     var frame=entry.getValue();
@@ -1900,8 +1905,8 @@ class TestMicaCharacterIntegration {
                     var art = presentation.art().get(host);
                     assertEquals(16, art.hudLifeIcon().width()); assertEquals(16, art.oneUpFace().height());
                     assertNotNull(art.sign().face().backing()); assertNotNull(art.sign().spin3());
-                    assertEquals(18, presentation.stages().get(StageSpriteSet.Surface.S2_HALF_PIPE).frames().size());
-                    assertEquals(11, presentation.stages().get(StageSpriteSet.Surface.S3K_BLUE_SPHERE).frames().size());
+                    assertEquals(58, presentation.stages().get(StageSpriteSet.Surface.S2_HALF_PIPE).frames().size());
+                    assertEquals(14, presentation.stages().get(StageSpriteSet.Surface.S3K_BLUE_SPHERE).frames().size());
                     assertTrue(com.openggf.game.presentation.StageSpriteCompiler.compile(presentation.stages().get(StageSpriteSet.Surface.S3K_BLUE_SPHERE), null).mappingFrames().getFirst().pieces().isEmpty());
                     if (game.equals("s1")) {
                         var name = com.openggf.game.sonic1.Sonic1CharacterPresentation.name(GameServices.rom().getRom(), presentation, CharacterPresentation.Style.HUD);
@@ -2188,6 +2193,15 @@ class TestMicaCharacterIntegration {
             }
         }
         Path stages = project.resolve("art/mica/wave3");
+        for (String character : List.of("mica", "talon")) {
+            Path source = project.resolve("art/" + character + "/oriented-stage");
+            Path destination = classes.resolve("art/" + character + "/oriented-stage");
+            Files.createDirectories(destination);
+            try (var files = Files.list(source)) {
+                for (var file : files.filter(p -> p.toString().endsWith(".png")).toList())
+                    Files.copy(file, destination.resolve(file.getFileName()));
+            }
+        }
         Files.createDirectories(classes.resolve("art/mica/wave3"));
         try(var files=Files.list(stages)) {
             for(var file:files.filter(p -> p.toString().endsWith(".png") && !p.toString().endsWith("-fixed.png")).toList())
