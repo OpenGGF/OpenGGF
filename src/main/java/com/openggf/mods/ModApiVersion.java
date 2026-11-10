@@ -7,6 +7,7 @@ import java.util.Objects;
 
 public final class ModApiVersion {
     /**
+     * Optional per-host normal/powered 32x32 reel portraits extend the unpublished candidate.
      * Host-aware character presentation suppliers extend the unpublished 0.7 candidate.
      * Optional directional canonical homing strike sheet keys extend this same 0.7 candidate.
      * Current unpublished compiled-mod API candidate, including the grouped landing animation rule,

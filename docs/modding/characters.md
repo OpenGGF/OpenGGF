@@ -718,3 +718,15 @@ FLY slot belongs to WAIT's lying phases; Tails' actual flight remains separate.
 Bindings can also declare a small mapping offset when native scripts reuse the
 same drawing at a different anchor. The binder creates mapping views sharing the
 same tiles and DPLC, so these variants require no duplicate sheet drawings.
+
+### Optional reel portraits
+
+`CharacterPresentation.withReelFaces(Map<Host, ReelFace>)` supplies 32×32 indexed
+head portraits for S2 CNZ and S3K Slots. `ReelFace` has normal/powered images and
+independent sixteen-entry RGB palettes; a null powered image keeps native art.
+Old constructors remain available. Images/palettes/maps are defensively copied.
+Native backing, scrolling, symbol selection and rewards stay with the host.
+Selected main owns Sonic's symbol; first sidekick owns Tails'. A Tails-archetype
+solo main supplies both portraits, plus the powered portrait when supplied.
+Other prize symbols never change. This extends the unpublished 0.7 candidate;
+rebuild compiled mods against the refreshed normalized signature pin.

@@ -277,3 +277,8 @@ Queued Java selection `TestAnimationFamilies,TestCanonicalPlayableSheet,TestMica
 with `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl` and DISPLAY/WAYLAND_DISPLAY
 unset: 53 passed, zero failures/errors/skips, all ROM properties found.
 This is the requested focused selection, not a full-suite claim.
+
+## Reel portraits (2026-11-10)
+
+See [reels](reels/README.md) for the native-pose-generated 32×32 head and Solar
+palette alias, size measurements and exact provenance. Titles remain native.

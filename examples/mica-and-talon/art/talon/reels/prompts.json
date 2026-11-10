@@ -1,0 +1,7 @@
+{
+  "tool": "built-in GPT Image",
+  "date": "2026-11-10",
+  "normal": "Native-pose transformation: replace Tails head in reference 1 by TALON original peregrine courier from model sheet and approved sprite references 2/3. Head-only slot reel portrait, 32x32 native pixel cell enlarged 8x nearest. Facing LEFT 3/4, native portrait occupancy about 28x26 pixels, not full body. Slate feathers, swept crest, amber aviator goggles atop forehead, hooked yellow beak pointing left, dark falcon moustache stripe, large brown eyes, cream cheeks, bold dark pixel outline. No fox ears, fur, quills, hands, body, rotor, tails, text or emblem. Two alternative portraits side by side in equal square cells on solid magenta background. Flat 16-bit pixel sprite style faithful to approved character. Fill each cell like native reference.",
+  "alternatives": 2,
+  "selection": "left closed-mouth portrait; right open-mouth portrait rejected for reduced-size legibility"
+}

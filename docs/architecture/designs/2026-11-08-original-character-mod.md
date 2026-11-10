@@ -2443,3 +2443,125 @@ wing cadence; full carrying-route contact is not certified.
 
 Review and exact logs:
 `$HOME/scratch/agent-tmp/talon-families-20261109/review.html`.
+
+### Reel portraits and title ownership (2026-11-10)
+
+The reel lane adds optional `CharacterPresentation.reelFaces` (native 32×32
+normal/powered portraits with independent sixteen-colour palettes), retaining
+all earlier constructor signatures. The release-policy guard requires the descriptor to remain unchanged for
+ordinary unpublished candidate signature regeneration; `ModApiVersion` notes
+and the normalized pin are refreshed on unpublished 0.7.0. Generated MICA/TALON head portraits replace the
+selected main's Sonic symbol and first sidekick's Tails symbol. TALON solo owns
+both and supplies Solar for the powered symbol; Gilded uses separately generated
+native-Super-pose art. Knuckles, Eggman, Ring, BAR, jackpot, prize IDs, RNG and
+reel clocks stay native. Transparent portrait pixels retain the native cell's
+flat backing colour. Shader sampling no longer adds a second half pixel to
+fragment-centred coordinates. Native white-entry fades modulate portrait RGB.
+
+Native evidence: SlotMachine_GetPixelRow (s2.asm:59778-59790) addresses fixed
+ArtUnc_CNZSlotPics (s2.asm:90461), with column-major 4×4 tiles. Contrary to the
+brief's native-rule assumption, that routine has **no Player_mode/current-player
+portrait substitution**: Sonic and Tails are fixed symbols. The new semantic
+main/sidekick substitution is an official creator presentation rule, not a claim
+about ROM behavior. S3K's sub_4C77C (sonic3k.asm:100060-100075) selects fixed
+32×32 symbols from ArtUnc_SlotOptions (sonic3k.asm:201630): jackpot 0, Sonic 1,
+Tails 2, Knuckles 3, Eggman 4, Ring 5, BAR 6 and Super Sonic 7. Production
+atlas upload and both native slot shaders consume the authored portraits.
+
+Size measurement excludes the native edge-connected white backing while
+retaining the dark outline. Raw cell opaque area would incorrectly count all
+1024 backing pixels as character. Normal heads reduce to 91% of their native
+cell box, then quantize to the approved character palette; Gilded reduces to 96%.
+
+| Portrait | Native head area | Authored head area | sqrt(area ratio) |
+| --- | ---: | ---: | ---: |
+| MICA / S2 Sonic reference | 696 | 678 | 0.987 |
+| TALON / S2 Tails reference | 607 | 602 | 0.996 |
+| MICA / S3K Sonic reference | 684 | 678 | 0.996 |
+| TALON / S3K Tails reference | 592 | 602 | 1.008 |
+| Gilded / S3K Super Sonic reference | 730 | 727 | 0.998 |
+| Solar / TALON normal geometry alias | 607 | 602 | 0.996 |
+
+S3K normal symbols alias the same original head within the same native cell.
+Solar retains TALON head geometry rather than acquiring Super Sonic's spikes;
+its ratio against native Super Sonic's different silhouette is 0.908, an explicit
+species/pose difference, not a claim of equal Super Sonic geometry. Each normal
+request and Gilded request generated two alternatives; the selected left image
+and rejected right image, exact prompts, reference roles, hashes, reduction and
+palette provenance live under each character's `reels/`. No native art or raw
+generation is committed. Review/captures are in the lane scratch directory.
+
+New audit obligations: six reel rows are authored (MICA/TALON S2 normal and S3K
+normal/powered); six title mascot rows explicitly remain fallback. Earlier audit
+omitted both families, so these are new tracked obligations, not removals from
+its old fallback totals. Authored totals MICA S1/S2/S3K **65/91/109 → 65/92/111**,
+TALON **0/28/38 → 0/29/40**. Title fallback adds one per character/host; other
+fallback/alias/N/A rows are unchanged. Against the expanded inventory before
+reel authoring, six reel fallback obligations move to authored.
+
+**Title surfaces remain unimplemented in this lane; no title captures or title
+animation certification are delivered.** Selection order is not a blanket
+technical blocker: `LaunchProfileApplier.apply` sets `MAIN_CHARACTER_CODE` from
+the launch profile, and the hub supports choosing the default before entering a
+native title. A later Data Select choice cannot retroactively change an already
+shown title; it should take effect on a subsequent title entry. A future title
+seam should resolve the configured default/explicit title option, not stale
+level-session selection, and must leave every logo tile untouched.
+
+- S1: TSon_Main (0E, 0F Title Screen - Sonic, Press Start, TM.asm:18-30) owns
+  the sprite mapping/palette and delay; TSon_Move
+  (0E, 0F Title Screen - Sonic, Press Start, TM.asm:44-51) owns the rise.
+  Ani_TSon (_anim/Title Screen Sonic.asm:5-11) supplies six entrance mappings plus a
+  two-frame finger loop. A character can sensibly own those eight mascot
+  frames with native hotspots and screen-plane masking; the emblem remains
+  host-owned. This is feasible, but those eight frames were not authored here.
+- S2: Obj0E_Sonic (s2.asm:26337-26358), Obj0E_Tails (s2.asm:26586-26600),
+  Obj0E_SonicHand (s2.asm:26778-26792), and Obj0E_TailsHand
+  (s2.asm:26822-26836) separate bodies/hands, with logo-top and curved
+  occlusion passes in `TitleScreenManager`. A single pasted portrait would
+  leave native hands or break entry composition. A proper lead/sidekick title
+  bank needs all reachable body/hand frames, exact native timing and independent
+  palette contexts. Those banks/seams were not implemented here.
+- S3K: TitleSonic_LoadFrame (sonic3k.asm:5850-5878) page-flips Kosinski art;
+  initial ArtKos_S3TitleSonic1 and MapEni_S3TitleSonic1 are uploaded to plane A
+  in TitleScreen (sonic3k.asm:5480-5508). The later static plane composition
+  also has separate Obj_TitleSonicFinger (sonic3k.asm:6239-6259) and
+  Obj_TitleSonicWink (sonic3k.asm:6261-6278). Replacing only those small sprites
+  would leave Sonic's native head/body. A mascot-only plane mask/frame bank,
+  independent palettes and matching finger/wink sprites are required before
+  this can honestly count as authored. No such plane-art title seam is delivered.
+
+These are remaining implementation/art obligations, not evidence that titles
+cannot be customized. No option was added that promises unavailable title art.
+
+
+Reel-lane validation on `feature/ai-mt-reels-title`, based on `3aac15eb45`:
+52 Python tests passed with
+`python3 -m unittest discover -s tools/modding -p 'test_*.py'`.
+All 127 focused Java cases passed, zero failures/errors/skips, with verified S1,
+S2 and S3K ROMs, Java 25, DISPLAY/WAYLAND_DISPLAY unset and surfaceless EGL:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestReelCharacterPresentation,TestReelPortraitRendering,TestCNZSlotMachineViewport,TestS3kSlotMachineRenderer,TestKis2SlotArt,TestMicaCharacterIntegration,TestCharacterArtCoverageAudit,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+```
+
+The first attempt exposed an extra half-pixel offset in both slot shaders and
+a copied empty signature resource after a snapshot classpath error. Corrected
+exact-pixel and pin rechecks passed; the final 127-case run passed on the final
+implementation. Pixel tests compare native ROM symbols and every opaque MICA
+pixel through the actual GPU shaders, and emit native/team/solo/half-scroll
+component captures. They do not certify in-level routes, title composition or
+all fade states. Four original PNGs pass 32×32/4-bit/binary-alpha/16-colour native
+ladder checks. Staged disassembly citation and whitespace checks passed.
+
+The final change-based smoke planner selects 4,511 classes because shared API,
+shader and audit changes select all smoke categories. That broad integration run is left to the coordinating lead;
+this lane reports focused evidence, with no category-run VERDICT or full-suite
+claim. Title art and title captures remain outstanding. No push/merge is performed.
+
+The additional 11-case `TestPaletteTextureCapacity` check passed without skips with the same queued
+EGL command prefix, preserving legacy single-channel slot callers through an
+explicit atlas flag. Final focused-run queue wait was 226s and Maven execution
+124s; user wait zero. The palette check waited 108s and Maven ran 33.5s.
