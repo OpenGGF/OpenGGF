@@ -1,0 +1,20 @@
+package com.openggf.game.soniccd;
+import org.junit.jupiter.api.Test;import java.util.*;import static org.junit.jupiter.api.Assertions.*;
+/** Tests FIRST; pure callback/knowledge contracts only. No actual WARP authority or execution. */
+class TestCdProgrammeReturnKnowledge {
+ static final class Fault extends RuntimeException{}
+ static class Tail implements CdRetainedProgrammeReturn.KnowledgePort {
+  final List<String> order=new ArrayList<>();CdRetainedProgrammeReturn.ReturnKnowledge returned;String fail;Throwable fault=new Fault();
+  private void reached(String name){order.add(name);if(name.equals(fail)){if(fault instanceof Error e)throw e;throw (RuntimeException)fault;}}
+  public void returnByte(CdRetainedProgrammeReturn.ReturnKnowledge v){reached("return");returned=v;}
+  public void stopFm(){reached("fm");}public void blank(){reached("blank");}
+ }
+ @Test void unknownIsPublishedAsUnknownBeforeOneFmStopAndOneBlank(){var p=new Tail();var v=CdRetainedProgrammeReturn.ReturnKnowledge.unknown();CdRetainedProgrammeReturn.enter(p,v);assertSame(v,p.returned);assertTrue(p.returned.value().isEmpty());assertEquals(List.of("return","fm","blank"),p.order);}
+ @Test void everyKnownByteIsPreservedWithoutInventingClearedPlcResult(){for(int v=0;v<256;v++){var p=new Tail();var k=CdRetainedProgrammeReturn.ReturnKnowledge.known(v);CdRetainedProgrammeReturn.enter(p,k);assertSame(k,p.returned);assertEquals(v,p.returned.value().orElseThrow());assertEquals(List.of("return","fm","blank"),p.order);}}
+ @Test void publicationFailureRetainsNoLaterCallbacksOrReplacementFault(){var p=new Tail();p.fail="return";assertSame(p.fault,assertThrows(Fault.class,()->CdRetainedProgrammeReturn.enter(p,CdRetainedProgrammeReturn.ReturnKnowledge.unknown())));assertNull(p.returned);assertEquals(List.of("return"),p.order);assertEquals(0,p.fault.getSuppressed().length);}
+ @Test void fmFailureRetainsTheUnknownPublicationAndNeverBlanksOrRetries(){var p=new Tail();p.fail="fm";var k=CdRetainedProgrammeReturn.ReturnKnowledge.unknown();assertSame(p.fault,assertThrows(Fault.class,()->CdRetainedProgrammeReturn.enter(p,k)));assertSame(k,p.returned);assertEquals(List.of("return","fm"),p.order);assertEquals(0,p.fault.getSuppressed().length);}
+ @Test void blankFailureKeepsPublicationAndFmAndTheExactOriginalFault(){var p=new Tail();p.fail="blank";var k=CdRetainedProgrammeReturn.ReturnKnowledge.known(0x93);assertSame(p.fault,assertThrows(Fault.class,()->CdRetainedProgrammeReturn.enter(p,k)));assertSame(k,p.returned);assertEquals(List.of("return","fm","blank"),p.order);assertEquals(0,p.fault.getSuppressed().length);}
+ @Test void callbackErrorIsNotConvertedOrSuppressed(){var p=new Tail();p.fail="fm";p.fault=new AssertionError("original semantic owner");assertSame(p.fault,assertThrows(AssertionError.class,()->CdRetainedProgrammeReturn.enter(p,CdRetainedProgrammeReturn.ReturnKnowledge.unknown())));assertEquals(List.of("return","fm"),p.order);}
+ @Test void knowledgeRejectsInvalidWidthsAndNullsBeforeAnyCallback(){for(int bad:new int[]{-1,256,65535})assertThrows(IllegalArgumentException.class,()->CdRetainedProgrammeReturn.ReturnKnowledge.known(bad));assertThrows(NullPointerException.class,()->new CdRetainedProgrammeReturn.ReturnKnowledge(null));var p=new Tail();assertThrows(NullPointerException.class,()->CdRetainedProgrammeReturn.enter(p,null));assertTrue(p.order.isEmpty());assertThrows(NullPointerException.class,()->CdRetainedProgrammeReturn.enter(null,CdRetainedProgrammeReturn.ReturnKnowledge.unknown()));}
+ @Test void legacyPortAndByteFfContractRemainSourceCompatible(){var order=new ArrayList<String>();CdRetainedProgrammeReturn.enter(new CdRetainedProgrammeReturn.Port(){public void returnByte(int value){assertEquals(0xFF,value);order.add("return");}public void stopFm(){order.add("fm");}public void blank(){order.add("blank");}});assertEquals(List.of("return","fm","blank"),order);assertEquals(0xFF,CdRetainedProgrammeReturn.clearedPlcReturnByte());assertThrows(NullPointerException.class,()->CdRetainedProgrammeReturn.enter(null));}
+}

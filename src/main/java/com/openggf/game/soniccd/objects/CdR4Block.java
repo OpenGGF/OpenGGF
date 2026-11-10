@@ -7,6 +7,14 @@ import static com.openggf.game.soniccd.objects.CdSolidObject.Entry.*;
  */
 public final class CdR4Block {
     private CdR4Block() { }
+    public static final int OBJECT_ID=0x34; // N1ecc r4/object_index_1a.asm entry52, BlockObject.
+    /** Actual source/current private owner is mandatory. Primary-only Block invokes the SAME body. */
+    public static void run(PrimaryInputs inputs,LiveOwner owner){
+        java.util.Objects.requireNonNull(inputs);java.util.Objects.requireNonNull(owner);
+        if(inputs.placement().pool().state(inputs.wholeIndex()).id()!=OBJECT_ID)
+            throw new IllegalArgumentException("Actual TT Block ID34 required");
+        runPrimary(inputs,owner,CdR4Block::body);
+    }
     public static Outcome run(Inputs inputs) { return calculate(inputs, CdR4Block::body); }
     private static Tail body(Cut c) {
         if(c.b(0x24)==0) {

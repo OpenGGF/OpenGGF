@@ -173,10 +173,31 @@ public final class Cd3dRamp {
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
     }
 
+    public record PrimaryCall(CdObjectPool.Snapshot cut,CdObjectState source,Player expectedPlayer,int signedWord){
+        public PrimaryCall{Objects.requireNonNull(cut);Objects.requireNonNull(source);Objects.requireNonNull(expectedPlayer);
+            if(signedWord!=LAUNCH_SPEED&&signedWord!=-LAUNCH_SPEED)throw new IllegalArgumentException("Native Ramp Y velocity");}
+    }
+    @FunctionalInterface public interface PrimaryPublication{void publish(PrimaryCall call);}
+    private PrimaryPublication primaryPublication;private boolean running;
+    private transient PrimaryCall pendingPrimary;private transient CdObjectState.Identity pendingDraw;
+    public boolean isCurrentPrimaryCall(PrimaryCall call){return running&&primaryPublication!=null&&call!=null&&pendingPrimary==call;}
+    public boolean isCurrentDrawCall(CdObjectPool pool,CdObjectState.Identity id){return running&&pool==runtime.pool()&&id!=null&&pendingDraw==id;}
+    public static Cd3dRamp withPrimaryPublication(CdObjectPlacementRuntime p,Assets data,PrimaryPublication publication,DrawObjectCall draw){
+        var body=new Cd3dRamp(p,data,draw);body.primaryPublication=Objects.requireNonNull(publication);return body;
+    }
+    public static Cd3dRamp fromOriginalPresentAssets(CdObjectPlacementRuntime p,
+            com.openggf.game.soniccd.level.CdR11aAssets source,PrimaryPublication publication,DrawObjectCall draw) throws java.io.IOException {
+        CdOriginalPresentObjectSource.require(p,source);
+        return withPrimaryPublication(p,Assets.fromObjectAssets(source.openingObjects()),publication,draw);
+    }
     public Assets assets() { return assets; }
 
     /** One Obj3DRamp dispatch for the whole-pool dynamic slot currently holding ID $2A. */
     public Result run(int wholeIndex, Player player, Globals globals) {
+        if(primaryPublication!=null&&running)throw new IllegalStateException("Reentrant Ramp");running=true;
+        try{return runSelected(wholeIndex,player,globals);}finally{running=false;pendingPrimary=null;pendingDraw=null;}
+    }
+    private Result runSelected(int wholeIndex,Player player,Globals globals){
         Objects.requireNonNull(player, "player");
         Objects.requireNonNull(globals, "globals");
         var pool = runtime.pool();
@@ -193,6 +214,7 @@ public final class Cd3dRamp {
         switch (state.routine()) {                                             // MOVE.W Obj3DRamp_Index(pc,d0.w),d0 / JSR
             case 0 -> {
                 state = init(state);
+                if(primaryPublication!=null)pool.write(state); // Init prefix survives a later reached fault.
                 effects.add(new CallReturned(NativeCall.INIT));
                 state = main(state, player, effects);                          // BEQ.S Obj3DRamp_Main or fall-through
                 pool.write(state);
@@ -206,7 +228,8 @@ public final class Cd3dRamp {
             default -> throw new Unsupported3dRamp(UnsupportedBoundary.ROUTINE_DISPATCH, wholeIndex,
                     "oRoutine " + state.routine() + " indexes past Obj3DRamp_Index");
         }
-        drawObject.drawObject(pool, state.identity());                         // JSR R43LegacyDrawObject (= DrawObject)
+        pendingDraw=state.identity();
+        try{drawObject.drawObject(pool,pendingDraw);}finally{pendingDraw=null;} //                         // JSR R43LegacyDrawObject (= DrawObject)
         effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
         // MOVE.W oVar2A(a0),d0 / BRA.W CheckObjDespawn2 read the live slot after DrawObject, including a zeroed one.
         var reloaded = pool.state(wholeIndex);
@@ -280,7 +303,13 @@ public final class Cd3dRamp {
         }
         // .TimerSet: TST.W oYVel(a6) / BPL.S .LaunchDown; the write is staged for the caller's player owner.
         boolean movingUp = (short) player.yVelocityWord() < 0;
-        effects.add(new PlayerWrite(PlayerField.Y_VELOCITY, movingUp ? -LAUNCH_SPEED : LAUNCH_SPEED));
+        int value=movingUp?-LAUNCH_SPEED:LAUNCH_SPEED;
+        if(primaryPublication!=null){
+            runtime.pool().write(state); // Native object prefix precedes MOVE.W oYVel(a6), Draw and despawn.
+            var call=new PrimaryCall(runtime.pool().capture(),state,player,value);pendingPrimary=call;
+            try{primaryPublication.publish(call);}finally{pendingPrimary=null;}
+        }
+        effects.add(new PlayerWrite(PlayerField.Y_VELOCITY,value));
         return state;
     }
 
@@ -288,6 +317,14 @@ public final class Cd3dRamp {
     private CdObjectState animate(CdObjectState state) {
         var visual = assets.booster();
         var table = new CdObjectAnimation.AnimationTable(visual.animationTable(), 0, visual.animations().size());
+        if(primaryPublication!=null){
+            var pool=runtime.pool();pool.write(state);
+            var prefix=new CdObjectAnimation.Prefix(pool,state.identity().wholeIndex(),new CdObjectAnimation.Guard(){
+                public void before(CdObjectAnimation.Operation op){}
+                public void after(CdObjectAnimation.Operation op){}
+            });
+            prefix.step(table);return pool.state(state.identity().wholeIndex());
+        }
         var out = CdObjectAnimation.step(new CdObjectAnimation.State(
                 state.unsignedByte(ANIMATION), state.unsignedByte(PREVIOUS_ANIMATION),
                 state.unsignedByte(ANIMATION_FRAME), state.unsignedByte(ANIMATION_TIME),

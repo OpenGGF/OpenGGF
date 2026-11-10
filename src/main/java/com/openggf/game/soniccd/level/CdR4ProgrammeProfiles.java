@@ -7,7 +7,7 @@ import static com.openggf.game.soniccd.level.CdProgrammeDefinition.*;
  * Closed TT binding facts from FINAL 4c6055a95 and its independently authenticated
  * shared-parser-differences.json (6621161b8dddef1de1308157c16a3666be207900cb329c66477400ae68706c62).
  * Actual bytes are always read/authenticated by CdProgrammeReader. Finite products/read endpoints are source-qualified separately for Java and native-style reads.
- * No terrain Shape, player source, World or water-service admission is supplied.
+ * No legacy terrain Shape, live player, World or water-service admission is supplied.
  */
 final class CdR4ProgrammeProfiles {
     private CdR4ProgrammeProfiles() { }
@@ -75,6 +75,14 @@ final class CdR4ProgrammeProfiles {
         for(var r:p.ranges())b.raw(r,r.fileOffset(),r.length(),r.sha256());
         for(var operand:p.operands())b.operand(operand.fileOffset(),operand.encodedHex());
         initialTerrain(b,p);
+        // Shared original placement parser, preserving physical rows, every mask bit and null list.
+        var placementLayout=switch(p) {
+            case R41A,R41B,R41C,R41D -> CdObjectPlacements.Layout.ORIGINAL_TT1_360_82;
+            case R42A,R42B,R42C,R42D -> CdObjectPlacements.Layout.ORIGINAL_TT2_426_82;
+            case R43C,R43D -> CdObjectPlacements.Layout.ORIGINAL_TT3_32_80;
+        };
+        b.placements=new PlacementBinding(p.range("StageObjectMaps"),placementLayout,
+            (p.range("StageObjectMaps").length()-26)/8);
         for(var line:f.sourceRows().strip().lines().toList()) {
             var words=line.split(" ");var range=p.range(words[0]);int header=Integer.parseInt(words[1],16);
             var product=product(words);var java=product.javaProduct();var nativeRead=product.nativeInput();
@@ -88,6 +96,11 @@ final class CdR4ProgrammeProfiles {
                 Optional.of(java),Optional.of(nativeRead),true));
         }
         b.visual=new Visual(p.sonicFormat(),p.range("PlayerSprites"),p.range("PlayerGfxScript"),p.range("PlayerArtReadView"));
+        player(b,p);
+        // Original R43C's4-byte first spawn was absent from the public range catalogue.
+        // Actual USA MMD + LEA operand authenticated in bootstrap-operand-proof.json.
+        if(p==CdR4DataLayout.Programme.R43C)b.raw(CdProgrammeReader.LoadingBorrow.R43C_SPAWN,
+            0x2C42,4,"abf2bc5dad91e5d25ef707cf383a0c5645a3db96ca7fb9cb53f258d939cfe796");
         b.loadRole(CdProgrammeReader.LoadRole.PLC,b.joined("PLC",f.plcOffset(),f.plcBytes(),f.plcSha()));
         b.loadRole(CdProgrammeReader.LoadRole.PALETTE,p.range("PaletteTable"));
         Sections sections=switch(f.section()) {
@@ -109,6 +122,31 @@ final class CdR4ProgrammeProfiles {
         };
         b.load=new Load(f.roots().size(),f.maximumCount(),f.roots(),f.bodies(),
             f.encountered().stream().map(name->(Object)p.range(name)).toList(),palettes,cycles,f.cycleProgramme(),sections,background);
+    }
+    private record PlayerFacts(int zoneAct,int period,String special) { }
+    /** N objects/player.asm:149,737-740,2501-2504,2790-2802 and r4/scroll_* InitScroll:
+     * actual programme-local tables, shared validators/math; no copied player algorithm.
+     * Native TT zone is2 (raw0200/0201/0202); A/B/C,D are time1/0/2, independent of filename digits.
+     * No PPZ ramp is consumed: PlayerCheckBooster3dSurfaceType returns before its table.
+     */
+    private static void player(Builder b,CdR4DataLayout.Programme p) {
+        var f=switch(p) {
+            case R41A -> new PlayerFacts(0x0200,1,"unk_202C90");
+            case R41B -> new PlayerFacts(0x0200,0,"unk_202C2E");
+            case R41C -> new PlayerFacts(0x0200,2,"unk_202C68");
+            case R41D -> new PlayerFacts(0x0200,2,"unk_202C56");
+            case R42A -> new PlayerFacts(0x0201,1,"unk_202CE8");
+            case R42B -> new PlayerFacts(0x0201,0,"unk_202C2E");
+            case R42C -> new PlayerFacts(0x0201,2,"unk_202C68");
+            case R42D -> new PlayerFacts(0x0201,2,"unk_202C56");
+            case R43C -> new PlayerFacts(0x0202,2,"unk_202C42");
+            case R43D -> new PlayerFacts(0x0202,2,"unk_202C56");
+        };
+        b.player=new Player(f.zoneAct(),f.period(),CdR11aPlayerAssets.SourceGraph.R4,(Visual)b.visual,
+            Map.of(CdProgrammeReader.Role.ANI,p.range("PlayerAnims"),
+                CdProgrammeReader.Role.MINI,p.range("PlayerShrunkAnimationMap"),
+                CdProgrammeReader.Role.SPECIAL,p.range(f.special()),
+                CdProgrammeReader.Role.SINE,p.range("SineTable"),CdProgrammeReader.Role.ATAN,p.range("ATan2Table")));
     }
     private static Facts facts(CdR4DataLayout.Programme p) {
         return switch(p) {

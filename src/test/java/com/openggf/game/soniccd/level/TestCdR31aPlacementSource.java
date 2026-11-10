@@ -89,7 +89,7 @@ class TestCdR31aPlacementSource {
         assertThrows(IllegalArgumentException.class,()->new CdObjectPlacements.Placement(517,1,0,1,0,0xE0,0,CdObjectPlacements.Layout.R31A_517));
         assertThrows(IllegalArgumentException.class,()->new CdObjectPlacements.Placement(0,1,0,61,0,0xE0,0,CdObjectPlacements.Layout.R31A_517));
         assertThrows(NullPointerException.class,()->new CdObjectPlacements.Placement(0,1,0,1,0,0xE0,0,null));
-        assertEquals(List.of("LEGACY_497","R31A_517","ORIGINAL_461_60","ORIGINAL_358_60","ORIGINAL_72_64","ORIGINAL_640_60","ORIGINAL_822_60","ORIGINAL_79_60"),Arrays.stream(CdObjectPlacements.Layout.values()).map(Enum::name).toList());
+        assertEquals(List.of("LEGACY_497","R31A_517","ORIGINAL_461_60","ORIGINAL_358_60","ORIGINAL_72_64","ORIGINAL_640_60","ORIGINAL_822_60","ORIGINAL_79_60","ORIGINAL_TT1_360_82","ORIGINAL_TT2_426_82","ORIGINAL_TT3_32_80","ORIGINAL_PPZ1_497_64","ORIGINAL_PPZ2_488_64","ORIGINAL_PPZ3_61_64"),Arrays.stream(CdObjectPlacements.Layout.values()).map(Enum::name).toList());
         assertEquals(List.of("index","centreX","packedY","encodedId","subtype","periodFlags","subtype2","layout"),Arrays.stream(CdObjectPlacements.Placement.class.getRecordComponents()).map(c->c.getName()).toList());
     }
 

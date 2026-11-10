@@ -5,20 +5,32 @@ import java.io.IOException;
 import java.util.*;
 
 /** Internal authenticated TT DATA borrow. Public declaration values never construct a source owner. */
-final class CdProgrammeData {
+public final class CdProgrammeData {
     private final CdProgrammeReader reader;
     private final CdR4DataLayout.Programme programme;
     private CdProgrammeData(CdProgrammeReader reader) {
         this.reader=Objects.requireNonNull(reader);reader.requireRetained();
         programme=reader.definition().tt().orElseThrow(()->new IllegalArgumentException("Not a TT data definition"));
     }
-    static CdProgrammeData open(CdProgramAssets actual,CdR4DataLayout.Programme programme)throws IOException {
+    public static CdProgrammeData open(CdProgramAssets actual,CdR4DataLayout.Programme programme)throws IOException {
         Objects.requireNonNull(programme,"explicit TT programme");
         return fromReader(CdProgrammeReader.open(actual,programme.payload().stage()));
     }
     static CdProgrammeData fromReader(CdProgrammeReader actual) { return new CdProgrammeData(actual); }
     boolean ownsReader(CdProgrammeReader actual) { return reader==actual; }
-    CdR4DataLayout.Programme programme() { return programme; }
+    public CdR4DataLayout.Programme programme() { return programme; }
+    /** Revalidate the actual retained original image, never an equal descriptor. */
+    public void requireRetained() { reader.requireRetained(); }
+    /** Source-bound metadata only. IPX.RunR41/42/43 writes0200/0201/0202;
+     * the older reader's R3-only player-admission query remains unchanged. */
+    public int ordinaryZoneActWord() { return 0x200 | (programme.payload().stage().actNumber()-1); }
+    /** Same retained source and decoder/cache relation, never a newly opened equal programme. */
+    public CdStagePlayerSource playerSource()throws IOException { return reader.playerSource(); }
+    public CdObjectPlacements placements() { return reader.placements(); }
+    public CdLevelLoadingSource levelLoadingSource() { return reader.levelLoadingSource(); }
+    public CdProgrammeObjectSource objectSource() { return reader.objectSource(); }
+    public String mmdSha256() { return reader.mmdSha(); }
+    public String wholeDiscSha256() { return reader.discSha(); }
     CdAssetBytes view(CdR4DataLayout.Range declaration) { return reader.view(declaration); }
     CdAssetBytes canonicalInput(CdR4DataLayout.Range declaration) { return reader.canonicalInput(declaration); }
     CdAssetBytes javaInput(CdR4DataLayout.Range declaration) { return reader.javaInput(declaration); }

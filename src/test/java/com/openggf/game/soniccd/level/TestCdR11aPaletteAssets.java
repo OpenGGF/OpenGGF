@@ -21,6 +21,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /** Source authenticity uses supplied original media; constructed metadata never supplies a positive capability. */
 class TestCdR11aPaletteAssets {
@@ -42,7 +43,8 @@ class TestCdR11aPaletteAssets {
         CdR11aAssets owner; CdR11aPaletteAssets palettes; CdMmdImage image;
         try (var program = CdProgramAssets.open(cue(CdReleaseVariant.USA), Optional.of(CdReleaseVariant.USA), Optional.empty())) {
             owner = CdR11aAssetLoader.load(program, CdReleaseVariant.USA, CdStageKey.parse("R11A"));
-            image = program.mmd(CdNativeFile.R11A);
+            image = owner.internalReader().retainedOriginalR11Image();
+            assertSame(owner.sonic(), owner.internalReader().sonic());
             assertArrayEquals(ROUTINE_LITERAL, image.readFile(0x228, 152));
             assertArrayEquals(SOURCE_LITERAL, image.readFile(0x2C0, 84));
             assertEquals("10944706086aebf5803d68a3c5f4e8d3a6036520eacd9ecbd9d005f1b8d225f7", CdR11aProfile.sha256(SOURCE_LITERAL));
@@ -67,17 +69,18 @@ class TestCdR11aPaletteAssets {
             }
             for (int offset : new int[]{0x228, 0x230, 0x232, 0x27E, 0x282, 0x29E, 0x2C0, 0x2C4, 0x2C8, 0x313, 0x3FFFF}) {
                 byte[] changed = image.readFile(0, image.fileBytes()); changed[offset] ^= 1;
-                assertThrows(IOException.class, () -> CdR11aPaletteAssets.load(owner.profile(), owner.identity(), CdMmdImage.parse(changed)));
+                var changedSource = spy(program);
+                doReturn(CdMmdImage.parse(changed)).when(changedSource).mmd(CdNativeFile.R11A);
+                assertThrows(IOException.class, () -> CdR11aAssetLoader.load(changedSource, CdReleaseVariant.USA, CdStageKey.parse("R11A")));
             }
             var id = owner.identity();
-            assertThrows(IllegalArgumentException.class, () -> CdR11aPaletteAssets.load(owner.profile(),
-                    new CdR11aAssets.Identity(id.variant(), CdStageKey.parse("R11B"), id.file(), id.domain(), id.mmdSha256(), id.observedWholeDiscSha256()), image));
-            assertThrows(IllegalArgumentException.class, () -> CdR11aPaletteAssets.load(owner.profile(),
-                    new CdR11aAssets.Identity(id.variant(), id.stage(), CdNativeFile.R11B, id.domain(), id.mmdSha256(), id.observedWholeDiscSha256()), image));
-            assertThrows(IllegalArgumentException.class, () -> CdR11aPaletteAssets.load(owner.profile(),
-                    new CdR11aAssets.Identity(id.variant(), id.stage(), id.file(), CdMmdImage.Domain.RELOCATED_COPY, id.mmdSha256(), id.observedWholeDiscSha256()), image));
-            assertThrows(IllegalArgumentException.class, () -> CdR11aPaletteAssets.load(owner.profile(),
-                    new CdR11aAssets.Identity(id.variant(), id.stage(), id.file(), id.domain(), "0".repeat(64), id.observedWholeDiscSha256()), image));
+            for (var foreign : java.util.List.of(
+                    new CdR11aAssets.Identity(id.variant(), CdStageKey.parse("R11B"), id.file(), id.domain(), id.mmdSha256(), id.observedWholeDiscSha256()),
+                    new CdR11aAssets.Identity(id.variant(), id.stage(), CdNativeFile.R11B, id.domain(), id.mmdSha256(), id.observedWholeDiscSha256()),
+                    new CdR11aAssets.Identity(id.variant(), id.stage(), id.file(), CdMmdImage.Domain.RELOCATED_COPY, id.mmdSha256(), id.observedWholeDiscSha256()),
+                    new CdR11aAssets.Identity(id.variant(), id.stage(), id.file(), id.domain(), "0".repeat(64), id.observedWholeDiscSha256()))) {
+                assertThrows(IllegalArgumentException.class, () -> CdR11aPaletteAssets.load(componentOwner(owner, foreign, image), owner.internalReader()));
+            }
         }
         assertSame(owner.identity(), palettes.identity()); assertSame(palettes, owner.paletteCycle());
         assertEquals(6, palettes.views().size()); assertEquals(6, palettes.scripts().size());
@@ -86,6 +89,12 @@ class TestCdR11aPaletteAssets {
             assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A, CdMmdImage.Domain.ORIGINAL_WORD_RAM, SCRIPT_OFFSETS[i], 8), view.scriptRange());
             assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A, CdMmdImage.Domain.ORIGINAL_WORD_RAM, SCRIPT_OFFSETS[i] + 8, 6), view.coloursRange());
             assertSame(view.data(), palettes.scripts().get(i));
+            var common = owner.internalReader().loadTables().cycles().get(i);
+            assertSame(common.script(), view.data().script());
+            assertSame(common.colors(), view.data().colours());
+            var p = CdPpzDataLayout.Programme.R11A;
+            assertSame(owner.internalReader().view(p.range("PalCycleScript" + (i + 1))), view.data().script());
+            assertSame(owner.internalReader().view(p.range("PalCycleColors" + (i + 1))), view.data().colours());
             assertArrayEquals(Arrays.copyOfRange(SOURCE_LITERAL, i * 14, i * 14 + 8), view.data().script().copy());
             assertArrayEquals(Arrays.copyOfRange(SOURCE_LITERAL, i * 14 + 8, i * 14 + 14), view.data().colours().copy());
             assertArrayEquals(image.readFile(SCRIPT_OFFSETS[i], 8), view.data().script().copy());
@@ -106,12 +115,54 @@ class TestCdR11aPaletteAssets {
             var owner = CdR11aAssetLoader.load(program, variant, CdStageKey.parse("R11A"));
             assertThrows(UnsupportedOperationException.class, owner::paletteCycle);
             var original = program.mmd(CdNativeFile.R11A);
-            assertThrows(UnsupportedOperationException.class, () -> CdR11aPaletteAssets.load(owner.profile(), owner.identity(), original));
-            var usa = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
-            var assertedUsa = new CdR11aAssets.Identity(CdReleaseVariant.USA, usa.stage(), usa.file(), usa.domain(),
-                    usa.expectedMmdSha256(), owner.identity().observedWholeDiscSha256());
-            assertThrows(IOException.class, () -> CdR11aPaletteAssets.load(usa, assertedUsa, original));
+            assertThrows(UnsupportedOperationException.class, () -> CdR11aPaletteAssets.load(owner, null));
+            try (var usa = CdProgramAssets.open(cue(CdReleaseVariant.USA), Optional.of(CdReleaseVariant.USA), Optional.empty())) {
+                var wrongRegion = spy(usa);
+                doReturn(original).when(wrongRegion).mmd(CdNativeFile.R11A);
+                assertThrows(IOException.class, () -> CdR11aAssetLoader.load(wrongRegion, CdReleaseVariant.USA, CdStageKey.parse("R11A")));
+            }
         }
+    }
+
+    /** Replacing exact custody with equal metadata must fail before creating a palette owner. */
+    @Test
+    void independentEqualReadersAndComponentOwnersCannotSupplyTheAggregatesPaletteSource() throws Exception {
+        CdR11aAssets first; CdR11aAssets second;
+        try (var program = CdProgramAssets.open(cue(CdReleaseVariant.USA), Optional.of(CdReleaseVariant.USA), Optional.empty())) {
+            first = CdR11aAssetLoader.load(program, CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+            second = CdR11aAssetLoader.load(program, CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+        }
+        assertEquals(first.identity(), second.identity());
+        assertNotSame(first.internalReader(), second.internalReader());
+        assertNotSame(first.internalReader().retainedOriginalR11Image(), second.internalReader().retainedOriginalR11Image());
+        var cache = CdR11aAssets.class.getDeclaredField("paletteCycle"); cache.setAccessible(true);
+        assertNull(cache.get(first)); assertNull(cache.get(second));
+        assertThrows(IllegalArgumentException.class, () -> CdR11aPaletteAssets.load(first, second.internalReader()));
+        assertThrows(IllegalArgumentException.class, () -> CdR11aPaletteAssets.load(first, null));
+        var component = componentOwner(first, first.identity(), first.internalReader().retainedOriginalR11Image());
+        assertThrows(IllegalArgumentException.class, () -> CdR11aPaletteAssets.load(component, first.internalReader()));
+        assertThrows(IllegalArgumentException.class, component::paletteCycle);
+        assertNull(cache.get(first)); assertNull(cache.get(second)); assertNull(cache.get(component));
+        var firstPalette = first.paletteCycle();
+        assertSame(firstPalette, first.paletteCycle());
+        assertNotSame(firstPalette, second.paletteCycle());
+        assertSame(first.identity(), firstPalette.identity());
+        assertArrayEquals(SOURCE_LITERAL, concat(firstPalette));
+        first.internalReader().requireOriginalR11Image(first.internalReader().retainedOriginalR11Image());
+        assertThrows(IllegalArgumentException.class, () -> first.internalReader().requireOriginalR11Image(second.internalReader().retainedOriginalR11Image()));
+    }
+
+    private static CdR11aAssets componentOwner(CdR11aAssets source, CdR11aAssets.Identity identity, CdMmdImage image) {
+        return new CdR11aAssets(source.profile(), identity, image, source.blocksDecode(), source.levelTilesDecode(),
+                source.terrain(), source.loadPlan(), source.placements(), source.sonic(), source.player(), source.shield());
+    }
+    private static byte[] concat(CdR11aPaletteAssets palettes) {
+        byte[] bytes = new byte[84]; int at = 0;
+        for (var script : palettes.scripts()) {
+            System.arraycopy(script.script().copy(), 0, bytes, at, 8); at += 8;
+            System.arraycopy(script.colours().copy(), 0, bytes, at, 6); at += 6;
+        }
+        return bytes;
     }
 
     private static Path cue(CdReleaseVariant variant) throws Exception {

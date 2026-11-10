@@ -1,6 +1,5 @@
 package com.openggf.game.soniccd.level;
 
-import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.resources.CdLevelPaletteCycle;
@@ -31,8 +30,10 @@ public final class CdR11aPaletteAssets {
     }
 
     /** Package-owned authenticated binding; public metadata records alone cannot publish a source owner. */
-    static CdR11aPaletteAssets load(CdR11aProfile profile, CdR11aAssets.Identity identity, CdMmdImage image) throws IOException {
-        Objects.requireNonNull(profile, "profile"); Objects.requireNonNull(identity, "identity");
+    static CdR11aPaletteAssets load(CdR11aAssets owner, CdProgrammeReader reader) throws IOException {
+        Objects.requireNonNull(owner, "actual R11A aggregate");
+        var profile=Objects.requireNonNull(owner.profile(), "profile");
+        var identity=Objects.requireNonNull(owner.identity(), "identity");
         if (profile.variant() != CdReleaseVariant.USA || identity.variant() != CdReleaseVariant.USA) {
             throw new UnsupportedOperationException("Palette-cycle sources are reviewed only for USA R11A Present");
         }
@@ -40,14 +41,20 @@ public final class CdR11aPaletteAssets {
                 || !profile.expectedMmdSha256().equals(identity.mmdSha256())) {
             throw new IllegalArgumentException("Palette source owner/profile identity mismatch");
         }
-        // Verify the entire actual immutable MMD before reading any source view. Asserted metadata or matching
-        // operand/header bytes alone cannot authenticate altered payloads or a different regional image.
-        profile.verifyProgram(identity.file(), identity.domain(), image);
+        // Exact loader-established reader/image/aggregate custody precedes every source borrow.
+        // The common table parser owns extraction; this adapter only retains legacy typed products.
+        owner.requireProgrammeReader(reader);
+        var parsed=reader.loadTables();var declarations=reader.definition().load().cycles();
+        if(parsed.cycleProgramme()!=CdProgrammeDefinition.CycleProgramme.STANDARD_CONFIGURED
+                || !parsed.directCycles().isEmpty() || parsed.cycles().size()!=6 || declarations.size()!=6)
+            throw new IllegalArgumentException("Original R11A requires six configured palette scripts");
         List<View> views = new ArrayList<>();
-        for (int cycle = 0; cycle < 6; cycle++) {
-            int offset = 0x2C0 + 14 * cycle;
-            var script = range(offset, 8); var colours = range(offset + 8, 6);
-            views.add(new View(cycle, script, colours, new CdLevelPaletteCycle.Script(script.read(image), colours.read(image))));
+        for (int cycle = 0; cycle < parsed.cycles().size(); cycle++) {
+            var source=parsed.cycles().get(cycle);var declaration=declarations.get(cycle);
+            if(source.kind()!=CdProgrammeDefinition.CycleKind.STANDARD)
+                throw new IllegalArgumentException("Original R11A palette script format differs");
+            views.add(new View(cycle, range(reader,declaration.script()), range(reader,declaration.colors()),
+                    new CdLevelPaletteCycle.Script(source.script(),source.colors())));
         }
         return new CdR11aPaletteAssets(identity, views);
     }
@@ -56,7 +63,8 @@ public final class CdR11aPaletteAssets {
     public List<View> views() { return views; }
     public List<CdLevelPaletteCycle.Script> scripts() { return scripts; }
 
-    private static CdR11aProfile.FileRange range(int offset, int length) {
-        return new CdR11aProfile.FileRange(CdNativeFile.R11A, CdMmdImage.Domain.ORIGINAL_WORD_RAM, offset, length);
+    private static CdR11aProfile.FileRange range(CdProgrammeReader reader, CdProgrammeDefinition.Slice source) {
+        return new CdR11aProfile.FileRange(reader.file(), CdMmdImage.Domain.ORIGINAL_WORD_RAM,
+                reader.fileOffset(source.key())+source.offset(), source.length());
     }
 }

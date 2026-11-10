@@ -65,7 +65,9 @@ public final class CdObjectState {
         SPRINGBOARD_FLING(0x2A),
         // R13 objects/r1/boss.asm: raw overlapping BYTE aliases only, no boss owner/state added.
         BOSS_ANIMATION_FLAGS(0x1F), BOSS_TIMER(0x2A), BOSS_COUNTER(0x2B), BOSS_FLAGS(0x2C),
-        BOSS_PARAMETER(0x2D), BOSS_HIT_TIMER(0x34), BOSS_SHAKE(0x35), BOSS_LIMB_SPEED(0x3C);
+        BOSS_PARAMETER(0x2D), BOSS_HIT_TIMER(0x34), BOSS_SHAKE(0x35), BOSS_LIMB_SPEED(0x3C),
+        // r4/bubble_spawner.asm: init reload and burst flags; native BYTE storage aliases only.
+        WATER_BUBBLE_RELOAD(0x33), WATER_BUBBLE_BURST_HIGH(0x36);
         private final int offset;
         ByteField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }

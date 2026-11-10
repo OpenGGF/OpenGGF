@@ -27,15 +27,21 @@ class SonicCdLevelGeometry extends AbstractLevel {
 
     SonicCdLevelGeometry(CdR11aTerrain terrain, CdAssetBytes initialPalette, CdR11aLoadPlan.Bounds bounds) {
         this(Objects.requireNonNull(terrain, "terrain").stageTerrain(), initialPalette, 0,
-                Objects.requireNonNull(bounds, "bounds").left(), bounds.right(), bounds.top(), bounds.bottom());
+                Objects.requireNonNull(bounds, "bounds").left(), bounds.right(), bounds.top(), bounds.bottom(), "R11A");
     }
 
     /** Shared format projection only; a constructed model or numeric zone is not load admission. */
     SonicCdLevelGeometry(CdStageTerrain terrain, CdAssetBytes initialPalette, int nativeZone,
                          int left, int right, int top, int bottom) {
+        this(terrain,initialPalette,nativeZone,left,right,top,bottom,stageLabel(terrain));
+    }
+
+    /** Same converter for an authenticated generic DATA source; no legacy shape is fabricated. */
+    SonicCdLevelGeometry(CdStageTerrain terrain,CdAssetBytes initialPalette,int nativeZone,
+                         int left,int right,int top,int bottom,String sourceStageLabel) {
         super(nativeZone);
         Objects.requireNonNull(terrain, "terrain");
-        nativeStageLabel = stageLabel(terrain);
+        nativeStageLabel = Objects.requireNonNull(sourceStageLabel,"actual source stage label");
         loadPalettes(Objects.requireNonNull(initialPalette, "initialPalette"));
         loadPatterns(terrain);
         loadCollisionShapes(terrain.collision());
@@ -141,7 +147,7 @@ class SonicCdLevelGeometry extends AbstractLevel {
         // Decode independent zero descriptors rather than sharing mutable ChunkDesc.EMPTY.
         blocks[0].fromSegaFormat(new byte[GRID_SIDE * GRID_SIDE * 2], GRID_SIDE * GRID_SIDE);
         for (int id = 1; id < blockCount; id++) {
-            blocks[id] = new ResidentBoundedBlock(terrain, id);
+            blocks[id] = new ResidentBoundedBlock(terrain, id, nativeStageLabel);
         }
     }
 
@@ -184,11 +190,13 @@ class SonicCdLevelGeometry extends AbstractLevel {
     private static final class ResidentBoundedBlock extends Block {
         private final CdStageTerrain terrain;
         private final int nativeChunkId;
+        private final String sourceStageLabel;
 
-        ResidentBoundedBlock(CdStageTerrain terrain, int nativeChunkId) {
+        ResidentBoundedBlock(CdStageTerrain terrain, int nativeChunkId,String sourceStageLabel) {
             super(GRID_SIDE);
             this.terrain = terrain;
             this.nativeChunkId = nativeChunkId;
+            this.sourceStageLabel=sourceStageLabel;
             for (int y = 0; y < GRID_SIDE; y++) {
                 for (int x = 0; x < GRID_SIDE; x++) {
                     var word = terrain.chunkWord(nativeChunkId, x, y);
@@ -213,7 +221,7 @@ class SonicCdLevelGeometry extends AbstractLevel {
             ChunkDesc desc = super.getChunkDesc(x, y);
             if (desc == null) {
                 var word = terrain.chunkWord(nativeChunkId, x, y);
-                throw new UnsupportedOperationException(stageLabel(terrain) + " native chunk " + nativeChunkId + " cell " + x + "," + y
+                throw new UnsupportedOperationException(sourceStageLabel + " native chunk " + nativeChunkId + " cell " + x + "," + y
                         + " requires unloaded drawing block " + word.renderBlockIndex()
                         + "; raw word=0x" + Integer.toHexString(word.rawWord())
                         + ", native collision index=" + word.collisionBlockIndex());

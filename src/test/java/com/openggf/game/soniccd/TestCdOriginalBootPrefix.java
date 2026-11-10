@@ -27,6 +27,14 @@ class TestCdOriginalBootPrefix {
         @Test void bothMainClearsPrecedeTitleAndFirstStorageSearch() throws Exception {
             var calls=prepare(directory).boot().state().calls();assertEquals(2,Collections.frequency(calls,CdOriginalBootPrefix.Call.MAIN_VARIABLES_CLEAR));assertTrue(calls.indexOf(CdOriginalBootPrefix.Call.TITLE_FLAGS_90)>calls.lastIndexOf(CdOriginalBootPrefix.Call.MAIN_VARIABLES_CLEAR));assertTrue(calls.indexOf(CdOriginalBootPrefix.Call.BRAM_VARIABLES_CLEAR)<calls.indexOf(CdOriginalBootPrefix.Call.BACKEND_INITIALIZED));assertTrue(calls.indexOf(CdOriginalBootPrefix.Call.BACKEND_INITIALIZED)<calls.indexOf(CdOriginalBootPrefix.Call.STORAGE_SEARCH));
         }
+        @Test void historicalMdAndBuramClearLogsDoNotAuthorizeTheFinalStageBank() throws Exception {
+            var boot=prepare(directory).boot();
+            assertTrue(boot.state().calls().contains(CdOriginalBootPrefix.Call.WORK_FILE_CLEAR));
+            assertThrows(com.openggf.game.soniccd.resources.CdBlockDefinitionStaging.UnknownRead.class,
+                    () -> boot.state().blockDefinitions().unsignedByte(0));
+            assertThrows(com.openggf.game.soniccd.resources.CdBlockDefinitionStaging.UnknownRead.class,
+                    () -> boot.state().blockDefinitions().unsignedWord(8190));
+        }
         @Test void genuineInitializationFactsAndTitle90AreNotLevelStart() throws Exception {
             var v=prepare(directory).boot().state();assertEquals(CdProgramInitialization.KnownBit.SET,v.initialization().controllerSetupBit());assertEquals(CdProgramInitialization.MarkerKnowledge.DIFFERS_FROM_INIT,v.initialization().initMarker());assertEquals(0,v.initialization().versionCache().value());assertEquals(OptionalInt.of(0x90),v.progress().titleFlagsByte());assertEquals(CdProgramInitialization.Branch.DO_INIT,CdProgramInitialization.selectStartBranch(v.initialization()));
         }

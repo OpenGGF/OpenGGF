@@ -8,6 +8,12 @@ import static com.openggf.game.soniccd.objects.CdSolidObject.Entry.*;
 public final class CdR4Swing {
     private CdR4Swing() { }
     public static Outcome run(Inputs inputs) { return calculate(inputs, CdR4Swing::body); }
+    /** Original primary-only occurrence; same native body, synchronous shared publications. */
+    public static void run(PrimaryInputs in,LiveOwner owner) {
+        if(in.placement().pool().state(in.wholeIndex()).id()!=0x29)
+            throw new IllegalArgumentException("Original Swing requires current ID29");
+        runPrimary(in,owner,CdR4Swing::body);
+    }
     private static Tail body(Cut c) {
         if(c.b(0x24)==0) {
             c.ab(0x24,2);c.b(1,c.b(1)|4);c.b(0x18,4);c.l(4,c.in.data().mapping(Mapping.SWING));c.w(2,0x340);

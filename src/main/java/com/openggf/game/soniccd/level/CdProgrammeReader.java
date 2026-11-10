@@ -11,7 +11,8 @@ final class CdProgrammeReader {
     enum Borrow { MUSIC_CONSUMER,MUSIC_COMMANDS,SCROLL_CONSUMER,COMMON_EVENTS,ZONE_DIRECTORY,
                   CCZ_DISPATCH,ACT_DIRECTORY,CCZ12,HUD_UPDATE,HUD_RESET,HUD_DIVISORS,HUD_VINT }
     enum Blocks { R31 }
-    enum Role { ANI, MINI, SPECIAL, SINE, ATAN, MAP, DPLC, ART, CHUNKS, FG, BG, COLLISION, ANGLE, HEIGHT, WIDTH, PLACEMENTS }
+    enum LoadingBorrow { R43C_SPAWN }
+    enum Role { ANI, MINI, SPECIAL, SINE, ATAN, MAP, DPLC, ART, CHUNKS, FG, BG, COLLISION, ANGLE, HEIGHT, WIDTH, PLACEMENTS, RAMP }
     enum LoadRole { PLC, PALETTE, CYCLES, SECTIONS, BG_POINTERS, PAL_TITLE, PAL_SELECT, PAL_SONIC, PAL_LEVEL, PAL_END }
     private record Source(CdProgrammeDefinition.Compressed definition,int header) { }
     private final CdProgrammeDefinition definition;
@@ -29,6 +30,14 @@ final class CdProgrammeReader {
     private CdObjectPlacements placements;
     private CdStageTerrain terrain;
     private CdProgrammeLoadTables loadTables;
+    private CdStagePlayerSource playerSource;
+    private CdR11aPlayerAssets originalR11Player;
+    private CdR11aLoadPlan originalR11Plan;
+    private CdR11aLoadPlan.Entry standardPpzEntry;
+    private CdR11aTerrainProducts originalR11Terrain;
+    private CdLevelLoadingSource loadingSource;
+    private CdProgrammeObjectSource objectSource;
+    private final Map<CdProgrammeObjectSource.Table,CdAssetBytes> objectViews=new EnumMap<>(CdProgrammeObjectSource.Table.class);
 
     private CdProgrammeReader(CdProgrammeDefinition definition,CdMmdImage image,String discSha)throws IOException {
         this.definition=definition;this.image=image;this.discSha=discSha;
@@ -80,10 +89,56 @@ final class CdProgrammeReader {
                 || !payload.stage().equals(selected))throw new IOException(name+" catalogue stage/file/release differs");
         return new CdProgrammeReader(definition,actual.mmd(definition.file()),actual.identity().normalizedSha256());
     }
+    /** Fixed package-owned bridge for the existing actual-media R11A loader. The image is
+     * borrowed from THIS reader; no caller image, descriptor or arbitrary address is admitted. */
+    CdMmdImage retainedOriginalR11Image() {
+        if(definition!=CdProgrammeDefinition.select(CdStagePayload.R11A.stage()))
+            throw new IllegalArgumentException("The existing original R11A loader requires its canonical reader");
+        requireRetained();return image;
+    }
+    CdPpzDataLayout.Programme standardPpzProgramme(){
+        if(definition==CdProgrammeDefinition.select(CdStagePayload.R11A.stage()))return CdPpzDataLayout.Programme.R11A;
+        if(definition==CdProgrammeDefinition.select(CdStagePayload.R11B.stage()))return CdPpzDataLayout.Programme.R11B;
+        throw new IllegalArgumentException("The existing original R11A loader requires its canonical reader");
+    }
+    CdMmdImage retainedStandardPpzImage(){
+        if(standardPpzProgramme()==CdPpzDataLayout.Programme.R11A)return retainedOriginalR11Image();
+        requireRetained();return image;
+    }
+    CdAssetBytes standardPpzLoadingView(CdPpzProgrammeProfiles.R11LoadingView role){
+        return view(CdPpzProgrammeProfiles.loadingKey(standardPpzProgramme(),role));
+    }
+    int standardPpzLoadingOffset(CdPpzProgrammeProfiles.R11LoadingView role){
+        return CdPpzProgrammeProfiles.loadingOffset(standardPpzProgramme(),role);
+    }
+    synchronized CdR11aLoadPlan.Entry standardPpzEntry(){
+        var p=standardPpzProgramme();
+        if(p==CdPpzDataLayout.Programme.R11A)return originalR11LoadPlan().entry();
+        retainedStandardPpzImage();
+        if(standardPpzEntry==null)standardPpzEntry=CdR11aLoadPlan.readEntry(
+            ()->view(p.range("LevelDataIndex")),()->view(p.range("LevelStartLoc")),()->view(p.range("CamBounds")),
+            bytes->CdR11aLoadPlan.decodeLevelIndex(bytes,(0x200000+p.range("Art_LevelTiles").fileOffset()),
+                (0x200000+p.range("LevelBlocks").fileOffset()),(0x200000+p.range("LevelChunks").fileOffset()),0x81,0x0505),
+            ()->{
+                var layouts=view(p.range("LevelLayouts"));
+                CdR11aLoadPlan.validatePlanePointers(layouts,p.range("LevelLayouts").fileOffset(),
+                    p.range("ForegroundRead").fileOffset(),p.range("BackgroundRead").fileOffset());
+                CdR11aLoadPlan.validateCollisionPointers(view(CdPpzProgrammeProfiles.R11PastLoadingView.COLLISION_INDEX),
+                    (0x200000+p.range("LevelCollision").fileOffset()));
+            });
+        return standardPpzEntry;
+    }
+    void requireOriginalR11Image(CdMmdImage actual) {
+        if(actual!=image)throw new IllegalArgumentException("Foreign original R11A retained image");
+        retainedOriginalR11Image();
+    }
     private String name() { return definition.payload().name(); }
-    private CdAssetBytes read(int offset,int length) {
-        if(offset<0 || length<0 || offset>image.fileBytes() || length>image.fileBytes()-offset)
-            throw new IllegalArgumentException(name()+" finite original span");
+    private CdAssetBytes read(int offset,int length) {return retainedSpan(image,offset,length,name());}
+    /** Shared finite original-file reader. Caller authenticates its private retained image relation. */
+    static CdAssetBytes retainedSpan(CdMmdImage image,int offset,int length,String name){
+        Objects.requireNonNull(image);
+        if(offset<0||length<0||offset>image.fileBytes()||length>image.fileBytes()-offset)
+            throw new IllegalArgumentException(name+" finite original span");
         return CdAssetBytes.copyOf(image.readFile(offset,length));
     }
     private void verifyImage()throws IOException {
@@ -102,10 +157,46 @@ final class CdProgrammeReader {
         Objects.requireNonNull(key);var bytes=views.get(key);
         if(bytes==null) {
             var fixed=definition.borrowed().get(key);
-            if(fixed!=null) {bytes=read(fixed.offset(),fixed.length());views.put(key,bytes);}
+            if(fixed!=null) {
+                bytes=read(fixed.offset(),fixed.length());
+                if(fixed.sha()!=null && !fixed.sha().equals(CdR11aProfile.sha256(bytes.copy())))
+                    throw new IllegalArgumentException(name()+" original borrowed source differs: "+key);
+                views.put(key,bytes);
+            }
         }
         if(bytes==null)throw new IllegalArgumentException(name()+" foreign fixed source key: "+key);
         return bytes;
+    }
+    /** Finite original R41 script view, anchored by its authenticated adjacent definition.
+     * Whole original image retention is checked before the borrow. No arbitrary public address reader. */
+    synchronized CdAssetBytes loadingAnimationTables(){
+        requireRetained();var p=definition.tt().orElseThrow();
+        if(p!=CdR4DataLayout.Programme.R41A)throw new UnsupportedOperationException("No selected original loading script profile");
+        int end=p.range("StageDataIndex").fileOffset();return read(end-3*82,3*82);
+    }
+    /** Finite semantic object tables only. Caller cannot supply an arbitrary address or equal descriptor. */
+    synchronized CdAssetBytes objectView(CdProgrammeObjectSource.Table table){
+        Objects.requireNonNull(table);
+        if(definition.tt().orElse(null)!=CdR4DataLayout.Programme.R41A)
+            throw new UnsupportedOperationException("Original object table profile currently binds R41A only");
+        var cached=objectViews.get(table);if(cached!=null)return cached;
+        var bytes=table==CdProgrammeObjectSource.Table.DISPATCH?view(CdR4DataLayout.Programme.R41A.range("ObjectIndex")):read(table.fileOffset(),table.length());
+        if(!table.sha256().equals(CdR11aProfile.sha256(bytes.copy())))throw new IllegalArgumentException("Retained original object table differs: "+table);
+        objectViews.put(table,bytes);return bytes;
+    }
+    /** One semantic reached BubbleSpawner pattern BYTE. Raw pointer and unsigned index stay intact.
+     * The finite owner includes the preceding complete RTS and following complete USA CMPI.B, not
+     * arbitrary original-image bytes. Unknown dirty addresses stop at this read after child stores. */
+    int bubblePatternByte(int pointerBits,int unsignedIndex){
+        if(definition.tt().orElse(null)!=CdR4DataLayout.Programme.R41A)throw new UnsupportedOperationException("Original bubble pattern source profile");
+        if((unsignedIndex&~255)!=0)throw new IllegalArgumentException("Bubble pattern unsigned BYTE index");
+        var table=CdProgrammeObjectSource.Table.BUBBLE_PATTERN_READS;long base=Integer.toUnsignedLong(table.nativeAddress());
+        long address=Integer.toUnsignedLong(pointerBits)+unsignedIndex;
+        if(address<base||address>=base+table.length())throw new CdProgrammeObjectSource.UnownedBubblePatternRead(pointerBits,unsignedIndex);
+        return objectView(table).unsignedByte(Math.toIntExact(address-base));
+    }
+    synchronized CdProgrammeObjectSource objectSource(){
+        if(objectSource==null)objectSource=CdProgrammeObjectSource.fromReader(this);return objectSource;
     }
     private Source source(Object key) {
         var source=compressed.get(Objects.requireNonNull(key));
@@ -151,12 +242,41 @@ final class CdProgrammeReader {
     private CdProgrammeDefinition.R3 r3() {
         return definition.r3().orElseThrow(()->new UnsupportedOperationException(name()+" has no R3 terrain/player binding"));
     }
-    int ordinaryZoneActWord() { return r3().ordinaryZoneActWord(); }
+    CdProgrammeDefinition.Player playerBinding() {
+        if(definition()!=definition)throw new IllegalArgumentException("Selected player definition and retained source differ");
+        // Keep the historical unowned-family error, without reading or staging any table.
+        return definition.player().orElseGet(()->{r3();throw new IllegalStateException("Missing reviewed player binding");});
+    }
+    int ordinaryZoneActWord() { return playerBinding().ordinaryZoneActWord(); }
+    int playerMappingAddress() { return 0x200000+fileOffset(playerBinding().visual().mapping()); }
+    /** Identity is checked against private retained products, never against public equal metadata. */
+    void requirePlayerRelation(CdSonicVisualAssets selected,int mapping) {
+        var binding=playerBinding();var span=spans.get(binding.visual().mapping());
+        if(selected!=sonic.orElseThrow() || span==null || mapping!=0x200000+span.offset())
+            throw new IllegalArgumentException("Selected player visual/mapping and retained source differ");
+    }
+    void requirePlayerTerrain(CdStageTerrain selected) {
+        if(selected!=terrain)throw new IllegalArgumentException("Selected player terrain and retained source differ");
+    }
+    CdAssetBytes playerRole(Role role) {
+        // The existing R3 path preserves its exact role/read/error order.
+        if(definition.tt().isEmpty())return role(role);
+        var key=playerBinding().roles().get(Objects.requireNonNull(role));
+        if(key==null)throw new IllegalArgumentException("Unowned player table role: "+role);
+        var selected=role(role);
+        if(selected!=views.get(key))throw new IllegalArgumentException("Selected player table and retained source differ: "+role);
+        return selected;
+    }
     CdStageTerrain.Shape terrainShape() { return r3().shape(); }
     CdAssetBytes role(Role role) {
         var data=definition.terrain();
         if(data.isPresent()) {
             var key=data.orElseThrow().roles().get(Objects.requireNonNull(role));
+            if(key!=null)return view(key);
+        }
+        var player=definition.player();
+        if(player.isPresent()) {
+            var key=player.orElseThrow().roles().get(Objects.requireNonNull(role));
             if(key!=null)return view(key);
         }
         return view(r3().roles().get(Objects.requireNonNull(role)));
@@ -185,6 +305,60 @@ final class CdProgrammeReader {
         return key;
     }
     int loadOutputBytes(Object key) { return source(key).definition().output(); }
+    /** One semantic PPZ DATA cache per retained reader. The original A path delegates to
+     * its existing bridge, preserving that source/read/error order and product identity.
+     * Other registered graphs cannot fill this cache; data construction grants no lifetime. */
+    synchronized CdR11aPlayerAssets ppzPlayerAssets(){
+        if(definition==CdProgrammeDefinition.select(CdStagePayload.R11A.stage()))return originalR11PlayerAssets();
+        if(originalR11Player==null)originalR11Player=CdR11aPlayerAssets.fromPpzProgramme(this);
+        else requireRetained();
+        return originalR11Player;
+    }
+    /** Existing actual R11A caller and common DATA adapter share one immutable Player product.
+     * All five extra source reads stay lazy at the original loader's player-read cut.
+     * A cache hit rechecks retained custody; no capture or equal reader can select this product. */
+    synchronized CdR11aPlayerAssets originalR11PlayerAssets() {
+        if(originalR11Player==null)originalR11Player=CdR11aPlayerAssets.fromOriginalR11Programme(this);
+        else retainedOriginalR11Image();
+        return originalR11Player;
+    }
+    /** Original USA R11A DATA products; no legacy Shape or current block-staging authority. */
+    synchronized CdR11aTerrainProducts originalR11TerrainProducts()throws IOException {
+        if(originalR11Terrain==null)originalR11Terrain=new CdR11aTerrainProducts(this);
+        else retainedOriginalR11Image();
+        return originalR11Terrain;
+    }
+    synchronized void requireOriginalR11TerrainProducts(CdR11aAssets.NemesisRead blocks,
+            CdR11aAssets.NemesisRead tiles,CdR11aTerrain terrain) {
+        if(originalR11Terrain==null)throw new IllegalArgumentException("No retained original R11A terrain products");
+        originalR11Terrain.require(blocks,tiles,terrain);
+    }
+    /** Original USA R11A plan retains the common parser and revalidates its exact source on reuse. */
+    synchronized CdR11aLoadPlan originalR11LoadPlan() {
+        if(originalR11Plan==null)originalR11Plan=CdR11aLoadPlan.fromOriginalReader(this);
+        else retainedOriginalR11Image();
+        return originalR11Plan;
+    }
+    /** One immutable borrow per actual retained reader; no reopen or equal-owner substitution. */
+    synchronized CdStagePlayerSource playerSource()throws IOException {
+        if(playerSource==null)playerSource=CdStagePlayerSource.fromProgramme(this);
+        return playerSource;
+    }
+    synchronized CdLevelLoadingSource levelLoadingSource() {
+        if(loadingSource==null)loadingSource=CdLevelLoadingSource.fromProgramme(this);
+        else if(loadingSource.completion()==CdLevelLoadingSource.Completion.STANDARD)retainedStandardPpzImage();
+        return loadingSource;
+    }
+    /** Only the authenticated bootstrap operand immediately preceding its registered bounds table.
+     * InitScroll ends with MOVE.W #focusX,scroll_focus_x; BRA.W, then the bounds table.
+     * A foreign declaration cannot select a read, even if its offset/bytes are equal. */
+    int loadingCameraCentreX(CdR4DataLayout.Range bounds) {
+        var selected=definition.tt().orElseThrow();
+        if(selected.ranges().stream().noneMatch(r->r==bounds))throw new IllegalArgumentException("Foreign bootstrap bounds");
+        int at=bounds.fileOffset()-10;var instruction=read(at,6);
+        if(instruction.unsignedWord(0)!=0x31FC||instruction.unsignedWord(4)!=0xF7A0)throw new IllegalArgumentException("Original focus-X store differs");
+        return instruction.unsignedWord(2);
+    }
     synchronized CdObjectPlacements placements() {
         if(placements==null)placements=CdObjectPlacements.decodeProgramme(this);
         return placements;

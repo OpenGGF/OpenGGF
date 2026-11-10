@@ -3,11 +3,17 @@ import static com.openggf.game.soniccd.objects.CdR4SolidMover.*;
 import static com.openggf.game.soniccd.objects.CdSolidObject.Entry.*;
 /** Native routine body at pin 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
  * Source: src/objects/r4/h_move_block.asm (whole parent/child graph). Draw/despawn is the returned Root cut.
- * Detached data only: never replays observations or adopts into a live World.
+ * Detached entry stays a value calculation; primary ingress issues synchronous current-owner receipts.
  */
 public final class CdR4HMoveBlock {
     private CdR4HMoveBlock() { }
     public static Outcome run(Inputs inputs) { return calculate(inputs, CdR4HMoveBlock::body); }
+    /** Original source-authenticated primary ingress. The same body owns every routine/child. */
+    public static void run(PrimaryInputs inputs,LiveOwner owner) {
+        if(inputs.placement().pool().state(inputs.wholeIndex()).id()!=0x24)
+            throw new IllegalArgumentException("Original HMove dispatch requires ID24");
+        runPrimary(inputs,owner,CdR4HMoveBlock::body);
+    }
     private static Tail body(Cut c) {
         int type=c.b(0x28)&127;if(type==7)type=0;
         if(type>8)throw new IllegalArgumentException("Unowned H subtype target");
@@ -18,9 +24,11 @@ public final class CdR4HMoveBlock {
         else throw new IllegalArgumentException("Unowned H routine offset");
         return Tail.DRAW_H_WINDOW;
     }
-    private static void child(Cut c,int slot,int type,int part,int x,int y) {
+    // N1ecc h_move_block.asm:122-130,188-200,258-263,609-623,723-730.
+    // Publish the header before lazy parent coordinates; each caller retains its native X/Y order.
+    private static void childHeader(Cut c,int slot,int type,int part) {
         c.child(slot,0,1,0x24);c.child(slot,0x28,1,type);c.child(slot,0x3c,1,part);
-        c.child(slot,0x36,2,c.w(0x36));c.child(slot,8,2,x);c.child(slot,12,2,y);
+        c.child(slot,0x36,2,c.w(0x36));
     }
     private static void init(Cut c,int type) {
         c.ab(0x24,2);c.b(1,c.b(1)|4);c.w(2,0x446a);c.b(0x18,3);
@@ -37,7 +45,7 @@ public final class CdR4HMoveBlock {
                         c.child(s,0x3a,1,(n<<5)+16);c.child(s,12,2,c.w(12)+n*0x60);
                     }
                     var f=c.spawn(false);if(f.isPresent()) {
-                        int s=f.getAsInt();child(c,s,1,1,c.w(8)+0xe0,c.w(12));c.child(s,0x3a,1,c.b(0x3a));
+                        int s=f.getAsInt();childHeader(c,s,1,1);c.child(s,12,2,c.w(12));c.child(s,8,2,c.w(8)+0xe0);c.child(s,0x3a,1,c.b(0x3a));
                     }
                 }
                 move(c,type);
@@ -46,8 +54,8 @@ public final class CdR4HMoveBlock {
                 c.b(0x19,0x20);c.b(0x16,0x10);
                 if(c.b(0x3c)==0) {
                     c.w(0x36,c.w(8));c.w(0x32,c.w(8)-0x20);var f=c.spawn(false);
-                    if(f.isPresent()) {int s=f.getAsInt();child(c,s,2,1,c.w(8)+0x40,c.w(12));
-                        c.child(s,0x32,2,c.w(8)+0x60);c.child(s,0x3a,1,c.b(0x3a)-0x80);}
+                    if(f.isPresent()) {int s=f.getAsInt();childHeader(c,s,2,1);c.child(s,12,2,c.w(12));int parentX=c.w(8);c.child(s,8,2,parentX+0x40);
+                        c.child(s,0x32,2,parentX+0x60);c.child(s,0x3a,1,c.b(0x3a)-0x80);}
                 }
                 move(c,type);
             }
@@ -56,7 +64,7 @@ public final class CdR4HMoveBlock {
                 boolean lastSearchFailed=false;
                 if(c.b(0x3c)==0) {c.w(0x36,c.w(8));for(int n=1;n<=5;n++) {
                     var f=c.spawn(false);lastSearchFailed=f.isEmpty();
-                    if(f.isPresent())child(c,f.getAsInt(),3,n,c.w(8),c.w(12));
+                    if(f.isPresent()){int s=f.getAsInt();childHeader(c,s,3,n);c.child(s,8,2,c.w(8));c.child(s,12,2,c.w(12));}
                 }}
                 // loc_20C50C MOVE.B retains the allocator's FFFF high byte after its last failed search.
                 // Parent part0 therefore addresses word_20C53C-$100; no generic register/CPU model.
@@ -87,7 +95,7 @@ public final class CdR4HMoveBlock {
             case 6 -> {
                 c.b(0x16,16);
                 if(c.b(0x3c)==0) {c.w(0x36,c.w(8));for(int n=1;n<=3;n++) {
-                    var f=c.spawn(false);if(f.isPresent())child(c,f.getAsInt(),6,n,c.w(8)-(byte)(n<<4),c.w(12)+n*0x20);
+                    var f=c.spawn(false);if(f.isPresent()){int s=f.getAsInt();childHeader(c,s,6,n);c.child(s,8,2,c.w(8)-(byte)(n<<4));c.child(s,12,2,c.w(12)+n*0x20);}
                 }}
                 int part=c.b(0x3c);c.b(0x1a,part);c.b(0x3b,part+1);int width=((part+1)*16)&255;
                 c.b(0x19,width);c.w(0x32,c.w(8)+width);c.b(0x3a,0x80);move(c,type);
@@ -99,7 +107,7 @@ public final class CdR4HMoveBlock {
                     if(first.isPresent()) {int s=first.getAsInt();c.child(s,0,1,0x24);c.child(s,0x28,1,4);c.child(s,0x3d,1,8);
                         c.child(s,8,2,c.w(8));c.child(s,12,2,c.w(12)-0x60);}
                     var f=c.spawn(false);
-                    if(f.isPresent()) {child(c,f.getAsInt(),8,1,c.w(0x36)-0x80,c.w(12));c.w(8,c.w(0x36)+0x80);}
+                    if(f.isPresent()) {int s=f.getAsInt();childHeader(c,s,8,1);c.child(s,8,2,c.w(0x36)-0x80);c.child(s,12,2,c.w(12));c.w(8,c.w(0x36)+0x80);}
                 }
                 c.w(0x10,0x200);
             }

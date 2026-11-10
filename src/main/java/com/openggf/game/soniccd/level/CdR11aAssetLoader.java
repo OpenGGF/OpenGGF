@@ -36,33 +36,46 @@ public final class CdR11aAssetLoader {
         if (payload.file() != profile.file() || !payload.stage().equals(profile.stage())) {
             throw new IOException("Catalogue stage/file does not match the R11A profile");
         }
-        CdMmdImage image = source.mmd(payload.file());
+        // Retain the shared reader and its one actual original image while THIS disc is open.
+        // PPZ DATA remains data-only; existing player/World/loading admission is unchanged.
+        CdProgrammeReader programmeReader = variant == CdReleaseVariant.USA
+                ? CdProgrammeReader.open(source, stage) : null;
+        CdMmdImage image = programmeReader == null ? source.mmd(payload.file()) : programmeReader.retainedOriginalR11Image();
         profile.verifyProgram(payload.file(), profile.domain(), image);
 
-        var blocks = decode(profile, image, LEVEL_BLOCKS, 6432, 0x2000, 0);
+        var terrainProducts = programmeReader==null ? null : programmeReader.originalR11TerrainProducts();
+        var blocks = terrainProducts==null ? decode(profile, image, LEVEL_BLOCKS, 6432, 0x2000, 0) : terrainProducts.blocks();
         // NemesisReader peeks eight bits per run. The final tile code needs the
         // one *actual adjacent MMD byte* at $3ED74. It is read-ahead, not an
         // extension of Art_LevelTiles' source blob or a native decoder-read claim.
         // r11a_asset_check.py independently verifies payload/read-ahead cursors and equal output.
-        var tiles = decode(profile, image, ART_LEVEL_TILES, 25600, 25600, 1);
-        var terrain = CdR11aTerrain.decode(blocks.bytes().copy(), tiles.bytes().copy(), read(profile, image, LEVEL_CHUNKS),
+        var tiles = terrainProducts==null ? decode(profile, image, ART_LEVEL_TILES, 25600, 25600, 1) : terrainProducts.tiles();
+        var terrain = terrainProducts==null ? CdR11aTerrain.decode(blocks.bytes().copy(), tiles.bytes().copy(), read(profile, image, LEVEL_CHUNKS),
                 read(profile, image, LAYOUT_FG), read(profile, image, LAYOUT_BG), read(profile, image, LEVEL_COLLISION),
-                read(profile, image, COL_ANGLE_MAP), read(profile, image, COL_HEIGHT_MAP), read(profile, image, COL_WIDTH_MAP));
-        var loadPlan = CdR11aLoadPlan.decode(profile, image);
-        int objects = profile.range(OBJECT_LAYOUTS).fileOffset();
-        int objectBytes = 12 + profile.range(OBJECT_PLACEMENT_RECORDS).length() + 6;
-        var placementRange = new CdR11aProfile.FileRange(profile.file(), profile.domain(), objects, objectBytes);
-        var placements = CdObjectPlacements.decodeLayout(placementRange.read(image).copy());
+                read(profile, image, COL_ANGLE_MAP), read(profile, image, COL_HEIGHT_MAP), read(profile, image, COL_WIDTH_MAP)) : terrainProducts.terrain();
+        var loadPlan = programmeReader == null
+                ? CdR11aLoadPlan.decode(profile, image) : programmeReader.originalR11LoadPlan();
+        CdObjectPlacements placements;
+        if(programmeReader!=null)placements=programmeReader.placements();
+        else {
+            int objects = profile.range(OBJECT_LAYOUTS).fileOffset();
+            int objectBytes = 12 + profile.range(OBJECT_PLACEMENT_RECORDS).length() + 6;
+            var placementRange = new CdR11aProfile.FileRange(profile.file(), profile.domain(), objects, objectBytes);
+            placements = CdObjectPlacements.decodeLayout(placementRange.read(image).copy());
+        }
         var sonicArt = new CdR11aProfile.FileRange(profile.file(), profile.domain(), profile.range(ART_SONIC).fileOffset(), 69472);
-        var sonic = CdSonicVisualAssets.decode(read(profile, image, MAP_SPR_SONIC), read(profile, image, DPLC_SONIC),
-                sonicArt.read(image).copy());
-        var player = CdR11aPlayerAssets.decode(read(profile, image, ANI_SONIC), read(profile, image, SONIC_MINI_ANIMATIONS),
+        var sonic = programmeReader == null
+                ? CdSonicVisualAssets.decode(read(profile, image, MAP_SPR_SONIC), read(profile, image, DPLC_SONIC), sonicArt.read(image).copy())
+                : programmeReader.sonic();
+        var player = programmeReader == null
+                ? CdR11aPlayerAssets.decode(read(profile, image, ANI_SONIC), read(profile, image, SONIC_MINI_ANIMATIONS),
                 read(profile, image, SONIC_RAMP_CHUNKS), read(profile, image, SPEC_CHUNKS),
-                read(profile, image, SINE_TABLE), read(profile, image, ARC_TAN_TABLE), sonic);
+                read(profile, image, SINE_TABLE), read(profile, image, ARC_TAN_TABLE), sonic)
+                : CdR11aPlayerAssets.fromProgramme(programmeReader);
         var shield = CdShieldArt.decode(profile, image);
         var identity = new CdR11aAssets.Identity(variant, stage, payload.file(), profile.domain(),
                 profile.expectedMmdSha256(), source.identity().normalizedSha256());
-        return new CdR11aAssets(profile, identity, image, blocks, tiles, terrain, loadPlan, placements, sonic, player, shield);
+        return new CdR11aAssets(profile, identity, image, blocks, tiles, terrain, loadPlan, placements, sonic, player, shield, programmeReader);
     }
 
     private static CdR11aAssets.NemesisRead decode(CdR11aProfile profile, CdMmdImage image, CdR11aAsset asset,

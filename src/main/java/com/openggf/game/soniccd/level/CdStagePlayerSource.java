@@ -9,6 +9,7 @@ import com.openggf.game.soniccd.release.CdRetailReleases;
 
 import java.util.Objects;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 /**
  * Read-only stage/player format binding over an existing aggregate. Native pin1ecc5f3a:
@@ -233,15 +234,28 @@ public final class CdStagePlayerSource {
     /** Native raw WORD metadata: R31A is0100, not native-round-minus-one or a truncated act byte.
      * Existing PPZ data bindings remain0000/0001/0002. No raw Frame gate is changed or admitted. */
     public int ordinaryZoneActWord() { return r3Source != null ? r3Source.ordinaryZoneActWord() : stage.actNumber() - 1; }
+    /** Source-derived native raw WORD, including TT0200; no live runtime admission. */
+    public int nativeZoneActWord() { return ordinaryZoneActWord(); }
+    boolean ownsProgrammeReader(CdProgrammeReader actual) { return r3Source!=null && r3Source==actual; }
     /** Internal data binding only. Does not widen existing runtime admission. */
     private CdStagePlayerSource(CdProgrammeReader actual)throws IOException {
         Objects.requireNonNull(actual,"actual retained programme").requireRetained();
         present=null;past=null;act2Terrain=null;act2Player=null;act2PastTerrain=null;act2PastPlayer=null;act3Future=null;r3Source=actual;
-        variant=CdReleaseVariant.USA;stage=actual.stage();player=CdR11aPlayerAssets.fromR3Programme(actual);
+        variant=CdReleaseVariant.USA;stage=actual.stage();player=CdR11aPlayerAssets.fromProgramme(actual);
         terrain=actual.terrain();sonic=actual.sonic();
-        if(terrain.shape()!=actual.terrainShape() || !player.ownsProgramme(actual) || player.sonic()!=sonic
-            || sonic.sourceFormat()!=CdSonicVisualAssets.SourceFormat.FRAMES_167)throw new IllegalArgumentException("R3 retained terrain/player relation differs");
-        mappingAddress=0x22DF20;ordinaryPeriod=1;
+        if(actual.definition().tt().isPresent())actual.requirePlayerTerrain(terrain);
+        var binding=actual.playerBinding();
+        boolean terrainMatches=actual.definition().r3().isPresent()?terrain.shape()==actual.terrainShape()
+            :terrain.profile().equals(actual.definition().terrain().orElseThrow().profile());
+        if(!terrainMatches || !player.ownsProgramme(actual) || player.sonic()!=sonic
+            || sonic.sourceFormat()!=binding.visual().format())throw new IllegalArgumentException("R3 retained terrain/player relation differs");
+        mappingAddress=actual.playerMappingAddress();actual.requirePlayerRelation(sonic,mappingAddress);
+        ordinaryPeriod=binding.ordinaryPeriod();
+    }
+    /** Authenticated immutable DATA ingress through the existing reader. No Body/Frame/Ready grant. */
+    public static CdStagePlayerSource fromProgramme(com.openggf.game.soniccd.media.CdProgramAssets actual,
+                                                    CdStageKey selected)throws IOException {
+        return fromProgramme(CdProgrammeReader.open(actual,selected));
     }
     static CdStagePlayerSource fromProgramme(CdProgrammeReader actual)throws IOException {return new CdStagePlayerSource(actual);}
     // END original R31A immutable core-data relation.
@@ -275,7 +289,12 @@ public final class CdStagePlayerSource {
 
     /** Present format/identity consistency only; opens no optional bank or media source. */
     public static CdStagePlayerSource fromPresent(CdR11aAssets assets) {
-        return new CdStagePlayerSource(Objects.requireNonNull(assets, "Present assets"), null);
+        var actual=Objects.requireNonNull(assets,"Present assets");
+        if(actual.hasRetainedStandardLoadingSource()) {
+            try{return actual.retainedStandardLoadingSource().playerSource();}
+            catch(IOException failure){throw new UncheckedIOException("Retained original R11 player source failed",failure);}
+        }
+        return new CdStagePlayerSource(actual,null);
     }
 
     /** Actual Past aggregate data remains separate from the typed Present facade. */
@@ -293,7 +312,21 @@ public final class CdStagePlayerSource {
     /** Source's ordinary period only; never a replacement for the actual raw/marked Frame gate. */
     public int ordinaryPeriod() { return ordinaryPeriod; }
 
-    public boolean ownsPresent(CdR11aAssets assets) { return present != null && present == assets; }
+    /** Read-only retained PPZ DATA provenance, never Frame/World or native-call authority.
+     * Legacy aggregate factories keep their existing behavior and do not acquire Reader custody. */
+    public boolean hasRetainedPpzProgrammeSource() {
+        if(r3Source==null || player.sourceGraph()!=CdR11aPlayerAssets.SourceGraph.PPZ)return false;
+        r3Source.requireRetained();
+        return player.ownsProgramme(r3Source) && sonic==r3Source.sonic();
+    }
+
+    public boolean ownsPresent(CdR11aAssets assets) {
+        if(present!=null)return present==assets;
+        // Private Reader identity is the original aggregate relation; equal descriptors
+        // and component copies cannot manufacture it. This DATA check grants no visit.
+        return assets!=null && r3Source!=null && assets.hasRetainedStandardLoadingSource()
+            && assets.internalReader()==r3Source;
+    }
     public boolean ownsPast(CdR11bAssets assets) { return past != null && past == assets; }
     /** Exact selected immutable pair only; equal metadata or one matching aggregate is insufficient. */
     public boolean ownsAct2(CdR12aTerrainAssets terrain, CdR12aPlayerAssets player) {

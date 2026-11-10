@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.objects;
 
 import com.openggf.game.soniccd.CdR31BumperCall;
+import com.openggf.game.soniccd.CdR31PinballCall;
 
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
@@ -304,6 +305,16 @@ public final class CdObjectPlacementRuntime {
     }
     // END R31A RETAINED PLACEMENT ADAPTER 20261107
 
+    /** Same spawner and exact carried bank; no clear, Init or invocation is manufactured. */
+    public static CdObjectPlacementRuntime fromPlacements(CdObjectPlacements placements,CdAssetBytes exactSavedBank) {
+        Objects.requireNonNull(placements,"actual retained original programme layout");
+        Objects.requireNonNull(exactSavedBank,"actual carried saved-object bank");
+        if(exactSavedBank.length()!=SAVED_BANK_BYTES)throw new IllegalArgumentException("Exact 2+$2FC carried saved bank required");
+        if(!placements.isRetainedOriginalProgramme())throw new IllegalArgumentException("No retained original programme placement relation");
+        var result=new CdObjectPlacementRuntime(placements);
+        exactSavedBank.buffer().get(result.savedFlags);return result;
+    }
+
     public CdObjectPlacements placements() { return placements; }
     public Optional<CdR11aAssets.Identity> sourceIdentity() { return identity; }
 
@@ -527,14 +538,16 @@ public final class CdObjectPlacementRuntime {
     }
     /** Original Bumper byte store only: linear counter and period-loaded clear remain distinct. */
     public static final class BumperSavedPublication {
-        private final CdObjectPlacementRuntime owner;private final CdR31BumperCall original;
+        private final CdObjectPlacementRuntime owner;private final CdR31PinballCall original;
         private final Snapshot before;private final int index,value;private boolean used;
-        private BumperSavedPublication(CdObjectPlacementRuntime owner,CdR31BumperCall original,int index,int value){
+        private BumperSavedPublication(CdObjectPlacementRuntime owner,CdR31PinballCall original,int index,int value){
             this.owner=owner;this.original=original;before=owner.capture();this.index=index;this.value=value;
         }
     }
     private boolean bumperSavedApplying;
-    public BumperSavedPublication prepareBumperSavedStore(CdR31BumperCall original){
+    public BumperSavedPublication prepareBumperSavedStore(CdR31BumperCall original){return preparePinballSavedStore(original);}
+    /** Shared live pinball receipt; the legacy publication type remains source compatible. */
+    public BumperSavedPublication preparePinballSavedStore(CdR31PinballCall original){
         if(bumperSavedApplying)throw new IllegalStateException("Bumper saved preparation reentry");
         Objects.requireNonNull(original).requireSavedPreparation(this);var op=original.savedStore();int at;
         if(op.kind()==CdPinballContext.SavedKind.BUMPER_LINEAR_COUNTER){

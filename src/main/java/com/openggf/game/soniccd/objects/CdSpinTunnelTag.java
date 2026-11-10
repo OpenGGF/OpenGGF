@@ -142,19 +142,17 @@ public final class CdSpinTunnelTag {
         }
     }
 
-    public enum UnsupportedBoundary { ROUTINE_DISPATCH }
+    public enum UnsupportedBoundary { ROUTINE_DISPATCH, SAVED_FLAGS_ADDRESS }
     public static final class UnsupportedSpinTunnelTag extends UnsupportedOperationException {
         private static final long serialVersionUID = 1L;
         private final UnsupportedBoundary boundary;
         private final int wholeIndex;
         private final int value;
 
-        private UnsupportedSpinTunnelTag(CdObjectState object) {
-            super("ROUTINE_DISPATCH at Spin tunnel tag whole slot " + object.identity().wholeIndex()
-                    + ", reached routine $" + Integer.toHexString(object.routine()));
-            boundary = UnsupportedBoundary.ROUTINE_DISPATCH;
-            wholeIndex = object.identity().wholeIndex();
-            value = object.routine();
+        private UnsupportedSpinTunnelTag(CdObjectState object){this(UnsupportedBoundary.ROUTINE_DISPATCH,object,object.routine());}
+        private UnsupportedSpinTunnelTag(UnsupportedBoundary boundary,CdObjectState object,int value){
+            super(boundary+" at Spin tunnel tag whole slot "+object.identity().wholeIndex()+", reached value $"+Integer.toHexString(value));
+            this.boundary=boundary;this.wholeIndex=object.identity().wholeIndex();this.value=value;
         }
         public UnsupportedBoundary boundary() { return boundary; }
         public int wholeIndex() { return wholeIndex; }
@@ -180,6 +178,75 @@ public final class CdSpinTunnelTag {
         Objects.requireNonNull(placement); Objects.requireNonNull(owner);
         if (!placement.sameAct2PastSource(owner)) throw new IllegalArgumentException("SpinTunnel placement/assets source differs");
         return new CdSpinTunnelTag(Assets.fromAct2PastAssets(owner.objects()));
+    }
+
+    public enum Read { ZONE, DEBUG_MODE, DEBUG_CHEAT, RAW_HELD }
+    public enum Site { MOTION, READ, OBJECT, PLAYER, DRAW, SAVED, DELETE }
+    /** Privately issued only while this cached kernel is executing its original operation. */
+    public static final class OriginalCall {
+        private final Site site;private final long ordinal;private final CdObjectPlacementRuntime.Snapshot cut;
+        private final CdObjectState source,output;private final Read read;private final PlayerResult player;private final int savedIndex;
+        private boolean completed;
+        private OriginalCall(Site site,long ordinal,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,
+                CdObjectState output,Read read,PlayerResult player,int savedIndex){
+            this.site=site;this.ordinal=ordinal;this.cut=cut;this.source=source;this.output=output;this.read=read;this.player=player;this.savedIndex=savedIndex;
+        }
+        public Site site(){return site;}public long ordinal(){return ordinal;}public CdObjectPlacementRuntime.Snapshot cut(){return cut;}
+        public CdObjectState source(){return source;}public CdObjectState output(){return output;}public Read read(){return read;}
+        public PlayerResult player(){return player;}public int savedIndex(){return savedIndex;}public boolean completed(){return completed;}
+    }
+    public interface OriginalPorts {
+        CdPlayerMotionState motion(OriginalCall call);int read(OriginalCall call,Read field);
+        void player(OriginalCall call,PlayerResult result);void draw(OriginalCall call);
+    }
+    public interface OriginalObserver {void before(OriginalCall call);void after(OriginalCall call);void failed(OriginalCall call,Throwable original);}
+    private CdObjectPlacementRuntime placement;private OriginalPorts ports;private OriginalObserver observer;
+    private OriginalCall pending;private boolean running;private int whole;private long ordinal;
+    public boolean isCurrentCall(Object call){return running&&pending!=null&&pending==call;}
+    /** Constructed controls only; production authenticates the retained source pair first. */
+    public static CdSpinTunnelTag withOriginalOperations(CdObjectPlacementRuntime placement,Assets assets,OriginalPorts ports,OriginalObserver observer){
+        var body=new CdSpinTunnelTag(assets);body.placement=Objects.requireNonNull(placement);body.ports=Objects.requireNonNull(ports);body.observer=Objects.requireNonNull(observer);return body;
+    }
+    public static CdSpinTunnelTag fromOriginalPresentAssets(CdObjectPlacementRuntime placement,
+            com.openggf.game.soniccd.level.CdR11aAssets assets,OriginalPorts ports,OriginalObserver observer)throws java.io.IOException{
+        CdOriginalPresentObjectSource.require(placement,assets);
+        return withOriginalOperations(placement,Assets.fromObjectAssets(assets.openingObjects()),ports,observer);
+    }
+    private <T> T operation(Site site,CdObjectState output,Read read,PlayerResult player,int savedIndex,
+            java.util.function.Function<OriginalCall,T> action){
+        if(!running||pending!=null)throw new IllegalStateException("No original Tag operation or nested operation");
+        var c=new OriginalCall(site,++ordinal,placement.capture(),placement.pool().state(whole),output,read,player,savedIndex);pending=c;
+        try{observer.before(c);T result=action.apply(c);c.completed=true;observer.after(c);return result;}
+        catch(RuntimeException|Error original){try{observer.failed(c,original);}catch(RuntimeException|Error v){if(v!=original)original.addSuppressed(v);}throw original;}
+        finally{pending=null;}
+    }
+    private int originalRead(Read field){return operation(Site.READ,null,field,null,-1,c->ports.read(c,field));}
+    /** Original Init/Main/optional Draw/despawn; never a result/effect replay. */
+    public void runOriginal(int wholeIndex,DespawnGlobals globals){
+        if(placement==null||running)throw new IllegalStateException("No original Tag owner or reentry");
+        running=true;whole=wholeIndex;ordinal=0;
+        try{
+            var o=placement.pool().state(whole);if(o.id()!=OBJECT_ID)throw new IllegalArgumentException("Expected original Tag $34");
+            if(o.routine()!=0&&o.routine()!=2)throw new UnsupportedSpinTunnelTag(o);
+            if(o.routine()==0){
+                var n=o.addByte(ROUTINE,2).moveByte(SPRITE_FLAGS,o.spriteFlags()|4).moveWord(TILE,0x544)
+                    .moveLong(MAPPINGS,assets.mappingsAddress()).moveByte(MAP_FRAME,(o.subtype()+1)&255);
+                operation(Site.OBJECT,n,null,null,-1,c->{placement.pool().write(n);return null;});
+            }
+            var m=operation(Site.MOTION,null,null,null,-1,c->ports.motion(c));var live=placement.pool().state(whole);
+            rolling(m,live.centreX(),live.centreY(),live.subtype(),this::originalRead,
+                value->operation(Site.PLAYER,null,null,value,-1,c->{ports.player(c,value);return null;}));
+            if((originalRead(Read.DEBUG_CHEAT)>>>8)!=0)operation(Site.DRAW,null,null,null,-1,c->{ports.draw(c);return null;});
+            var decision=despawn(placement.pool().state(whole),globals);
+            if(decision.deleteObject()){
+                if(decision.loadedClear().isPresent()){
+                    int index=decision.loadedClear().orElseThrow().index();
+                    if(index<2||index>=CdObjectPlacementRuntime.SAVED_BANK_BYTES)throw new UnsupportedSpinTunnelTag(UnsupportedBoundary.SAVED_FLAGS_ADDRESS,placement.pool().state(whole),index);
+                    operation(Site.SAVED,null,null,null,index,c->{placement.bclrSavedFlag((index-2)/3,(index-2)%3,CdObjectPlacementRuntime.SavedBit.LOADED);return null;});
+                }
+                operation(Site.DELETE,null,null,null,-1,c->{placement.pool().deleteObject(whole);return null;});
+            }
+        }finally{running=false;whole=-1;}
     }
 
     public CdSpinTunnelTag(Assets assets) { this.assets = Objects.requireNonNull(assets, "assets"); }
@@ -216,82 +283,62 @@ public final class CdSpinTunnelTag {
      * N1ecc5f3a Tag37-161 and CC Roll Tunnel/Main37-210 retain distinct IDs/operands/callers. */
     static PlayerResult prepareRollingMotion(CdPlayerMotionState motion,int objectX,int objectY,int subtype,Gates gates) {
         Objects.requireNonNull(motion);Objects.requireNonNull(gates);byteValue(subtype);wordValue(objectX);wordValue(objectY);
-        CdPlayerMotionState next = motion;
-        var stores = EnumSet.noneOf(PlayerField.class);
-        // Tag:37-44,166-188. Other actor flags/controls/charge/radii are NOT admission gates.
-        if (motion.animation() != 0x2B && motion.routine() < 6
-                && (gates.debugModeWord() >>> 8) == 0
-                && inRange(motion.centreX16_16() >>> 16, objectX)
-                && inRange(motion.centreY16_16() >>> 16, objectY)) {
-            int xv = motion.xVelocity();
-            int yv = motion.yVelocity();
-            int gv = motion.groundVelocity();
-            int flags = motion.flags();
-            int xr = motion.xRadius();
-            int yr = motion.yRadius();
-            int animation = motion.animation();
-            int y = motion.centreY16_16();
+        return rolling(motion,objectX,objectY,subtype,read->switch(read){
+            case ZONE->gates.zoneByte();case DEBUG_MODE->gates.debugModeWord();
+            case DEBUG_CHEAT->gates.debugCheatWord();case RAW_HELD->gates.rawHeldByte();
+        },null);
+    }
 
-            if (subtype == 0) {
-                // .AbsVX/.GotXCap/.CheckXSign (Tag:47-76): unsigned minimum, not maximum.
-                xv = minimumMagnitude(xv, gates.zoneByte() == 5 ? 0xD00 : 0xA00);
-                gv = xv;
-                int sector = ((motion.angle() + 0x20) & 0xFF) & 0xC0;
-                if (sector == 0x80) gv = (short) -gv;
-                stores.add(PlayerField.X_VELOCITY);
-                stores.add(PlayerField.GROUND_VELOCITY);
-            } else if (subtype == 1) {
-                // .Subtype1/.CheckYSign (Tag:80-102).
-                yv = minimumMagnitude(yv, 0xD00);
-                gv = yv;
-                flags |= 2;
-                stores.add(PlayerField.Y_VELOCITY);
-                stores.add(PlayerField.GROUND_VELOCITY);
-            } else if (subtype == 4) {
-                // .Subtype4 jumps DIRECTLY to .CheckYSign (Tag:155-161,99-102).
-                // The old Y sign is never reapplied to this negative immediate.
-                if (xv >= 0 && (gates.rawHeldByte() & 1) != 0) {
-                    yv = -0xA00;
-                    gv = -0xA00;
-                    flags |= 2;
-                    stores.add(PlayerField.Y_VELOCITY);
-                    stores.add(PlayerField.GROUND_VELOCITY);
-                }
-            } else if (subtype == 2 ? yv < 0 : yv >= 0) {
-                // .Subtype2/.Subtype3/.ChkLaunch (Tag:117-151). Every other unsigned subtype
-                // >=2, including5..255, follows Subtype3. Raw Right wins over raw Left.
-                int launch = (gates.rawHeldByte() & 8) != 0 ? 0xD00
-                        : (gates.rawHeldByte() & 4) != 0 ? -0xD00 : 0;
-                if (launch != 0) {
-                    if (subtype != 2) flags |= 2;
-                    xv = launch;
-                    gv = launch;
-                    stores.add(PlayerField.X_VELOCITY);
-                    stores.add(PlayerField.GROUND_VELOCITY);
+    /** One arithmetic kernel for detached legacy values and original ordered operations. */
+    private static PlayerResult rolling(CdPlayerMotionState motion,int x,int y,int subtype,
+            java.util.function.ToIntFunction<Read> gates,java.util.function.Consumer<PlayerResult> publish) {
+        var c=new Roll(motion,publish);
+        if(motion.animation()!=0x2B&&motion.routine()<6&&(gates.applyAsInt(Read.DEBUG_MODE)>>>8)==0
+                &&inRange(motion.centreX16_16()>>>16,x)&&inRange(motion.centreY16_16()>>>16,y)){
+            if(subtype==0){
+                int speed=minimumMagnitude(motion.xVelocity(),gates.applyAsInt(Read.ZONE)==5?0xD00:0xA00);
+                c.store(PlayerField.X_VELOCITY,speed);c.store(PlayerField.GROUND_VELOCITY,speed);
+                if((((motion.angle()+0x20)&255)&0xC0)==0x80)c.store(PlayerField.GROUND_VELOCITY,(short)-speed);
+            }else if(subtype==1){
+                int speed=minimumMagnitude(motion.yVelocity(),0xD00);
+                c.store(PlayerField.Y_VELOCITY,speed);c.store(PlayerField.GROUND_VELOCITY,speed);
+                c.store(PlayerField.FLAGS,c.value.flags()|2);
+            }else{
+                int held=gates.applyAsInt(Read.RAW_HELD);
+                if(subtype==4){
+                    if(motion.xVelocity()>=0&&(held&1)!=0){
+                        c.store(PlayerField.Y_VELOCITY,-0xA00);c.store(PlayerField.GROUND_VELOCITY,-0xA00);
+                        c.store(PlayerField.FLAGS,c.value.flags()|2);
+                    }
+                }else if(subtype==2?motion.yVelocity()<0:motion.yVelocity()>=0){
+                    int launch=(held&8)!=0?0xD00:(held&4)!=0?-0xD00:0;
+                    if(launch!=0){
+                        if(subtype!=2)c.store(PlayerField.FLAGS,c.value.flags()|2);
+                        c.store(PlayerField.X_VELOCITY,launch);c.store(PlayerField.GROUND_VELOCITY,launch);
+                    }
                 }
             }
-
-            // .SetRoll (Tag:104-113). BSET is an executed store even if already set.
-            boolean wasRolling = (flags & 4) != 0;
-            flags |= 4;
-            stores.add(PlayerField.FLAGS);
-            if (!wasRolling) {
-                yr = 0x0E;
-                xr = 7;
-                int integerY = ((y >>> 16) + 5) & 0xFFFF;
-                y = (integerY << 16) | (y & 0xFFFF);
-                animation = 2;
-                stores.add(PlayerField.Y_RADIUS);
-                stores.add(PlayerField.X_RADIUS);
-                stores.add(PlayerField.CENTRE_Y_WORD);
-                stores.add(PlayerField.ANIMATION);
-            }
-            next = new CdPlayerMotionState(motion.centreX16_16(), y, xv, yv, gv,
-                    motion.routine(), motion.angle(), flags, motion.spriteFlags(), xr, yr,
-                    animation, motion.previousAnimation(), motion.playerJump(), motion.charge(), motion.moveLock(),
-                    motion.stick(), motion.playerControl(), motion.previousPrimaryAngle(), motion.previousSecondaryAngle());
+            boolean rolled=(c.value.flags()&4)!=0;c.store(PlayerField.FLAGS,c.value.flags()|4);
+            if(!rolled){c.store(PlayerField.Y_RADIUS,14);c.store(PlayerField.X_RADIUS,7);
+                c.store(PlayerField.CENTRE_Y_WORD,((c.value.centreY16_16()>>>16)+5)&65535);c.store(PlayerField.ANIMATION,2);}
         }
-        return new PlayerResult(motion,next,stores);
+        return new PlayerResult(motion,c.value,c.stores);
+    }
+    private static final class Roll {
+        CdPlayerMotionState value;final EnumSet<PlayerField> stores=EnumSet.noneOf(PlayerField.class);
+        final java.util.function.Consumer<PlayerResult> publish;
+        Roll(CdPlayerMotionState value,java.util.function.Consumer<PlayerResult> publish){this.value=value;this.publish=publish;}
+        void store(PlayerField field,int raw){
+            var m=value;
+            var n=new CdPlayerMotionState(m.centreX16_16(),field==PlayerField.CENTRE_Y_WORD?(raw<<16)|(m.centreY16_16()&65535):m.centreY16_16(),
+                field==PlayerField.X_VELOCITY?raw:m.xVelocity(),field==PlayerField.Y_VELOCITY?raw:m.yVelocity(),
+                field==PlayerField.GROUND_VELOCITY?raw:m.groundVelocity(),m.routine(),m.angle(),field==PlayerField.FLAGS?raw:m.flags(),
+                m.spriteFlags(),field==PlayerField.X_RADIUS?raw:m.xRadius(),field==PlayerField.Y_RADIUS?raw:m.yRadius(),
+                field==PlayerField.ANIMATION?raw:m.animation(),m.previousAnimation(),m.playerJump(),m.charge(),m.moveLock(),m.stick(),
+                m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle());
+            if(publish!=null)publish.accept(new PlayerResult(m,n,Set.of(field)));
+            value=n;stores.add(field);
+        }
     }
 
     /**
@@ -306,15 +353,19 @@ public final class CdSpinTunnelTag {
 
     /** Shared CheckObjectDespawn2's explicit selected-X operand; original image is not rewritten. */
     public DespawnResult despawnAtX(CdObjectState afterDrawLiveImage,int selectedXWord,DespawnGlobals globals) {
+        return checkObjectDespawnAtX(afterDrawLiveImage,selectedXWord,globals);
+    }
+    /** One shared native CheckObjectDespawn/2 value entry. Original live callers retain their
+     * own current operation, pool/saved-bank/source/Frame guards and ordered BCLR/Delete.
+     * No Tag asset, body, data fallback or invocation is manufactured to reuse this algorithm. */
+    public static DespawnResult checkObjectDespawnAtX(CdObjectState afterDrawLiveImage,int selectedXWord,DespawnGlobals globals) {
         Objects.requireNonNull(afterDrawLiveImage, "post-draw live image");
         if((selectedXWord&~65535)!=0)throw new IllegalArgumentException("Selected native X WORD required");
         Objects.requireNonNull(globals, "despawn globals");
         boolean warp = (globals.rawTimeZoneByte() & 0x80) != 0;
         boolean distanceDelete = false;
         if ((afterDrawLiveImage.spriteFlags() & 0x80) == 0) {
-            int cameraChunk = ((globals.cameraXWord() - 0x80) & 0xFFFF) & 0xFF80;
-            int distance = ((selectedXWord & 0xFF80) - cameraChunk) & 0xFFFF;
-            distanceDelete = distance > 0x280; // BLS keeps equality; unsigned WORD, fixed native320 constant.
+            distanceDelete = outsideCameraWindow(selectedXWord,globals.cameraXWord());
         }
         if (!distanceDelete && !warp) return new DespawnResult(false, Optional.empty());
         int savedId = afterDrawLiveImage.savedFlagsId();
@@ -332,6 +383,15 @@ public final class CdSpinTunnelTag {
             if(period<0)period=0;else if(period>=3)period=2;
         }
         return period;
+    }
+
+    /** Shared native unsigned chunk-window arithmetic, without onscreen/warp policy or writes.
+     * CheckObjectDespawn and HMove's loc_20C224 are actual callers with distinct native gates. */
+    public static boolean outsideCameraWindow(int selectedXWord,int cameraXWord){
+        if(((selectedXWord|cameraXWord)&~65535)!=0)throw new IllegalArgumentException("Native X WORD operands required");
+        int cameraChunk=((cameraXWord-0x80)&0xFFFF)&0xFF80;
+        int distance=((selectedXWord&0xFF80)-cameraChunk)&0xFFFF;
+        return distance>0x280;
     }
 
     /** Tag:166-188; signed BMI followed by unsigned BCC on the wrapped distance word. */

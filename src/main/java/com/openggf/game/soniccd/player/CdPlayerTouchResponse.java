@@ -445,7 +445,7 @@ public final class CdPlayerTouchResponse {
         Objects.requireNonNull(player); Objects.requireNonNull(world); Objects.requireNonNull(callCut);
         byteValue(bossFight);
         // BEGIN R31 cannot borrow the PPZ/R13 bossFight continuation contract.
-        if (r31aAssets != null || selected.r31aAssets() != null)
+        if (r31aAssets != null || selected.r31aAssets() != null || selected.programmeSource() != null)
             throw new IllegalArgumentException("Legacy boss SPECIAL requires its PPZ source rules");
         // END R31 cannot borrow the PPZ/R13 bossFight continuation contract.
         var source = selected.selectedSlot().orElseThrow();
@@ -495,7 +495,7 @@ public final class CdPlayerTouchResponse {
         Objects.requireNonNull(player, "player globals"); Objects.requireNonNull(world, "world globals");
         Objects.requireNonNull(callCut, "call-cut snapshot");
         // BEGIN R31 exact original selector identity; equal values grant no source-profile admission.
-        if (r31aAssets != selected.r31aAssets())
+        if (r31aAssets != selected.r31aAssets() || selected.programmeSource() != null)
             throw new IllegalArgumentException("Touch response requires the exact selector/source owner");
         // END R31 exact original selector identity.
         var slot = selected.selectedSlot().orElseThrow();
@@ -687,6 +687,38 @@ public final class CdPlayerTouchResponse {
      */
     public static KillResult killPlayer(Actor actor, int invincible, int debugMode, int scoreChain, int miniSonic) {
         return killPlayer(actor,invincible,debugMode,scoreChain,miniSonic,null);
+    }
+    /** Source-issued sound cut from the SAME KillPlayer kernel. Values describe the reached
+     * prefix; claiming it alone confers no Frame/World/source or sound authority. */
+    public static final class KillStep {
+        private final KillVisit visit;private final KillPrefix prefix;private boolean claimed;
+        private KillStep(KillVisit visit,KillPrefix prefix){this.visit=visit;this.prefix=prefix;}
+        private void require(){if(!visit.open||visit.current!=this||visit.thread!=Thread.currentThread())throw new IllegalStateException("Expired/off-thread KillPlayer source cut");}
+        public void claim(Object originalInvocation){require();if(claimed||visit.invocation!=originalInvocation)throw new IllegalStateException("Foreign or repeated KillPlayer cut");claimed=true;}
+        public Actor actor(){require();return prefix.actor();}
+        public int invincible(){require();return prefix.invincible();}
+        public int scoreChain(){require();return prefix.scoreChain();}
+        public FmSound sound(){require();return prefix.sound();}
+    }
+    @FunctionalInterface public interface KillObserver {void reached(KillStep step);}
+    private static final class KillVisit {
+        final Object invocation;final Thread thread=Thread.currentThread();final KillObserver observer;
+        boolean open=true;KillStep current;
+        KillVisit(Object invocation,KillObserver observer){this.invocation=invocation;this.observer=observer;}
+        void emit(KillPrefix prefix){
+            var step=new KillStep(this,prefix);current=step;
+            try{observer.reached(step);if(!step.claimed)throw new IllegalStateException("Unclaimed KillPlayer source cut");}
+            finally{current=null;}
+        }
+    }
+    /** Synchronous source-position hook, not iteration over a completed calls/effects list.
+     * Debug's no-write return emits nothing. First callback failure escapes unchanged and expires
+     * every step; the caller retains only its actually published prefix. Pure APIs stay unchanged. */
+    public static KillResult visitKillPlayer(Actor actor,int invincible,int debugMode,int scoreChain,int miniSonic,
+                                             Object originalInvocation,KillObserver observer){
+        var visit=new KillVisit(Objects.requireNonNull(originalInvocation),Objects.requireNonNull(observer));
+        try{return killPlayer(actor,invincible,debugMode,scoreChain,miniSonic,visit::emit);}
+        finally{visit.open=false;visit.current=null;}
     }
     private record KillPrefix(Actor actor,int invincible,int scoreChain,FmSound sound) { }
     private static KillResult killPlayer(Actor actor,int invincible,int debugMode,int scoreChain,int miniSonic,

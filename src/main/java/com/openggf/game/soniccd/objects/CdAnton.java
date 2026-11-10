@@ -10,6 +10,7 @@ import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR11bObjectData;
 import com.openggf.game.soniccd.level.CdR12aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
@@ -174,6 +175,7 @@ public final class CdAnton {
     private final PrimaryAngleCommit angleCommit;
     private final DrawObjectCall drawObject;
     private boolean running;
+    private CdEnemyPrimitiveScope originalPrimitives;
     private transient PrimaryAngleCall pendingPrimaryAngleCall;
 
     /** True only for the cached body's currently suspended synchronous floor-store call. */
@@ -247,16 +249,45 @@ public final class CdAnton {
         return new CdAnton(placement, bound, CdPlayerTerrain.fromStageTerrain(owner.terrain()), angleCommit, drawObject);
     }
 
+    public static CdAnton fromOriginalPresentAssets(CdObjectPlacementRuntime placement,
+            com.openggf.game.soniccd.level.CdR11aAssets owner,CdR11aObjectAssets objects,PrimaryAngleCommit angle,
+            DrawObjectCall draw,CdEnemyPrimitiveScope.Observer observer){
+        CdOriginalPresentObjectSource.require(placement,owner);
+        if(!Objects.requireNonNull(objects,"actual original object source").identity().equals(owner.identity()))throw new IllegalArgumentException("Different original enemy object source");
+        var o=objects;var tiles=o.view(CdR11aObjectAssets.Table.OBJECT_TILE_IDS).bytes();
+        var data=new NativeAssets(secondary->tiles.unsignedWord((short)tiles.unsignedWord(TILE_SELECTOR*2)+secondary*2),o.anton(),CdR11aObjectAssets.Table.ANTON_MAPPINGS.range().nativeAddress());
+        var body=new CdAnton(placement,data,new CdPlayerTerrain(owner.terrain()),angle,draw);
+        body.originalPrimitives=new CdEnemyPrimitiveScope(placement,observer);return body;
+    }
+    /** One cached original B binding over its actual retained Reader/placement pair.
+     * Native ObjAnton is the same included body for A/B; the B72 tile operand and
+     * distinct animation/mapping/terrain products are supplied here without an A owner.
+     * No slot/current art/service/World authority is created by these DATA relations. */
+    public static CdAnton fromOriginalStandardPastSource(CdObjectPlacementRuntime placement,
+            CdR11bObjectData owner,PrimaryAngleCommit angle,DrawObjectCall draw,
+            CdEnemyPrimitiveScope.Observer observer)throws java.io.IOException{
+        Objects.requireNonNull(owner,"actual retained original B object source").requirePlacement(placement);
+        var tiles=owner.view(CdR11bObjectData.Table.OBJECT_TILE_IDS).bytes();
+        if(tiles.length()!=72)throw new IllegalArgumentException("Original Past Anton requires its actual72-byte tile directory");
+        var data=new NativeAssets(secondary->readPastTileWord(tiles,secondary),owner.anton(),
+                CdR11bObjectData.Table.MAP_SPR_ANTON.nativeAddress());
+        var body=new CdAnton(placement,data,CdPlayerTerrain.fromStageTerrain(owner.terrain()),angle,draw);
+        body.originalPrimitives=new CdEnemyPrimitiveScope(placement,observer);return body;
+    }
+    public boolean isCurrentOriginalPrimitive(CdEnemyPrimitiveScope.Call c){return running&&originalPrimitives!=null&&originalPrimitives.isCurrent(c);}
+    private void originalWrite(CdObjectState s){if(originalPrimitives==null)placement.pool().write(s);else originalPrimitives.write(s);}
+
     /** ObjAnton (:7-15): good-future check FIRST, then raw byte-offset dispatch and wrapper. */
     public Result run(int wholeIndex, Globals globals) {
         if (running) throw new IllegalStateException("Anton body cannot reenter its synchronous dispatch");
         running = true;
         try {
+            if(originalPrimitives!=null)originalPrimitives.enter(wholeIndex,OBJECT_ID);
             Objects.requireNonNull(globals, "globals");
             var pool = placement.pool(); var state = pool.state(wholeIndex);
             if (state.id() != OBJECT_ID) throw new IllegalArgumentException("Selected slot is not Anton ID $3F");
             var c = new Cursor(pool, state, globals.primaryAngle());
-            if (destroyOnGoodFuture(c, globals)) return c.finish();
+            if (destroyOnGoodFuture(c, globals)) {if(originalPrimitives!=null)originalPrimitives.returned();return c.finish();}
             switch (c.state.routine()) {
                 case 0 -> { init(c); place(c); }
                 case 2 -> place(c);
@@ -265,14 +296,14 @@ public final class CdAnton {
             }
             draw(c);
             despawn(c, globals);
-            return c.finish();
+            if(originalPrimitives!=null)originalPrimitives.returned();return c.finish();
         } finally {
-            running = false;
+            if(originalPrimitives!=null)originalPrimitives.close();running = false;
         }
     }
 
     /** DestroyOnGoodFuture (:12-44): full DeleteObject, integer-position restore, skip caller. */
-    private static boolean destroyOnGoodFuture(Cursor c, Globals globals) {
+    private boolean destroyOnGoodFuture(Cursor c, Globals globals) {
         if (globals.goodFuture() == 0 || (globals.timeZone() == 1 && c.state.subtype() == 0)) {
             c.effects.add(new CallReturned(NativeCall.DESTROY_ON_GOOD_FUTURE));
             return false;
@@ -294,7 +325,7 @@ public final class CdAnton {
                 .moveByte(Y_RADIUS, 0x13).moveByte(COLLISION_TYPE, 0x29).moveWord(ANTON_ANCHOR_X, c.state.centreX());
         c.publish();
         int secondary = c.state.subtype2();
-        if (secondary > 1) throw unsupported(UnsupportedBoundary.TILE_ENTRY, c, secondary);
+        if (originalPrimitives==null&&secondary > 1) throw unsupported(UnsupportedBoundary.TILE_ENTRY, c, secondary);
         int tile = assets.tileOperand().read(secondary);
         c.state = c.state.moveWord(TILE, tile); c.publish();
         c.effects.add(new CallReturned(NativeCall.SET_OBJECT_TILE_ID));
@@ -331,7 +362,7 @@ public final class CdAnton {
         }
     }
     private record MainCut(CdObjectState state, int primaryAngle) { }
-    private static void turn(Cursor c) {
+    private void turn(Cursor c) {
         c.state = c.state.moveLong(ANTON_X_DELTA, -c.state.longBits(ANTON_X_DELTA))
                 .moveByte(SPRITE_FLAGS, c.state.spriteFlags() ^ 1).moveByte(FLAGS, c.state.flags() ^ 1);
         c.publish();
@@ -348,7 +379,7 @@ public final class CdAnton {
         var call = new PrimaryAngleCall(cut, c.state, c.primaryAngle, value);
         requireCurrentCut(c, call);
         pendingPrimaryAngleCall = call;
-        try { angleCommit.commit(call); }
+        try { if(originalPrimitives==null)angleCommit.commit(call);else originalPrimitives.invoke(CdEnemyPrimitiveScope.Kind.ANGLE,()->{angleCommit.commit(call);return null;}); }
         finally { pendingPrimaryAngleCall = null; }
         requireCurrentCut(c, call); // Never adopt/overwrite any unexpected callback pool image.
         c.primaryAngle = value; // Invocation-local expected byte for the NEXT reached store only.
@@ -364,6 +395,7 @@ public final class CdAnton {
 
     /** Shared animator owns successful transitions; original call image is supplied exactly once. */
     private void animate(Cursor c) {
+        if(originalPrimitives!=null){originalPrimitives.animate(new CdObjectAnimation.AnimationTable(assets.visual().animationTable(),0,assets.visual().animations().size()));c.state=c.pool.state(c.wholeIndex);c.effects.add(new CallReturned(NativeCall.ANIMATE_OBJECT));return;}
         var original = c.state;
         animationReadPrefixes(c);
         var result = CdObjectAnimation.step(new CdObjectAnimation.State(original.unsignedByte(ANIMATION),
@@ -418,7 +450,7 @@ public final class CdAnton {
 
     /** Wrapper DrawObject (:13): actual callback queue, then live reload before anchor load. */
     private void draw(Cursor c) {
-        c.publish(); drawObject.drawObject(c.pool, c.state.identity());
+        c.publish();if(originalPrimitives==null)drawObject.drawObject(c.pool,c.state.identity());else originalPrimitives.draw(()->drawObject.drawObject(c.pool,c.state.identity()));
         c.state = c.pool.state(c.wholeIndex); c.effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
     }
     /** Wrapper :14-15 / CheckObjDespawn2: the freshly loaded ANCHOR, never moved X. */
@@ -430,7 +462,7 @@ public final class CdAnton {
             if (c.state.savedFlagsId() != 0) {
                 var at = savedAddress(c, globals);
                 int previous = placement.savedFlag(at.id(), at.period());
-                placement.bclrSavedFlag(at.id(), at.period(), CdObjectPlacementRuntime.SavedBit.LOADED);
+                if(originalPrimitives==null)placement.bclrSavedFlag(at.id(),at.period(),CdObjectPlacementRuntime.SavedBit.LOADED);else originalPrimitives.saved(at.id(),at.period());
                 c.effects.add(new SavedFlagChanged(at.byteIndex(), previous, placement.savedFlag(at.id(), at.period())));
             }
             delete(c);
@@ -452,13 +484,13 @@ public final class CdAnton {
         }
         return new SavedAddress((index - 2) / 3, (index - 2) % 3, index);
     }
-    private static void delete(Cursor c) {
-        c.pool.deleteObject(c.wholeIndex); c.state = c.pool.state(c.wholeIndex); c.effects.add(new Deleted());
+    private void delete(Cursor c) {
+        if(originalPrimitives==null)c.pool.deleteObject(c.wholeIndex);else originalPrimitives.delete(c.wholeIndex);c.state = c.pool.state(c.wholeIndex);c.effects.add(new Deleted());
     }
     private static UnsupportedAnton unsupported(UnsupportedBoundary boundary, Cursor c, int value) {
         return new UnsupportedAnton(boundary, c.wholeIndex, value);
     }
-    private static final class Cursor {
+    private final class Cursor {
         final CdObjectPool pool;
         final int wholeIndex;
         final List<Effect> effects = new ArrayList<>();
@@ -468,7 +500,7 @@ public final class CdAnton {
             this.pool = pool; this.state = state; this.primaryAngle = primaryAngle; wholeIndex = state.identity().wholeIndex();
         }
         void enter(NativeRoutine routine) { effects.add(new RoutineEntered(routine)); }
-        void publish() { pool.write(state); }
+        void publish() { originalWrite(state); }
         Result finish() { return new Result(state, primaryAngle, effects); }
     }
     private static void byteValue(int value) {

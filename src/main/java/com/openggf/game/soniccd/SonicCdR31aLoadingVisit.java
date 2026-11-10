@@ -6,6 +6,7 @@ import com.openggf.game.soniccd.player.*;
 import com.openggf.game.soniccd.resources.*;
 import com.openggf.game.soniccd.scroll.*;
 import java.io.IOException;
+import com.openggf.game.soniccd.resources.CdBlockDefinitionStaging;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -87,12 +88,18 @@ final class SonicCdR31aLoadingVisit {
         private Program entry(boolean force){return new Program(0,timeStonesByte,force?1:goodFutureByte,0,specialStageByte,palFadeFlagsByte,gameModeByte,0,demoDataIndexWord);}
         private Program fade(int b){return new Program(demoModeWord,timeStonesByte,goodFutureByte,usePlayer2Byte,specialStageByte,b,gameModeByte,levelStartedByte,demoDataIndexWord);}
         private Program demoIndex(int w){return new Program(demoModeWord,timeStonesByte,goodFutureByte,usePlayer2Byte,specialStageByte,palFadeFlagsByte,gameModeByte,levelStartedByte,w);}
-        private Program started(){return new Program(demoModeWord,timeStonesByte,goodFutureByte,usePlayer2Byte,specialStageByte,palFadeFlagsByte,gameModeByte&127,1,demoDataIndexWord);}
+        private Program completed(CdLoadedLevelSetup.Ready ready){return new Program(demoModeWord,timeStonesByte,goodFutureByte,usePlayer2Byte,specialStageByte,palFadeFlagsByte,ready.gameModeByte(),ready.levelStartedByte(),demoDataIndexWord);}
     }
     record Entry(CdProgramInitialization.State initialization,CdProgramInitialization.ExecutionEnvironment executionEnvironment,
                  CdR31aSectionArt.State section,Program program,CdLevelGlobals level,CdAssetBytes normalPalette,
-                 CdAssetBytes fadePalette,CdAssetBytes waterPalette,CdAssetBytes displayedPalette,CdAssetBytes reserved,boolean displayEnabled){
-        Entry{Objects.requireNonNull(initialization);Objects.requireNonNull(executionEnvironment);Objects.requireNonNull(section);Objects.requireNonNull(program);Objects.requireNonNull(level);palette(normalPalette);palette(fadePalette);palette(waterPalette);palette(displayedPalette);extent(reserved,1984);}
+                 CdAssetBytes fadePalette,CdAssetBytes waterPalette,CdAssetBytes displayedPalette,CdAssetBytes reserved,boolean displayEnabled,CdBlockDefinitionStaging blockDefinitions){
+        Entry{Objects.requireNonNull(blockDefinitions);Objects.requireNonNull(initialization);Objects.requireNonNull(executionEnvironment);Objects.requireNonNull(section);Objects.requireNonNull(program);Objects.requireNonNull(level);palette(normalPalette);palette(fadePalette);palette(waterPalette);palette(displayedPalette);extent(reserved,1984);}
+        Entry(CdProgramInitialization.State initialization,CdProgramInitialization.ExecutionEnvironment executionEnvironment,
+              CdR31aSectionArt.State section,Program program,CdLevelGlobals level,CdAssetBytes normalPalette,
+              CdAssetBytes fadePalette,CdAssetBytes waterPalette,CdAssetBytes displayedPalette,CdAssetBytes reserved,boolean displayEnabled){
+            this(initialization,executionEnvironment,section,program,level,normalPalette,fadePalette,waterPalette,
+                    displayedPalette,reserved,displayEnabled,CdBlockDefinitionStaging.unknown());
+        }
     }
     record Publication(int selector,Phase phase,CdAssetBytes normalPalette,CdAssetBytes waterPalette,
                        boolean displayEnabled,CdR31aSectionArt.State section){
@@ -101,27 +108,41 @@ final class SonicCdR31aLoadingVisit {
     record State(Phase phase,CdProgramInitialization.State initialization,CdR31aSectionArt.State section,Program program,
                  CdLevelGlobals level,CdAssetBytes normalPalette,CdAssetBytes fadePalette,CdAssetBytes waterPalette,
                  CdAssetBytes displayedPalette,CdAssetBytes reserved,Optional<CdAssetBytes> blocksRam,Optional<CdAssetBytes> layoutRam,
-                 int initialFadeSteps,int fromFadeSteps,boolean displayEnabled,List<Call> calls,ReturnKind returnKind,Optional<CdCommand> music,CdFlowerPositions flowerPositions){
-        State{Objects.requireNonNull(flowerPositions);Objects.requireNonNull(phase);Objects.requireNonNull(initialization);Objects.requireNonNull(section);Objects.requireNonNull(program);Objects.requireNonNull(level);palette(normalPalette);palette(fadePalette);palette(waterPalette);palette(displayedPalette);extent(reserved,1984);Objects.requireNonNull(blocksRam);Objects.requireNonNull(layoutRam);layoutRam.ifPresent(b->extent(b,2048));if(initialFadeSteps<0||initialFadeSteps>22||fromFadeSteps<0||fromFadeSteps>22)throw new IllegalArgumentException("Native fade progress0..22");calls=List.copyOf(calls);Objects.requireNonNull(returnKind);Objects.requireNonNull(music);}
+                 int initialFadeSteps,int fromFadeSteps,boolean displayEnabled,List<Call> calls,ReturnKind returnKind,Optional<CdCommand> music,CdFlowerPositions flowerPositions,CdBlockDefinitionStaging blockDefinitions){
+        State{Objects.requireNonNull(blockDefinitions);Objects.requireNonNull(flowerPositions);Objects.requireNonNull(phase);Objects.requireNonNull(initialization);Objects.requireNonNull(section);Objects.requireNonNull(program);Objects.requireNonNull(level);palette(normalPalette);palette(fadePalette);palette(waterPalette);palette(displayedPalette);extent(reserved,1984);Objects.requireNonNull(blocksRam);Objects.requireNonNull(layoutRam);layoutRam.ifPresent(b->extent(b,2048));if(initialFadeSteps<0||initialFadeSteps>22||fromFadeSteps<0||fromFadeSteps>22)throw new IllegalArgumentException("Native fade progress0..22");calls=List.copyOf(calls);Objects.requireNonNull(returnKind);Objects.requireNonNull(music);}
         State(Phase phase,CdProgramInitialization.State initialization,CdR31aSectionArt.State section,Program program,
               CdLevelGlobals level,CdAssetBytes normalPalette,CdAssetBytes fadePalette,CdAssetBytes waterPalette,CdAssetBytes displayedPalette,CdAssetBytes reserved,
               Optional<CdAssetBytes> blocksRam,Optional<CdAssetBytes> layoutRam,int initialFadeSteps,int fromFadeSteps,boolean displayEnabled,List<Call> calls,ReturnKind returnKind,Optional<CdCommand> music){
-            this(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,CdFlowerPositions.unknown());
+            this(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,CdFlowerPositions.unknown(),CdBlockDefinitionStaging.unknown());
         }
-        State positions(CdFlowerPositions positions){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,positions);}
-        private State phase(Phase p){return new State(p,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
-        private State initialization(CdProgramInitialization.State i){return new State(phase,i,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
-        private State art(CdR31aSectionArt.State a){return new State(phase,initialization,a,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
-        private State program(Program p){return new State(phase,initialization,section,p,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
+        State(Phase phase,CdProgramInitialization.State initialization,CdR31aSectionArt.State section,Program program,
+              CdLevelGlobals level,CdAssetBytes normalPalette,CdAssetBytes fadePalette,CdAssetBytes waterPalette,
+              CdAssetBytes displayedPalette,CdAssetBytes reserved,Optional<CdAssetBytes> blocksRam,Optional<CdAssetBytes> layoutRam,
+              int initialFadeSteps,int fromFadeSteps,boolean displayEnabled,List<Call> calls,ReturnKind returnKind,
+              Optional<CdCommand> music,CdFlowerPositions flowerPositions){
+            this(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,
+                    reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,
+                    flowerPositions,CdBlockDefinitionStaging.unknown());
+        }
+        private State blockDefinitions(CdBlockDefinitionStaging bank){
+            return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,
+                    displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,
+                    calls,returnKind,music,flowerPositions,bank);
+        }
+        State positions(CdFlowerPositions positions){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,positions,blockDefinitions);}
+        private State phase(Phase p){return new State(p,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions,blockDefinitions);}
+        private State initialization(CdProgramInitialization.State i){return new State(phase,i,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions,blockDefinitions);}
+        private State art(CdR31aSectionArt.State a){return new State(phase,initialization,a,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions,blockDefinitions);}
+        private State program(Program p){return new State(phase,initialization,section,p,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions,blockDefinitions);}
         // Immutable candidate DATA only; current OrdinaryAccess alone can prepare/adopt it.
-        State level(CdLevelGlobals l){return new State(phase,initialization,section,program,l,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
-        private State colours(CdAssetBytes n,CdAssetBytes f,CdAssetBytes w,CdAssetBytes d){return new State(phase,initialization,section,program,level,n,f,w,d,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
-        private State reserved(CdAssetBytes h){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,h,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
-        private State geometry(Optional<CdAssetBytes> b,Optional<CdAssetBytes> l){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,b,l,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions);}
-        private State progress(int i,int f,boolean e){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,i,f,e,calls,returnKind,music,flowerPositions);}
-        private State calls(List<Call> c){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,c,returnKind,music,flowerPositions);}
-        private State returnKind(ReturnKind k){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,k,music,flowerPositions);}
-        private State music(Optional<CdCommand> c){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,c,flowerPositions);}
+        State level(CdLevelGlobals l){return new State(phase,initialization,section,program,l,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions,blockDefinitions);}
+        private State colours(CdAssetBytes n,CdAssetBytes f,CdAssetBytes w,CdAssetBytes d){return new State(phase,initialization,section,program,level,n,f,w,d,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions,blockDefinitions);}
+        private State reserved(CdAssetBytes h){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,h,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions,blockDefinitions);}
+        private State geometry(Optional<CdAssetBytes> b,Optional<CdAssetBytes> l){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,b,l,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,music,flowerPositions,blockDefinitions);}
+        private State progress(int i,int f,boolean e){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,i,f,e,calls,returnKind,music,flowerPositions,blockDefinitions);}
+        private State calls(List<Call> c){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,c,returnKind,music,flowerPositions,blockDefinitions);}
+        private State returnKind(ReturnKind k){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,k,music,flowerPositions,blockDefinitions);}
+        private State music(Optional<CdCommand> c){return new State(phase,initialization,section,program,level,normalPalette,fadePalette,waterPalette,displayedPalette,reserved,blocksRam,layoutRam,initialFadeSteps,fromFadeSteps,displayEnabled,calls,returnKind,c,flowerPositions,blockDefinitions);}
     }
     static final class Snapshot {
         private final SonicCdR31aLoadingVisit owner;private final State state;private final CdPlayerFrameRuntime.ActorState actor;
@@ -234,7 +255,7 @@ final class SonicCdR31aLoadingVisit {
         private NativeClearCall(Action a){
             action=a;preparing=true;ready=a==Action.CLEAR_OBJECTS?before.reserved(zero(1984)):a==Action.CLEAR_FLOWERS?before.positions(CdFlowerPositions.originalClear(this)):before;
             frameReady=switch(a){case CLEAR_FLOWERS->frame.prepareLevelStartFlowersClear();case CLEAR_OBJECTS->frame.prepareLevelStartObjectClear();case CLEAR_CAMERA->frame.prepareLevelStartCameraClear();default->throw new IllegalArgumentException("Not a native clear loop");};
-            scrollBefore=readScroll();scrollReady=switch(a){case CLEAR_FLOWERS->flowersCleared(scrollBefore);case CLEAR_CAMERA->cameraCleared(scrollBefore);default->scrollBefore;};
+            scrollBefore=readScroll();scrollReady=switch(a){case CLEAR_FLOWERS->CdLevelStartStorage.flowersCleared(scrollBefore);case CLEAR_CAMERA->CdLevelStartStorage.cameraCleared(scrollBefore);default->scrollBefore;};
             hostBefore=Objects.requireNonNull(host.capture());preparing=false;
         }
         CdR31aAssets flowerPositionClearSource(){
@@ -271,7 +292,7 @@ final class SonicCdR31aLoadingVisit {
         background=CdR31aBackgroundScroll.fromAssets(assets);programme=CdR31aProgrammeAssets.fromAssets(assets);terrain=assets.terrain();
         var c=assets.view(CdR31aAssets.Asset.PALETTE_CYCLES);
         cycles=List.of(new CdLevelPaletteCycle.Script(c.slice(0,8),c.slice(8,6)),new CdLevelPaletteCycle.Script(c.slice(14,34),c.slice(48,4)),new CdLevelPaletteCycle.Script(c.slice(52,32),c.slice(84,6)),new CdLevelPaletteCycle.Script(c.slice(90,6),c.slice(96,4)));
-        values=new State(Phase.START,entry.initialization(),entry.section(),entry.program(),entry.level(),entry.normalPalette(),entry.fadePalette(),entry.waterPalette(),entry.displayedPalette(),entry.reserved(),Optional.empty(),Optional.empty(),0,0,entry.displayEnabled(),List.of(),ReturnKind.NONE,Optional.empty());
+        values=new State(Phase.START,entry.initialization(),entry.section(),entry.program(),entry.level(),entry.normalPalette(),entry.fadePalette(),entry.waterPalette(),entry.displayedPalette(),entry.reserved(),Optional.empty(),Optional.empty(),0,0,entry.displayEnabled(),List.of(),ReturnKind.NONE,Optional.empty()).blockDefinitions(entry.blockDefinitions());
     }
     State state(){return values;}CdR31aAssets assets(){return assets;}boolean failed(){return failed;}
     private void validateHost(){if(validating)throw new IllegalStateException("Reentrant Host validation");validating=true;try{host.validate(this,frame,assets,art);}finally{validating=false;}}
@@ -291,6 +312,16 @@ final class SonicCdR31aLoadingVisit {
     }
     private void requireSource(){var g=frame.environment().movement().gates();if(!frame.stageSource().ownsR31aAssets(assets)||!art.ownsAssets(assets)||g.zoneAct()!=0x100||g.timeZone()!=1)throw new IllegalStateException("R31 raw source/gates changed");}
     void requireServiceIdle(){current();}
+    /** Frame-issued active Finish site only. A State/Snapshot or a direct idle Frame service
+     * cannot authorize access to the Host's native tail. No owner-bearing value is constructed. */
+    void requireFinishTimers(Host expected,CdPlayerFrameRuntime actual){
+        if(expected!=host||actual!=frame||!running||failed||observing||checking||validating
+                ||activeAction!=null||activePublication!=null||eventsActive||cpuReading||activeScrollBefore!=null
+                ||values.phase()==Phase.START||values.phase()==Phase.RETURNED
+                ||(values.phase()==Phase.READY)!=(activeOrdinary!=null))
+            throw new IllegalStateException("No original Core Frame Finish site");
+        validateHost();requireSource();
+    }
     /** Retirement checks local activity without borrowing an expired boot/session permit.
      * The Module/World still validate their exact retained pair, thread and render lifetime. */
     void requireRetirementIdle(Host expected){
@@ -348,15 +379,25 @@ final class SonicCdR31aLoadingVisit {
             public void markInitializing(){values=values.program(values.program().gameMode(values.program().gameModeByte()|128));}
             public void clearPlcs(){artOp(art::clearPlcs);call(Call.CLEAR_PLCS);}
         });
-        boolean white=values.program().specialStageByte()!=0||(frame.environment().movement().gates().timeZone()&128)!=0;
-        boolean fade=values.program().specialStageByte()!=0||(values.program().palFadeFlagsByte()&1)!=0;
-        if(values.program().specialStageByte()==0)values=values.program(values.program().fade(values.program().palFadeFlagsByte()|1));
-        if(fade){values=values.phase(white?Phase.INITIAL_TO_WHITE:Phase.INITIAL_TO_BLACK);act(Action.INITIAL_FADE_SETUP);}
-        else afterInitial(white);
+        CdLevelStart.initialFade(new CdLevelStart.InitialFade(){
+            public int specialStage(){return values.program().specialStageByte();}
+            public int rawPeriod(){return frame.environment().movement().gates().timeZone();}
+            public boolean setPaletteFadeFlag(){var p=values.program();boolean old=(p.palFadeFlagsByte()&1)!=0;values=values.program(p.fade(p.palFadeFlagsByte()|1));return old;}
+            public void beginFade(boolean white){values=values.phase(white?Phase.INITIAL_TO_WHITE:Phase.INITIAL_TO_BLACK);act(Action.INITIAL_FADE_SETUP);}
+            public void skipped(boolean white){afterInitial(white,false);}
+        });
     }
-    private void afterInitial(boolean white){
+    private void afterInitial(boolean white,boolean completedFade){
         var l=values.level();
-        if(white){frame.clearLevelStartWarpDirection();act(Action.PRELUDE_END);if(l.levelRestart()!=0){values=values.level(level(l,0,l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()));returned(ReturnKind.WHITE_RESTART);return;}}
+        if(white){if(CdLevelStart.afterWhite(completedFade,new CdLevelStart.WhiteReturn(){
+            public void clearPaletteFadeFlag(){values=values.program(values.program().fade(values.program().palFadeFlagsByte()&~1));}
+            public void clearDirection(){frame.clearLevelStartWarpDirection();act(Action.PRELUDE_END);}
+            public int restartWord(){return values.level().levelRestart();}
+            public void clearRestartWord(){var v=values.level();values=values.level(level(v,0,v.updateHudTime(),v.checkpoint(),v.spawnMode(),v.plcLoadFlags(),v.flowerCount(),v.fadeEnableDisplay(),v.powerup(),v.timeOver()));}
+            public int actByte(){return frame.environment().movement().gates().zoneAct()&255;}
+            public void clearPeriodMarker(){throw new IllegalStateException("Retained R31A act0 cannot reach act3 marker clear");}
+            public void returned(){SonicCdR31aLoadingVisit.this.returned(ReturnKind.WHITE_RESTART);}
+        }))return;}
         else if(l.levelRestart()==2){values=values.level(level(l,0,l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver())).program(values.program().fade(0));clearReturn(ReturnKind.NEXT_LEVEL);return;}
         else{int lives=observe(host::livesByte);octet(lives);if(lives==0){values=values.level(level(l,l.levelRestart(),l.updateHudTime(),0,0,0,l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver())).program(values.program().fade(0));clearReturn(ReturnKind.NO_LIVES);return;}}
         if(values.program().demoDataIndexWord()==0x800){values=values.program(values.program().demoIndex(0).entry(false).fade(0));returned(ReturnKind.DEMO);return;}
@@ -369,14 +410,12 @@ final class SonicCdR31aLoadingVisit {
         current();octet(held);if(values.phase()==Phase.START)throw new IllegalStateException("Begin before service");
         if(values.phase()==Phase.RETURNED)stop(Boundary.MMD_RETURN_OWNER);
         if(values.phase()==Phase.READY&&ordinary==null)stop(Boundary.ORDINARY_OWNER);
-        running=true;try{switch(values.phase()){
-            case INITIAL_TO_WHITE,INITIAL_TO_BLACK -> fadeService(held,true);
-            case FROM_WHITE,FROM_BLACK -> fadeService(held,false);
-            case FIRST_PLC,LEVEL_PLC -> plcService(held);
-            case CLEAR_RETURN_WAIT -> {loadService(held);call(Call.RETURN_WAIT);returned(values.returnKind());}
-            case READY -> {var access=new OrdinaryAccess();activeOrdinary=access;try{ordinary.run(held,access);}finally{activeOrdinary=null;}}
-            default -> throw new IllegalStateException("Unserviceable loading phase");
-        }}catch(RuntimeException|Error original){terminal(original);throw original;}finally{running=false;}
+        running=true;try{CdLoadingWaits.service(values.phase(),held,new CdLoadingWaits.Programme(){
+            public void plc(int row){plcService(row);}
+            public void palette(int row,boolean initial){fadeService(row,initial);}
+            public void returnWait(int row){loadService(row);call(Call.RETURN_WAIT);returned(values.returnKind());}
+            public void ordinary(int row){var access=new OrdinaryAccess();activeOrdinary=access;try{ordinary.run(row,access);}finally{activeOrdinary=null;}}
+        });}catch(RuntimeException|Error original){terminal(original);throw original;}finally{running=false;}
     }
     private void publish(int selector){
         validateHost();var p=new Publication(selector,values.phase(),values.normalPalette(),values.waterPalette(),values.displayEnabled(),values.section());
@@ -391,13 +430,20 @@ final class SonicCdR31aLoadingVisit {
     }
     private void loadService(int held){frame.serviceLevelLoad(held,()->publish(0xC),this::copyAndDraw,()->artOp(art::serviceFast));act(Action.VINT_COMPLETED);}
     private void plcService(int held){
-        var phase=values.phase();loadService(held);call(phase==Phase.FIRST_PLC?Call.FIRST_WAIT:Call.LEVEL_WAIT);artOp(art::prepare);call(Call.PROCESS_PLCS);
-        if(values.section().queue().headSource()==0&&values.section().remainingTilesWord()==0){if(phase==Phase.FIRST_PLC)mainLoad();else finishLoad();}
+        var phase=values.phase();CdLoadingWaits.plc(held,new CdLoadingWaits.Plc(){
+            public void selectorC(int row){loadService(row);call(phase==Phase.FIRST_PLC?Call.FIRST_WAIT:Call.LEVEL_WAIT);}
+            public boolean processAndTestQueue(){artOp(art::prepare);call(Call.PROCESS_PLCS);return values.section().queue().headSource()==0&&values.section().remainingTilesWord()==0;}
+            public void returned(){if(phase==Phase.FIRST_PLC)mainLoad();else finishLoad();}
+        });
     }
     private void fadeService(int held,boolean initial){
         var phase=values.phase();
-        frame.serviceLevelPaletteFade(held,()->{publish(0x12);if(values.level().fadeEnableDisplay()==1){var l=values.level();values=values.level(level(l,l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),2,l.powerup(),l.timeOver())).progress(values.initialFadeSteps(),values.fromFadeSteps(),true);act(Action.ENABLE_DISPLAY);}},()->artOp(art::serviceFast));
+        CdLoadingWaits.palette(held,new CdLoadingWaits.Palette(){
+            public void selector12(int row){
+        frame.serviceLevelPaletteFade(row,()->{publish(0x12);if(values.level().fadeEnableDisplay()==1){var l=values.level();values=values.level(level(l,l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),2,l.powerup(),l.timeOver())).progress(values.initialFadeSteps(),values.fromFadeSteps(),true);act(Action.ENABLE_DISPLAY);}},()->artOp(art::serviceFast));
         act(Action.VINT_COMPLETED);call(initial?Call.INITIAL_FADE_SERVICE:Call.FROM_FADE_SERVICE);
+            }
+            public void colours(){
         if(initial){var pair=new CdLevelPaletteFade.Palettes(values.normalPalette(),values.waterPalette());var out=phase==Phase.INITIAL_TO_WHITE?CdLevelPaletteFade.stepToWhite(pair):CdLevelPaletteFade.stepToBlack(pair);values=values.colours(out.palette(),values.fadePalette(),out.waterPalette(),values.displayedPalette());call(Call.INITIAL_FADE_COLOURS);}
         else{
             var normal=phase==Phase.FROM_WHITE?CdLevelPaletteFade.stepFromWhite(values.normalPalette(),values.fadePalette()):CdLevelPaletteFade.stepFromBlack(values.normalPalette(),values.fadePalette(),0x202F);
@@ -407,55 +453,65 @@ final class SonicCdR31aLoadingVisit {
             var water=phase==Phase.FROM_WHITE?CdLevelPaletteFade.stepFromWhite(values.waterPalette(),cpu.slice(512,128)):CdLevelPaletteFade.stepFromBlack(values.waterPalette(),cpu.slice(512,128),0x202F);
             values=values.colours(values.normalPalette(),values.fadePalette(),water,values.displayedPalette());call(Call.FROM_WATER_COLOURS);
         }
-        artOp(art::prepare);call(Call.PROCESS_PLCS);values=values.progress(values.initialFadeSteps()+(initial?1:0),values.fromFadeSteps()+(initial?0:1),values.displayEnabled());
-        if(initial&&values.initialFadeSteps()==22){if(phase==Phase.INITIAL_TO_WHITE)values=values.program(values.program().fade(values.program().palFadeFlagsByte()&~1));afterInitial(phase==Phase.INITIAL_TO_WHITE);}
-        else if(!initial&&values.fromFadeSteps()==22){values=values.program(values.program().started()).phase(Phase.READY);act(Action.BEGIN_LEVEL);}
+            }
+            public void processPlcs(){artOp(art::prepare);call(Call.PROCESS_PLCS);}
+            public boolean countAndTestLast(){values=values.progress(values.initialFadeSteps()+(initial?1:0),values.fromFadeSteps()+(initial?0:1),values.displayEnabled());return CdLoadedLevelSetup.returnedFade(initial?values.initialFadeSteps():values.fromFadeSteps());}
+            public void returned(){if(initial)afterInitial(phase==Phase.INITIAL_TO_WHITE,true);else CdLoadedLevelSetup.completedFade(values.fromFadeSteps(),loadedSetup());}
+        });
     }
+
     private void artOp(UnaryOperator<CdR31aSectionArt.State> operation){
         var before=values.section();try{values=values.art(operation.apply(before));}
-        catch(CdR31aSectionArt.SectionArtException original){values=values.art(original.state());original.completedRamPrefix().ifPresent(b->values=values.geometry(Optional.of(b),values.layoutRam()));try{act(Action.CURRENT_ART);}catch(RuntimeException|Error publication){if(publication!=original)original.addSuppressed(publication);}throw original;}
+        catch(CdR31aSectionArt.SectionArtException original){values=values.art(original.state());original.completedRamPrefix().ifPresent(b->values=values.geometry(Optional.of(b),values.layoutRam()).blockDefinitions(values.blockDefinitions().withCompletedPrefix(b)));try{act(Action.CURRENT_ART);}catch(RuntimeException|Error publication){if(publication!=original)original.addSuppressed(publication);}throw original;}
         if(values.section().residency()!=before.residency())act(Action.CURRENT_ART);
     }
     private void mainLoad(){
-        var g=frame.environment().movement().gates();
-        values=values.music(Optional.of(programme.selectLevelMusic(g.zoneAct(),g.timeZone(),frame.environment().globals().timeAttackMode(),values.program().goodFutureByte())));act(Action.PLAY_LEVEL_MUSIC);
-        int id=assets.view(CdR31aAssets.Asset.LEVEL_DATA_INDEX).unsignedByte(0);if(id!=0){artOp(a->art.loadImmediateList(a,id));call(Call.IMMEDIATE_LEVEL);}artOp(a->art.loadImmediateList(a,1));call(Call.IMMEDIATE_STANDARD);
-        var l=values.level();values=values.level(level(l,l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),0,0,0,l.timeOver()));act(Action.CLEAR_POWERUP_FLOWERS);act(Action.CLEAR_DRAW_QUEUE);
-        clearNative(Action.CLEAR_FLOWERS);
-        clearNative(Action.CLEAR_OBJECTS);act(Action.CLEAR_UNKNOWN_BUFFER);act(Action.CLEAR_MISC);
-        clearNative(Action.CLEAR_CAMERA);values=values.program(values.program().demoIndex(0));act(Action.CLEAR_DEMO_INDEX);
+        CdInitialLevelArt.load(new CdInitialLevelArt.Port(){
+            public CdCommand selectMusic(){var g=frame.environment().movement().gates();return programme.selectLevelMusic(g.zoneAct(),g.timeZone(),frame.environment().globals().timeAttackMode(),values.program().goodFutureByte());}
+            public void publishMusic(CdCommand command){values=values.music(Optional.of(command));act(Action.PLAY_LEVEL_MUSIC);}
+            public int levelPlcId(){return assets.view(CdR31aAssets.Asset.LEVEL_DATA_INDEX).unsignedByte(0);}
+            public void loadLevel(int id){artOp(a->art.loadImmediateList(a,id));call(Call.IMMEDIATE_LEVEL);}
+            public void loadStandard(){artOp(a->art.loadImmediateList(a,1));call(Call.IMMEDIATE_STANDARD);}
+        });
+        CdLevelStartStorage.clear(cut->{switch(cut){
+            case POWERUP_FLOWERS -> {var l=values.level();values=values.level(level(l,l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),0,0,0,l.timeOver()));act(Action.CLEAR_POWERUP_FLOWERS);}
+            case DRAW_QUEUE -> act(Action.CLEAR_DRAW_QUEUE);
+            case FLOWERS -> clearNative(Action.CLEAR_FLOWERS);
+            case OBJECTS -> clearNative(Action.CLEAR_OBJECTS);
+            case UNKNOWN_BUFFER -> act(Action.CLEAR_UNKNOWN_BUFFER);
+            case MISC -> act(Action.CLEAR_MISC);
+            case CAMERA -> clearNative(Action.CLEAR_CAMERA);
+            case DEMO_INDEX -> {values=values.program(values.program().demoIndex(0));act(Action.CLEAR_DEMO_INDEX);}
+        }});
         byte[] water=values.waterPalette().copy();Arrays.fill(water,0,4,(byte)0);values=values.colours(values.normalPalette(),values.fadePalette(),CdAssetBytes.copyOf(water),values.displayedPalette());clearScreenScroll();act(Action.CLEAR_SCREEN);act(Action.DROWN_TIMER);
         paletteCopy(assets.view(CdR31aAssets.Asset.PAL_SONIC),0,true);paletteCopy(assets.view(CdR31aAssets.Asset.PAL_SONIC),0,false);call(Call.PALETTE_SONIC);
         var bounds=assets.bounds();frame.initializeLevelSizePlayerValues(new CdPlayerMovement.Bounds(bounds.left(),bounds.right(),bounds.bottom(),frame.environment().movement().bounds().bossFight()),bounds.cameraCentreY());initializeSizeScroll();act(Action.LEVEL_SIZE);
         if(values.level().spawnMode()!=0)stop(Boundary.CHECKPOINT_LOAD);
         var start=assets.initialCentre();frame.initializeLevelSizeCentrePlayerValues(start.centreX(),start.centreY());setupScroll();act(Action.SETUP_CAMERA_AND_SCROLL);levelScroll();act(Action.LEVEL_SCROLL);forceLeftColumn();act(Action.FORCE_LEFT_COLUMN);
-        try{var blocks=art.decodeBlocksToRam(values.section());values=values.art(blocks.state()).geometry(Optional.of(blocks.blocks()),values.layoutRam());}
-        catch(CdR31aSectionArt.SectionArtException original){values=values.art(original.state());original.completedRamPrefix().ifPresent(b->values=values.geometry(Optional.of(b),values.layoutRam()));throw original;}call(Call.BLOCKS_RAM);
+        try{var blocks=art.decodeBlocksToRam(values.section());values=values.art(blocks.state()).geometry(Optional.of(blocks.blocks()),values.layoutRam()).blockDefinitions(values.blockDefinitions().withCompletedPrefix(blocks.blocks()));}
+        catch(CdR31aSectionArt.SectionArtException original){values=values.art(original.state());original.completedRamPrefix().ifPresent(b->values=values.geometry(Optional.of(b),values.layoutRam()).blockDefinitions(values.blockDefinitions().withCompletedPrefix(b)));throw original;}call(Call.BLOCKS_RAM);
         values=values.geometry(values.blocksRam(),Optional.of(terrain.layout().ram()));act(Action.LEVEL_LAYOUT);paletteCopy(assets.view(CdR31aAssets.Asset.PAL_LEVEL),32,false);call(Call.PALETTE_LEVEL);
         if(values.level().spawnMode()!=0){int x=readScroll().foreground().cameraX();artOp(a->art.initSection(a,x));call(Call.SECTION_LEVEL);}
         else if((values.level().plcLoadFlags()&2)!=0){int plc=assets.levelIndex().blocks().plcId();if(plc!=0){artOp(a->art.appendList(a,plc));call(Call.QUEUED_LEVEL);}else call(Call.NO_PLC);}
         else call(Call.NO_PLC);
         act(Action.INITIAL_FOREGROUND);act(Action.INITIAL_BACKGROUND);act(Action.COLLISION_POINTER);values=values.phase(Phase.LEVEL_PLC);
     }
+    private CdLoadedLevelSetup.Programme<CdR31aSectionArt.State> loadedSetup(){return new CdLoadedLevelSetup.Programme<>(){
+        public CdPlayerFrameRuntime frame(){validateHost();return frame;}
+        public CdLoadedLevelSetup.Values<CdR31aSectionArt.State> values(){validateHost();return new CdLoadedLevelSetup.Values<>(values.section(),values.level(),values.reserved(),values.initialization(),values.normalPalette(),values.fadePalette());}
+        public void store(CdLoadedLevelSetup.Values<CdR31aSectionArt.State> v,CdLoadedLevelSetup.Event event){validateHost();values=values.art(v.art()).level(v.level()).reserved(v.reserved()).initialization(v.initialization()).colours(v.normal(),v.fade(),values.waterPalette(),values.displayedPalette());
+            switch(event){case STORE->{}case LOAD_PLAYER->call(Call.LOAD_PLAYER);case HUD->act(Action.RESERVED_HUD);case LIFE_ICON->call(Call.LIFE_ICON);case TIME_ICON->act(Action.RESERVED_TIME_ICON);case TITLE->act(Action.TITLE_CARD_CREATE);case BEGIN_MAIN->act(Action.BEGIN_MAIN);case ANIMATED_TILES->act(Action.UPDATE_ANIMATED_TILES);case ENABLE_FADE->act(Action.ENABLE_FADE_AND_CLEAR_MARKER);case FROM_WHITE->act(Action.FROM_WHITE_INFO);}}
+        public void lifeIcon(int period){artOp(a->art.loadLifeIcon(a,period));}
+        public CdR31aSectionArt.State clearSectionHighByte(CdR31aSectionArt.State a){return art.fromValues(a.codeTable(),a.residency(),a.sectionWord()&255,a.queue(),a.decoder(),a.savedDecoder(),a.remainingTilesWord(),a.processBudgetWord(),a.hintWord(),a.padWord());}
+        public void unavailablePowerup(){stop(Boundary.ACTIVE_POWERUP);}public void unavailablePeriod(){stop(Boundary.ENTRY);}
+        public int gameMode(){validateHost();return values.program().gameModeByte();}
+        public void completed(CdLoadedLevelSetup.Ready ready){validateHost();values=values.program(values.program().completed(ready)).phase(ready.phase());act(Action.BEGIN_LEVEL);}
+    };}
     private void finishLoad(){
-        if(values.level().spawnMode()==0)frame.applyLevelStartNormalPlayer();else frame.applyLevelStartWarpPlayer();call(Call.LOAD_PLAYER);
-        byte[] h=values.reserved().copy();for(int whole:new int[]{2,3,5})h[(whole-1)*64]=0x1C;h[2*64+0x28]=1;h[4*64+0x29]=1;values=values.reserved(CdAssetBytes.copyOf(h));act(Action.RESERVED_HUD);
-        artOp(a->art.loadLifeIcon(a,frame.environment().movement().gates().timeZone()));call(Call.LIFE_ICON);h=values.reserved().copy();h[30*64]=0x19;h[30*64+0x28]=10;values=values.reserved(CdAssetBytes.copyOf(h));act(Action.RESERVED_TIME_ICON);
-        var l=values.level();boolean title=(l.plcLoadFlags()&2)==0;values=values.level(level(l,l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags()|2,l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()));
-        if(title){h=values.reserved().copy();h[3*64]=0x3C;values=values.reserved(CdAssetBytes.copyOf(h));act(Action.TITLE_CARD_CREATE);if(frame.environment().controls().controlLocked()!=1)throw new IllegalStateException("Actual Title setup control lock was not stored");var a=values.section();values=values.art(art.fromValues(a.codeTable(),a.residency(),a.sectionWord()&255,a.queue(),a.decoder(),a.savedDecoder(),a.remainingTilesWord(),a.processBudgetWord(),a.hintWord(),a.padWord()));}
-        frame.clearLevelStartControlsAndBoredTimer();frame.clearLevelStartPlayerGlobals();l=values.level();values=values.level(level(l,0,1,l.checkpoint(),0,l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),0));act(Action.BEGIN_MAIN);
-        if(CdPowerupArtRuntime.gate(values.level().powerup()).copyRequired())stop(Boundary.ACTIVE_POWERUP);act(Action.UPDATE_ANIMATED_TILES);
-        l=values.level();values=values.level(level(l,l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),1,l.powerup(),l.timeOver()));boolean marked=frame.clearLevelStartTimeZoneMarker();
-        if(frame.environment().movement().gates().timeZone()!=1)stop(Boundary.ENTRY);
-        boolean white=marked;if(!marked){white=CdProgramInitialization.requirePalClearFlagBit0(values.initialization());var i=values.initialization();values=values.initialization(new CdProgramInitialization.State(i.controllerSetupBit(),i.initMarker(),i.versionCache(),CdProgramInitialization.KnownBit.CLEAR));}
-        act(Action.ENABLE_FADE_AND_CLEAR_MARKER);if(white)act(Action.FROM_WHITE_INFO);
-        byte[] normal=values.normalPalette().copy();if(white)normal=CdLevelStart.normalLoadPalette(true).copy();else Arrays.fill(normal,32,128,(byte)0);
-        values=values.colours(CdAssetBytes.copyOf(normal),values.fadePalette(),values.waterPalette(),values.displayedPalette()).phase(white?Phase.FROM_WHITE:Phase.FROM_BLACK);
+        // Evaluate the mutating shared driver before borrowing its completed image.
+        var phase=CdLoadedLevelSetup.afterSecondPlc(loadedSetup());values=values.phase(phase);
     }
     private void paletteCopy(CdAssetBytes source,int offset,boolean normal){byte[] bytes=(normal?values.normalPalette():values.fadePalette()).copy();System.arraycopy(source.copy(),0,bytes,offset,source.length());values=values.colours(normal?CdAssetBytes.copyOf(bytes):values.normalPalette(),normal?values.fadePalette():CdAssetBytes.copyOf(bytes),values.waterPalette(),values.displayedPalette());}
-    private static Scroll flowersCleared(Scroll s){var b=s.background();var c=new CdR11aBackgroundPlane.Camera(0,0);var copies=new Copies(0,0,new CdR11aBackgroundPlane.CopiedCameras(c,c,c),0,new CdR11aBackgroundPlane.FlagWords(0,0,0));return new Scroll(s.foreground(),bg(b,b.cameraBgX(),b.cameraBgY(),b.cameraBg2X(),b.cameraBg2Y(),b.cameraBg3X(),b.cameraBg3Y(),b.crossingRam(),b.scrollFlagsBg(),b.scrollFlagsBg2(),b.scrollFlagsBg3(),zero(512),b.deformationRam(),b.hscrollRam(),b.vscroll()),copies,s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord());}
-    private static Scroll cameraCleared(Scroll s){var b=s.background();return new Scroll(new CdR11aForegroundScroll.State(0,0,0,0,0,0,0,0,0,0,0),bg(b,0,0,0,0,0,0,zero(8),0,0,0,b.cloudRam(),b.deformationRam(),b.hscrollRam(),b.vscroll()),s.copies(),0,0,0);}
-
     private void clearScreenScroll(){var s=readScroll();var b=s.background();storeScroll(s,new Scroll(s.foreground(),bg(b,b.cameraBgX(),b.cameraBgY(),b.cameraBg2X(),b.cameraBg2Y(),b.cameraBg3X(),b.cameraBg3Y(),b.crossingRam(),b.scrollFlagsBg(),b.scrollFlagsBg2(),b.scrollFlagsBg3(),b.cloudRam(),b.deformationRam(),zero(1024),0),s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord()));}
     private void initializeSizeScroll(){var s=readScroll();var f=s.foreground();var b=assets.bounds();storeScroll(s,new Scroll(new CdR11aForegroundScroll.State(f.cameraX(),f.cameraY16_16(),16,16,f.scrollXDiff(),f.scrollYDiff(),f.scrollFlags(),b.bottom(),b.left(),f.bottomBoundShift(),f.scrollLock()),s.background(),s.copies(),s.foregroundXFractionWord(),b.top(),s.waterDeformWord()));}
     private void setupScroll(){var s=readScroll();var m=frame.state().motion();var f=CdR11aForegroundScroll.checkpointSetupCamera(s.foreground(),m.centreX16_16()>>>16,m.centreY16_16()>>>16,frame.environment().movement().bounds());var b=background.initialize(s.background(),new CdR31aBackgroundScroll.InitInput(f.cameraX(),f.cameraYWord()));storeScroll(s,new Scroll(f,b,s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord()));}

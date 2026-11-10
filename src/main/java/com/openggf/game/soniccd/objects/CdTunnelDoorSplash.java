@@ -141,6 +141,7 @@ public final class CdTunnelDoorSplash {
         void afterPublication(Publication call);
         void beforeCall(Object call);
         void afterCall(Object call);
+        default void failed(Object call,Throwable original){}
     }
     public interface ReceiptGuard { void prepared(Object call); void completed(Object call); }
     @FunctionalInterface public interface SourceDraw { void draw(DrawCall call); }
@@ -149,6 +150,14 @@ public final class CdTunnelDoorSplash {
     private final CdObjectPlacementRuntime runtime;
     private final Assets assets;
     private final CdObjectAnimation.AnimationTable animation;
+    private SourceProfile sourceProfile;
+    private record SourceProfile(CdAssetBytes tiles,CdObjectVisualAssets visual,int mapping){}
+    private int mappingsAddress(){return sourceProfile==null?assets.mappingsAddress():sourceProfile.mapping();}
+    private int tileWord(CdObjectState state){
+        if(sourceProfile==null)return assets.tileWord(state);
+        var tiles=sourceProfile.tiles();int target=(short)tiles.unsignedWord(TILE_SELECTOR*2);int end=CdObjectTileIds.endOfBody(tiles,TILE_SELECTOR);
+        if(state.subtype2()!=0||end-target!=2)throw unsupported(UnsupportedBoundary.TILE_ID_SUBTYPE2,state,state.subtype2());return tiles.unsignedWord(target);
+    }
     private final DrawObjectCall drawObject;
     private final PlayFmCall playFm;
     private DispatchObserver observer;
@@ -198,7 +207,25 @@ public final class CdTunnelDoorSplash {
         return body;
     }
 
-    public Assets assets() { return assets; }
+    /** Original R11 owns a distinct absolute pointer; legacy R12 Assets3 stays strict. */
+    public static CdTunnelDoorSplash fromOriginalPresentAssets(CdObjectPlacementRuntime runtime,
+            com.openggf.game.soniccd.level.CdR11aAssets source,DispatchObserver observer,SourceDraw draw,
+            SourceSound sound,ReceiptGuard guard)throws java.io.IOException{
+        CdOriginalPresentObjectSource.require(runtime,source);var o=source.openingObjects();
+        var profile=new SourceProfile(o.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.OBJECT_TILE_IDS).bytes(),
+            o.tunnelDoorSplash(),o.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.TUNNEL_DOOR_SPLASH_MAPPINGS).range().nativeAddress());
+        return new CdTunnelDoorSplash(runtime,profile,observer,draw,sound,guard);
+    }
+    private CdTunnelDoorSplash(CdObjectPlacementRuntime runtime,SourceProfile profile,DispatchObserver observer,
+            SourceDraw draw,SourceSound sound,ReceiptGuard guard){
+        this.runtime=Objects.requireNonNull(runtime);this.assets=null;this.sourceProfile=Objects.requireNonNull(profile);
+        this.animation=new CdObjectAnimation.AnimationTable(profile.visual().animationTable(),0,3);
+        this.drawObject=(pool,id)->{throw new IllegalStateException("Original Splash requires its actual Draw");};
+        this.playFm=s->{throw new IllegalStateException("Original Splash requires its actual FM");};
+        this.observer=Objects.requireNonNull(observer);this.sourceDraw=Objects.requireNonNull(draw);
+        this.sourceSound=Objects.requireNonNull(sound);this.receiptGuard=Objects.requireNonNull(guard);
+    }
+    public Assets assets() { if(assets==null)throw new IllegalStateException("Original R11 uses its distinct finite source profile");return assets; }
     public boolean isCurrentCall(Object call) {
         return call != null && dispatching && (call == pendingPublication || call == pendingCall);
     }
@@ -221,9 +248,9 @@ public final class CdTunnelDoorSplash {
             switch (state.routine()) {
                 case 0 -> {
                     state = state.addByte(ROUTINE, 2).moveByte(SPRITE_FLAGS, 4).moveByte(PRIORITY, 1)
-                            .moveLong(MAPPINGS, assets.mappingsAddress()).moveByte(ANIMATION, state.subtype());
+                            .moveLong(MAPPINGS, mappingsAddress()).moveByte(ANIMATION, state.subtype());
                     observedWrite(state, StoreKind.INIT_HEADER);
-                    state = state.moveWord(TILE, assets.tileWord(state));
+                    state = state.moveWord(TILE, tileWord(state));
                     observedWrite(state, StoreKind.INIT_TILE);
                     var sound = state.subtype() < 2 ? FmSound.FM_A2 : FmSound.FM_A1;
                     observedSound(sound);
@@ -311,7 +338,8 @@ public final class CdTunnelDoorSplash {
             readOnly(() -> observer.beforePublication(call)); readOnly(() -> receiptGuard.prepared(call));
             nativeStore.run(); operationCompleted = true;
             readOnly(() -> observer.afterPublication(call)); readOnly(() -> receiptGuard.completed(call));
-        } finally { pendingPublication = null; operationCompleted = false; }
+        } catch(RuntimeException|Error original){try{observer.failed(call,original);}catch(RuntimeException|Error v){if(v!=original)original.addSuppressed(v);}throw original;}
+        finally { pendingPublication = null; operationCompleted = false; }
     }
     private void observedSound(FmSound sound) {
         if (observer == null) { readOnly(() -> playFm.playFm(sound)); return; }
@@ -332,7 +360,8 @@ public final class CdTunnelDoorSplash {
             readOnly(() -> observer.beforeCall(call)); readOnly(() -> receiptGuard.prepared(call)); nativeCall.run();
             operationCompleted = true;
             readOnly(() -> observer.afterCall(call)); readOnly(() -> receiptGuard.completed(call));
-        } finally { pendingCall = null; operationCompleted = false; }
+        } catch(RuntimeException|Error original){try{observer.failed(call,original);}catch(RuntimeException|Error v){if(v!=original)original.addSuppressed(v);}throw original;}
+        finally { pendingCall = null; operationCompleted = false; }
     }
     private void requireNoPending() {
         if (pendingPublication != null || pendingCall != null) throw new IllegalStateException("Nested Door Splash producer operation");

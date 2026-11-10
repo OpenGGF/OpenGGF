@@ -292,6 +292,14 @@ public final class CdTunnelDoor {
         return withPrefixOwner(runtime, secondary, Assets.fromAct2PastAssets(owner.objects()), solid, commit, draw, fm, observer);
     }
 
+    /** Genuine original R11 retained owner; no source relabelling or second reserved bank. */
+    public static CdTunnelDoor fromOriginalPresentAssets(CdObjectPlacementRuntime runtime,
+            com.openggf.game.soniccd.level.CdR11aAssets source,SecondarySource secondary,CdSolidObject solid,
+            PrefixSolidOwner commit,DrawObjectCall draw,PlayFmCall fm,DispatchObserver observer)throws java.io.IOException{
+        CdOriginalPresentObjectSource.require(runtime,source);
+        return withPrefixOwner(runtime,secondary,Assets.fromObjectAssets(source.openingObjects()),solid,commit,draw,fm,observer);
+    }
+
     public CdTunnelDoor(CdObjectPlacementRuntime runtime, CdReservedObjectBank reserved, Assets assets,
                         CdSolidObject solid, SolidOwner solidOwner, DrawObjectCall drawObject, PlayFmCall playFm) {
         this.runtime = Objects.requireNonNull(runtime); this.reserved = Objects.requireNonNull(reserved);

@@ -13,6 +13,7 @@ import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR11bObjectData;
 import com.openggf.game.soniccd.level.CdR12aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
@@ -218,6 +219,7 @@ public final class CdTamabboh {
     private final PlayFmSound playFmSound;
     private final DrawObjectCall drawObject;
     private boolean running;
+    private CdEnemyPrimitiveScope originalPrimitives;
     private CdObjectAnimationBinding.Guard animationGuard;
     private final CdObjectAnimationBinding.Pending pendingAnimation = new CdObjectAnimationBinding.Pending();
     boolean isCurrentAnimation(CdObjectAnimation.Prefix prefix, CdObjectAnimation.Operation operation) {
@@ -375,6 +377,35 @@ public final class CdTamabboh {
                 angleCommit, playerRead, playFmSound, drawObject);
     }
 
+    public static CdTamabboh fromOriginalPresentAssets(CdObjectPlacementRuntime placement,
+            com.openggf.game.soniccd.level.CdR11aAssets owner,CdR11aObjectAssets objects,PrimaryAngleCommit angle,
+            PlayerWordRead player,PlayFmSound fm,DrawObjectCall draw,CdEnemyPrimitiveScope.Observer observer){
+        CdOriginalPresentObjectSource.require(placement,owner);
+        if(!Objects.requireNonNull(objects,"actual original object source").identity().equals(owner.identity()))throw new IllegalArgumentException("Different original enemy object source");
+        var o=objects;var tiles=o.view(CdR11aObjectAssets.Table.OBJECT_TILE_IDS).bytes();var a=Assets.fromObjectAssets(o);
+        var data=new NativeAssets(secondary->tiles.unsignedWord((short)tiles.unsignedWord(TILE_SELECTOR*2)+secondary*2),a.normal(),a.damaged(),a.missile(),a.normalMappingsAddress(),a.damagedMappingsAddress(),a.missileMappingsAddress(),a.normalAnimationAddress(),a.damagedAnimationAddress());
+        var body=new CdTamabboh(placement,data,new CdPlayerTerrain(owner.terrain()),angle,player,fm,draw);
+        body.originalPrimitives=new CdEnemyPrimitiveScope(placement,observer);return body;
+    }
+    /** Original B cached source adapter. The same ObjTamabboh branches subtype1 FIRST,
+     * then services its actual ID22 child with the same native missile body; no ID23 alias.
+     * B mapping/animation/tile/terrain bytes all come from this one retained Reader. */
+    public static CdTamabboh fromOriginalStandardPastSource(CdObjectPlacementRuntime placement,
+            CdR11bObjectData owner,PrimaryAngleCommit angle,PlayerWordRead player,PlayFmSound fm,
+            DrawObjectCall draw,CdEnemyPrimitiveScope.Observer observer)throws java.io.IOException{
+        Objects.requireNonNull(owner,"actual retained B object source").requirePlacement(placement);
+        var tiles=owner.view(CdR11bObjectData.Table.OBJECT_TILE_IDS).bytes();
+        if(tiles.length()!=72)throw new IllegalArgumentException("Original Past Tamabboh requires the actual72-byte tile directory");
+        int root=CdR11bObjectData.Table.MAP_SPR_TAMABBOH1.nativeAddress();
+        var a=new NativeAssets(secondary->tiles.unsignedWord((short)tiles.unsignedWord(TILE_SELECTOR*2)+secondary*2),
+                owner.tamabbohNormal(),owner.tamabbohDamaged(),owner.tamabbohMissile(),root,root+22,
+                CdR11bObjectData.Table.MAP_SPR_TAMABBOH_MISSILE.nativeAddress(),CdR11bObjectData.Table.ANI_TAMABBOH1.nativeAddress(),CdR11bObjectData.Table.ANI_TAMABBOH2.nativeAddress());
+        var body=new CdTamabboh(placement,a,CdPlayerTerrain.fromStageTerrain(owner.terrain()),angle,player,fm,draw);
+        body.originalPrimitives=new CdEnemyPrimitiveScope(placement,observer);return body;
+    }
+    public boolean isCurrentOriginalPrimitive(CdEnemyPrimitiveScope.Call c){return running&&originalPrimitives!=null&&originalPrimitives.isCurrent(c);}
+    private void originalWrite(CdObjectState s){if(originalPrimitives==null)placement.pool().write(s);else originalPrimitives.write(s);}
+
     /** ObjTamabboh:7-18 / ObjTamabbohMissile:213-224: subtype equality1 is FIRST. */
     public Result run(int wholeIndex, Globals globals) { return run(wholeIndex,(Reads)globals); }
     /** Lazy actual scalar reads preserve subtype1-before-parent-presence order. No default values. */
@@ -382,6 +413,7 @@ public final class CdTamabboh {
         if (running) throw new IllegalStateException("Tamabboh cannot reenter its synchronous physical dispatch");
         running = true;
         try {
+            if(originalPrimitives!=null)originalPrimitives.enter(wholeIndex,OBJECT_ID);
             Objects.requireNonNull(globals, "globals"); var pool = placement.pool(); var state = pool.state(wholeIndex);
             if (state.id() != OBJECT_ID) throw new IllegalArgumentException("Selected slot is not Tamabboh ID $22");
             var c = new Cursor(pool, state, globals.primaryAngle()); currentCursor = c;
@@ -392,9 +424,9 @@ public final class CdTamabboh {
                     default -> throw unsupported(UnsupportedBoundary.ROUTINE_DISPATCH, c, state.routine());
                 }
                 draw(c); // Including the actual cleared ID0 image after missile Main DeleteObject.
-                return c.finish();
+                if(originalPrimitives!=null)originalPrimitives.returned();return c.finish();
             }
-            if (destroyOnGoodFuture(c, globals)) return c.finish();
+            if (destroyOnGoodFuture(c, globals)) {if(originalPrimitives!=null)originalPrimitives.returned();return c.finish();}
             switch (c.state.routine()) {
                 case 0 -> { init(c); position(c); }
                 case 2 -> position(c);
@@ -408,12 +440,12 @@ public final class CdTamabboh {
                 case 10 -> fire(c);
                 default -> throw unsupported(UnsupportedBoundary.ROUTINE_DISPATCH, c, c.state.routine());
             }
-            draw(c); despawn(c, globals); return c.finish();
-        } finally { pendingAnimation.retire(); currentCursor = null; running = false; }
+            draw(c); despawn(c, globals); if(originalPrimitives!=null)originalPrimitives.returned();return c.finish();
+        } finally { pendingAnimation.retire(); currentCursor = null; if(originalPrimitives!=null)originalPrimitives.close();running = false; }
     }
 
     /** Object Time Check.asm:12-44: Delete64, restore only XY WORDs, ID18, skip body wrapper. */
-    private static boolean destroyOnGoodFuture(Cursor c, Reads globals) {
+    private boolean destroyOnGoodFuture(Cursor c, Reads globals) {
         if (globals.goodFuture() == 0 || (globals.timeZone() == 1 && c.state.subtype() == 0)) {
             c.returned(NativeCall.DESTROY_ON_GOOD_FUTURE); return false;
         }
@@ -430,7 +462,7 @@ public final class CdTamabboh {
                 .moveByte(PRIORITY, 4).moveByte(COLLISION_TYPE, 0x2C).moveByte(X_RADIUS, 16)
                 .moveByte(WIDTH, 16).moveByte(Y_RADIUS, 15).moveWord(TAMABBOH_ANCHOR_X, c.state.centreX()); c.publish();
         int secondary = c.state.subtype2();
-        if (secondary != 0) throw unsupported(UnsupportedBoundary.TILE_ENTRY, c, secondary);
+        if (originalPrimitives==null&&secondary != 0) throw unsupported(UnsupportedBoundary.TILE_ENTRY, c, secondary);
         int tile = assets.tileOperand().read(secondary);
         c.state = c.state.moveWord(TILE, tile); c.publish(); c.returned(NativeCall.SET_OBJECT_TILE_ID);
         boolean damaged = c.state.subtype() != 0;
@@ -476,7 +508,7 @@ public final class CdTamabboh {
         int x = playerWord(c, PlayerField.X_WORD);
         return ((x - c.state.centreX() + 0x50) & 0xFFFF) < 0xA0;
     }
-    private static void turn(Cursor c) {
+    private void turn(Cursor c) {
         c.state = c.state.moveLong(TAMABBOH_X_DELTA, -c.state.longBits(TAMABBOH_X_DELTA))
                 .moveByte(SPRITE_FLAGS, c.state.spriteFlags() ^ 1).moveByte(FLAGS, c.state.flags() ^ 1); c.publish();
     }
@@ -487,21 +519,21 @@ public final class CdTamabboh {
         c.enter(NativeRoutine.FIRE);
         c.state = c.state.moveByte(ROUTINE, 4).moveByte(ANIMATION, 0).moveWord(TAMABBOH_COOLDOWN, 0x78); c.publish();
         if (c.state.subtype() != 0) return;
-        var first = c.pool.findObjSlot(); c.returned(NativeCall.FIND_OBJ_SLOT);
+        var first = (originalPrimitives==null?c.pool.findObjSlot():originalPrimitives.invoke(CdEnemyPrimitiveScope.Kind.FIND,()->c.pool.findObjSlot())); c.returned(NativeCall.FIND_OBJ_SLOT);
         if (first.isEmpty()) return;
         if (c.state.signedByte(SPRITE_FLAGS) < 0) fm(c, first.getAsInt()); // BEFORE ANY first-child write.
         initMissile(c, first.getAsInt(), 0);
-        var second = c.pool.findObjSlot(); c.returned(NativeCall.FIND_OBJ_SLOT); // Always restart at32; no reservation.
+        var second = (originalPrimitives==null?c.pool.findObjSlot():originalPrimitives.invoke(CdEnemyPrimitiveScope.Kind.FIND,()->c.pool.findObjSlot())); c.returned(NativeCall.FIND_OBJ_SLOT); // Always restart at32; no reservation.
         if (second.isPresent()) initMissile(c, second.getAsInt(), 0xFF);
     }
     /** ObjTamabboh_InitMissile:189-199, then caller's Var3F: retain EVERY other dirty byte. */
-    private static void initMissile(Cursor c, int wholeIndex, int direction) {
+    private void initMissile(Cursor c, int wholeIndex, int direction) {
         var child = c.pool.state(wholeIndex);
         child = child.moveByte(ID, c.state.id()).moveByte(SUBTYPE, 1).moveWord(TILE, c.state.word(TILE))
                 .moveByte(PRIORITY, c.state.unsignedByte(PRIORITY)).addByte(PRIORITY, 1)
                 .moveWord(X, c.state.centreX()).moveWord(Y, c.state.centreY()).addWord(Y, -10);
-        c.pool.write(child); // ID is live before the next Find; neither clear nor reserved ownership.
-        c.pool.write(c.pool.state(wholeIndex).moveByte(TAMABBOH_MISSILE_DIRECTION, direction));
+        originalWrite(child); // ID is live before the next Find; neither clear nor reserved ownership.
+        originalWrite(c.pool.state(wholeIndex).moveByte(TAMABBOH_MISSILE_DIRECTION, direction));
         c.effects.add(new MissileCreated(wholeIndex, direction));
     }
     /** ObjTamabbohMissile_Init:226-252: no fallthrough, floor, motion or animation. */
@@ -535,7 +567,7 @@ public final class CdTamabboh {
         var cut = c.pool.capture(); var call = new PrimaryAngleCall(cut, c.state, c.primaryAngle, value);
         requireCurrentCut(c, cut, call.expectedSource());
         pendingAngle = call;
-        try { angleCommit.commit(call); }
+        try { if(originalPrimitives==null)angleCommit.commit(call);else originalPrimitives.invoke(CdEnemyPrimitiveScope.Kind.ANGLE,()->{angleCommit.commit(call);return null;}); }
         catch (RuntimeException | Error original) {
             try { requireCurrentCut(c,cut,call.expectedSource()); }
             catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
@@ -548,7 +580,7 @@ public final class CdTamabboh {
         var cut = c.pool.capture(); var call = new PlayerReadCall(cut, c.state, field);
         requireCurrentCut(c, cut, call.expectedSource()); int value;
         pendingPlayer = call;
-        try { value = playerRead.read(call); }
+        try { value = originalPrimitives==null?playerRead.read(call):originalPrimitives.invoke(CdEnemyPrimitiveScope.Kind.PLAYER,()->playerRead.read(call)); }
         catch (RuntimeException | Error original) {
             try { requireCurrentCut(c,cut,call.expectedSource()); }
             catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
@@ -561,7 +593,7 @@ public final class CdTamabboh {
         var cut = c.pool.capture(); var call = new FmCall(cut, c.state, firstFreeWholeIndex, FmSound.FM_A0);
         requireCurrentCut(c, cut, call.expectedSource());
         pendingFm = call;
-        try { playFmSound.play(call); }
+        try { if(originalPrimitives==null)playFmSound.play(call);else originalPrimitives.invoke(CdEnemyPrimitiveScope.Kind.FM,()->{playFmSound.play(call);return null;}); }
         catch (RuntimeException | Error original) {
             try { requireCurrentCut(c,cut,call.expectedSource()); }
             catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
@@ -589,6 +621,10 @@ public final class CdTamabboh {
         int pointer = c.state.longBits(TAMABBOH_ANIMATION_SCRIPT);
         var visual = missile ? assets.missile() : pointer == assets.damagedAnimationAddress() ? assets.damaged() : assets.normal();
         var table = new CdObjectAnimation.AnimationTable(visual.animationTable(), 0, visual.animations().size());
+        if(originalPrimitives!=null){
+            originalPrimitives.animate(table,op->{if(op.kind()==CdObjectAnimation.Kind.DIRECTORY&&!missile&&pointer!=assets.normalAnimationAddress()&&pointer!=assets.damagedAnimationAddress())throw unsupported(UnsupportedBoundary.ANIMATION_POINTER,c,pointer);});
+            c.state=c.pool.state(c.wholeIndex);c.returned(NativeCall.ANIMATE_OBJECT);return;
+        }
         CdObjectAnimationBinding.run(placement, c.wholeIndex, table,
                 () -> running && currentCursor == c, state -> c.state = state, pendingAnimation.wrap(animationGuard),
                 op -> {
@@ -611,7 +647,7 @@ public final class CdTamabboh {
     /** Existing DrawObject is mutating. Reload live source before the wrapper's anchor/saved tail. */
     private void draw(Cursor c) {
         pendingDrawCut = c.pool.capture(); pendingDrawIdentity = c.state.identity();
-        try { drawObject.drawObject(c.pool, pendingDrawIdentity); }
+        try { if(originalPrimitives==null)drawObject.drawObject(c.pool,pendingDrawIdentity);else originalPrimitives.draw(()->drawObject.drawObject(c.pool,pendingDrawIdentity)); }
         finally { pendingDrawCut = null; pendingDrawIdentity = null; c.state = c.pool.state(c.wholeIndex); }
         c.returned(NativeCall.DRAW_OBJECT);
     }
@@ -623,7 +659,7 @@ public final class CdTamabboh {
         if (outside || (globals.timeZone() & 0x80) != 0) {
             if (c.state.savedFlagsId() != 0) {
                 var address = savedAddress(c, globals); int old = placement.savedFlag(address.id(), address.period());
-                placement.bclrSavedFlag(address.id(), address.period(), CdObjectPlacementRuntime.SavedBit.LOADED);
+                if(originalPrimitives==null)placement.bclrSavedFlag(address.id(),address.period(),CdObjectPlacementRuntime.SavedBit.LOADED);else originalPrimitives.saved(address.id(),address.period());
                 c.effects.add(new SavedFlagChanged(address.byteIndex(), old, placement.savedFlag(address.id(), address.period())));
             }
             delete(c);
@@ -642,13 +678,13 @@ public final class CdTamabboh {
         if (index < 2 || index >= CdObjectPlacementRuntime.SAVED_BANK_BYTES) throw unsupported(UnsupportedBoundary.SAVED_FLAGS_ADDRESS, c, index);
         return new SavedAddress((index - 2) / 3, (index - 2) % 3, index);
     }
-    private static void delete(Cursor c) {
-        c.pool.deleteObject(c.wholeIndex); c.state = c.pool.state(c.wholeIndex); c.effects.add(new Deleted());
+    private void delete(Cursor c) {
+        if(originalPrimitives==null)c.pool.deleteObject(c.wholeIndex);else originalPrimitives.delete(c.wholeIndex);c.state = c.pool.state(c.wholeIndex);c.effects.add(new Deleted());
     }
     private static UnsupportedTamabboh unsupported(UnsupportedBoundary boundary, Cursor c, int value) {
         return new UnsupportedTamabboh(boundary, c, value);
     }
-    private static final class Cursor {
+    private final class Cursor {
         final CdObjectPool pool;
         final int wholeIndex;
         final List<Effect> effects = new ArrayList<>();
@@ -657,7 +693,7 @@ public final class CdTamabboh {
         Cursor(CdObjectPool pool, CdObjectState state, int primaryAngle) {
             this.pool = pool; this.state = state; this.primaryAngle = primaryAngle; wholeIndex = state.identity().wholeIndex();
         }
-        void publish() { pool.write(state); }
+        void publish() { originalWrite(state); }
         void enter(NativeRoutine routine) { effects.add(new RoutineEntered(routine)); }
         void returned(NativeCall call) { effects.add(new CallReturned(call)); }
         Result finish() { return new Result(state, effects); }

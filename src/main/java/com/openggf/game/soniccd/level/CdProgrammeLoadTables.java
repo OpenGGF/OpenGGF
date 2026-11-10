@@ -20,6 +20,7 @@ final class CdProgrammeLoadTables {
         public CdAssetBytes bytes() { return sourceBytes.orElseThrow(()->new UnsupportedOperationException("Native zero-address palette read is unavailable")); }
     }
     record Cycle(CdAssetBytes script,CdAssetBytes colors,CycleKind kind) { }
+    record DirectColorCycleData(CdAssetBytes colors,int frames,int wordsPerFrame,int resetByte,int destinationByte) { }
     sealed interface BackgroundData permits DirectCameraData,BackgroundTables { }
     enum DirectCameraData implements BackgroundData { INSTANCE }
     record PointerTable(PointerKind kind,List<Integer> values) { PointerTable { values=List.copyOf(values); } }
@@ -32,6 +33,7 @@ final class CdProgrammeLoadTables {
     private final List<Palette> palettes;
     private final List<Cycle> cycles;
     private final CycleProgramme cycleProgramme;
+    private final List<DirectColorCycleData> directCycles;
     private final Sections sectionProgramme;
     private final BackgroundData backgroundProgramme;
     private final Optional<List<CdR11bLoadPlan.SectionArt>> sections;
@@ -94,6 +96,12 @@ final class CdProgrammeLoadTables {
         }
         palettes=List.copyOf(parsedPalettes);
         var parsedCycles=new ArrayList<Cycle>();var cycleViews=new IdentityHashMap<Object,CdAssetBytes>();
+        // Native direct tables precede the independent third script in future DATA.
+        var direct=new ArrayList<DirectColorCycleData>();
+        for(var cycle:definition.directCycles())direct.add(new DirectColorCycleData(
+            slice(reader,cycle.colors(),cycleViews),cycle.frames(),cycle.wordsPerFrame(),cycle.resetByte(),cycle.destinationByte()));
+        directCycles=List.copyOf(direct);
+
         for(var cycle:profile.cycles())parsedCycles.add(new Cycle(
             slice(reader,cycle.script(),cycleViews),slice(reader,cycle.colors(),cycleViews),cycle.kind()));
         cycles=List.copyOf(parsedCycles);cycleProgramme=profile.cycleProgramme();
@@ -185,6 +193,7 @@ final class CdProgrammeLoadTables {
     List<Plc> plcs() { return plcs; }
     List<Object> encounteredSources() { return encounteredSources; }
     List<Palette> palettes() { return palettes; }
+    List<DirectColorCycleData> directCycles() { return directCycles; }
     List<Cycle> cycles() { return cycles; }
     CycleProgramme cycleProgramme() { return cycleProgramme; }
     Sections sectionProgramme() { return sectionProgramme; }

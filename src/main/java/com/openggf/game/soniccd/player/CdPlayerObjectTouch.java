@@ -1,6 +1,7 @@
 package com.openggf.game.soniccd.player;
 
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdProgrammeObjectSource;
 import com.openggf.game.soniccd.level.CdR31aAssets;
 import com.openggf.game.soniccd.objects.CdObjectPool;
 import com.openggf.game.soniccd.objects.CdObjectState;
@@ -77,18 +78,23 @@ public final class CdPlayerObjectTouch {
         private final CdObjectState selectedSlot;
         // BEGIN R31 pure selection source relation; not Body/Frame/World invocation authority.
         private final CdR31aAssets r31aAssets;
+        private final CdProgrammeObjectSource programmeSource;
         // END R31 pure selection source relation.
 
         private HandlerBoundary(Kind kind, CdObjectState selectedSlot) {
             this.kind = kind;
             this.selectedSlot = selectedSlot;
-            this.r31aAssets = null;
+            this.r31aAssets = null; this.programmeSource = null;
         }
         // BEGIN R31 original selection producer identity.
         private HandlerBoundary(Kind kind, CdObjectState selectedSlot, CdR31aAssets r31aAssets) {
-            this.kind = kind; this.selectedSlot = selectedSlot; this.r31aAssets = r31aAssets;
+            this(kind, selectedSlot, r31aAssets, null);
+        }
+        private HandlerBoundary(Kind kind,CdObjectState selectedSlot,CdR31aAssets r31aAssets,CdProgrammeObjectSource programmeSource) {
+            this.kind=kind;this.selectedSlot=selectedSlot;this.r31aAssets=r31aAssets;this.programmeSource=programmeSource;
         }
         CdR31aAssets r31aAssets() { return r31aAssets; }
+        CdProgrammeObjectSource programmeSource() { return programmeSource; }
         // END R31 original selection producer identity.
 
         @Override public Kind kind() { return kind; }
@@ -99,6 +105,7 @@ public final class CdPlayerObjectTouch {
     private final List<CdR11aObjectAssets.TouchSize> sizes;
     // BEGIN R31 authenticated semantic source; legacy format constructors remain PPZ.
     private final CdR31aAssets r31aAssets;
+    private final CdProgrammeObjectSource programmeSource;
     // END R31 authenticated semantic source.
 
     /**
@@ -114,13 +121,28 @@ public final class CdPlayerObjectTouch {
             requireWidth(size.halfHeight(), 0xFF, "ObjColSizes half-height byte");
         }
         this.sizes = copy;
-        this.r31aAssets = null;
+        this.r31aAssets = null; this.programmeSource = null;
     }
 
     /** Runtime bytes come only from the existing immutable loaded object-asset view; no literal fallback. */
     public static CdPlayerObjectTouch fromAssets(CdR11aObjectAssets assets) {
         var view = Objects.requireNonNull(assets, "assets").view(CdR11aObjectAssets.Table.TOUCH_DIMENSIONS);
         return new CdPlayerObjectTouch(CdR11aObjectAssets.decodeTouchDimensions(view.bytes().copy()));
+    }
+
+    /** Actual original R41A uses the same scanner geometry/item algorithm. Native source
+     * r4/player_object_collide.asm:3-107; authenticated LEA selects the real126-byte table.
+     * This retains immutable DATA identity only, never a private Frame/World invocation. */
+    public static CdPlayerObjectTouch fromProgrammeSource(CdProgrammeObjectSource actual) {
+        var source=Objects.requireNonNull(actual,"actual original object source");source.requireRetained();
+        return new CdPlayerObjectTouch(source,CdR11aObjectAssets.decodeTouchDimensions(
+                source.view(CdProgrammeObjectSource.Table.TOUCH_DIMENSIONS).bytes().copy()));
+    }
+    private CdPlayerObjectTouch(CdProgrammeObjectSource source,List<CdR11aObjectAssets.TouchSize> dimensions) {
+        sizes=List.copyOf(dimensions);r31aAssets=null;programmeSource=source;
+    }
+    public boolean ownsProgrammeSource(CdProgrammeObjectSource source) {
+        return programmeSource!=null&&programmeSource==source;
     }
 
     // BEGIN R31 normal player selector entry, native r3/player_object_collide.asm:3-98.
@@ -130,7 +152,7 @@ public final class CdPlayerObjectTouch {
         return new CdPlayerObjectTouch(source, CdR11aObjectAssets.decodeTouchDimensions(source.view(CdR31aAssets.Asset.TOUCH_DIMENSIONS).copy()));
     }
     private CdPlayerObjectTouch(CdR31aAssets assets, List<CdR11aObjectAssets.TouchSize> dimensions) {
-        r31aAssets = assets; sizes = dimensions;
+        r31aAssets = assets; sizes = dimensions; programmeSource = null;
     }
     public boolean ownsR31aAssets(CdR31aAssets assets) { return r31aAssets != null && r31aAssets == assets; }
     public enum UnsupportedBoundary { R3_CONTROL_2C_OWNER }
@@ -208,10 +230,10 @@ public final class CdPlayerObjectTouch {
 
             // Every selected overlap returns; unsupported entries never fall through to later items.
             int group = collisionType & 0xC0;
-            if (group == 0) { return new HandlerBoundary(Kind.ENEMY, slot, r31aAssets); }
-            if (group == 0xC0) { return new HandlerBoundary(Kind.SPECIAL, slot, r31aAssets); }
-            if (group == 0x80) { return new HandlerBoundary(Kind.HAZARD, slot, r31aAssets); }
-            if ((collisionType & 0x3F) == 6) { return new HandlerBoundary(Kind.MONITOR, slot, r31aAssets); }
+            if (group == 0) { return new HandlerBoundary(Kind.ENEMY, slot, r31aAssets, programmeSource); }
+            if (group == 0xC0) { return new HandlerBoundary(Kind.SPECIAL, slot, r31aAssets, programmeSource); }
+            if (group == 0x80) { return new HandlerBoundary(Kind.HAZARD, slot, r31aAssets, programmeSource); }
+            if ((collisionType & 0x3F) == 6) { return new HandlerBoundary(Kind.MONITOR, slot, r31aAssets, programmeSource); }
             return new Item(slot, player.hurtTimerWord());
         }
         return NoTouch.INSTANCE;

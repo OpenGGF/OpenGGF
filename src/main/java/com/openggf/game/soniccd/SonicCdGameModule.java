@@ -36,9 +36,11 @@ import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.objects.CdTunnelDoor;
 // BEGIN R12B Disc/Door imports.
 import com.openggf.game.soniccd.objects.CdSpinningDisc;
+import com.openggf.game.soniccd.objects.CdSonicHole;
 import com.openggf.game.soniccd.objects.CdTunnelDoorVertical;
 // END R12B Disc/Door imports.
 import com.openggf.game.soniccd.objects.CdTunnelDoorSplash;
+import com.openggf.game.soniccd.objects.CdR4PlayerBubbles;
 import com.openggf.game.soniccd.objects.CdTunnelPath;
 import com.openggf.game.soniccd.objects.CdMonitor;
 import com.openggf.game.soniccd.objects.CdMonitorItem;
@@ -52,11 +54,14 @@ import com.openggf.game.soniccd.objects.CdMosqui;
 import com.openggf.game.soniccd.objects.CdLostRing;
 import com.openggf.game.soniccd.objects.CdRingGlobals;
 import com.openggf.game.soniccd.objects.CdTimeWarpSaveData;
+import com.openggf.game.soniccd.objects.CdTimeWarpLoadData;
 import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayableSonic;
 import com.openggf.game.soniccd.player.CdPlayerEngineRules;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
+import com.openggf.game.soniccd.player.CdR4WaterAirPorts;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
+import com.openggf.game.soniccd.resources.CdBlockDefinitionStaging;
 import com.openggf.game.soniccd.resources.CdPowerupArtRuntime;
 import com.openggf.game.soniccd.resources.CdR11aCameraArtResidency;
 import com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll;
@@ -99,8 +104,13 @@ public final class SonicCdGameModule implements GameModule {
     private final PlayableCharacterRegistry characters;
     private CdGameDataSource source;
     private final CdSelectedProfileVisit selectedProfile;
+    private WorldSession selectedProfilePolicyWorld;
+    private com.openggf.game.session.WorldSessionPolicyState selectedProfilePolicyOwner;
     private final Object selectedProfileInvocation;
     private final CdOriginalBootPrefix originalBoot; // Fresh factory only; never reconstructed from values/captures.
+    private final Object r11TimeWarpSavedLifetime=new Object();
+    // Absent without original Boot; never borrow OpeningObjectRuntime's DEV bank.
+    private CdTimeWarpSaveData.State r11TimeWarpSaved;
     private GameplayModeContext playerMode;
     private CdPlayerFrameRuntime playerFrame;
     private CdPlayableSonic playerActor;
@@ -269,7 +279,7 @@ public final class SonicCdGameModule implements GameModule {
             var oldLevel=m.level();var levelGlobals=new CdLevelGlobals(oldLevel.levelRestart(),oldLevel.updateHudTime(),selected.checkpoint(),oldLevel.spawnMode(),selected.plcLoadFlags().orElseThrow(),oldLevel.flowerCount(),oldLevel.fadeEnableDisplay(),oldLevel.powerup(),oldLevel.timeOver());
             levelProgram=new LevelProgramState(p.demoModeWord(),p.timeStonesByte(),p.specialStageByte(),p.usePlayer2Byte(),p.palFadeFlagsByte(),p.gameModeByte(),p.levelStartedByte(),0,LevelProgramPhase.R31_LOADING,OptionalInt.of(main.goodFutureFlags()));
             var palettes=originalBoot.state().cpuPalettes().orElseThrow();
-            r31Loading=new SonicCdR31aLoadingVisit(r31Host,stagedR31,playerFrame,r31Art,new SonicCdR31aLoadingVisit.Entry(programServices.initialization(),originalBoot.environment(),section,p,levelGlobals,palettes.normal(),palettes.fade(),clear.waterPalette(),originalVideo.displayedPalette().orElseThrow(),clear.reserved(),originalVideo.displayEnabled().orElseThrow()));
+            r31Loading=new SonicCdR31aLoadingVisit(r31Host,stagedR31,playerFrame,r31Art,new SonicCdR31aLoadingVisit.Entry(programServices.initialization(),originalBoot.environment(),section,p,levelGlobals,palettes.normal(),palettes.fade(),clear.waterPalette(),originalVideo.displayedPalette().orElseThrow(),clear.reserved(),originalVideo.displayEnabled().orElseThrow(),originalBoot.state().blockDefinitions()));
             r31Host.install(r31Loading);r31Host.retainOriginalMainClears(r31Authority,main);
             r31World=new CdWorld(r31Authority,r31Loading,r31Host,playerFrame,stagedR31,r31Art,com.openggf.game.soniccd.level.CdR31aObjectAssets.fromAssets(stagedR31));
             r31Host.bindOrdinaryWorld(r31Authority,r31World);r31Loading.bindOrdinaryOwner(r31Host,r31World);
@@ -743,7 +753,7 @@ public final class SonicCdGameModule implements GameModule {
         requireAct2PastLoadingVisit(act2PastLoading);var phase=act2PastLoading.state().phase();
         if(phase!=SonicCdAct2PastLoadingVisit.Phase.OLD_RETURNED&&phase!=SonicCdAct2PastLoadingVisit.Phase.OLD_IPX_RETURNED)
             throw new IllegalStateException("No completed old R12B MMD return");
-        return 0xFF; // ClearPLCs DBF651-658; VSync preserves that semantic BYTE, no CPU register owner.
+        return CdRetainedProgrammeReturn.clearedPlcReturnByte(); // Existing semantic result, no CPU register owner.
     }
     void validateAct2PastLoadRequest(LevelLoadContext context) {
         var mode = SessionManager.getCurrentGameplayMode();
@@ -1138,7 +1148,7 @@ public final class SonicCdGameModule implements GameModule {
         PastLoadBoundary boundary() { return boundary; }
     }
     // Typed request metadata and one native music-latch projection; no audio synthesis.
-    sealed interface PastSound permits PastIntroFm, PastIntroSubCpu, PastCcFm, PastKamaSickleFm, PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastLostRingFm, PastRobotGeneratorFm, PastProjectorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing, PastTunnelDoorSplashFm, PastDiscFm, PastVerticalDoorFm, PastSpeedShoesSubCpu, PastLevelMusic, PastR13BossFm, PastR13BossSubCpu, PastR13CapsuleExplosion, PastR13CapsuleSubCpu, PastGameOverSubCpu, PastBumperSubCpu { }
+    sealed interface PastSound permits PastIntroFm, PastIntroSubCpu, PastCcFm, PastKamaSickleFm, PastTentouExplosionFm, PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastLostRingFm, PastRobotGeneratorFm, PastProjectorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing, PastTunnelDoorSplashFm, PastDiscFm, PastVerticalDoorFm, PastSpeedShoesSubCpu, PastLevelMusic, PastR13BossFm, PastR13BossSubCpu, PastR13CapsuleExplosion, PastR13CapsuleSubCpu, PastGameOverSubCpu, PastBumperSubCpu, PastMechanismHoleFm, PastTtSwitchFm, PastTtWaterAirFm { }
     record PastR13CapsuleExplosion() implements PastSound { }
     record PastR13CapsuleSubCpu(com.openggf.game.soniccd.objects.CdR13Capsule.CpuCommand command) implements PastSound {
         PastR13CapsuleSubCpu { Objects.requireNonNull(command); }
@@ -1159,6 +1169,9 @@ public final class SonicCdGameModule implements GameModule {
         public PastMonitorItemRing { Objects.requireNonNull(sound); }
     }
     // BEGIN R12B Disc/Door immutable FM alternatives; no operation/cut is retained.
+    record PastMechanismHoleFm(CdSonicHole.FmSound sound) implements PastSound {
+        PastMechanismHoleFm { Objects.requireNonNull(sound); }
+    }
     record PastDiscFm(CdSpinningDisc.FmSound sound) implements PastSound {
         PastDiscFm { Objects.requireNonNull(sound); }
     }
@@ -1182,6 +1195,8 @@ public final class SonicCdGameModule implements GameModule {
     // END R13 GAME OVER IMMUTABLE SUBCPU REQUEST 20261107
     /** Completed B9 ledger metadata only; private original pass publication owns the operation. */
     record PastKamaSickleFm() implements PastSound { }
+    /** Original TentouBomb PlayFMSound FM_EXPLODE=$9E; request metadata only. */
+    record PastTentouExplosionFm() implements PastSound { }
     record PastCcFm(int id) implements PastSound {PastCcFm{if(id!=0xB7)throw new IllegalArgumentException("Actual CC Spikes FM B7");}}
     record PastBumperSubCpu(int nativeId) implements PastSound {PastBumperSubCpu{if(nativeId!=0x7a&&nativeId!=0x7f)throw new IllegalArgumentException("Actual Bumper SubCPU");}}
     record PastIntroFm(int nativeId) implements PastSound {PastIntroFm{if(nativeId!=0xA3&&nativeId!=0xCA)throw new IllegalArgumentException("Actual intro FM");}}
@@ -1246,6 +1261,14 @@ public final class SonicCdGameModule implements GameModule {
             if (nativeId != CdCollapsePlatform.COLLAPSE_FM) throw new IllegalArgumentException("Collapse requests only FM_A3");
         }
     }
+    /** Completed request metadata in the existing ledger, not playback/replay/owner authority.
+     * Header/priority resolve through the actual authenticated MDINIT bank, including DF's
+     * native adjacent-header priority byte; no invented 80th priority declaration. */
+    record PastTtWaterAirFm(CdR4PlayerBubbles.FmSound sound,int headerAddress,int priorityByte) implements PastSound {
+        PastTtWaterAirFm{Objects.requireNonNull(sound);if((headerAddress&~65535)!=0||(priorityByte&~255)!=0)throw new IllegalArgumentException("Native FM source operands");}
+        int nativeId(){return sound.nativeId();}
+    }
+    record PastTtSwitchFm(int nativeId) implements PastSound {PastTtSwitchFm{if(nativeId!=0xBF)throw new IllegalArgumentException("Switch native FM_BF only");}}
     record PastWallFm(int nativeId) implements PastSound {
         PastWallFm { if(nativeId!=CdBreakableWall.BREAK_FM)throw new IllegalArgumentException("Wall emits native FM_B0 only"); }
     }
@@ -1427,7 +1450,7 @@ public final class SonicCdGameModule implements GameModule {
         if (levelProgram.phase() != LevelProgramPhase.OLD_RETURNED
                 && levelProgram.phase() != LevelProgramPhase.OLD_IPX_RETURNED)
             throw new IllegalStateException("No completed old MMD semantic result");
-        return 0xFF;
+        return CdRetainedProgrammeReturn.clearedPlcReturnByte();
     }
     enum BigRingProgramBoundary { TIME_STONES_READ, SPECIAL_STAGE_STORE }
     static final class UnsupportedBigRingProgram extends UnsupportedOperationException {
@@ -1565,6 +1588,7 @@ public final class SonicCdGameModule implements GameModule {
         }
     }
     @Override public Level loadLevelOverride(int levelIndex) {
+        if(constructingOriginalR11){validateOriginalR11Assembly(r11AssemblyContext);if(levelIndex!=SonicCd.sourceLevelIndex(originalLoadingSource))throw new IllegalArgumentException("Original selected descriptor");try{return SonicCdLevel.fromLoadingSource(originalLoadingSource);}catch(IOException failure){throw new UncheckedIOException("Actual original selected geometry read failed",failure);}}
         if(stagedR31!=null){
             validateR31LoadRequest(stagedR31Context);
             if(levelIndex!=r31Zones.loadingIndex())throw SonicCd.unsupported("R31 descriptor index");
@@ -1657,25 +1681,8 @@ public final class SonicCdGameModule implements GameModule {
         programServices = withProgramCall(ProgramStartCall.INIT_VDP, programServices.loads(), programServices.initialization());
         programServices = withProgramCall(ProgramStartCall.INIT_CONTROLLERS, programServices.loads(),
                 CdProgramInitialization.initializeControllers(programServices.initialization()));
-        var old = c.environment(); var g = old.globals(); var oldMove = old.movement();
-        var oldGate = oldMove.gates(); var mg = oldMove.globals();
-        // IPX.RunMMD clears 2000..FB00. Mainvars/debug-probe bytes and 1600..2000 survive
-        // until their genuine later ClearFlowers; controller/camera/physics fields do not.
-        var environment = new CdPlayerBody.Environment(new com.openggf.game.soniccd.player.CdPlayerMovement.Environment(
-                new com.openggf.game.soniccd.player.CdPlayerMovement.Physics(0, 0, 0),
-                new com.openggf.game.soniccd.player.CdPlayerMovement.Bounds(0, 0, 0, 0),
-                new com.openggf.game.soniccd.player.CdPlayerMovement.Gates(oldGate.zoneAct(), oldGate.timeZone(),
-                        oldGate.miniSonic(), 0, 0, oldGate.speedShoes(), 0),
-                new com.openggf.game.soniccd.player.CdPlayerMovement.Globals(0, 0, 0, 0, 0, 0,
-                        mg.debugAngle(), mg.debugAngleShift(), mg.debugQuadrant(), mg.debugFloorDistance())),
-                new CdPlayerBody.Controls(0, 0, 0, 0, 0),
-                new CdPlayerBody.Globals(g.levelFrames(), 0, g.timeAttackMode(), g.debugMode(),
-                        g.debugCheat(), 0, g.invincible(), g.bossMusic()), old.dynamicSlots());
-        var state = new CdPlayerBody.State(new com.openggf.game.soniccd.player.CdPlayerMotionState(
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-                new CdPlayerBody.AnimationCursor(0, 0, 0), new CdPlayerBody.Header(0, 0, 0, 0, 0),
-                new CdPlayerBody.Timers(0, 0, 0, 0), new CdPlayerBody.History(CdAssetBytes.copyOf(new byte[256]), 0),
-                0, new CdPlayerBody.ObjectLinks(0, 0), 0);
+        var environment = CdOriginalProgrammeWorkClear.environment(c.environment());
+        var state = CdOriginalProgrammeWorkClear.primary();
         playerFrame = CdPlayerFrameRuntime.fromPastEntry(c.assets(), state, environment, video.playerArt(), c.clock());
         playerFrame.beginLevelStart(); playerFrame.clearLevelStartWarpDirection();
         var foreground = new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.State(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
@@ -2322,25 +2329,40 @@ public final class SonicCdGameModule implements GameModule {
 
     /** Shared authenticated scene binding; each actual caller establishes its own source authority. */
     private void startWarpProgram(LevelProgramState program) {
-        if (warpScene == null) {
-            var retained = requireRuntimeSource().timeWarpPrograms().orElseThrow(
-                    () -> new UnsupportedRestart(RestartBoundary.WARP_PROGRAM_START));
-            try {
-                var assets = CdWarpAssets.fromPrograms(retained);
-                var scene = new CdWarpScene(assets);
-                // Explicit semantic setup cut: native Start cleared its own counter; synchronous
-                // asset/setup work contributes no represented pulse. This is not a measured console
-                // IRQ phase or a copy of the suspended level's V-int/read-controller state.
-                var initial = scene.initial(0);
-                scene.validate(initial);
-                warpAssets = assets; warpScene = scene;
-            } catch (IOException failure) { throw new UncheckedIOException("Cannot bind original WARP programme", failure); }
-        }
+        bindWarpScene(requireRuntimeSource().timeWarpPrograms().orElseThrow(
+                () -> new UnsupportedRestart(RestartBoundary.WARP_PROGRAM_START)), () -> { });
         var initial = warpScene.initial(0);
         var sounds = List.of(ProgramSound.STOP_FM);
         warpState = initial; programSounds = sounds;
         levelProgram = withProgramPhase(program, LevelProgramPhase.WARP);
         // No old Frame/ObjectManager V-int is serviced. Its owners remain inactive and capturable.
+    }
+
+    /** Shared finite binding only. Caller-supplied source/lifetime admission surrounds fallible IO.
+     * Native WARP Start:128-133 clears its private counter; it never borrows the level LONG. */
+    private void bindWarpScene(com.openggf.game.soniccd.media.CdTimeWarpPrograms retained,Runnable requireOwner) {
+        Objects.requireNonNull(retained);Objects.requireNonNull(requireOwner).run();
+        if(warpScene!=null){
+            if(warpAssets==null||warpAssets.source()!=retained.source())throw new IllegalArgumentException("Different retained WARP source");
+            requireOwner.run();return;
+        }
+        try {
+            var assets=CdWarpAssets.fromPrograms(retained);requireOwner.run();
+            var scene=new CdWarpScene(assets);scene.validate(scene.initial(0));requireOwner.run();
+            if(warpScene!=null||warpAssets!=null)throw new IllegalStateException("WARP binding changed during finite IO");
+            warpAssets=assets;warpScene=scene;
+        }catch(IOException failure){throw new UncheckedIOException("Cannot bind original WARP programme",failure);}
+    }
+    /** The sole native scene-step/publication leaf for retained and original callers. */
+    private void stepWarpScene(int rawHeldByte,Runnable requireOwner) {
+        requireOwner.run();var before=Objects.requireNonNull(warpState);var scene=Objects.requireNonNull(warpScene);
+        var sounds=programSounds;var result=scene.step(before,rawHeldByte);
+        var expected=before.phase()==CdWarpScene.Phase.PREPARE?List.of(CdWarpScene.SoundRequest.FM_D8):List.<CdWarpScene.SoundRequest>of();
+        if(!result.sounds().equals(expected))throw new IllegalStateException("WARP sound request left its actual source cut");
+        var ready=expected.isEmpty()?sounds:List.of(ProgramSound.STOP_FM,ProgramSound.WARP_DIRECT_FM_D8);
+        scene.validate(result.state());requireOwner.run();
+        if(warpState!=before||warpScene!=scene||programSounds!=sounds)throw new IllegalStateException("Changed WARP step preimage");
+        warpState=result.state();programSounds=ready;
     }
 
     /** One current controller HOLD row; neither draw nor restore calls this source owner. */
@@ -2359,14 +2381,7 @@ public final class SonicCdGameModule implements GameModule {
                 levelProgram = withProgramPhase(program, LevelProgramPhase.PAST_PENDING);
                 return;
             }
-            var before = warpState;
-            var result = warpScene.step(before, rawHeldByte);
-            var expected = before.phase() == CdWarpScene.Phase.PREPARE
-                    ? List.of(CdWarpScene.SoundRequest.FM_D8) : List.<CdWarpScene.SoundRequest>of();
-            if (!result.sounds().equals(expected)) throw new IllegalStateException("WARP sound request left its actual source cut");
-            var ready = expected.isEmpty() ? programSounds : List.of(ProgramSound.STOP_FM, ProgramSound.WARP_DIRECT_FM_D8);
-            warpScene.validate(result.state());
-            warpState = result.state(); programSounds = ready;
+            stepWarpScene(rawHeldByte,this::validateWarpProgrammeOwner);
         } catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
     }
 
@@ -2457,8 +2472,9 @@ public final class SonicCdGameModule implements GameModule {
             requireOpeningClosedCut();
             playerActor.requireCompletedNativeFrame();
             validateProgramServicesState(programServices);
+            var shared=playerFrame.captureShared(); // Reject pending input before terminal Runtime capture.
             var objects=openingObjects.captureClosedCut();
-            return new OpeningSharedState(playerFrame.captureShared(), objects,
+            return new OpeningSharedState(shared, objects,
                     playerPresentation.captureScrollPublication(), levelProgramState(), warpState, programSounds, programServices,captureIpxProgress(objects));
         }
         @Override public void validateRestore(Object value) {
@@ -2603,6 +2619,7 @@ public final class SonicCdGameModule implements GameModule {
                               CdProgramInitialization.ExecutionEnvironment explicitEnvironment,
                               CdSelectedProfileVisit.Prepared selected,CdOriginalBootPrefix boot) {
         originalBoot=boot;
+        r11TimeWarpSaved=boot==null?null:boot.timeWarpSavedAfterMainClear();
         coldProgramStartAdmission = explicitEnvironment != null;
         programServices = initialProgramServices(explicitEnvironment);
         this.playerAdmission = playerAdmission;
@@ -2670,48 +2687,125 @@ public final class SonicCdGameModule implements GameModule {
     }
     // Genuine original selected R11 Start and shared LevelStart prefix; first loading service remains fenced.
     // One reached prefix under the original selected lifetime, not another loading loop.
-    // Main.WaitPLC:148-149 is fenced until original selector-C selection/current-art is owned.
+    // Main.WaitPLC:148-149 requires the privately staged original engine loading pair.
     record R11LoadingPrefix(CdOriginalBootPrefix.MainImage main,int goodFuture,int gameMode,int goodFutureFlags,
             CdRingGlobals ring,CdOpeningObjectRuntime.ScoreGlobals score,
             com.openggf.game.soniccd.resources.CdR11aSectionArt.State section,
-            CdAssetBytes normalPalette,CdAssetBytes fadePalette,List<CdLevelStart.Cut> calls){
-        R11LoadingPrefix{Objects.requireNonNull(main);Objects.requireNonNull(ring);Objects.requireNonNull(score);Objects.requireNonNull(section);Objects.requireNonNull(normalPalette);Objects.requireNonNull(fadePalette);calls=List.copyOf(calls);}
-        R11LoadingPrefix main(CdOriginalBootPrefix.MainImage m){return new R11LoadingPrefix(m,goodFuture,gameMode,goodFutureFlags,ring,score,section,normalPalette,fadePalette,calls);}
-        R11LoadingPrefix future(int b){return new R11LoadingPrefix(main,b,gameMode,goodFutureFlags,ring,score,section,normalPalette,fadePalette,calls);}
-        R11LoadingPrefix mode(int b){return new R11LoadingPrefix(main,goodFuture,b,goodFutureFlags,ring,score,section,normalPalette,fadePalette,calls);}
-        R11LoadingPrefix score(CdOpeningObjectRuntime.ScoreGlobals value){return new R11LoadingPrefix(main,goodFuture,gameMode,goodFutureFlags,ring,value,section,normalPalette,fadePalette,calls);}
-        R11LoadingPrefix freshSuffix(int lives){var r=ring;return new R11LoadingPrefix(main,goodFuture,gameMode,0,new CdRingGlobals(r.rings(),lives,r.livesFlags(),r.updateHudRings(),r.updateHudLives(),r.timeStopTimer(),r.ringAnimationTimer(),r.ringAnimationFrame()),new CdOpeningObjectRuntime.ScoreGlobals(0,score.nextLifeScore(),score.updateHudScore()),section,normalPalette,fadePalette,calls);}
-        R11LoadingPrefix art(com.openggf.game.soniccd.resources.CdR11aSectionArt.State a){return new R11LoadingPrefix(main,goodFuture,gameMode,goodFutureFlags,ring,score,a,normalPalette,fadePalette,calls);}
-        R11LoadingPrefix palette(CdAssetBytes p){return new R11LoadingPrefix(main,goodFuture,gameMode,goodFutureFlags,ring,score,section,p,fadePalette,calls);}
-        R11LoadingPrefix call(CdLevelStart.Cut cut){var ready=new java.util.ArrayList<>(calls);ready.add(cut);return new R11LoadingPrefix(main,goodFuture,gameMode,goodFutureFlags,ring,score,section,normalPalette,fadePalette,ready);}
+            CdAssetBytes normalPalette,CdAssetBytes fadePalette,List<CdLevelStart.Cut> calls,CdBlockDefinitionStaging blockDefinitions){
+        R11LoadingPrefix{Objects.requireNonNull(blockDefinitions);Objects.requireNonNull(main);Objects.requireNonNull(ring);Objects.requireNonNull(score);Objects.requireNonNull(section);Objects.requireNonNull(normalPalette);Objects.requireNonNull(fadePalette);calls=List.copyOf(calls);}
+        private R11LoadingPrefix blocks(CdBlockDefinitionStaging bank){return new R11LoadingPrefix(main,goodFuture,gameMode,goodFutureFlags,ring,score,section,normalPalette,fadePalette,calls,bank);}
+        R11LoadingPrefix main(CdOriginalBootPrefix.MainImage m){return new R11LoadingPrefix(m,goodFuture,gameMode,goodFutureFlags,ring,score,section,normalPalette,fadePalette,calls,blockDefinitions);}
+        R11LoadingPrefix future(int b){return new R11LoadingPrefix(main,b,gameMode,goodFutureFlags,ring,score,section,normalPalette,fadePalette,calls,blockDefinitions);}
+        R11LoadingPrefix mode(int b){return new R11LoadingPrefix(main,goodFuture,b,goodFutureFlags,ring,score,section,normalPalette,fadePalette,calls,blockDefinitions);}
+        R11LoadingPrefix score(CdOpeningObjectRuntime.ScoreGlobals value){return new R11LoadingPrefix(main,goodFuture,gameMode,goodFutureFlags,ring,value,section,normalPalette,fadePalette,calls,blockDefinitions);}
+        R11LoadingPrefix freshSuffix(int lives){var r=ring;return new R11LoadingPrefix(main,goodFuture,gameMode,0,new CdRingGlobals(r.rings(),lives,r.livesFlags(),r.updateHudRings(),r.updateHudLives(),r.timeStopTimer(),r.ringAnimationTimer(),r.ringAnimationFrame()),new CdOpeningObjectRuntime.ScoreGlobals(0,score.nextLifeScore(),score.updateHudScore()),section,normalPalette,fadePalette,calls,blockDefinitions);}
+        R11LoadingPrefix art(com.openggf.game.soniccd.resources.CdR11aSectionArt.State a){return new R11LoadingPrefix(main,goodFuture,gameMode,goodFutureFlags,ring,score,a,normalPalette,fadePalette,calls,blockDefinitions);}
+        R11LoadingPrefix palette(CdAssetBytes p){return new R11LoadingPrefix(main,goodFuture,gameMode,goodFutureFlags,ring,score,section,p,fadePalette,calls,blockDefinitions);}
+        R11LoadingPrefix palettes(CdAssetBytes n,CdAssetBytes f){return new R11LoadingPrefix(main,goodFuture,gameMode,goodFutureFlags,ring,score,section,n,f,calls,blockDefinitions);}
+        R11LoadingPrefix level(CdLevelGlobals l){return main(new CdOriginalBootPrefix.MainImage(l,main.sectionWord(),main.demoModeWord(),main.usePlayer2Byte(),main.palFadeFlagsByte(),main.levelStartedByte()));}
+        R11LoadingPrefix globals(SonicCdR31aWorldHost.Globals g){return new R11LoadingPrefix(main,goodFuture,gameMode,goodFutureFlags,g.ring(),g.score(),section,normalPalette,fadePalette,calls,blockDefinitions);}
+        R11LoadingPrefix completed(CdLoadedLevelSetup.Ready ready){return new R11LoadingPrefix(new CdOriginalBootPrefix.MainImage(main.level(),main.sectionWord(),main.demoModeWord(),main.usePlayer2Byte(),main.palFadeFlagsByte(),ready.levelStartedByte()),goodFuture,ready.gameModeByte(),goodFutureFlags,ring,score,section,normalPalette,fadePalette,calls,blockDefinitions);}
+
+        R11LoadingPrefix call(CdLevelStart.Cut cut){var ready=new java.util.ArrayList<>(calls);ready.add(cut);return new R11LoadingPrefix(main,goodFuture,gameMode,goodFutureFlags,ring,score,section,normalPalette,fadePalette,ready,blockDefinitions);}
     }
+    // No live bank adopter: only the actual original clear or decoder call updates this value.
     private R11LoadingPrefix r11LoadingPrefix;
+    private com.openggf.game.soniccd.level.CdLevelLoadingSource originalLoadingSource;
+    // Authentication is bounded by one real service invocation; every primitive still
+    // checks this exact source, live context, thread and lifetime. The retained MMD
+    // owns a cloned private array with copy/read-only accessors.
+    private com.openggf.game.soniccd.level.CdLevelLoadingSource r11ServiceLoadingSource;
+    private CdSelectedProfileVisit.Programme originalLoadingProgramme;
+    private CdSelectedProfileVisit.Publication originalLoadingPublication;
+    private boolean originalSourceLoadingInstalled;
+    private boolean originalWaterStage(){return originalLoadingSource!=null&&originalLoadingSource.completion()==com.openggf.game.soniccd.level.CdLevelLoadingSource.Completion.WATER_PALETTE_AFTER_FADE;}
+    private boolean ownsOriginalLoadingFrame(CdPlayerFrameRuntime actual){
+        return actual!=null&&!actual.closed()&&originalLoadingSource!=null
+            &&originalLoadingSource.ownsPlayerSource(actual.stageSource());
+    }
+    /** Partial knowledge only. Each Optional becomes known at its reached native store.
+     * Current/selected/pending have single storage for Root's subsequent private water
+     * binding; no capture can create invocation, and no unknown byte has a zero default. */
+    record OriginalLoadingWater(OptionalInt waterYWord,OptionalInt staticYWord,OptionalInt targetYWord,
+            OptionalInt routineByte,OptionalInt fullByte,OptionalInt speedByte,OptionalInt splitByte,
+            OptionalInt pendingByte,Optional<CdAssetBytes> selectedPalette,boolean returnedPaletteLoaded,OptionalInt swayAngleByte){
+        OriginalLoadingWater{for(var v:List.of(waterYWord,staticYWord,targetYWord))if(v.isPresent()&&(v.getAsInt()&~65535)!=0)throw new IllegalArgumentException("Water WORD");
+            for(var v:List.of(routineByte,fullByte,speedByte,splitByte,pendingByte,swayAngleByte))if(v.isPresent()&&(v.getAsInt()&~255)!=0)throw new IllegalArgumentException("Water BYTE");
+            Objects.requireNonNull(selectedPalette);selectedPalette.ifPresent(v->{if(v.length()!=128)throw new IllegalArgumentException("Selected water128");});}
+        static OriginalLoadingWater unknown(){return new OriginalLoadingWater(OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),OptionalInt.empty(),Optional.empty(),false,OptionalInt.empty());}
+        private List<Object> scalars(){return List.of(waterYWord,staticYWord,targetYWord,routineByte,fullByte,speedByte,splitByte,pendingByte,returnedPaletteLoaded,swayAngleByte);}
+        @Override public boolean equals(Object o){return this==o||o instanceof OriginalLoadingWater w&&scalars().equals(w.scalars())&&selectedPalette.isPresent()==w.selectedPalette.isPresent()&&(selectedPalette.isEmpty()||java.util.Arrays.equals(selectedPalette.orElseThrow().copy(),w.selectedPalette.orElseThrow().copy()));}
+        @Override public int hashCode(){return Objects.hash(scalars(),selectedPalette.map(v->java.util.Arrays.hashCode(v.copy())).orElse(0));}
+        OriginalLoadingWater store(int ordinal,int value){return new OriginalLoadingWater(ordinal==0?OptionalInt.of(value):waterYWord,ordinal==1?OptionalInt.of(value):staticYWord,ordinal==2?OptionalInt.of(value):targetYWord,ordinal==3?OptionalInt.of(value):routineByte,ordinal==4?OptionalInt.of(value):fullByte,ordinal==5?OptionalInt.of(value):speedByte,splitByte,pendingByte,selectedPalette,returnedPaletteLoaded,swayAngleByte);}
+        OriginalLoadingWater returnedPalette(){return new OriginalLoadingWater(waterYWord,staticYWord,targetYWord,routineByte,fullByte,speedByte,splitByte,pendingByte,selectedPalette,true,swayAngleByte);}
+    }
+    record OriginalLoadingAnimation(CdAssetBytes frames,CdAssetBytes timers){
+        OriginalLoadingAnimation{if(frames.length()!=6||timers.length()!=6)throw new IllegalArgumentException("Actual stage art frames/timers6");}
+        OriginalLoadingAnimation store(boolean timer,int ordinal,int value){Objects.checkIndex(ordinal,6);if((value&~255)!=0)throw new IllegalArgumentException("Stage art BYTE");var bytes=(timer?timers:frames).copy();bytes[ordinal]=(byte)value;return timer?new OriginalLoadingAnimation(frames,CdAssetBytes.copyOf(bytes)):new OriginalLoadingAnimation(CdAssetBytes.copyOf(bytes),timers);}
+        @Override public boolean equals(Object o){return this==o||o instanceof OriginalLoadingAnimation a&&java.util.Arrays.equals(frames.copy(),a.frames.copy())&&java.util.Arrays.equals(timers.copy(),a.timers.copy());}
+        @Override public int hashCode(){return Objects.hash(java.util.Arrays.hashCode(frames.copy()),java.util.Arrays.hashCode(timers.copy()));}
+    }
+    private Optional<OriginalLoadingAnimation> originalLoadingAnimation=Optional.empty();
+    enum OriginalScrollField { UNUSED_X,UNUSED_Y,UNUSED_DIE,UNUSED_TIMER,EVENT_ROUTINE,
+        ROUTINE,TARGET_TOP,X_KEEP,LOOP_CHUNKS }
+    // Absence is unknown. Actual InitScroll stores, never the source fact DTO, establish knowledge.
+    private java.util.Map<OriginalScrollField,Integer> originalScrollFields=java.util.Map.of();
+    private void storeOriginalScrollField(OriginalScrollField field,int value){
+        requireOriginalR11Service();var before=originalScrollFields;
+        var ready=new java.util.EnumMap<OriginalScrollField,Integer>(OriginalScrollField.class);ready.putAll(before);ready.put(field,value);
+        requireOriginalR11Service();if(originalScrollFields!=before)throw new IllegalStateException("Changed InitScroll storage preimage");
+        originalScrollFields=java.util.Collections.unmodifiableMap(ready);
+    }
+    private Optional<OriginalLoadingWater> originalLoadingWater=Optional.empty();
+    Optional<OriginalLoadingWater> originalLoadingWaterImage(){requireOriginalR11EntryCut();return originalLoadingWater;}
+    // One current water bank, already in R11EntryImage.waterPalette. Arm aliases section.hintWord;
+    // water-fade aliases the actual CPU-SAT tail. No duplicate banks or default arm values.
+    CdAssetBytes originalLoadingWaterPalette(){requireOriginalR11EntryCut();if(!originalWaterStage())throw new IllegalStateException("No water programme");return r11WaterPalette;}
+
     private CdObjectPlacementRuntime r11Placement;
     private com.openggf.game.soniccd.resources.CdR11aSectionArt r11LoadingArt;
+    // Actual BRAM work-clear product, then only original Palette Fade/ClearScreen stores.
+    private CdAssetBytes r11WaterPalette;
+    private Object r11LevelLifetime;
+    private com.openggf.game.soniccd.objects.r4.CdR4SwitchBank r11Switches;
+    private int r11ClosureSpecialStage;
+    private SonicCdR31aLoadingVisit.ReturnKind r11ReturnKind=SonicCdR31aLoadingVisit.ReturnKind.NONE;
     R11LoadingPrefix originalR11LoadingPrefix(){requireOriginalR11EntryCut();return Objects.requireNonNull(r11LoadingPrefix);}
     CdObjectPlacementRuntime.Snapshot originalR11PlacementImage(){requireOriginalR11EntryCut();return r11Placement.capture();}
-    private void enterOriginalR11LevelStart(CdSelectedProfileVisit.Publication original){
-        requireR11Start(original);
+    R11LoadingState originalR11LoadingImage(){requireOriginalR11EntryCut();return Objects.requireNonNull(r11LoadingState);}
+    Optional<CdWorld.R11Snapshot> originalR11WorldImage(){requireOriginalR11EntryCut();return r11World==null?Optional.empty():Optional.of(r11World.captureR11());}
+    private void enterOriginalLevelStart(CdSelectedProfileVisit.Publication original,Runnable guard){
+        guard.run();
         var m=originalBoot.state().main().orElseThrow();var w=originalBoot.workClears();var g=r11SelectedFinal.globals().orElseThrow();var c=originalBoot.mainClears();var p=w.plc();
         var l=m.level();var level=new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),g.checkpoint(),l.spawnMode(),g.plcLoadFlags().orElseThrow(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver());
         var ring=w.globals().ring();var score=w.globals().score();
+        r11WaterPalette=w.waterPalette();
         // NewGame has no lives store; retain the original clear until LevelStart freshSuffix writes it.
-        try{r11LoadingArt=com.openggf.game.soniccd.resources.CdR11aSectionArt.fromAssets(source.assets());}
+        try{r11LoadingArt=com.openggf.game.soniccd.resources.CdR11aSectionArt.fromLoadingSource(originalLoadingSource);}
         catch(IOException failure){throw new UncheckedIOException("Original R11 source assembly failed",failure);}
         // Exact original clear products, never devState(), preloaded object art or a new save lifetime.
-        r11Placement=CdObjectPlacementRuntime.fromAssets(source.assets(),c.savedFlags());
+        r11Placement=originalWaterStage()?CdObjectPlacementRuntime.fromPlacements(originalLoadingSource.placements(),c.savedFlags()):CdObjectPlacementRuntime.fromAssets(source.assets(),c.savedFlags());
         var art=r11LoadingArt.fromInactiveValues(programStartVideo.currentPatterns(),w.nemesisTable(),m.sectionWord(),p.queue(),p.saved(),p.remaining(),p.budget(),p.hint(),p.pad());
         var colours=originalBoot.state().cpuPalettes().orElseThrow();
+        r11ClosureSpecialStage=r11SelectedFinal.globals().orElseThrow().specialStage();
         r11LoadingPrefix=new R11LoadingPrefix(new CdOriginalBootPrefix.MainImage(level,m.sectionWord(),m.demoModeWord(),m.usePlayer2Byte(),m.palFadeFlagsByte(),m.levelStartedByte()),g.goodFuture(),w.gameModeByte(),c.goodFutureFlags(),
                 new CdRingGlobals(g.rings(),g.lives().orElse(ring.lives()),ring.livesFlags(),ring.updateHudRings(),ring.updateHudLives(),ring.timeStopTimer(),ring.ringAnimationTimer(),ring.ringAnimationFrame()),
-                new CdOpeningObjectRuntime.ScoreGlobals(g.score(),score.nextLifeScore(),score.updateHudScore()),art,colours.normal(),colours.fade(),List.of());
+                new CdOpeningObjectRuntime.ScoreGlobals(g.score(),score.nextLifeScore(),score.updateHudScore()),art,colours.normal(),colours.fade(),List.of(),originalBoot.state().blockDefinitions());
+        originalR11LevelStartPrefix(r11PreparedFrame,guard);
+        guard.run();
+        originalR11LevelStartFade(r11PreparedFrame,true);
+    }
+
+    /** Both genuine callers reach the same existing LevelStart semantic driver. The private
+     * guard is synchronous and subordinate to the original selected/Frame scope; no token escapes. */
+    private void originalR11LevelStartPrefix(CdPlayerFrameRuntime actual,Runnable guard){
         CdLevelStart.enter(new CdLevelStart.Port(){
-            private void require(){requireR11Start(original);if(r11PreparedFrame==null||r11PreparedFrame.closed()||!r11PreparedFrame.stageSource().ownsPresent(source.assets()))throw new IllegalStateException("No actual original R11 loading Frame");}
+            private void require(){guard.run();if(!ownsOriginalLoadingFrame(actual))throw new IllegalStateException("No actual original R11 loading Frame");}
             public void clearDemo(){require();var m=r11LoadingPrefix.main();r11LoadingPrefix=r11LoadingPrefix.main(new CdOriginalBootPrefix.MainImage(m.level(),m.sectionWord(),0,m.usePlayer2Byte(),m.palFadeFlagsByte(),m.levelStartedByte())).call(CdLevelStart.Cut.CLEAR_DEMO);}
             public int timeStones(){require();return r11SelectedFinal.progress().timeStonesByte().orElseThrow();}
-            public int timeAttack(){require();return r11PreparedFrame.environment().globals().timeAttackMode();}
+            public int timeAttack(){require();return actual.environment().globals().timeAttackMode();}
             public void forceGoodFuture(){require();r11LoadingPrefix=r11LoadingPrefix.future(1);}
-            public void entryStores(){require();var m=r11LoadingPrefix.main();var ready=r11LoadingPrefix.main(new CdOriginalBootPrefix.MainImage(m.level(),m.sectionWord(),m.demoModeWord(),0,m.palFadeFlagsByte(),0)).call(CdLevelStart.Cut.ENTRY_STORES);r11LoadingPrefix=ready;r11PreparedFrame.beginLevelStart();}
+            public void entryStores(){require();var m=r11LoadingPrefix.main();var ready=r11LoadingPrefix.main(new CdOriginalBootPrefix.MainImage(m.level(),m.sectionWord(),m.demoModeWord(),0,m.palFadeFlagsByte(),0)).call(CdLevelStart.Cut.ENTRY_STORES);r11LoadingPrefix=ready;actual.beginLevelStart();if(r11LevelLifetime==null)r11LevelLifetime=new Object(); /* capture owner is stable until actual World retirement */}
             public boolean setPlcLoaded(){require();var m=r11LoadingPrefix.main();var l=m.level();boolean loaded=(l.plcLoadFlags()&1)!=0;var next=new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags()|1,l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver());r11LoadingPrefix=r11LoadingPrefix.main(new CdOriginalBootPrefix.MainImage(next,m.sectionWord(),m.demoModeWord(),m.usePlayer2Byte(),m.palFadeFlagsByte(),m.levelStartedByte())).call(CdLevelStart.Cut.PLC_LOADED);return loaded;}
             public void freshPrefix(){require();var m=r11LoadingPrefix.main();var l=m.level();var next=new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),0,l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver());var score=r11LoadingPrefix.score();r11LoadingPrefix=r11LoadingPrefix.main(new CdOriginalBootPrefix.MainImage(next,m.sectionWord(),m.demoModeWord(),m.usePlayer2Byte(),0,m.levelStartedByte())).score(new CdOpeningObjectRuntime.ScoreGlobals(score.score(),5000,score.updateHudScore())).call(CdLevelStart.Cut.FRESH_PREFIX);}
             public void resetSavedFlags(){require();var ready=r11LoadingPrefix.call(CdLevelStart.Cut.RESET_SAVED_FLAGS);r11Placement.resetSavedObjectFlags();r11LoadingPrefix=ready;}
@@ -2719,26 +2813,1401 @@ public final class SonicCdGameModule implements GameModule {
             public void markInitializing(){require();r11LoadingPrefix=r11LoadingPrefix.mode(r11LoadingPrefix.gameMode()|128).call(CdLevelStart.Cut.MARK_INITIALIZING);}
             public void clearPlcs(){require();r11LoadingPrefix=r11LoadingPrefix.art(r11LoadingArt.clearPlcs(r11LoadingPrefix.section())).call(CdLevelStart.Cut.CLEAR_PLCS);}
         });
-        requireR11Start(original);
-        // The actual selected RunR1 supplies specialStage0/raw period1. Preserve the
-        // reached native branch/store prefix if a future genuine caller differs.
-        var live=r11LoadingPrefix.main();var selected=r11SelectedFinal.globals().orElseThrow();
-        if(selected.specialStage()!=0)
-            throw SonicCd.unsupported("Original R11 FromSpecialStage FadeToWhite owner absent");
-        int period=r11PreparedFrame.environment().movement().gates().timeZone();
-        int priorFade=live.palFadeFlagsByte();
-        r11LoadingPrefix=r11LoadingPrefix.main(new CdOriginalBootPrefix.MainImage(live.level(),live.sectionWord(),live.demoModeWord(),live.usePlayer2Byte(),priorFade|1,live.levelStartedByte()));
-        if((period&128)!=0)
-            throw SonicCd.unsupported("Original R11 marked-period fade/SkipFade continuation owner absent");
-        if((priorFade&1)!=0)
-            throw SonicCd.unsupported("Original R11 FadeToBlack owner absent");
-        // .SkipFade2/.CheckNoLives/.CheckNormalLoad. These do not describe Ready.
-        if(live.level().levelRestart()==2||r11LoadingPrefix.ring().lives()==0||w.demoDataIndexWord()==0x800)
-            throw SonicCd.unsupported("Original R11 native early-return continuation owner absent");
-        boolean white=CdProgramInitialization.requirePalClearFlagBit0(programServices.initialization());
-        r11LoadingPrefix=r11LoadingPrefix.palette(CdLevelStart.normalLoadPalette(white||(period&128)!=0)).call(CdLevelStart.Cut.NORMAL_PALETTE);
-        // STOP before Main.WaitPLC's selector C store/VSync. No input, VInt seed, DrawLevel,
-        // immediate PLC, player/Title initialization, Ready or ordinary permission is fabricated.
+    }
+    private void originalR11LevelStartFade(CdPlayerFrameRuntime actual,boolean firstEntry){
+        // One shared Main59-81 branch kernel; the genuine caller retains all source authority.
+        if(r11ClosureSpecialStage!=0)throw SonicCd.unsupported("Original R11 FromSpecialStage FadeToWhite owner absent");
+        if(!firstEntry)r11LoadingState=r11LoadingState.fade(0,r11LoadingState.displayEnabled());
+        CdLevelStart.initialFade(new CdLevelStart.InitialFade(){
+            public int specialStage(){return r11ClosureSpecialStage;}
+            public int rawPeriod(){return actual.environment().movement().gates().timeZone();}
+            public boolean setPaletteFadeFlag(){var m=r11LoadingPrefix.main();boolean old=(m.palFadeFlagsByte()&1)!=0;r11LoadingPrefix=r11LoadingPrefix.main(new CdOriginalBootPrefix.MainImage(m.level(),m.sectionWord(),m.demoModeWord(),m.usePlayer2Byte(),m.palFadeFlagsByte()|1,m.levelStartedByte()));return old;}
+            public void beginFade(boolean white){
+                if(firstEntry)throw SonicCd.unsupported("Original R11 initial entry unexpectedly requires palette fade service");
+                // Palette Fade.asm:274/105 precedes the first selector12 service.
+                r11LoadingState=r11LoadingState.globals(r11LoadingState.globals().fadeInfo(0x003F));
+                r11LoadingState=r11LoadingState.fade(0,r11LoadingState.displayEnabled()).phase(white?SonicCdR31aLoadingVisit.Phase.INITIAL_TO_WHITE:SonicCdR31aLoadingVisit.Phase.INITIAL_TO_BLACK);
+            }
+            public void skipped(boolean white){originalR11AfterInitialFade(actual,firstEntry,white,false);}
+        });
+    }
+    private void originalR11AfterInitialFade(CdPlayerFrameRuntime actual,boolean firstEntry,boolean white,boolean completedFade){
+        if(white&&CdLevelStart.afterWhite(completedFade,new CdLevelStart.WhiteReturn(){
+            public void clearPaletteFadeFlag(){var m=r11LoadingPrefix.main();r11LoadingPrefix=r11LoadingPrefix.main(new CdOriginalBootPrefix.MainImage(m.level(),m.sectionWord(),m.demoModeWord(),m.usePlayer2Byte(),m.palFadeFlagsByte()&~1,m.levelStartedByte()));}
+            public void clearDirection(){actual.clearLevelStartWarpDirection();}
+            public int restartWord(){return r11LoadingPrefix.main().level().levelRestart();}
+            public void clearRestartWord(){var l=r11LoadingPrefix.main().level();r11LoadingPrefix=r11LoadingPrefix.level(new CdLevelGlobals(0,l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver()));}
+            public int actByte(){return actual.environment().movement().gates().zoneAct()&255;}
+            public void clearPeriodMarker(){throw SonicCd.unsupported("Original R11A act0 does not own act3 marker clear");}
+            public void returned(){
+                if(firstEntry)throw SonicCd.unsupported("Original R11 native initial early-return continuation owner absent");
+                r11ReturnKind=SonicCdR31aLoadingVisit.ReturnKind.WHITE_RESTART;
+                r11LoadingState=r11LoadingState.phase(SonicCdR31aLoadingVisit.Phase.RETURNED);
+                issueOriginalWarpReturn();
+            }
+        }))return;
+        var m=r11LoadingPrefix.main();var l=m.level();
+        if(!white&&l.levelRestart()==2){
+            l=new CdLevelGlobals(0,l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver());
+            r11LoadingPrefix=r11LoadingPrefix.main(new CdOriginalBootPrefix.MainImage(l,m.sectionWord(),m.demoModeWord(),m.usePlayer2Byte(),0,m.levelStartedByte()));
+            originalR11ClearReturn(SonicCdR31aLoadingVisit.ReturnKind.NEXT_LEVEL,firstEntry);return;
+        }
+        if(!white&&r11LoadingPrefix.ring().lives()==0){
+            l=new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),0,0,0,l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver());
+            r11LoadingPrefix=r11LoadingPrefix.main(new CdOriginalBootPrefix.MainImage(l,m.sectionWord(),m.demoModeWord(),m.usePlayer2Byte(),0,m.levelStartedByte()));
+            originalR11ClearReturn(SonicCdR31aLoadingVisit.ReturnKind.NO_LIVES,firstEntry);return;
+        }
+        if(originalBoot.workClears().demoDataIndexWord()==0x800)throw SonicCd.unsupported("Original R11 native demo return owner absent");
+        boolean fill=CdProgramInitialization.requirePalClearFlagBit0(programServices.initialization())
+                ||(actual.environment().movement().gates().timeZone()&128)!=0;
+        r11LoadingPrefix=r11LoadingPrefix.palette(CdLevelStart.normalLoadPalette(fill)).call(CdLevelStart.Cut.NORMAL_PALETTE);
+        if(!firstEntry)r11LoadingState=r11LoadingState.fade(0,r11LoadingState.displayEnabled()).phase(SonicCdR31aLoadingVisit.Phase.FIRST_PLC);
+    }
+    private void originalR11ClearReturn(SonicCdR31aLoadingVisit.ReturnKind kind,boolean firstEntry){
+        if(firstEntry)throw SonicCd.unsupported("Original R11 native initial early-return continuation owner absent");
+        r11LoadingPrefix=r11LoadingPrefix.palette(loadingZero(128));r11ReturnKind=kind;
+        r11LoadingState=r11LoadingState.phase(SonicCdR31aLoadingVisit.Phase.CLEAR_RETURN_WAIT);
+    }
+    private void restartOriginalR11LevelStart(CdWorld world){
+        requireOriginalR11Service();world.requireOriginalR11LevelStartOwner(this);
+        if(r11LoadingPrefix.main().level().levelRestart()==0)throw new IllegalStateException("Actual R11 LevelStart branch not reached");
+        world.abandonOriginalR11LevelStartWalk(this);r11ReturnKind=SonicCdR31aLoadingVisit.ReturnKind.NONE;
+        originalR11LevelStartPrefix(playerFrame,this::requireOriginalR11Service);
+        var g=r11LoadingState.globals();r11LoadingState=r11LoadingState.globals(SonicCdR31aWorldHost.with(g,r11LoadingPrefix.ring(),g.live(),g.contact(),r11LoadingPrefix.score(),g.pauseMusicBit(),g.bonus(),g.animations(),g.paletteSteps7(),g.paletteTimers7()));
+        originalR11LevelStartFade(playerFrame,false);
+    }
+    private CdR11aCameraArtResidency.State originalR11LoadingUnknownPatterns(){
+        try{return CdR11aCameraArtResidency.unknownForLoading(originalLoadingSource);}
+        catch(IOException failure){throw new UncheckedIOException("Original R11 loading source binding",failure);}
+    }
+    record R11FirstLoad(CdOriginalR11Display.Selection selection,com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State foreground,
+            com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State background,
+            SonicCdR31aLoadingVisit.Copies copies,boolean levelLoaded,boolean standardLoaded,int completedWaits,
+            List<CdCommand> music){R11FirstLoad{Objects.requireNonNull(selection);Objects.requireNonNull(foreground);Objects.requireNonNull(background);Objects.requireNonNull(copies);music=List.copyOf(music);}}
+    static final class R11LoadingStopped extends UnsupportedOperationException{
+        private final R11FirstLoad completed;private final R11LoadingPrefix prefix;private final R11LoadingState loading;
+        private final CdPlayerFrameRuntime.ActorState actor;private final CdPlayerFrameRuntime.SharedState shared;
+        private R11LoadingStopped(R11FirstLoad completed,R11LoadingPrefix prefix,R11LoadingState loading,CdPlayerFrameRuntime.ActorState actor,CdPlayerFrameRuntime.SharedState shared){super("ORIGINAL_R11_ORDINARY_BINDING: Main330 follows actual BeginLevel; CdWorld R11 physical/reserved-object publication is not yet bound");this.completed=completed;this.prefix=prefix;this.loading=loading;this.actor=actor;this.shared=shared;}
+        R11FirstLoad completed(){return completed;}R11LoadingPrefix prefix(){return prefix;}R11LoadingState loading(){return loading;}CdPlayerFrameRuntime.ActorState actor(){return actor;}CdPlayerFrameRuntime.SharedState shared(){return shared;}
+    }
+    private boolean constructingOriginalR11,r11EngineAssembled,r11ServiceActive;
+    private LevelLoadContext r11AssemblyContext;private Level r11AssembledLevel;
+    private R11FirstLoad r11FirstLoad;
+    private R11LoadingState r11LoadingState;
+    private CdWorld r11World;private boolean r11WorldConstructing;private OriginalR11Access r11OrdinaryAccess;
+
+    boolean originalR11AssemblySelected(){return constructingOriginalR11||r11EngineAssembled;}
+    public boolean originalR11EngineLoadingAssembled(){
+        if(!r11EngineAssembled||r11Retired||r11ServiceActive||constructingOriginalR11||playerFrame==null||playerFrame.closed()||playerFrame!=r11EntryFrame||r11Thread!=Thread.currentThread()||SessionManager.getCurrentWorldSession()!=programWorld
+                ||SessionManager.getCurrentGameplayMode()!=playerMode||r11EntryLevelManager==null||r11EntryLoadGeneration.isEmpty()
+                ||r11EntryLevelManager.getCurrentLevel()!=r11EntryLevel||r11EntryLevelManager.getCompletedProductionLoadGeneration()!=r11EntryLoadGeneration.orElseThrow()
+                ||!(r11EntryLevel instanceof SonicCdLevel level)||level.loadingSource()!=originalLoadingSource)return false;
+        requireOriginalR11EntryCut();return true;
+    }
+    /** Only the genuine completed selected publication can return its installed source loading pair. */
+    boolean originalSelectedSourceLoadingAssembled(CdSelectedProfileVisit.Publication original){
+        if(original==null||original!=originalLoadingPublication||!originalSourceLoadingInstalled)return false;
+        requireOriginalR11EntryCut();return true;
+    }
+    int selectedLoadingZone(){return originalR11AssemblySelected()?originalLoadingSource.nativeZoneActWord()>>>8:1;}
+    int selectedLoadingIndex(){return originalR11AssemblySelected()?SonicCd.sourceLevelIndex(originalLoadingSource):r31Zones.loadingIndex();}
+    void validateSelectedLoadingRequest(LevelLoadContext context){if(constructingOriginalR11)validateOriginalR11Assembly(context);else validateR31LoadRequest(context);}
+    void prepareSelectedLoadingAssembly(LevelLoadContext context){validateSelectedLoadingRequest(context);if(!constructingOriginalR11)closeTerrainPlayer();}
+    void installSelectedLoadingVisit(){if(constructingOriginalR11)installOriginalR11FirstLoad();else installR31LoadingVisit();}
+    private void validateOriginalR11Assembly(LevelLoadContext context){
+        var mode=SessionManager.getCurrentGameplayMode();var world=SessionManager.getCurrentWorldSession();
+        if(!constructingOriginalR11||r11Retired||!r11StartComplete||context!=r11AssemblyContext||mode!=playerMode||world!=programWorld
+            ||world==null||world.rootGameModule()!=this||world.resolvedGameModule()!=this||world.getDataSource()!=source
+            ||mode.getLevelManager()!=r11EntryLevelManager||r11EntryLevelManager==null||r11ServiceActive
+            ||r11Thread!=Thread.currentThread()||playerFrame!=r11EntryFrame||playerFrame.closed()
+            ||context.getLevelIndex()!=SonicCd.sourceLevelIndex(originalLoadingSource)||context.getZone()!=(originalLoadingSource.nativeZoneActWord()>>>8)||context.getAct()!=0||context.getLoadMode()!=LevelLoadMode.FULL
+            ||context.getAssemblyKind()!=LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY||context.getLoadCause()!=LevelLoadCause.STAGE_RETURN_FULL_ASSEMBLY
+            ||!context.isIncludePostLoadAssembly()||context.hasCheckpoint()||context.getRom()!=null||context.isShowTitleCard()
+            ||context.isTitleCardRequiredInHeadlessMode()||context.isQueueFreshLevelRuntimeArt())throw new IllegalStateException("No original R11 FULL assembly request");
+        if(originalPastStage()){
+            originalPastArrival.require();
+            if(!originalDestinationEntering||r11FirstLoad==null||!originalSourceLoadingInstalled)
+                throw new IllegalStateException("No actual private Past FULL occurrence");
+        }
+        originalBoot.requireConsumed(this,world,selectedProfileInvocation);playerFrame.captureActor();playerFrame.captureShared();
+    }
+    private void assembleOriginalR11(){
+        if(originalDestinationEntering){Objects.requireNonNull(originalPastArrival).require();}
+        else requireOriginalR11EntryCut();
+        long before=r11EntryLevelManager.getCompletedProductionLoadGeneration();long expected=Math.incrementExact(before);
+        var context=SonicCdLevelInitProfile.staticStageContext();context.setLevelIndex(SonicCd.sourceLevelIndex(originalLoadingSource));context.setZone(originalLoadingSource.nativeZoneActWord()>>>8);context.setAct(0);context.setLoadCause(LevelLoadCause.STAGE_RETURN_FULL_ASSEMBLY);r11AssemblyContext=context;constructingOriginalR11=true;
+        try{zones.bind(source,originalLoadingSource);r11EntryLevelManager.loadLevel(SonicCd.sourceLevelIndex(originalLoadingSource),LevelLoadMode.FULL,context);
+            if(r11AssembledLevel==null||r11EntryLevelManager.getCurrentLevel()!=r11AssembledLevel||r11EntryLevelManager.getCompletedProductionLoadGeneration()!=expected)throw new IllegalStateException("Original R11 FULL generation did not commit");
+            r11EntryLevel=r11AssembledLevel;r11EntryLoadGeneration=java.util.OptionalLong.of(expected);r11EngineAssembled=true;
+        }catch(IOException failure){r11Retired=true;originalBoot.retire(programWorld);closePlayerCycleAfterFailure(failure);throw new UncheckedIOException("Original R11 assembly failed",failure);}
+        catch(RuntimeException|Error failure){r11Retired=true;originalBoot.retire(programWorld);closePlayerCycleAfterFailure(failure);throw failure;}
+        finally{constructingOriginalR11=false;r11AssemblyContext=null;}
+        r11WorldConstructing=true;try{r11World=(originalWaterStage()||originalPastStage())?new CdWorld(this,playerFrame,originalLoadingSource,r11LoadingArt,r11Placement):new CdWorld(this,playerFrame,source.assets(),r11LoadingArt,r11Placement);}
+        catch(IOException failure){r11Retired=true;originalBoot.retire(programWorld);closePlayerCycleAfterFailure(failure);throw new UncheckedIOException(failure);}
+        catch(RuntimeException|Error failure){r11Retired=true;originalBoot.retire(programWorld);closePlayerCycleAfterFailure(failure);throw failure;}
+        finally{r11WorldConstructing=false;}
+    }
+    private void installOriginalR11FirstLoad(){
+        validateOriginalR11Assembly(r11AssemblyContext);var level=r11EntryLevelManager.getCurrentLevel();
+        if(!(level instanceof SonicCdLevel actual)||actual.loadingSource()!=originalLoadingSource)throw new IllegalStateException("Foreign actual original programme geometry");
+        originalLoadingSource.requirePlayerSource(playerFrame.stageSource());
+        if(originalSourceLoadingInstalled){
+            if(!(originalWaterStage()||originalPastStage())||r11FirstLoad==null||r11LoadingState==null)throw new IllegalStateException("Missing actual selected loading image");
+        }else installOriginalLoadingImage();
+        r11AssembledLevel=actual;
+    }
+    private void installOriginalLoadingImage(){
+        var v=programStartVideo.selection();
+        // InitVDP General111-155 actually cleared both physical name-table windows. The
+        // existing video DTO's background is never relabelled as a foreground source.
+        var fg=new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State(CdAssetBytes.copyOf(new byte[4096]));
+        var input=new SonicCdPastDisplay.Inputs(Optional.empty(),v.displayedSat(),v.displayedPalette(),originalBoot.physicalClears().hscroll(),v.screenVScrollLongBits(),v.displayEnabled(),null,null,null,playerFrame.artState());
+        if(v.displayEnabled())throw new IllegalStateException("Original InitVDP must retain disabled display");
+        var selected=CdOriginalR11Display.project(new CdOriginalR11Display.Inputs(input.selectedCpu(),input.selectedSat(),input.palette(),input.hscroll(),input.vscrollLongBits(),false,fg,v.backgroundPlane(),r11LoadingPrefix.section().residency(),playerFrame.artState()));
+        r11FirstLoad=new R11FirstLoad(selected,fg,v.backgroundPlane(),originalBoot.workClears().scroll().copies(),false,false,0,List.of());
+        var g=originalBoot.workClears().globals();g=SonicCdR31aWorldHost.with(g,r11LoadingPrefix.ring(),g.live(),g.contact(),r11LoadingPrefix.score(),g.pauseMusicBit(),g.bonus(),g.animations(),g.paletteSteps7(),g.paletteTimers7());
+        r11LoadingState=new R11LoadingState(SonicCdR31aLoadingVisit.Phase.FIRST_PLC,originalBoot.workClears().scroll(),g,originalBoot.workClears().reserved(),CdFlowerPositions.unknown(),originalBoot.workClears().cpuSat(),Optional.empty(),Optional.empty(),originalBoot.workClears().nativeCarry(),originalBoot.mainClears().shieldCpu(),originalBoot.mainClears().noBumperByte(),0,0,false,List.of());
+    }
+    private void installOriginalSourceLoading(){
+        if(!originalWaterStage()||!r11StartComplete||playerFrame!=r11EntryFrame||r11FirstLoad!=null||r11LoadingState!=null)
+            throw new IllegalStateException("Original source loading already installed");
+        installOriginalLoadingImage();originalSourceLoadingInstalled=true;
+    }
+    void validateOriginalR11Projection(){if(constructingOriginalR11)validateOriginalR11Assembly(r11AssemblyContext);else originalR11FirstLoad();}
+    void validateOriginalR11ProjectionReset(){
+        playerPresentation.requirePastRenderIdle();
+        if(r11Thread!=Thread.currentThread()||r11ServiceActive)
+            throw new IllegalStateException("Original R11 projection reset during another thread or loading service");
+        // The provider owns no mutable projection to clear here. Teardown calls it after
+        // the Frame and level manager retire; do not borrow a healthy native cut to dispose it.
+        if(r11Retired)return;
+        validateOriginalR11Projection();
+    }
+
+    private final com.openggf.level.scroll.ZoneScrollHandler r11ScrollProjection=new com.openggf.level.scroll.ZoneScrollHandler(){
+        private final Object binding=new Object();
+        private CdAssetBytes h(){validateOriginalR11Projection();return r11LoadingState.scroll().background().hscrollRam();}
+        public void update(int[] output,int cameraX,int cameraY,int frameCounter,int actId){if(actId!=0)throw new IllegalArgumentException("Original R11 act0 projection");var bytes=h();Objects.requireNonNull(output);if(output.length>256)throw new IllegalArgumentException("Native256 HScroll LONGs");for(int i=0;i<output.length;i++)output[i]=(int)bytes.unsignedLong(i*4);}
+        public short getVscrollFactorBG(){validateOriginalR11Projection();return(short)r11LoadingState.scroll().background().vscroll();}
+        public short getVscrollFactorFG(){validateOriginalR11Projection();return(short)(r11LoadingState.scroll().background().vscroll()>>>16);}
+        public int getMinScrollOffset(){return extreme(true);}public int getMaxScrollOffset(){return extreme(false);}
+        private int extreme(boolean minimum){var bytes=h();int result=minimum?Integer.MAX_VALUE:Integer.MIN_VALUE;for(int i=0;i<224;i++){int word=(int)bytes.unsignedLong(i*4);int offset=(short)word-(short)(word>>>16);result=minimum?Math.min(result,offset):Math.max(result,offset);}return result;}
+        public int getBgCameraX(){validateOriginalR11Projection();return(short)r11LoadingState.scroll().background().cameraBgXWord();}
+        public int getBgPeriodWidth(){validateOriginalR11Projection();return 512;}
+        public Object captureRewindState(){originalR11FirstLoad();return binding;}
+        public void restoreRewindState(Object value){originalR11FirstLoad();if(value!=binding)throw new IllegalArgumentException("Foreign original R11 projection lifetime");}
+    };
+    com.openggf.level.scroll.ZoneScrollHandler originalR11ScrollProjection(){validateOriginalR11Projection();return r11ScrollProjection;}
+    R11FirstLoad originalR11FirstLoad(){requireOriginalR11EntryCut();if((!r11EngineAssembled&&!originalSourceLoadingInstalled)||r11ServiceActive)throw new IllegalStateException("No idle original programme loading pair");return Objects.requireNonNull(r11FirstLoad);}
+    /** Idle immutable DATA only; native marked periods80..82 remain the same retained Frame. */
+    CdTimeWarpSaveData.State originalR11TimeWarpSavedImage(){
+        originalR11FirstLoad();if(r11OrdinaryAccess!=null)throw new IllegalStateException("Original save operation is active");
+        return Objects.requireNonNull(r11TimeWarpSaved,"No original warp-save owner");
+    }
+    Optional<com.openggf.game.soniccd.objects.r4.CdR4SwitchBank> originalR11SwitchesImage(){originalR11FirstLoad();return Optional.ofNullable(r11Switches);}
+    void failOriginalR11LoadingDraw(CdOriginalR11Display.Selection expected,Throwable original){
+        if(r11Thread!=Thread.currentThread()||r11ServiceActive||!r11EngineAssembled||playerFrame!=r11EntryFrame
+            ||r11FirstLoad==null||r11FirstLoad.selection()!=expected){original.addSuppressed(new IllegalStateException("Original R11 render failure pair changed"));return;}
+        r11Retired=true;originalBoot.retire(programWorld);closePlayerCycleAfterFailure(original);
+    }
+    private void bindOriginalR11FinishTimers(CdPlayerFrameRuntime actual){
+        actual.bindFinishTimersOwner(new CdPlayerFrameRuntime.FinishTimersOwner(){
+            private void require(CdPlayerFrameRuntime.FinishTimerCall call,boolean writing){
+                call.requireCurrent(actual);requireOriginalR11Service();
+                if(actual!=playerFrame||call.writing()!=writing||r11LoadingState==null)
+                    throw new IllegalStateException("No actual original R11 Finish timer site");
+            }
+            public int readSecondary(CdPlayerFrameRuntime.FinishTimerCall call){
+                require(call,false);return r11LoadingState.globals().tail()
+                        .orElseThrow(CdPlayerFrameRuntime.UnownedSecondaryBoredTimer::new).player2BoredWord();
+            }
+            public void writeSecondary(CdPlayerFrameRuntime.FinishTimerCall call,int word){
+                require(call,true);var before=r11LoadingState;var ready=before.globals(before.globals().secondaryBored(word));
+                require(call,true);if(r11LoadingState!=before)throw new IllegalStateException("Changed actual timer Tail preimage");r11LoadingState=ready;
+            }
+        });
+    }
+    private void requireOriginalR11Service(){
+        if(!r11ServiceActive||r11ServiceLoadingSource!=originalLoadingSource||!r11StartComplete||(!r11EngineAssembled&&!originalSourceLoadingInstalled)||r11Retired||r11Thread!=Thread.currentThread()
+            ||SessionManager.getCurrentGameplayMode()!=playerMode||SessionManager.getCurrentWorldSession()!=programWorld
+            ||programWorld.getDataSource()!=source||selectedProfile.state()!=r11SelectedFinal||r11SelectedFinal.programme().orElseThrow()!=originalLoadingProgramme||playerMode.getLevelManager()!=r11EntryLevelManager
+            ||(r11EntryLevelManager!=null&&(r11EntryLevelManager.getCurrentLevel()!=r11EntryLevel||r11EntryLevelManager.getCompletedProductionLoadGeneration()!=r11EntryLoadGeneration.orElseThrow()))
+            ||playerFrame!=r11EntryFrame||playerFrame.closed()||!ownsOriginalLoadingFrame(playerFrame))throw new IllegalStateException("No original active programme loading service");
+        originalBoot.requireConsumed(this,programWorld,selectedProfileInvocation);
+    }
+    /** One lifetime-complete original loading image. Source/Frame/placement identities remain
+     * in the enclosing original entry; this value never authorizes invocation or input. */
+    record R11LoadingState(SonicCdR31aLoadingVisit.Phase phase,SonicCdR31aLoadingVisit.Scroll scroll,SonicCdR31aWorldHost.Globals globals,
+            CdAssetBytes reserved,CdFlowerPositions flowers,CdAssetBytes cpuSat,Optional<CdAssetBytes> blocks,
+            Optional<CdAssetBytes> layout,SonicCdR31aWorldHost.NativeCarry nativeCarry,CdAssetBytes shieldCpu,
+            int noBumperByte,int bossStartedByte,int fadeSteps,boolean displayEnabled,List<CdLevelStartStorage.Cut> clears){
+        R11LoadingState{Objects.requireNonNull(phase);Objects.requireNonNull(scroll);Objects.requireNonNull(globals);Objects.requireNonNull(flowers);Objects.requireNonNull(blocks);Objects.requireNonNull(layout);Objects.requireNonNull(nativeCarry);if(reserved.length()!=1984||cpuSat.length()!=640||shieldCpu.length()!=0x480||(noBumperByte&~255)!=0||(bossStartedByte&~255)!=0||fadeSteps<0||fadeSteps>22)throw new IllegalArgumentException("Complete original loading image required");clears=List.copyOf(clears);}
+        R11LoadingState scroll(SonicCdR31aLoadingVisit.Scroll s){return new R11LoadingState(phase,s,globals,reserved,flowers,cpuSat,blocks,layout,nativeCarry,shieldCpu,noBumperByte,bossStartedByte,fadeSteps,displayEnabled,clears);}
+        R11LoadingState globals(SonicCdR31aWorldHost.Globals g){return new R11LoadingState(phase,scroll,g,reserved,flowers,cpuSat,blocks,layout,nativeCarry,shieldCpu,noBumperByte,bossStartedByte,fadeSteps,displayEnabled,clears);}
+        R11LoadingState reserved(CdAssetBytes r){return new R11LoadingState(phase,scroll,globals,r,flowers,cpuSat,blocks,layout,nativeCarry,shieldCpu,noBumperByte,bossStartedByte,fadeSteps,displayEnabled,clears);}
+        R11LoadingState geometry(Optional<CdAssetBytes> b,Optional<CdAssetBytes> l){return new R11LoadingState(phase,scroll,globals,reserved,flowers,cpuSat,b,l,nativeCarry,shieldCpu,noBumperByte,bossStartedByte,fadeSteps,displayEnabled,clears);}
+        R11LoadingState phase(SonicCdR31aLoadingVisit.Phase p){return new R11LoadingState(p,scroll,globals,reserved,flowers,cpuSat,blocks,layout,nativeCarry,shieldCpu,noBumperByte,bossStartedByte,fadeSteps,displayEnabled,clears);}
+        R11LoadingState fade(int n,boolean e){return new R11LoadingState(phase,scroll,globals,reserved,flowers,cpuSat,blocks,layout,nativeCarry,shieldCpu,noBumperByte,bossStartedByte,n,e,clears);}
+        R11LoadingState carry(SonicCdR31aWorldHost.NativeCarry n){return new R11LoadingState(phase,scroll,globals,reserved,flowers,cpuSat,blocks,layout,n,shieldCpu,noBumperByte,bossStartedByte,fadeSteps,displayEnabled,clears);}
+        R11LoadingState cleared(CdLevelStartStorage.Cut cut){var c=new java.util.ArrayList<>(clears);c.add(cut);return new R11LoadingState(phase,scroll,globals,reserved,flowers,cpuSat,blocks,layout,nativeCarry,shieldCpu,noBumperByte,bossStartedByte,fadeSteps,displayEnabled,c);}
+    }
+    /** Private actual Main clear operation; only its constructor can request Flower source
+     * knowledge, under the current source/World/thread/generation and complete preimage. */
+    final class OriginalR11ClearCall {
+        private final CdLevelStartStorage.Cut cut;private final R11LoadingState before=r11LoadingState;
+        private final Thread thread=Thread.currentThread();private boolean preparing=true;
+        private OriginalR11ClearCall(CdLevelStartStorage.Cut cut){this.cut=cut;}
+        void requireDrawQueueOwner(SonicCdGameModule owner,CdWorld world){
+            requireOriginalR11Service();if(owner!=SonicCdGameModule.this||world!=r11World||cut!=CdLevelStartStorage.Cut.DRAW_QUEUE||!preparing||thread!=Thread.currentThread()||r11LoadingState!=before||r11Clear!=this)throw new IllegalStateException("No original R11 Draw queue clear");
+        }
+        Object flowerPositionClearSource(){
+            requireOriginalR11Service();if(cut!=CdLevelStartStorage.Cut.FLOWERS||!preparing||thread!=Thread.currentThread()||r11LoadingState!=before||r11Clear!=this)throw new IllegalStateException("No original R11 Flower clear");return (originalWaterStage()||originalPastStage())?originalLoadingSource:source.assets();
+        }
+    }
+    private OriginalR11ClearCall r11Clear;
+    private static CdAssetBytes loadingZero(int n){return CdAssetBytes.copyOf(new byte[n]);}
+    private void storeR11Scroll(SonicCdR31aLoadingVisit.Scroll expected,SonicCdR31aLoadingVisit.Scroll ready){requireOriginalR11Service();if(r11LoadingState.scroll()!=expected)throw new IllegalStateException("Changed R11 scroll preimage");r11LoadingState=r11LoadingState.scroll(ready);}
+    private void clearOriginalR11(CdLevelStartStorage.Cut cut){
+        requireOriginalR11Service();if(r11Clear!=null)throw new IllegalStateException("Native clear reentry");
+        var original=new OriginalR11ClearCall(cut);r11Clear=original;
+        try{var before=r11LoadingState;var prefix=r11LoadingPrefix;var l=prefix.main().level();
+            switch(cut){
+                case POWERUP_FLOWERS -> r11LoadingPrefix=prefix.level(new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),0,0,0,l.timeOver()));
+                case DRAW_QUEUE -> {if(r11World!=null)r11World.originalR11QueueCleared(original);}
+                case UNKNOWN_BUFFER -> { /* no addressable/readable buffer in this semantic view */ }
+                case FLOWERS -> {
+                    var positions=CdFlowerPositions.originalClear(original);var f=playerFrame.prepareLevelStartFlowersClear();
+                    var ready=new R11LoadingState(before.phase(),CdLevelStartStorage.flowersCleared(before.scroll()),before.globals().flowers(),before.reserved(),positions,before.cpuSat(),before.blocks(),before.layout(),before.nativeCarry(),loadingZero(0x480),0,before.bossStartedByte(),before.fadeSteps(),before.displayEnabled(),before.clears());
+                    playerFrame.validateLevelStartClear(f);requireOriginalR11Service();playerFrame.applyLevelStartClear(f);r11LoadingState=ready;
+                }
+                case OBJECTS -> {
+                    var f=playerFrame.prepareLevelStartObjectClear();var staged=com.openggf.game.soniccd.objects.CdObjectPool.stagingCopy(r11Placement.capture().pool());staged.clearDynamicSlots();var pool=staged.capture();
+                    var ready=before.reserved(loadingZero(1984));r11Placement.pool().validateRestore(pool);playerFrame.validateLevelStartClear(f);requireOriginalR11Service();
+                    playerFrame.applyLevelStartClear(f);r11Placement.pool().restore(pool);r11LoadingState=ready;
+                }
+                case MISC -> {if(originalWaterStage())originalLoadingAnimation=Optional.of(new OriginalLoadingAnimation(loadingZero(6),loadingZero(6)));var n=before.nativeCarry();r11LoadingState=before.globals(before.globals().misc()).carry(new SonicCdR31aWorldHost.NativeCarry(n.collisionPointer(),n.fadeInfoWithoutTail(),java.util.OptionalLong.of(0),n.targetRightBoundWord(),n.amyCapturedByte()));}
+                case CAMERA -> {
+                    var switches=new com.openggf.game.soniccd.objects.r4.CdR4SwitchBank(new byte[32],-1);
+                    var f=playerFrame.prepareLevelStartCameraClear();var n=before.nativeCarry();var ready=new R11LoadingState(before.phase(),CdLevelStartStorage.cameraCleared(before.scroll()),before.globals().camera(),before.reserved(),before.flowers(),before.cpuSat(),before.blocks(),before.layout(),new SonicCdR31aWorldHost.NativeCarry(n.collisionPointer(),n.fadeInfoWithoutTail(),n.rngSeedLong(),OptionalInt.of(0),n.amyCapturedByte()),before.shieldCpu(),before.noBumperByte(),0,before.fadeSteps(),before.displayEnabled(),before.clears());
+                    playerFrame.validateLevelStartClear(f);requireOriginalR11Service();playerFrame.applyLevelStartClear(f);r11Placement.clearLevelStartCameraValues();
+                    // Actual Main.ClearCamera FFF700..FFF800 contains switchFlags FFF7E0..FFF800.
+                    // This private source/current-clear occurrence, never a DATA/default bank, owns all32 zero writes.
+                    r11Switches=switches;r11LoadingState=ready;
+                }
+                case DEMO_INDEX -> { /* source DEMO=0, demoDataIndex was actually cleared by BRAM and is retained zero */ }
+            }
+            r11LoadingState=r11LoadingState.cleared(cut);r11LoadingPrefix=r11LoadingPrefix.globals(r11LoadingState.globals());
+        }finally{original.preparing=false;r11Clear=null;}
+    }
+    private void projectOriginalR11Selection(CdOriginalR11Display.Inputs selected){
+        requireOriginalR11Service();var old=r11FirstLoad;r11FirstLoad=new R11FirstLoad(CdOriginalR11Display.project(selected),old.foreground(),old.background(),old.copies(),old.levelLoaded(),old.standardLoaded(),old.completedWaits(),old.music());
+    }
+    void requireOriginalR11WorldConstruction(CdPlayerFrameRuntime frame,CdR11aAssets assets,com.openggf.game.soniccd.resources.CdR11aSectionArt art,CdObjectPlacementRuntime placement){
+        requireOriginalR11EntryCut();if(!r11WorldConstructing||r11World!=null||frame!=playerFrame||assets!=source.assets()||art!=r11LoadingArt||placement!=r11Placement)throw new IllegalStateException("No actual original R11 World construction");
+    }
+    void requireOriginalProgrammeWorldConstruction(CdPlayerFrameRuntime frame,com.openggf.game.soniccd.level.CdLevelLoadingSource loading,com.openggf.game.soniccd.resources.CdR11aSectionArt art,CdObjectPlacementRuntime placement){
+        requireOriginalR11EntryCut();if(!r11WorldConstructing||r11World!=null||!(originalWaterStage()||originalPastStage())||loading!=originalLoadingSource||frame!=playerFrame||frame.stageSource()!=loading.retainedPlayerSource()||art!=r11LoadingArt||!art.ownsLoadingSource(loading,frame.stageSource())||placement!=r11Placement||placement.placements()!=loading.placements())throw new IllegalStateException("No actual original source World construction");
+        if(originalPastStage())originalPastArrival.require();
+    }
+    void requireOriginalR11WorldIdle(CdWorld world){requireOriginalR11EntryCut();if(world!=r11World||r11OrdinaryAccess!=null)throw new IllegalStateException("Foreign original R11 World");}
+    void requireOriginalR11WorldRetiring(CdWorld world,CdPlayerFrameRuntime frame,CdR11aAssets assets){if(r11Thread!=Thread.currentThread()||r11ServiceActive||world!=r11World||frame!=r11EntryFrame||((originalWaterStage()||originalPastStage())?assets!=null:assets!=source.assets()))throw new IllegalStateException("Foreign retiring original R11 World");playerPresentation.requirePastRenderIdle();}
+    void drawOriginalR11World(){playerPresentation.drawOriginalR11Loading();}
+    void drawOriginalR11Selected(){originalR11FirstLoad();if(originalWarpSceneSelected()){playerPresentation.drawOriginalR11Loading();return;}if(r11World==null&&originalWaterStage()){playerPresentation.drawOriginalR11Loading();return;}if(r11World==null)throw new IllegalStateException("No original R11 World renderer");r11World.draw();}
+    final class OriginalR11Access {
+        private OriginalR11Access(){}
+        void requireOwner(CdWorld expected){requireOriginalR11Service();if(r11OrdinaryAccess!=this||r11World!=expected||r11LoadingState.phase()!=SonicCdR31aLoadingVisit.Phase.READY)throw new IllegalStateException("No actual original R11 ordinary scope");}
+        R11LoadingState state(){requireOwner(r11World);return r11LoadingState;}
+        PastTtWaterAirFm prepareWaterAirFm(CdR4PlayerBubbles.FmCall original){
+            requireOwner(r11World);r11World.requireOriginalTtWaterAirFm(SonicCdGameModule.this,original);
+            if(!originalWaterStage()||originalBoot==null)throw new IllegalStateException("No original TT authenticated FM owner");
+            var fm=source.fmSoundAssets().orElseThrow(()->new IllegalStateException("No original MDINIT FM source"));
+            var installed=originalBoot.state().fm().orElseThrow(()->new IllegalStateException("Original FM bank installation not reached"));
+            if(installed.assets()!=fm||fm.source().variant()!=CdReleaseVariant.USA
+                    ||!fm.source().wholeDiscSha256().equals(source.assets().identity().observedWholeDiscSha256()))
+                throw new IllegalStateException("Original TT request differs from its installed authenticated FM pipeline");
+            var sound=original.sound();var request=new PastTtWaterAirFm(sound,fm.sfxHeaderAddress(sound.nativeId()),fm.nativePriorityByte(sound.nativeId()));
+            requireOwner(r11World);r11World.requireOriginalTtWaterAirFm(SonicCdGameModule.this,original);return request;
+        }
+        CdTimeWarpSaveData.State timeWarpSaved(){requireOwner(r11World);return Objects.requireNonNull(r11TimeWarpSaved,"No original warp-save owner");}
+        void timeWarpSaved(CdWorld.OriginalR11TimeWarpSaveStore original){
+            requireOwner(r11World);Objects.requireNonNull(original,"actual shared-save occurrence");
+            var before=Objects.requireNonNull(r11TimeWarpSaved,"No original warp-save owner");
+            var expected=original.requireExpected(r11World,before);
+            requireOwner(r11World);if(expected!=before||r11TimeWarpSaved!=before)throw new IllegalStateException("Changed original warp-save preimage");
+            var ready=Objects.requireNonNull(original.ready(),"completed original store prefix");
+            requireOwner(r11World);if(r11TimeWarpSaved!=before)throw new IllegalStateException("Changed original warp-save adoption cut");
+            r11TimeWarpSaved=ready;
+        }
+        com.openggf.game.soniccd.objects.r4.CdR4SwitchBank switches(){requireOwner(r11World);return r11Switches;}
+        int switchByte(int index){requireOwner(r11World);var bank=r11Switches;if(bank==null)throw new UnsupportedOperationException("Original current switch BYTE before actual camera clear");return bank.read(index);}
+        /** Private active World publication only; bank exists solely after the genuine camera clear. */
+        com.openggf.game.soniccd.objects.r4.CdR4SwitchBank switchByte(com.openggf.game.soniccd.objects.r4.CdR4SwitchBank expected,int index,int value){
+            requireOwner(r11World);if(expected==null||r11Switches!=expected||(value&~255)!=0)throw new IllegalArgumentException("Changed current switch-bank store cut");
+            expected.read(index);var ready=expected.write(index,value);requireOwner(r11World);if(r11Switches!=expected)throw new IllegalStateException("Changed switch adoption cut");r11Switches=ready;return ready;
+        }
+        R11LoadingPrefix prefix(){requireOwner(r11World);return r11LoadingPrefix;}
+        void state(R11LoadingState before,R11LoadingState ready){requireOwner(r11World);if(r11LoadingState!=before)throw new IllegalStateException("Changed full original R11 cut");Objects.requireNonNull(ready);var prefix=r11LoadingPrefix.globals(ready.globals());r11LoadingState=ready;r11LoadingPrefix=prefix;}
+        void level(CdLevelGlobals before,CdLevelGlobals ready){requireOwner(r11World);if(r11LoadingPrefix.main().level()!=before)throw new IllegalStateException("Changed original R11 level");r11LoadingPrefix=r11LoadingPrefix.level(ready);}
+        void primaryLifecycle(R11LoadingState before,R11LoadingPrefix prefix,R11LoadingState ready,R11LoadingPrefix readyPrefix){
+            requireOwner(r11World);if(r11LoadingState!=before||r11LoadingPrefix!=prefix||ready==null||readyPrefix==null
+                ||!readyPrefix.ring().equals(ready.globals().ring())||!readyPrefix.score().equals(ready.globals().score()))throw new IllegalStateException("Changed complete original R11 lifecycle pair");
+            r11LoadingState=ready;r11LoadingPrefix=readyPrefix;
+        }
+        void palette(CdAssetBytes ready){requireOwner(r11World);if(ready.length()!=128)throw new IllegalArgumentException("Palette128");r11LoadingPrefix=r11LoadingPrefix.palette(ready);}
+        void section(com.openggf.game.soniccd.resources.CdR11aSectionArt.State before,com.openggf.game.soniccd.resources.CdR11aSectionArt.State ready){requireOwner(r11World);if(before!=r11LoadingPrefix.section())throw new IllegalStateException("Changed original R11 art");r11LoadingArt.validateState(ready);originalR11Art(a->ready);}
+        int closureSpecialStage(){requireOwner(r11World);return r11ClosureSpecialStage;}
+        int closureTimeStones(){requireOwner(r11World);return r11SelectedFinal.progress().timeStonesByte().orElseThrow();}
+        void closureSpecialStage(int value){requireOwner(r11World);if(value!=1)throw new IllegalArgumentException("BigRing writes BYTE1 only");r11ClosureSpecialStage=value;}
+        void beginLevelStart(CdWorld world){requireOwner(world);restartOriginalR11LevelStart(world);}
+        void powerup(){requireOwner(r11World);copyOriginalR11Powerup();}
+        void slow(){originalR11Art(a->r11LoadingArt.serviceSlow(a,r11LoadingState.scroll().foreground().scrollLock()));}
+        void prepare(){originalR11Art(r11LoadingArt::prepare);}
+        void updateSection(){originalR11Art(a->r11LoadingArt.updateSection(a,r11LoadingState.scroll().foreground().cameraX()));}
+        void append(int id){originalR11Art(a->r11LoadingArt.appendList(a,id));}
+        void copyDraw(){copyAndDrawOriginalR11();}
+        void serviceCount(){requireOwner(r11World);EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();}
+        void publish(java.util.Optional<CdObjectDrawQueue.CpuSat> cpu){requireOwner(r11World);var old=r11FirstLoad;var scroll=r11LoadingState.scroll();
+            projectOriginalR11Selection(new CdOriginalR11Display.Inputs(cpu,r11LoadingState.cpuSat(),originalWaterStage()?originalLoadingWater.orElseThrow().selectedPalette().orElseThrow():r11LoadingPrefix.normalPalette(),CdSelectedHscroll.copyNativePrefix(old.selection().inputs().hscroll(),scroll.background().hscrollRam()),scroll.background().vscroll(),r11LoadingState.displayEnabled(),old.foreground(),old.background(),r11LoadingPrefix.section().residency(),playerFrame.artState()));}
+        void refresh(){refreshOriginalR11CurrentArt();}
+        void cpu(CdObjectDrawQueue.CpuSat cpu){requireOwner(r11World);var s=r11LoadingState;var next=new R11LoadingState(s.phase(),s.scroll(),s.globals(),s.reserved(),s.flowers(),CdAssetBytes.copyOf(cpu.bytes()),s.blocks(),s.layout(),s.nativeCarry(),s.shieldCpu(),s.noBumperByte(),s.bossStartedByte(),s.fadeSteps(),s.displayEnabled(),s.clears());state(s,next);}
+        void reserved(int whole,CdAssetBytes expected,CdAssetBytes ready){requireOwner(r11World);if(whole<1||whole>31||ready.length()!=64)throw new IllegalArgumentException("Reserved full64");var s=r11LoadingState;var bank=s.reserved();if(!java.util.Arrays.equals(bank.slice((whole-1)*64,64).copy(),expected.copy()))throw new IllegalStateException("Changed reserved source");var bytes=bank.copy();System.arraycopy(ready.copy(),0,bytes,(whole-1)*64,64);state(s,s.reserved(CdAssetBytes.copyOf(bytes)));}
+        void scroll(SonicCdR31aLoadingVisit.Scroll before,SonicCdR31aLoadingVisit.Scroll ready){requireOwner(r11World);storeR11Scroll(before,ready);}
+        com.openggf.game.soniccd.level.CdLevelLoadingSource loadingSource(){requireOwner(r11World);return originalLoadingSource;}
+        int waterRead(CdR4WaterAirPorts.Value field){requireOwner(r11World);var w=originalLoadingWater.orElseThrow();var e=playerFrame.environment();return switch(field){
+            case WATER_Y->w.waterYWord().orElseThrow();case STATIC_WATER_Y->w.staticYWord().orElseThrow();case TARGET_WATER_Y->w.targetYWord().orElseThrow();case WATER_SPEED->w.speedByte().orElseThrow();case WATER_ANGLE->w.swayAngleByte().orElseThrow();case WATER_FULL->w.fullByte().orElseThrow();case SPLIT->w.splitByte().orElseThrow();
+            case CAMERA_X->r11LoadingState.scroll().foreground().cameraX();case CAMERA_Y->r11LoadingState.scroll().foreground().cameraYWord();case ACT->e.movement().gates().zoneAct()&255;case ZONE->e.movement().gates().zoneAct()>>>8;case ZONE_WORD->e.movement().gates().zoneAct();case TIME_ZONE->e.movement().gates().timeZone();case PAUSED->playerFrame.paused()?1:0;case DEBUG_MODE->e.globals().debugMode();case BOSS_STARTED->r11LoadingState.bossStartedByte();case DROWN_TIMER->r11LoadingState.globals().drownTimerWord().orElseThrow();case SCROLL_LOCK->r11LoadingState.scroll().foreground().scrollLock()>>>8;
+            case WATER_CURRENT->e.movement().gates().windTunnel();case HELD->e.controls().logicalHeld();case VBLANK_LOW->(int)(playerFrame.vIntClock().absoluteValue().orElseThrow(()->new CdPlayerFrameRuntime.OriginalProgrammeUnavailable("absolute native VBlank LOW"))&255);case STAGE_FRAMES->e.globals().levelFrames();case STAGE_FRAMES_LOW->e.globals().levelFrames()&255;default->throw new CdPlayerFrameRuntime.OriginalProgrammeUnavailable("actual TT scalar "+field);};}
+        void waterWrite(CdR4WaterAirPorts.Value field,int value){
+            requireOwner(r11World);CdR4WaterAirPorts.checked(value,field.bytes,field.name());
+            if(field==CdR4WaterAirPorts.Value.DROWN_TIMER){
+                // Native Main CPU Variables.inc:58 WORD; PlayerResetDrown stores30 at
+                // objects/r4/player_bubbles.asm:175. Reuse the sole captured Globals owner.
+                r11World.requireOriginalTtDrownTimerWrite(playerFrame,value);
+                var before=r11LoadingState;var g=before.globals();
+                var ready=new SonicCdR31aWorldHost.Globals(g.ring(),g.live(),g.contact(),g.score(),g.projectorByte(),g.checkpointSaved(),OptionalInt.of(value),g.debugBlockWord(),g.pauseMusicBit(),g.bonus(),g.tail(),g.animations(),g.paletteSteps7(),g.paletteTimers7(),g.layerByte(),g.bossFlagsByte(),g.eventRoutineWord());
+                state(before,before.globals(ready));return;
+            }
+            var w=originalLoadingWater.orElseThrow();
+            var n=new OriginalLoadingWater(field==CdR4WaterAirPorts.Value.WATER_Y?OptionalInt.of(value):w.waterYWord(),field==CdR4WaterAirPorts.Value.STATIC_WATER_Y?OptionalInt.of(value):w.staticYWord(),field==CdR4WaterAirPorts.Value.TARGET_WATER_Y?OptionalInt.of(value):w.targetYWord(),w.routineByte(),field==CdR4WaterAirPorts.Value.WATER_FULL?OptionalInt.of(value):w.fullByte(),field==CdR4WaterAirPorts.Value.WATER_SPEED?OptionalInt.of(value):w.speedByte(),field==CdR4WaterAirPorts.Value.SPLIT?OptionalInt.of(value):w.splitByte(),w.pendingByte(),w.selectedPalette(),w.returnedPaletteLoaded(),field==CdR4WaterAirPorts.Value.WATER_ANGLE?OptionalInt.of(value):w.swayAngleByte());
+            if(field!=CdR4WaterAirPorts.Value.WATER_Y&&field!=CdR4WaterAirPorts.Value.STATIC_WATER_Y&&field!=CdR4WaterAirPorts.Value.TARGET_WATER_Y&&field!=CdR4WaterAirPorts.Value.WATER_FULL&&field!=CdR4WaterAirPorts.Value.WATER_SPEED&&field!=CdR4WaterAirPorts.Value.SPLIT&&field!=CdR4WaterAirPorts.Value.WATER_ANGLE)throw new CdPlayerFrameRuntime.OriginalProgrammeUnavailable("actual TT scalar store "+field);
+            if(field==CdR4WaterAirPorts.Value.STATIC_WATER_Y||field==CdR4WaterAirPorts.Value.WATER_FULL){var g=r11LoadingState.globals();var live=field==CdR4WaterAirPorts.Value.STATIC_WATER_Y?CdCheckpointLiveAux.writeWaterHeight2(g.live(),value):CdCheckpointLiveAux.writeWaterFullscreen(g.live(),value);state(r11LoadingState,r11LoadingState.globals(SonicCdR31aWorldHost.with(g,g.ring(),live,g.contact(),g.score(),g.pauseMusicBit(),g.bonus(),g.animations(),g.paletteSteps7(),g.paletteTimers7())));}
+            originalLoadingWater=Optional.of(n);
+        }
+        int waterArm(){requireOwner(r11World);return r11LoadingPrefix.section().hintWord();}
+        void waterArm(int value){requireOwner(r11World);originalR11Art(s->r11LoadingArt.writeHintWord(s,value));}
+        int waterPending(){requireOwner(r11World);return originalLoadingWater.orElseThrow().pendingByte().orElseThrow();}
+        void waterPending(int value){requireOwner(r11World);if((value&~255)!=0)throw new IllegalArgumentException("Pending BYTE");var w=originalLoadingWater.orElseThrow();originalLoadingWater=Optional.of(new OriginalLoadingWater(w.waterYWord(),w.staticYWord(),w.targetYWord(),w.routineByte(),w.fullByte(),w.speedByte(),w.splitByte(),OptionalInt.of(value),w.selectedPalette(),w.returnedPaletteLoaded(),w.swayAngleByte()));}
+        void selectWaterInitial(){requireOwner(r11World);selectWaterImage(waterRead(CdR4WaterAirPorts.Value.WATER_FULL)!=0?r11WaterPalette:r11LoadingPrefix.normalPalette());}
+        private void selectWaterImage(CdAssetBytes value){var w=originalLoadingWater.orElseThrow();originalLoadingWater=Optional.of(new OriginalLoadingWater(w.waterYWord(),w.staticYWord(),w.targetYWord(),w.routineByte(),w.fullByte(),w.speedByte(),w.splitByte(),w.pendingByte(),Optional.of(value),w.returnedPaletteLoaded(),w.swayAngleByte()));}
+        int currentWaterLong(int at){requireOwner(r11World);Objects.checkFromIndexSize(at,4,128);return(int)r11WaterPalette.unsignedLong(at);}
+        void selectWaterLong(int at,int bits){requireOwner(r11World);Objects.checkFromIndexSize(at,4,128);var bytes=originalLoadingWater.orElseThrow().selectedPalette().orElseThrow().copy();bytes[at]=(byte)(bits>>>24);bytes[at+1]=(byte)(bits>>>16);bytes[at+2]=(byte)(bits>>>8);bytes[at+3]=(byte)bits;selectWaterImage(CdAssetBytes.copyOf(bytes));}
+        CdAssetBytes currentWater(){requireOwner(r11World);return r11WaterPalette;}
+        CdAssetBytes currentWaterFade(){requireOwner(r11World);return r11LoadingState.cpuSat().slice(512,128);}
+        void copyWaterCameras(){requireOwner(r11World);copyOriginalR11Cameras();}
+        void drawWaterStage(){requireOwner(r11World);drawOriginalR11CopiedStage();}
+        void animateWaterStage(){requireOwner(r11World);if(r11LoadingState.globals().ring().timeStopTimer()==0&&!playerFrame.paused()){powerup();animateOriginalLoadingStage();}}
+        int waterRandom(){requireOwner(r11World);var n=r11LoadingState.nativeCarry();var seed=n.rngSeedLong().orElseThrow(()->new CdPlayerFrameRuntime.OriginalProgrammeUnavailable("actual TT RNG seed"));var rng=new com.openggf.game.GameRng(com.openggf.game.GameRng.Flavour.S1_S2,seed);int result=rng.nextWord();requireOwner(r11World);if(r11LoadingState.nativeCarry()!=n)throw new IllegalStateException("Changed actual RNG preimage");var ready=new SonicCdR31aWorldHost.NativeCarry(n.collisionPointer(),n.fadeInfoWithoutTail(),java.util.OptionalLong.of(rng.getSeed()),n.targetRightBoundWord(),n.amyCapturedByte());r11LoadingState=r11LoadingState.carry(ready);return result;}
+        void waterScroll(){requireOwner(r11World);initializeOriginalWaterScroll();}
+
+    }
+    void requireOriginalR11LoadingPictureOwner(CdWorld expected){
+        requireOriginalR11Service();
+        if(r11World!=expected||r11OrdinaryAccess!=null||r11Clear!=null||r11LoadingState.phase()==SonicCdR31aLoadingVisit.Phase.READY)
+            throw new IllegalStateException("No original loading publication scope");
+    }
+    private void publishOriginalR11Loading(){
+        requireOriginalR11Service();var old=r11FirstLoad;var scroll=r11LoadingState.scroll();
+        var retained=r11World==null?Optional.<CdObjectDrawQueue.CpuSat>empty():r11World.originalR11LoadingCpu(this);
+        projectOriginalR11Selection(new CdOriginalR11Display.Inputs(retained,r11LoadingState.cpuSat(),r11LoadingPrefix.normalPalette(),CdSelectedHscroll.copyNativePrefix(old.selection().inputs().hscroll(),scroll.background().hscrollRam()),scroll.background().vscroll(),r11LoadingState.displayEnabled(),old.foreground(),old.background(),r11LoadingPrefix.section().residency(),playerFrame.artState()));
+    }
+    private void retainOriginalR11Planes(com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State fg,com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State bg,SonicCdR31aLoadingVisit.Copies copies){
+        requireOriginalR11Service();var old=r11FirstLoad;var input=old.selection().inputs();
+        var selected=CdOriginalR11Display.project(new CdOriginalR11Display.Inputs(input.selectedCpu(),input.selectedSat(),input.palette(),input.hscroll(),input.vscrollLongBits(),input.displayEnabled(),fg,bg,r11LoadingPrefix.section().residency(),playerFrame.artState()));
+        r11FirstLoad=new R11FirstLoad(selected,fg,bg,copies,old.levelLoaded(),old.standardLoaded(),old.completedWaits(),old.music());
+    }
+    private void copyAndDrawOriginalR11(){copyOriginalR11Cameras();drawOriginalR11CopiedStage();}
+    private void copyOriginalR11Cameras(){
+        requireOriginalR11Service();var s=r11LoadingState.scroll();var f=s.foreground();var b=s.background();
+        var cams=new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.CopiedCameras(new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera(b.cameraBgX(),b.cameraBgY()),new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera(b.cameraBg2X(),b.cameraBg2Y()),new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera(b.cameraBg3X(),b.cameraBg3Y()));
+        var c=new SonicCdR31aLoadingVisit.Copies((f.cameraX()<<16)|s.foregroundXFractionWord(),f.cameraY16_16(),cams,f.scrollFlags(),new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.FlagWords(b.scrollFlagsBg(),b.scrollFlagsBg2(),b.scrollFlagsBg3()));
+        storeR11Scroll(s,new SonicCdR31aLoadingVisit.Scroll(f,b,c,s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord()));
+    }
+    private void drawOriginalR11CopiedStage(){
+        requireOriginalR11Service();var s=r11LoadingState.scroll();var c=s.copies();var cams=c.background();
+        var live=new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.LiveCameras(cams.bg1(),cams.bg2(),cams.bg3());
+        com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Result out;
+        try{out=originalLoadingSource.backgroundPlane().withBlockDefinitions(r11LoadingPrefix.blockDefinitions()).incremental(r11FirstLoad.background(),live,c.background(),c.backgroundFlags());}
+        catch(com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.InvalidPlane original){retainOriginalR11Background(original,c,true);throw original;}
+        c=new SonicCdR31aLoadingVisit.Copies(c.foregroundX16_16(),c.foregroundY16_16(),cams,c.foregroundFlags(),out.flags());retainOriginalR11Planes(r11FirstLoad.foreground(),out.state(),c);
+        // PP DrawBGBlockCol restores a0; otherwise a0 is BGCameraSectIDs+1. Preserve the
+        // actual directory cursor, including an off-end metadata read as unavailable.
+        int index=1;for(var read:out.sections())if(read.phase()==com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Phase.INCREMENTAL_COLUMN)index=read.tableIndex()+1;
+        var ids=originalLoadingSource.backgroundSectionIds();
+        var metadata=new com.openggf.game.soniccd.scroll.CdR11bForegroundPlane.CallerMetadata(index>=0&&index<ids.length()?OptionalInt.of(ids.unsignedByte(index)):OptionalInt.empty());
+        var t=originalLoadingSource.retainedPlayerSource().terrain();var writer=com.openggf.game.soniccd.scroll.CdR11bForegroundPlane.fromTables(t.blocks(),t.chunks(),t.layout().ram()).withBlockDefinitions(r11LoadingPrefix.blockDefinitions());
+        try{var result=writer.incremental(r11FirstLoad.foreground(),new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera(c.foregroundX16_16(),c.foregroundY16_16()),c.foregroundFlags(),metadata);retainOriginalR11Foreground(result,c);}
+        catch(com.openggf.game.soniccd.scroll.CdR11bForegroundPlane.InvalidPlane original){retainOriginalR11Foreground(original.completedPrefix(),c);throw original;}
+    }
+    private void retainOriginalR11Background(com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.InvalidPlane original,SonicCdR31aLoadingVisit.Copies before,boolean consume){
+        try{var prefix=original.completedPrefix();if(prefix.isPresent()){var result=prefix.orElseThrow();var copies=consume?new SonicCdR31aLoadingVisit.Copies(before.foregroundX16_16(),before.foregroundY16_16(),before.background(),before.foregroundFlags(),result.flags()):before;retainOriginalR11Planes(r11FirstLoad.foreground(),result.state(),copies);}}
+        catch(RuntimeException|Error retention){if(retention!=original)original.addSuppressed(retention);}
+    }
+    private void retainOriginalR11Foreground(com.openggf.game.soniccd.scroll.CdR11bForegroundPlane.Result result,SonicCdR31aLoadingVisit.Copies before){
+        var c=new SonicCdR31aLoadingVisit.Copies(before.foregroundX16_16(),before.foregroundY16_16(),before.background(),result.flagsWord(),before.backgroundFlags());var s=r11LoadingState.scroll();storeR11Scroll(s,new SonicCdR31aLoadingVisit.Scroll(s.foreground(),s.background(),c,s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord()));retainOriginalR11Planes(result.state(),r11FirstLoad.background(),c);
+    }
+    /** One private actual caller of native LoadShieldArt, shared by the post-PLC and
+     * ordinary paths. Completed BCLR7, CPU and each tile publication retain their own prefixes.
+     * No flag-to-slot synthesis: the native ID3 producer and shared World dispatch own slot6. */
+    private void copyOriginalR11Powerup(){
+        requireOriginalR11Service();
+        if(originalPastStage()){
+            originalPastArrival.require();
+            if((r11LoadingState.phase()!=SonicCdR31aLoadingVisit.Phase.LEVEL_PLC&&r11LoadingState.phase()!=SonicCdR31aLoadingVisit.Phase.READY)
+                    ||playerFrame.stageSource()!=originalLoadingSource.retainedPlayerSource()
+                    ||!r11LoadingArt.ownsLoadingSource(originalLoadingSource))
+                throw new IllegalStateException("No actual Past Shield source/Frame/current-art/phase owner");
+            originalLoadingSource.standardPastObjectSource().requirePlacement(r11Placement);
+            r11LoadingArt.validateState(r11LoadingPrefix.section());
+        }
+        var l=r11LoadingPrefix.main().level();var gate=com.openggf.game.soniccd.resources.CdPowerupArtRuntime.gate(l.powerup());r11LoadingPrefix=r11LoadingPrefix.level(new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),gate.powerup(),l.timeOver()));if(!gate.copyRequired())return;
+        var runtime=originalPastStage()?com.openggf.game.soniccd.resources.CdPowerupArtRuntime.fromRawSources(originalLoadingSource.shield()):originalWaterStage()?com.openggf.game.soniccd.resources.CdPowerupArtRuntime.fromRawSources(originalLoadingSource.objectSource().powerupArtSources()):new com.openggf.game.soniccd.resources.CdPowerupArtRuntime(source.assets().shield());var request=runtime.prepareActiveCopy(r11LoadingState.shieldCpu(),gate.powerup());var s=r11LoadingState;r11LoadingState=new R11LoadingState(s.phase(),s.scroll(),s.globals(),s.reserved(),s.flowers(),s.cpuSat(),s.blocks(),s.layout(),s.nativeCarry(),request.bytes(),s.noBumperByte(),s.bossStartedByte(),s.fadeSteps(),s.displayEnabled(),s.clears());
+        for(int at=0;at<request.bytes().length();at+=32){int dest=com.openggf.game.soniccd.resources.CdPowerupArtRuntime.VRAM_BYTE_ADDRESS+at;var bytes=request.bytes().slice(at,32);originalR11Art(a->r11LoadingArt.writeCurrentPowerupTile(a,dest,bytes));}
+    }
+    private void originalR11VIntReturned(){requireOriginalR11Service();EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();var old=r11FirstLoad;r11FirstLoad=new R11FirstLoad(old.selection(),old.foreground(),old.background(),old.copies(),old.levelLoaded(),old.standardLoaded(),old.completedWaits()+1,old.music());}
+    private void originalR11Art(java.util.function.UnaryOperator<com.openggf.game.soniccd.resources.CdR11aSectionArt.State> op){
+        requireOriginalR11Service();var before=r11LoadingPrefix.section();
+        try{r11LoadingPrefix=r11LoadingPrefix.art(op.apply(before));}
+        catch(com.openggf.game.soniccd.resources.CdR11aSectionArt.SectionArtException failure){
+            r11LoadingPrefix=r11LoadingPrefix.art(failure.state());failure.completedRamPrefix().ifPresent(b->r11LoadingState=r11LoadingState.geometry(Optional.of(b),r11LoadingState.layout()));
+            try{refreshOriginalR11CurrentArt();}catch(RuntimeException|Error publication){if(publication!=failure)failure.addSuppressed(publication);}throw failure;
+        }
+        if(before.residency()!=r11LoadingPrefix.section().residency())refreshOriginalR11CurrentArt();
+    }
+    private void refreshOriginalR11CurrentArt(){
+        requireOriginalR11Service();var i=r11FirstLoad.selection().inputs();projectOriginalR11Selection(new CdOriginalR11Display.Inputs(i.selectedCpu(),i.selectedSat(),i.palette(),i.hscroll(),i.vscrollLongBits(),i.displayEnabled(),r11FirstLoad.foreground(),r11FirstLoad.background(),r11LoadingPrefix.section().residency(),playerFrame.artState()));
+    }
+    enum OriginalR11TransferBoundary { RUN_R12_DESTINATION_ENTRY_OWNER, RUN_LEVEL_GAME_OVER_OWNER, RUN_LEVEL_TIME_WARP_OWNER, RUN_LEVEL_SPECIAL_STAGE_OWNER, WARP_RETURN_BYTE_AND_DESTINATION_OWNER, ORIGINAL_WARP_INITIAL_SOURCE_OWNER, ORIGINAL_WARP_DESTINATION_ENTRY_OWNER }
+    enum OriginalR11IpxPhase { NOT_STARTED, RETURN_BYTE, FM_STOPPED, BLANK_RETURNED }
+    private enum OriginalR11IpxOrigin { CLEARED_LEVEL, RETURNED_WARP }
+    private record OriginalR11IpxState(OriginalR11IpxPhase phase,OptionalInt returnByte,OriginalR11IpxOrigin origin){
+        OriginalR11IpxState(OriginalR11IpxPhase phase,OptionalInt returnByte){this(phase,returnByte,OriginalR11IpxOrigin.CLEARED_LEVEL);}
+        OriginalR11IpxState{
+            Objects.requireNonNull(phase);Objects.requireNonNull(returnByte);Objects.requireNonNull(origin);
+            if(origin==OriginalR11IpxOrigin.CLEARED_LEVEL){
+                if((phase==OriginalR11IpxPhase.NOT_STARTED)!=returnByte.isEmpty()||returnByte.isPresent()&&returnByte.orElseThrow()!=CdRetainedProgrammeReturn.clearedPlcReturnByte())throw new IllegalArgumentException("Original IPX semantic return pair");
+            }else if(phase==OriginalR11IpxPhase.NOT_STARTED||returnByte.isPresent())throw new IllegalArgumentException("Returned WARP owns a reached UNKNOWN byte write");
+        }
+    }
+    private OriginalR11IpxState r11ClosureIpx=new OriginalR11IpxState(OriginalR11IpxPhase.NOT_STARTED,OptionalInt.empty());
+    static final class OriginalR11TransferStopped extends UnsupportedOperationException {
+        private final OriginalR11TransferBoundary boundary;
+        private OriginalR11TransferStopped(OriginalR11TransferBoundary boundary){super("Original R11 native programme return requires "+boundary+"; its actual IPX/destination continuation remains unowned");this.boundary=boundary;}
+        OriginalR11TransferBoundary boundary(){return boundary;}
+    }
+    /** Original controller continuation, never callable from capture/DTO/effects.
+     * Native hardware arbitration is omitted for immutable detached programme data, as in the
+     * existing retained caller. Actual display-disable and represented blank remain explicit. */
+    private void originalR11StageCompleteIpx(){
+        requireOriginalR11Service();var g=playerFrame.environment().movement().gates();
+        if(r11LoadingState.phase()!=SonicCdR31aLoadingVisit.Phase.RETURNED||r11ReturnKind!=SonicCdR31aLoadingVisit.ReturnKind.NEXT_LEVEL
+                ||r11LoadingPrefix.main().level().levelRestart()!=0||g.zoneAct()!=1||g.timeZone()!=1||r11World==null||r11OrdinaryAccess!=null)
+            throw new IllegalStateException("No original R1 actual stage-complete return");
+        originalBoot.requireConsumed(this,programWorld,selectedProfileInvocation);
+        if(r11ClosureIpx.phase()==OriginalR11IpxPhase.NOT_STARTED){originalR11ReturnTail(false);return;}
+        if(r11ClosureIpx.phase()!=OriginalR11IpxPhase.BLANK_RETURNED)throw new IllegalStateException("Unreturned original IPX prefix");
+        var decision=CdIpxProgress.levelReturned(new CdIpxProgress.LevelReturnReads(){public int lives(){requireOriginalR11Service();return r11LoadingState.globals().ring().lives();}public int rawPeriod(){requireOriginalR11Service();return playerFrame.environment().movement().gates().timeZone();}public int specialStage(){requireOriginalR11Service();return r11ClosureSpecialStage;}});
+        throw new OriginalR11TransferStopped(switch(decision){case GAME_OVER->OriginalR11TransferBoundary.RUN_LEVEL_GAME_OVER_OWNER;case TIME_WARP->OriginalR11TransferBoundary.RUN_LEVEL_TIME_WARP_OWNER;case SPECIAL_STAGE->OriginalR11TransferBoundary.RUN_LEVEL_SPECIAL_STAGE_OWNER;case RETURN_TO_ACT_CALLER->OriginalR11TransferBoundary.RUN_R12_DESTINATION_ENTRY_OWNER;});
+    }
+    /** Original marked LevelStart RTS -> IPX.RunMMD -> WARP. This is an independent
+     * selected-programme control partition; the old level stays RETURNED, open and inactive. */
+    enum OriginalWarpPhase { NONE, LEVEL_RETURN_TAIL, WARP_ACTIVE, WARP_RETURNED, WARP_IPX_TAIL, DESTINATION_SELECTED }
+    private OriginalWarpPhase originalWarpPhase=OriginalWarpPhase.NONE;
+    private OriginalWarpAuthority originalWarpAuthority;
+    private OriginalWarpDestination originalWarpDestination;
+    /** Observation only. Neither this value nor its DATA can invoke a destination entry. */
+    record OriginalWarpDestinationView(CdIpxProgress.WarpDestination selection,CdCommand command,CdStageKey stage,
+            Optional<com.openggf.game.soniccd.level.CdLevelLoadingSource> loadingSource) { }
+    Optional<OriginalWarpDestinationView> originalWarpDestination(){requireOriginalR11EntryCut();return Optional.ofNullable(originalWarpDestination).map(d->d.view);}
+    CdRetainedProgrammeReturn.ReturnKnowledge originalWarpReturnKnowledge(){requireOriginalR11EntryCut();return new CdRetainedProgrammeReturn.ReturnKnowledge(r11ClosureIpx.returnByte());}
+    /** IPX screen-disable is distinct from WARP's retained internal display variable. */
+    boolean originalWarpDisplayEnabled(){return originalWarpSceneSelected()&&warpState.displayEnabled()
+            &&!(r11ClosureIpx.origin()==OriginalR11IpxOrigin.RETURNED_WARP&&r11ClosureIpx.phase()==OriginalR11IpxPhase.BLANK_RETURNED);}
+    private final class OriginalWarpDestination {
+        private final OriginalWarpAuthority ticket=originalWarpAuthority;
+        private final com.openggf.game.soniccd.level.CdInitialProgramSource initial;
+        private final OriginalWarpDestinationView view;
+        private OriginalWarpDestination(com.openggf.game.soniccd.level.CdInitialProgramSource initial,CdIpxProgress.WarpDestination selection){
+            this.initial=Objects.requireNonNull(initial);var command=CdCommand.fromId(selection.commandByte());
+            var catalogue=CdProgramCatalogue.forRelease(source.release().variant());var payload=catalogue.stageForCommand(command).orElseThrow(()->new IllegalArgumentException("Actual initial command has no stage consumer"));
+            Optional<com.openggf.game.soniccd.level.CdLevelLoadingSource> loading=payload==CdStagePayload.R11B?Optional.of(initial.pastLoadingSource()):payload==CdStagePayload.R11A?Optional.of(originalLoadingSource):Optional.empty();
+            view=new OriginalWarpDestinationView(selection,command,payload.stage(),loading);require(ticket);
+        }
+        private void require(OriginalWarpAuthority expected){
+            if(ticket==null||ticket!=expected||source.initialProgramSource().orElse(null)!=initial)throw new IllegalArgumentException("Foreign original WARP destination occurrence");
+            ticket.lifetime();initial.requireDisc(source.release().normalizedSha256());
+            var choice=view.selection();if(initial.runR11CommandByte(choice.row().commandByteOffset())!=choice.commandByte()
+                ||CdCommand.fromId(choice.commandByte())!=view.command()
+                ||!CdProgramCatalogue.forRelease(source.release().variant()).stageForCommand(view.command()).orElseThrow().stage().equals(view.stage()))throw new IllegalArgumentException("Original destination row/consumer differs");
+            if(view.command()==CdCommand.R11B){if(view.loadingSource().orElse(null)!=initial.pastLoadingSource())throw new IllegalArgumentException("Different retained actual Past reader");}
+            else if(view.command()==CdCommand.R11A){if(view.loadingSource().orElse(null)!=originalLoadingSource)throw new IllegalArgumentException("Different retained actual Present source");}
+            else if(view.loadingSource().isPresent())throw new IllegalArgumentException("Unowned future loading source");
+            view.loadingSource().ifPresent(com.openggf.game.soniccd.level.CdLevelLoadingSource::requireRetained);
+        }
+    }
+    private final class OriginalWarpAuthority {
+        private final SonicCdGameModule owner=SonicCdGameModule.this;
+        private final CdGameDataSource data=source;
+        private final CdOriginalBootPrefix boot=originalBoot;
+        private final Object loading=originalLoadingSource,world=programWorld,mode=playerMode,level=r11EntryLevel;
+        private final Object frame=r11EntryFrame,worldOwner=r11World,levelLifetime=r11LevelLifetime,bankLifetime=r11TimeWarpSavedLifetime;
+        private final Thread thread=Thread.currentThread();
+        private final java.util.OptionalLong generation=r11EntryLoadGeneration;
+        private final CdTimeWarpSaveData.State bank=Objects.requireNonNull(r11TimeWarpSaved);
+        private final com.openggf.game.soniccd.media.CdTimeWarpPrograms programs=source.timeWarpPrograms().orElseThrow(()->SonicCd.unsupported("Original selected WARP source absent"));
+        private void lifetime(){
+            if(owner!=SonicCdGameModule.this||data!=source||boot!=originalBoot||loading!=originalLoadingSource
+                ||world!=programWorld||mode!=playerMode||level!=r11EntryLevel||frame!=r11EntryFrame||worldOwner!=r11World
+                ||levelLifetime!=r11LevelLifetime||bankLifetime!=r11TimeWarpSavedLifetime||thread!=Thread.currentThread()
+                ||thread!=r11Thread||!generation.equals(r11EntryLoadGeneration)||source.timeWarpPrograms().orElse(null)!=programs)
+                throw new IllegalArgumentException("Foreign or expired original WARP occurrence");
+        }
+    }
+    /** Private constructor site is ONLY the actual native WhiteReturn.returned callback. */
+    private void issueOriginalWarpReturn(){
+        requireOriginalR11Service();var g=playerFrame.environment().movement().gates();
+        if(originalWarpPhase!=OriginalWarpPhase.NONE||originalWarpAuthority!=null||warpState!=null
+            ||!programSounds.isEmpty()||r11ClosureIpx.phase()!=OriginalR11IpxPhase.NOT_STARTED||originalWaterStage()
+            ||r11World==null||g.zoneAct()!=0||g.timeZone()<0x80||g.timeZone()>0x82
+            ||r11ReturnKind!=SonicCdR31aLoadingVisit.ReturnKind.WHITE_RESTART||r11LoadingState.phase()!=SonicCdR31aLoadingVisit.Phase.RETURNED
+            ||r11LoadingPrefix.main().level().levelRestart()!=0||r11LoadingPrefix.main().level().spawnMode()!=2)
+            throw new IllegalStateException("No genuine selected marked LevelStart RTS");
+        var issued=new OriginalWarpAuthority();issued.lifetime();originalWarpAuthority=issued;originalWarpPhase=OriginalWarpPhase.LEVEL_RETURN_TAIL;
+    }
+    boolean originalWarpProgrammeSelected(){return originalWarpPhase!=OriginalWarpPhase.NONE;}
+    boolean originalWarpSceneSelected(){return originalWarpPhase==OriginalWarpPhase.WARP_ACTIVE||originalWarpPhase==OriginalWarpPhase.WARP_RETURNED||originalWarpPhase==OriginalWarpPhase.WARP_IPX_TAIL||originalWarpPhase==OriginalWarpPhase.DESTINATION_SELECTED;}
+    OriginalWarpPhase originalWarpPhase(){requireOriginalR11EntryCut();return originalWarpPhase;}
+    private void requireOriginalWarpHostIdle(){
+        var level=r11EntryLevelManager;
+        if(level==null||playerMode.getFadeManager().isActive()||level.isTitleCardRequested()
+            ||level.hasPendingInLevelTitleCardHeldCounterDispatch()||level.hasPendingFreshLevelTransitionBoundary()
+            ||level.hasPendingLevelExit()||level.isLevelInactiveForTransition()||level.isRespawnRequestedForRewind()
+            // This exact native profile keeps its music-suppression flag true permanently;
+            // its inherited host VBlank music callback is a no-op, not pending host work.
+            ||getTitleCardProvider()!=com.openggf.game.NoOpTitleCardProvider.INSTANCE||getLevelInitProfile()!=r31Profile)
+            throw SonicCd.unsupported("Original WARP requires inactive host title/transition/music owners");
+    }
+    private void requireOriginalWarpService(){
+        requireOriginalR11Service();Objects.requireNonNull(originalWarpAuthority,"No issued original WARP RTS").lifetime();
+        if(originalWarpPhase==OriginalWarpPhase.NONE||r11LoadingState.phase()!=SonicCdR31aLoadingVisit.Phase.RETURNED
+            ||r11ReturnKind!=SonicCdR31aLoadingVisit.ReturnKind.WHITE_RESTART||r11TimeWarpSaved!=originalWarpAuthority.bank
+            ||r11OrdinaryAccess!=null)throw new IllegalStateException("Original level is not suspended at its actual marked return");
+        playerFrame.captureActor();playerFrame.captureShared();requireOriginalWarpHostIdle();
+    }
+    void validateOriginalWarpProgrammeOwner(){
+        requireOriginalR11EntryCut();Objects.requireNonNull(originalWarpAuthority,"No original WARP ticket").lifetime();
+        if(!originalWarpProgrammeSelected()||r11TimeWarpSaved!=originalWarpAuthority.bank)throw new IllegalStateException("No selected original WARP occurrence");
+        requireOriginalWarpHostIdle();validateOriginalWarpCut(originalWarpPhase,originalWarpAuthority,warpAssets,warpScene,warpState,programSounds,r11ClosureIpx,originalWarpDestination);
+    }
+    private void originalR11ReturnTail(boolean warpReturn){
+        requireOriginalR11Service();if(warpReturn)requireOriginalWarpService();
+            CdRetainedProgrammeReturn.enter(new CdRetainedProgrammeReturn.Port(){
+                public void returnByte(int value){requireOriginalR11Service();r11ClosureIpx=new OriginalR11IpxState(OriginalR11IpxPhase.RETURN_BYTE,OptionalInt.of(value));}
+                public void stopFm(){requireOriginalR11Service();if(r11ClosureIpx.phase()!=OriginalR11IpxPhase.RETURN_BYTE)throw new IllegalStateException("Original return-byte prefix missing");var ready=new java.util.ArrayList<>(programSounds);ready.add(ProgramSound.STOP_FM);var next=List.copyOf(ready);var phase=new OriginalR11IpxState(OriginalR11IpxPhase.FM_STOPPED,r11ClosureIpx.returnByte());programSounds=next;r11ClosureIpx=phase;}
+                public void blank(){requireOriginalR11Service();if(r11ClosureIpx.phase()!=OriginalR11IpxPhase.FM_STOPPED)throw new IllegalStateException("Original FM-stop prefix missing");var i=r11FirstLoad.selection().inputs();var next=r11LoadingState.fade(r11LoadingState.fadeSteps(),false);var selected=new CdOriginalR11Display.Inputs(i.selectedCpu(),i.selectedSat(),i.palette(),i.hscroll(),i.vscrollLongBits(),false,r11FirstLoad.foreground(),r11FirstLoad.background(),r11LoadingPrefix.section().residency(),playerFrame.artState());r11LoadingState=next;projectOriginalR11Selection(selected);if(warpReturn){var completed=r11FirstLoad;r11FirstLoad=new R11FirstLoad(completed.selection(),completed.foreground(),completed.background(),completed.copies(),completed.levelLoaded(),completed.standardLoaded(),completed.completedWaits()+1,completed.music());}else originalR11VIntReturned();r11ClosureIpx=new OriginalR11IpxState(OriginalR11IpxPhase.BLANK_RETURNED,r11ClosureIpx.returnByte());}
+            });    }
+    /** One synchronous actual WARP RTS occurrence. No public DTO or idle callback enters it. */
+    private void originalReturnedWarpTail(){
+        requireOriginalWarpService();
+        if(originalWarpPhase!=OriginalWarpPhase.WARP_RETURNED||warpState.phase()!=CdWarpScene.Phase.RETURNED
+                ||r11ClosureIpx.origin()!=OriginalR11IpxOrigin.CLEARED_LEVEL||r11ClosureIpx.phase()!=OriginalR11IpxPhase.BLANK_RETURNED
+                ||originalWarpDestination!=null)throw new IllegalStateException("No genuine returned WARP tail");
+        var ticket=originalWarpAuthority;var scene=warpScene;var state=warpState;
+        var unknown=CdRetainedProgrammeReturn.ReturnKnowledge.unknown();
+        class Call implements CdRetainedProgrammeReturn.KnowledgePort {
+            private int next;private boolean active=true;
+            private OriginalR11IpxState ipx=r11ClosureIpx;private List<ProgramSound> sounds=programSounds;
+            private void check(int ordinal){requireOriginalWarpService();if(!active||next!=ordinal||originalWarpAuthority!=ticket||warpScene!=scene||warpState!=state
+                    ||r11ClosureIpx!=ipx||programSounds!=sounds||originalWarpDestination!=null
+                    ||originalWarpPhase!=(ordinal==0?OriginalWarpPhase.WARP_RETURNED:OriginalWarpPhase.WARP_IPX_TAIL))throw new IllegalStateException("Copied/expired original WARP tail callback");}
+            public void returnByte(CdRetainedProgrammeReturn.ReturnKnowledge value){
+                check(0);if(value!=unknown||value.value().isPresent())throw new IllegalArgumentException("Only issued unknown WARP result");
+                var ready=new OriginalR11IpxState(OriginalR11IpxPhase.RETURN_BYTE,value.value(),OriginalR11IpxOrigin.RETURNED_WARP);check(0);
+                r11ClosureIpx=ready;originalWarpPhase=OriginalWarpPhase.WARP_IPX_TAIL;ipx=ready;next=1;
+            }
+            public void stopFm(){
+                check(1);var ready=new java.util.ArrayList<>(sounds);ready.add(ProgramSound.STOP_FM);var requests=List.copyOf(ready);
+                var completed=new OriginalR11IpxState(OriginalR11IpxPhase.FM_STOPPED,ipx.returnByte(),OriginalR11IpxOrigin.RETURNED_WARP);check(1);
+                programSounds=requests;r11ClosureIpx=completed;sounds=requests;ipx=completed;next=2;
+            }
+            public void blank(){
+                check(2);var completed=new OriginalR11IpxState(OriginalR11IpxPhase.BLANK_RETURNED,ipx.returnByte(),OriginalR11IpxOrigin.RETURNED_WARP);check(2);
+                // Existing selected retained renderer derives IPX's blank from this exact prefix.
+                // Neither old level clock nor scene Cursor.pulse is serviced by this IPX VSync.
+                r11ClosureIpx=completed;ipx=completed;next=3;
+            }
+        }
+        var call=new Call();try{CdRetainedProgrammeReturn.enter(call,unknown);}finally{call.active=false;}
+    }
+    private void selectOriginalWarpDestination(){
+        requireOriginalWarpService();
+        if(originalWarpPhase!=OriginalWarpPhase.WARP_IPX_TAIL||warpState.phase()!=CdWarpScene.Phase.RETURNED
+                ||r11ClosureIpx.origin()!=OriginalR11IpxOrigin.RETURNED_WARP||r11ClosureIpx.phase()!=OriginalR11IpxPhase.BLANK_RETURNED
+                ||originalWarpDestination!=null)throw new IllegalStateException("Original WARP IPX blank has not returned");
+        var initial=source.initialProgramSource().orElseThrow(()->new OriginalR11TransferStopped(OriginalR11TransferBoundary.ORIGINAL_WARP_INITIAL_SOURCE_OWNER));
+        initial.requireDisc(source.release().normalizedSha256());
+        var choice=CdIpxProgress.postWarpDestination(new CdIpxProgress.WarpDestinationReads(){
+            public int rawPeriod(){requireOriginalWarpService();return playerFrame.environment().movement().gates().timeZone();}
+            public int commandByte(CdIpxProgress.WarpCommandRow row){requireOriginalWarpService();return initial.runR11CommandByte(row.commandByteOffset());}
+            public int goodFuture(){requireOriginalWarpService();return r11LoadingPrefix.goodFuture();}
+        });
+        var selected=new OriginalWarpDestination(initial,choice);requireOriginalWarpService();selected.require(originalWarpAuthority);
+        originalWarpDestination=selected;originalWarpPhase=OriginalWarpPhase.DESTINATION_SELECTED;
+        // No live source/FULL/generation swap or old Frame retirement occurs in this slice.
+    }
+    private boolean originalDestinationEntering;
+    private OriginalPastArrival originalPastArrival;
+    private final class OriginalPastArrival {
+        private final com.openggf.game.soniccd.level.CdInitialProgramSource initial;
+        private final com.openggf.game.soniccd.level.CdLevelLoadingSource loading;
+        private final CdPlayerFrameRuntime frame;
+        private final Object lifetime,bankLifetime;
+        private final Thread thread=Thread.currentThread();
+        private OriginalPastArrival(OriginalWarpDestination request,CdPlayerFrameRuntime actual){
+            initial=request.initial;loading=request.view.loadingSource().orElseThrow();frame=actual;
+            lifetime=r11LevelLifetime;bankLifetime=r11TimeWarpSavedLifetime;
+        }
+        private void require(){
+            if(thread!=Thread.currentThread()||thread!=r11Thread||source.initialProgramSource().orElse(null)!=initial
+                ||initial.pastLoadingSource()!=loading||originalLoadingSource!=loading||playerFrame!=frame||r11EntryFrame!=frame
+                ||frame.closed()||r11LevelLifetime!=lifetime||r11TimeWarpSavedLifetime!=bankLifetime)
+                throw new IllegalStateException("Expired original Past destination lifetime");
+            initial.requireDisc(source.release().normalizedSha256());loading.requirePlayerSource(frame.stageSource());
+        }
+    }
+    private boolean originalPastStage(){return originalPastArrival!=null;}
+    /** The actual public controller is the only issuer. The old request is validated in full
+     * before its physical World is retired; no metadata/restore path can recreate this call.
+     * Repeated RunMMD clears WORKRAMFILE, then original Start and shared LevelStart run once.
+     * Native N1ecc IPX.RunMMD:1311-1319, PPZ Main:1-18, common Level/Main:46-329. */
+    private void enterOriginalPastDestination(){
+        validateOriginalWarpProgrammeOwner();var request=Objects.requireNonNull(originalWarpDestination);
+        request.require(originalWarpAuthority);
+        if(originalDestinationEntering||originalPastArrival!=null||request.view.command()!=CdCommand.R11B
+                ||request.view.loadingSource().orElse(null)!=request.initial.pastLoadingSource()
+                ||r11EntryLevelManager==null||r11World==null||originalWaterStage())
+            throw new OriginalR11TransferStopped(OriginalR11TransferBoundary.ORIGINAL_WARP_DESTINATION_ENTRY_OWNER);
+        var oldFrame=playerFrame;var oldWorld=r11World;var before=r11LoadingState;var prefix=r11LoadingPrefix;
+        var saved=Objects.requireNonNull(r11TimeWarpSaved);var bankLifetime=r11TimeWarpSavedLifetime;
+        var savedFlags=r11Placement.capture().savedFlags();
+        var generation=r11EntryLoadGeneration;var oldLevel=r11EntryLevel;var manager=r11EntryLevelManager;
+        var clock=oldFrame.vIntClock();var environment=CdOriginalProgrammeWorkClear.environment(oldFrame.environment());
+        if(environment.movement().gates().zoneAct()!=0||environment.movement().gates().timeZone()!=0x80
+                ||prefix.main().level().spawnMode()!=2||prefix.main().level().levelRestart()!=0
+                ||(prefix.main().level().plcLoadFlags()&3)!=3||prefix.main().palFadeFlagsByte()!=0)
+            throw new IllegalStateException("Actual Past marked entry prefix differs");
+        var loading=request.initial.pastLoadingSource();loading.requireRetained();
+        if(CdProgramInitialization.selectStartBranch(programServices.initialization())!=CdProgramInitialization.Branch.GAME_INIT)
+            throw new IllegalStateException("Original Past requires actual GameInit branch");
+        // Complete all refusal checks before a source/Frame retirement or repeated native clear.
+        playerPresentation.requirePastRenderIdle();requireOriginalWarpHostIdle();request.require(originalWarpAuthority);
+        originalDestinationEntering=true;
+        try{
+            oldWorld.close(); // authentic old lifetime; no Module/session teardown or retained save-bank clear
+            if(!oldFrame.closed())throw new IllegalStateException("Old original World failed to retire Frame");
+            playerPresentation.unbind();r11World=null;playerFrame=null;r11EntryFrame=null;
+            r11EngineAssembled=false;originalSourceLoadingInstalled=false;r11FirstLoad=null;r11LoadingState=null;
+            r11AssembledLevel=null;r11LevelLifetime=null;r11OrdinaryAccess=null;r11Switches=null;
+            originalLoadingWater=Optional.empty();originalLoadingAnimation=Optional.empty();originalScrollFields=java.util.Map.of();
+            originalLoadingSource=loading;
+            Runnable guard=()->{
+                if(!originalDestinationEntering||r11Thread!=Thread.currentThread()||r11Retired
+                    ||SessionManager.getCurrentWorldSession()!=programWorld||SessionManager.getCurrentGameplayMode()!=playerMode
+                    ||programWorld.getDataSource()!=source||playerMode.getLevelManager()!=manager
+                    ||manager.getCurrentLevel()!=oldLevel||!generation.equals(r11EntryLoadGeneration)
+                    ||manager.getCompletedProductionLoadGeneration()!=generation.orElseThrow()
+                    ||originalLoadingSource!=loading||source.initialProgramSource().orElse(null)!=request.initial
+                    ||r11TimeWarpSaved!=saved||r11TimeWarpSavedLifetime!=bankLifetime||r11World!=null)
+                    throw new IllegalStateException("Changed actual original Past source/entry generation");
+                loading.requireRetained();
+            };
+            guard.run();
+            // Actual RunMMD has retired and cleared the old working projection before
+            // the Sub CPU's level PCM suffix and the new original Start are serviced.
+            var emptyArt=new CdPlayerArtRuntime.State(new byte[CdPlayerArtRuntime.CPU_BUFFER_BYTES],
+                    new byte[CdPlayerArtRuntime.RESIDENT_WINDOW_BYTES],0,false);
+            var loads=SonicCdProgramLoadServices.loadLevelR1Pcm(programServices.loads(),source.timeWarpPrograms().orElseThrow());
+            guard.run();programServices=withProgramCall(ProgramStartCall.LOAD_LEVEL_PCM,loads,programServices.initialization());
+            enterOriginalProgrammeStart(guard,()->programStartVideo=playerPresentation.initializeProgramVideo(originalR11LoadingUnknownPatterns(),emptyArt));
+            guard.run();
+            var actual=CdPlayerFrameRuntime.fromMarkedProgrammeEntry(loading.retainedPlayerSource(),
+                    CdOriginalProgrammeWorkClear.primary(),environment,programStartVideo.playerArt(),clock);
+            r11PreparedFrame=actual;playerFrame=actual;r11EntryFrame=actual;bindOriginalR11FinishTimers(actual);
+            r11LoadingArt=com.openggf.game.soniccd.resources.CdR11aSectionArt.fromLoadingSource(loading);
+            r11Placement=CdObjectPlacementRuntime.fromPlacements(loading.placements(),savedFlags);
+            var art=r11LoadingArt.fromInactiveValues(programStartVideo.currentPatterns(),loadingZero(512),prefix.main().sectionWord(),
+                    com.openggf.game.soniccd.resources.CdR11aPlcBuffer.cleared(),
+                    new com.openggf.game.soniccd.resources.CdR11aSectionArt.SavedDecoder(com.openggf.game.soniccd.resources.CdR11aSectionArt.Writer.CLEARED,0,0,0,0,0),0,0,0,0);
+            r11WaterPalette=loadingZero(128);
+            r11LoadingPrefix=new R11LoadingPrefix(prefix.main(),prefix.goodFuture(),0,prefix.goodFutureFlags(),
+                    prefix.ring(),prefix.score(),art,prefix.normalPalette(),prefix.fadePalette(),List.of(),CdBlockDefinitionStaging.afterFileBufferClear());
+            originalR11LevelStartPrefix(actual,guard);guard.run();originalR11LevelStartFade(actual,true);guard.run();
+            var scroll=before.scroll();var bg=scroll.background();
+            var clearedBackground=new com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll.State(0,0,0,0,0,0,loadingZero(8),0,0,0,bg.cloudRam(),loadingZero(512),loadingZero(1024),0);
+            var clearedScroll=new SonicCdR31aLoadingVisit.Scroll(new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.State(0,0,0,0,0,0,0,0,0,0,0),clearedBackground,scroll.copies(),0,0,0);
+            var globals=originalRunMmdGlobals(before.globals());
+            var carry=new SonicCdR31aWorldHost.NativeCarry(java.util.OptionalLong.of(0),OptionalInt.empty(),java.util.OptionalLong.of(0),OptionalInt.of(0),before.nativeCarry().amyCapturedByte());
+            r11LoadingState=new R11LoadingState(SonicCdR31aLoadingVisit.Phase.FIRST_PLC,clearedScroll,globals,
+                    loadingZero(1984),before.flowers(),loadingZero(640),Optional.empty(),Optional.empty(),carry,
+                    before.shieldCpu(),before.noBumperByte(),0,0,false,List.of());
+            r11LoadingPrefix=r11LoadingPrefix.globals(globals);
+            var video=programStartVideo.selection();var fg=new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State(loadingZero(4096));
+            var selected=CdOriginalR11Display.project(new CdOriginalR11Display.Inputs(Optional.empty(),video.displayedSat(),video.displayedPalette(),
+                    loadingZero(1024),video.screenVScrollLongBits(),false,fg,video.backgroundPlane(),art.residency(),actual.artState()));
+            r11FirstLoad=new R11FirstLoad(selected,fg,video.backgroundPlane(),clearedScroll.copies(),false,false,0,List.of());
+            originalSourceLoadingInstalled=true;r11ReturnKind=SonicCdR31aLoadingVisit.ReturnKind.NONE;
+            originalPastArrival=new OriginalPastArrival(request,actual);
+            originalWarpPhase=OriginalWarpPhase.NONE;originalWarpAuthority=null;originalWarpDestination=null;warpState=null;warpScene=null;warpAssets=null;
+            r11ClosureIpx=new OriginalR11IpxState(OriginalR11IpxPhase.NOT_STARTED,OptionalInt.empty());
+            // Prior STOP_FM/WARP requests remain in the actual ledger; no replay/reset effects.
+            originalPastArrival.require();assembleOriginalR11();originalPastArrival.require();
+        }catch(SonicCdProgramLoadServices.Unsupported stopped){
+            programServices=new ProgramServicesState(stopped.completedPrefix(),programServices.initialization(),programServices.environment(),programServices.completedCalls());
+            r11Retired=true;originalBoot.retire(programWorld);closePlayerCycleAfterFailure(stopped);throw stopped;
+        }catch(IOException failure){r11Retired=true;originalBoot.retire(programWorld);closePlayerCycleAfterFailure(failure);throw new UncheckedIOException("Original Past destination failed",failure);}
+        catch(RuntimeException|Error failure){r11Retired=true;originalBoot.retire(programWorld);closePlayerCycleAfterFailure(failure);throw failure;}
+        finally{r11PreparedFrame=null;originalDestinationEntering=false;}
+    }
+    private static SonicCdR31aWorldHost.Globals originalRunMmdGlobals(SonicCdR31aWorldHost.Globals old){
+        var cleared=old.camera().misc();var tail=cleared.tail().map(t->new SonicCdR31aWorldHost.Tail(0,0,t.unknownLevelByte(),t.demoS1IndexWord(),0));
+        return new SonicCdR31aWorldHost.Globals(cleared.ring(),cleared.live(),cleared.contact(),cleared.score(),cleared.projectorByte(),cleared.checkpointSaved(),
+                OptionalInt.of(0),cleared.debugBlockWord(),cleared.pauseMusicBit(),cleared.bonus(),tail,cleared.animations(),
+                cleared.paletteSteps7(),cleared.paletteTimers7(),cleared.layerByte(),cleared.bossFlagsByte(),cleared.eventRoutineWord());
+    }
+    /** Actual controller service lease only; direct idle/draw/capture/restore cannot enter it. */
+    private void serviceOriginalWarpProgramme(int held){
+        requireOriginalWarpService();
+        if(originalWarpPhase==OriginalWarpPhase.DESTINATION_SELECTED){originalWarpDestination.require(originalWarpAuthority);throw new OriginalR11TransferStopped(OriginalR11TransferBoundary.ORIGINAL_WARP_DESTINATION_ENTRY_OWNER);}
+        if(originalWarpPhase==OriginalWarpPhase.WARP_IPX_TAIL){selectOriginalWarpDestination();return;}
+        if(originalWarpPhase==OriginalWarpPhase.WARP_RETURNED){originalReturnedWarpTail();return;}
+        if(originalWarpPhase==OriginalWarpPhase.LEVEL_RETURN_TAIL){
+            if(r11ClosureIpx.phase()==OriginalR11IpxPhase.NOT_STARTED){originalR11ReturnTail(true);return;}
+            if(r11ClosureIpx.phase()!=OriginalR11IpxPhase.BLANK_RETURNED)throw new IllegalStateException("Original WARP return prefix incomplete");
+            var decision=CdIpxProgress.levelReturned(new CdIpxProgress.LevelReturnReads(){
+                public int lives(){requireOriginalWarpService();return r11LoadingState.globals().ring().lives();}
+                public int rawPeriod(){requireOriginalWarpService();return playerFrame.environment().movement().gates().timeZone();}
+                public int specialStage(){requireOriginalWarpService();return r11ClosureSpecialStage;}
+            });
+            if(decision!=CdIpxProgress.LevelReturn.TIME_WARP)throw new OriginalR11TransferStopped(switch(decision){
+                case GAME_OVER->OriginalR11TransferBoundary.RUN_LEVEL_GAME_OVER_OWNER;
+                case SPECIAL_STAGE->OriginalR11TransferBoundary.RUN_LEVEL_SPECIAL_STAGE_OWNER;
+                case RETURN_TO_ACT_CALLER->OriginalR11TransferBoundary.RUN_R12_DESTINATION_ENTRY_OWNER;
+                case TIME_WARP->throw new AssertionError("checked above");});
+            bindWarpScene(originalWarpAuthority.programs,this::requireOriginalWarpService);
+            var initial=warpScene.initial(0);warpScene.validate(initial);requireOriginalWarpService();
+            warpState=initial;originalWarpPhase=OriginalWarpPhase.WARP_ACTIVE;return;
+        }
+        stepWarpScene(held,this::requireOriginalWarpService);
+        if(warpState.phase()==CdWarpScene.Phase.RETURNED)originalWarpPhase=OriginalWarpPhase.WARP_RETURNED;
+        // WARP Cursor.pulse owns its private WORD; old level/Frame/ObjectManager/EngineTiming stay untouched.
+    }
+    private void validateOriginalWarpCut(OriginalWarpPhase phase,OriginalWarpAuthority ticket,CdWarpAssets assets,
+            CdWarpScene scene,CdWarpScene.State state,List<ProgramSound> sounds,OriginalR11IpxState ipx,OriginalWarpDestination destination){
+        if(phase==OriginalWarpPhase.NONE){if(ticket!=null||state!=null||destination!=null)throw new IllegalArgumentException("Unissued original WARP image");return;}
+        Objects.requireNonNull(ticket).lifetime();
+        if(phase==OriginalWarpPhase.LEVEL_RETURN_TAIL){
+            if(destination!=null||ipx.origin()!=OriginalR11IpxOrigin.CLEARED_LEVEL)throw new IllegalArgumentException("Foreign original level return origin");
+            boolean stopped=ipx.phase()==OriginalR11IpxPhase.FM_STOPPED||ipx.phase()==OriginalR11IpxPhase.BLANK_RETURNED;
+            if(state!=null||!(stopped?sounds.equals(List.of(ProgramSound.STOP_FM)):sounds.isEmpty()))
+                throw new IllegalArgumentException("Different original return prefix");
+            return;
+        }
+        if(assets==null||scene==null||state==null||assets.source()!=ticket.programs.source())throw new IllegalArgumentException("Different original selected WARP binding");
+        scene.validate(state);
+        boolean tail=phase==OriginalWarpPhase.WARP_IPX_TAIL||phase==OriginalWarpPhase.DESTINATION_SELECTED;
+        if(tail){
+            if(state.phase()!=CdWarpScene.Phase.RETURNED||ipx.origin()!=OriginalR11IpxOrigin.RETURNED_WARP||ipx.returnByte().isPresent()
+                    ||ipx.phase()==OriginalR11IpxPhase.NOT_STARTED)throw new IllegalArgumentException("Different actual WARP result publication");
+            boolean stopped=ipx.phase()!=OriginalR11IpxPhase.RETURN_BYTE;
+            var expected=stopped?List.of(ProgramSound.STOP_FM,ProgramSound.WARP_DIRECT_FM_D8,ProgramSound.STOP_FM):List.of(ProgramSound.STOP_FM,ProgramSound.WARP_DIRECT_FM_D8);
+            if(!sounds.equals(expected)||(phase==OriginalWarpPhase.DESTINATION_SELECTED)!=(destination!=null))throw new IllegalArgumentException("Different returned WARP prefix/destination cut");
+            if(destination!=null){if(ipx.phase()!=OriginalR11IpxPhase.BLANK_RETURNED)throw new IllegalArgumentException("Destination before actual IPX blank");destination.require(ticket);}
+            return;
+        }
+        if(destination!=null||ipx.origin()!=OriginalR11IpxOrigin.CLEARED_LEVEL||ipx.phase()!=OriginalR11IpxPhase.BLANK_RETURNED)throw new IllegalArgumentException("Different original WARP entry prefix");
+        if((phase==OriginalWarpPhase.WARP_RETURNED)!=(state.phase()==CdWarpScene.Phase.RETURNED))throw new IllegalArgumentException("Different original WARP return occurrence");
+        var expected=state.phase()==CdWarpScene.Phase.DELAY||state.phase()==CdWarpScene.Phase.PREPARE?List.of(ProgramSound.STOP_FM):List.of(ProgramSound.STOP_FM,ProgramSound.WARP_DIRECT_FM_D8);
+        if(!sounds.equals(expected))throw new IllegalArgumentException("Different original WARP request prefix");
+    }
+    /** Sealed pairing of actual original scene/source with its exact whole selected native image. */
+    private final class OriginalWarpImage {
+        private final SonicCdGameModule owner=SonicCdGameModule.this;
+        private final Object frame=r11EntryFrame,levelLifetime=r11LevelLifetime,bankLifetime=r11TimeWarpSavedLifetime;
+        private final Thread thread=Thread.currentThread();
+        private final Object actor,shared,world;
+        private final R11LoadingPrefix prefix=r11LoadingPrefix;
+        private final R11LoadingState loading=r11LoadingState;
+        private final OriginalR11IpxState ipx=r11ClosureIpx;
+        private final List<ProgramSound> sounds=programSounds;
+        private final OriginalWarpPhase phase=originalWarpPhase;
+        private final OriginalWarpAuthority ticket=originalWarpAuthority;
+        private final CdWarpAssets assets=warpAssets;
+        private final CdWarpScene scene=warpScene;
+        private final CdWarpScene.State state=warpState;
+        private final OriginalWarpDestination destination=originalWarpDestination;
+        private OriginalWarpImage(Object actor,Object shared,Object world){this.actor=actor;this.shared=shared;this.world=world;}
+        private void require(R11EntryImage whole){
+            if(owner!=SonicCdGameModule.this||frame!=r11EntryFrame||levelLifetime!=r11LevelLifetime||bankLifetime!=r11TimeWarpSavedLifetime
+                ||thread!=Thread.currentThread()||thread!=r11Thread||whole.actor()!=actor||whole.shared()!=shared||whole.world()!=world
+                ||whole.prefix()!=prefix||whole.loading()!=loading||whole.closureIpx()!=ipx||whole.programmeSounds()!=sounds)
+                throw new IllegalArgumentException("Copied/foreign/stale original WARP capture");
+            if(phase!=OriginalWarpPhase.NONE){
+                if(ticket==null||ticket.bank!=whole.warpSaved().saved)throw new IllegalArgumentException("Different original saved bank occurrence");
+                requireOriginalWarpHostIdle();
+            }
+            if(destination!=null&&destination.view.selection().rawPeriodByte()!=whole.shared().environment().movement().gates().timeZone())throw new IllegalArgumentException("Different captured live destination period");
+            validateOriginalWarpCut(phase,ticket,assets,scene,state,sounds,ipx,destination);
+        }
+    }
+    void serviceOriginalR11Loading(int held){
+        if((held&~255)!=0)throw new IllegalArgumentException("Native held BYTE required");
+        if(r11ServiceActive||originalDestinationEntering)throw new IllegalStateException("Original R11 loading reentry");originalR11FirstLoad();
+        if(originalWarpPhase==OriginalWarpPhase.DESTINATION_SELECTED){enterOriginalPastDestination();return;}
+        if(originalWarpProgrammeSelected())validateOriginalWarpProgrammeOwner(); // refusal stays outside fatal source work
+        r11ServiceActive=true;
+        try{originalLoadingSource.requireRetained();r11ServiceLoadingSource=originalLoadingSource;
+        if(originalWarpProgrammeSelected()){serviceOriginalWarpProgramme(held);return;}
+        if(r11LoadingState.phase()==SonicCdR31aLoadingVisit.Phase.RETURNED){
+            if(r11ReturnKind==SonicCdR31aLoadingVisit.ReturnKind.NEXT_LEVEL){originalR11StageCompleteIpx();return;}
+            if(r11ReturnKind==SonicCdR31aLoadingVisit.ReturnKind.WHITE_RESTART)
+                throw new IllegalStateException("Marked original RTS lacks its private returned occurrence");
+            throw SonicCd.unsupported("Original R11 native programme return owner: "+r11ReturnKind);
+        }
+        CdLoadingWaits.service(r11LoadingState.phase(),held,new CdLoadingWaits.Programme(){
+            public void plc(int row){serviceOriginalR11Plc(row);}
+            public void palette(int row,boolean initial){serviceOriginalR11Fade(row,initial);}
+            public void ordinary(int row){if(r11World==null||r11OrdinaryAccess!=null)throw new IllegalStateException("No original R11 World");var actual=new OriginalR11Access();r11OrdinaryAccess=actual;try{r11World.runOriginalR11(row,actual);}finally{r11OrdinaryAccess=null;}}
+            public void returnWait(int row){
+                if(r11ReturnKind==SonicCdR31aLoadingVisit.ReturnKind.NEXT_LEVEL)
+                    playerFrame.serviceOldProgrammeExitLoad(row,playerFrame.state(),playerFrame.environment(),SonicCdGameModule.this::publishOriginalR11Loading,SonicCdGameModule.this::copyAndDrawOriginalR11,()->originalR11Art(r11LoadingArt::serviceFast));
+                else playerFrame.serviceLevelLoad(row,SonicCdGameModule.this::publishOriginalR11Loading,SonicCdGameModule.this::copyAndDrawOriginalR11,()->originalR11Art(r11LoadingArt::serviceFast));
+                originalR11VIntReturned();r11LoadingState=r11LoadingState.phase(SonicCdR31aLoadingVisit.Phase.RETURNED);
+            }
+        });
+        }catch(OriginalR11TransferStopped unfinished){throw unfinished;}
+        catch(com.openggf.game.soniccd.resources.CdR11aSectionArt.SectionArtException failure){r11LoadingPrefix=r11LoadingPrefix.art(failure.state());r11Retired=true;originalBoot.retire(programWorld);closePlayerCycleAfterFailure(failure);throw failure;}
+        catch(RuntimeException|Error failure){r11Retired=true;originalBoot.retire(programWorld);closePlayerCycleAfterFailure(failure);throw failure;}
+        finally{r11ServiceLoadingSource=null;r11ServiceActive=false;}
+    }
+    private void serviceOriginalR11Plc(int held){
+        var phase=r11LoadingState.phase();CdLoadingWaits.plc(held,new CdLoadingWaits.Plc(){
+                public void selectorC(int row){playerFrame.serviceLevelLoad(row,SonicCdGameModule.this::publishOriginalR11Loading,SonicCdGameModule.this::copyAndDrawOriginalR11,()->originalR11Art(r11LoadingArt::serviceFast));originalR11VIntReturned();}
+                public boolean processAndTestQueue(){originalR11Art(r11LoadingArt::prepare);return r11LoadingPrefix.section().queue().headSource()==0&&r11LoadingPrefix.section().remainingTilesWord()==0;}
+                public void returned(){if(phase==SonicCdR31aLoadingVisit.Phase.FIRST_PLC)loadOriginalR11Data();else finishOriginalR11Data();}
+            });
+    }
+    private void serviceOriginalR11Fade(int held,boolean initial){
+        var phase=r11LoadingState.phase();CdLoadingWaits.palette(held,new CdLoadingWaits.Palette(){
+                public void selector12(int row){java.util.function.BiConsumer<Runnable,Runnable> service=(publish,fast)->{
+                    if(playerFrame.environment().movement().gates().zoneAct()==1&&r11LoadingPrefix.main().level().levelRestart()==2)
+                        playerFrame.serviceOldProgrammeExitPaletteFade(row,playerFrame.state(),playerFrame.environment(),publish,fast);
+                    else playerFrame.serviceLevelPaletteFade(row,publish,fast);
+                };service.accept(()->{publishOriginalR11Loading();if(r11LoadingPrefix.main().level().fadeEnableDisplay()==1){var l=r11LoadingPrefix.main().level();r11LoadingPrefix=r11LoadingPrefix.level(new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),l.flowerCount(),2,l.powerup(),l.timeOver()));r11LoadingState=r11LoadingState.fade(r11LoadingState.fadeSteps(),true);var i=r11FirstLoad.selection().inputs();projectOriginalR11Selection(new CdOriginalR11Display.Inputs(i.selectedCpu(),i.selectedSat(),i.palette(),i.hscroll(),i.vscrollLongBits(),true,r11FirstLoad.foreground(),r11FirstLoad.background(),r11LoadingPrefix.section().residency(),playerFrame.artState()));}},()->originalR11Art(r11LoadingArt::serviceFast));originalR11VIntReturned();}
+                public void colours(){
+                    if(initial){
+                        var pair=new com.openggf.game.soniccd.resources.CdLevelPaletteFade.Palettes(r11LoadingPrefix.normalPalette(),r11WaterPalette);
+                        var next=phase==SonicCdR31aLoadingVisit.Phase.INITIAL_TO_WHITE?com.openggf.game.soniccd.resources.CdLevelPaletteFade.stepToWhite(pair):com.openggf.game.soniccd.resources.CdLevelPaletteFade.stepToBlack(pair);
+                        r11LoadingPrefix=r11LoadingPrefix.palette(next.palette());r11WaterPalette=next.waterPalette();
+                    }else{var normal=phase==SonicCdR31aLoadingVisit.Phase.FROM_WHITE?com.openggf.game.soniccd.resources.CdLevelPaletteFade.stepFromWhite(r11LoadingPrefix.normalPalette(),r11LoadingPrefix.fadePalette()):com.openggf.game.soniccd.resources.CdLevelPaletteFade.stepFromBlack(r11LoadingPrefix.normalPalette(),r11LoadingPrefix.fadePalette(),0x202F);r11LoadingPrefix=r11LoadingPrefix.palette(normal);/* Both native From paths leave water loading to the source completion below. */}
+                }
+                public void processPlcs(){originalR11Art(r11LoadingArt::prepare);}
+                public boolean countAndTestLast(){r11LoadingState=r11LoadingState.fade(r11LoadingState.fadeSteps()+1,r11LoadingState.displayEnabled());return CdLoadedLevelSetup.returnedFade(r11LoadingState.fadeSteps());}
+                public void returned(){if(initial)originalR11AfterInitialFade(playerFrame,false,phase==SonicCdR31aLoadingVisit.Phase.INITIAL_TO_WHITE,true);else CdLoadedLevelSetup.completedFade(r11LoadingState.fadeSteps(),originalR11LoadedSetup());}
+            });
+    }
+    private void loadOriginalR11Data(){
+        requireOriginalR11Service();
+        CdInitialLevelArt.load(new CdInitialLevelArt.Port(){
+            public CdCommand selectMusic(){requireOriginalR11Service();var g=playerFrame.environment().movement().gates();return originalLoadingSource.selectLevelMusic(g.zoneAct(),g.timeZone(),playerFrame.environment().globals().timeAttackMode(),r11LoadingPrefix.goodFuture());}
+            public void publishMusic(CdCommand command){requireOriginalR11Service();var old=r11FirstLoad;r11FirstLoad=new R11FirstLoad(old.selection(),old.foreground(),old.background(),old.copies(),false,false,old.completedWaits(),List.of(command));}
+            public int levelPlcId(){return originalLoadingSource.levelPlcId();}
+            public void loadLevel(int id){originalR11Art(a->r11LoadingArt.loadImmediateList(a,id));var old=r11FirstLoad;r11FirstLoad=new R11FirstLoad(old.selection(),old.foreground(),old.background(),old.copies(),true,false,old.completedWaits(),old.music());}
+            public void loadStandard(){originalR11Art(a->r11LoadingArt.loadImmediateList(a,1));var old=r11FirstLoad;r11FirstLoad=new R11FirstLoad(old.selection(),old.foreground(),old.background(),old.copies(),old.levelLoaded(),true,old.completedWaits(),old.music());}
+        });
+        var oldClears=r11LoadingState;
+        r11LoadingState=new R11LoadingState(oldClears.phase(),oldClears.scroll(),oldClears.globals(),oldClears.reserved(),oldClears.flowers(),oldClears.cpuSat(),oldClears.blocks(),oldClears.layout(),oldClears.nativeCarry(),oldClears.shieldCpu(),oldClears.noBumperByte(),oldClears.bossStartedByte(),oldClears.fadeSteps(),oldClears.displayEnabled(),List.of());
+        CdLevelStartStorage.clear(cut->{if(!originalWaterStage()||cut!=CdLevelStartStorage.Cut.UNKNOWN_BUFFER)clearOriginalR11(cut);});
+        // Main.ClearScreen owns both planes, SAT640 (including the water-fade alias),
+        // its extra LONG into waterPalette, HScroll1024 and its extra primary-header LONG.
+        // The latter alias values are already actual zero outputs of the reached clear owners.
+        var old=r11LoadingState;var b=old.scroll().background();var s=old.scroll();
+        var bg=CdLevelStartStorage.bg(b,b.cameraBgX(),b.cameraBgY(),b.cameraBg2X(),b.cameraBg2Y(),b.cameraBg3X(),b.cameraBg3Y(),b.crossingRam(),b.scrollFlagsBg(),b.scrollFlagsBg2(),b.scrollFlagsBg3(),b.cloudRam(),b.deformationRam(),loadingZero(1024),0);
+        byte[] sat=old.cpuSat().copy();java.util.Arrays.fill(sat,(byte)0);
+        byte[] water=r11WaterPalette.copy();java.util.Arrays.fill(water,0,4,(byte)0);r11WaterPalette=CdAssetBytes.copyOf(water);
+        if(playerFrame.state().header().slotId()!=0||playerFrame.state().header().tile()!=0||playerFrame.state().motion().spriteFlags()!=0)throw new IllegalStateException("Unowned original primary-header ClearScreen alias");
+        initializeOriginalWater();
+        r11LoadingState=new R11LoadingState(old.phase(),new SonicCdR31aLoadingVisit.Scroll(s.foreground(),bg,s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord()),old.globals().drown(),old.reserved(),old.flowers(),CdAssetBytes.copyOf(sat),old.blocks(),old.layout(),old.nativeCarry(),old.shieldCpu(),old.noBumperByte(),old.bossStartedByte(),old.fadeSteps(),old.displayEnabled(),old.clears());
+        retainOriginalR11Planes(new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State(loadingZero(4096)),new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State(loadingZero(4096)),r11FirstLoad.copies());
+        var sonic=originalLoadingSource.playerPalette();byte[] normal=r11LoadingPrefix.normalPalette().copy(),fade=r11LoadingPrefix.fadePalette().copy();System.arraycopy(sonic.copy(),0,normal,0,32);r11LoadingPrefix=r11LoadingPrefix.palette(CdAssetBytes.copyOf(normal));System.arraycopy(sonic.copy(),0,fade,0,32);r11LoadingPrefix=r11LoadingPrefix.palettes(r11LoadingPrefix.normalPalette(),CdAssetBytes.copyOf(fade));
+        initializeOriginalR11SizeScroll();
+        try{var blocks=r11LoadingArt.decodeBlocksToRam(r11LoadingPrefix.section());r11LoadingPrefix=r11LoadingPrefix.art(blocks.state()).blocks(r11LoadingPrefix.blockDefinitions().withCompletedPrefix(blocks.blocks()));r11LoadingState=r11LoadingState.geometry(Optional.of(blocks.blocks()),r11LoadingState.layout());}
+        catch(com.openggf.game.soniccd.resources.CdR11aSectionArt.SectionArtException failure){r11LoadingPrefix=r11LoadingPrefix.art(failure.state());failure.completedRamPrefix().ifPresent(p->{r11LoadingPrefix=r11LoadingPrefix.blocks(r11LoadingPrefix.blockDefinitions().withCompletedPrefix(p));r11LoadingState=r11LoadingState.geometry(Optional.of(p),r11LoadingState.layout());});throw failure;}
+        r11LoadingState=r11LoadingState.geometry(r11LoadingState.blocks(),Optional.of(originalLoadingSource.retainedPlayerSource().terrain().layout().ram()));
+        byte[] target=r11LoadingPrefix.fadePalette().copy();System.arraycopy(originalLoadingSource.levelPalette().copy(),0,target,32,96);r11LoadingPrefix=r11LoadingPrefix.palettes(r11LoadingPrefix.normalPalette(),CdAssetBytes.copyOf(target));
+        var l=r11LoadingPrefix.main().level();if(l.spawnMode()!=0)originalR11Art(a->r11LoadingArt.loadSection(a,r11LoadingState.scroll().foreground().cameraX()));else if((l.plcLoadFlags()&2)!=0){int plc=originalLoadingSource.blocksPlcId();if(plc!=0)originalR11Art(a->r11LoadingArt.appendList(a,plc));}
+        initializeOriginalR11Planes();
+        long pointer=originalLoadingSource.collisionPointer(playerFrame.environment().movement().gates().zoneAct());
+        if(pointer!=originalLoadingSource.collisionSourceAddress())throw new IllegalStateException("Actual R11 collision source differs");
+        var n=r11LoadingState.nativeCarry();r11LoadingState=r11LoadingState.carry(new SonicCdR31aWorldHost.NativeCarry(java.util.OptionalLong.of(pointer),n.fadeInfoWithoutTail(),n.rngSeedLong(),n.targetRightBoundWord(),n.amyCapturedByte())).phase(SonicCdR31aLoadingVisit.Phase.LEVEL_PLC);
+    }
+    /** Actual synchronous source call; no public DTO can construct or retain it. Each reached
+     * read/store checks complete State+Environment plus the common image before and after.
+     * First fault escapes unchanged; finally retires the scope without retry or rollback. */
+    private final class OriginalLoadingAnimationCall implements CdLoadedLevelSetup.LoadingAnimation {
+        private final CdPlayerFrameRuntime frame=playerFrame;
+        private final com.openggf.game.soniccd.level.CdLevelLoadingSource data=originalLoadingSource;
+        private final Object lifetime=r11LevelLifetime;private final Thread thread=Thread.currentThread();
+        private R11LoadingState loading=r11LoadingState;private R11LoadingPrefix prefix=r11LoadingPrefix;
+        private CdPlayerBody.State state=frame.state();private CdPlayerBody.Environment environment=frame.environment();
+        private Optional<OriginalLoadingAnimation> animation=originalLoadingAnimation;private boolean active=true;
+        private OriginalLoadingAnimationCall(){}
+        private void require(){requireOriginalR11Service();if(!active||originalLoadingAnimationCall!=this||frame!=playerFrame||data!=originalLoadingSource||lifetime!=r11LevelLifetime||thread!=Thread.currentThread()||loading!=r11LoadingState||prefix!=r11LoadingPrefix||state!=frame.state()||environment!=frame.environment()||animation!=originalLoadingAnimation)throw new IllegalStateException("Expired complete loading animation primitive");}
+        private void adopted(){loading=r11LoadingState;prefix=r11LoadingPrefix;animation=originalLoadingAnimation;require();}
+        public int timer(int ordinal){require();int v=animation.orElseThrow().timers().unsignedByte(ordinal);require();return v;}
+        public int frame(int ordinal){require();int v=animation.orElseThrow().frames().unsignedByte(ordinal);require();return v;}
+        public void timer(int ordinal,int value){store(true,ordinal,value);}
+        public void frame(int ordinal,int value){store(false,ordinal,value);}
+        private void store(boolean timer,int ordinal,int value){require();var ready=animation.orElseThrow().store(timer,ordinal,value);require();originalLoadingAnimation=Optional.of(ready);adopted();}
+        public long script(int ordinal){require();long v=data.stageAnimationScript(ordinal);require();return v;}
+        public int sourceByte(long address){require();int v=data.stageAnimationByte(address);require();return v;}
+        public int sourceLong(long address){require();int v=data.stageAnimationLong(address);require();return v;}
+        public void cpuLong(int at,int bits){
+            require();var bytes=loading.shieldCpu().copy();Objects.checkFromIndexSize(at,4,bytes.length);
+            bytes[at]=(byte)(bits>>>24);bytes[at+1]=(byte)(bits>>>16);bytes[at+2]=(byte)(bits>>>8);bytes[at+3]=(byte)bits;
+            var v=loading;var ready=new R11LoadingState(v.phase(),v.scroll(),v.globals(),v.reserved(),v.flowers(),v.cpuSat(),v.blocks(),v.layout(),v.nativeCarry(),CdAssetBytes.copyOf(bytes),v.noBumperByte(),v.bossStartedByte(),v.fadeSteps(),v.displayEnabled(),v.clears());
+            require();r11LoadingState=ready;adopted();
+        }
+        public void publishCpu(int destination,int bytes){
+            require();for(int at=0;at<bytes;at+=32){var tile=loading.shieldCpu().slice(at,32);int dest=destination+at;
+                require();originalR11Art(a->r11LoadingArt.writeCurrentStageAnimationTile(a,dest,tile));adopted();}
+        }
+    }
+    private OriginalLoadingAnimationCall originalLoadingAnimationCall;
+    private void animateOriginalLoadingStage(){
+        requireOriginalR11Service();if(!originalWaterStage())return;
+        if(originalLoadingAnimationCall!=null)throw new IllegalStateException("Loading animation reentry");
+        var f=r11LoadingState.scroll().foreground();
+        // Main calls AnimateStageGfx directly: it does not test time_stop. Zero here selects
+        // the metadata's ungated call mode; it is never published as a gameplay value.
+        var calls=com.openggf.game.soniccd.resources.CdR4ArtServiceMetadata.stageAnimation(originalLoadingSource.artStrategy(),0,playerFrame.paused()?1:0,f.cameraX(),f.cameraYWord());
+        var call=new OriginalLoadingAnimationCall();originalLoadingAnimationCall=call;
+        try{for(var window:calls.orderedScripts())CdLoadedLevelSetup.animateStage(call,window.scriptOrdinal(),window.destination(),window.bytes());}
+        finally{call.active=false;originalLoadingAnimationCall=null;}
+    }
+    /** Native r4/main191-212: the source-selected WORD read precedes six distinct stores.
+     * Failure before the read publishes none; each completed store remains in the common image. */
+    private void initializeOriginalWater(){
+        requireOriginalR11Service();if(!originalWaterStage())return;
+        int zoneAct=playerFrame.environment().movement().gates().zoneAct();
+        int period=playerFrame.environment().movement().gates().timeZone();
+        // The semantic split BYTE comes from the reached hblank line-value write, not beam timing.
+        int split=originalLoadingSource.loadingSplitByte();requireOriginalR11Service();
+        var unknown=OriginalLoadingWater.unknown();
+        var prior=originalLoadingWater;
+        var angle=prior.isPresent()?prior.orElseThrow().swayAngleByte():OptionalInt.of(originalBoot.mainClears().waterSwayAngleByte());
+        var pending=prior.isPresent()?prior.orElseThrow().pendingByte():OptionalInt.of(originalBoot.workClears().waterDeferredByte());
+        originalLoadingWater=Optional.of(new OriginalLoadingWater(unknown.waterYWord(),unknown.staticYWord(),unknown.targetYWord(),unknown.routineByte(),unknown.fullByte(),unknown.speedByte(),OptionalInt.of(split),pending,unknown.selectedPalette(),false,angle));
+        int y=originalLoadingSource.waterHeight((zoneAct&255)*8+(period&127)*2);
+        requireOriginalR11Service();
+        for(int ordinal=0;ordinal<6;ordinal++){
+            requireOriginalR11Service();var before=originalLoadingWater.orElseThrow();
+            var ready=before.store(ordinal,ordinal<3?y:ordinal==5?1:0);
+            requireOriginalR11Service();if(originalLoadingWater.orElseThrow()!=before)throw new IllegalStateException("Changed water store preimage");
+            originalLoadingWater=Optional.of(ready);
+        }
+    }
+    /** r4/main297-305. This adapter runs only after the real returned fade, before Ready.
+     * It executes reached source-LONG/store pairs; a read fault retains the written prefix.
+     * No public facade result or equal palette can invoke this private continuation. */
+    private void loadOriginalReturnedWaterPalette(){
+        requireOriginalR11Service();if(!originalWaterStage())return;
+        if(r11LoadingState.fadeSteps()!=22||r11LoadingPrefix.main().levelStartedByte()!=0
+                ||(r11LoadingPrefix.gameMode()&128)==0||originalLoadingWater.orElseThrow().returnedPaletteLoaded())
+            throw new IllegalStateException("Not the actual first returned water fade");
+        var binding=originalLoadingSource.waterPalette(0);
+        for(int index=0;index<binding.longCount();index++){
+            requireOriginalR11Service();var before=r11WaterPalette;var state=playerFrame.state();var environment=playerFrame.environment();
+            int bits=(int)binding.bytes().unsignedLong(index*4);
+            requireOriginalR11Service();if(r11WaterPalette!=before||playerFrame.state()!=state||playerFrame.environment()!=environment)
+                throw new IllegalStateException("Changed returned water palette read/store cut");
+            int at=Math.addExact(binding.byteOffset(),index*4);Objects.checkFromIndexSize(at,4,before.length());
+            byte[] bytes=before.copy();bytes[at]=(byte)(bits>>>24);bytes[at+1]=(byte)(bits>>>16);bytes[at+2]=(byte)(bits>>>8);bytes[at+3]=(byte)bits;
+            r11WaterPalette=CdAssetBytes.copyOf(bytes);
+        }
+        originalLoadingWater=Optional.of(originalLoadingWater.orElseThrow().returnedPalette());
+    }
+    private void validateOriginalWaterRestore(R11EntryImage r){
+        Objects.requireNonNull(r.water());Objects.requireNonNull(r.animation());if(originalLoadingAnimationCall!=null)throw new IllegalStateException("In-flight loading animation cannot be captured/restored");
+        if(!originalWaterStage()){if(r.water().isPresent())throw new IllegalArgumentException("Water image on standard programme");return;}
+        var phase=r.loading().phase();boolean reached=phase!=SonicCdR31aLoadingVisit.Phase.FIRST_PLC;
+        if(reached?r.scrollFields().size()!=OriginalScrollField.values().length:!r.scrollFields().isEmpty())throw new IllegalArgumentException("Incomplete native InitScroll store image");
+        if(r.animation().isPresent()!=reached)throw new IllegalArgumentException("Actual stage-animation clear/source cut differs");
+        if(r.water().isPresent()!=reached)throw new IllegalArgumentException("Water stores differ from actual loading cut");
+        if(reached){var w=r.water().orElseThrow();
+            if(w.swayAngleByte().isEmpty()||w.pendingByte().isEmpty())throw new IllegalArgumentException("Unknown original clear/retained water scalars");
+            if(w.waterYWord().isEmpty()||w.staticYWord().isEmpty()||w.targetYWord().isEmpty()||w.routineByte().isEmpty()||w.fullByte().isEmpty()||w.speedByte().isEmpty()
+                    ||w.returnedPaletteLoaded()!=(phase==SonicCdR31aLoadingVisit.Phase.READY))
+                throw new IllegalArgumentException("Incomplete water/current/loading capture pair");
+        }
+    }
+    /** TT's actual first UpdateScroll: entry flag clears -> common foreground arithmetic ->
+     * native R41Events target store -> existing TT background kernel. No PP event selection.
+     * N1ecc5f3 r4/scroll_1a165-182; r4/events.asm:59-61. This is only loading, not an ordinary binding. */
+    private void initializeOriginalWaterScroll(){
+        requireOriginalR11Service();var s=r11LoadingState.scroll();var f=s.foreground();var b=s.background();
+        if((f.scrollLock()>>>8)!=0)return;
+        f=new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.State(f.cameraX(),f.cameraY16_16(),f.horizontalCrossed(),f.verticalCrossed(),f.scrollXDiff(),f.scrollYDiff(),0,f.destBottomBound(),f.destLeftBound(),f.bottomBoundShift(),f.scrollLock());
+        b=CdLevelStartStorage.bg(b,b.cameraBgX(),b.cameraBgY(),b.cameraBg2X(),b.cameraBg2Y(),b.cameraBg3X(),b.cameraBg3Y(),b.crossingRam(),0,0,0,b.cloudRam(),b.deformationRam(),b.hscrollRam(),b.vscroll());
+        storeR11Scroll(s,new SonicCdR31aLoadingVisit.Scroll(f,b,s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord()));
+        s=r11LoadingState.scroll();var m=playerFrame.state().motion();var e=playerFrame.environment();
+        var input=new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.Input(new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.Actor(m.centreX16_16()>>>16,m.centreY16_16()>>>16,m.flags(),m.groundVelocity(),m.animation(),m.playerControl()),e.movement().bounds(),s.topBoundWord(),e.globals().cameraXCentre(),e.movement().globals().cameraYCentre(),playerFrame.stageSource().variant(),r11LoadingPrefix.main().level().updateHudTime(),320,224);
+        var out=com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.stepAfterEvents(s.foreground(),input);
+        playerFrame.applyScrollFeedback(out.bounds(),out.cameraYCentre());
+        // R41Events has exactly one target-bottom store. Target equals current on this genuine
+        // loading path; no ordinary convergence is assumed or supplied by this adapter.
+        var next=out.state();int target=originalLoadingSource.initialEventTargetBottomWord();
+        next=new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.State(next.cameraX(),next.cameraY16_16(),next.horizontalCrossed(),next.verticalCrossed(),next.scrollXDiff(),next.scrollYDiff(),next.scrollFlags(),target,next.destLeftBound(),next.bottomBoundShift(),next.scrollLock());
+        storeR11Scroll(s,new SonicCdR31aLoadingVisit.Scroll(next,s.background(),s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord()));
+        if(out.bounds().bottom()!=target)throw SonicCd.unsupported("Original loading R41Events bound convergence is not this InitScroll entry");
+        s=r11LoadingState.scroll();f=s.foreground();
+        try{
+            var result=com.openggf.game.soniccd.scroll.CdR4BackgroundScroll.step(originalLoadingSource.waterScrollProfile(),s.background(),new com.openggf.game.soniccd.scroll.CdR4BackgroundScroll.Input(f.cameraX(),f.cameraYWord(),(short)f.scrollXDiff(),(short)f.scrollYDiff(),f.scrollLock()>>>8,originalLoadingWater.orElseThrow().waterYWord().orElseThrow(),s.waterDeformWord()),originalLoadingSource.waterScrollTables());
+            retainOriginalWaterScroll(result,true);
+        }catch(com.openggf.game.soniccd.scroll.CdR4BackgroundScroll.ScrollFault original){
+            try{retainOriginalWaterScroll(original.prefix(),false);}catch(RuntimeException|Error retention){if(retention!=original)original.addSuppressed(retention);}throw original;
+        }
+    }
+    private void retainOriginalWaterScroll(com.openggf.game.soniccd.scroll.CdR4BackgroundScroll.Result result,boolean completed){
+        requireOriginalR11Service();var s=r11LoadingState.scroll();var f=s.foreground();
+        f=new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.State(f.cameraX(),f.cameraY16_16(),f.horizontalCrossed(),f.verticalCrossed(),f.scrollXDiff(),f.scrollYDiff(),f.scrollFlags()|(completed?0x400:0),f.destBottomBound(),f.destLeftBound(),f.bottomBoundShift(),f.scrollLock());
+        storeR11Scroll(s,new SonicCdR31aLoadingVisit.Scroll(f,result.state(),s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),result.deform()));
+    }
+    private void initializeOriginalR11SizeScroll(){
+        requireOriginalR11Service();
+        if(originalWaterStage()){
+            storeOriginalScrollField(OriginalScrollField.UNUSED_X,0);storeOriginalScrollField(OriginalScrollField.UNUSED_Y,0);
+            storeOriginalScrollField(OriginalScrollField.UNUSED_DIE,0);storeOriginalScrollField(OriginalScrollField.UNUSED_TIMER,0);
+            storeOriginalScrollField(OriginalScrollField.EVENT_ROUTINE,0);
+        }
+        var bounds=originalLoadingSource.bounds();
+        if(originalWaterStage()){
+            storeOriginalScrollField(OriginalScrollField.ROUTINE,bounds.unusedWord());
+            // Target left/bottom/right already belong to foreground/nativeCarry; only target top is new storage.
+            storeOriginalScrollField(OriginalScrollField.TARGET_TOP,bounds.top());
+            storeOriginalScrollField(OriginalScrollField.X_KEEP,(bounds.left()+0x240)&65535);
+        }
+        var s=r11LoadingState.scroll();var f=s.foreground();
+        playerFrame.initializeLevelSizePlayerValues(new com.openggf.game.soniccd.player.CdPlayerMovement.Bounds(bounds.left(),bounds.right(),bounds.bottom(),playerFrame.environment().movement().bounds().bossFight()),bounds.cameraCentreY());
+        f=new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.State(f.cameraX(),f.cameraY16_16(),16,16,f.scrollXDiff(),f.scrollYDiff(),f.scrollFlags(),bounds.bottom(),bounds.left(),f.bottomBoundShift(),f.scrollLock());storeR11Scroll(s,new SonicCdR31aLoadingVisit.Scroll(f,s.background(),s.copies(),s.foregroundXFractionWord(),bounds.top(),s.waterDeformWord()));
+        // N1ecc5f3a PP Scroll (Act 1 Present).asm:61-84. All preceding level-size
+        // stores remain completed if this exact native call faults.
+        if(r11LoadingPrefix.main().level().spawnMode()==2)loadOriginalR11TimeWarp();
+        else if(r11LoadingPrefix.main().level().spawnMode()!=0)loadOriginalR11Checkpoint();
+        else {var start=originalLoadingSource.initialCentre();playerFrame.initializeLevelSizeCentrePlayerValues(start.centreX(),start.centreY());}
+        int startX=playerFrame.state().motion().centreX16_16()>>>16,startY=playerFrame.state().motion().centreY16_16()>>>16;
+        s=r11LoadingState.scroll();f=com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.checkpointSetupCamera(s.foreground(),startX,startY,playerFrame.environment().movement().bounds());
+        var bg=originalWaterStage()?com.openggf.game.soniccd.scroll.CdR4BackgroundScroll.initialize(originalLoadingSource.waterScrollProfile(),s.background(),f.cameraX(),f.cameraYWord())
+            :originalLoadingSource.standardBackgroundProgram()==com.openggf.game.soniccd.level.CdLevelLoadingSource.StandardBackgroundProgram.PARALLAX_CLOUD_BANDS
+            ?com.openggf.game.soniccd.scroll.CdR11bBackgroundScroll.init(s.background(),f)
+            :com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll.init(s.background(),new com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll.InitRegisters(f.cameraYWord(),f.cameraX(),startX));storeR11Scroll(s,new SonicCdR31aLoadingVisit.Scroll(f,bg,s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord()));
+        var n=r11LoadingState.nativeCarry();r11LoadingState=r11LoadingState.carry(new SonicCdR31aWorldHost.NativeCarry(n.collisionPointer(),n.fadeInfoWithoutTail(),n.rngSeedLong(),OptionalInt.of(bounds.right()),n.amyCapturedByte()));
+        s=r11LoadingState.scroll();var m=playerFrame.state().motion();var e=playerFrame.environment();
+        if(originalWaterStage()){storeOriginalScrollField(OriginalScrollField.LOOP_CHUNKS,originalLoadingSource.loopChunksLong());initializeOriginalWaterScroll();return;}
+        var input=new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.Input(new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.Actor(m.centreX16_16()>>>16,m.centreY16_16()>>>16,m.flags(),m.groundVelocity(),m.animation(),m.playerControl()),e.movement().bounds(),s.topBoundWord(),e.globals().cameraXCentre(),e.movement().globals().cameraYCentre(),playerFrame.stageSource().variant(),r11LoadingPrefix.main().level().updateHudTime(),320,224);
+        var out=com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.stepForPeriodBackground(s.foreground(),input,e.movement().gates().timeZone());playerFrame.applyScrollFeedback(out.bounds(),out.cameraYCentre());
+        f=out.state();storeR11Scroll(s,new SonicCdR31aLoadingVisit.Scroll(f,s.background(),s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord()));
+        var back=originalLoadingSource.standardBackgroundProgram()==com.openggf.game.soniccd.level.CdLevelLoadingSource.StandardBackgroundProgram.PARALLAX_CLOUD_BANDS
+            ?com.openggf.game.soniccd.scroll.CdR11bBackgroundScroll.step(r11LoadingState.scroll().background(),new com.openggf.game.soniccd.scroll.CdR11bBackgroundScroll.Input(f.cameraX(),f.cameraYWord(),(short)f.scrollXDiff(),(short)f.scrollYDiff(),f.scrollLock()>>>8))
+            :com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll.bind(source.assets()).step(r11LoadingState.scroll().background(),new com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll.Input(f.cameraX(),f.cameraYWord(),(short)f.scrollXDiff(),(short)m.xVelocity(),m.centreX16_16()>>>16,m.playerControl(),f.scrollLock()>>>8)).state();
+        s=r11LoadingState.scroll();f=new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.State(f.cameraX(),f.cameraY16_16(),f.horizontalCrossed(),f.verticalCrossed(),f.scrollXDiff(),f.scrollYDiff(),f.scrollFlags()|0x400,f.destBottomBound(),f.destLeftBound(),f.bottomBoundShift(),f.scrollLock());storeR11Scroll(s,new SonicCdR31aLoadingVisit.Scroll(f,back,s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord()));
+    }
+    private OriginalR11WarpLoadCall r11WarpLoad;
+    /** Only the actual original InitLevelSize.StartPos spawn2 call enters this issuer.
+     * It delegates every source read and gate to the existing shared native helper.
+     * Its current tuple is private, synchronous and expires even on the first fault. */
+    private void loadOriginalR11TimeWarp(){
+        requireOriginalR11Service();
+        if(!originalPastStage()||r11WarpLoad!=null||r11LoadingPrefix.main().level().spawnMode()!=2)
+            throw new IllegalStateException("No original Past LoadTimeWarpData occurrence");
+        originalPastArrival.require();var call=new OriginalR11WarpLoadCall();r11WarpLoad=call;
+        try{CdTimeWarpLoadData.load(call.saved,call);call.require();if(call.cursor!=22)throw new IllegalStateException("Incomplete actual warp load");}
+        finally{call.active=false;r11WarpLoad=null;}
+    }
+    private final class OriginalR11WarpLoadCall implements CdTimeWarpLoadData.Port {
+        private final CdPlayerFrameRuntime frame=playerFrame;
+        private final Object lifetime=r11LevelLifetime,bankLifetime=r11TimeWarpSavedLifetime;
+        private final Object sourceOwner=originalLoadingSource,placement=r11Placement;
+        private final Thread thread=Thread.currentThread();
+        private final CdTimeWarpSaveData.State saved=Objects.requireNonNull(r11TimeWarpSaved);
+        private CdPlayerBody.State actor=frame.state();private CdPlayerBody.Environment environment=frame.environment();
+        private final Object display=frame.display(),art=frame.artState(),clock=frame.vIntClock();
+        private final boolean paused=frame.paused();
+        private R11LoadingState expected=r11LoadingState;private R11LoadingPrefix prefix=r11LoadingPrefix;
+        private boolean active=true;private int cursor;
+        private CdTimeWarpLoadData.StoreTarget observedTarget;private OptionalInt observed;
+        private void require(){
+            requireOriginalR11Service();originalPastArrival.require();
+            if(!active||r11WarpLoad!=this||thread!=Thread.currentThread()||playerFrame!=frame
+                ||r11LevelLifetime!=lifetime||r11TimeWarpSavedLifetime!=bankLifetime||r11TimeWarpSaved!=saved
+                ||originalLoadingSource!=sourceOwner||r11Placement!=placement||r11LoadingState!=expected||r11LoadingPrefix!=prefix
+                ||frame.state()!=actor||frame.environment()!=environment||frame.display()!=display||frame.artState()!=art
+                ||frame.vIntClock()!=clock||frame.paused()!=paused||expected.phase()!=SonicCdR31aLoadingVisit.Phase.FIRST_PLC
+                ||frame.environment().movement().gates().zoneAct()!=0||prefix.main().level().spawnMode()!=2)
+                throw new IllegalStateException("Stale/foreign original warp-load primitive");
+        }
+        public CdTimeWarpSaveData.State currentSaved(){require();return saved;}
+        public OptionalInt readLive(CdTimeWarpLoadData.LiveRead field){
+            require();
+            if(field==CdTimeWarpLoadData.LiveRead.ZONE&&cursor==20){cursor=21;return OptionalInt.of(frame.environment().movement().gates().zoneAct()>>>8);}
+            if(field==CdTimeWarpLoadData.LiveRead.SPAWN_MODE&&cursor==21){cursor=22;return OptionalInt.of(prefix.main().level().spawnMode());}
+            throw new IllegalStateException("Original warp-load live-read cursor differs");
+        }
+        private OptionalInt value(CdTimeWarpLoadData.StoreTarget target){
+            var g=expected.globals();return switch(target){
+                case PRIMARY_X,PRIMARY_Y,PRIMARY_FLAGS,PRIMARY_GVEL,PRIMARY_X_VELOCITY,PRIMARY_Y_VELOCITY,BOTTOM_BOUND,MINI_SONIC,LEFT_BOUND -> OptionalInt.of(frame.readTimeWarpLoadField(target));
+                case RINGS -> OptionalInt.of(g.ring().rings());
+                case LIVES_FLAGS -> OptionalInt.of(g.ring().livesFlags());
+                case TIME_LONG -> originalCheckpointAux(g.live(),CdCheckpointLiveAux.Field.TIME_LONG);
+                case WATER_ROUTINE -> originalCheckpointAux(g.live(),CdCheckpointLiveAux.Field.WATER_ROUTINE);
+                default -> OptionalInt.of(originalCheckpointCameraWord(expected.scroll(),warpCameraField(target)));
+            };
+        }
+        public OptionalInt read(CdTimeWarpLoadData.StoreTarget target){require();observedTarget=Objects.requireNonNull(target);observed=value(target);return observed;}
+        public void commit(CdTimeWarpLoadData.StoreCall call){
+            require();Objects.requireNonNull(call);
+            if(cursor>=20||call.instruction()!=CdTimeWarpLoadData.NativeStore.values()[cursor]
+                ||observedTarget!=call.target()||!call.expectedValue().equals(observed)||!call.expectedValue().equals(value(call.target())))
+                throw new IllegalArgumentException("Original warp-load source order/full preimage differs");
+            var next=expected;var nextPrefix=prefix;
+            switch(call.target()){
+                case PRIMARY_X,PRIMARY_Y,PRIMARY_FLAGS,PRIMARY_GVEL,PRIMARY_X_VELOCITY,PRIMARY_Y_VELOCITY,BOTTOM_BOUND -> frame.applyTimeWarpLoadStore(call);
+                case RINGS,LIVES_FLAGS,TIME_LONG,WATER_ROUTINE -> {
+                    var target=switch(call.target()){
+                        case RINGS -> CdCheckpointLoadData.StoreTarget.RINGS;case LIVES_FLAGS -> CdCheckpointLoadData.StoreTarget.LIVES_FLAGS;
+                        case TIME_LONG -> CdCheckpointLoadData.StoreTarget.TIME_LONG;case WATER_ROUTINE -> CdCheckpointLoadData.StoreTarget.WATER_ROUTINE;
+                        default -> throw new AssertionError();};
+                    var globals=originalCheckpointGlobalStore(expected.globals(),new CdCheckpointLoadData.StoreCall(target,call.expectedValue(),call.value()));
+                    next=expected.globals(globals);nextPrefix=prefix.globals(globals);
+                }
+                default -> next=expected.scroll(originalCheckpointCameraStore(expected.scroll(),new CdCheckpointLoadData.StoreCall(warpCameraField(call.target()),call.expectedValue(),call.value())));
+            }
+            r11LoadingState=next;r11LoadingPrefix=nextPrefix;expected=next;prefix=nextPrefix;
+            actor=frame.state();environment=frame.environment();cursor++;observedTarget=null;observed=null;
+        }
+    }
+    /** These distinct native helpers write the same existing nine camera WORD owners. */
+    private static CdCheckpointLoadData.StoreTarget warpCameraField(CdTimeWarpLoadData.StoreTarget target){
+        return switch(target){
+            case DEST_BOTTOM_BOUND -> CdCheckpointLoadData.StoreTarget.DEST_BOTTOM_BOUND;
+            case FG_X -> CdCheckpointLoadData.StoreTarget.FG_X;case FG_Y -> CdCheckpointLoadData.StoreTarget.FG_Y;
+            case BG_X -> CdCheckpointLoadData.StoreTarget.BG_X;case BG_Y -> CdCheckpointLoadData.StoreTarget.BG_Y;
+            case BG2_X -> CdCheckpointLoadData.StoreTarget.BG2_X;case BG2_Y -> CdCheckpointLoadData.StoreTarget.BG2_Y;
+            case BG3_X -> CdCheckpointLoadData.StoreTarget.BG3_X;case BG3_Y -> CdCheckpointLoadData.StoreTarget.BG3_Y;
+            default -> throw new IllegalArgumentException("Not a shared camera WORD");};
+    }
+    /** One private issuer at the original StartPos call. Saved/capture/result values
+     * cannot construct or reopen it. All fields are transient and expire in finally. */
+    public final class OriginalR11CheckpointLoadCall implements CdCheckpointLoadData.Port {
+        private final CdPlayerFrameRuntime frame=playerFrame;
+        private final CdObjectPlacementRuntime placement=r11Placement;
+        private final Object lifetime=r11LevelLifetime;
+        private final Thread thread=Thread.currentThread();
+        private com.openggf.game.soniccd.player.CdPlayerBody.State actor=frame.state();
+        private com.openggf.game.soniccd.player.CdPlayerBody.Environment environment=frame.environment();
+        private final Object display=frame.display(),art=frame.artState(),clock=frame.vIntClock();
+        private final boolean paused=frame.paused();
+        private final CdCheckpointSaveData.State saved=r11LoadingState.globals().checkpointSaved();
+        private final CdObjectPlacementRuntime.Snapshot placed=placement.capture();
+        private R11LoadingState expected=r11LoadingState;
+        private R11LoadingPrefix prefix=r11LoadingPrefix;
+        private CdPlayerFrameRuntime.CheckpointLoadPort port;
+        private boolean active=true,started;
+        private int cursor;
+        private CdCheckpointLoadData.StoreTarget observedTarget;
+        private OptionalInt observed;
+        private OriginalR11CheckpointLoadCall(){}
+        /** Cross-package Frame handshake. Constructor and active issuer remain private. */
+        public void requireFrame(CdPlayerFrameRuntime actual){
+            requireOriginalR11Service();
+            if(!active||r11CheckpointLoad!=this||thread!=Thread.currentThread()||actual!=frame
+                    ||playerFrame!=frame||r11Placement!=placement||r11LevelLifetime!=lifetime
+                    ||r11LoadingState!=expected||r11LoadingPrefix!=prefix
+                    ||expected.globals().checkpointSaved()!=saved||frame.state()!=actor||frame.environment()!=environment
+                    ||frame.display()!=display||frame.artState()!=art||frame.vIntClock()!=clock||frame.paused()!=paused
+                    ||expected.phase()!=SonicCdR31aLoadingVisit.Phase.FIRST_PLC
+                    ||frame.environment().movement().gates().zoneAct()!=0)
+                throw new IllegalStateException("No actual original R11 checkpoint load call");
+            var now=placement.capture();
+            if(!now.status().equals(placed.status())||!now.pool().slots().equals(placed.pool().slots())
+                    ||!java.util.Arrays.equals(now.savedFlags().copy(),placed.savedFlags().copy()))
+                throw new IllegalStateException("Original checkpoint placement cut changed");
+        }
+        /** Only the existing Frame can mint a matching active port. No replayed result. */
+        public void load(CdPlayerFrameRuntime actual,CdPlayerFrameRuntime.CheckpointLoadPort actualPort){
+            requireFrame(actual);
+            if(started||!Objects.requireNonNull(actualPort).isOriginalInvocation(this,actual))
+                throw new IllegalStateException("Original checkpoint invocation cannot be replayed");
+            started=true;port=actualPort;
+            // Shared helper owns native saved read/store order, branch gates and first fault.
+            // Incoming2 stops at the separately unowned warp transfer before any saved read.
+            CdCheckpointLoadData.load(prefix.main().level().spawnMode(),
+                    actual.environment().movement().gates().zoneAct()>>>8,saved,this);
+            int count=19+((prefix.main().level().spawnMode()&128)!=0?1:0);
+            if(cursor!=count)throw new IllegalStateException("Incomplete actual original checkpoint stores");
+        }
+        private void requireLoad(){
+            requireFrame(frame);
+            if(!started||port==null||!port.isOriginalInvocation(this,frame))
+                throw new IllegalStateException("No current original checkpoint Frame operation");
+        }
+        @Override public CdCheckpointSaveData.State currentSaved(){requireLoad();return saved;}
+        private OptionalInt value(CdCheckpointLoadData.StoreTarget target){
+            var g=expected.globals();var r=g.ring();
+            return switch(target){
+                case SPAWN_MODE->OptionalInt.of(prefix.main().level().spawnMode());
+                case PRIMARY_X,PRIMARY_Y,BOTTOM_BOUND,LEFT_BOUND,MINI_SONIC->OptionalInt.of(port.read(frameField(target)));
+                case RINGS->OptionalInt.of(r.rings());
+                case LIVES_FLAGS->OptionalInt.of(r.livesFlags());
+                case TIME_LONG->originalCheckpointAux(g.live(),CdCheckpointLiveAux.Field.TIME_LONG);
+                case TIME_FRAMES->g.live().knownByte(0xFF1517);
+                case TIME_SECONDS->g.live().knownByte(0xFF1516);
+                case WATER_ROUTINE->originalCheckpointAux(g.live(),CdCheckpointLiveAux.Field.WATER_ROUTINE);
+                case WATER_HEIGHT2->originalCheckpointAux(g.live(),CdCheckpointLiveAux.Field.WATER_HEIGHT2);
+                case WATER_FULLSCREEN->originalCheckpointAux(g.live(),CdCheckpointLiveAux.Field.WATER_FULLSCREEN);
+                default->OptionalInt.of(originalCheckpointCameraWord(expected.scroll(),target));
+            };
+        }
+        @Override public OptionalInt read(CdCheckpointLoadData.StoreTarget target){
+            requireLoad();observedTarget=Objects.requireNonNull(target);observed=value(target);return observed;
+        }
+        @Override public void commit(CdCheckpointLoadData.StoreCall call){
+            requireLoad();Objects.requireNonNull(call);
+            // This original programme is zone0: shared helper suppresses mini/water reads.
+            var instruction=cursor<19?CdCheckpointLoadData.NativeStore.values()[cursor]
+                    :cursor==19&&(prefix.main().level().spawnMode()&128)!=0?CdCheckpointLoadData.NativeStore.SET_LEFT_BOUND:null;
+            if(instruction==null||instruction.target()!=call.target()||observedTarget!=call.target()
+                    ||!call.expectedValue().equals(observed)||!call.expectedValue().equals(value(call.target())))
+                throw new IllegalArgumentException("Original checkpoint native cursor/full preimage changed");
+            var nextState=expected;var nextPrefix=prefix;
+            switch(call.target()){
+                case SPAWN_MODE->nextPrefix=prefix.level(levelWithSpawn(prefix.main().level(),call.value()));
+                case PRIMARY_X,PRIMARY_Y,BOTTOM_BOUND,LEFT_BOUND,MINI_SONIC->port.store(
+                        new CdPlayerFrameRuntime.CheckpointLoadStore(frameField(call.target()),call.expectedValue().orElseThrow(),call.value()));
+                case RINGS,LIVES_FLAGS,TIME_LONG,TIME_FRAMES,TIME_SECONDS,WATER_ROUTINE,WATER_HEIGHT2,WATER_FULLSCREEN->{
+                    var globals=originalCheckpointGlobalStore(expected.globals(),call);
+                    nextState=expected.globals(globals);nextPrefix=prefix.globals(globals);
+                }
+                default->nextState=expected.scroll(originalCheckpointCameraStore(expected.scroll(),call));
+            }
+            // No callback or fallible work between these current-owner reference stores.
+            r11LoadingState=nextState;r11LoadingPrefix=nextPrefix;expected=nextState;prefix=nextPrefix;
+            actor=frame.state();environment=frame.environment();
+            cursor++;observedTarget=null;observed=null;
+        }
+        private void expire(){active=false;port=null;observedTarget=null;observed=null;}
+    }
+    private OriginalR11CheckpointLoadCall r11CheckpointLoad;
+    private void loadOriginalR11Checkpoint(){
+        requireOriginalR11Service();
+        if(r11CheckpointLoad!=null)throw new IllegalStateException("Original checkpoint load reentry");
+        var call=new OriginalR11CheckpointLoadCall();r11CheckpointLoad=call;
+        try{playerFrame.loadOriginalCheckpoint(call);}
+        finally{call.expire();r11CheckpointLoad=null;}
+        // Cleanup performs assignments only: cannot replace/suppress the native first fault.
+    }
+    private static OptionalInt originalCheckpointAux(CdCheckpointLiveAux.State live,CdCheckpointLiveAux.Field field){
+        int value=0;
+        for(int i=0;i<field.width();i++){
+            var b=live.knownByte(field.nativeAddress()+i);if(b.isEmpty())return OptionalInt.empty();
+            value=(value<<8)|b.getAsInt();
+        }
+        return OptionalInt.of(value);
+    }
+    /** Pure existing-value projections below grant no native invocation authority. */
+    static SonicCdR31aWorldHost.Globals originalCheckpointGlobalStore(SonicCdR31aWorldHost.Globals g,CdCheckpointLoadData.StoreCall call){
+        var r=g.ring();var live=g.live();
+        switch(call.target()){
+            case RINGS->r=ringWithCount(r,call.value());
+            case LIVES_FLAGS->r=ringWithLivesFlags(r,call.value());
+            case TIME_LONG->live=CdCheckpointLiveAux.writeTimeLong(live,call.value());
+            case TIME_FRAMES->live=CdCheckpointLiveAux.writeTimeByte(live,CdCheckpointLiveAux.TimeByte.FRAMES,call.value());
+            case TIME_SECONDS->live=CdCheckpointLiveAux.writeTimeByte(live,CdCheckpointLiveAux.TimeByte.SECONDS,call.value());
+            case WATER_ROUTINE->live=CdCheckpointLiveAux.writeWaterRoutine(live,call.value());
+            case WATER_HEIGHT2->live=CdCheckpointLiveAux.writeWaterHeight2(live,call.value());
+            case WATER_FULLSCREEN->live=CdCheckpointLiveAux.writeWaterFullscreen(live,call.value());
+            default->throw new IllegalArgumentException("Not an original checkpoint scalar store");
+        }
+        return SonicCdR31aWorldHost.with(g,r,live,g.contact(),g.score(),g.pauseMusicBit(),g.bonus(),g.animations(),g.paletteSteps7(),g.paletteTimers7());
+    }
+    static int originalCheckpointCameraWord(SonicCdR31aLoadingVisit.Scroll s,CdCheckpointLoadData.StoreTarget target){
+        var f=s.foreground();var b=s.background();
+        return switch(target){
+            case DEST_BOTTOM_BOUND->f.destBottomBound();case FG_X->f.cameraX();case FG_Y->f.cameraYWord();
+            case BG_X->b.cameraBgXWord();case BG_Y->b.cameraBgYWord();
+            case BG2_X->b.cameraBg2XWord();case BG2_Y->b.cameraBg2YWord();
+            case BG3_X->b.cameraBg3XWord();case BG3_Y->b.cameraBg3YWord();
+            default->throw new IllegalArgumentException("Not an original checkpoint camera store");
+        };
+    }
+    private static int originalCheckpointWord(int raw,int word){return (word<<16)|(raw&65535);}
+    static SonicCdR31aLoadingVisit.Scroll originalCheckpointCameraStore(SonicCdR31aLoadingVisit.Scroll s,CdCheckpointLoadData.StoreCall call){
+        if(!call.expectedValue().equals(OptionalInt.of(originalCheckpointCameraWord(s,call.target()))))
+            throw new IllegalArgumentException("Stale original checkpoint camera WORD");
+        var t=call.target();int v=call.value();var f=s.foreground();var b=s.background();
+        if(t==CdCheckpointLoadData.StoreTarget.DEST_BOTTOM_BOUND||t==CdCheckpointLoadData.StoreTarget.FG_X||t==CdCheckpointLoadData.StoreTarget.FG_Y){
+            f=new com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.State(
+                    t==CdCheckpointLoadData.StoreTarget.FG_X?v:f.cameraX(),
+                    t==CdCheckpointLoadData.StoreTarget.FG_Y?originalCheckpointWord(f.cameraY16_16(),v):f.cameraY16_16(),
+                    f.horizontalCrossed(),f.verticalCrossed(),f.scrollXDiff(),f.scrollYDiff(),f.scrollFlags(),
+                    t==CdCheckpointLoadData.StoreTarget.DEST_BOTTOM_BOUND?v:f.destBottomBound(),f.destLeftBound(),f.bottomBoundShift(),f.scrollLock());
+        }else{
+            b=new com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll.State(
+                    t==CdCheckpointLoadData.StoreTarget.BG_X?originalCheckpointWord(b.cameraBgX(),v):b.cameraBgX(),
+                    t==CdCheckpointLoadData.StoreTarget.BG_Y?originalCheckpointWord(b.cameraBgY(),v):b.cameraBgY(),
+                    t==CdCheckpointLoadData.StoreTarget.BG2_X?originalCheckpointWord(b.cameraBg2X(),v):b.cameraBg2X(),
+                    t==CdCheckpointLoadData.StoreTarget.BG2_Y?originalCheckpointWord(b.cameraBg2Y(),v):b.cameraBg2Y(),
+                    t==CdCheckpointLoadData.StoreTarget.BG3_X?originalCheckpointWord(b.cameraBg3X(),v):b.cameraBg3X(),
+                    t==CdCheckpointLoadData.StoreTarget.BG3_Y?originalCheckpointWord(b.cameraBg3Y(),v):b.cameraBg3Y(),
+                    b.crossingRam(),b.scrollFlagsBg(),b.scrollFlagsBg2(),b.scrollFlagsBg3(),b.cloudRam(),b.deformationRam(),b.hscrollRam(),b.vscroll());
+        }
+        return new SonicCdR31aLoadingVisit.Scroll(f,b,s.copies(),s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord());
+    }
+
+    private void initializeOriginalR11Planes(){
+        requireOriginalR11Service();var t=originalLoadingSource.retainedPlayerSource().terrain();var s=r11LoadingState.scroll();var f=s.foreground();var bg=originalLoadingSource.backgroundLayout();int cursor=64+bg.unsignedByte(1)*128+bg.unsignedByte(0)+1;var ram=r11LoadingState.layout().orElseThrow();var metadata=new com.openggf.game.soniccd.scroll.CdR11bForegroundPlane.CallerMetadata(cursor<ram.length()?OptionalInt.of(ram.unsignedByte(cursor)):OptionalInt.empty());
+        var writer=com.openggf.game.soniccd.scroll.CdR11bForegroundPlane.fromTables(t.blocks(),t.chunks(),ram).withBlockDefinitions(r11LoadingPrefix.blockDefinitions());
+        try{var out=writer.initialize(r11FirstLoad.foreground(),new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera((f.cameraX()<<16)|s.foregroundXFractionWord(),f.cameraY16_16()),f.scrollFlags(),metadata);retainOriginalR11Planes(out.state(),r11FirstLoad.background(),r11FirstLoad.copies());}
+        catch(com.openggf.game.soniccd.scroll.CdR11bForegroundPlane.InvalidPlane original){retainOriginalR11Planes(original.completedPrefix().state(),r11FirstLoad.background(),r11FirstLoad.copies());throw original;}
+        var b=s.background();var live=new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.LiveCameras(new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera(b.cameraBgX(),b.cameraBgY()),new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera(b.cameraBg2X(),b.cameraBg2Y()),new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera(b.cameraBg3X(),b.cameraBg3Y()));
+        try{var backgroundWriter=originalLoadingSource.backgroundPlane().withBlockDefinitions(r11LoadingPrefix.blockDefinitions());var flags=new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.FlagWords(b.scrollFlagsBg(),b.scrollFlagsBg2(),b.scrollFlagsBg3());
+            var result=originalWaterStage()?backgroundWriter.initializeWaterCompressedRows(r11FirstLoad.background(),live,flags,f.cameraX()):backgroundWriter.initialize(r11FirstLoad.background(),live,flags);
+            retainOriginalR11Planes(r11FirstLoad.foreground(),result.state(),r11FirstLoad.copies());}
+        catch(com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.InvalidPlane original){retainOriginalR11Background(original,r11FirstLoad.copies(),false);throw original;}
+    }
+    private CdLoadedLevelSetup.Programme<com.openggf.game.soniccd.resources.CdR11aSectionArt.State> originalR11LoadedSetup(){return new CdLoadedLevelSetup.Programme<>(){
+        public CdPlayerFrameRuntime frame(){requireOriginalR11Service();return playerFrame;}
+        public CdLoadedLevelSetup.Values<com.openggf.game.soniccd.resources.CdR11aSectionArt.State> values(){requireOriginalR11Service();return new CdLoadedLevelSetup.Values<>(r11LoadingPrefix.section(),r11LoadingPrefix.main().level(),r11LoadingState.reserved(),programServices.initialization(),r11LoadingPrefix.normalPalette(),r11LoadingPrefix.fadePalette());}
+        public void store(CdLoadedLevelSetup.Values<com.openggf.game.soniccd.resources.CdR11aSectionArt.State> v,CdLoadedLevelSetup.Event event){requireOriginalR11Service();r11LoadingArt.validateState(v.art());var services=programServices;if(v.initialization()!=services.initialization())services=new ProgramServicesState(services.loads(),v.initialization(),services.environment(),services.completedCalls());var prefix=r11LoadingPrefix.level(v.level()).art(v.art()).palettes(v.normal(),v.fade());var state=r11LoadingState.reserved(v.reserved());
+            switch(event){case BEFORE_INPUT_TIMERS->{if(originalWaterStage()){var pool=r11Placement.pool();var before=pool.state(32);var ready=before.moveByte(com.openggf.game.soniccd.objects.CdObjectState.ByteField.ID,4);requireOriginalR11Service();if(pool.state(32)!=before)throw new IllegalStateException("Changed source-selected first dynamic spawn slot");pool.write(ready);}}case ANIMATED_TILES->{animateOriginalLoadingStage();state=r11LoadingState;prefix=r11LoadingPrefix;}case SECONDARY_TIMER->state=state.globals(state.globals().secondaryBored(0));case TITLE->{var p=playerFrame.prepareObjectTitleCardGlobal(playerFrame.state(),playerFrame.environment(),com.openggf.game.soniccd.objects.CdTitleCard.StoreField.CONTROL_LOCK_BYTE,1);playerFrame.validatePreparedObjectSolidPublication(p);playerFrame.applyPreparedObjectSolidPublication(p);}case BEGIN_MAIN->state=state.globals(state.globals().beginMain(r11LoadingPrefix.main().level().spawnMode()));case FROM_WHITE->state=state.globals(state.globals().fromWhite());default->{}}
+            programServices=services;r11LoadingState=state;r11LoadingPrefix=prefix.globals(state.globals());}
+        public void lifeIcon(int period){originalR11Art(a->r11LoadingArt.loadLifeIcon(a,period));}
+        public com.openggf.game.soniccd.resources.CdR11aSectionArt.State clearSectionHighByte(com.openggf.game.soniccd.resources.CdR11aSectionArt.State a){return r11LoadingArt.clearSectionHighByte(a);}
+        public void unavailablePowerup(){if(originalPastStage()){copyOriginalR11Powerup();return;}throw new UnsupportedOperationException("Original R11 active powerup loading owner");}public void unavailablePeriod(){throw new UnsupportedOperationException("Original R11 loading period owner");}
+        public int gameMode(){requireOriginalR11Service();return r11LoadingPrefix.gameMode();}
+        public void completed(CdLoadedLevelSetup.Ready ready){requireOriginalR11Service();loadOriginalReturnedWaterPalette();requireOriginalR11Service();r11LoadingPrefix=r11LoadingPrefix.completed(ready);r11LoadingState=r11LoadingState.phase(ready.phase());}
+    };}
+    private void finishOriginalR11Data(){
+        // The shared setup publishes into the current image; select phase only after those stores return.
+        var phase=CdLoadedLevelSetup.afterSecondPlc(originalR11LoadedSetup());r11LoadingState=r11LoadingState.phase(phase);
     }
     private CdOriginalBootPrefix.Continuation r11Permit;
     private CdSelectedProfileVisit.State r11SelectedFinal;
@@ -2758,6 +4227,11 @@ public final class SonicCdGameModule implements GameModule {
         selectedProfile.requireProgrammeHandoff(this,original,CdSelectedProfileVisit.Programme.R11A);
     }
     private void enterOriginalR11Programme(CdSelectedProfileVisit.Publication original){
+        originalLoadingProgramme=CdSelectedProfileVisit.Programme.R11A;originalLoadingPublication=original;
+        try{originalLoadingSource=source.assets().identity().variant()==CdReleaseVariant.USA
+                ?source.assets().retainedStandardLoadingSource()
+                :com.openggf.game.soniccd.level.CdLevelLoadingSource.fromOriginalR11(source.assets());}
+        catch(IOException failure){throw new UncheckedIOException("Actual original R11 standard source read failed",failure);}
         r11Permit=originalBoot.issueR11(this,original);r11SelectedFinal=original.after();programWorld=SessionManager.getCurrentWorldSession();playerMode=SessionManager.getCurrentGameplayMode();
         r11Thread=Thread.currentThread();r11EntryLevelManager=playerMode.getLevelManager();
         // Before engine assembly the actual mode can have no LevelManager. Retain that
@@ -2775,26 +4249,99 @@ public final class SonicCdGameModule implements GameModule {
                 throw new IllegalArgumentException("Actual original R11 programme source differs");
             var loads=SonicCdProgramLoadServices.loadLevelR1Pcm(programServices.loads(),source.timeWarpPrograms().orElseThrow());
             var loaded=withProgramCall(ProgramStartCall.LOAD_LEVEL_PCM,loads,programServices.initialization());requireR11Start(original);programServices=loaded;
-            CdProgramInitialization.enterLevelProgram(new CdProgramInitialization.StartPort(){
-                public CdProgramInitialization.State initialization(){requireR11Start(original);return programServices.initialization();}
-                public CdProgramInitialization.ExecutionEnvironment executionEnvironment(){requireR11Start(original);return originalBoot.environment();}
-                public void clearScratch(){requireR11Start(original);originalBoot.mainClears();programServices=withProgramCall(ProgramStartCall.START_SCRATCH_CLEAR,programServices.loads(),programServices.initialization());}
-                public void writeVersion(CdProgramInitialization.ExecutionRegion r){requireR11Start(original);var ready=CdProgramInitialization.writeVersionCache(programServices.initialization(),r);programServices=withProgramCall(ProgramStartCall.WRITE_VERSION_CACHE,programServices.loads(),ready);}
-                public void writeMarker(){requireR11Start(original);var ready=CdProgramInitialization.writeInitMarker(programServices.initialization());programServices=withProgramCall(ProgramStartCall.WRITE_INIT_MARKER,programServices.loads(),ready);}
-                public void initializeVideo(){requireR11Start(original);var ready=withProgramCall(ProgramStartCall.INIT_VDP,programServices.loads(),programServices.initialization());var video=playerPresentation.initializeProgramVideo(CdR11aCameraArtResidency.unknown(),originalBoot.workClears().playerArt());programStartVideo=video;programServices=ready;}
-                public void initializeControllers(){requireR11Start(original);var ready=CdProgramInitialization.initializeControllers(programServices.initialization());programServices=withProgramCall(ProgramStartCall.INIT_CONTROLLERS,programServices.loads(),ready);}
-                public void selectLevelMode(){requireR11Start(original);programServices=withProgramCall(ProgramStartCall.GAME_MODE_LEVEL,programServices.loads(),programServices.initialization());}
+            enterOriginalProgrammeStart(()->requireR11Start(original),()->{
+                var video=playerPresentation.initializeProgramVideo(originalR11LoadingUnknownPatterns(),originalBoot.workClears().playerArt());
+                programStartVideo=video;
             });
             // Original IPX RunMMD's work clear and selected stores, not ColdSnapshot/DEV defaults.
             var clear=originalBoot.workClears();var environment=originalProgrammeEnvironment(r11SelectedFinal.globals().orElseThrow());
             r11PreparedFrame=CdPlayerFrameRuntime.fromPresentEntry(source.assets(),clear.primary(),environment,programStartVideo.playerArt(),new CdPlayerFrameRuntime.VIntClock(java.util.OptionalLong.empty(),0));
-            enterOriginalR11LevelStart(original);
+            bindOriginalR11FinishTimers(r11PreparedFrame);
+            enterOriginalLevelStart(original,()->requireR11Start(original));
             var ready=r11Permit.prepareR11Start(r11PreparedFrame,original);requireR11Start(original);
             playerFrame=r11PreparedFrame;r11EntryFrame=r11PreparedFrame;r11Permit.adoptR11Start(ready);r11StartComplete=true;
         }catch(SonicCdProgramLoadServices.Unsupported stopped){programServices=new ProgramServicesState(stopped.completedPrefix(),programServices.initialization(),programServices.environment(),programServices.completedCalls());r11Retired=true;originalBoot.retire(programWorld);throw stopped;}
         catch(RuntimeException|Error originalFailure){r11Retired=true;originalBoot.retire(programWorld);try{if(r11PreparedFrame!=null)r11PreparedFrame.close();}catch(RuntimeException|Error close){if(close!=originalFailure)originalFailure.addSuppressed(close);}throw originalFailure;}
         finally{r11PreparedFrame=null;r11StartActive=false;}
+        if(r11EntryLevelManager!=null)assembleOriginalR11();
     }
+    /** One shared native Initialization.Start instruction sequence. Guards bracket each reached
+     * call; callbacks publish only their actual first-fault prefixes. No result is replayed as calls. */
+    private void enterOriginalProgrammeStart(Runnable requireCurrent,Runnable initializeVideo){
+        CdProgramInitialization.enterLevelProgram(new CdProgramInitialization.StartPort(){
+            public CdProgramInitialization.State initialization(){requireCurrent.run();return programServices.initialization();}
+            public CdProgramInitialization.ExecutionEnvironment executionEnvironment(){requireCurrent.run();return originalBoot.environment();}
+            public void clearScratch(){requireCurrent.run();originalBoot.mainClears();var ready=withProgramCall(ProgramStartCall.START_SCRATCH_CLEAR,programServices.loads(),programServices.initialization());requireCurrent.run();programServices=ready;}
+            public void writeVersion(CdProgramInitialization.ExecutionRegion r){requireCurrent.run();var ready=withProgramCall(ProgramStartCall.WRITE_VERSION_CACHE,programServices.loads(),CdProgramInitialization.writeVersionCache(programServices.initialization(),r));requireCurrent.run();programServices=ready;}
+            public void writeMarker(){requireCurrent.run();var ready=withProgramCall(ProgramStartCall.WRITE_INIT_MARKER,programServices.loads(),CdProgramInitialization.writeInitMarker(programServices.initialization()));requireCurrent.run();programServices=ready;}
+            public void initializeVideo(){requireCurrent.run();var ready=withProgramCall(ProgramStartCall.INIT_VDP,programServices.loads(),programServices.initialization());initializeVideo.run();requireCurrent.run();programServices=ready;}
+            public void initializeControllers(){requireCurrent.run();var ready=withProgramCall(ProgramStartCall.INIT_CONTROLLERS,programServices.loads(),CdProgramInitialization.initializeControllers(programServices.initialization()));requireCurrent.run();programServices=ready;}
+            public void selectLevelMode(){requireCurrent.run();var ready=withProgramCall(ProgramStartCall.GAME_MODE_LEVEL,programServices.loads(),programServices.initialization());requireCurrent.run();programServices=ready;}
+        });
+    }
+    private void enterOriginalR41Programme(CdSelectedProfileVisit.Publication original){
+        var permit=originalBoot.issueR41(this,original);
+        var world=SessionManager.getCurrentWorldSession();var mode=SessionManager.getCurrentGameplayMode();
+        var manager=mode.getLevelManager();var level=manager==null?null:manager.getCurrentLevel();
+        var generation=manager==null?java.util.OptionalLong.empty():java.util.OptionalLong.of(manager.getCompletedProductionLoadGeneration());
+        programWorld=world;playerMode=mode;r11Permit=permit;r11SelectedFinal=original.after();
+        originalLoadingProgramme=CdSelectedProfileVisit.Programme.R41A;originalLoadingPublication=original;
+        originalLoadingSource=source.programmeData(CdStagePayload.R41A.stage()).orElseThrow().levelLoadingSource();
+        r11Thread=Thread.currentThread();r11EntryLevelManager=manager;r11EntryLevel=level;r11EntryLoadGeneration=generation;r11StartActive=true;
+        permit.beginR41Start(this,original);
+        Runnable requireCurrent=()->{
+            permit.requireR41Start(this,original);
+            if(SessionManager.getCurrentWorldSession()!=world||SessionManager.getCurrentGameplayMode()!=mode
+                    ||source!=originalBoot.source()||mode.getLevelManager()!=manager
+                    ||(manager!=null&&(manager.getCurrentLevel()!=level||manager.getCompletedProductionLoadGeneration()!=generation.orElseThrow()))
+                    ||playerFrame!=null||playerActor!=null||openingObjects!=null||levelProgram!=null)
+                throw new IllegalStateException("Original R41 entry source/World/load generation changed");
+        };
+        try{
+            requireCurrent.run();
+            var pcm=source.r4PcmSource().orElseThrow(()->originalBoot.stopR41Pcm(permit,this,original));
+            if(!pcm.source().wholeDiscSha256().equals(source.release().normalizedSha256()))
+                throw new IllegalArgumentException("Original R4PCM source differs");
+            if(SonicCdProgramLoadServices.r4PcmFile(CdNativeFile.R41A)!=pcm.file())
+                throw new IllegalArgumentException("Original selected programme PCM selector differs");
+            var loads=SonicCdProgramLoadServices.loadLevelR4Pcm(programServices.loads(),pcm);
+            var ready=withProgramCall(ProgramStartCall.LOAD_LEVEL_PCM,loads,programServices.initialization());
+            requireCurrent.run();programServices=ready;
+            enterOriginalProgrammeStart(requireCurrent,()->{
+                programStartVideo=playerPresentation.initializeProgramVideo(originalR11LoadingUnknownPatterns(),originalBoot.workClears().playerArt());
+            });
+            requireCurrent.run();
+            var clear=originalBoot.workClears();
+            r11PreparedFrame=CdPlayerFrameRuntime.fromProgrammeEntry(originalLoadingSource.retainedPlayerSource(),clear.primary(),
+                    originalProgrammeEnvironment(r11SelectedFinal.globals().orElseThrow()),programStartVideo.playerArt(),
+                    new CdPlayerFrameRuntime.VIntClock(java.util.OptionalLong.empty(),0));
+            bindOriginalR11FinishTimers(r11PreparedFrame);
+            enterOriginalLevelStart(original,requireCurrent);
+            var publication=permit.prepareR41Start(r11PreparedFrame,original);requireCurrent.run();
+            playerFrame=r11PreparedFrame;r11EntryFrame=r11PreparedFrame;
+            permit.adoptR41Start(publication);r11StartComplete=true;
+            installOriginalSourceLoading();
+        }catch(SonicCdProgramLoadServices.Unsupported stopped){
+            programServices=new ProgramServicesState(stopped.completedPrefix(),programServices.initialization(),programServices.environment(),programServices.completedCalls());
+            permit.failR41Start();throw stopped;
+        }catch(RuntimeException|Error failure){permit.failR41Start();r11Retired=true;
+            try{if(r11PreparedFrame!=null)r11PreparedFrame.close();}catch(RuntimeException|Error close){if(close!=failure)failure.addSuppressed(close);}throw failure;}
+        finally{r11PreparedFrame=null;r11StartActive=false;}
+        if(r11EntryLevelManager!=null)assembleOriginalR11();
+    }
+    /** Called only by Root's Boot continuation prepareR41Start, at the actual private handoff. */
+    void requireOriginalBootR41Frame(CdOriginalBootPrefix.Continuation permit,CdPlayerFrameRuntime actual,CdSelectedProfileVisit.Publication original){
+        permit.requireR41Start(this,original);
+        if(permit!=r11Permit||original!=originalLoadingPublication||!r11StartActive||r11StartComplete||r11Retired
+                ||r11Thread!=Thread.currentThread()||SessionManager.getCurrentWorldSession()!=programWorld
+                ||SessionManager.getCurrentGameplayMode()!=playerMode||source!=originalBoot.source()
+                ||actual!=r11PreparedFrame||!ownsOriginalLoadingFrame(actual)||playerFrame!=null
+                ||playerMode.getLevelManager()!=r11EntryLevelManager
+                ||(r11EntryLevelManager!=null&&(r11EntryLevelManager.getCurrentLevel()!=r11EntryLevel||r11EntryLevelManager.getCompletedProductionLoadGeneration()!=r11EntryLoadGeneration.orElseThrow())))
+            throw new IllegalStateException("No actual original programme loading birth");
+        actual.captureActor();actual.captureShared();
+    }
+
     /** Shared fresh programme birth projection; values are not admission or an existing-Frame setter. */
     private CdPlayerBody.Environment originalProgrammeEnvironment(CdSelectedProfileVisit.Globals selected){
         var before=originalBoot.workClears().environment();var movement=before.movement();var gate=movement.gates();
@@ -2807,6 +4354,7 @@ public final class SonicCdGameModule implements GameModule {
     }
     /** One actual closed reached loading pair. A rejected observation/restore is a healthy nonwrite. */
     private void requireOriginalR11EntryCut(){
+        if(r11ServiceActive||constructingOriginalR11||originalDestinationEntering&&!r11WorldConstructing)throw new IllegalStateException("Original R11 loading operation is active");
         playerPresentation.requirePastRenderIdle();
         var mode=SessionManager.getCurrentGameplayMode();var world=SessionManager.getCurrentWorldSession();
         if(!r11StartComplete||r11Retired||r11StartActive||r11Thread!=Thread.currentThread()
@@ -2814,7 +4362,7 @@ public final class SonicCdGameModule implements GameModule {
                 ||mode==null||mode!=playerMode||world==null||world!=programWorld||mode.getWorldSession()!=world
                 ||world.rootGameModule()!=this||world.resolvedGameModule()!=this||world.getDataSource()!=source
                 ||originalBoot==null||source!=originalBoot.source()||selectedProfile.state()!=r11SelectedFinal
-                ||!playerFrame.stageSource().ownsPresent(source.assets())||playerActor!=null||openingObjects!=null
+                ||!ownsOriginalLoadingFrame(playerFrame)||playerActor!=null||openingObjects!=null
                 ||mode.getLevelManager()!=r11EntryLevelManager
                 ||(r11EntryLevelManager==null&&(r11EntryLevel!=null||r11EntryLoadGeneration.isPresent()))
                 ||(r11EntryLevelManager!=null&&(r11EntryLevelManager.getCurrentLevel()!=r11EntryLevel
@@ -2824,7 +4372,7 @@ public final class SonicCdGameModule implements GameModule {
         // Unlike restore's component owner checks, these also reject pending input/Body work.
         playerFrame.captureActor();playerFrame.captureShared();
         if(r11LoadingPrefix==null||r11Placement==null||r11LoadingArt==null)throw new IllegalStateException("No original R11 LevelStart prefix");
-        r11LoadingArt.validateState(r11LoadingPrefix.section());
+        r11LoadingArt.validateState(r11LoadingPrefix.section());if(originalPastStage())originalPastArrival.require();
     }
     CdPlayerFrameRuntime originalR11EntryFrame(){requireOriginalR11EntryCut();return playerFrame;}
     private void enterOriginalR31Programme(CdSelectedProfileVisit.Publication original){
@@ -2851,7 +4399,9 @@ public final class SonicCdGameModule implements GameModule {
     private void validateOriginalBootServices(ProgramServicesState value){
         originalBoot.requireConsumed(this,SessionManager.getCurrentWorldSession(),selectedProfileInvocation);
         if(!value.environment().equals(originalBoot.environment()))throw new IllegalArgumentException("Another original execution environment");
-        SonicCdProgramLoadServices.validateWithR3ForCapture(value.loads(),source.timeWarpPrograms().orElseThrow(),source.r3PcmSource().orElseThrow());
+        if(source.r4PcmSource().isPresent())
+            SonicCdProgramLoadServices.validateWithR4ForCapture(value.loads(),source.timeWarpPrograms().orElseThrow(),source.r3PcmSource().orElseThrow(),source.r4PcmSource().orElseThrow());
+        else SonicCdProgramLoadServices.validateWithR3ForCapture(value.loads(),source.timeWarpPrograms().orElseThrow(),source.r3PcmSource().orElseThrow());
     }
     // END original pre-storage fresh factory/private continuation bridge.
     boolean ownsSelectedProfileVisit(CdSelectedProfileVisit expected){return selectedProfile!=null&&selectedProfile==expected;}
@@ -2882,28 +4432,127 @@ public final class SonicCdGameModule implements GameModule {
                 if(original.after().phase()==CdSelectedProfileVisit.Phase.PROGRAMME_ENTRY){
                     if(original.after().programme().orElseThrow()==CdSelectedProfileVisit.Programme.R31A)enterOriginalR31Programme(original);
                     else if(original.after().programme().orElseThrow()==CdSelectedProfileVisit.Programme.R11A)enterOriginalR11Programme(original);
+                    else if(original.after().programme().orElseThrow()==CdSelectedProfileVisit.Programme.R41A){
+                        enterOriginalR41Programme(original);
+                    }
                 }
             }
         },selectedProfileInvocation);
-        if(originalBoot!=null){originalBoot.requireHandoffStarted(this,world,selectedProfileInvocation);return;}
+        if(originalBoot!=null){
+            if(originalR11EngineLoadingAssembled()||originalSourceLoadingInstalled){requireOriginalR11EntryCut();return;}
+            originalBoot.requireHandoffStarted(this,world,selectedProfileInvocation);return;
+        }
         throw new AssertionError("Selected native programme entry must remain an explicit boundary");
     }
     private record SelectedShared(SonicCdGameModule owner,CdGameDataSource source,Object progressLifetime,
                                   CdSelectedProfileVisit.Snapshot visit,IpxProgressFacts facts,Optional<R11EntryImage> r11) { }
-    private record R11EntryImage(CdPlayerFrameRuntime.ActorState actor,CdPlayerFrameRuntime.SharedState shared,ProgramServicesState services,SonicCdPlayerPresentation.PresentVideoInit video,R11LoadingPrefix prefix,CdObjectPlacementRuntime.Snapshot placement){}
+    /** A capture never manufactures saved knowledge from a public supplied State. The private
+     * issued image binds the exact bank/shared/World references and current original lifetime. */
+    private final class OriginalTimeWarpSavedImage {
+        private final SonicCdGameModule owner=SonicCdGameModule.this;
+        private final CdOriginalBootPrefix boot=originalBoot;
+        private final CdGameDataSource retainedSource=source;
+        private final WorldSession world=programWorld;
+        private final Thread thread=Thread.currentThread();
+        private final Object lifetime=r11TimeWarpSavedLifetime,levelLifetime=r11LevelLifetime;
+        private final java.util.OptionalLong generation=r11EntryLoadGeneration;
+        private final CdPlayerFrameRuntime.ActorState actor;
+        private final CdPlayerFrameRuntime.SharedState shared;
+        private final Optional<CdWorld.R11Snapshot> worldImage;
+        private final R11LoadingPrefix prefix=r11LoadingPrefix;
+        private final R11LoadingState loading=r11LoadingState;
+        private final R11FirstLoad firstLoad=r11FirstLoad;
+        private final SonicCdR31aLoadingVisit.ReturnKind returnKind=r11ReturnKind;
+        private final CdTimeWarpSaveData.State saved;
+        private final Optional<com.openggf.game.soniccd.objects.r4.CdR4SwitchBank> switches=Optional.ofNullable(r11Switches);
+        private OriginalTimeWarpSavedImage(CdPlayerFrameRuntime.ActorState actor,CdPlayerFrameRuntime.SharedState shared,Optional<CdWorld.R11Snapshot> worldImage){
+            this.actor=Objects.requireNonNull(actor);this.shared=Objects.requireNonNull(shared);this.worldImage=Objects.requireNonNull(worldImage);
+            saved=Objects.requireNonNull(r11TimeWarpSaved,"No reached original warp-save product");
+        }
+        private void require(SonicCdGameModule actual,R11EntryImage image){
+            if(actual!=owner||boot==null||actual.originalBoot!=boot||actual.source!=retainedSource
+                    ||actual.programWorld!=world||thread!=Thread.currentThread()||actual.r11Thread!=thread
+                    ||actual.r11TimeWarpSavedLifetime!=lifetime||actual.r11LevelLifetime!=levelLifetime
+                    ||!generation.equals(actual.r11EntryLoadGeneration)||image.actor()!=actor||image.shared()!=shared||image.world()!=worldImage||image.switches()!=switches
+                    ||image.prefix()!=prefix||image.loading()!=loading||image.firstLoad()!=firstLoad||image.returnKind()!=returnKind)
+                throw new IllegalArgumentException("Foreign original warp-save capture/source/lifetime");
+        }
+    }
+    private R11EntryImage captureOriginalR11EntryImage(){
+        if(originalWarpProgrammeSelected())validateOriginalWarpProgrammeOwner();
+        var actor=originalR11EntryFrame().captureActor();var shared=playerFrame.captureShared();
+        var services=programServices;var video=programStartVideo;var prefix=r11LoadingPrefix;var placement=r11Placement.capture();
+        var first=r11FirstLoad;var loading=r11LoadingState;Optional<CdWorld.R11Snapshot> worldImage=r11World==null?Optional.empty():Optional.of(r11World.captureR11());
+        var saved=new OriginalTimeWarpSavedImage(actor,shared,worldImage);
+        return new R11EntryImage(actor,shared,services,video,prefix,placement,first,loading,worldImage,r11WaterPalette,r11LevelLifetime,r11ReturnKind,originalLoadingWater,originalScrollFields,originalLoadingAnimation,r11ClosureSpecialStage,r11ClosureIpx,programSounds,saved.switches,saved,new OriginalWarpImage(actor,shared,worldImage));
+    }
+    private record R11EntryImage(CdPlayerFrameRuntime.ActorState actor,CdPlayerFrameRuntime.SharedState shared,ProgramServicesState services,SonicCdPlayerPresentation.PresentVideoInit video,R11LoadingPrefix prefix,CdObjectPlacementRuntime.Snapshot placement,R11FirstLoad firstLoad,R11LoadingState loading,Optional<CdWorld.R11Snapshot> world,CdAssetBytes waterPalette,Object levelLifetime,SonicCdR31aLoadingVisit.ReturnKind returnKind,Optional<OriginalLoadingWater> water,java.util.Map<OriginalScrollField,Integer> scrollFields,Optional<OriginalLoadingAnimation> animation,int closureSpecialStage,OriginalR11IpxState closureIpx,List<ProgramSound> programmeSounds,Optional<com.openggf.game.soniccd.objects.r4.CdR4SwitchBank> switches,OriginalTimeWarpSavedImage warpSaved,OriginalWarpImage originalWarp){R11EntryImage{scrollFields=java.util.Map.copyOf(scrollFields);}}
+    private void validateOriginalR11Restore(R11EntryImage r){
+        var f=originalR11EntryFrame();Objects.requireNonNull(r);Objects.requireNonNull(r.warpSaved()).require(this,r);var state=r.loading();
+        Objects.requireNonNull(r.originalWarp()).require(r);
+        Objects.requireNonNull(r.closureIpx());Objects.requireNonNull(r.programmeSounds());if(r.closureIpx().phase()!=OriginalR11IpxPhase.NOT_STARTED&&state.phase()!=SonicCdR31aLoadingVisit.Phase.RETURNED)throw new IllegalArgumentException("IPX prefix before actual R11 RTS");
+        if((r.closureSpecialStage()&~255)!=0)throw new IllegalArgumentException("Original closure specialStage BYTE");
+        if(r.levelLifetime()!=r11LevelLifetime||r.waterPalette()==null||r.waterPalette().length()!=128||r.returnKind()==null)throw new IllegalArgumentException("Different original R11 LevelStart/water lifetime");
+        if((state==null)!=(r11LoadingState==null)||(r.firstLoad()==null)!=(r11FirstLoad==null)
+                ||r.world().isPresent()!=(r11World!=null))throw new IllegalArgumentException("Different original R11 loading/World generation");
+        if(state==null&&(r.firstLoad()!=null||r.world().isPresent()))throw new IllegalArgumentException("Loading owners before original R11 assembly");
+        if(r11World!=null)r11World.validateR11Cpu(r.world().orElseThrow(),Objects.requireNonNull(state).cpuSat());
+        if(r11Clear!=null||originalLoadingAnimationCall!=null||r.video()!=programStartVideo||r.services().loads()!=programServices.loads()||!r.services().completedCalls().equals(programServices.completedCalls())||!r.services().environment().equals(programServices.environment()))throw new IllegalArgumentException("Different original R11 Start/PCM/source lifetime");
+        validateOriginalBootServices(r.services());r11LoadingArt.validateState(r.prefix().section());
+        r11Placement.validateRestore(r.placement());f.validateActorRestore(r.actor());f.validateSharedRestore(r.shared());
+        // The genuine Start/LevelStart prefix is capturable before engine assembly.
+        // No selected display or loading state exists at that earlier reached cut.
+        // A prior level's genuinely cleared bank is retained until the next CAMERA clear.
+        // The private capture seal binds that exact reference even in the earlier reload prefix.
+        if((state!=null&&state.clears().contains(CdLevelStartStorage.Cut.CAMERA)&&r.switches().isEmpty())
+            ||r.switches().isPresent()&&r.switches().orElseThrow().knownMask()!=-1)throw new IllegalArgumentException("Different actual original camera-clear/switch-bank capture");
+        if(state==null)return;
+        if(!originalWaterStage()&&!originalPastStage())state.flowers().requireSource(source.assets());
+        validateOriginalWaterRestore(r);
+        var gates=r.shared().environment().movement().gates();var phase=state.phase();
+        // These additional phases are DATA from the exact privately issued actor/shared/
+        // loading/World ticket above; equal phase/period DTOs cannot reopen a continuation.
+        boolean marked=!originalWaterStage()&&r.world().isPresent()
+            &&originalLoadingSource.retainedPlayerSource().nativeZoneActWord()==0&&gates.zoneAct()==0
+            &&gates.timeZone()>=0x80&&gates.timeZone()<=0x82;
+        boolean activeWarp=phase==SonicCdR31aLoadingVisit.Phase.READY&&r.world().isPresent()
+            &&gates.timeZone()>=0x80&&gates.timeZone()<=0x82;
+        var level=r.prefix().main().level();int fadeBit=r.prefix().main().palFadeFlagsByte()&1;
+        boolean markedCommon=marked&&level.spawnMode()==2&&r.prefix().main().levelStartedByte()==0
+            &&(r.prefix().gameMode()&128)!=0&&(r.closureIpx().phase()==OriginalR11IpxPhase.NOT_STARTED||r.originalWarp().phase!=OriginalWarpPhase.NONE);
+        boolean markedWhite=markedCommon&&phase==SonicCdR31aLoadingVisit.Phase.INITIAL_TO_WHITE
+            &&r.returnKind()==SonicCdR31aLoadingVisit.ReturnKind.NONE&&level.levelRestart()!=0&&fadeBit==1
+            &&state.fadeSteps()<22&&state.globals().tail().orElseThrow().paletteFadeInfoWord()==0x003F;
+        boolean markedRts=markedCommon&&phase==SonicCdR31aLoadingVisit.Phase.RETURNED
+            &&r.returnKind()==SonicCdR31aLoadingVisit.ReturnKind.WHITE_RESTART&&level.levelRestart()==0
+            &&gates.timeWarpDirection()==0&&((state.fadeSteps()==22&&fadeBit==0)||(state.fadeSteps()==0&&fadeBit==1));
+        if(phase==SonicCdR31aLoadingVisit.Phase.INITIAL_TO_WHITE&&!markedWhite)
+            throw new IllegalArgumentException("Unissued original marked white-fade cut");
+        if(phase!=SonicCdR31aLoadingVisit.Phase.FIRST_PLC&&phase!=SonicCdR31aLoadingVisit.Phase.LEVEL_PLC&&phase!=SonicCdR31aLoadingVisit.Phase.INITIAL_TO_BLACK&&phase!=SonicCdR31aLoadingVisit.Phase.INITIAL_TO_WHITE&&phase!=SonicCdR31aLoadingVisit.Phase.FROM_WHITE&&phase!=SonicCdR31aLoadingVisit.Phase.FROM_BLACK&&phase!=SonicCdR31aLoadingVisit.Phase.READY&&phase!=SonicCdR31aLoadingVisit.Phase.CLEAR_RETURN_WAIT&&phase!=SonicCdR31aLoadingVisit.Phase.RETURNED)throw new IllegalArgumentException("Unadmitted original R11 capture phase");
+        if((gates.zoneAct()!=originalLoadingSource.retainedPlayerSource().nativeZoneActWord()&&!(originalLoadingSource.retainedPlayerSource().nativeZoneActWord()==0&&gates.zoneAct()==1&&gates.timeZone()==1&&(r.prefix().main().level().levelRestart()==2||phase==SonicCdR31aLoadingVisit.Phase.INITIAL_TO_BLACK||phase==SonicCdR31aLoadingVisit.Phase.CLEAR_RETURN_WAIT||phase==SonicCdR31aLoadingVisit.Phase.RETURNED)))||((gates.timeZone()&127)!=originalLoadingSource.retainedPlayerSource().ordinaryPeriod()&&!activeWarp&&!markedWhite&&!markedRts)||r.prefix().main().levelStartedByte()!=(phase==SonicCdR31aLoadingVisit.Phase.READY?1:0)
+            ||(phase==SonicCdR31aLoadingVisit.Phase.READY&&state.fadeSteps()!=22)||(phase==SonicCdR31aLoadingVisit.Phase.FROM_WHITE||phase==SonicCdR31aLoadingVisit.Phase.FROM_BLACK)&&state.fadeSteps()>=22
+            ||phase!=SonicCdR31aLoadingVisit.Phase.FIRST_PLC&&state.clears().size()!=CdLevelStartStorage.Cut.values().length-(originalWaterStage()?1:0)
+            ||!r.prefix().ring().equals(state.globals().ring())||!r.prefix().score().equals(state.globals().score()))throw new IllegalArgumentException("Different complete original R11 loading cut: phase="+phase+", zoneAct="+gates.zoneAct()+", period="+gates.timeZone()+", started="+r.prefix().main().levelStartedByte()+", fade="+state.fadeSteps()+", clears="+state.clears().size()+"/"+CdLevelStartStorage.Cut.values().length+", ringPair="+r.prefix().ring().equals(state.globals().ring())+", scorePair="+r.prefix().score().equals(state.globals().score()));
+        boolean returning=phase==SonicCdR31aLoadingVisit.Phase.CLEAR_RETURN_WAIT||phase==SonicCdR31aLoadingVisit.Phase.RETURNED;
+        if(returning!=(r.returnKind()!=SonicCdR31aLoadingVisit.ReturnKind.NONE)||returning&&r.returnKind()!=SonicCdR31aLoadingVisit.ReturnKind.NO_LIVES&&r.returnKind()!=SonicCdR31aLoadingVisit.ReturnKind.NEXT_LEVEL&&!markedRts)throw new IllegalArgumentException("Different original R11 return cut");
+        if(r.firstLoad()==null||r.firstLoad().levelLoaded()!=r.firstLoad().standardLoaded()||phase!=SonicCdR31aLoadingVisit.Phase.FIRST_PLC&&(!r.firstLoad().standardLoaded()||state.blocks().isEmpty()||state.layout().isEmpty()))throw new IllegalArgumentException("Incomplete source/art/geometry loading cut");
+        if(state.layout().isPresent()&&!java.util.Arrays.equals(state.layout().orElseThrow().copy(),originalLoadingSource.retainedPlayerSource().terrain().layout().ram().copy()))throw new IllegalArgumentException("Captured actual programme layout differs");
+        if(state.blocks().isPresent()&&!java.util.Arrays.equals(state.blocks().orElseThrow().copy(),originalLoadingSource.retainedPlayerSource().terrain().blocks().copy()))throw new IllegalArgumentException("Captured actual programme blocks differ");
+    }
     private com.openggf.game.session.WorldSessionPolicyState openSelectedProfilePolicy(WorldSession world){
-        return new com.openggf.game.session.WorldSessionPolicyState(){
-            private void requireInstalled(){if(com.openggf.game.session.WorldSessionPolicyAccess.getService(world,getClass())!=this)throw new IllegalStateException("Not this World's original selected policy");}
+        if(selectedProfilePolicyOwner!=null)throw new IllegalStateException("Selected profile policy already belongs to its original World");
+        var policy=new com.openggf.game.session.WorldSessionPolicyState(){
+            private void requireInstalled(){if(selectedProfilePolicyWorld!=world||selectedProfilePolicyOwner!=this||com.openggf.game.session.WorldSessionPolicyAccess.getService(world,getClass())!=this)throw new IllegalStateException("Not this World's original selected policy");}
             private final NativeRewindRestoreGuard<Object> capture=new NativeRewindRestoreGuard<>(){
                 @Override public String key(){return "soniccd-selected-profile-pre-level";}
-                @Override public Object capture(){requireInstalled();if(r31Retired)throw new IllegalStateException("Selected R31 lifetime retired");if(r31LoadingSelected())return captureR31();return new SelectedShared(SonicCdGameModule.this,source,ipxProgressLifetime,selectedProfile.capture(world),ipxProgress,r11StartComplete?Optional.of(new R11EntryImage(originalR11EntryFrame().captureActor(),playerFrame.captureShared(),programServices,programStartVideo,r11LoadingPrefix,r11Placement.capture())):Optional.empty());}
+                @Override public Object capture(){requireInstalled();if(r31Retired)throw new IllegalStateException("Selected R31 lifetime retired");if(r31LoadingSelected())return captureR31();return new SelectedShared(SonicCdGameModule.this,source,ipxProgressLifetime,selectedProfile.capture(world),ipxProgress,r11StartComplete?Optional.of(captureOriginalR11EntryImage()):Optional.empty());}
                 @Override public void validateRestore(Object value){
                     requireInstalled();if(r31Retired)throw new IllegalStateException("Selected R31 lifetime retired");if(r31LoadingSelected()){if(!(value instanceof R31Shared r31))throw new IllegalArgumentException("Pre-level capture cannot restore a consumed R31 permit");validateR31Restore(r31);return;}
                     if(!(value instanceof SelectedShared image))throw new IllegalArgumentException("Foreign selected pre-level capture");
                     if(image.owner()!=SonicCdGameModule.this||image.source()!=source||image.progressLifetime()!=ipxProgressLifetime)throw new IllegalArgumentException("Foreign selected Module/source/progress capture");
                     selectedProfile.validateRestore(image.visit(),world);var facts=IpxProgressFacts.from(image.visit().state().progress());if(!facts.equals(image.facts()))throw new IllegalArgumentException("Selected complete progress/capture pair differs");
                     if(image.r11().isPresent()!=r11StartComplete)throw new IllegalArgumentException("Different original R11 entry generation");
-                    if(r11StartComplete){var f=originalR11EntryFrame();var r=image.r11().orElseThrow();if(r.video()!=programStartVideo||r.services()!=programServices||r.prefix()!=r11LoadingPrefix)throw new IllegalArgumentException("Different original R11 Start/loading output");r11LoadingArt.validateState(r.prefix().section());r11Placement.validateRestore(r.placement());f.validateActorRestore(r.actor());f.validateSharedRestore(r.shared());}
+                    if(r11StartComplete)validateOriginalR11Restore(image.r11().orElseThrow());
                 }
                 @Override public void restore(Object value){
                     validateRestore(value);if(value instanceof R31Shared r31){restoreR31(r31);return;}
@@ -2913,7 +4562,13 @@ public final class SonicCdGameModule implements GameModule {
                         throw new IllegalArgumentException("Foreign selected Module/source/progress capture");
                     selectedProfile.validateRestore(image.visit(),world);var ready=IpxProgressFacts.from(image.visit().state().progress());
                     if(!ready.equals(image.facts()))throw new IllegalArgumentException("Selected complete progress/capture pair differs");
-                    if(image.r11().isPresent()){var f=originalR11EntryFrame();var r=image.r11().orElseThrow();r11LoadingArt.validateState(r.prefix().section());r11Placement.validateRestore(r.placement());f.validateActorRestore(r.actor());f.validateSharedRestore(r.shared());f.restoreActor(r.actor());f.restoreShared(r.shared());r11Placement.restore(r.placement());}
+                    if(image.r11().isPresent()){
+                        var r=image.r11().orElseThrow();validateOriginalR11Restore(r);var f=playerFrame;
+                        // Complete Frame/placement/art/phase/source/progress preflight ABOVE every mutation.
+                        // These setters adopt captured data only; neither Boot/Start/I-O nor service replays.
+                        f.restoreActor(r.actor());f.restoreShared(r.shared());r11Placement.restore(r.placement());
+                        programServices=r.services();programStartVideo=r.video();r11LoadingPrefix=r.prefix();r11FirstLoad=r.firstLoad();r11LoadingState=r.loading();r11WaterPalette=r.waterPalette();r11ReturnKind=r.returnKind();originalLoadingWater=r.water();originalScrollFields=r.scrollFields();originalLoadingAnimation=r.animation();r11ClosureSpecialStage=r.closureSpecialStage();r11ClosureIpx=r.closureIpx();programSounds=r.programmeSounds();r11Switches=r.switches().orElse(null);r11TimeWarpSaved=r.warpSaved().saved;var warp=r.originalWarp();originalWarpPhase=warp.phase;originalWarpAuthority=warp.ticket;warpAssets=warp.assets;warpScene=warp.scene;warpState=warp.state;originalWarpDestination=warp.destination;if(r11World!=null)r11World.restore(r.world().orElseThrow());
+                    }
                     selectedProfile.restore(image.visit(),world);ipxProgress=image.facts();
                 }
             };
@@ -2923,9 +4578,10 @@ public final class SonicCdGameModule implements GameModule {
             @Override public void bindRoster(com.openggf.sprites.managers.SpriteManager sprites){ }
             @Override public void failedAssembly(LevelLoadCause cause){ }
             @Override public void closeScreens(){ }
-            @Override public boolean holdsGameplay(){return !r31LoadingSelected();} // actual loading owns HOLD; the common World owns ordinary service
-            @Override public void retire(){requireInstalled();if(SessionManager.getCurrentWorldSession()==world)throw new IllegalStateException("Actual World retirement must precede selected profile retirement");selectedProfile.retire(world);if(originalBoot!=null)originalBoot.retire(world);if(r11StartComplete){r11Retired=true;if(playerFrame!=null)playerFrame.close();}}
+            @Override public boolean holdsGameplay(){return !r31LoadingSelected()&&!r11EngineAssembled;} // actual loading owns HOLD; the common World owns ordinary service
+            @Override public void retire(){requireInstalled();if(r11ServiceActive)throw new IllegalStateException("Original R11 policy retirement during native service");if(SessionManager.getCurrentWorldSession()==world)throw new IllegalStateException("Actual World retirement must precede selected profile retirement");selectedProfile.retire(world);if(originalBoot!=null)originalBoot.retire(world);if(r11StartComplete){r11Retired=true;if(r11World!=null)r11World.close();else if(playerFrame!=null)playerFrame.close();}}
         };
+        selectedProfilePolicyWorld=world;selectedProfilePolicyOwner=policy;return policy;
     }
     // END actual selected-profile pre-level Module owner.
 
@@ -2951,8 +4607,10 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override public Game createGame(GameDataSource dataSource) {
         CdGameDataSource candidate = SonicCd.requireSource(dataSource);
+        if(constructingOriginalR11){if(candidate!=source)throw new IllegalArgumentException("Foreign original R11 source");validateOriginalR11Assembly(r11AssemblyContext);zones.bind(candidate,originalLoadingSource);return new SonicCd(candidate,originalLoadingSource);}
+        if(selectedProfile!=null&&(r11EngineAssembled||originalSourceLoadingInstalled))throw new IllegalStateException("Original programme assembly already consumed");
         if(selectedProfile!=null&&r31Loading!=null&&stagedR31==null)throw new IllegalStateException("Actual selected programme handoff already completed");
-        if(selectedProfile!=null&&stagedR31==null){runSelectedProfile(candidate);return new SonicCd(candidate);}
+        if(selectedProfile!=null&&stagedR31==null){runSelectedProfile(candidate);return originalLoadingSource==null?new SonicCd(candidate):new SonicCd(candidate,originalLoadingSource);}
         if(stagedR31!=null){if(candidate!=source)throw new IllegalArgumentException("Foreign selected source object");validateR31LoadRequest(stagedR31Context);return new SonicCd(candidate);}
         authenticateOpeningSource(candidate); // Actual retained media before replacing source/presentation state.
         if (source != null && !source.identity().equals(candidate.identity())) {
@@ -3595,7 +5253,10 @@ public final class SonicCdGameModule implements GameModule {
     }
 
     CdPlayerFrameRuntime requirePlayerFrame() {
-        if(r11StartComplete)throw SonicCd.unsupported("Original R11 LevelStart loading has no live Ready owner yet");
+        if(r11StartComplete){
+            if(originalR11EngineLoadingAssembled())return playerFrame;
+            throw SonicCd.unsupported("Original selected loading Frame requires its actual committed engine assembly");
+        }
         if(r31Loading!=null){validateR31LoadingCut();return playerFrame;}
         if(act3FutureLoading!=null){validateAct3FutureLoadingCut();return playerFrame;}
         if (act2PastLoading != null) { validateAct2PastLoadingCut(); return playerFrame; }
@@ -3628,6 +5289,8 @@ public final class SonicCdGameModule implements GameModule {
     void closeTerrainPlayer() {
         if (!playerAdmission) return;
         playerPresentation.requirePastRenderIdle(); // Reject a caught recursive close before retiring any owner.
+        if(r11ServiceActive)throw new IllegalStateException("Original R11 close cannot interrupt loading service");
+        if(r11EngineAssembled){r11Retired=true;if(originalBoot!=null)originalBoot.retire(programWorld);}
         if(r31Loading!=null){if(r31Thread!=Thread.currentThread()||r31ServiceActive)throw new IllegalStateException("R31 teardown cannot reenter its actual thread/service");r31Loading.requireRetirementIdle(r31Host);}
         var oldFrame = playerFrame;
         var oldObjects = openingObjects;
@@ -3698,6 +5361,7 @@ public final class SonicCdGameModule implements GameModule {
 
     @Override public Level transformDecodedLevel(Level decoded) {
         var candidate = requireRuntimeSource();
+        if(constructingOriginalR11){validateOriginalR11Assembly(r11AssemblyContext);if(!(decoded instanceof SonicCdLevel actual)||actual.loadingSource()!=originalLoadingSource)throw new IllegalArgumentException("Foreign original programme geometry");originalLoadingSource.requirePlayerSource(playerFrame.stageSource());return actual;}
         if(stagedR31!=null){validateR31LoadRequest(stagedR31Context);if(!(decoded instanceof com.openggf.game.soniccd.level.SonicCdR31aLevel r31)||r31.assets()!=stagedR31)throw new IllegalArgumentException("Foreign prepared R31 geometry");return r31;}
         if(stagedAct3Future!=null) {
             validateAct3FutureLoadRequest(stagedAct3FutureContext);
@@ -3765,7 +5429,7 @@ public final class SonicCdGameModule implements GameModule {
         // Loading has no independently ticking host HUD. Native ring/time values live
         // once in PastLoadingVisit and its existing module capture. The generic level
         // adapter explicitly supports an absent HUD partition; never invent a timer.
-        if (pastLoading != null || act2Loading != null || act2PastLoading != null || act3FutureLoading!=null || r31Loading!=null) return null;
+        if (originalR11AssemblySelected() || pastLoading != null || act2Loading != null || act2PastLoading != null || act3FutureLoading!=null || r31Loading!=null) return null;
         return playerAdmission ? new SonicCdDevelopmentPlayerState() : new SonicCdStaticState.Level();
     }
     @Override public ZoneRegistry getZoneRegistry() {
@@ -3780,14 +5444,16 @@ public final class SonicCdGameModule implements GameModule {
     @Override public PhysicsProvider getPhysicsProvider() { return rules; }
     @Override public GameAudioProfile getAudioProfile() { return audio; }
     @Override public LevelInitProfile getLevelInitProfile() {
-        if(r31RegistrySelected())return r31Profile;
+        if(originalR11AssemblySelected()||r31RegistrySelected())return r31Profile;
         if(act3FutureRegistrySelected())return act3FutureProfile;
         return stagedAct2Past != null || act2PastLoading != null ? act2PastProfile : stagedAct2 != null || act2Loading != null ? act2Profile : stagedPast != null || pastLoading != null ? pastProfile : playerAdmission ? playerProfile : profile;
     }
     @Override public GameplayFrameController gameplayFrameController() { return playerAdmission ? playerPresentation : presentation; }
     @Override public PlayableCharacterRegistry getPlayableCharacterRegistry() { return characters; }
     @Override public List<RewindSnapshottable<?>> rewindAdapters() {
-        if(selectedProfile!=null)return List.of(); // actual World policy owns the pre-level profile capture
+        // Publish the exact installed World-policy adapter as a native owner so its
+        // complete preflight runs before camera/timer/other registry restore writes.
+        if(selectedProfile!=null)return selectedProfilePolicyOwner==null?List.of():List.of(selectedProfilePolicyOwner.rewindAdapter());
         return openingObjectsAdmission ? List.of(sharedOpeningAdapter)
                 : playerAdmission ? List.of(sharedPlayerAdapter) : List.of();
     }

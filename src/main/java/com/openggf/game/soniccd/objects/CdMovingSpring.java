@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -41,13 +43,16 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
  */
 public final class CdMovingSpring {
+    private CdOriginalMechanismProtocol mechanismProtocol;
+    public boolean isCurrentOriginalOperation(CdOriginalMechanismProtocol.Call call){return mechanismProtocol!=null&&mechanismProtocol.current(call);}
+
     public static final int OBJECT_ID = 0x0F, CHILD_ID = 0x0A, TILE_SELECTOR = 0x0E, MAPPING_ADDRESS = 0x209A96;
 
     /** Finite format data; construction is not source authentication or an art-residency statement. */
     public record Assets(CdAssetBytes objectTileIds, CdObjectVisualAssets visual, int mappingsAddress) {
         public Assets {
             Objects.requireNonNull(objectTileIds); Objects.requireNonNull(visual);
-            if (objectTileIds.length() != 74 || mappingsAddress != MAPPING_ADDRESS
+            if (!((objectTileIds.length()==74&&mappingsAddress==MAPPING_ADDRESS)||(objectTileIds.length()==74&&mappingsAddress==0x209C6E))
                     || visual.mappingTableOffset() != 0 || visual.mappings().length() != 16
                     || visual.mappingFrames().size() != 2 || visual.animations().size() != 1
                     || visual.animationTable().length() != 6) {
@@ -79,6 +84,18 @@ public final class CdMovingSpring {
             }
             return objectTileIds.unsignedWord(at);
         }
+    }
+    /** Finite original wheel metadata; comparison DATA carries no World invocation authority. */
+    public record SourceData(CdObjectVisualAssets visual,int mappingsAddress){
+        public SourceData{Objects.requireNonNull(visual);if(visual.mappingTableOffset()!=0||visual.mappings().length()!=16||visual.mappingFrames().size()!=2||visual.animations().size()!=1||visual.animationTable().length()!=6||mappingsAddress<0||mappingsAddress>0xFFFFFF-15)throw new IllegalArgumentException("Finite Moving Spring metadata differs");
+            for(var frame:visual.mappingFrames())for(var piece:frame.pieces())if(piece.tileOffset()>8-piece.tileCount())throw new IllegalArgumentException("Moving Spring source tiles exceed8");}
+    }
+    private interface SourceProfile{CdObjectVisualAssets visual();int mappingsAddress();boolean writesTileWord();int tileWord(CdObjectState source);}
+    private record LegacyProfile(Assets source) implements SourceProfile{
+        public CdObjectVisualAssets visual(){return source.visual();}public int mappingsAddress(){return source.mappingsAddress();}public boolean writesTileWord(){return true;}public int tileWord(CdObjectState s){return source.tileWord(s);}
+    }
+    private record NoTileStoreProfile(SourceData source) implements SourceProfile{
+        public CdObjectVisualAssets visual(){return source.visual();}public int mappingsAddress(){return source.mappingsAddress();}public boolean writesTileWord(){return false;}public int tileWord(CdObjectState s){throw new IllegalStateException("Native RTS has no tile WORD store");}
     }
     /** Read only at the reached TST.W Main and wrapper camera read; native unsigned WORD widths. */
     public record Globals(int cameraXWord, int timeStopTimerWord) {
@@ -144,17 +161,35 @@ public final class CdMovingSpring {
     public interface ReceiptGuard { void prepared(Object call); void completed(Object call); }
 
     private final CdObjectPlacementRuntime placement;
-    private final Assets assets; private final CdPlayerTerrain terrain;
+    private final SourceProfile assets; private final CdPlayerTerrain terrain;
     private final PrimaryAngleCommit angleCommit; private final SupportRead supportRead; private final DrawObjectCall drawObject;
     private DispatchObserver observer; private ReceiptGuard receiptGuard;
     private boolean running; private Object pendingOperation; private long ordinal, pendingOrdinal;
     private CdObjectCollisionCheck.FloorDistance floorResult;
 
+
+    public static CdMovingSpring fromOriginalPresentMechanism(CdObjectPlacementRuntime placement,CdR11aAssets owner,
+            CdPlayerTerrain terrain,PrimaryAngleCommit angle,SupportRead support,DrawObjectCall draw,CdOriginalMechanismProtocol.Observer observer)throws java.io.IOException{
+        CdOriginalPresentObjectSource.require(placement,owner);var o=owner.openingObjects();
+        var body=new CdMovingSpring(placement,new Assets(o.view(CdR11aObjectAssets.Table.OBJECT_TILE_IDS).bytes(),o.mechanismWheel(),CdR11aObjectAssets.Table.MECHANISM_WHEEL_MAPPINGS.range().nativeAddress()),terrain,angle,support,draw);
+        body.mechanismProtocol=new CdOriginalMechanismProtocol(placement,observer);return body;
+    }
     public CdMovingSpring(CdObjectPlacementRuntime placement, Assets assets, CdPlayerTerrain terrain,
                           PrimaryAngleCommit angleCommit, SupportRead supportRead, DrawObjectCall drawObject) {
-        this.placement = Objects.requireNonNull(placement); this.assets = Objects.requireNonNull(assets);
-        this.terrain = Objects.requireNonNull(terrain); this.angleCommit = Objects.requireNonNull(angleCommit);
-        this.supportRead = Objects.requireNonNull(supportRead); this.drawObject = Objects.requireNonNull(drawObject);
+        this(placement,new LegacyProfile(Objects.requireNonNull(assets)),terrain,angleCommit,supportRead,drawObject);
+    }
+    private CdMovingSpring(CdObjectPlacementRuntime placement,SourceProfile assets,CdPlayerTerrain terrain,
+            PrimaryAngleCommit angleCommit,SupportRead supportRead,DrawObjectCall drawObject){
+        this.placement=Objects.requireNonNull(placement);this.assets=Objects.requireNonNull(assets);this.terrain=Objects.requireNonNull(terrain);
+        this.angleCommit=Objects.requireNonNull(angleCommit);this.supportRead=Objects.requireNonNull(supportRead);this.drawObject=Objects.requireNonNull(drawObject);
+    }
+    /** Same original mechanism protocol with the source-proved no-store tile helper. */
+    public static CdMovingSpring fromProgrammeMechanism(CdObjectPlacementRuntime placement,
+            com.openggf.game.soniccd.level.CdProgrammeObjectSource source,CdPlayerTerrain terrain,
+            PrimaryAngleCommit angle,SupportRead support,DrawObjectCall draw,CdOriginalMechanismProtocol.Observer observer){
+        Objects.requireNonNull(source).requirePlacement(placement);source.requireSpringTileHelperNoop();
+        var body=new CdMovingSpring(placement,new NoTileStoreProfile(source.movingSpringData()),terrain,angle,support,draw);
+        body.mechanismProtocol=new CdOriginalMechanismProtocol(placement,Objects.requireNonNull(observer));return body;
     }
     public static CdMovingSpring fromAct2Assets(CdObjectPlacementRuntime placement, CdR12aObjectAssets owner,
                                                CdPlayerTerrain terrain, PrimaryAngleCommit angleCommit,
@@ -165,7 +200,7 @@ public final class CdMovingSpring {
         var body = new CdMovingSpring(placement, Assets.fromAct2Assets(owner), terrain, angleCommit, supportRead, drawObject);
         body.observer = Objects.requireNonNull(observer); body.receiptGuard = Objects.requireNonNull(guard); return body;
     }
-    public Assets assets() { return assets; }
+    public Assets assets() { if(assets instanceof LegacyProfile legacy)return legacy.source();throw new UnsupportedOperationException("Original programme wheel has finite DATA, not legacy tile-table Assets"); }
     public boolean isCurrentCall(Object call) { return call != null && running && call == pendingOperation; }
     public long currentCallOrdinal(Object call) {
         if (!isCurrentCall(call)) throw new IllegalStateException("Not the original current Moving Spring operation");
@@ -183,7 +218,7 @@ public final class CdMovingSpring {
         if (source.routine() != 0 && source.routine() != 2 && source.routine() != 4) {
             throw unsupported(UnsupportedBoundary.ROUTINE_DISPATCH, source, source.routine());
         }
-        running = true; ordinal = 0; floorResult = null;
+        running = true; ordinal = 0; floorResult = null;if(mechanismProtocol!=null)mechanismProtocol.begin(wholeIndex);
         try {
             var c = new Cursor(source, globals);
             switch (source.routine()) {
@@ -197,14 +232,14 @@ public final class CdMovingSpring {
             int d1 = (c.globals().cameraXWord() - 0x80) & 0xFF80;
             if (((d0 - d1) & 0xFFFF) > 0x280) delete(c, DeleteSite.ANCHOR_DISTANCE);
             return new Result(placement.pool().state(wholeIndex), c.effects);
-        } finally { running = false; pendingOperation = null; pendingOrdinal = 0; floorResult = null; }
+        } finally { if(mechanismProtocol!=null)mechanismProtocol.end();running = false; pendingOperation = null; pendingOrdinal = 0; floorResult = null; }
     }
     private void init(Cursor c) {
         c.enter(NativeRoutine.INIT);
         c.write(c.state.addByte(ROUTINE, 2).moveByte(SPRITE_FLAGS, c.state.spriteFlags() | 4).moveByte(PRIORITY, 4)
                 .moveLong(MAPPINGS, assets.mappingsAddress()).moveByte(WIDTH, 8).moveByte(Y_RADIUS, 7)
                 .moveWord(MOVING_SPRING_ANCHOR_X, c.state.centreX()).moveWord(X_VELOCITY, 0x180));
-        c.write(c.state.moveWord(TILE, assets.tileWord(c.state)));
+        if(assets.writesTileWord())c.write(c.state.moveWord(TILE, assets.tileWord(c.state))); // R41A helper RTS performs no tile store.
         var found = placement.pool().findObjSlot();
         if (found.isEmpty()) { c.effects.add(new SlotUnavailable()); delete(c, DeleteSite.INIT_CAPACITY); return; }
         var child = placement.pool().state(found.getAsInt()).moveByte(ID, CHILD_ID)
@@ -233,6 +268,7 @@ public final class CdMovingSpring {
         draw(c);
     }
     private CdObjectCollisionCheck.FloorDistance floor(Cursor c) {
+        if(mechanismProtocol!=null)mechanismProtocol.callback(CdOriginalMechanismProtocol.NativeSite.FLOOR_OWNER,()->{});
         var result = CdObjectCollisionCheck.objGetFloorDist(terrain, c.state, value -> {
             var call = new PrimaryAngleCall(capture(c), c.state, value);
             observedCall(call, () -> { readOnly(() -> { angleCommit.commit(call); return null; }); return null; });
@@ -261,6 +297,8 @@ public final class CdMovingSpring {
         c.effects.add(new CallReturned(NativeCall.OBJ_MOVE));
     }
     private void animate(Cursor c) {
+        if(mechanismProtocol!=null){mechanismProtocol.animate(new CdObjectAnimation.AnimationTable(assets.visual().animationTable(),0,1),()->running,state->c.state=state,read->new UnsupportedOperationException("Original MovingSpring animation read "+read));c.effects.add(new CallReturned(NativeCall.ANIMATE_OBJECT));return;}
+
         var original = c.state; CdObjectAnimation.State out;
         var table = new CdObjectAnimation.AnimationTable(assets.visual().animationTable(), 0, 1);
         try {
@@ -318,12 +356,12 @@ public final class CdMovingSpring {
     private void nativeStore(Cursor c, CdObjectState output, StoreKind kind) {
         var cut = capture(c); placement.pool().validateWrite(output); var expected = expected(cut, output, false);
         var call = new Publication(nextOrdinal(), kind, cut, c.state, placement.pool().state(output.identity().wholeIndex()), output);
-        observedPublication(call, () -> { placement.pool().write(output); requirePlacement(cut, expected); });
+        observedPublication(call, () -> { if(mechanismProtocol==null)placement.pool().write(output);else mechanismProtocol.store(output,()->placement.pool().write(output)); requirePlacement(cut, expected); });
     }
     private void delete(Cursor c, DeleteSite site) {
         var cut = capture(c); var expected = expected(cut, c.state, true);
         var call = new Publication(nextOrdinal(), StoreKind.DELETE, cut, c.state, c.state, null);
-        observedPublication(call, () -> { placement.pool().deleteObject(c.whole); requirePlacement(cut, expected); });
+        observedPublication(call, () -> { if(mechanismProtocol==null)placement.pool().deleteObject(c.whole);else mechanismProtocol.delete(()->placement.pool().deleteObject(c.whole)); requirePlacement(cut, expected); });
         c.state = placement.pool().state(c.whole); c.effects.add(new Deleted(site));
     }
     private long nextOrdinal() {
@@ -341,7 +379,7 @@ public final class CdMovingSpring {
         long value = nextOrdinal(); pendingOperation = call; pendingOrdinal = value;
         try {
             if (observer != null) { readOnly(() -> { observer.beforeCall(call); return null; }); readOnly(() -> { receiptGuard.prepared(call); return null; }); }
-            T result = nativeCall.get();
+            T result = mechanismProtocol==null?nativeCall.get():mechanismProtocol.callback(call,nativeCall);
             if (observer != null) { readOnly(() -> { observer.afterCall(call); return null; }); readOnly(() -> { receiptGuard.completed(call); return null; }); }
             return result;
         } finally { pendingOperation = null; pendingOrdinal = 0; }

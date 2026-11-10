@@ -12,6 +12,7 @@ import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR11bObjectData;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
 
 import java.util.ArrayList;
@@ -407,6 +408,14 @@ public final class CdMosqui {
         body.act2PastBinding = true; return body;
     }
 
+    /** Original retained A74 source with the existing synchronous native-prefix algorithm.
+     * The old named DEV constructor remains separate; this does not preload any pixels. */
+    public static CdMosqui fromOriginalPresentAssets(CdObjectPlacementRuntime runtime,CdR11aObjectAssets owner,CdPlayerTerrain terrain,PrimaryAngleCommit angle,PlayFmSound fm,DrawObjectCall draw){
+        Objects.requireNonNull(owner);if(!runtime.sourceIdentity().equals(java.util.Optional.of(owner.identity())))throw new IllegalArgumentException("Foreign original Mosqui placement/source");
+        var a=Assets.fromObjectAssets(owner);var data=new NativeAssets(secondary->CdR11aObjectAssets.decodeTileWord(a.objectTileIds().copy(),0,secondary),a.normal(),a.damaged(),a.normalMappingsAddress(),a.normalScriptAddress(),a.damagedMappingsAddress(),a.damagedScriptAddress());
+        return new CdMosqui(runtime,data,terrain,angle,fm,draw);
+    }
+
     /** Actual B72 tile selector and the four complete B views; no new art or reader owner. */
     public static CdMosqui fromPastAssets(CdObjectPlacementRuntime runtime, CdR11bAssets owner, CdPlayerTerrain terrain,
                                          PrimaryAngleCommit angleCommit, PlayFmSound playFm, DrawObjectCall drawObject) {
@@ -425,6 +434,24 @@ public final class CdMosqui {
         return new CdMosqui(runtime, nativeAssets, terrain, angleCommit, playFm, drawObject);
     }
 
+    /** Original B source/placement pair; no A/R12B data is borrowed.
+     * Object Time Check.asm:12-44 is the same shipped non-R43 semantic prefix in PPZ.
+     * The historical act2PastBinding name selects that existing guarded prefix, not a
+     * stage identity, alternate algorithm, copied state or authority to invoke a World. */
+    public static CdMosqui fromOriginalStandardPastSource(CdObjectPlacementRuntime runtime,
+            CdR11bObjectData owner,PrimaryAngleCommit angle,PlayFmSound fm,
+            DispatchObserver observer,SourceDraw draw)throws java.io.IOException{
+        Objects.requireNonNull(owner,"actual retained B object source").requirePlacement(runtime);
+        var tiles=owner.view(CdR11bObjectData.Table.OBJECT_TILE_IDS).bytes();
+        if(tiles.length()!=72)throw new IllegalArgumentException("Original Past Mosqui requires the actual72-byte tile directory");
+        var a=new NativeAssets(secondary->tiles.unsignedWord((short)tiles.unsignedWord(0)+secondary*2),
+                owner.normalMosqui(),owner.damagedMosqui(),CdR11bObjectData.Table.MAP_SPR_MOSQUI1.nativeAddress(),
+                CdR11bObjectData.Table.ANI_MOSQUI1.nativeAddress(),CdR11bObjectData.Table.MAP_SPR_MOSQUI2.nativeAddress(),CdR11bObjectData.Table.ANI_MOSQUI2.nativeAddress());
+        var body=new CdMosqui(runtime,a,CdPlayerTerrain.fromStageTerrain(owner.terrain()),angle,fm,(pool,id)->{
+            throw new IllegalStateException("Original B Mosqui requires its exact source Draw call");
+        });
+        body.observer=Objects.requireNonNull(observer);body.sourceDraw=Objects.requireNonNull(draw);body.act2PastBinding=true;return body;
+    }
     /** The legacy A74 aggregate is intentionally unavailable on a named Past instance. */
     public Assets assets() {
         if (assets == null) throw new IllegalStateException("Named Past Mosqui has no legacy A74 Assets");

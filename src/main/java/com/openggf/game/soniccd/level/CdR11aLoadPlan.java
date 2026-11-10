@@ -34,6 +34,9 @@ public final class CdR11aLoadPlan {
         public int colorCount() { return bytes.length() / 2; }
     }
 
+    /** Pure immutable entry facts, never a LevelStart/service permit. */
+    record Entry(LevelIndex index,InitialCentre centre,Bounds bounds) { }
+    private final Entry entry;
     private final LevelIndex levelIndex;
     private final InitialCentre initialCentre;
     private final Bounds bounds;
@@ -44,6 +47,7 @@ public final class CdR11aLoadPlan {
 
     private CdR11aLoadPlan(LevelIndex levelIndex, InitialCentre centre, Bounds bounds, List<PlcList> plcs,
                            List<SectionArt> sections, List<PaletteBinding> paletteBindings, byte[] palette) {
+        this.entry = new Entry(levelIndex,centre,bounds);
         this.levelIndex = levelIndex;
         this.initialCentre = centre;
         this.bounds = bounds;
@@ -51,6 +55,59 @@ public final class CdR11aLoadPlan {
         this.sections = List.copyOf(sections);
         this.paletteBindings = List.copyOf(paletteBindings);
         this.initialPalette = CdAssetBytes.copyOf(palette);
+    }
+
+    /**
+     * Original USA R11A borrows the one common table product from its actual retained reader.
+     * The component decoder below remains for the existing regional and constructed callers.
+     * This only projects immutable values; it does not invoke a PLC, palette or camera owner.
+     */
+    static CdR11aLoadPlan fromOriginalReader(CdProgrammeReader actual) {
+        var image = java.util.Objects.requireNonNull(actual, "actual retained reader").retainedOriginalR11Image();
+        var profile = CdR11aProfile.forStage(com.openggf.game.soniccd.CdReleaseVariant.USA,
+                CdPpzDataLayout.Programme.R11A.payload().stage());
+        var programme = CdPpzDataLayout.Programme.R11A;
+        var decodedEntry = readEntry(()->actual.view(programme.range("LevelDataIndex")),
+                ()->actual.view(programme.range("LevelStartLoc")),()->actual.view(programme.range("CamBounds")),
+                CdR11aLoadPlan::decodeLevelIndex,()->validateTerrainPointers(profile,image));
+        var index=decodedEntry.index();var centre=decodedEntry.centre();var bounds=decodedEntry.bounds();
+        var tables = actual.loadTables();
+        List<PlcList> plcs = new ArrayList<>();
+        for (var plc : tables.plcs()) {
+            List<PlcEntry> entries = new ArrayList<>();
+            for (var entry : plc.body().entries()) {
+                var source = sourceAt(profile, entry.sourceNativeAddress());
+                entries.add(new PlcEntry(source, profile.range(source), entry.vramAddress()));
+            }
+            var body = new CdR11aProfile.FileRange(profile.file(), profile.domain(),
+                    plc.body().fileOffset(), 2 + plc.body().entries().size() * 6);
+            plcs.add(new PlcList(plc.nativeId(), body, entries));
+        }
+        if (!(tables.sectionProgramme() instanceof CdProgrammeDefinition.CameraSections camera)) {
+            throw new IllegalArgumentException("Original R11A camera-section product differs");
+        }
+        List<SectionArt> sections = new ArrayList<>();
+        for (var row : camera.rows()) {
+            sections.add(new SectionArt(row.threshold(), row.initial(), row.update()));
+        }
+        PaletteBinding sonic = originalPalette(profile, tables, 3, PAL_SONIC, 0xFB00, 7);
+        PaletteBinding level = originalPalette(profile, tables, 5, PAL_LEVEL, 0xFB20, 23);
+        byte[] colors = new byte[128];
+        System.arraycopy(sonic.bytes().copy(), 0, colors, 0, 32);
+        System.arraycopy(level.bytes().copy(), 0, colors, 32, 96);
+        return new CdR11aLoadPlan(index, centre, bounds, plcs, sections, List.of(sonic, level), colors);
+    }
+
+    /** Validate the retained compatibility binding before borrowing its already parsed source. */
+    private static PaletteBinding originalPalette(CdR11aProfile profile, CdProgrammeLoadTables tables, int id,
+                                                   CdR11aAsset source, int destination, int counter) {
+        var palette = tables.palettes().get(id);
+        if (palette.nativeId() != id || palette.sourceNativeAddress() != profile.range(source).nativeAddress()
+                || palette.destinationWord() != destination || palette.longwordCounter() != counter
+                || (counter + 1) * 4 != source.length()) {
+            throw new IllegalArgumentException("Unverified live palette binding");
+        }
+        return new PaletteBinding(id, destination, counter, source, palette.bytes());
     }
 
     /** Component decoder; only CdR11aAssetLoader binds this to authenticated supplied media. */
@@ -76,19 +133,34 @@ public final class CdR11aLoadPlan {
      * The following $0081 is retained without inventing a selector or load behavior.
      */
     public static LevelIndex decodeLevelIndex(byte[] input) {
+        return decodeLevelIndex(input,0x23C4EE,0x23B0A8,0x210000,0x81,0x0505);
+    }
+    /** Same tagged-pointer format, checked against this authenticated programme's own sources. */
+    static LevelIndex decodeLevelIndex(byte[] input,int artAddress,int blocksAddress,int chunksAddress,
+                                      int trailingWord,int paletteIds) {
         var data = exact(input, 16, "LevelDataIndex");
         var art = new TaggedPointer(data.unsignedLong(0));
         var blocks = new TaggedPointer(data.unsignedLong(4));
-        if (art.plcId() != 3 || art.nativeAddress() != 0x23C4EE
-                || blocks.plcId() != 2 || blocks.nativeAddress() != 0x23B0A8
-                || data.unsignedLong(8) != 0x210000 || data.unsignedWord(14) != 0x0505) {
+        if (art.plcId() != 3 || art.nativeAddress() != artAddress
+                || blocks.plcId() != 2 || blocks.nativeAddress() != blocksAddress
+                || data.unsignedLong(8) != Integer.toUnsignedLong(chunksAddress) || data.unsignedWord(14) != paletteIds) {
             throw new IllegalArgumentException("LevelDataIndex has unverified tags, pointers or palette IDs");
         }
-        if (data.unsignedWord(12) != 0x0081) {
+        if (data.unsignedWord(12) != trailingWord) {
             throw new UnsupportedOperationException("Unverified LevelDataIndex trailing bytes");
         }
-        return new LevelIndex(art, blocks, 0x210000, data.slice(12, 2), data.slice(14, 2));
+        return new LevelIndex(art, blocks, chunksAddress, data.slice(12, 2), data.slice(14, 2));
     }
+    /** Decode each reached input before reading the next. A refusal never reaches a later source. */
+    static Entry readEntry(java.util.function.Supplier<CdAssetBytes> index,
+            java.util.function.Supplier<CdAssetBytes> centre,java.util.function.Supplier<CdAssetBytes> bounds,
+            java.util.function.Function<byte[],LevelIndex> decodeIndex,Runnable validatePointers){
+        var selectedIndex=decodeIndex.apply(index.get().copy());
+        var selectedCentre=decodeInitialCentre(centre.get().copy());
+        var selectedBounds=decodeBounds(bounds.get().copy());
+        validatePointers.run();return new Entry(selectedIndex,selectedCentre,selectedBounds);
+    }
+    Entry entry(){return entry;}
 
     public static InitialCentre decodeInitialCentre(byte[] input) {
         var bytes = exact(input, 4, "LevelStartLoc");
@@ -190,18 +262,19 @@ public final class CdR11aLoadPlan {
     private static void validateTerrainPointers(CdR11aProfile profile, CdMmdImage image) {
         var layouts = profile.range(LEVEL_LAYOUTS).read(image);
         int base = profile.range(LEVEL_LAYOUTS).fileOffset();
-        if (base + (short) layouts.unsignedWord(0) != profile.range(LAYOUT_FG).fileOffset()
-                || base + (short) layouts.unsignedWord(2) != profile.range(LAYOUT_BG).fileOffset()) {
-            throw new IllegalArgumentException("Live R11A plane pointers differ");
-        }
+        validatePlanePointers(layouts,base,profile.range(LAYOUT_FG).fileOffset(),profile.range(LAYOUT_BG).fileOffset());
         var indices = profile.range(LEVEL_COL_INDEX).read(image);
-        for (int i = 0; i < 8; i++) {
-            if (indices.unsignedLong(i * 4) != profile.range(LEVEL_COLLISION).nativeAddress()) {
-                throw new IllegalArgumentException("LevelColIndex pointer differs");
-            }
-        }
+        validateCollisionPointers(indices,profile.range(LEVEL_COLLISION).nativeAddress());
     }
 
+    static void validatePlanePointers(CdAssetBytes layouts,int base,int foreground,int background){
+        if(base+(short)layouts.unsignedWord(0)!=foreground||base+(short)layouts.unsignedWord(2)!=background)
+            throw new IllegalArgumentException("Live R11A plane pointers differ");
+    }
+    static void validateCollisionPointers(CdAssetBytes indices,int collisionAddress){
+        for(int i=0;i<8;i++)if(indices.unsignedLong(i*4)!=Integer.toUnsignedLong(collisionAddress))
+            throw new IllegalArgumentException("LevelColIndex pointer differs");
+    }
     public LevelIndex levelIndex() { return levelIndex; }
     public InitialCentre initialCentre() { return initialCentre; }
     public Bounds bounds() { return bounds; }

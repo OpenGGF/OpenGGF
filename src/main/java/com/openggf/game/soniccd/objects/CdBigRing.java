@@ -5,6 +5,8 @@ import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
@@ -191,6 +193,18 @@ public final class CdBigRing {
     private final ScrollLockStore scrollLock;
     private final SoundPort sound;
     private final DrawObjectCall drawObject;
+    /** Exact current original R11 source ingress. Public format records grant no invocation. */
+    public static CdBigRing fromOriginalPresentAssets(CdObjectPlacementRuntime placement,CdR11aAssets assets,
+            NativeRead read, SpecialStageStore special, PlayerCommit player, ScrollLockStore scroll, SoundPort sound, DrawObjectCall draw,CdStageClosureInvocation.Observer observer)throws java.io.IOException{
+        Objects.requireNonNull(placement);Objects.requireNonNull(assets);
+        if(!(placement.placements()==assets.placements()&&placement.sourceIdentity().equals(java.util.Optional.of(assets.identity()))))throw new IllegalArgumentException("Original closure placement/source mismatch");
+        var o=assets.openingObjects();var result=new CdBigRing(placement,new Assets(CdObjectVisualAssets.decodeStatic(o.view(CdR11aObjectAssets.Table.CLOSURE_BIG_RING_MAPPINGS).bytes().copy(),4,106),o.view(CdR11aObjectAssets.Table.CLOSURE_BIG_RING_MAPPINGS).range().nativeAddress(),o.view(CdR11aObjectAssets.Table.CLOSURE_BIG_RING_ANIMATIONS).bytes(),CdObjectVisualAssets.decodeStatic(o.view(CdR11aObjectAssets.Table.CLOSURE_BIG_RING_FLASH_MAPPINGS).bytes().copy(),8,77),o.view(CdR11aObjectAssets.Table.CLOSURE_BIG_RING_FLASH_MAPPINGS).range().nativeAddress(),o.view(CdR11aObjectAssets.Table.CLOSURE_BIG_RING_FLASH_ANIMATIONS).bytes()),read,special,player,scroll,sound,draw);
+        result.closureIssuer=new CdStageClosureInvocation.Issuer(observer);return result;
+    }
+    private CdStageClosureInvocation.Issuer closureIssuer;
+    public boolean isCurrentOriginalCall(CdStageClosureInvocation.Call call){return running&&closureIssuer!=null&&closureIssuer.current(call);}
+    private <T>T closureRead(Object call,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,java.util.function.Supplier<T> primitive){return closureIssuer==null?primitive.get():closureIssuer.invoke(call,cut,source,primitive);}
+    private void closureInvoke(Object call,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,Runnable primitive){closureRead(call,cut,source,()->{primitive.run();return null;});}
     private boolean running;
 
     /** Source-pair ingress only; caller retains every actual helper/publication authority. */
@@ -312,23 +326,23 @@ public final class CdBigRing {
     private void special(Cursor c) {
         if (specialStage == null) throw unsupported(UnsupportedBoundary.SPECIAL_STAGE_OWNER, c, 1);
         var cut = capture(c); var call = new SpecialStageCall(cut, c.state);
-        readOnly(cut, () -> specialStage.store(call)); c.effects.add(new SpecialStageStored());
+        readOnly(cut, () -> closureInvoke(call,cut,c.state,() -> specialStage.store(call))); c.effects.add(new SpecialStageStored());
     }
     private void player(Cursor c, PlayerStore call) {
         if (playerCommit == null) throw unsupported(UnsupportedBoundary.PLAYER_OWNER, c, 0);
         requireSource(call.actualCut(), c.state);
-        readOnly(call.actualCut(), () -> playerCommit.commit(call));
+        readOnly(call.actualCut(), () -> closureInvoke(call,call.actualCut(),c.state,() -> playerCommit.commit(call)));
         c.effects.add(new PlayerCommitted(call.getClass()));
     }
     private void scroll(Cursor c) {
         if (scrollLock == null) throw unsupported(UnsupportedBoundary.SCROLL_LOCK_OWNER, c, 1);
         var cut = capture(c); var call = new ScrollLockHighByteOne(cut, c.state);
-        readOnly(cut, () -> scrollLock.store(call)); c.effects.add(new ScrollLockStored());
+        readOnly(cut, () -> closureInvoke(call,cut,c.state,() -> scrollLock.store(call))); c.effects.add(new ScrollLockStored());
     }
     private void fm(Cursor c) {
         if (sound == null) throw unsupported(UnsupportedBoundary.SOUND_OWNER, c, FM_BIG_RING);
         var cut = capture(c); var call = new SoundCall(cut, c.state);
-        readOnly(cut, () -> sound.request(call)); c.effects.add(new SoundRequested());
+        readOnly(cut, () -> closureInvoke(call,cut,c.state,() -> sound.request(call))); c.effects.add(new SoundRequested());
     }
 
     /** Successful animation is computed once by the existing shared owner from its ORIGINAL inputs. */
@@ -420,7 +434,7 @@ public final class CdBigRing {
     private int read(Cursor c, ReadField field) {
         if (nativeRead == null) throw unsupported(UnsupportedBoundary.READ_OWNER, c, field.ordinal());
         var cut = capture(c); var call = new ReadCall(field, cut, c.state);
-        int value = readValue(cut, () -> nativeRead.read(call));
+        int value = readValue(cut, () -> closureRead(call,cut,c.state,() -> nativeRead.read(call)));
         int mask = field.widthBits() == 8 ? 0xFF : 0xFFFF;
         if ((value & ~mask) != 0) throw unsupported(UnsupportedBoundary.READ_VALUE_WIDTH, c, value);
         c.effects.add(new ReadReturned(field, value)); return value;
@@ -429,7 +443,7 @@ public final class CdBigRing {
         var cut = capture(c); var call = new DrawCall(cut, c.state);
         var expected = CdObjectPool.overlay(cut.pool(), List.of(c.state.moveByte(SPRITE_FLAGS, c.state.spriteFlags() & 0x7F)));
         assertPlacement(cut, cut.pool());
-        try { drawObject.drawObject(call); }
+        try { closureInvoke(call,cut,c.state,() -> drawObject.drawObject(call)); }
         catch (RuntimeException | Error original) {
             suppress(original, () -> { if (!samePlacement(cut, cut.pool())) assertPlacement(cut, expected); }); throw original;
         }

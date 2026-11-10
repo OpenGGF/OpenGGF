@@ -7,6 +7,7 @@ import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectTileIds;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.level.CdR12aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aProfile;
@@ -313,7 +314,7 @@ public final class CdFloatBlock {
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
     }
 
-    private CdFloatBlock(CdObjectPlacementRuntime runtime, Assets assets, CdSolidObject solid, TopSolidCommit commit,
+    CdFloatBlock(CdObjectPlacementRuntime runtime, Assets assets, CdSolidObject solid, TopSolidCommit commit,
                          PrefixTopSolidCommit prefixCommit, DrawObjectCall drawObject) {
         this.runtime = Objects.requireNonNull(runtime, "runtime");
         this.assets = Objects.requireNonNull(assets, "assets");
@@ -321,6 +322,25 @@ public final class CdFloatBlock {
         this.commit = commit;
         this.prefixCommit = Objects.requireNonNull(prefixCommit, "prefix commit");
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
+    }
+
+    /** Original USA R11A DATA and the existing prefix body, over exactly this retained placement.
+     * The World owns actual source/current-geometry/Frame/physical-call authority; these data do not.
+     * No caller-supplied Solid owner can silently borrow another programme's terrain. */
+    public static CdFloatBlock fromOriginalPresentAssets(CdObjectPlacementRuntime runtime, CdR11aAssets owner,
+            PrefixTopSolidCommit commit, DrawObjectCall drawObject) throws java.io.IOException {
+        Objects.requireNonNull(runtime, "actual original placement");
+        Objects.requireNonNull(owner, "actual original R11A assets");
+        var identity = owner.identity();
+        if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R11A
+                || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                || !identity.stage().equals(CdStagePayload.R11A.stage())
+                || !runtime.sourceIdentity().equals(java.util.Optional.of(identity))
+                || runtime.placements() != owner.placements()) {
+            throw new IllegalArgumentException("FloatBlock requires the same authenticated original USA R11A source");
+        }
+        return new CdFloatBlock(runtime, Assets.fromObjectAssets(owner.openingObjects()),
+                CdSolidObject.fromAssets(owner), null, commit, drawObject);
     }
 
     /** Same seven-routine body, with actual Past assets and the existing shared Solid owner's native prefix seam. */

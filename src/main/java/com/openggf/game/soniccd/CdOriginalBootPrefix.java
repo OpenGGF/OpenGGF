@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd;
 
+// Bounded SOURCE packet; authored Java UNRUN. Root owns queued validation.
+
 import com.openggf.game.GameId;
 import com.openggf.game.save.SaveManager;
 import com.openggf.game.save.SaveProfileAccess;
@@ -11,6 +13,7 @@ import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.game.soniccd.resources.CdR31aSectionArt;
+import com.openggf.game.soniccd.resources.CdBlockDefinitionStaging;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,10 +36,10 @@ final class CdOriginalBootPrefix {
         TITLE_FLAGS_90, FM_RETURN_STOP, IPX_RETURN_BLANK, BURAM_SOURCE,
         BURAM_WORDRAM_CLEAR, BURAM_HANDLER, BRAM_VARIABLES_CLEAR,
         BRAM_SELECTOR_CLEAR, BACKEND_INITIALIZED, BRAM_PARAMETERS, STORAGE_SEARCH,
-        STORAGE_RETURNED, INITIALIZATION_RETURN, R31_CONTINUATION_ISSUED, R11_CONTINUATION_ISSUED
+        STORAGE_RETURNED, INITIALIZATION_RETURN, R31_CONTINUATION_ISSUED, R11_CONTINUATION_ISSUED, PROGRAMME_FILE_CLEAR, R41_CONTINUATION_ISSUED
     }
-    enum Phase { PREPARING, STORAGE, PREPARED, WORLD_BOUND, INITIALIZATION_RETURNED, R31_PENDING, CONSUMED, R11_PENDING }
-    enum Boundary { R31_WORLD_OWNER }
+    enum Phase { PREPARING, STORAGE, PREPARED, WORLD_BOUND, INITIALIZATION_RETURNED, R31_PENDING, CONSUMED, R11_PENDING, R41_PENDING }
+    enum Boundary { R31_WORLD_OWNER, R41_PROGRAMME_SOURCE, R41_PCM_SOURCE, R41_LOADING_FRAME_SOURCE }
     enum InterruptOwner { UNKNOWN, IPX, BURAM }
     /** Actual already-adopted engine prefix only; observing it cannot resume the failed attempt. */
     static final class Failed extends IOException {
@@ -59,8 +62,8 @@ final class CdOriginalBootPrefix {
     record FmImage(CdFmSoundAssets assets,CdFmPlaySound.NativeView view,CdFmPlaySound.State resident) { }
     record State(Phase phase,CdProgramInitialization.State initialization,SonicCdProgramLoadServices.State loads,
                  CdIpxProgress.State progress,Optional<MainImage> main,Video video,Optional<CpuPalettes> cpuPalettes,
-                 WordRamKnowledge wordRam,Optional<FmImage> fm,List<Call> calls) {
-        State { calls=List.copyOf(calls); }
+                 WordRamKnowledge wordRam,Optional<FmImage> fm,CdBlockDefinitionStaging blockDefinitions,List<Call> calls) {
+        State { Objects.requireNonNull(blockDefinitions);calls=List.copyOf(calls); }
     }
     static final class Preparation {
         private final CdOriginalBootPrefix boot;private final CdSelectedProfileVisit.Prepared selected;
@@ -73,7 +76,7 @@ final class CdOriginalBootPrefix {
     record MainClears(CdAssetBytes savedFlags,CdAssetBytes cloudRam,int levelFrames,int miniSonic,
             int speedShoes,int debugMode,int debugCheat,int invincible,int bossMusic,int debugAngle,
             int debugAngleShift,int debugQuadrant,int debugFloorDistance,int goodFutureFlags,
-            int noBumperByte,CdAssetBytes shieldCpu) {
+            int noBumperByte,CdAssetBytes shieldCpu,int waterSwayAngleByte) {
         MainClears{if((noBumperByte&~255)!=0||Objects.requireNonNull(shieldCpu).length()!=0x480)throw new IllegalArgumentException("Named MAINVARS scratch extents");}
     }
     record WorkClears(com.openggf.game.soniccd.player.CdPlayerBody.State primary,
@@ -81,10 +84,17 @@ final class CdOriginalBootPrefix {
             com.openggf.game.soniccd.resources.CdPlayerArtRuntime.State playerArt,
             SonicCdR31aWorldHost.Globals globals,SonicCdR31aLoadingVisit.Scroll scroll,
             CdAssetBytes reserved,CdAssetBytes waterPalette,CdAssetBytes cpuSat,CdAssetBytes nemesisTable,
-            SonicCdR31aWorldHost.NativeCarry nativeCarry,PlcClears plc,int gameModeByte,int demoDataIndexWord) { }
+            SonicCdR31aWorldHost.NativeCarry nativeCarry,PlcClears plc,int gameModeByte,int demoDataIndexWord,int waterDeferredByte) { }
     record PlcClears(com.openggf.game.soniccd.resources.CdR11aPlcBuffer.State queue,
             com.openggf.game.soniccd.resources.CdR11aSectionArt.SavedDecoder saved,int remaining,int budget,int hint,int pad) { }
     private MainClears mainClears;
+    // A distinct named MAINVARS product, never projected later from a value/capture or DEV bank.
+    private com.openggf.game.soniccd.objects.CdTimeWarpSaveData.State timeWarpSaved;
+    com.openggf.game.soniccd.objects.CdTimeWarpSaveData.State timeWarpSavedAfterMainClear(){
+        if(mainClears==null||timeWarpSaved==null||!state.calls().contains(Call.MAIN_VARIABLES_CLEAR))
+            throw new IllegalStateException("Original MAINVARS warp-save clear not reached");
+        return timeWarpSaved;
+    }
     private WorkClears workClears;
     record PhysicalClears(CdAssetBytes playerResident,CdAssetBytes hscroll) { }
     private PhysicalClears mdClears;
@@ -115,7 +125,7 @@ final class CdOriginalBootPrefix {
         var camera=new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera(0,0);
         var copies=new SonicCdR31aLoadingVisit.Copies(0,0,new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.CopiedCameras(camera,camera,camera),0,new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.FlagWords(0,0,0));
         return new WorkClears(actor,environment,new com.openggf.game.soniccd.resources.CdPlayerArtRuntime.State(zero(768),physicalClears().playerResident(),0,false),globals,new SonicCdR31aLoadingVisit.Scroll(fg,bg,copies,0,0,0),zero(1984),zero(128),zero(640),zero(512),new SonicCdR31aWorldHost.NativeCarry(OptionalLong.of(0),OptionalInt.empty(),OptionalLong.of(0),OptionalInt.of(0)),
-                new PlcClears(com.openggf.game.soniccd.resources.CdR11aPlcBuffer.cleared(),new com.openggf.game.soniccd.resources.CdR11aSectionArt.SavedDecoder(com.openggf.game.soniccd.resources.CdR11aSectionArt.Writer.CLEARED,0,0,0,0,0),0,0,0,0),0,0);
+                new PlcClears(com.openggf.game.soniccd.resources.CdR11aPlcBuffer.cleared(),new com.openggf.game.soniccd.resources.CdR11aSectionArt.SavedDecoder(com.openggf.game.soniccd.resources.CdR11aSectionArt.Writer.CLEARED,0,0,0,0,0),0,0,0,0),0,0,0);
     }
     // END named original clear products.
 
@@ -146,7 +156,7 @@ final class CdOriginalBootPrefix {
         if(slot<=0)throw new IllegalArgumentException("Actual positive selected slot required");this.slot=slot;
         state=new State(Phase.PREPARING,CdProgramInitialization.unknown(),SonicCdProgramLoadServices.unknown(),CdIpxProgress.unknown(),
                 Optional.empty(),new Video(Optional.empty(),Optional.empty(),Optional.empty(),OptionalLong.empty(),OptionalLong.empty(),Optional.empty(),false),
-                Optional.empty(),new WordRamKnowledge(unknownTail(),unknownTail(),OptionalInt.empty()),Optional.empty(),List.of());
+                Optional.empty(),new WordRamKnowledge(unknownTail(),unknownTail(),OptionalInt.empty()),Optional.empty(),CdBlockDefinitionStaging.unknown(),List.of());
     }
     static Preparation prepare(CdGameDataSource source,SaveManager manager,int slot,SonicCdGameModule.ProfileEntry entry,
                                CdProgramInitialization.ExecutionEnvironment environment)throws IOException{
@@ -225,11 +235,25 @@ final class CdOriginalBootPrefix {
         if(!initialized.isFor(manager,GameId.SCD))throw new IllegalStateException("Another backend initialization result");
         backendInitialization=initialized;call(Call.BACKEND_INITIALIZED);call(Call.BRAM_PARAMETERS);phase(Phase.STORAGE);
     }
+    /** Finite represented-field projection only. N1ecc MAINVARS[FF0F00,FF2000) is cleared
+     * by IPX.Start32-37 and MD.Start25-30. The private reached clear below is its sole owner.
+     * Sorting the documented packed native addresses supplies no RAM padding; bytes outside
+     * the declared interval remain typed UNKNOWN, not readable zero. */
+    private static com.openggf.game.soniccd.objects.CdTimeWarpSaveData.State warpSavedProjection(int first,int end){
+        if(first<0||end<first||end>0x1000000)throw new IllegalArgumentException("Native clear interval");
+        var addresses=new java.util.TreeSet<Integer>();
+        for(var field:com.openggf.game.soniccd.objects.CdTimeWarpSaveData.SavedField.values())
+            for(int part=0;part<field.width();part++)addresses.add(field.nativeAddress()+part);
+        byte[] bytes=new byte[addresses.size()],known=new byte[addresses.size()];int at=0;
+        for(int address:addresses)known[at++]=(byte)(address>=first&&address<end?1:0);
+        return com.openggf.game.soniccd.objects.CdTimeWarpSaveData.State.supplied(CdAssetBytes.copyOf(bytes),CdAssetBytes.copyOf(known));
+    }
     private void clearMain(){
-        var mainReady=new MainClears(zero(766),zero(512),0,0,0,0,0,0,0,0,0,0,0,0,0,zero(0x480)); // MAINVARS21-192, before selected reads.
+        var warpReady=warpSavedProjection(0xFF0F00,0xFF2000);
+        var mainReady=new MainClears(zero(766),zero(512),0,0,0,0,0,0,0,0,0,0,0,0,0,zero(0x480),0); // MAINVARS21-192, before selected reads.
         var p=CdIpxProgress.mainVariablesCleared();
         var main=new MainImage(new CdLevelGlobals(0,0,0,0,0,0,0,0,0),0,0,0,0,0);
-        replace(CdProgramInitialization.clearMainVariables(state.initialization()),state.loads(),p,Optional.of(main),state.video(),state.cpuPalettes(),state.wordRam(),state.fm());mainClears=mainReady;call(Call.MAIN_VARIABLES_CLEAR);
+        replace(CdProgramInitialization.clearMainVariables(state.initialization()),state.loads(),p,Optional.of(main),state.video(),state.cpuPalettes(),state.wordRam(),state.fm());mainClears=mainReady;timeWarpSaved=warpReady;call(Call.MAIN_VARIABLES_CLEAR);
     }
     private void returnStopAndBlank(){
         // IPX1375-77: the actual Main CPU queue2 store, not StopSound/driver execution.
@@ -260,7 +284,7 @@ final class CdOriginalBootPrefix {
     void bindWorld(SonicCdGameModule owner,WorldSession actual,Object originalInvocation){
         if(owner!=module||originalInvocation!=invocation||failed||retired||(interruptOwner!=InterruptOwner.BURAM&&interruptOwner!=InterruptOwner.IPX))throw new IllegalStateException("Another original boot invocation");
         requireWorld(actual);if(world!=null&&world!=actual)throw new IllegalStateException("Original boot cannot change Worlds");
-        var before=state;var ready=before.phase()==Phase.PREPARED?new State(Phase.WORLD_BOUND,before.initialization(),before.loads(),before.progress(),before.main(),before.video(),before.cpuPalettes(),before.wordRam(),before.fm(),before.calls()):before;
+        var before=state;var ready=before.phase()==Phase.PREPARED?new State(Phase.WORLD_BOUND,before.initialization(),before.loads(),before.progress(),before.main(),before.video(),before.cpuPalettes(),before.wordRam(),before.fm(),before.blockDefinitions(),before.calls()):before;
         world=actual;state=ready;
     }
     private void requireWorld(WorldSession actual){
@@ -275,12 +299,68 @@ final class CdOriginalBootPrefix {
     }
     Continuation issueR31(SonicCdGameModule owner,CdSelectedProfileVisit.Publication original){return issueProgramme(owner,original,CdSelectedProfileVisit.Programme.R31A);}
     Continuation issueR11(SonicCdGameModule owner,CdSelectedProfileVisit.Publication original){return issueProgramme(owner,original,CdSelectedProfileVisit.Programme.R11A);}
+    Continuation issueR41(SonicCdGameModule owner,CdSelectedProfileVisit.Publication original){return issueProgramme(owner,original,CdSelectedProfileVisit.Programme.R41A);}
+    Unowned stopR41Pcm(Continuation original,SonicCdGameModule owner,CdSelectedProfileVisit.Publication publication){
+        original.requireR41Start(owner,publication);failed=true;original.retired=true;original.r41Running=false;
+        return new Unowned(Boundary.R41_PCM_SOURCE);
+    }
+    /** Genuine selected Start returned, but no TT Frame/loading admission exists in this basis.
+     * Terminal at the GameModes -> InitStage dispatch, before its first stage_demo store. */
+    Unowned stopR41Loading(Continuation original,SonicCdGameModule owner,CdSelectedProfileVisit.Publication publication){
+        original.requireR41Start(owner,publication);
+        failed=true;original.retired=true;original.r41Running=false;
+        return new Unowned(Boundary.R41_LOADING_FRAME_SOURCE);
+    }
     private Continuation issueProgramme(SonicCdGameModule owner,CdSelectedProfileVisit.Publication original,CdSelectedProfileVisit.Programme target){
         requireWorld(world);if(owner!=module||failed||retired||continuation!=null||state.phase()!=Phase.INITIALIZATION_RETURNED)throw new IllegalStateException("Original programme continuation is unavailable");
         visit.requireProgrammeHandoff(owner,original,target);
-        var ready=new Continuation(target);var calls=new ArrayList<>(state.calls());calls.add(target==CdSelectedProfileVisit.Programme.R31A?Call.R31_CONTINUATION_ISSUED:Call.R11_CONTINUATION_ISSUED);
-        var next=new State(target==CdSelectedProfileVisit.Programme.R31A?Phase.R31_PENDING:Phase.R11_PENDING,state.initialization(),state.loads(),state.progress(),state.main(),state.video(),state.cpuPalettes(),state.wordRam(),state.fm(),calls);
+        // This current original RunMMD invocation, after the actual selected
+        // handoff gate, supplies the clear. The older MDINIT/BURAM WORK_FILE_CLEAR
+        // log entries do not: those programmes relocate over this region.
+        requireOriginalZeroOriginProgramme(target);
+        projectCurrentProgrammeFileClear();
+        var ready=new Continuation(target);var calls=new ArrayList<>(state.calls());calls.add(target==CdSelectedProfileVisit.Programme.R41A?Call.R41_CONTINUATION_ISSUED:target==CdSelectedProfileVisit.Programme.R31A?Call.R31_CONTINUATION_ISSUED:Call.R11_CONTINUATION_ISSUED);
+        var next=new State(target==CdSelectedProfileVisit.Programme.R41A?Phase.R41_PENDING:target==CdSelectedProfileVisit.Programme.R31A?Phase.R31_PENDING:Phase.R11_PENDING,state.initialization(),state.loads(),state.progress(),state.main(),state.video(),state.cpuPalettes(),state.wordRam(),state.fm(),state.blockDefinitions(),calls);
         continuation=ready;state=next;return ready;
+    }
+    /** Preflight the actual privately authenticated holder, not an equal Identity DTO.
+     * R11 profile.verifyProgram and R31 ProgrammeReader.verify establish the complete
+     * header including origin0/size0. Their immutable source proofs are part of this
+     * packet. A future ingress must prove its own post-clear copy relation.
+     */
+    private void requireOriginalZeroOriginProgramme(CdSelectedProfileVisit.Programme target){
+        var disc=source.release().normalizedSha256();
+        if(source.release().variant()!=CdReleaseVariant.USA)throw new IllegalArgumentException("Original USA programme required");
+        if(target==CdSelectedProfileVisit.Programme.R11A){
+            var actual=source.assets();var id=actual.identity();
+            if(id.file()!=CdNativeFile.R11A||id.variant()!=CdReleaseVariant.USA
+                    ||id.domain()!=com.openggf.game.soniccd.media.CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    ||!id.mmdSha256().equals(actual.profile().expectedMmdSha256())
+                    ||!disc.equals(id.observedWholeDiscSha256()))
+                throw new IllegalArgumentException("Original zero-origin R11 holder differs");
+        }else if(target==CdSelectedProfileVisit.Programme.R31A){
+            var actual=source.r31aAssets().orElseThrow();var id=actual.identity();
+            if(id.file()!=CdNativeFile.R31A||id.variant()!=CdReleaseVariant.USA
+                    ||id.domain()!=com.openggf.game.soniccd.media.CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    ||!disc.equals(id.observedWholeDiscSha256()))
+                throw new IllegalArgumentException("Original zero-origin R31 holder differs");
+        }else if(target==CdSelectedProfileVisit.Programme.R41A){
+            // CdProgrammeReader verifies the entire retained original MMD and originalHeader
+            // including origin0/size0. No disassembly payload or public identity record enters.
+            var actual=source.programmeData(CdStagePayload.R41A.stage()).orElseThrow(()->new Unowned(Boundary.R41_PROGRAMME_SOURCE));
+            actual.requireRetained();
+            if(actual.programme()!=com.openggf.game.soniccd.level.CdR4DataLayout.Programme.R41A
+                    || actual.ordinaryZoneActWord()!=0x200 || !disc.equals(actual.wholeDiscSha256()))
+                throw new IllegalArgumentException("Original zero-origin R41 holder differs");
+        }else throw new IllegalArgumentException("Unproved original programme copy relation");
+    }
+    private void projectCurrentProgrammeFileClear(){
+        // IPX RunMMD.ClearFileBuffer:1311-1319. The complete semantic bank
+        // lies inside its actual clear. No patterns, palettes or DATA are reset.
+        var before=state;
+        state=new State(before.phase(),before.initialization(),before.loads(),before.progress(),before.main(),before.video(),
+                before.cpuPalettes(),before.wordRam(),before.fm(),CdBlockDefinitionStaging.afterFileBufferClear(),before.calls());
+        call(Call.PROGRAMME_FILE_CLEAR);
     }
     Unowned unownedR31(Continuation original){if(original!=continuation)throw new IllegalArgumentException("Another continuation");failed=true;original.retired=true;return new Unowned(Boundary.R31_WORLD_OWNER);}
 
@@ -306,6 +386,27 @@ final class CdOriginalBootPrefix {
                     ||failed||CdOriginalBootPrefix.this.retired||retired||consumed||CdOriginalBootPrefix.this.consumed)throw new IllegalStateException("Expired original R31 continuation");
             requireWorld(issuedWorld);
         }
+        private boolean r41Entered,r41Running;
+        private Thread r41Thread;
+        private CdSelectedProfileVisit.Publication r41Publication;
+        void beginR41Start(SonicCdGameModule actual,CdSelectedProfileVisit.Publication original){
+            require();
+            if(actual!=owner||target!=CdSelectedProfileVisit.Programme.R41A||r41Entered)
+                throw new IllegalStateException("No unused original R41 Start generation");
+            visit.requireProgrammeHandoff(owner,original,target);
+            requireOriginalZeroOriginProgramme(target);
+            r41Entered=true;r41Running=true;r41Thread=Thread.currentThread();r41Publication=original;
+        }
+        void requireR41Start(SonicCdGameModule actual,CdSelectedProfileVisit.Publication original){
+            require();
+            if(actual!=owner||target!=CdSelectedProfileVisit.Programme.R41A||!r41Entered||!r41Running
+                    ||Thread.currentThread()!=r41Thread||original!=r41Publication)
+                throw new IllegalStateException("No current original R41 Start callback");
+            visit.requireProgrammeHandoff(owner,original,target);
+        }
+        void failR41Start(){
+            r41Running=false;r41Publication=null;retired=true;CdOriginalBootPrefix.this.failed=true;
+        }
         void bindLoading(SonicCdR31aLoadingVisit actual,SonicCdR31aLoadingVisit.Host actualHost,CdPlayerFrameRuntime actualFrame,CdR31aSectionArt actualArt){
             require();
             try{
@@ -318,7 +419,7 @@ final class CdOriginalBootPrefix {
         }
         final class R11Start {
             private final State before,ready;private final Thread issuedThread=Thread.currentThread();private final CdPlayerFrameRuntime actual;private final CdSelectedProfileVisit.Publication publication;
-            private R11Start(CdPlayerFrameRuntime actual,CdSelectedProfileVisit.Publication publication){this.before=state;this.actual=actual;this.publication=publication;ready=new State(Phase.CONSUMED,before.initialization(),before.loads(),before.progress(),before.main(),before.video(),before.cpuPalettes(),before.wordRam(),before.fm(),before.calls());}
+            private R11Start(CdPlayerFrameRuntime actual,CdSelectedProfileVisit.Publication publication){this.before=state;this.actual=actual;this.publication=publication;ready=new State(Phase.CONSUMED,before.initialization(),before.loads(),before.progress(),before.main(),before.video(),before.cpuPalettes(),before.wordRam(),before.fm(),before.blockDefinitions(),before.calls());}
         }
         private R11Start pendingR11;
         R11Start prepareR11Start(CdPlayerFrameRuntime actual,CdSelectedProfileVisit.Publication original){
@@ -326,18 +427,35 @@ final class CdOriginalBootPrefix {
             var ready=new R11Start(actual,original);visit.requireProgrammeHandoff(owner,original,target);owner.requireOriginalBootR11Frame(this,actual,original);
             if(state!=ready.before)throw new IllegalStateException("Original R11 boot preimage changed");pendingR11=ready;return ready;
         }
+        R11Start prepareR41Start(CdPlayerFrameRuntime actual,CdSelectedProfileVisit.Publication original){
+            requireR41Start(owner,original);
+            if(pendingR11!=null)throw new IllegalStateException("Original Start already prepared");
+            var ready=new R11Start(actual,original);owner.requireOriginalBootR41Frame(this,actual,original);
+            if(state!=ready.before)throw new IllegalStateException("Original R41 boot preimage changed");
+            pendingR11=ready;return ready;
+        }
+        void adoptR41Start(R11Start actual){
+            if(actual==null||target!=CdSelectedProfileVisit.Programme.R41A||!r41Running||r41Publication!=actual.publication)
+                throw new IllegalStateException("Original R41 Start target expired");
+            adoptOriginalStart(actual);r41Running=false;r41Publication=null;
+        }
         void adoptR11Start(R11Start actual){
+            if(target!=CdSelectedProfileVisit.Programme.R11A)throw new IllegalStateException("Original R11 Start target expired");
+            adoptOriginalStart(actual);
+        }
+        private void adoptOriginalStart(R11Start actual){
             if(actual==null||actual!=pendingR11||Thread.currentThread()!=actual.issuedThread||state!=actual.before||consumed||retired||failed||CdOriginalBootPrefix.this.retired||continuation!=this)
                 throw new IllegalStateException("Original prevalidated R11 start expired");
             frame=actual.actual;consumed=true;CdOriginalBootPrefix.this.consumed=true;state=actual.ready;pendingR11=null;
-            visit.adoptR11StartAfterNative(owner,actual.publication);
+            if(target==CdSelectedProfileVisit.Programme.R41A)visit.adoptR41StartAfterNative(owner,actual.publication);
+            else visit.adoptR11StartAfterNative(owner,actual.publication);
         }
         void consume(SonicCdR31aLoadingVisit actual,SonicCdR31aLoadingVisit.Host actualHost,SonicCdR31aLoadingVisit.Publication original){
             require();
             try{
                 if(core==null||actual!=core||actualHost!=host||loadingThread!=Thread.currentThread())throw new IllegalStateException("No original bound R31 load generation");
                 var before=state;
-                var ready=new State(Phase.CONSUMED,before.initialization(),before.loads(),before.progress(),before.main(),before.video(),before.cpuPalettes(),before.wordRam(),before.fm(),before.calls());
+                var ready=new State(Phase.CONSUMED,before.initialization(),before.loads(),before.progress(),before.main(),before.video(),before.cpuPalettes(),before.wordRam(),before.fm(),before.blockDefinitions(),before.calls());
                 core.requirePublication(host,original);owner.requireOriginalBootR31Loading(this,core,host,frame,art);
                 if(state!=before)throw new IllegalStateException("Original boot preimage changed during load validation");
                 consumed=true;CdOriginalBootPrefix.this.consumed=true;state=ready;
@@ -352,13 +470,13 @@ final class CdOriginalBootPrefix {
 
     private static CdAssetBytes zero(int bytes){return CdAssetBytes.copyOf(new byte[bytes]);}
     private static List<OptionalInt> unknownTail(){return List.of(OptionalInt.empty(),OptionalInt.empty());}
-    private void phase(Phase phase){state=new State(phase,state.initialization(),state.loads(),state.progress(),state.main(),state.video(),state.cpuPalettes(),state.wordRam(),state.fm(),state.calls());}
-    private void call(Call call){var calls=new ArrayList<>(state.calls());calls.add(call);state=new State(state.phase(),state.initialization(),state.loads(),state.progress(),state.main(),state.video(),state.cpuPalettes(),state.wordRam(),state.fm(),calls);}
+    private void phase(Phase phase){state=new State(phase,state.initialization(),state.loads(),state.progress(),state.main(),state.video(),state.cpuPalettes(),state.wordRam(),state.fm(),state.blockDefinitions(),state.calls());}
+    private void call(Call call){var calls=new ArrayList<>(state.calls());calls.add(call);state=new State(state.phase(),state.initialization(),state.loads(),state.progress(),state.main(),state.video(),state.cpuPalettes(),state.wordRam(),state.fm(),state.blockDefinitions(),calls);}
     private void video(Video video){replace(state.initialization(),state.loads(),state.progress(),state.main(),video,state.cpuPalettes(),state.wordRam(),state.fm());}
     private void progress(CdIpxProgress.State progress){replace(state.initialization(),state.loads(),progress,state.main(),state.video(),state.cpuPalettes(),state.wordRam(),state.fm());}
     private void replace(CdProgramInitialization.State init,SonicCdProgramLoadServices.State loads,CdIpxProgress.State progress,
                          Optional<MainImage> main,Video video,Optional<CpuPalettes> palettes,WordRamKnowledge word,Optional<FmImage> fm){
-        state=new State(state.phase(),init,loads,progress,main,video,palettes,word,fm,state.calls());
+        state=new State(state.phase(),init,loads,progress,main,video,palettes,word,fm,state.blockDefinitions(),state.calls());
     }
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

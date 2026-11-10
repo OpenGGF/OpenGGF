@@ -117,7 +117,34 @@ public final class CdR11aObjectAssets {
         SONIC_HOLE_MAPPINGS("MapSpr_SonicHole", 0x8AD4, 18),
         // Powerup/Main.asm:58,132: actual USA absolute LEAs $6490/$6534 select the full nine-script include.
         // Keep raw through the existing view owner; no animation step, visual decode or art access occurs here.
-        POWERUP_ANIMATIONS("Ani_Powerup", 0x3ED74, 296);
+        POWERUP_ANIMATIONS("Ani_Powerup", 0x3ED74, 296),
+        // APPEND ONLY: preserve all original68 ordinals. Native PP Data (Act 1 Present):530-538:
+        // Powerup274 ends3EFAE; Splash Ani24 then Map100 end at existing Door Ani3F02A.
+        TUNNEL_DOOR_SPLASH_ANIMATIONS("Ani_TunnelDoorSplash",0x3EFAE,24),
+        TUNNEL_DOOR_SPLASH_MAPPINGS("MapSpr_TunnelDoorSplash",0x3EFC6,100),
+        // Original SpinSplash Init/Animate select these contiguous 8/24-byte source includes.
+        // Append only: preserve the previous 70 descriptor ordinals and existing art producers.
+        TUNNEL_WATERFALL_ANIMATIONS("Ani_TunnelWaterfall",0x3F054,8),
+        TUNNEL_WATERFALL_MAPPINGS("MapSpr_TunnelWaterfall",0x3F05C,24),
+        MECHANISM_WHEEL_ANIMATIONS("Ani_MovingSpring",0x9C68,6),
+        MECHANISM_WHEEL_MAPPINGS("MapSpr_MovingSpring",0x9C6E,16),
+        MECHANISM_BOARD_HITBOXES("ObjSpringBoard_ChkPlayer.Hitboxes",0xBDC2,32),
+        MECHANISM_BOARD_ANIMATIONS("Ani_SpringBoard",0xC090,54),
+        MECHANISM_BOARD_MAPPINGS("MapSpr_SpringBoard",0xC0C6,84),
+        MECHANISM_WALL_MAPPINGS("MapSpr_BreakableWall",0xF9F0,312),
+        MECHANISM_WALL_FRAMES("ObjBreakableWall_PieceFrames",0xFB28,64),
+        MECHANISM_WALL_DELTAS("ObjBreakableWall_PieceDeltas",0xFB68,24),
+        MECHANISM_WALL_SPEEDS("ObjBreakableWall_PieceSpeeds",0xFB80,48),
+        CLOSURE_BIG_RING_ANIMATIONS("original BIG_RING_ANIMATIONS",0x3F162,8),
+        CLOSURE_BIG_RING_MAPPINGS("original BIG_RING_MAPPINGS",0x3F16A,176),
+        CLOSURE_BIG_RING_FLASH_ANIMATIONS("original BIG_RING_FLASH_ANIMATIONS",0xD990,12),
+        CLOSURE_BIG_RING_FLASH_MAPPINGS("original BIG_RING_FLASH_MAPPINGS",0xD99C,416),
+        CLOSURE_SIGNPOST_ANIMATIONS("original SIGNPOST_ANIMATIONS",0x3F21A,14),
+        CLOSURE_GOAL_SIGNPOST_MAPPINGS("original GOAL_SIGNPOST_MAPPINGS",0x3F228,126),
+        CLOSURE_RESULTS_MAPPINGS("original RESULTS_MAPPINGS",0xF4D4,622),
+        CLOSURE_GOAL_BASE_TILES("original GOAL_BASE_TILES",0xD744,112),
+        CLOSURE_TIME_BONUSES("original TIME_BONUSES",0xD92E,42),
+        CLOSURE_RESULTS_INIT("original RESULTS_INIT",0xF4BC,24);
 
         private final String nativeLabel;
         private final int offset;
@@ -374,6 +401,7 @@ public final class CdR11aObjectAssets {
     private CdObjectVisualAssets monitorTime;
     private MonitorTimeArtBank monitorTimeArtBank;
     private CdObjectVisualAssets tunnelDoor;
+    private CdObjectVisualAssets tunnelDoorSplash;
     private CdObjectVisualAssets pataBataNormal;
     private CdObjectVisualAssets pataBataDamaged;
     private PataBataArtBank pataBataArtBank;
@@ -389,6 +417,16 @@ public final class CdR11aObjectAssets {
     private CdObjectVisualAssets tamabbohNormal;
     private CdObjectVisualAssets tamabbohDamaged;
     private CdObjectVisualAssets tamabbohMissile;
+    private CdObjectVisualAssets mechanismWheel,mechanismBoard,mechanismWall;
+    public synchronized CdObjectVisualAssets mechanismWheel(){
+        if(mechanismWheel==null)mechanismWheel=CdObjectVisualAssets.decode(read(Table.MECHANISM_WHEEL_MAPPINGS),2,read(Table.MECHANISM_WHEEL_ANIMATIONS),1,8);return mechanismWheel;
+    }
+    public synchronized CdObjectVisualAssets mechanismBoard(){
+        if(mechanismBoard==null)mechanismBoard=CdObjectVisualAssets.decode(read(Table.MECHANISM_BOARD_MAPPINGS),6,read(Table.MECHANISM_BOARD_ANIMATIONS),5,21);return mechanismBoard;
+    }
+    public synchronized CdObjectVisualAssets mechanismWall(){
+        if(mechanismWall==null)mechanismWall=CdObjectVisualAssets.decodeStatic(read(Table.MECHANISM_WALL_MAPPINGS),14,57);return mechanismWall;
+    }
     private CdObjectVisualAssets spinningDisc;
     private CdObjectVisualAssets logShadow;
     private CdObjectVisualAssets sonicHole;
@@ -745,6 +783,13 @@ public final class CdR11aObjectAssets {
     }
 
     /** Normal Spin Tunnel Door: two counted frames and its one real FC script, sharing the existing standard art. */
+    /** Original R11 complete includes; existing common decoder, no copied disassembly art. */
+    public synchronized CdObjectVisualAssets tunnelDoorSplash(){
+        if(tunnelDoorSplash==null)tunnelDoorSplash=CdObjectVisualAssets.decode(read(Table.TUNNEL_DOOR_SPLASH_MAPPINGS),7,
+                read(Table.TUNNEL_DOOR_SPLASH_ANIMATIONS),3,86);
+        return tunnelDoorSplash;
+    }
+
     public synchronized CdObjectVisualAssets tunnelDoor() {
         if (tunnelDoor == null) {
             tunnelDoor = CdObjectVisualAssets.decode(read(Table.TUNNEL_DOOR_MAPPINGS), 2,

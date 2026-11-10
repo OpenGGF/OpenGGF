@@ -157,7 +157,7 @@ public final class CdExplosion {
     public enum UnsupportedBoundary {
         /** oRoutine outside {0,2,4} misaligns into or indexes past the three-entry .Index (Explosion/Main.asm:53-56). */
         ROUTINE_DISPATCH,
-        /** A reached raw animation directory/frame read exceeds its finite authenticated B view. */
+        /** A reached raw animation directory/frame read exceeds its finite authenticated view. */
         ANIMATION_DIRECTORY_READ, ANIMATION_FRAME_READ
     }
 
@@ -179,6 +179,8 @@ public final class CdExplosion {
     private final Assets assets;
     private final DrawObjectCall drawObject;
     private final boolean pastBinding;
+    public enum TilePriority { LAYER_DEPENDENT, FIXED_LOW }
+    private final TilePriority tilePriority;
     private boolean dispatching;
 
     /** Ephemeral source observations; records and equal copies confer no World authority. */
@@ -246,10 +248,14 @@ public final class CdExplosion {
 
     private CdExplosion(CdObjectPlacementRuntime runtime, Assets assets, DrawObjectCall drawObject,
                         boolean pastBinding) {
+        this(runtime,assets,drawObject,pastBinding,TilePriority.LAYER_DEPENDENT);
+    }
+    private CdExplosion(CdObjectPlacementRuntime runtime,Assets assets,DrawObjectCall drawObject,
+            boolean pastBinding,TilePriority tilePriority){
         this.runtime = Objects.requireNonNull(runtime, "runtime");
         this.assets = Objects.requireNonNull(assets, "assets");
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
-        this.pastBinding = pastBinding;
+        this.pastBinding = pastBinding;this.tilePriority=Objects.requireNonNull(tilePriority);
     }
 
     /** Named B binding; the existing public A constructor and two-field Assets value keep their contract. */
@@ -303,19 +309,28 @@ public final class CdExplosion {
         body.observer=Objects.requireNonNull(observer);body.sourceDraw=Objects.requireNonNull(draw);body.receiptGuard=Objects.requireNonNull(guard);return body;
     }
 
+    /** Same original live-store/animation kernel, with an authenticated semantic tile profile.
+     * Native STAGE_ZONE=2 writes fixed$0680 and omits the layer-dependent priority branch. */
+    public static CdExplosion withOriginalOperations(CdObjectPlacementRuntime runtime,Assets assets,
+            TilePriority tilePriority,DispatchObserver observer,SourceDraw draw,ReceiptGuard guard){
+        var body=new CdExplosion(runtime,assets,(pool,id)->{throw new IllegalStateException("Original effect requires its current source Draw");},false,tilePriority);
+        body.observer=Objects.requireNonNull(observer);body.sourceDraw=Objects.requireNonNull(draw);
+        body.receiptGuard=Objects.requireNonNull(guard);return body;
+    }
     public Assets assets() { return assets; }
 
     /** One ObjExplosion dispatch for the whole-pool dynamic slot currently holding ID $18. */
     public Result run(int wholeIndex) {
-        if (pastBinding && dispatching) {
-            throw new IllegalStateException("Past Explosion dispatch is not reentrant");
+        if (dispatching) {
+            throw new IllegalStateException(pastBinding ? "Past Explosion dispatch is not reentrant" : "Explosion dispatch is not reentrant");
         }
         dispatching = true;
-        if (observer != null) { activeWhole = wholeIndex; publicationOrdinal = 0; }
+        activeWhole = wholeIndex; publicationOrdinal = 0;
         try {
             return runSelected(wholeIndex);
         } finally {
-            dispatching = false;
+            pendingPublication = null; pendingDraw = null; // Retire a rejected reached-prefix call too.
+            activeWhole = -1; dispatching = false;
         }
     }
 
@@ -332,12 +347,12 @@ public final class CdExplosion {
                 state = init(state, pool, effects);
                 effects.add(new CallReturned(NativeCall.INIT));
                 state = animate(state);                                        // falls into ObjExplosion_Main
-                observedWrite(state, StoreKind.ANIMATION_RESULT);
+                if (pastBinding) observedWrite(state, StoreKind.ANIMATION_RESULT);
                 effects.add(new CallReturned(NativeCall.MAIN));
             }
             case 2 -> {
                 state = animate(state);
-                observedWrite(state, StoreKind.ANIMATION_RESULT);
+                if (pastBinding) observedWrite(state, StoreKind.ANIMATION_RESULT);
                 effects.add(new CallReturned(NativeCall.MAIN));
             }
             case 4 -> {
@@ -361,8 +376,8 @@ public final class CdExplosion {
         var self = state.addByte(ROUTINE, 2)                                   // ADDQ.B #2,oRoutine(a0)
                 .moveByte(SPRITE_FLAGS, state.spriteFlags() | 4)               // ORI.B #%100,oSprFlags(a0): flips and bit 7 stay
                 .moveByte(PRIORITY, 1)                                         // MOVE.B #1,oPriority(a0)
-                .moveWord(TILE, NATIVE_TILE_WORD);                             // MOVE.W #$8680,oTile(a0)
-        if (self.unsignedByte(LAYER) != 0) {                                   // TST.B oLayer(a0) / BEQ.S .HighPriority
+                .moveWord(TILE, tilePriority==TilePriority.FIXED_LOW?0x680:NATIVE_TILE_WORD);                             // MOVE.W #$8680,oTile(a0)
+        if (tilePriority==TilePriority.LAYER_DEPENDENT && self.unsignedByte(LAYER) != 0) {                                   // TST.B oLayer(a0) / BEQ.S .HighPriority
             self = self.moveWord(TILE, self.word(TILE) & 0x7FFF);              // ANDI.B #$7F,oTile(a0): the high byte only
         }
         self = self.moveLong(MAPPINGS, assets.mappingsAddress());               // .HighPriority: MOVE.L #MapSpr_Explosion,oMap(a0)
@@ -375,6 +390,9 @@ public final class CdExplosion {
         if (self.subtype() != 0) {                                             // TST.B oSubtype(a0) / BEQ.S ObjExplosion_Main
             self = self.moveWord(ANIMATION_WORD, 0x0100);                      // MOVE.W #$100,oAnim(a0): oAnim 1, oPrevAnim 0
         }
+        // Original A now enters the shared live animation kernel. Publish the completed Init
+        // suffix before AnimateObject reads it; its stores must also survive a later selected fault.
+        if (!pastBinding) observedWrite(self, StoreKind.INIT_HEADER);
         return self;
     }
 
@@ -404,6 +422,7 @@ public final class CdExplosion {
     private CdObjectState animate(CdObjectState state) {
         var visual = assets.explosion();
         var table = new CdObjectAnimation.AnimationTable(visual.animationTable(), 0, visual.animations().size());
+        if (!pastBinding) return animateOriginal(state, table);
         CdObjectAnimation.State out;
         try {
             out = CdObjectAnimation.step(new CdObjectAnimation.State(
@@ -425,6 +444,49 @@ public final class CdExplosion {
                 .moveByte(FLAGS, out.statusFlags())
                 .moveByte(ROUTINE, out.routine())
                 .moveByte(ROUTINE_2, out.routine2());
+    }
+
+    /** Original A shares the one animation algorithm and its reached live-store publication path.
+     * The binding validates the full96/status/saved preimage at each cut. No second step, native
+     * arithmetic reconstruction or completed-effect replay occurs. Original callback throwables
+     * retain their identity; selected format failures retain their completed source prefix. */
+    private CdObjectState animateOriginal(CdObjectState state, CdObjectAnimation.AnimationTable table) {
+        int whole = state.identity().wholeIndex();
+        CdObjectAnimationBinding.run(runtime, whole, table,
+                () -> dispatching && activeWhole == whole, output -> { }, originalAnimationGuard(),
+                operation -> { }, read -> new UnsupportedExplosion(
+                        read.boundary() == CdObjectAnimation.Kind.DIRECTORY
+                                ? UnsupportedBoundary.ANIMATION_DIRECTORY_READ : UnsupportedBoundary.ANIMATION_FRAME_READ,
+                        whole, "reached animation byte " + read.value()));
+        return runtime.pool().state(whole);
+    }
+
+    /** Keep an already-bound outer observer on the ORIGINAL kernel STORE occurrence. The kernel
+     * alone writes; before/after callbacks never repeat an operation or publish a reconstructed result.
+     * Legacy component-only construction has no enclosing observer, but retains the same structural
+     * placement checks in CdObjectAnimationBinding. World/Frame authority remains with its caller. */
+    private CdObjectAnimationBinding.Guard originalAnimationGuard() {
+        if (observer == null) return null;
+        return new CdObjectAnimationBinding.Guard() {
+            public void before(CdObjectAnimation.Prefix prefix, CdObjectAnimation.Operation operation) {
+                if (operation.kind() != CdObjectAnimation.Kind.STORE) return;
+                if (pendingPublication != null || pendingDraw != null)
+                    throw new IllegalStateException("Nested original A animation publication");
+                var source = runtime.pool().state(operation.wholeIndex());
+                var call = new Publication(++publicationOrdinal, StoreKind.ANIMATION_RESULT,
+                        runtime.capture(), source, source, source.moveByte(operation.field(), operation.value()));
+                pendingPublication = call;
+                observer.beforePublication(call); receiptGuard.prepared(call);
+            }
+            public void after(CdObjectAnimation.Prefix prefix, CdObjectAnimation.Operation operation) {
+                if (operation.kind() != CdObjectAnimation.Kind.STORE) return;
+                var call = pendingPublication;
+                try {
+                    if (call == null) throw new IllegalStateException("Missing original A animation publication");
+                    if (operation.completed()) { observer.afterPublication(call); receiptGuard.completed(call); }
+                } finally { pendingPublication = null; }
+            }
+        };
     }
 
     /**

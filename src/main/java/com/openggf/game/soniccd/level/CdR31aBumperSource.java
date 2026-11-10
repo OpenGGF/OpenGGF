@@ -4,7 +4,7 @@ import com.openggf.game.soniccd.objects.CdObjectAnimation;
 import com.openggf.game.soniccd.objects.CdObjectMappings;
 import java.util.*;
 
-/** Original same-owner R31A P3 DATA prerequisite. Only Bumper is registered for live dispatch.
+/** Original same-owner R31A P3 DATA prerequisite. Bumper retains its legacy mapper; Flipper has an explicit finite admission.
  * N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff CC Bumper/Flipper, Glass, Platform, Pocket includes.
  * Canonical/read extents remain literal. No current-art, other-body or regional admission. */
 public final class CdR31aBumperSource {
@@ -48,5 +48,11 @@ public final class CdR31aBumperSource {
     public boolean owns(CdR31aAssets candidate){return owner==candidate;}
     public CdR31PinballAssets.Visual data(){return assets.bumper();}
     public CdR31PinballAssets assets(){return assets;}
+    /** Object Index (Act1 Present): ID1E is ObjFlipper, not LostRing11. The complete table
+     * is authenticated by CdR31aAssets before this read; no relocated/numeric default. */
+    public long flipperHandlerAddress(){owner.requireAuthenticated();return owner.view(CdR31aAssets.Asset.OBJECT_INDEX).unsignedLong((0x1e-1)*4);}
+    public CdObjectMappings.DeclaredTable flipperMapping(){
+        flipperHandlerAddress();var v=assets.flipper();return new CdObjectMappings.DeclaredTable(v.mappingAddress(),v.visual().mappings(),0,3);
+    }
     public CdObjectMappings.DeclaredTable mapping(){return new CdObjectMappings.DeclaredTable(data().mappingAddress(),data().visual().mappings(),0,3);}
 }

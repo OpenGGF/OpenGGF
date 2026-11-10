@@ -2,12 +2,18 @@ package com.openggf.game.soniccd.objects;
 import static com.openggf.game.soniccd.objects.CdR4SolidMover.*;
 import static com.openggf.game.soniccd.objects.CdSolidObject.Entry.*;
 /** Native routine body at pin 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
- * Source: src/objects/r4/collapse_floor.asm (whole parent/child graph). Draw/despawn is the returned Root cut.
- * Detached data only: never replays observations or adopts into a live World.
+ * Source: src/objects/r4/collapse_floor.asm (whole parent/child graph).
+ * Detached outcomes stay data; the primary overload issues current synchronous native primitives.
+ * Neither entry supplies original source/World admission or replays observations.
  */
 public final class CdR4CollapseFloor {
     private CdR4CollapseFloor() { }
     public static Outcome run(Inputs inputs) { return calculate(inputs, CdR4CollapseFloor::body); }
+    /** Same native parent/child evaluator under one actual private synchronous occurrence. */
+    public static void run(PrimaryInputs inputs,LiveOwner owner) {
+        if(inputs.placement().pool().state(inputs.wholeIndex()).id()!=0x39)throw new IllegalArgumentException("Original CollapseFloor requires actual native ID39");
+        runPrimary(inputs,owner,CdR4CollapseFloor::body);
+    }
     private static Tail body(Cut c) {
         if(c.b(0x29)!=0) return piece(c);
         int routine=c.b(0x24);
@@ -39,7 +45,7 @@ public final class CdR4CollapseFloor {
     }
     private static Tail piece(Cut c) {
         switch(c.b(0x24)) {
-            case 0 -> {c.ab(0x24,2);c.b(0x1a,8);c.b(0x16,8);c.b(0x17,8);c.b(0x18,3);c.b(0x19,8);}
+            case 0 -> {c.ab(0x24,2);c.b(0x1a,8);c.l(0x16,0x08080308);}
             case 2 -> {c.aw(0x2a,-1);if((short)c.w(0x2a)<0)c.ab(0x24,2);}
             case 4 -> {
                 if((byte)c.b(1)>=0) {c.clear();return Tail.NONE;}

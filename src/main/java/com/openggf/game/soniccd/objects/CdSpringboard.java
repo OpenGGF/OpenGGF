@@ -9,6 +9,8 @@ import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 
 import static com.openggf.game.soniccd.objects.CdObjectState.ByteField.*;
 import static com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS;
@@ -37,6 +39,9 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE;
  * Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
  */
 public final class CdSpringboard {
+    private CdOriginalMechanismProtocol mechanismProtocol;
+    public boolean isCurrentOriginalOperation(CdOriginalMechanismProtocol.Call call){return mechanismProtocol!=null&&mechanismProtocol.current(call);}
+
     public static final int OBJECT_ID = 0x28;
 
     public enum NativeRoutine { INIT, NORMAL_MAIN, FLIP_MAIN, NORMAL_MAIN_2, FLIP_MAIN_2, NORMAL_FLING, FLIP_FLING }
@@ -153,6 +158,13 @@ public final class CdSpringboard {
     private Object pending;
     private long ordinal;
 
+
+    public static CdSpringboard fromOriginalPresentMechanism(CdObjectPlacementRuntime placement,CdR11aAssets owner,
+            PrimaryCommit primary,SourceDraw draw,CdOriginalMechanismProtocol.Observer observer)throws java.io.IOException{
+        CdOriginalPresentObjectSource.require(placement,owner);var o=owner.openingObjects();
+        var body=new CdSpringboard(placement,new Assets(o.view(CdR11aObjectAssets.Table.OBJECT_TILE_IDS).bytes(),o.view(CdR11aObjectAssets.Table.MECHANISM_BOARD_HITBOXES).bytes(),o.mechanismBoard(),CdR11aObjectAssets.Table.MECHANISM_BOARD_MAPPINGS.range().nativeAddress()),primary,draw);
+        body.mechanismProtocol=new CdOriginalMechanismProtocol(placement,observer);return body;
+    }
     public CdSpringboard(CdObjectPlacementRuntime placement, Assets assets, PrimaryCommit primaryCommit, SourceDraw draw) {
         this(placement, assets, primaryCommit, draw, NO_OBSERVER);
     }
@@ -173,7 +185,7 @@ public final class CdSpringboard {
         int routine = state.routine();
         if ((routine & 1) != 0 || routine > 12)
             throw unsupported(UnsupportedBoundary.ROUTINE_DISPATCH, wholeIndex, routine);
-        running = true; ordinal = 0;
+        running = true; ordinal = 0;if(mechanismProtocol!=null)mechanismProtocol.begin(wholeIndex);
         try {
             var c = new Cursor(wholeIndex, inputs);
             c.effects.add(new RoutineEntered(NativeRoutine.values()[routine / 2]));
@@ -191,7 +203,7 @@ public final class CdSpringboard {
             boolean deleted = checkDespawn(c, globals); // JMP after returning routine, even Init.
             c.effects.add(new DespawnChecked(deleted));
             return new Result(c.state(), c.primary, c.environment, c.effects);
-        } finally { pending = null; running = false; }
+        } finally { if(mechanismProtocol!=null)mechanismProtocol.end();pending = null; running = false; }
     }
 
     /** Init:128-154. Each native store is observable BEFORE the next selected read/store. */
@@ -295,7 +307,7 @@ public final class CdSpringboard {
         return (byte) assets.hitboxes().unsignedByte(offset);
     }
     private int tileWord(int whole, int offset) {
-        if (offset < 0 || offset > 70 || offset > assets.objectTileIds().length() - 2)
+        if (offset < 0 || offset > (mechanismProtocol==null?70:72) || offset > assets.objectTileIds().length() - 2)
             throw unsupported(UnsupportedBoundary.TILE_ADDRESS, whole, offset);
         return assets.objectTileIds().unsignedWord(offset);
     }
@@ -345,6 +357,10 @@ public final class CdSpringboard {
     }
 
     private void animateAndDraw(Cursor c) {
+        if(mechanismProtocol!=null){
+            mechanismProtocol.animate(new CdObjectAnimation.AnimationTable(assets.visual().animationTable(),0,5),()->running,state->{},read->new UnsupportedOperationException("Original Springboard animation read "+read));
+            c.effects.add(new Animated());var call=new DrawCall(placement.capture(),c.state());invoke(call,()->draw.draw(call));c.effects.add(new Drawn());return;
+        }
         var s = c.state();
         var out = CdObjectAnimation.step(new CdObjectAnimation.State(s.unsignedByte(ANIMATION),
                 s.unsignedByte(PREVIOUS_ANIMATION), s.unsignedByte(ANIMATION_FRAME), s.unsignedByte(ANIMATION_TIME),
@@ -367,13 +383,17 @@ public final class CdSpringboard {
     private void publish(Publication call, Runnable store) {
         if (pending != null) throw new IllegalStateException("Nested Springboard operation");
         pending = call;
-        try { observer.beforePublication(call); store.run(); observer.afterPublication(call); }
+        try { observer.beforePublication(call);
+            if(mechanismProtocol==null)store.run();
+            else if(call.savedIndex()>=2)mechanismProtocol.saved(call.savedIndex(),call.cut().savedFlags().unsignedByte(call.savedIndex())&127,store);
+            else if(call.output()==null)mechanismProtocol.delete(store);else mechanismProtocol.store(call.output(),store);
+            observer.afterPublication(call); }
         finally { pending = null; }
     }
     private void invoke(Object call, Runnable work) {
         if (pending != null) throw new IllegalStateException("Nested Springboard operation");
         pending = call;
-        try { observer.beforeCall(call); work.run(); observer.afterCall(call); }
+        try { observer.beforeCall(call);if(mechanismProtocol==null)work.run();else mechanismProtocol.callback(call,work); observer.afterCall(call); }
         finally { pending = null; }
     }
 

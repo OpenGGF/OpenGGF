@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.resources;
 
+// Bounded SOURCE packet; authored Java UNRUN. Root owns queued validation.
+
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR31aAssets;
 import com.openggf.game.soniccd.level.CdR31aLoadMetadata;
@@ -58,8 +60,11 @@ public final class CdR31aSectionArt {
         public Operation operation() { return operation; }
         public long sourcePointer() { return sourcePointer; }
         public int destinationByteOffset() { return destinationByteOffset; }
-        /** Completed RAM tiles only. Any attempted tile's emitted rows remain in the decoder cause. */
+        /** Actual completed RAM LONG rows, including rows within a faulting tile. */
         public Optional<CdAssetBytes> completedRamPrefix() { return Optional.ofNullable(completedRamPrefix); }
+        public Optional<CdBlockDefinitionStaging> completedBlockDefinitions() {
+            return completedRamPrefix().map(p -> CdBlockDefinitionStaging.unknown().withCompletedPrefix(p));
+        }
     }
 
     public static final class State {
@@ -127,9 +132,13 @@ public final class CdR31aSectionArt {
     public static final class BlocksResult {
         private final State state;
         private final CdAssetBytes blocks;
-        private BlocksResult(State state, CdAssetBytes blocks) { this.state = state; this.blocks = blocks; }
+        private final CdBlockDefinitionStaging blockDefinitions;
+        private BlocksResult(State state, CdAssetBytes blocks,CdBlockDefinitionStaging blockDefinitions) { this.state = state; this.blocks = blocks;this.blockDefinitions=blockDefinitions; }
         public State state() { return state; }
         public CdAssetBytes blocks() { return blocks; }
+        public CdBlockDefinitionStaging blockDefinitions() {
+            return blockDefinitions;
+        }
     }
 
     private static final SavedDecoder CLEARED = new SavedDecoder(Writer.CLEARED, 0, 0, 0, 0, 0);
@@ -239,7 +248,7 @@ public final class CdR31aSectionArt {
     /** Native NemDecToRAM; returns the existing product after the shared complete decode loop. */
     public BlocksResult decodeBlocksToRam(State state) {
         var result = immediate.decodeBlocksToRam(state);
-        return new BlocksResult(result.state(), result.bytes());
+        return new BlocksResult(result.state(), result.bytes(),result.blockDefinitions());
     }
 
     /** Actual raw period selection, with all queued fields retained. */

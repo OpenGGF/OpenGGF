@@ -1,5 +1,5 @@
 package com.openggf.game.soniccd;
-import com.openggf.game.soniccd.level.CdR31aAssets;import com.openggf.game.soniccd.objects.CdLevelGlobals;import java.util.*;
+import com.openggf.game.soniccd.level.CdR31aAssets;import com.openggf.game.soniccd.level.CdR11aAssets;import com.openggf.game.soniccd.objects.CdLevelGlobals;import java.util.*;
 /** Immutable semantic Flower position slice, never addressable RAM or a second owner.
  * N1ecc5f3 Main CPU Variables:148-150, Main:178-184 and Flower/Main:132-144.
  * Unknown bytes have NO readable default. Only original private clear/store occurrences
@@ -12,17 +12,27 @@ final class CdFlowerPositions {
   private Unavailable(Boundary b,int offset){super("Flower positions "+b+" at byte$"+Integer.toHexString(offset));this.boundary=b;this.offset=offset;}
   Boundary boundary(){return boundary;}int offset(){return offset;}
  }
- private final CdR31aAssets source;private final byte[] bytes;private final BitSet known;private final boolean cleared;
- private CdFlowerPositions(CdR31aAssets source,byte[] bytes,BitSet known,boolean cleared){this.source=source;this.bytes=bytes;this.known=known;this.cleared=cleared;}
+ private final Object source;private final byte[] bytes;private final BitSet known;private final boolean cleared;
+ private CdFlowerPositions(Object source,byte[] bytes,BitSet known,boolean cleared){this.source=source;this.bytes=bytes;this.known=known;this.cleared=cleared;}
  static CdFlowerPositions unknown(){return new CdFlowerPositions(null,null,new BitSet(BYTES),false);}
- static CdFlowerPositions originalClear(SonicCdR31aLoadingVisit.NativeClearCall original){var source=original.flowerPositionClearSource();var known=new BitSet(BYTES);known.set(0,BYTES);return new CdFlowerPositions(source,new byte[BYTES],known,true);}
+ static CdFlowerPositions originalClear(SonicCdR31aLoadingVisit.NativeClearCall original){return cleared(original.flowerPositionClearSource());}
+ static CdFlowerPositions originalClear(SonicCdGameModule.OriginalR11ClearCall original){return cleared(original.flowerPositionClearSource());}
+ private static CdFlowerPositions cleared(Object source){Objects.requireNonNull(source);var known=new BitSet(BYTES);known.set(0,BYTES);return new CdFlowerPositions(source,new byte[BYTES],known,true);}
  static CdFlowerPositions originalStore(CdFlowerPositions before,SonicCdR31aObjectPass.FlowerPositionStore original){
-  var source=original.requirePositionSource(before);before.requireSource(source);int offset=original.offset(),value=original.value();represented(offset);wordValue(value);
+  return stored(before,original.requirePositionSource(before),original.offset(),original.value());
+ }
+ static CdFlowerPositions originalStore(CdFlowerPositions before,CdWorld.OriginalR11FlowerPositionStore original){
+  return stored(before,original.requirePositionSource(before),original.offset(),original.value());
+ }
+ private static CdFlowerPositions stored(CdFlowerPositions before,Object source,int offset,int value){
+  before.requireSourceIdentity(source);represented(offset);wordValue(value);
   byte[] bytes=before.bytes==null?new byte[BYTES]:before.bytes.clone();var known=(BitSet)before.known.clone();bytes[offset]=(byte)(value>>>8);bytes[offset+1]=(byte)value;known.set(offset,offset+2);return new CdFlowerPositions(source,bytes,known,before.cleared);
  }
  int word(int offset){represented(offset);if(!known.get(offset)||!known.get(offset+1))throw new Unavailable(Boundary.UNKNOWN_WORD,offset);return(Byte.toUnsignedInt(bytes[offset])<<8)|Byte.toUnsignedInt(bytes[offset+1]);}
  int knownBytes(){return known.cardinality();}boolean clearedByOriginal(){return cleared;}
- void requireSource(CdR31aAssets source){if(this.source!=null&&this.source!=source)throw new Unavailable(Boundary.FOREIGN_SOURCE,0);}
+ void requireSource(CdR31aAssets source){requireSourceIdentity(source);}
+ void requireSource(CdR11aAssets source){requireSourceIdentity(source);}
+ private void requireSourceIdentity(Object source){Objects.requireNonNull(source);if(this.source!=null&&this.source!=source)throw new Unavailable(Boundary.FOREIGN_SOURCE,0);}
  private static void represented(int offset){if(offset<0||offset>BYTES-2||(offset&1)!=0)throw new Unavailable(Boundary.UNREPRESENTED_WORD,offset);}
  private static void wordValue(int value){if((value&~65535)!=0)throw new IllegalArgumentException("Native Flower WORD");}
  /** Pure projection of ONLY the already owned adjacent count/fade aliases; no invocation authority. */

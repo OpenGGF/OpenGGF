@@ -1,6 +1,10 @@
 package com.openggf.game.soniccd.scroll;
 
+import com.openggf.game.soniccd.resources.CdBlockDefinitionStaging;
+
 import com.openggf.game.soniccd.level.CdAssetBytes;
+import com.openggf.game.soniccd.level.CdLevelLoadingSource;
+import com.openggf.game.soniccd.level.CdPpzDataLayout;
 import com.openggf.game.soniccd.level.CdR11aAsset;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11aTerrain;
@@ -41,10 +45,11 @@ public final class CdR11aBackgroundPlane {
         CAMERA_ADDRESS, LAYOUT_READ, CHUNK_READ, BLOCK_READ, PLANE_WRITE
     }
 
-    /** Stops at the actual missing source/read/write; no partial State is published. */
+    /** Stops at the actual missing read/write. Reached immutable prefix facts confer no publication authority. */
     public static final class InvalidPlane extends IllegalArgumentException {
         private final Boundary boundary;
         private final int byteOffset;
+        private Result completedPrefix;
         private InvalidPlane(Boundary boundary, int byteOffset) {
             super(boundary + " at byte " + byteOffset);
             this.boundary = boundary;
@@ -52,6 +57,9 @@ public final class CdR11aBackgroundPlane {
         }
         public Boundary boundary() { return boundary; }
         public int byteOffset() { return byteOffset; }
+        /** Empty for rejected bindings/shapes before any draw invocation. */
+        public java.util.Optional<Result> completedPrefix() { return java.util.Optional.ofNullable(completedPrefix); }
+        private void attachPrefix(Result reached) { if (completedPrefix == null) completedPrefix = Objects.requireNonNull(reached); }
     }
 
     /** Exact caller-supplied native RAM, never implicitly cleared at construction/init/restore. */
@@ -129,6 +137,7 @@ public final class CdR11aBackgroundPlane {
     }
 
     private final CdAssetBytes terrainBlocks;
+    private final CdBlockDefinitionStaging blockDefinitions;
     private final CdAssetBytes terrainChunks;
     private final CdAssetBytes terrainLayout;
     private final int initialRowMask;
@@ -141,6 +150,7 @@ public final class CdR11aBackgroundPlane {
         this.livePointers = Objects.requireNonNull(livePointers, "livePointers");
         shape(ids, 130, Boundary.TABLE_SHAPE);
         shape(livePointers, 16, Boundary.TABLE_SHAPE);
+        this.blockDefinitions = null;
         this.terrainBlocks = terrain.blocks();
         this.terrainChunks = terrain.chunks();
         this.terrainLayout = terrain.layout().ram();
@@ -164,6 +174,7 @@ public final class CdR11aBackgroundPlane {
         this.livePointers = Objects.requireNonNull(livePointers, "livePointers");
         shape(ids, 34, Boundary.TABLE_SHAPE);
         shape(livePointers, 16, Boundary.TABLE_SHAPE);
+        this.blockDefinitions = null;
         this.terrainBlocks = terrain.blocks();
         this.terrainChunks = terrain.chunks();
         this.terrainLayout = terrain.layout().ram();
@@ -181,6 +192,7 @@ public final class CdR11aBackgroundPlane {
             throw new IllegalArgumentException("Actual original C/D terrain required");
         this.ids = sources.ids(); this.livePointers = sources.pointers();
         shape(ids, 34, Boundary.TABLE_SHAPE); shape(livePointers, 16, Boundary.TABLE_SHAPE);
+        this.blockDefinitions = null;
         this.terrainBlocks = terrain.blocks(); this.terrainChunks = terrain.chunks();
         this.terrainLayout = terrain.layout().ram(); this.initialRowMask = 0x1F0;
     }
@@ -222,10 +234,27 @@ public final class CdR11aBackgroundPlane {
         this.livePointers = assets.view(CdR31aAssets.Asset.BG_POINTERS);
         shape(ids, 50, Boundary.TABLE_SHAPE);
         shape(livePointers, 16, Boundary.TABLE_SHAPE);
+        this.blockDefinitions = null;
         this.terrainBlocks = current.blocks();
         this.terrainChunks = current.chunks();
         this.terrainLayout = current.layout().ram();
         this.initialRowMask = 0x3F0;
+    }
+
+    /** Explicit immutable current block bank. The existing shared draw algorithm,
+     * chunks/layout/table binding and owner validation are unchanged. */
+    public CdR11aBackgroundPlane withBlockDefinitions(CdBlockDefinitionStaging current) {
+        return new CdR11aBackgroundPlane(this, Objects.requireNonNull(current,"current block knowledge"));
+    }
+    private CdR11aBackgroundPlane(CdR11aBackgroundPlane source,CdBlockDefinitionStaging current) {
+        terrainBlocks=source.terrainBlocks; terrainChunks=source.terrainChunks; terrainLayout=source.terrainLayout;
+        initialRowMask=source.initialRowMask; ids=source.ids; livePointers=source.livePointers; blockDefinitions=current;
+    }
+    private int blockWord(int offset) {
+        if(blockDefinitions==null) return readWord(terrainBlocks,offset,Boundary.BLOCK_READ);
+        if(offset<0 || offset>CdBlockDefinitionStaging.BYTE_LENGTH-2) throw new InvalidPlane(Boundary.BLOCK_READ,offset);
+        try{return blockDefinitions.unsignedWord(offset);}
+        catch(CdBlockDefinitionStaging.UnknownRead original){var stopped=new InvalidPlane(Boundary.BLOCK_READ,original.byteOffset());stopped.initCause(original);throw stopped;}
     }
 
     private static boolean sameMaterial(CdAssetBytes current, CdAssetBytes original) {
@@ -307,20 +336,97 @@ public final class CdR11aBackgroundPlane {
         return new CdR11aBackgroundPlane(terrain, ids, pointers);
     }
 
+    /** Actual selected loading DATA, reusing the existing semantic name-table algorithm.
+     * STANDARD borrows its canonical R11 rows/one LIVE table; TT retains its distinct
+     * independently authenticated LIVE/COPIED table contract. No current bank is created. */
+    public static CdR11aBackgroundPlane fromLoadingSource(com.openggf.game.soniccd.level.CdLevelLoadingSource source) throws IOException {
+        Objects.requireNonNull(source).requireRetained();
+        if(source.completion()==CdLevelLoadingSource.Completion.STANDARD)return fromStandardLoadingSource(source);
+        if(!(source.background() instanceof com.openggf.game.soniccd.level.CdLevelLoadingSource.PointerTables tables))
+            throw new UnsupportedOperationException("Direct-camera TT plane strategy is not this pointer-table algorithm");
+        var live=tables.tables().stream().filter(t->t.kind()==com.openggf.game.soniccd.level.CdLevelLoadingSource.PointerKind.LIVE).findFirst().orElseThrow();
+        var copied=tables.tables().stream().filter(t->t.kind()==com.openggf.game.soniccd.level.CdLevelLoadingSource.PointerKind.COPIED).findFirst().orElseThrow();
+        if(!copied.values().equals(List.of(0xFF192E,0xFF192E,0xFF1936,0xFF193E)))throw new IllegalArgumentException("Unsupported original copied camera table");
+        byte[] pointers=new byte[Math.multiplyExact(live.values().size(),4)];
+        for(int i=0;i<live.values().size();i++){int value=live.values().get(i);for(int j=0;j<4;j++)pointers[i*4+j]=(byte)(value>>>(24-j*8));}
+        var ids=source.backgroundSectionIds();
+        return new CdR11aBackgroundPlane(source.terrain(),ids,CdAssetBytes.copyOf(pointers),0x7F0);
+    }
+    private static CdR11aBackgroundPlane fromStandardLoadingSource(CdLevelLoadingSource source)throws IOException {
+        // Canonical PPZ declarations admit only the SAME original standard reader.
+        // An old aggregate keeps its separate bind factory; equal metadata is not custody.
+        var pointers=source.standardBackgroundPointers();
+        var ids=source.backgroundSectionIds();
+        if(source.backgroundSectionIds()!=ids
+                || !(source.background() instanceof CdLevelLoadingSource.PointerTables tables)
+                || tables.tables().size()!=1 || tables.tables().getFirst().kind()!=CdLevelLoadingSource.PointerKind.LIVE
+                || tables.tables().getFirst().values().size()!=4 || tables.rowSelectors().orElse(null)!=ids)
+            throw new InvalidPlane(Boundary.VIEW_BINDING,0);
+        // N1ecc Scroll (Act 1 Present):InitLevelDrawBG,1092-1114; actual AND is$7F0.
+        // The earlier$1F0 proposal was not this source. No legacy Shape or clear is supplied.
+        return new CdR11aBackgroundPlane(source.terrain(),ids,pointers,source.standardBackgroundRowMask());
+    }
+    private CdR11aBackgroundPlane(CdStageTerrain terrain,CdAssetBytes ids,CdAssetBytes pointers,int rowMask){
+        Objects.requireNonNull(terrain);this.ids=Objects.requireNonNull(ids);this.livePointers=Objects.requireNonNull(pointers);
+        if(rowMask!=0x7F0&&rowMask!=0x1F0)throw new InvalidPlane(Boundary.TABLE_SHAPE,0);
+        shape(ids,(rowMask>>>4)+3,Boundary.TABLE_SHAPE);shape(pointers,16,Boundary.TABLE_SHAPE);
+        terrainBlocks=terrain.blocks();terrainChunks=terrain.chunks();terrainLayout=terrain.layout().ram();
+        blockDefinitions=null;initialRowMask=rowMask;
+    }
+
     /** InitLevelDrawBG: exactly 16 rows at -16..224; flags and unaddressed RAM remain supplied. */
     public Result initialize(State before, LiveCameras live, FlagWords flags) {
+        return initializeRows(before, live, flags, y -> live.bg1().yWord());
+    }
+
+    /** Source-selected compressed background row lookup; block coordinates stay live.
+     * loc_2037C4/EA/800 (r4/stage_draw_1a.asm:542-570) and
+     * sub_2038AA (r4/stage_draw_1a.asm:717-727).
+     * The existing row/name-table kernel is shared with the direct source programme.
+     */
+    public Result initializeWaterCompressedRows(State before, LiveCameras live, FlagWords flags,
+                                                int foregroundXWord) {
+        if ((foregroundXWord & ~0xFFFF) != 0) throw new IllegalArgumentException("Foreground X WORD");
+        return initializeRows(before, live, flags,
+                y -> waterInitialSelectorYWord(live.bg1().yWord(), foregroundXWord, y == -16));
+    }
+
+    /** Integer semantic form of the native initial selector expression, not a camera write.
+     * Below $200, foreground X chooses the $200 table band at $280. At/above $200,
+     * the source compresses displacement to 3/4. Completed foreground-row output
+     * leaves the first lookup's fractional tie below the carry threshold; background
+     * row output leaves later lookups above it only for displacement mod4 == 1.
+     * Those finite source bounds are folded into this row rule, without storing or
+     * simulating CPU registers, command words, hardware timing or a VDP.
+     */
+    public static int waterInitialSelectorYWord(int backgroundYWord, int foregroundXWord, boolean firstRow) {
+        if (((backgroundYWord | foregroundXWord) & ~0xFFFF) != 0)
+            throw new IllegalArgumentException("Initial selector inputs must be unsigned WORDs");
+        if (backgroundYWord < 0x200) return foregroundXWord >= 0x280 ? 0x200 : backgroundYWord;
+        int displacement = backgroundYWord - 0x200;
+        return 0x200 + displacement * 3 / 4 + (!firstRow && (displacement & 3) == 1 ? 1 : 0);
+    }
+
+    private Result initializeRows(State before, LiveCameras live, FlagWords flags,
+                                  java.util.function.IntUnaryOperator selectorY) {
         Objects.requireNonNull(before, "before");
         Objects.requireNonNull(live, "live");
         Objects.requireNonNull(flags, "flags");
-        Work work = new Work(before);
-        for (int y = -16; y <= 224; y += 16) {
-            int index = 1 + (((live.bg1().yWord() + y) & initialRowMask) >>> 4);
-            int selector = section(index);
-            work.sections.add(new SectionRead(Phase.INITIAL_ROW, index, selector, y, true));
-            Selection selection = initialSelection(selector, live);
-            drawRow(work, Phase.INITIAL_ROW, y, selector == 0, selection);
+        Work work = new Work(before, flags);
+        try {
+            for (int y = -16; y <= 224; y += 16) {
+                int index = 1 + (((selectorY.applyAsInt(y) + y) & initialRowMask) >>> 4);
+                int selector = section(index);
+                work.sections.add(new SectionRead(Phase.INITIAL_ROW, index, selector, y, true));
+                Selection selection = initialSelection(selector, live);
+                drawRow(work, Phase.INITIAL_ROW, y, selector == 0, selection);
+            }
+            return work.finish(before, flags);
+        } catch (InvalidPlane original) {
+            try { original.attachPrefix(work.finish(before, work.flags)); }
+            catch (RuntimeException | Error retention) { if (retention != original) original.addSuppressed(retention); }
+            throw original;
         }
-        return work.finish(before, flags);
     }
 
     /**
@@ -333,51 +439,61 @@ public final class CdR11aBackgroundPlane {
         Objects.requireNonNull(live, "live");
         Objects.requireNonNull(copied, "copied");
         Objects.requireNonNull(flags, "flags");
-        Work work = new Work(before);
-        int high = flags.bg1() >>> 8;
-        int y = -16;
-        boolean row = (high & 1) != 0;
-        high &= ~1;
-        if (!row) {
-            row = (high & 2) != 0;
-            high &= ~2;
-            y = 224;
-        }
-        if (row) {
-            int index = 1 + (((short) ((live.bg1().yWord() + y) & 0xFFF0)) >> 4);
-            int selector = section(index);
-            work.sections.add(new SectionRead(Phase.INCREMENTAL_ROW, index, selector, y, true));
-            // EXT.W then ADD.W; static BEQ tests ADD's zero flag (MOVEA does not change it).
-            Selection selection = copiedSelection((byte) selector, copied);
-            drawRow(work, Phase.INCREMENTAL_ROW, y, selector == 0, selection);
-        }
-        if (high != 0) {
-            int right = high & 0xA8;
-            int x = -16;
-            if (right != 0) {
-                high = right >>> 1; // Native MOVE.B discards every other pending bit.
-                x = 320;
+        Work work = new Work(before, flags);
+        try {
+            int high = flags.bg1() >>> 8;
+            int y = -16;
+            boolean row = (high & 1) != 0;
+            high &= ~1;
+            work.high(high);
+            if (!row) {
+                row = (high & 2) != 0;
+                high &= ~2;
+                work.high(high);
+                y = 224;
             }
-            int start = ((short) (live.bg1().yWord() & 0xFFF0)) >> 4;
-            for (int i = 0; i < 16; i++) {
-                int index = start + i;
+            if (row) {
+                int index = 1 + (((short) ((live.bg1().yWord() + y) & 0xFFF0)) >> 4);
                 int selector = section(index);
-                boolean draw = selector != 0 && (high & (1 << (selector & 7))) != 0;
-                int relativeY = -16 + i * 16;
-                work.sections.add(new SectionRead(Phase.INCREMENTAL_COLUMN, index, selector, relativeY, draw));
-                if (draw) {
-                    Selection selection = copiedSelection(selector, copied);
-                    int wx = (selection.camera().xWord() + x) & 0xFFFF;
-                    int wy = (selection.camera().yWord() + relativeY) & 0xFFFF;
-                    // A0 already advanced by MOVE.B (a0)+. Preserve exactly that source cursor.
-                    drawBlock(work, Phase.INCREMENTAL_COLUMN, selection, x, relativeY, wx, wy,
-                            planeOffset(wx, wy), new MetadataCursor(MetadataSource.SECTION_IDS, index + 1));
-                }
+                work.sections.add(new SectionRead(Phase.INCREMENTAL_ROW, index, selector, y, true));
+                // EXT.W then ADD.W; static BEQ tests ADD's zero flag (MOVEA does not change it).
+                Selection selection = copiedSelection((byte) selector, copied);
+                drawRow(work, Phase.INCREMENTAL_ROW, y, selector == 0, selection);
             }
-            high = 0; // CLR.B only after all 16 ID reads completed.
+            if (high != 0) {
+                int right = high & 0xA8;
+                int x = -16;
+                if (right != 0) {
+                    high = right >>> 1; // Native MOVE.B discards every other pending bit.
+                    work.high(high);
+                    x = 320;
+                }
+                int start = ((short) (live.bg1().yWord() & 0xFFF0)) >> 4;
+                for (int i = 0; i < 16; i++) {
+                    int index = start + i;
+                    int selector = section(index);
+                    boolean draw = selector != 0 && (high & (1 << (selector & 7))) != 0;
+                    int relativeY = -16 + i * 16;
+                    work.sections.add(new SectionRead(Phase.INCREMENTAL_COLUMN, index, selector, relativeY, draw));
+                    if (draw) {
+                        Selection selection = copiedSelection(selector, copied);
+                        int wx = (selection.camera().xWord() + x) & 0xFFFF;
+                        int wy = (selection.camera().yWord() + relativeY) & 0xFFFF;
+                        // A0 already advanced by MOVE.B (a0)+. Preserve exactly that source cursor.
+                        drawBlock(work, Phase.INCREMENTAL_COLUMN, selection, x, relativeY, wx, wy,
+                                planeOffset(wx, wy), new MetadataCursor(MetadataSource.SECTION_IDS, index + 1));
+                    }
+                }
+                high = 0; // CLR.B only after all 16 ID reads completed.
+                work.high(high);
+            }
+            FlagWords remaining = new FlagWords((high << 8) | (flags.bg1() & 0xFF), flags.bg2(), flags.bg3());
+            return work.finish(before, remaining);
+        } catch (InvalidPlane original) {
+            try { original.attachPrefix(work.finish(before, work.flags)); }
+            catch (RuntimeException | Error retention) { if (retention != original) original.addSuppressed(retention); }
+            throw original;
         }
-        FlagWords remaining = new FlagWords((high << 8) | (flags.bg1() & 0xFF), flags.bg2(), flags.bg3());
-        return work.finish(before, remaining);
     }
 
     private void drawRow(Work work, Phase phase, int y, boolean absoluteX, Selection selection) {
@@ -419,17 +535,20 @@ public final class CdR11aBackgroundPlane {
                 ? readByte(terrainChunks, metadata.byteOffset(), Boundary.CHUNK_READ)
                 : section(metadata.byteOffset());
         int flip = ((high & 8) != 0 ? 0x800 : 0) | ((high & 16) != 0 ? 0x1000 : 0);
-        int[] words = new int[4];
-        for (int i = 0; i < 4; i++) { words[i] = readWord(terrainBlocks, blockOffset + i * 2, Boundary.BLOCK_READ); }
-        // Equivalent to native long swaps / XORs, retaining palette, priority and existing flips.
-        int topLeft = words[((flip & 0x1000) != 0 ? 2 : 0) + ((flip & 0x800) != 0 ? 1 : 0)] ^ flip;
-        int topRight = words[((flip & 0x1000) != 0 ? 2 : 0) + ((flip & 0x800) != 0 ? 0 : 1)] ^ flip;
-        int bottomLeft = words[((flip & 0x1000) != 0 ? 0 : 2) + ((flip & 0x800) != 0 ? 1 : 0)] ^ flip;
-        int bottomRight = words[((flip & 0x1000) != 0 ? 0 : 2) + ((flip & 0x800) != 0 ? 0 : 1)] ^ flip;
         int upper = ((0x6000 | offset) << 16) | 3;
         int lower = upper + 0x800000;
-        store(work.ram, upper, topLeft, topRight);
-        store(work.ram, lower, bottomLeft, bottomRight);
+        int first = blockLong(blockOffset);
+        if ((flip & 0x1000) != 0) {
+            // Native Y/XY reads both source LONGs before its first plane write.
+            int second = blockLong(blockOffset + 4);
+            pair(work, upper, second, (flip & 0x800) != 0, flip);
+            pair(work, lower, first, (flip & 0x800) != 0, flip);
+        } else {
+            // Native normal/X commits the upper LONG before reading the lower source LONG.
+            pair(work, upper, first, (flip & 0x800) != 0, flip);
+            int second = blockLong(blockOffset + 4);
+            pair(work, lower, second, (flip & 0x800) != 0, flip);
+        }
         work.blocks.add(new BlockRead(phase, selection.source(), relativeX, relativeY, worldX, worldY,
                 layoutOffset, rawLayout, new MetadataRead(metadata.source(), metadata.byteOffset(), high),
                 blockOffset, upper, lower));
@@ -461,7 +580,14 @@ public final class CdR11aBackgroundPlane {
 
     private int section(int index) { return readByte(ids, index, Boundary.SECTION_READ); }
     private static int planeOffset(int x, int y) { return ((y & 0xF0) << 4) + ((x & 0x1F0) >>> 2); }
-    private static void store(byte[] ram, int command, int left, int right) {
+    private int blockLong(int offset) { return (blockWord(offset) << 16) | blockWord(offset + 2); }
+    private static void pair(Work work, int command, int source, boolean flipX, int flip) {
+        int left = flipX ? source & 0xFFFF : source >>> 16;
+        int right = flipX ? source >>> 16 : source & 0xFFFF;
+        store(work, command, left ^ flip, right ^ flip);
+    }
+    private static void store(Work work, int command, int left, int right) {
+        byte[] ram = work.ram;
         int vramAddress = ((command >>> 16) & 0x3FFF) | ((command & 3) << 14);
         int at = vramAddress - VRAM_BASE;
         if (at < 0 || at > ram.length - 4 || (at & 1) != 0) { throw new InvalidPlane(Boundary.PLANE_WRITE, at); }
@@ -469,6 +595,7 @@ public final class CdR11aBackgroundPlane {
         ram[at + 1] = (byte) left;
         ram[at + 2] = (byte) (right >>> 8);
         ram[at + 3] = (byte) right;
+        work.written = true;
     }
     private static int readByte(CdAssetBytes bytes, int offset, Boundary boundary) {
         checkRead(bytes, offset, 1, boundary);
@@ -498,9 +625,12 @@ public final class CdR11aBackgroundPlane {
         private final byte[] ram;
         private final List<SectionRead> sections = new ArrayList<>();
         private final List<BlockRead> blocks = new ArrayList<>();
-        private Work(State before) { ram = before.nameTable().copy(); }
+        private boolean written;
+        private FlagWords flags;
+        private Work(State before, FlagWords flags) { ram = before.nameTable().copy(); this.flags = flags; }
+        private void high(int high) { flags = new FlagWords((high << 8) | (flags.bg1() & 0xFF), flags.bg2(), flags.bg3()); }
         private Result finish(State before, FlagWords flags) {
-            State after = blocks.isEmpty() ? before : new State(CdAssetBytes.copyOf(ram));
+            State after = written ? new State(CdAssetBytes.copyOf(ram)) : before;
             return new Result(after, flags, sections, blocks);
         }
     }

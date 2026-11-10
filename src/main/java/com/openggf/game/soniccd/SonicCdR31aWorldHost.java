@@ -62,31 +62,51 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
         private Globals scalars(CdRingGlobals r, CdCheckpointLiveAux.State l) {
             return new Globals(r,l,contact,score,projectorByte,checkpointSaved,drownTimerWord,debugBlockWord,pauseMusicBit,bonus,tail,animations,paletteSteps7,paletteTimers7,layerByte,bossFlagsByte,eventRoutineWord);
         }
-        private Globals flowers() {
+        Globals flowers() {
             var r=ring;
             return new Globals(new CdRingGlobals(r.rings(),r.lives(),r.livesFlags(),r.updateHudRings(),r.updateHudLives(),0,0,0),
                     live,contact,score,projectorByte,checkpointSaved,drownTimerWord,OptionalInt.of(0),pauseMusicBit,bonus,tail,
                     Optional.of(new CdGlobalObjectAnimation.Extras(0,0,0,0,new CdRingSpillGlobals(0,0,0))),paletteSteps7,paletteTimers7,OptionalInt.of(0),bossFlagsByte,eventRoutineWord);
         }
-        private Globals misc() {
+        Globals misc() {
             return new Globals(ring,CdCheckpointLiveAux.clearMiscAtLevelStart(live),contact,score,projectorByte,checkpointSaved,
                     drownTimerWord,debugBlockWord,OptionalInt.of(0),bonus,tail,animations,paletteSteps7,paletteTimers7,layerByte,bossFlagsByte,eventRoutineWord);
         }
-        private Globals camera() {
+        Globals camera() {
             return new Globals(ring,live,contact,score,projectorByte,checkpointSaved,drownTimerWord,debugBlockWord,pauseMusicBit,
-                    Optional.of(new CdLevelHud.BonusValues(0,0,0)),tail,animations,zero(7),zero(7),layerByte,OptionalInt.of(0),OptionalInt.of(0));
+                    Optional.of(new CdLevelHud.BonusValues(0,0,0)),tail.map(t->new Tail(t.player2ControlsWord(),0,
+                            t.unknownLevelByte(),t.demoS1IndexWord(),t.paletteFadeInfoWord())),animations,zero(7),zero(7),layerByte,OptionalInt.of(0),OptionalInt.of(0));
         }
-        private Globals drown() {
+        Globals drown() {
             return new Globals(ring,live,contact,score,projectorByte,checkpointSaved,OptionalInt.of(30),debugBlockWord,pauseMusicBit,bonus,tail,animations,paletteSteps7,paletteTimers7,layerByte,bossFlagsByte,eventRoutineWord);
         }
-        private Globals beginMain() {
-            var r=ring;
-            return new Globals(new CdRingGlobals(0,r.lives(),0,0x80,1,r.timeStopTimer(),r.ringAnimationTimer(),r.ringAnimationFrame()),
-                    CdCheckpointLiveAux.clearTimeAtSpawnZero(live),new CdPlayerBody.ContactGlobals(0,0,contact.combineRing()),new CdOpeningObjectRuntime.ScoreGlobals(score.score(),score.nextLifeScore(),0x80),
+        /** Same persistent Tail, preserving all other native words. No shadow timer. */
+        Globals secondaryBored(int word) {
+            var t=tail.orElseThrow(com.openggf.game.soniccd.player.CdPlayerFrameRuntime.UnownedSecondaryBoredTimer::new);
+            return new Globals(ring,live,contact,score,projectorByte,checkpointSaved,drownTimerWord,debugBlockWord,
+                    pauseMusicBit,bonus,Optional.of(new Tail(t.player2ControlsWord(),word,t.unknownLevelByte(),
+                    t.demoS1IndexWord(),t.paletteFadeInfoWord())),animations,paletteSteps7,paletteTimers7,
+                    layerByte,bossFlagsByte,eventRoutineWord);
+        }
+        Globals fadeInfo(int value) {
+            var t=tail.orElseThrow();
+            return new Globals(ring,live,contact,score,projectorByte,checkpointSaved,drownTimerWord,debugBlockWord,
+                    pauseMusicBit,bonus,Optional.of(new Tail(t.player2ControlsWord(),t.player2BoredWord(),
+                    t.unknownLevelByte(),t.demoS1IndexWord(),value)),animations,paletteSteps7,paletteTimers7,
+                    layerByte,bossFlagsByte,eventRoutineWord);
+        }
+        Globals beginMain() { return beginMain(0); }
+        /** Main.asm:285-290 tests spawn BEFORE Main:301 clears it. Native nonzero
+         * checkpoint/warp entry preserves the loaded rings/lives flags/time. */
+        Globals beginMain(int preClearSpawn) {
+            if ((preClearSpawn & ~255) != 0) throw new IllegalArgumentException("Raw spawn BYTE required");
+            var r=ring; boolean fresh=preClearSpawn==0;
+            return new Globals(new CdRingGlobals(fresh?0:r.rings(),r.lives(),fresh?0:r.livesFlags(),0x80,1,r.timeStopTimer(),r.ringAnimationTimer(),r.ringAnimationFrame()),
+                    fresh?CdCheckpointLiveAux.clearTimeAtSpawnZero(live):live,new CdPlayerBody.ContactGlobals(0,0,contact.combineRing()),new CdOpeningObjectRuntime.ScoreGlobals(score.score(),score.nextLifeScore(),0x80),
                     projectorByte,checkpointSaved,drownTimerWord,debugBlockWord,pauseMusicBit,bonus,
                     Optional.of(new Tail(0,0,0,0,0x202F)),animations,paletteSteps7,paletteTimers7,layerByte,bossFlagsByte,eventRoutineWord);
         }
-        private Globals fromWhite() {
+        Globals fromWhite() {
             var t=tail.orElseThrow(()->new IllegalStateException("FromWhite requires actual Main tail stores"));
             return new Globals(ring,live,contact,score,projectorByte,checkpointSaved,drownTimerWord,debugBlockWord,pauseMusicBit,bonus,
                     Optional.of(new Tail(t.player2ControlsWord(),t.player2BoredWord(),t.unknownLevelByte(),t.demoS1IndexWord(),0x003F)),
@@ -147,6 +167,17 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
                               Camera camera,GraphicsManager graphics,PatternAtlas atlas,GLCapabilities capabilities,Thread thread,String backend,RetainedPlaneSceneRenderer renderer){}
  private final Authority authority;private final CdR31aAssets assets;private final CdPlayerFrameRuntime frame;private final CdR31aSectionArt art;
  private final CdObjectPlacementRuntime placement;private final CdR31aLevelEvents events;private final CdStageTerrain terrain;
+ private Writers runtimeBlockWriters;
+ private Writers runtimeBlockSource;
+ private com.openggf.game.soniccd.resources.CdBlockDefinitionStaging runtimeBlockBank;
+ private Writers runtimeWriters(){
+  var source=image.ordinary().writers();var bank=owner.state().blockDefinitions();
+  if(runtimeBlockWriters==null||runtimeBlockSource!=source||runtimeBlockBank!=bank){
+   runtimeBlockWriters=new Writers(source.terrain(),source.foreground().withBlockDefinitions(bank),source.background().withBlockDefinitions(bank));
+   runtimeBlockSource=source;runtimeBlockBank=bank;
+  }
+  return runtimeBlockWriters;
+ }
  private Writers writers(CdStageTerrain current){
   try{return new Writers(current,CdR11bForegroundPlane.fromTables(current.blocks(),current.chunks(),current.layout().ram()),CdR11aBackgroundPlane.bindR31a(assets,current));}
   catch(IOException fault){throw new java.io.UncheckedIOException("Cannot prepare current R31 terrain writers",fault);}
@@ -164,7 +195,21 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
   events=CdR31aLevelEvents.fromAssets(assets);terrain=assets.terrain();
   var carry=initial.nativeCarry();image=new Image(this,initial.globals(),initial.scroll(),initial.foreground(),initial.background(),initial.video(),Set.of(),false,carry.collisionPointer(),carry.fadeInfoWithoutTail(),carry.rngSeedLong(),carry.targetRightBoundWord(),List.of(),new OrdinaryImage(terrain,OptionalInt.empty(),OptionalInt.empty(),Optional.empty(),writers(terrain),carry.amyCapturedByte()));
  }
- void install(SonicCdR31aLoadingVisit core){idle();if(owner!=null||Objects.requireNonNull(core).assets()!=assets||core.state().phase()!=Phase.START||core.state().section().residency()!=image.video().current())throw new IllegalArgumentException("One actual Core/Start/current relation");var selected=image.video().selected();if(selectedEnabled(selected)!=core.state().displayEnabled()||!Arrays.equals(selectedPalette(selected),core.state().displayedPalette().copy()))throw new IllegalArgumentException("Initial physical selected display differs from actual Core entry");requireAuthority(core);owner=core;}
+  private void bindFinishTimers(){
+   frame.bindFinishTimersOwner(new CdPlayerFrameRuntime.FinishTimersOwner(){
+    private void require(CdPlayerFrameRuntime.FinishTimerCall call,boolean writing){
+     call.requireCurrent(frame);current();owner.requireFinishTimers(SonicCdR31aWorldHost.this,frame);
+     if(call.writing()!=writing)throw new IllegalArgumentException("Wrong original Finish timer site");
+    }
+    public int readSecondary(CdPlayerFrameRuntime.FinishTimerCall call){
+     require(call,false);return image.globals().tail().orElseThrow(CdPlayerFrameRuntime.UnownedSecondaryBoredTimer::new).player2BoredWord();
+    }
+    public void writeSecondary(CdPlayerFrameRuntime.FinishTimerCall call,int word){
+     require(call,true);var ready=globalsImage(image.globals().secondaryBored(word));require(call,true);image=ready;
+    }
+   });
+  }
+ void install(SonicCdR31aLoadingVisit core){idle();if(owner!=null||Objects.requireNonNull(core).assets()!=assets||core.state().phase()!=Phase.START||core.state().section().residency()!=image.video().current())throw new IllegalArgumentException("One actual Core/Start/current relation");var selected=image.video().selected();if(selectedEnabled(selected)!=core.state().displayEnabled()||!Arrays.equals(selectedPalette(selected),core.state().displayedPalette().copy()))throw new IllegalArgumentException("Initial physical selected display differs from actual Core entry");requireAuthority(core);owner=core;bindFinishTimers();}
  void requireRenderIdle(){if(drawing)throw new IllegalStateException("R31A retained draw active");}
  private void idle(){requireRenderIdle();if(Thread.currentThread()!=thread||closed||closing)throw new IllegalStateException("R31A Host retired or another thread");}
  private void requireAuthority(SonicCdR31aLoadingVisit core){
@@ -205,7 +250,7 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
  private Image globalsImage(Globals globals){return copy(globals,image.scroll(),image.foreground(),image.background(),image.video(),image.sounds());}
  private Image videoImage(Video video){return copy(image.globals(),image.scroll(),image.foreground(),image.background(),video,image.sounds());}
  private Image scrollImage(Scroll scroll){return copy(image.globals(),scroll,image.foreground(),image.background(),image.video(),image.sounds());}
- private Image fadeInfo(int value){var g=image.globals();if(g.tail().isEmpty())return new Image(this,g,image.scroll(),image.foreground(),image.background(),image.video(),image.clears(),image.geometryReady(),image.collisionPointer(),OptionalInt.of(value),image.rngSeedLong(),image.targetRightBoundWord(),image.sounds(),image.ordinary());var t=g.tail().orElseThrow();return globalsImage(new Globals(g.ring(),g.live(),g.contact(),g.score(),g.projectorByte(),g.checkpointSaved(),g.drownTimerWord(),g.debugBlockWord(),g.pauseMusicBit(),g.bonus(),Optional.of(new Tail(t.player2ControlsWord(),t.player2BoredWord(),t.unknownLevelByte(),t.demoS1IndexWord(),value)),g.animations(),g.paletteSteps7(),g.paletteTimers7(),g.layerByte(),g.bossFlagsByte(),g.eventRoutineWord()));}
+ private Image fadeInfo(int value){var g=image.globals();if(g.tail().isEmpty())return new Image(this,g,image.scroll(),image.foreground(),image.background(),image.video(),image.clears(),image.geometryReady(),image.collisionPointer(),OptionalInt.of(value),image.rngSeedLong(),image.targetRightBoundWord(),image.sounds(),image.ordinary());return globalsImage(g.fadeInfo(value));}
 
  // Common World is the sole lifetime/admission coordinator. Host retains one captured native image.
  /** Named immutable early writer products; these data values confer no entry or invocation. */
@@ -372,7 +417,7 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
   if(frame.state().header().slotId()!=0||frame.state().motion().spriteFlags()!=0||frame.state().header().tile()!=0)throw new HostBoundary(Boundary.CLEAR_SCREEN_PLAYER_ALIAS);
  }
  private void initialForeground(State state){if(!image.geometryReady())throw new HostBoundary(Boundary.GEOMETRY_NOT_LOADED);var s=image.scroll();var f=s.foreground();var bg=assets.view(CdR31aAssets.Asset.LAYOUT_BG);int cursor=64+bg.unsignedByte(1)*128+bg.unsignedByte(0)+1;var ram=state.layoutRam().orElseThrow();var metadata=new CdR11bForegroundPlane.CallerMetadata(cursor<ram.length()?OptionalInt.of(ram.unsignedByte(cursor)):OptionalInt.empty());
-  try{adoptForeground(image.ordinary().writers().foreground().initialize(image.foreground(),new CdR11aBackgroundPlane.Camera((f.cameraX()<<16)|s.foregroundXFractionWord(),f.cameraY16_16()),f.scrollFlags(),metadata),false);}catch(CdR11bForegroundPlane.InvalidPlane original){try{adoptForeground(original.completedPrefix(),false);}catch(RuntimeException|Error publication){if(publication!=original)original.addSuppressed(publication);}throw original;}
+  try{adoptForeground(runtimeWriters().foreground().initialize(image.foreground(),new CdR11aBackgroundPlane.Camera((f.cameraX()<<16)|s.foregroundXFractionWord(),f.cameraY16_16()),f.scrollFlags(),metadata),false);}catch(CdR11bForegroundPlane.InvalidPlane original){try{adoptForeground(original.completedPrefix(),false);}catch(RuntimeException|Error publication){if(publication!=original)original.addSuppressed(publication);}throw original;}
  }
  /** Native name-table writes affect current physical planes after selection, without
   * selecting another CPU/palette/HScroll image or replaying draw observations. */
@@ -380,14 +425,18 @@ final class SonicCdR31aWorldHost implements Host,AutoCloseable {
   var v=image.video();if(v.selected() instanceof Published p){var old=p.selection().inputs();var i=new Inputs(old.selectedCpu(),old.selectedSat(),old.palette(),old.hscroll(),old.vscrollLongBits(),old.displayEnabled(),foreground,background,v.current(),v.playerArt());v=new Video(v.cpuSat(),v.completedCpu(),v.playerArt(),v.current(),new Published(project(i)));}
   return copy(image.globals(),scroll,foreground,background,v,image.sounds());
  }
- private void initialBackground(){if(!image.geometryReady())throw new HostBoundary(Boundary.GEOMETRY_NOT_LOADED);var s=image.scroll();var out=image.ordinary().writers().background().initialize(image.background(),live(s.background()),flags(s.background()));image=planeImage(s,image.foreground(),out.state());}
+ private void initialBackground(){if(!image.geometryReady())throw new HostBoundary(Boundary.GEOMETRY_NOT_LOADED);var s=image.scroll();try{var out=runtimeWriters().background().initialize(image.background(),live(s.background()),flags(s.background()));image=planeImage(s,image.foreground(),out.state());}catch(CdR11aBackgroundPlane.InvalidPlane original){retainBackgroundPrefix(original,false);throw original;}}
  private void drawCopied(){var s=image.scroll();var c=s.copies();if(!image.geometryReady()&&((c.foregroundFlags()|c.backgroundFlags().bg1())&0xFF00)!=0)throw new HostBoundary(Boundary.GEOMETRY_NOT_LOADED);
-  var bg=image.ordinary().writers().background().incremental(image.background(),live(s.background()),c.background(),c.backgroundFlags());var copies=new Copies(c.foregroundX16_16(),c.foregroundY16_16(),c.background(),c.foregroundFlags(),bg.flags());var ready=new Scroll(s.foreground(),s.background(),copies,s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord());image=planeImage(ready,image.foreground(),bg.state());
+  CdR11aBackgroundPlane.Result bg;try{bg=runtimeWriters().background().incremental(image.background(),live(s.background()),c.background(),c.backgroundFlags());}catch(CdR11aBackgroundPlane.InvalidPlane original){retainBackgroundPrefix(original,true);throw original;}var copies=new Copies(c.foregroundX16_16(),c.foregroundY16_16(),c.background(),c.foregroundFlags(),bg.flags());var ready=new Scroll(s.foreground(),s.background(),copies,s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord());image=planeImage(ready,image.foreground(),bg.state());
   // Native BG rows/drawn columns restore a0 (R31 Stage Draw118-136,184-190).
   // Inherit BG IDs+1 without columns, or the post16-read directory cursor.
   int index=1;for(var read:bg.sections())if(read.phase()==CdR11aBackgroundPlane.Phase.INCREMENTAL_COLUMN)index=read.tableIndex()+1;
   var ids=assets.view(CdR31aAssets.Asset.BG_SECTIONS);var metadata=new CdR11bForegroundPlane.CallerMetadata(index>=0&&index<ids.length()?OptionalInt.of(ids.unsignedByte(index)):OptionalInt.empty());
-  try{adoptForeground(image.ordinary().writers().foreground().incremental(image.foreground(),new CdR11aBackgroundPlane.Camera(copies.foregroundX16_16(),copies.foregroundY16_16()),copies.foregroundFlags(),metadata),true);}catch(CdR11bForegroundPlane.InvalidPlane original){try{adoptForeground(original.completedPrefix(),true);}catch(RuntimeException|Error publication){if(publication!=original)original.addSuppressed(publication);}throw original;}
+  try{adoptForeground(runtimeWriters().foreground().incremental(image.foreground(),new CdR11aBackgroundPlane.Camera(copies.foregroundX16_16(),copies.foregroundY16_16()),copies.foregroundFlags(),metadata),true);}catch(CdR11bForegroundPlane.InvalidPlane original){try{adoptForeground(original.completedPrefix(),true);}catch(RuntimeException|Error publication){if(publication!=original)original.addSuppressed(publication);}throw original;}
+ }
+ private void retainBackgroundPrefix(CdR11aBackgroundPlane.InvalidPlane original,boolean consume){
+  try{var prefix=original.completedPrefix();if(prefix.isPresent()){var result=prefix.orElseThrow();var s=image.scroll();var c=s.copies();if(consume)c=new Copies(c.foregroundX16_16(),c.foregroundY16_16(),c.background(),c.foregroundFlags(),result.flags());var ready=consume?new Scroll(s.foreground(),s.background(),c,s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord()):s;image=planeImage(ready,image.foreground(),result.state());}}
+  catch(RuntimeException|Error retention){if(retention!=original)original.addSuppressed(retention);}
  }
  private void adoptForeground(CdR11bForegroundPlane.Result result,boolean consume){var s=image.scroll();var c=s.copies();if(consume)c=new Copies(c.foregroundX16_16(),c.foregroundY16_16(),c.background(),result.flagsWord(),c.backgroundFlags());var ready=new Scroll(s.foreground(),s.background(),c,s.foregroundXFractionWord(),s.topBoundWord(),s.waterDeformWord());image=planeImage(ready,result.state(),image.background());}
  @Override public CdAssetBytes publish(Publication selected){

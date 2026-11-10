@@ -95,6 +95,22 @@ public final class CdObjectMappings implements CdDrawMappings {
         this.staticPieces = Map.copyOf(indexedStatic);
     }
 
+    /** Existing original R11 mapping owner plus authenticated startup tables; no source art is read. */
+    public static CdObjectMappings fromOriginalR11Startup(CdR11aAssets assets,CdR11aObjectAssets objects,com.openggf.game.soniccd.level.CdR11aStartupSource startup){
+        if(!startup.owns(assets))throw new IllegalArgumentException("Foreign original R11 startup source");
+        var base=fromOpeningAssets(assets,objects);
+        var tables=new ArrayList<>(base.tables.values());
+        tables.addAll(startup.mappings());
+        addObject(tables,objects,CdR11aObjectAssets.Table.TUNNEL_DOOR_SPLASH_MAPPINGS,objects.tunnelDoorSplash());
+        var waterfall=objects.view(CdR11aObjectAssets.Table.TUNNEL_WATERFALL_MAPPINGS);
+        tables.add(new DeclaredTable((int)waterfall.range().nativeAddress(),waterfall.bytes(),0,3));
+        addObject(tables,objects,CdR11aObjectAssets.Table.CLOSURE_BIG_RING_MAPPINGS,CdObjectVisualAssets.decodeStatic(objects.view(CdR11aObjectAssets.Table.CLOSURE_BIG_RING_MAPPINGS).bytes().copy(),4,106));
+        addObject(tables,objects,CdR11aObjectAssets.Table.CLOSURE_BIG_RING_FLASH_MAPPINGS,CdObjectVisualAssets.decodeStatic(objects.view(CdR11aObjectAssets.Table.CLOSURE_BIG_RING_FLASH_MAPPINGS).bytes().copy(),8,77));
+        addObject(tables,objects,CdR11aObjectAssets.Table.CLOSURE_GOAL_SIGNPOST_MAPPINGS,CdObjectVisualAssets.decodeStatic(objects.view(CdR11aObjectAssets.Table.CLOSURE_GOAL_SIGNPOST_MAPPINGS).bytes().copy(),6,76));
+        var closure=objects.view(CdR11aObjectAssets.Table.CLOSURE_RESULTS_MAPPINGS);for(int root:new int[]{0,10,20,30})tables.add(new DeclaredTable(closure.range().nativeAddress(),closure.bytes(),root,5));
+        return new CdObjectMappings(tables,new ArrayList<>(base.staticPieces.values()));
+    }
+
     /** Pure declared-format binding. It does not authenticate media, an object owner or native execution. */
     public static CdObjectMappings declaredSourceViews(List<DeclaredTable> tables,
                                                        List<DeclaredStaticPiece> staticPieces) {
@@ -201,17 +217,26 @@ public final class CdObjectMappings implements CdDrawMappings {
         addObject(tables, objects, CdR11aObjectAssets.Table.SPINNING_DISC_MAPPINGS, objects.spinningDisc());
         addObject(tables, objects, CdR11aObjectAssets.Table.LOG_SHADOW_MAPPINGS, objects.logShadow());
         addObject(tables, objects, CdR11aObjectAssets.Table.SONIC_HOLE_MAPPINGS, objects.sonicHole());
+        addObject(tables, objects, CdR11aObjectAssets.Table.MECHANISM_WHEEL_MAPPINGS, objects.mechanismWheel());
+        addObject(tables, objects, CdR11aObjectAssets.Table.MECHANISM_BOARD_MAPPINGS, objects.mechanismBoard());
+        addObject(tables, objects, CdR11aObjectAssets.Table.MECHANISM_WALL_MAPPINGS, objects.mechanismWall());
         var monitorView = objects.view(CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS);
         var staticPieces = new ArrayList<DeclaredStaticPiece>();
         // ObjMonitorItem_Init (:451-459) adds the signed frame word and then one byte, skipping the count.
         // Only the eight Monitor icons (subtypes 0..7, :278-280) are admitted; post/HUD first pieces are not.
         // Keep the odd native pointers and exactly five actual source bytes, never a copied counted header.
-        for (int frame = 0; frame < 8; frame++) {
-            int firstPiece = (short) monitorView.bytes().unsignedWord(frame * 2) + 1;
-            staticPieces.add(new DeclaredStaticPiece(monitorView.range().nativeAddress() + firstPiece,
-                    monitorView.bytes().slice(firstPiece, 5)));
-        }
+        staticPieces.addAll(monitorItemStaticPieces(monitorView.bytes(),monitorView.range().nativeAddress()));
         return new CdObjectMappings(tables, staticPieces);
+    }
+
+    /** Pure source relation only: signed directory word + one byte, eight actual Monitor icons.
+     * All actual profile factories validate their own provenance before using this common reader. */
+    public static List<DeclaredStaticPiece> monitorItemStaticPieces(CdAssetBytes source,int root){
+        Objects.requireNonNull(source);var pieces=new ArrayList<DeclaredStaticPiece>(8);
+        for(int frame=0;frame<8;frame++){
+            int firstPiece=(short)source.unsignedWord(frame*2)+1;
+            pieces.add(new DeclaredStaticPiece(root+firstPiece,source.slice(firstPiece,5)));
+        }return List.copyOf(pieces);
     }
 
     /**
@@ -228,10 +253,7 @@ public final class CdObjectMappings implements CdDrawMappings {
         var source = objects.view(CdR12aProfile.Asset.MAP_SPR_MONITOR_TIME);
         int root = objects.profile().range(CdR12aProfile.Asset.MAP_SPR_MONITOR_TIME).nativeAddress();
         var pieces = new ArrayList<DeclaredStaticPiece>(8);
-        for (int frame = 0; frame < 8; frame++) {
-            int firstPiece = (short) source.unsignedWord(frame * 2) + 1;
-            pieces.add(new DeclaredStaticPiece(root + firstPiece, source.slice(firstPiece, 5)));
-        }
+        pieces.addAll(monitorItemStaticPieces(source,root));
         return List.copyOf(pieces);
     }
 
@@ -320,10 +342,7 @@ public final class CdObjectMappings implements CdDrawMappings {
         var source = objects.view(CdR12bObjectAssets.View.MAP_SPR_MONITOR_TIME);
         int root = CdR12bObjectAssets.View.MAP_SPR_MONITOR_TIME.range().nativeAddress();
         var pieces = new ArrayList<DeclaredStaticPiece>(8);
-        for (int frame = 0; frame < 8; frame++) {
-            int firstPiece = (short) source.unsignedWord(frame * 2) + 1;
-            pieces.add(new DeclaredStaticPiece(root + firstPiece, source.slice(firstPiece, 5)));
-        }
+        pieces.addAll(monitorItemStaticPieces(source,root));
         return List.copyOf(pieces);
     }
 
@@ -371,10 +390,7 @@ public final class CdObjectMappings implements CdDrawMappings {
         var source = objects.view(CdR13ObjectAssets.View.MAP_SPR_MONITOR_TIME);
         int root = CdR13ObjectAssets.View.MAP_SPR_MONITOR_TIME.range(assets.identity().file()).nativeAddress();
         var pieces = new ArrayList<DeclaredStaticPiece>(8);
-        for (int frame = 0; frame < 8; frame++) {
-            int firstPiece = (short) source.unsignedWord(frame * 2) + 1;
-            pieces.add(new DeclaredStaticPiece(root + firstPiece, source.slice(firstPiece, 5)));
-        }
+        pieces.addAll(monitorItemStaticPieces(source,root));
         return declaredSourceViews(tables, pieces);
     }
 
@@ -501,6 +517,12 @@ public final class CdObjectMappings implements CdDrawMappings {
         var pair=common.kamaSickleAssets();
         for(var key:List.of(CdCczEnemyPorts.Mapping.KAMA_NORMAL,CdCczEnemyPorts.Mapping.KAMA_DAMAGED,CdCczEnemyPorts.Mapping.SICKLE))
             tables.add(pair.mapping(key).table());
+        var tentou=common.tentouAssets();
+        for(var key:List.of(CdCczEnemyPorts.Mapping.TENTOU_NORMAL,CdCczEnemyPorts.Mapping.TENTOU_DAMAGED,CdCczEnemyPorts.Mapping.BOMB))
+            tables.add(tentou.mapping(key).table());
+        var animal=common.ccAnimalAssets();
+        tables.add(new DeclaredTable(animal.flyingAddress(),animal.flying().mappings(),0,3));
+        tables.add(new DeclaredTable(animal.groundAddress(),animal.ground().mappings(),0,5));
         var explosion=common.explosionAssets();var points=common.pointsAssets();
         tables.add(new DeclaredTable(explosion.mappingsAddress(),explosion.explosion().mappings(),0,7));
         tables.add(new DeclaredTable(points.mappingsAddress(),points.points().mappings(),0,6));
@@ -508,7 +530,17 @@ public final class CdObjectMappings implements CdDrawMappings {
         tables.add(CdR31aBumperSource.fromAssets(assets).mapping());
         var flower=common.flowerAssets();
         tables.add(new DeclaredTable(flower.mappingsAddress(),flower.flower().mappings(),0,8));
+        // Append Ga's two actual roots; Ring dust uses the existing Ring registration above.
+        var ga=common.gaAssets();
+        tables.add(ga.mapping(CdCczEnemyPorts.Mapping.GA_NORMAL).table());
+        tables.add(ga.mapping(CdCczEnemyPorts.Mapping.GA_DAMAGED).table());
         return declaredSourceViews(tables, List.of());
+    }
+    /** Explicit original Flipper admission. The legacy R31 mapper contract is unchanged. */
+    public static CdObjectMappings fromR31aPinballAssets(CdR31aAssets assets,CdR31aObjectAssets common){
+        var base=fromR31aAssets(assets,common);var tables=new ArrayList<>(base.tables.values());
+        tables.add(CdR31aBumperSource.fromAssets(assets).flipperMapping());
+        return new CdObjectMappings(tables,new ArrayList<>(base.staticPieces.values()));
     }
     // END R31 COMMON COUNTED METADATA JOIN 20261107
 

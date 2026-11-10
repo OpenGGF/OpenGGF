@@ -86,11 +86,11 @@ class TestSonicCdAct2PastObjectPass {
     }
     @Test void unownedLaterIdKeepsCompletedPrimaryAndEarlierSlotPrefixWithoutPublishingCpu(){
         actual();var f=fixture(false);var pool=f.placement.pool();
-        pool.write(pool.state(32).moveByte(ID,0x1D).moveWord(X_FRACTION,0xBEEF));pool.write(pool.state(33).moveByte(ID,0x18));
+        pool.write(pool.state(32).moveByte(ID,0x1D).moveWord(X_FRACTION,0xBEEF));pool.write(pool.state(33).moveByte(ID,0x06));
         var pass=f.pass();var stop=assertThrows(Unowned.class,()->pass.runWalk(1));
         assertEquals(Boundary.OBJECT_KIND,stop.boundary());assertEquals(33,stop.wholeIndex());
         assertEquals(2,f.frame.state().motion().routine());assertEquals(0,pool.state(32).id());assertEquals(0xBEEF,pool.state(32).word(X_FRACTION));
-        assertEquals(0x18,pool.state(33).id());assertTrue(f.ports.cut.completedCpu().isEmpty());
+        assertEquals(0x06,pool.state(33).id());assertTrue(f.ports.cut.completedCpu().isEmpty());
         assertThrows(IllegalStateException.class,()->pass.finishDraw(cameras()));assertFalse(f.frame.closed());
     }
     @Test void nextSonicMainUsesActualTouchSupportAndTheOriginalCompletedExternalPublication(){

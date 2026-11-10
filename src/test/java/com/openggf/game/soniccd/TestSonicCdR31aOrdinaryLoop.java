@@ -114,8 +114,8 @@ class TestSonicCdR31aOrdinaryLoop {
     }
 
     @Test void kernelAddsOnlySchedulingReferencesAndFlagsWithoutValueOrCaptureState() throws Exception {
-        assertFalse(Modifier.isPublic(CdOrdinaryLoop.class.getModifiers()));assertEquals(List.of(3),Arrays.stream(CdOrdinaryLoop.class.getDeclaredConstructors()).map(c->c.getParameterCount()).toList());assertTrue(Arrays.stream(CdOrdinaryLoop.class.getDeclaredMethods()).noneMatch(m->Modifier.isPublic(m.getModifiers())));assertEquals(20,CdOrdinaryLoop.Cut.values().length);assertEquals(18,CdOrdinaryLoop.Ports.class.getDeclaredMethods().length);
-        var types=Arrays.stream(CdOrdinaryLoop.class.getDeclaredFields()).map(f->f.getType().getSimpleName()).sorted().toList();assertEquals(List.of("CdPlayerFrameRuntime","CdStagePlayerSource","Ports","boolean","boolean"),types);assertTrue(Arrays.stream(CdOrdinaryLoop.Ports.class.getDeclaredMethods()).noneMatch(m->m.isDefault()));
+        assertFalse(Modifier.isPublic(CdOrdinaryLoop.class.getModifiers()));assertEquals(List.of(3),Arrays.stream(CdOrdinaryLoop.class.getDeclaredConstructors()).map(c->c.getParameterCount()).toList());assertTrue(Arrays.stream(CdOrdinaryLoop.class.getDeclaredMethods()).noneMatch(m->Modifier.isPublic(m.getModifiers())));assertEquals(20,CdOrdinaryLoop.Cut.values().length);assertEquals(20,CdOrdinaryLoop.Ports.class.getDeclaredMethods().length);
+        var types=Arrays.stream(CdOrdinaryLoop.class.getDeclaredFields()).map(f->f.getType().getSimpleName()).sorted().toList();assertEquals(List.of("CdPlayerFrameRuntime","CdStagePlayerSource","Ports","boolean","boolean"),types);assertEquals(List.of("originalProgrammeOwner","originalStandardProgrammeOwner"),Arrays.stream(CdOrdinaryLoop.Ports.class.getDeclaredMethods()).filter(m->m.isDefault()).map(m->m.getName()).sorted().toList());
     }
 
     @ParameterizedTest(name="native timeStop WORD {0}")

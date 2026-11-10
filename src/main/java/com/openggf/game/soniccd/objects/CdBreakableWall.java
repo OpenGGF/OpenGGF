@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import java.util.OptionalInt;
 
 import static com.openggf.game.soniccd.objects.CdObjectState.ByteField.*;
@@ -38,6 +40,9 @@ import static com.openggf.game.soniccd.objects.CdObjectState.LongField.*;
  * service clock, mutable globals, second pool or persistent capture owner is created here.
  */
 public final class CdBreakableWall {
+    private CdOriginalMechanismProtocol mechanismProtocol;
+    public boolean isCurrentOriginalOperation(CdOriginalMechanismProtocol.Call call){return mechanismProtocol!=null&&mechanismProtocol.current(call);}
+
     public static final int OBJECT_ID = 0x36, BREAK_FM = 0xB0;
     // Existing enums describe overlapping STORAGE only. Reuse their exact $2A/$2E locations;
     // this component adds no shared enum, owner, byte bank or unrelated object's behavior.
@@ -203,7 +208,7 @@ public final class CdBreakableWall {
         if (dispatch.pending != null) throw new IllegalStateException("Nested Wall owner publication");
         dispatch.pending = call; dispatch.acknowledged = false;
         try {
-            action.run();
+            if(mechanismProtocol==null)action.run();else mechanismProtocol.callback(call,action);
             if (observer != null && (call instanceof SolidCall || call instanceof FmCall
                     || call instanceof HalveXVelocityCall || call instanceof CdObjectState.Identity) && !dispatch.acknowledged)
                 throw new IllegalStateException("Wall owner omitted its actual pending publication");
@@ -215,12 +220,12 @@ public final class CdBreakableWall {
         validateCurrentDispatch();
         var next = new ArrayList<>(dispatch.images); next.set(state.identity().dynamicIndex(), state);
         var ready = java.util.Collections.unmodifiableList(next);
-        placement.pool().write(state); dispatch.images = ready;
+        if(mechanismProtocol==null)placement.pool().write(state);else mechanismProtocol.store(state,()->placement.pool().write(state)); dispatch.images = ready;
     }
     private void deleteNative(int whole) {
         validateCurrentDispatch();
         var next = new ArrayList<>(dispatch.images); var ready = java.util.Collections.unmodifiableList(next);
-        placement.pool().deleteObject(whole);
+        if(mechanismProtocol==null)placement.pool().deleteObject(whole);else mechanismProtocol.delete(()->placement.pool().deleteObject(whole));
         next.set(whole - CdObjectPool.FIRST_WHOLE_INDEX, placement.pool().state(whole)); dispatch.images = ready;
     }
     private void allowCallbackPrefix(CdObjectPool.Snapshot before, CdObjectPool.Snapshot after) {
@@ -231,6 +236,13 @@ public final class CdBreakableWall {
     }
 
 
+
+    public static CdBreakableWall fromOriginalPresentMechanism(CdObjectPlacementRuntime placement,CdR11aAssets owner,
+            CdSolidObject solid,SolidCommit commit,HalveXVelocity halve,DrawObject draw,PlayFm fm,CdOriginalMechanismProtocol.Observer observer)throws java.io.IOException{
+        CdOriginalPresentObjectSource.require(placement,owner);var o=owner.openingObjects();o.mechanismWall();
+        var body=new CdBreakableWall(placement,new Assets(o.view(CdR11aObjectAssets.Table.MECHANISM_WALL_FRAMES).bytes(),o.view(CdR11aObjectAssets.Table.MECHANISM_WALL_DELTAS).bytes(),o.view(CdR11aObjectAssets.Table.MECHANISM_WALL_SPEEDS).bytes(),CdR11aObjectAssets.Table.MECHANISM_WALL_MAPPINGS.range().nativeAddress()),solid,commit,halve,draw,fm,true);
+        body.mechanismProtocol=new CdOriginalMechanismProtocol(placement,observer);return body;
+    }
     /** Constructed component ingress only; it cannot select an authenticated placement by equal bytes. */
     public CdBreakableWall(CdObjectPlacementRuntime placement, Assets assets, CdSolidObject solid,
                           SolidCommit solidCommit, HalveXVelocity halve, DrawObject draw, PlayFm fm) {
@@ -274,7 +286,7 @@ public final class CdBreakableWall {
         var pool = placement.pool(); var state = pool.state(wholeIndex);
         if (state.id() != OBJECT_ID) throw new IllegalArgumentException("Wall requires actual dynamic ID36");
         int routine = state.routine();
-        var preparedDispatch = new DispatchCursor(wholeIndex); running = true; dispatch = preparedDispatch;
+        var preparedDispatch = new DispatchCursor(wholeIndex); running = true; dispatch = preparedDispatch;if(mechanismProtocol!=null)mechanismProtocol.begin(wholeIndex);
         try {
             if ((routine & 1) != 0 || routine > 4) throw new UnsupportedWall(Boundary.ROUTINE);
             var effects = new ArrayList<Effect>(); effects.add(new RoutineEntered(routine));
@@ -317,7 +329,7 @@ public final class CdBreakableWall {
         } catch (RuntimeException | Error original) {
             if (observer != null) suppress(original, () -> pending(original, () -> observer.failed(original)));
             throw original;
-        } finally { dispatch = null; running = false; }
+        } finally { if(mechanismProtocol!=null)mechanismProtocol.end();dispatch = null; running = false; }
     }
 
     private void breakUp(int whole, int finalPlayerX, List<Effect> effects) {
@@ -360,6 +372,7 @@ public final class CdBreakableWall {
 
     private void publishSolid(CdObjectState state, Inputs inputs, List<Effect> effects) {
         var cut = cut(state.identity().wholeIndex()); var pool = placement.pool();
+        if(mechanismProtocol!=null)mechanismProtocol.callback(CdOriginalMechanismProtocol.NativeSite.WALL_SOLID_OWNER,()->{});
         var outcome = solid.runWithPrefix(CdSolidObject.Entry.SOLID_OBJECT, state, inputs.player(), inputs.gates(), inputs.globals(), cut.placement().pool());
         CdObjectState object; List<CdObjectState> others; CdSolidObject.NativeStopped stopped = null;
         if (outcome instanceof CdSolidObject.Completed done) { object = done.completedResult().object(); others = done.completedResult().otherSlots(); }
@@ -422,7 +435,7 @@ public final class CdBreakableWall {
             int relative = address - 2;
             validateCurrentDispatch(); var bank = dispatch.saved.copy(); bank[address] &= 0x7F;
             var readyBank = CdAssetBytes.copyOf(bank);
-            placement.bclrSavedFlag(relative / 3, relative % 3, CdObjectPlacementRuntime.SavedBit.LOADED);
+            if(mechanismProtocol==null)placement.bclrSavedFlag(relative/3,relative%3,CdObjectPlacementRuntime.SavedBit.LOADED);else mechanismProtocol.saved(address,bank[address]&255,()->placement.bclrSavedFlag(relative/3,relative%3,CdObjectPlacementRuntime.SavedBit.LOADED));
             dispatch.saved = readyBank;
         }
         deleteNative(state.identity().wholeIndex()); return true;

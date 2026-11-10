@@ -86,7 +86,7 @@ class TestCdStagePlayerSource {
                 .filter(m -> Modifier.isPublic(m.getModifiers()))
                 .map(m -> m.getName() + "/" + m.getParameterCount()).collect(Collectors.toSet());
         assertEquals(Set.of("fromPresent/1", "fromPast/1", "fromAct2/2", "terrain/0", "player/0", "sonic/0",
-                "mappingAddress/0", "variant/0", "stage/0", "ordinaryPeriod/0", "ownsPresent/1", "ownsPast/1", "ownsAct2/2", "fromAct2Past/2", "ownsAct2Past/2", "fromAct3Future/1", "ownsAct3Future/1", "fromR31aAssets/1", "ownsR31aAssets/1", "ordinaryZoneActWord/0"), names);
+                "mappingAddress/0", "variant/0", "stage/0", "ordinaryPeriod/0", "ownsPresent/1", "ownsPast/1", "ownsAct2/2", "fromAct2Past/2", "ownsAct2Past/2", "fromAct3Future/1", "ownsAct3Future/1", "fromR31aAssets/1", "ownsR31aAssets/1", "ordinaryZoneActWord/0", "nativeZoneActWord/0", "fromProgramme/2", "hasRetainedPpzProgrammeSource/0"), names);
         var fields = CdStagePlayerSource.class.getDeclaredFields(); assertEquals(15, fields.length);
         assertEquals(1, Arrays.stream(fields).filter(f -> f.getName().equals("act3Future")
                 && f.getType() == CdR13FutureAssets.class).count());
@@ -128,13 +128,14 @@ class TestCdStagePlayerSource {
     }
 
     @Test
-    void actualPresentBorrowsTheExistingImmutableFormatProducts() {
+    void actualPresentBorrowsTheExistingImmutableFormatProducts() throws Exception {
         requireActual(); var binding = CdStagePlayerSource.fromPresent(present);
         assertSame(present.terrain().stageTerrain(), binding.terrain());
         assertSame(present.player(), binding.player()); assertSame(present.sonic(), binding.sonic());
         assertSame(binding.sonic(), binding.player().sonic());
         assertEquals(0x21F200, binding.mappingAddress());
-        assertEquals(CdStageTerrain.Shape.PPZ1_PRESENT, binding.terrain().shape());
+        assertThrows(UnsupportedOperationException.class,binding.terrain()::shape);
+        assertEquals(present.internalReader().terrain().profile(),binding.terrain().profile());
         assertEquals(804, binding.terrain().blockCount()); assertEquals(800, binding.terrain().patternCount());
         assertEquals(121, binding.terrain().chunkCount());
         assertEquals(42, binding.terrain().layout().columns(CdStageTerrain.Plane.FOREGROUND));
@@ -185,7 +186,7 @@ class TestCdStagePlayerSource {
     void repeatedWrappersBorrowTheSameOwnerButAreNotAnInvocationToken() {
         requireActual(); var first = CdStagePlayerSource.fromPresent(present); var again = CdStagePlayerSource.fromPresent(present);
         var old = CdStagePlayerSource.fromPast(past); var next = CdStagePlayerSource.fromPast(past);
-        assertNotSame(first, again); assertNotSame(old, next);
+        assertSame(first, again); assertNotSame(old, next);
         assertTrue(first.ownsPresent(present)); assertTrue(again.ownsPresent(present));
         assertTrue(old.ownsPast(past)); assertTrue(next.ownsPast(past));
         assertSame(first.terrain(), again.terrain()); assertSame(first.player(), again.player());
@@ -224,9 +225,9 @@ class TestCdStagePlayerSource {
         requireActual();
         assertArrayEquals(present.sonic().mappings().copy(), anotherPresent.sonic().mappings().copy());
         assertThrows(IllegalArgumentException.class, () -> CdStagePlayerSource.fromPresent(
-                declared(present.profile(), present.identity(), present.terrain(), anotherPresent.sonic(), present.player())));
+                declared(present.profile(), present.identity(), legacyPresentTerrain(), anotherPresent.sonic(), present.player())));
         assertThrows(IllegalArgumentException.class, () -> CdStagePlayerSource.fromPresent(
-                declared(present.profile(), present.identity(), present.terrain(), present.sonic(), past.player())));
+                declared(present.profile(), present.identity(), legacyPresentTerrain(), present.sonic(), past.player())));
     }
 
     @Test
@@ -243,11 +244,12 @@ class TestCdStagePlayerSource {
         requireActual();
         // Deliberately constructed package fixture: image/decode/load/placement/shield fields are null.
         // This exercises data-only reads, not the supplied-disc factory or native admission.
-        var fixture = declared(present.profile(), present.identity(), present.terrain(), present.sonic(), present.player());
+        var fixture = declared(present.profile(), present.identity(), legacyPresentTerrain(), present.sonic(), present.player());
         var view = CdStagePlayerSource.fromPresent(fixture);
         assertTrue(view.ownsPresent(fixture)); assertFalse(view.ownsPresent(present));
         assertSame(present.player(), view.player()); assertSame(present.sonic(), view.sonic());
-        assertSame(present.terrain().stageTerrain(), view.terrain());
+        assertSame(fixture.terrain().stageTerrain(), view.terrain());
+        assertEquals(CdStageTerrain.Shape.PPZ1_PRESENT,view.terrain().shape());
         assertNull(fixture.loadPlan()); assertNull(fixture.placements()); assertNull(fixture.shield());
     }
 
@@ -411,6 +413,15 @@ class TestCdStagePlayerSource {
 
     private static void requireActual() {
         assumeTrue(present != null && past != null, "Set soniccd.media.root for original-USA A/B cases");
+    }
+
+    /** Explicit legacy-format component control, decoded from the actual borrowed source bytes.
+     * The common reader terrain deliberately carries no legacy stage Shape/admission. */
+    private static CdR11aTerrain legacyPresentTerrain() {
+        return CdR11aTerrain.decode(present.decoded(CdR11aAsset.LEVEL_BLOCKS).copy(),present.decoded(CdR11aAsset.ART_LEVEL_TILES).copy(),
+            present.view(CdR11aAsset.LEVEL_CHUNKS).bytes().copy(),present.view(CdR11aAsset.LAYOUT_FG).bytes().copy(),
+            present.view(CdR11aAsset.LAYOUT_BG).bytes().copy(),present.view(CdR11aAsset.LEVEL_COLLISION).bytes().copy(),
+            present.view(CdR11aAsset.COL_ANGLE_MAP).bytes().copy(),present.view(CdR11aAsset.COL_HEIGHT_MAP).bytes().copy(),present.view(CdR11aAsset.COL_WIDTH_MAP).bytes().copy());
     }
 
     private static CdR11aAssets declared(CdR11aProfile profile, CdR11aAssets.Identity identity,

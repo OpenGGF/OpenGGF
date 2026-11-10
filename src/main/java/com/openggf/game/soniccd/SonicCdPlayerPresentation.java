@@ -21,6 +21,7 @@ import com.openggf.game.mode.GameplayFrameController;
 import com.openggf.game.mode.GameplayFrameDisposition;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineTiming;
 import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.game.session.WorldSessionPolicyAccess;
@@ -256,6 +257,18 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         requireProgramVideoInitializationCut();Objects.requireNonNull(current);Objects.requireNonNull(player);
         return new Act3FutureVideoInit(com.openggf.game.soniccd.resources.CdR13ArtResidency.clear(current),
                 clearProgramPlayerResident(player),programVideoSelection());
+    }
+
+    /** Shared initialization output without borrowing a different programme's pattern profile.
+     * InitVdp (common/vdp.asm:3-42) clears physical patterns/palette and scroll shadows;
+     * the R41A graph includes it. No TT DATA, CPU palette, Frame or Ready is fabricated. */
+    record ProgramVideoInit(CdPlayerArtRuntime.State playerArt,ProgramVideoSelection selection,
+                            boolean patternsCleared) { }
+    ProgramVideoInit initializeProgramVideo(CdPlayerArtRuntime.State playerArt) {
+        requireProgramVideoInitializationCut();Objects.requireNonNull(playerArt);
+        var result=new ProgramVideoInit(clearProgramPlayerResident(playerArt),programVideoSelection(),true);
+        planeState=result.selection().backgroundPlane();publishedPlane=result.selection().backgroundPlane();
+        return result;
     }
 
     private static ProgramVideoSelection programVideoSelection() {
@@ -661,6 +674,11 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     void unbind() {
         requirePastRenderIdle();
         try {
+            if (originalR11RenderBinding != null) {
+                // A retired native Frame is no longer a getter for resource teardown.
+                // Retain the binding if close fails so the renderer keeps its retirement ledger.
+                originalR11RenderBinding.renderer().close(); originalR11RenderBinding = null;
+            }
             if (act2RenderBinding != null) {
                 act2RenderBinding.renderer().close(); act2RenderBinding = null;
             }
@@ -689,6 +707,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     void afterRestore() {
         requirePastRenderIdle();
+        if(module.originalR11AssemblySelected()){module.originalR11FirstLoad();GameServices.level().recomputeParallaxAfterRewindRestore();heldPhase=null;return;}
         if(module.r31LoadingSelected())module.validateR31LoadingCut();
         try {
             if(module.r31LoadingSelected()) {
@@ -848,6 +867,14 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         throw new IllegalStateException("CD uses the complete controlled-frame disposition");
     }
     @Override public GameplayFrameDisposition beforeFrame(CourseControl course, LogicalInputSnapshot input) {
+        if(module.originalR11AssemblySelected()){
+            requirePastRenderIdle();
+            if(input==null)throw new IllegalArgumentException("Original R11 loading requires the actual controller row");
+            if(input.debugModeTogglePressed())throw SonicCd.unsupported("Original R11 loading has no debug movement");
+            if(input!=null&&!input.player2().equals(com.openggf.control.PlayerInputState.neutral()))throw SonicCd.unsupported("Original R11 loading requires neutral controller2");
+            int held=nativeHeldByte(input,SpriteManagerInternalAccess.inputSuppressed(GameServices.sprites()));
+            heldPhase=null;module.serviceOriginalR11Loading(held);return GameplayFrameDisposition.HOLD;
+        }
         if(module.r31LoadingSelected()) {
             requirePastRenderIdle();
             if(input!=null&&input.debugModeTogglePressed())throw SonicCd.unsupported("R31 loading has no debug movement");
@@ -965,6 +992,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     @Override public PlcLifecyclePhase heldVBlankPhase() { return heldPhase; }
     @Override public void afterTick(CourseControl course, boolean advanced) {
+        if(module.originalR11AssemblySelected()){module.originalR11FirstLoad();if(module.originalWarpProgrammeSelected())module.validateOriginalWarpProgrammeOwner();if(advanced||heldPhase!=null)throw new IllegalStateException("Original R11 loading cannot advance generic gameplay");return;}
         requirePastRenderIdle(); // Reentry rejection is observational, outside native failure closure.
         if(module.r31LoadingSelected())module.validateR31LoadingCut();
         try {
@@ -1035,6 +1063,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     @Override public boolean drawScene() { return true; }
     @Override public boolean presentationPaused() { if(module.r31LoadingSelected())return module.requirePlayerFrame().paused();return frame != null && frame.paused(); }
     @Override public void drawOverlay() {
+        if(module.originalR11AssemblySelected()){module.drawOriginalR11Selected();return;}
         requirePastRenderIdle(); // Rejected recursive drawing must not enter native failure closure.
         if(module.r31LoadingSelected())module.validateR31LoadingCut();
         try { drawCompletedOverlay(); }
@@ -1118,6 +1147,52 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
 
 
+    private record OriginalR11RenderBinding(com.openggf.graphics.GraphicsManager graphics,
+            com.openggf.graphics.PatternAtlas atlas, org.lwjgl.opengl.GLCapabilities capabilities,
+            Thread thread, String backend, com.openggf.graphics.RetainedPlaneSceneRenderer renderer) { }
+    private OriginalR11RenderBinding originalR11RenderBinding;
+    private boolean drawingOriginalR11;
+    void drawOriginalR11Loading(){
+        requirePastRenderIdle();var selected=module.originalR11FirstLoad().selection();
+        if(!module.originalWarpSceneSelected()&&selected.projection() instanceof SonicCdPastDisplay.Blocked blocked){var original=new UnsupportedOperationException("Original R11 selected current display blocked: "+blocked.failure());module.failOriginalR11LoadingDraw(selected,original);throw original;}
+        boolean selectedWarp=module.originalWarpSceneSelected();
+        var selectedWarpState=selectedWarp?module.warpSceneState().orElseThrow():null;
+        var selectedWarpAssets=selectedWarp?module.warpSceneAssets():null;
+        if(selectedWarp)module.validateOriginalWarpProgrammeOwner();
+        boolean selectedWarpDisplay=selectedWarp&&module.originalWarpDisplayEnabled();
+        var scene=selectedWarp?com.openggf.game.soniccd.scene.CdWarpPresentation.retainedScene(selectedWarpAssets,selectedWarpState,PatternAtlasRange.OBJECTS.base(),selectedWarpDisplay)
+            :selected.projection() instanceof SonicCdPastDisplay.Ready ready?ready.scene():((SonicCdPastDisplay.Disabled)selected.projection()).scene();
+        var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();var world=mode.getWorldSession();var levels=mode.getLevelManager();var level=levels.getCurrentLevel();long generation=levels.getCompletedProductionLoadGeneration();var graphics=GameServices.graphics();var thread=Thread.currentThread();
+        var camera=mode.getCamera();int cameraX=camera.getX(),cameraY=camera.getY();var data=world.getDataSource();
+        var frame=module.originalR11EntryFrame();var actor=frame.state();var environment=frame.environment();var art=frame.artState();var clock=frame.vIntClock();
+        drawingOriginalR11=true;
+        try{
+            // One exclusive atlas registration belongs to this presentation's graphics lifetime.
+            // Construction is inside the failure scope, before any selected rendering work.
+            if(originalR11RenderBinding==null){
+                var renderer=new com.openggf.graphics.RetainedPlaneSceneRenderer(graphics,PatternAtlasRange.OBJECTS);
+                originalR11RenderBinding=new OriginalR11RenderBinding(graphics,graphics.getPatternAtlas(),
+                        org.lwjgl.opengl.GL.getCapabilities(),thread,System.getProperty("openggf.headless.gl"),renderer);
+            }
+            var binding=originalR11RenderBinding;
+            Runnable requireCurrent=()->{
+                if(!drawingOriginalR11||originalR11RenderBinding!=binding||binding.graphics()!=graphics
+                    ||binding.atlas()!=graphics.getPatternAtlas()||binding.capabilities()!=org.lwjgl.opengl.GL.getCapabilities()
+                    ||binding.thread()!=thread||!Objects.equals(binding.backend(),System.getProperty("openggf.headless.gl"))
+                    ||Thread.currentThread()!=thread||SessionManager.getCurrentGameplayMode()!=mode
+                    ||SessionManager.getCurrentWorldSession()!=world||world.getDataSource()!=data||mode.getLevelManager()!=levels
+                    ||levels.getCurrentLevel()!=level||levels.getCompletedProductionLoadGeneration()!=generation
+                    ||mode.getCamera()!=camera||camera.getX()!=cameraX||camera.getY()!=cameraY||GameServices.graphics()!=graphics
+                    ||module.originalWarpSceneSelected()!=selectedWarp||(selectedWarp&&(module.warpSceneState().orElseThrow()!=selectedWarpState||module.warpSceneAssets()!=selectedWarpAssets||module.originalWarpDisplayEnabled()!=selectedWarpDisplay))
+                    ||frame.closed()||frame.state()!=actor||frame.environment()!=environment||frame.artState()!=art||frame.vIntClock()!=clock)
+                    throw new IllegalStateException("Original R11 selected draw lifetime changed");
+            };
+            requireCurrent.run();
+            binding.renderer().draw(scene,cameraX,cameraY,requireCurrent);
+        }catch(RuntimeException|Error original){drawingOriginalR11=false;module.failOriginalR11LoadingDraw(selected,original);throw original;}
+        finally{drawingOriginalR11=false;}
+    }
+
     /** Render the actual retained service selection, without borrowing Main's later CPU or source art. */
     private void drawPastSelectedDisplay() {
         requirePastRenderIdle();
@@ -1172,7 +1247,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         if(module.r31LoadingSelected())module.r31WorldHost().requireRenderIdle();
         if(module.act3FutureLoadingSelected())module.act3FutureWorldHost().requireRenderIdle();
         if (module.act2PastLoadingSelected()) module.act2PastWorldHost().requireRenderIdle();
-        if (drawingPast || drawingAct2 || drawingWarp) throw new IllegalStateException("Past selected draw is active");
+        if (drawingOriginalR11 || drawingPast || drawingAct2 || drawingWarp) throw new IllegalStateException("Past selected draw is active");
     }
 
     /** Pure selected-scene projection inside the existing controller draw; no native work occurs here. */
@@ -1313,6 +1388,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         if (rom != null) throw new UnsupportedOperationException("CD scroll is source-bound, not cartridge-backed");
     }
     @Override public ZoneScrollHandler getHandler(int zoneIndex) {
+        if(module.originalR11AssemblySelected()){if(zoneIndex!=module.selectedLoadingZone())throw new IllegalArgumentException("Original selected source zone projection");return module.originalR11ScrollProjection();}
         if(module.r31LoadingSelected()){module.r31WorldHost().requireRenderIdle();module.validateR31LoadingCut();if(zoneIndex!=1)throw SonicCd.unsupported("Actual R31 zone1 handler");return module.r31WorldHost().handler();}
         if (zoneIndex != 0) throw new UnsupportedOperationException("Only Palmtree Panic is admitted");
         if(module.act3FutureLoadingSelected())return module.act3FutureWorldHost().handler();
@@ -1324,7 +1400,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             @Override public String getZoneName(int index) { return module.getZoneRegistry().getZoneName(index); }
         };
     }
-    @Override public void resetZoneState() { if(module.r31LoadingSelected()){module.r31WorldHost().requireRenderIdle();module.validateR31LoadingCut();return;}scroll.resetProjection(); }
+    @Override public void resetZoneState() { if(module.originalR11AssemblySelected()){module.validateOriginalR11ProjectionReset();return;}if(module.r31LoadingSelected()){module.r31WorldHost().requireRenderIdle();module.validateR31LoadingCut();return;}scroll.resetProjection(); }
 
     private void projectCamera(Camera camera) {
         var bounds = frame.environment().movement().bounds();

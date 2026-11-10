@@ -85,8 +85,10 @@ class TestCdR4TerrainData {
         assertEquals(f.ids,terrain.collision().ids().length());assertEquals(LayoutEncoding.EXACT_READ_VIEW,terrain.profile().layoutEncoding());
         assertEquals(ReferencePolicy.SELECTED_KNOWN_SOURCE,terrain.profile().referencePolicy());
         assertThrows(UnsupportedOperationException.class,terrain::shape);assertThrows(UnsupportedOperationException.class,reader::terrainShape);
-        assertThrows(UnsupportedOperationException.class,reader::ordinaryZoneActWord);
-        assertEquals("R3 requires retained 167-frame visuals",assertThrows(IllegalArgumentException.class,()->CdStagePlayerSource.fromProgramme(reader)).getMessage());
+        assertEquals(reader.playerBinding().ordinaryZoneActWord(),reader.ordinaryZoneActWord());
+        var playerSource=CdStagePlayerSource.fromProgramme(reader);
+        assertSame(terrain,playerSource.terrain());assertSame(reader.sonic(),playerSource.sonic());
+        assertEquals(CdR11aPlayerAssets.SourceGraph.R4,playerSource.player().sourceGraph());
         assertSame(p,reader.definition().tt().orElseThrow());
         assertEquals(CdSonicVisualAssets.SourceFormat.FRAMES_188,reader.sonic().sourceFormat());
         assertEquals(76928,reader.sonic().rawArt().length());assertEquals(82944,reader.sonic().artReadView().length());assertEquals(188,reader.sonic().mappingFrames().size());

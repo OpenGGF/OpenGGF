@@ -1,6 +1,11 @@
 package com.openggf.game.soniccd.objects;
 
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
+import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.media.CdMmdImage;
+import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aProfile;
@@ -126,7 +131,11 @@ public final class CdCheckpoint {
     }
 
     /** Raw widths only: even $7F/$FF timeZone values are meaningful reached inputs. */
-    public record DespawnGlobals(int rawTimeZoneByte, int rawDirectionByte, int cameraXWord) {
+    public interface DespawnReads {
+        int rawTimeZoneByte();int rawDirectionByte();int cameraXWord();
+    }
+    public enum DespawnOperand { PERIOD, DIRECTION, CAMERA_X }
+    public record DespawnGlobals(int rawTimeZoneByte, int rawDirectionByte, int cameraXWord) implements DespawnReads {
         public DespawnGlobals {
             byteValue(rawTimeZoneByte); byteValue(rawDirectionByte); wordValue(cameraXWord);
         }
@@ -288,6 +297,20 @@ public final class CdCheckpoint {
         if (!placement.sameAct2Source(owner)) throw new IllegalArgumentException("Checkpoint requires the same retained R12A placement/source");
         return new CdCheckpoint(placement,Assets.fromAct2Assets(owner,math),livePort,draw);
     }
+    /** Original USA R11A DATA; reuses the exact existing live body and save callbacks.
+     * This is source admission only. The World still requires its current original physical invocation. */
+    public static CdCheckpoint fromOriginalPresentAssets(CdObjectPlacementRuntime placement,CdR11aAssets owner,
+                                                         LivePort livePort,DrawCall draw) throws java.io.IOException {
+        Objects.requireNonNull(placement);Objects.requireNonNull(owner);
+        var identity=owner.identity();
+        if(identity.variant()!=CdReleaseVariant.USA||identity.file()!=CdNativeFile.R11A
+                ||identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                ||!identity.stage().equals(CdStagePayload.R11A.stage())
+                ||!placement.sourceIdentity().equals(java.util.Optional.of(identity))
+                ||placement.placements()!=owner.placements())
+            throw new IllegalArgumentException("Checkpoint requires the same authenticated original USA R11A source");
+        return new CdCheckpoint(placement,Assets.fromObjectAssets(owner.openingObjects(),new CdPlayerMath(owner.player())),livePort,draw);
+    }
     private CdCheckpoint(CdObjectPlacementRuntime placement,Assets assets,LivePort livePort,DrawCall draw) {
         this.placement=Objects.requireNonNull(placement);this.assets=Objects.requireNonNull(assets);
         this.livePort=Objects.requireNonNull(livePort);this.draw=Objects.requireNonNull(draw);
@@ -331,8 +354,31 @@ public final class CdCheckpoint {
         this.fm = Objects.requireNonNull(fm, "fm"); this.draw = Objects.requireNonNull(draw, "draw");
     }
 
+    private DespawnOperand pendingDespawnRead;
+    public boolean isCurrentDespawnRead(DespawnOperand operand) {
+        return running && currentCursor!=null && operand!=null && pendingDespawnRead==operand;
+    }
+    /** Same wrapper, with operands borrowed only when their native branch actually reads them. */
+    public Result runWithReads(int wholeIndex,DespawnReads reads) {
+        Objects.requireNonNull(reads);
+        return dispatch(wholeIndex,new DespawnReads(){
+            public int rawTimeZoneByte(){return readDespawn(DespawnOperand.PERIOD,reads::rawTimeZoneByte);}
+            public int rawDirectionByte(){return readDespawn(DespawnOperand.DIRECTION,reads::rawDirectionByte);}
+            public int cameraXWord(){return readDespawn(DespawnOperand.CAMERA_X,reads::cameraXWord);}
+        });
+    }
+    private int readDespawn(DespawnOperand operand,java.util.function.IntSupplier read) {
+        if(!running||currentCursor==null||pendingDespawnRead!=null)throw new IllegalStateException("No current Checkpoint despawn read");
+        var cut=liveCut();pendingDespawnRead=operand;
+        try{int value=read.getAsInt();requireLivePool(cut);if(operand==DespawnOperand.CAMERA_X)wordValue(value);else byteValue(value);return value;}
+        catch(RuntimeException|Error original){try{requireLivePool(cut);}catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}throw original;}
+        finally{pendingDespawnRead=null;}
+    }
     /** ObjCheckpoint:50-65: raw routine is a byte OFFSET into four relative words. */
     public Result run(int wholeIndex, DespawnGlobals globals) {
+        return dispatch(wholeIndex,globals);
+    }
+    private Result dispatch(int wholeIndex, DespawnReads globals) {
         if (running) throw new IllegalStateException("Checkpoint body cannot reenter its synchronous dispatch");
         running = true;
         try {
@@ -499,7 +545,7 @@ public final class CdCheckpoint {
     }
 
     /** CheckObjDespawn/DespawnObject/DespawnObjTimeWarp (Object Spawner.asm:385-446). */
-    private void despawn(Cursor c, DespawnGlobals globals) {
+    private void despawn(Cursor c, DespawnReads globals) {
         int x = c.state.centreX(); // MOVE.W is reached before testing current sprite sign.
         boolean outside = (c.state.spriteFlags() & 0x80) == 0
                 && (((x & 0xFF80) - ((globals.cameraXWord() - 0x80) & 0xFF80)) & 0xFFFF) > 0x280;
@@ -517,9 +563,10 @@ public final class CdCheckpoint {
 
     private record SavedAddress(int id, int period, int byteIndex) { }
     /** Preserve the actual native ADDRESS, using canonical API arguments only after bounds. */
-    private static SavedAddress savedAddress(Cursor c, DespawnGlobals globals) {
-        int period = globals.rawTimeZoneByte() & 0x7F;
-        if ((globals.rawTimeZoneByte() & 0x80) != 0) {
+    private static SavedAddress savedAddress(Cursor c, DespawnReads globals) {
+        int rawPeriod = globals.rawTimeZoneByte();
+        int period = rawPeriod & 0x7F;
+        if ((rawPeriod & 0x80) != 0) {
             int adjusted = (period - (byte) globals.rawDirectionByte()) & 0xFFFF;
             period = (short) adjusted < 0 ? 0 : adjusted >= 3 ? 2 : adjusted;
         }

@@ -1062,24 +1062,27 @@ final class SonicCdPastLoadingVisit {
         if (values.phase() == OLD_IPX_RETURNED) {
             // IPX.RunMMD1387 hardware arbitration is deliberately omitted for immutable detached
             // programme data. RunLevel545-594 then selects only from these actual retained values.
-            if (values.ring().lives() == 0)
-                throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.IPX_LEVEL_GAME_OVER);
-            if ((frame.environment().movement().gates().timeZone() & 0x80) != 0)
-                throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.IPX_LEVEL_TIME_WARP);
-            if (module.levelProgramState().specialStage() != 0)
-                throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.IPX_LEVEL_SPECIAL_STAGE);
+            switch(CdIpxProgress.levelReturned(new CdIpxProgress.LevelReturnReads(){
+                public int lives(){return values.ring().lives();}
+                public int rawPeriod(){return frame.environment().movement().gates().timeZone();}
+                public int specialStage(){return module.levelProgramState().specialStage();}
+            })){
+                case GAME_OVER -> throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.IPX_LEVEL_GAME_OVER);
+                case TIME_WARP -> throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.IPX_LEVEL_TIME_WARP);
+                case SPECIAL_STAGE -> throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.IPX_LEVEL_SPECIAL_STAGE);
+                case RETURN_TO_ACT_CALLER -> { }
+            }
             // RunR12 selects R12SubCmds[0]/R12A. No new-act Frame/World/palette authority exists here.
             throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.NEXT_ACT_PROGRAMME_ADMISSION);
         }
         if (values.phase() == OLD_RETURNED) {
             // IPX.RunMMD1373-1385: semantic known BYTEFF result, FM stop and one blank.
             // No level controller read/Finish or Frame clock is invented at this caller wait.
-            if (module.pastOldProgrammeReturnCode() != 0xFF) throw new IllegalStateException("Old MMD result changed");
-            appendSound(new SonicCdGameModule.PastProgrammeSound(SonicCdGameModule.ProgramSound.STOP_FM));
-            fadeProgress(new FadeProgress(values.fadeProgress().completedSteps(), false));
-            representedServiceCompleted();
-            module.completePastOldIpxBlank(this); phase(OLD_IPX_RETURNED); call(OLD_IPX_BLANK);
-            settleSelectedDisplay(values.loop().completedDraw());
+            CdRetainedProgrammeReturn.enter(new CdRetainedProgrammeReturn.Port(){
+                public void returnByte(int value){if(module.pastOldProgrammeReturnCode()!=value)throw new IllegalStateException("Old MMD result changed");}
+                public void stopFm(){appendSound(new SonicCdGameModule.PastProgrammeSound(SonicCdGameModule.ProgramSound.STOP_FM));}
+                public void blank(){fadeProgress(new FadeProgress(values.fadeProgress().completedSteps(),false));representedServiceCompleted();module.completePastOldIpxBlank(SonicCdPastLoadingVisit.this);phase(OLD_IPX_RETURNED);call(OLD_IPX_BLANK);settleSelectedDisplay(values.loop().completedDraw());}
+            });
             return;
         }
         presentation.validatePastOldProgrammePlane();

@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test-only captured VALUE equality, promoted from the private World-fixture comparators.
- * CdAssetBytes and CpuSat expose defensive byte reads; records/containers are compared recursively.
+ * CdAssetBytes/CpuSat expose defensive bytes; records, containers and R11Snapshot values recurse.
  * Every other value keeps its own equals, including opaque owners and knowledge-scoped states.
  * This assertion grants no source, phase, invocation, capture, mutation or adoption authority.
  * Keep assertSame checks for actual owner/World/Frame/source identity facts at their call sites.
@@ -36,6 +36,14 @@ final class CdCapturedValueAssertions {
             if(expected instanceof CdObjectDrawQueue.CpuSat sat){
                 var other=type(CdObjectDrawQueue.CpuSat.class,actual,path);bytes(sat.bytes(),other.bytes(),path+".bytes");
                 assertEquals(sat.spriteCount(),other.spriteCount(),path+".spriteCount");same(sat.provenance(),other.provenance(),path+".provenance",depth+1);return;
+            }
+            if(expected instanceof CdWorld.R11Snapshot snapshot){
+                var other=type(CdWorld.R11Snapshot.class,actual,path);
+                same(snapshot.cpu(),other.cpu(),path+".cpu",depth+1);
+                same(snapshot.sounds(),other.sounds(),path+".sounds",depth+1);
+                same(snapshot.tunnelServices(),other.tunnelServices(),path+".tunnelServices",depth+1);
+                same(snapshot.mechanismServices(),other.mechanismServices(),path+".mechanismServices",depth+1);
+                same(snapshot.closureServices(),other.closureServices(),path+".closureServices",depth+1);return;
             }
             boolean structured=expected instanceof Optional<?> || expected instanceof Map<?,?> || expected instanceof List<?>
                     || expected.getClass().isArray() || expected.getClass().isRecord();

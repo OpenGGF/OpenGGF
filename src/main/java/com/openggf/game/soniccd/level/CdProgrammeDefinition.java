@@ -35,10 +35,40 @@ final class CdProgrammeDefinition {
                 if(!roles.containsKey(role))throw new IllegalArgumentException("Missing terrain DATA role: "+role);
         }
     }
+    /** Finite table semantics, never an execution-family capability or external registration. */
+    record Player(int ordinaryZoneActWord,int ordinaryPeriod,CdR11aPlayerAssets.SourceGraph graph,
+                  Visual visual,Map<CdProgrammeReader.Role,Object> roles) {
+        Player {
+            Objects.requireNonNull(graph);Objects.requireNonNull(visual);roles=Map.copyOf(roles);
+            if((ordinaryZoneActWord&~0xFFFF)!=0 || ordinaryPeriod<0 || ordinaryPeriod>2
+                    || (graph==CdR11aPlayerAssets.SourceGraph.PPZ && visual.format()!=CdSonicVisualAssets.SourceFormat.FRAMES_198_WITH_EVEN_BYTE)
+                    || (graph==CdR11aPlayerAssets.SourceGraph.R3 && visual.format()!=CdSonicVisualAssets.SourceFormat.FRAMES_167)
+                    || (graph==CdR11aPlayerAssets.SourceGraph.R4 && visual.format()!=CdSonicVisualAssets.SourceFormat.FRAMES_188))
+                throw new IllegalArgumentException("Player DATA format/source binding differs");
+            for(var role:List.of(CdProgrammeReader.Role.ANI,CdProgrammeReader.Role.MINI,CdProgrammeReader.Role.SPECIAL,
+                    CdProgrammeReader.Role.SINE,CdProgrammeReader.Role.ATAN))
+                Objects.requireNonNull(roles.get(role),"Missing player DATA role: "+role);
+            if(graph==CdR11aPlayerAssets.SourceGraph.PPZ)
+                Objects.requireNonNull(roles.get(CdProgrammeReader.Role.RAMP),"Missing PPZ ramp DATA role");
+        }
+        int frames() { return switch(visual.format()) {case FRAMES_167->167;case FRAMES_188->188;case FRAMES_198_WITH_EVEN_BYTE->198;
+            default->throw new IllegalArgumentException("Unowned player DATA format");}; }
+    }
     record Slice(Object key, int offset, int length) { }
     record Palette(Object key, int destination, int counter) { }
     enum CycleKind { STANDARD, UPPER, BYTE_HEADER_4 }
-    enum CycleProgramme { STANDARD_FOUR, UPPER_SIX_OR_STANDARD_FOUR, STANDARD_FOUR_WITH_RETAINED_UPPER, THREE_SOURCE_ACT_GATED, R5_PRESENT_BACKGROUND_CONVEYOR, R5_PAST_BACKGROUND_CONVEYOR, R5_FUTURE_BOSS_GATED_CONVEYOR, FOUR_WITH_BOSS_COLOR_OVERRIDE, THREE_MIRRORED, SOURCE_RTS, SOURCE_ACT_GATED, STANDARD_CONFIGURED }
+    enum CycleProgramme { STANDARD_FOUR, UPPER_SIX_OR_STANDARD_FOUR, STANDARD_FOUR_WITH_RETAINED_UPPER, THREE_SOURCE_ACT_GATED, R5_PRESENT_BACKGROUND_CONVEYOR, R5_PAST_BACKGROUND_CONVEYOR, R5_FUTURE_BOSS_GATED_CONVEYOR, FOUR_WITH_BOSS_COLOR_OVERRIDE, THREE_MIRRORED, SOURCE_RTS, SOURCE_ACT_GATED, STANDARD_CONFIGURED, TWO_DIRECT_TRIPLETS, TWO_DIRECT_TRIPLETS_WITH_SCRIPT }
+    /** Future source directly indexes three four-WORD frames; it has no script header.
+     * Palmtree Panic/Palette Cycle (Good Future).asm:PaletteCycle / PalCycleData1;
+     * Bad Future has the same two direct tables then an independent standard script. */
+    record DirectColorCycle(Slice colors,int frames,int wordsPerFrame,int resetByte,int destinationByte) {
+        DirectColorCycle {
+            Objects.requireNonNull(colors);
+            if(frames!=3 || wordsPerFrame!=4 || colors.length()!=24 || resetByte<0 || resetByte>255
+                    || destinationByte<0 || (destinationByte&1)!=0 || destinationByte+8>128)
+                throw new IllegalArgumentException("Direct color cycle source format differs");
+        }
+    }
     record Cycle(CycleKind kind, Slice script, Slice colors) { }
     record SectionRow(int threshold, int initial, int update) { }
     sealed interface Sections permits CameraSections, InitQueueUpdateRts, NoSections { }
@@ -102,9 +132,11 @@ final class CdProgrammeDefinition {
     private final Map<CdProgrammeReader.LoadRole,Object> loadRoles;
     private final VisualBinding visual;
     private final Optional<R3> r3;
+    private final Optional<Player> player;
     private final Optional<Terrain> terrain;
     private final Optional<CdR4DataLayout.Programme> tt;
     private final Optional<Load> load;
+    private final List<DirectColorCycle> directCycles;
     private final Optional<PlacementBinding> placements;
     private final boolean dataOnly;
     private final String loadBoundary;
@@ -118,6 +150,15 @@ final class CdProgrammeDefinition {
         loadRoles=Map.copyOf(b.loadRoles); visual=Objects.requireNonNull(b.visual);
         terrain=Optional.ofNullable(b.terrain);
         r3=Optional.ofNullable(b.r3); tt=Optional.ofNullable(b.tt); load=Optional.ofNullable(b.load);
+        player=b.player!=null?Optional.of(b.player):r3.map(r->new Player(r.ordinaryZoneActWord(),1,
+            CdR11aPlayerAssets.SourceGraph.R3,(Visual)visual,r.roles()));
+        player.ifPresent(p->{
+            if(p.visual()!=visual)throw new IllegalArgumentException("Player visual must be the selected canonical declaration");
+            for(var key:p.roles().values())
+                if(raw.stream().noneMatch(span->span.key()==key) && !borrowed.containsKey(key))
+                    throw new IllegalArgumentException("Unregistered player DATA role");
+        });
+        directCycles=List.copyOf(b.directCycles);
         placements=Optional.ofNullable(b.placements);
         dataOnly=b.dataOnly;loadBoundary=b.loadBoundary;
         if((r3.isPresent()?1:0)+(tt.isPresent()?1:0)+(dataOnly?1:0)!=1)
@@ -148,9 +189,11 @@ final class CdProgrammeDefinition {
     List<Compressed> sources() { return sources; }
     VisualBinding visual() { return visual; }
     Load load() { return load.orElseThrow(()->new UnsupportedOperationException(loadBoundary)); }
+    List<DirectColorCycle> directCycles() { return directCycles; }
     Optional<PlacementBinding> placements() { return placements; }
     boolean dataOnly() { return dataOnly; }
     Optional<R3> r3() { return r3; }
+    Optional<Player> player() { return player; }
     Optional<Terrain> terrain() { return terrain; }
     Optional<CdR4DataLayout.Programme> tt() { return tt; }
     Object loadKey(CdProgrammeReader.LoadRole role) {
@@ -180,9 +223,11 @@ final class CdProgrammeDefinition {
         final Map<CdProgrammeReader.LoadRole,Object> loadRoles=new EnumMap<>(CdProgrammeReader.LoadRole.class);
         VisualBinding visual;
         R3 r3;
+        Player player;
         Terrain terrain;
         CdR4DataLayout.Programme tt;
         boolean dataOnly; // Generic source-only data, not live terrain/player/World admission.
+        final List<DirectColorCycle> directCycles=new ArrayList<>();
         Load load;
         PlacementBinding placements;
         String loadBoundary;
@@ -192,6 +237,8 @@ final class CdProgrammeDefinition {
         void raw(Object key,int offset,int length,String sha) { raw.add(new Span(key,offset,length,sha)); }
         void operand(int offset,String hex) { operands.add(new Operand(offset,hex)); }
         void borrow(Object key,int offset,int length) { borrowed.put(key,new Span(key,offset,length,null)); }
+        /** Checked lazy source; not read until the existing caller reaches this fixed role. */
+        void borrow(Object key,int offset,int length,String sha) { borrowed.put(key,new Span(key,offset,length,Objects.requireNonNull(sha))); }
         Object joined(String name,int offset,int length,String sha) {
             var key=new JoinedKey(payload+":"+name);raw(key,offset,length,sha);return key;
         }
@@ -224,6 +271,10 @@ final class CdProgrammeDefinition {
             for(var p:CdCczDataLayout.Programme.values()) {
                 var b=new Builder(p.payload(),p.file(),262144,p.fileSha256(),originalHeader());
                 CdCczProgrammeProfiles.configure(b,p);result.add(new CdProgrammeDefinition(b));
+            }
+            for(var p:CdPpzDataLayout.Programme.values()) {
+                var b=new Builder(p.payload(),p.file(),p.fileBytes(),p.fileSha256(),originalHeader());
+                CdPpzProgrammeProfiles.configure(b,p);result.add(new CdProgrammeDefinition(b));
             }
             return List.copyOf(result);
         }
@@ -309,6 +360,14 @@ final class CdProgrammeDefinition {
         for(var view:CdR31aObjectAssets.FlowerView.values())b.borrow(view,view.offset,view.length);
         for(var view:CdR31aObjectAssets.SpringView.values())if(view.sha==null)b.borrow(view,view.offset,view.length);else b.raw(view,view.offset,view.length,view.sha);
         for(var view:CdR31aObjectAssets.KamaView.values())b.borrow(view,view.offset,view.length);
+        for(var view:CdR31aObjectAssets.TentouView.values())b.raw(view,view.offset,view.length,view.sha);
+        for(var view:CdR31aObjectAssets.CcAnimalView.values())b.raw(view,view.offset,view.length,view.sha);
+        for(var view:CdR31aObjectAssets.GaView.values()){
+            if(view.sha==null)b.borrow(view,view.offset,view.length);else b.raw(view,view.offset,view.length,view.sha);
+        }
+        for(var view:List.of(CdR31EcologyEndAssets.View.ANIMAL_FLY_MAP,CdR31EcologyEndAssets.View.ANIMAL_GROUND_MAP,
+                CdR31EcologyEndAssets.View.ANIMAL_FLY_ANI,CdR31EcologyEndAssets.View.ANIMAL_GROUND_ANI,CdR31EcologyEndAssets.View.ANIMAL_TILES))
+            b.raw(view,view.fileOffset(CdNativeFile.R31A),view.length(),view.sha256());
         for(var view:CdR31aObjectAssets.EffectView.values())b.borrow(view,view.offset,view.length);
         r3Bindings(b,0x100,CdStageTerrain.Shape.CCZ1_PRESENT,CdProgrammeReader.Blocks.R31,CdR31aLoadMetadata.SourceId.STAGE_GFX,
             new Object[]{CdR31aAssets.Asset.ANI_SONIC,CdR31aAssets.Asset.MINI_ANIMATIONS,CdR31aAssets.Asset.SPEC_CHUNKS,CdR31aAssets.Asset.SINE_TABLE,CdR31aAssets.Asset.ARC_TAN_TABLE,CdR31aAssets.Asset.MAP_SPR_SONIC,CdR31aAssets.Asset.DPLC_SONIC,CdR31aAssets.Asset.ART_SONIC,CdR31aAssets.Asset.LEVEL_CHUNKS,CdR31aAssets.Asset.LAYOUT_FG,CdR31aAssets.Asset.LAYOUT_BG,CdR31aAssets.Asset.LEVEL_COLLISION,CdR31aAssets.Asset.COL_ANGLE_MAP,CdR31aAssets.Asset.COL_HEIGHT_MAP,CdR31aAssets.Asset.COL_WIDTH_MAP,CdR31aAssets.Asset.OBJECT_LAYOUTS},
@@ -339,7 +398,8 @@ final class CdProgrammeDefinition {
     }
     private static void r3Bindings(Builder b,int word,CdStageTerrain.Shape shape,Object blocks,Object graphics,Object[] roles,Object[] loads) {
         var roleMap=new EnumMap<CdProgrammeReader.Role,Object>(CdProgrammeReader.Role.class);
-        for(var r:CdProgrammeReader.Role.values())roleMap.put(r,roles[r.ordinal()]);
+        // This legacy source owns exactly these sixteen ordered roles; appended PPZ RAMP is unowned.
+        for(int i=0;i<roles.length;i++)roleMap.put(CdProgrammeReader.Role.values()[i],roles[i]);
         for(var r:CdProgrammeReader.LoadRole.values())b.loadRole(r,loads[r.ordinal()]);
         b.r3=new R3(word,shape,roleMap,blocks,graphics);
         b.terrain=new Terrain(CdStageTerrain.profileFor(shape),Optional.of(shape),roleMap,blocks,graphics);

@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.level;
 
+// Bounded SOURCE packet; authored Java UNRUN. Root owns queued validation.
+
 import com.openggf.game.soniccd.*;
 import com.openggf.game.soniccd.media.*;
 import com.openggf.game.soniccd.release.CdRetailReleases;
@@ -47,8 +49,8 @@ class TestCdProgrammeTtDefinitions {
         }
         return retained;
     }
-    private static CdProgrammeReader reader(CdR4DataLayout.Programme p)throws Exception { return actual().readers().get(p); }
-    private static CdProgrammeReader fresh(CdR4DataLayout.Programme p)throws Exception {
+    static CdProgrammeReader reader(CdR4DataLayout.Programme p)throws Exception { return actual().readers().get(p); }
+    static CdProgrammeReader fresh(CdR4DataLayout.Programme p)throws Exception {
         try(var programmes=CdProgramAssets.open(actual().cue(),Optional.of(CdReleaseVariant.USA),Optional.empty())) {
             return CdProgrammeReader.open(programmes,p.payload().stage());
         }
@@ -70,8 +72,8 @@ class TestCdProgrammeTtDefinitions {
         assertArrayEquals(data.view(p.range("PlayerGfx")).copy(),data.view(p.range("PlayerArtReadView")).slice(0,76928).copy());
         assertThrows(IllegalArgumentException.class,()->CdSonicVisualAssets.decode(CdSonicVisualAssets.SourceFormat.FRAMES_188,
             data.view(p.range("PlayerSprites")).copy(),data.view(p.range("PlayerGfxScript")).copy(),data.view(p.range("PlayerGfx")).copy()));
-        assertSame(r.terrain(),r.terrain());assertThrows(UnsupportedOperationException.class,r::ordinaryZoneActWord);
-        assertThrows(UnsupportedOperationException.class,()->r.role(CdProgrammeReader.Role.MINI));
+        assertSame(r.terrain(),r.terrain());assertEquals(r.playerBinding().ordinaryZoneActWord(),r.ordinaryZoneActWord());
+        assertSame(r.view(p.range("PlayerShrunkAnimationMap")),r.role(CdProgrammeReader.Role.MINI));
     }
     @ParameterizedTest @EnumSource(CdR4DataLayout.Programme.class)
     void all191ActualRootsAndRowsMatchIndependentDeclarationsAndAliasBodies(CdR4DataLayout.Programme p)throws Exception {
@@ -127,6 +129,24 @@ class TestCdProgrammeTtDefinitions {
         } else assertEquals(new CdProgrammeDefinition.InitQueueUpdateRts(2),t.sectionProgramme());
         assertThrows(UnsupportedOperationException.class,t::sections);assertThrows(UnsupportedOperationException.class,t::backgroundPointers);
     }
+    @ParameterizedTest @EnumSource(CdR4DataLayout.Programme.class)
+    void allTenOriginalHeadersAndActualKernelRowsKeepDataSuffixUnbacked(CdR4DataLayout.Programme p)throws Exception {
+        var image=actual().images().get(p);var header=image.header();
+        assertEquals(new CdMmdHeader(0,0,0,0,0x200100,0x20010C,0x200112),header);
+        assertEquals(0,header.declaredCopyBytes());assertTrue(image.relocatedCopy().isEmpty());
+        var r=reader(p);var key=p.range("StageBlocks");var product=r.decoded(key).bytes();
+        var rows=com.openggf.game.soniccd.resources.CdBlockStagingTestAccess.decode(
+                CdProgrammeData.fromReader(r).nativeInput(key),product,p.file(),0x200000L+key.fileOffset());
+        for(int offset=0;offset<product.length();offset++)assertEquals(product.unsignedByte(offset),rows.unsignedByte(offset));
+        assertThrows(com.openggf.game.soniccd.resources.CdBlockDefinitionStaging.UnknownRead.class,
+                ()->rows.unsignedByte(product.length()));
+        // Conditional pure transform only. This component has no original continuation.
+        var conditional=com.openggf.game.soniccd.resources.CdBlockDefinitionStaging.afterFileBufferClear().withCompletedPrefix(product);
+        int[] witnesses={1019,604,1019,604,583,604,-1,604,-1,-1};int witness=witnesses[p.ordinal()];
+        if(witness>=0){for(int word=0;word<4;word++)assertEquals(0,conditional.blockWord(witness,word));
+            assertThrows(CdStageTerrain.UnavailableRead.class,()->r.terrain().blockWord(witness,0,0));}
+        assertEquals(product.length(),r.terrain().blocks().length());
+    }
     @Test void publicEqualRangeValuesAndForeignKeysCannotSelectOwnedBytesOrProducts()throws Exception {
         var r=reader(R41A);var data=CdProgrammeData.fromReader(r);var a=R41A.range("PlayerGfx");
         var equal=new CdR4DataLayout.Range(a.key(),a.fileOffset(),a.length(),a.sha256(),a.nativePath(),a.line());assertEquals(a,equal);
@@ -160,10 +180,22 @@ class TestCdProgrammeTtDefinitions {
         assertEquals(419,total);
     }
     @Test void unsupportedSourceFamiliesStillRejectBeforeAnyProgrammeOwnerRead() throws Exception {
-        var source=mock(CdProgramAssets.class);
-        for(var payload:List.of(CdStagePayload.R12A,CdStagePayload.R11A))
-            assertThrows(UnsupportedOperationException.class,()->CdProgrammeReader.open(source,payload.stage()));
-        verifyNoInteractions(source);
+        // PPZ DATA is now registered; that supplies no legacy player/source-family grant.
+        try(var actual=TestCdCczProgrammeData.open()) {
+            for(var payload:List.of(CdStagePayload.R12A)) {
+                var source=spy(actual);var reader=CdProgrammeReader.open(source,payload.stage());clearInvocations(source);
+                var refusal=assertThrows(IllegalArgumentException.class,()->CdStagePlayerSource.fromProgramme(reader));
+                assertEquals("R3 requires retained 167-frame visuals",refusal.getMessage());
+                verifyNoInteractions(source);
+            }
+        }
+        // R11A now has a cached immutable STANDARD loading binding; DATA alone grants no live service.
+        try(var actual=TestCdCczProgrammeData.open()) {
+            var source=spy(actual);var reader=CdProgrammeReader.open(source,CdStagePayload.R11A.stage());clearInvocations(source);
+            assertEquals(CdR11aPlayerAssets.SourceGraph.PPZ,reader.playerBinding().graph());
+            assertSame(reader.levelLoadingSource(),reader.levelLoadingSource());
+            assertEquals(CdLevelLoadingSource.Completion.STANDARD,reader.levelLoadingSource().completion());verifyNoInteractions(source);
+        }
         // R31B now has authenticated DATA; preserve its still-unadmitted source-family boundary.
         try(var actual=TestCdCczProgrammeData.open()) {
             var probe=spy(actual);var reader=CdProgrammeReader.open(probe,CdStagePayload.R31B.stage());

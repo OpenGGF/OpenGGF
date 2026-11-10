@@ -2415,7 +2415,7 @@ class TestCdObjectMappings {
         // The existing 34 registered roots remain; Log Shadow adds one. Static Monitor roots stay eight.
         var tablesField = CdObjectMappings.class.getDeclaredField("tables"); tablesField.setAccessible(true);
         var registered = (Map<?, ?>) tablesField.get(mappings);
-        assertEquals(36, registered.size()); assertEquals(registered.keySet(), ((Map<?, ?>) tablesField.get(again)).keySet());
+        assertEquals(39, registered.size()); assertEquals(registered.keySet(), ((Map<?, ?>) tablesField.get(again)).keySet());
         var disc = (CdObjectMappings.DeclaredTable) registered.get(SPINNING_DISC_MAP);
         assertNotNull(disc); assertEquals(SPINNING_DISC_MAP, disc.nativeStartBits());
         assertEquals(0, disc.tableOffset()); assertEquals(3, disc.frameCount());
@@ -2424,7 +2424,7 @@ class TestCdObjectMappings {
         var staticField = CdObjectMappings.class.getDeclaredField("staticPieces"); staticField.setAccessible(true);
         assertEquals(8, ((Map<?, ?>) staticField.get(mappings)).size());
         assertTamabbohFramesAndBounds(mappings); assertTamabbohPriorRoots(usa, mappings);
-        assertEquals(List.of("act2MonitorItemStaticPieces/1", "act2PastMonitorItemStaticPieces/1", "declaredSourceViews/2", "fromAct2PastAssets/2", "fromAct3FutureAssets/2", "fromAct3FutureAssets/3", "fromAct3FutureAssets/4", "fromAct3FutureAssets/6", "fromOpeningAssets/2", "resolve/3"),
+        assertEquals(List.of("act2MonitorItemStaticPieces/1", "act2PastMonitorItemStaticPieces/1", "declaredSourceViews/2", "fromAct2PastAssets/2", "fromAct3FutureAssets/2", "fromAct3FutureAssets/3", "fromAct3FutureAssets/4", "fromAct3FutureAssets/6", "fromOpeningAssets/2", "fromOriginalR11Startup/3", "fromR31aAssets/2", "fromR31aPinballAssets/2", "monitorItemStaticPieces/2", "resolve/3", "withAct3FutureGameOver/3"),
                 Arrays.stream(CdObjectMappings.class.getDeclaredMethods())
                         .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers()))
                         .map(m -> m.getName() + "/" + m.getParameterCount()).sorted().toList());
@@ -2436,7 +2436,7 @@ class TestCdObjectMappings {
         assertTrue(java.lang.reflect.Modifier.isPublic(getter.getModifiers()));
         assertTrue(java.lang.reflect.Modifier.isSynchronized(getter.getModifiers()));
         assertEquals(0, getter.getExceptionTypes().length);
-        assertEquals(68, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
+        assertEquals(91, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
         // No art getter, source-bank access, pixel callback or residency snapshot is used by this contract.
     }
 
@@ -2517,7 +2517,7 @@ class TestCdObjectMappings {
             assertEquals(mappings.resolve(LOG_SHADOW_MAP, false, frame).pieces().getFirst().rawTileWord(), visual.mappingFrames().get(frame).pieces().getFirst().rawTileWord());
         }
         var field = CdObjectMappings.class.getDeclaredField("tables"); field.setAccessible(true);
-        var tables = (Map<?, ?>) field.get(mappings); assertEquals(36, tables.size());
+        var tables = (Map<?, ?>) field.get(mappings); assertEquals(39, tables.size());
         var registered = (CdObjectMappings.DeclaredTable) tables.get(LOG_SHADOW_MAP);
         assertSame(view.bytes(), registered.bytes()); assertEquals(0, registered.tableOffset()); assertEquals(2, registered.frameCount());
         var again = CdObjectMappings.fromOpeningAssets(usa.assets(), objects); assertSame(visual, objects.logShadow());
@@ -2527,11 +2527,11 @@ class TestCdObjectMappings {
         }
         assertTamabbohFramesAndBounds(mappings); assertTamabbohPriorRoots(usa, mappings);
         for (int frame = 0; frame < 3; frame++) assertEquals(SPINNING_DISC_FRAMES.get(frame), mappings.resolve(SPINNING_DISC_MAP, false, frame).pieces());
-        assertEquals(68, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
+        assertEquals(91, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
         var getter = CdR11aObjectAssets.class.getDeclaredMethod("logShadow");
         assertEquals(CdObjectVisualAssets.class, getter.getReturnType()); assertEquals(0, getter.getParameterCount());
         assertTrue(java.lang.reflect.Modifier.isPublic(getter.getModifiers())); assertTrue(java.lang.reflect.Modifier.isSynchronized(getter.getModifiers()));
-        assertEquals(List.of("act2MonitorItemStaticPieces/1", "act2PastMonitorItemStaticPieces/1", "declaredSourceViews/2", "fromAct2PastAssets/2", "fromAct3FutureAssets/2", "fromAct3FutureAssets/3", "fromAct3FutureAssets/4", "fromAct3FutureAssets/6", "fromOpeningAssets/2", "resolve/3"), Arrays.stream(CdObjectMappings.class.getDeclaredMethods())
+        assertEquals(List.of("act2MonitorItemStaticPieces/1", "act2PastMonitorItemStaticPieces/1", "declaredSourceViews/2", "fromAct2PastAssets/2", "fromAct3FutureAssets/2", "fromAct3FutureAssets/3", "fromAct3FutureAssets/4", "fromAct3FutureAssets/6", "fromOpeningAssets/2", "fromOriginalR11Startup/3", "fromR31aAssets/2", "fromR31aPinballAssets/2", "monitorItemStaticPieces/2", "resolve/3", "withAct3FutureGameOver/3"), Arrays.stream(CdObjectMappings.class.getDeclaredMethods())
                 .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers())).map(m -> m.getName() + "/" + m.getParameterCount()).sorted().toList());
         for (int pointer : new int[]{0x89EE, 0xFF2089EE, 0x012089EE, 0x2089FC, LOG_SHADOW_MAP + 4})
             assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, false, 0));
@@ -2624,7 +2624,7 @@ class TestCdObjectMappings {
         var table = CdR11aObjectAssets.Table.SONIC_HOLE_MAPPINGS;
         var view = objects.view(table); var visual = objects.sonicHole();
         assertEquals(usa.assets().identity(), objects.identity());
-        assertEquals(66, table.ordinal()); assertEquals(68, CdR11aObjectAssets.Table.values().length);
+        assertEquals(66, table.ordinal()); assertEquals(91, CdR11aObjectAssets.Table.values().length);
         assertEquals(106, CdR11aAsset.values().length);
         assertEquals("MapSpr_SonicHole", table.nativeLabel());
         assertEquals(table, view.table()); assertEquals(table.range(), view.range());
@@ -2640,7 +2640,7 @@ class TestCdObjectMappings {
         assertEquals(SONIC_HOLE_PIECES, visual.mappingFrames().getFirst().pieces().stream().map(p ->
                 new CdObjectDrawQueue.RawPiece(p.y(), p.sizeByte(), p.rawTileWord(), p.x())).toList());
         var tablesField = CdObjectMappings.class.getDeclaredField("tables"); tablesField.setAccessible(true);
-        var registered = (Map<?, ?>) tablesField.get(mappings); assertEquals(36, registered.size());
+        var registered = (Map<?, ?>) tablesField.get(mappings); assertEquals(39, registered.size());
         var hole = (CdObjectMappings.DeclaredTable) registered.get(SONIC_HOLE_MAP); assertNotNull(hole);
         assertEquals(SONIC_HOLE_MAP, hole.nativeStartBits()); assertEquals(SONIC_HOLE_MAP, hole.tableAddressBits());
         assertEquals(0, hole.tableOffset()); assertEquals(1, hole.frameCount()); assertSame(view.bytes(), hole.bytes());
@@ -2658,7 +2658,7 @@ class TestCdObjectMappings {
             var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
             assertNull(field.get(objects), "mapper must not decode or preload art: " + name);
         }
-        assertEquals(List.of("act2MonitorItemStaticPieces/1", "act2PastMonitorItemStaticPieces/1", "declaredSourceViews/2", "fromAct2PastAssets/2", "fromAct3FutureAssets/2", "fromAct3FutureAssets/3", "fromAct3FutureAssets/4", "fromAct3FutureAssets/6", "fromOpeningAssets/2", "resolve/3"),
+        assertEquals(List.of("act2MonitorItemStaticPieces/1", "act2PastMonitorItemStaticPieces/1", "declaredSourceViews/2", "fromAct2PastAssets/2", "fromAct3FutureAssets/2", "fromAct3FutureAssets/3", "fromAct3FutureAssets/4", "fromAct3FutureAssets/6", "fromOpeningAssets/2", "fromOriginalR11Startup/3", "fromR31aAssets/2", "fromR31aPinballAssets/2", "monitorItemStaticPieces/2", "resolve/3", "withAct3FutureGameOver/3"),
                 Arrays.stream(CdObjectMappings.class.getDeclaredMethods())
                         .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers()))
                         .map(m -> m.getName() + "/" + m.getParameterCount()).sorted().toList());

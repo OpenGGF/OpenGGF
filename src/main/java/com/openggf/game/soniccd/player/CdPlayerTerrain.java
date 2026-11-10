@@ -284,6 +284,16 @@ public final class CdPlayerTerrain {
         return queryWithPrefix(Axis.FLOOR, x, y, solidityBit, mirrorMask, step, spriteFlags, rawAngleWrite);
     }
 
+    /** CheckBlockDown3:153-159 clears primary before entering the same CheckBlockY kernel.
+     * Writes alias the actual caller buffer; no new storage, defaults, probe or state owner. */
+    public Result floorWithPrimaryZeroPrefix(int x,int y,int solidityBit,int mirrorMask,int step,int spriteFlags,
+                                             IntConsumer primaryWrite){
+        Objects.requireNonNull(primaryWrite,"actual primary angle writer");
+        if(solidityBit<0||solidityBit>15)throw new IllegalArgumentException("Solidity bit must select the original native word");
+        primaryWrite.accept(0);
+        return floorWithPrefix(x,y,solidityBit,mirrorMask,step,spriteFlags,primaryWrite);
+    }
+
     /** Same FindLevelWall algorithm and raw stores, including writes before an adjacent read fails. */
     public Result wallWithPrefix(int x, int y, int solidityBit, int mirrorMask, int step, int spriteFlags,
                                  IntConsumer rawAngleWrite) {

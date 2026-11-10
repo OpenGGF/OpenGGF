@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.scroll;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.level.CdStageTerrain;
+import com.openggf.game.soniccd.resources.CdBlockDefinitionStaging;
 import com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera;
 import com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State;
 
@@ -89,13 +90,33 @@ public final class CdR11bForegroundPlane {
     }
 
     private final CdAssetBytes blocks;
+    private final CdBlockDefinitionStaging blockDefinitions;
     private final CdAssetBytes chunks;
     private final CdAssetBytes layout;
 
     private CdR11bForegroundPlane(CdAssetBytes blocks, CdAssetBytes chunks, CdAssetBytes layout) {
         this.blocks = Objects.requireNonNull(blocks, "prepared block bytes");
+        this.blockDefinitions = null;
         this.chunks = Objects.requireNonNull(chunks, "original chunk bytes");
         this.layout = Objects.requireNonNull(layout, "current layout image");
+    }
+
+    /** Pure source selection only. The existing original loading/World owner supplies
+     * the current bank; a value cannot confer clear, service or restore authority. */
+    public CdR11bForegroundPlane withBlockDefinitions(CdBlockDefinitionStaging current) {
+        return new CdR11bForegroundPlane(this, Objects.requireNonNull(current, "current block knowledge"));
+    }
+    private CdR11bForegroundPlane(CdR11bForegroundPlane source, CdBlockDefinitionStaging current) {
+        blocks=source.blocks; chunks=source.chunks; layout=source.layout; blockDefinitions=current;
+    }
+    private int blockLong(int offset, Work work) {
+        if (blockDefinitions == null) return longAt(blocks, offset, Boundary.BLOCK_READ, work);
+        if(offset<0 || offset>CdBlockDefinitionStaging.BYTE_LENGTH-4) throw new InvalidPlane(Boundary.BLOCK_READ,offset,work);
+        try { return (blockDefinitions.unsignedWord(offset)<<16)|blockDefinitions.unsignedWord(offset+2); }
+        catch(CdBlockDefinitionStaging.UnknownRead original) {
+            var stopped=new InvalidPlane(Boundary.BLOCK_READ,original.byteOffset(),work);
+            stopped.initCause(original); throw stopped;
+        }
     }
 
     /** Borrows the authenticated aggregate; it neither runs LoadLevelData nor makes bytes current. */
@@ -200,16 +221,16 @@ public final class CdR11bForegroundPlane {
         int lower = upper + 0x80;
         boolean flipX = (high & 8) != 0;
         boolean flipY = (high & 16) != 0;
-        int first = longAt(blocks, blockOffset, Boundary.BLOCK_READ, work);
+        int first = blockLong(blockOffset, work);
         if (flipY) {
             // Native Y/XY reads both original LONGs before its first plane write.
-            int second = longAt(blocks, blockOffset + 4, Boundary.BLOCK_READ, work);
+            int second = blockLong(blockOffset + 4, work);
             pair(work, upper, second, flipX, 0x1000 | (flipX ? 0x800 : 0));
             pair(work, lower, first, flipX, 0x1000 | (flipX ? 0x800 : 0));
         } else {
             // Native normal/X commits the upper LONG before reading the lower source LONG.
             pair(work, upper, first, flipX, flipX ? 0x800 : 0);
-            int second = longAt(blocks, blockOffset + 4, Boundary.BLOCK_READ, work);
+            int second = blockLong(blockOffset + 4, work);
             pair(work, lower, second, flipX, flipX ? 0x800 : 0);
         }
         work.reads.add(new BlockRead(work.phase, x, y, worldX, worldY, layoutOffset,

@@ -258,6 +258,29 @@ class TestCdR11aObjectRetailAssets {
         hashes.put(LOG_SHADOW_MAPPINGS, "bb3b5b1a67fd3665a520a4a6c1d7ff89212992a766df61ec42b6c41aa1d38f7b");
         hashes.put(SONIC_HOLE_MAPPINGS, "294c5d0eb7d5d0a19a3799ebf5bed56036e7f842b7d50da8488a5cfccaddce35");
         hashes.put(POWERUP_ANIMATIONS, TestCdR11aObjectAssets.POWERUP_ANIMATIONS_SHA256);
+        hashes.put(TUNNEL_DOOR_SPLASH_ANIMATIONS, TestCdR11aObjectAssets.TUNNEL_DOOR_SPLASH_SHA256.get(0));
+        hashes.put(TUNNEL_DOOR_SPLASH_MAPPINGS, TestCdR11aObjectAssets.TUNNEL_DOOR_SPLASH_SHA256.get(1));
+        hashes.put(TUNNEL_WATERFALL_ANIMATIONS, TestCdR11aObjectAssets.TUNNEL_WATERFALL_SHA256.get(0));
+        hashes.put(TUNNEL_WATERFALL_MAPPINGS, TestCdR11aObjectAssets.TUNNEL_WATERFALL_SHA256.get(1));
+        hashes.put(MECHANISM_WHEEL_ANIMATIONS, "e8b2932927462b357fa2e0666e939c3cd3031a290c5be159b9f9321c3021547a");
+        hashes.put(MECHANISM_WHEEL_MAPPINGS, "f06f49cb0a71706485ede6030456b96b0523e69e3545ba6bc7094076698f459d");
+        hashes.put(MECHANISM_BOARD_HITBOXES, "48c0ebee94aed675266f2c3b8ffbb5f609aeac6e40c7d72d792ef851c7e2735c");
+        hashes.put(MECHANISM_BOARD_ANIMATIONS, "66b7d5d2f75e5d7ff1977d7d3f1cc4ec7635c1f1db4da5b7568f72ea142067ba");
+        hashes.put(MECHANISM_BOARD_MAPPINGS, "a5b367d30a33cd6d503930c42c8ac86f8155235475b57094740a62ee242b0a3f");
+        hashes.put(MECHANISM_WALL_MAPPINGS, "c561a76556cc21a46155e135205ab7c39cc8b007b9730c66e0a34a707d671226");
+        hashes.put(MECHANISM_WALL_FRAMES, "9ea247159cb7c1830c8392d11b18cd1ce1de576fa33e4451179201fbe800ac7f");
+        hashes.put(MECHANISM_WALL_DELTAS, "86444e752d8300afadd9aa1b5e2fa7a3252febf156c023d05f7bcf152f706e94");
+        hashes.put(MECHANISM_WALL_SPEEDS, "7a1571aadadf44de0c59b260de3ec3464b1b3676a4ea2cef273b069284032b31");
+        hashes.put(CLOSURE_BIG_RING_ANIMATIONS, "b8997affb40b5e6a6e2aff4f5013c56226e1ce0ff2d25c8396f6193939ba1ba6");
+        hashes.put(CLOSURE_BIG_RING_MAPPINGS, "c6edd39fb1e1cc977c264d87e2301816d01ff2c10660fb63f89d9148afdb30c4");
+        hashes.put(CLOSURE_BIG_RING_FLASH_ANIMATIONS, "b4dbc8e16c7b27313dd1d0443cc0a9f6226470e751fd826adaac47dcc12a4d0f");
+        hashes.put(CLOSURE_BIG_RING_FLASH_MAPPINGS, "b48a9c17b2359210ba747bf79d3c07a7af111639eef836d7315811b285226e10");
+        hashes.put(CLOSURE_SIGNPOST_ANIMATIONS, "9912394f852b914651884191ea8532d60421a3bd40293510a3f356f86c69e691");
+        hashes.put(CLOSURE_GOAL_SIGNPOST_MAPPINGS, "610a02baa99d911f509b5fc06a1e4c0c72bc7ef71fa56ecd72640e409734bad8");
+        hashes.put(CLOSURE_RESULTS_MAPPINGS, "3421ca10ca8d30d20ebc792104211ebc360321c4e6a4509abf2fa0b9a6ea73e9");
+        hashes.put(CLOSURE_GOAL_BASE_TILES, "82fd77609648d39ac2f50bc4c0e3762fccf3ef0986bf6bc8cef7f4cdeb3b3724");
+        hashes.put(CLOSURE_TIME_BONUSES, "be40c9a172da6d18e694f0b8cfe698fa674eb88ab210958f4fa82713e0cf0861");
+        hashes.put(CLOSURE_RESULTS_INIT, "8fdebd3a15a4a74f401c329bbbaf9750596828e9578df9121565cd24f4c165f8");
         assertEquals(CdR11aObjectAssets.Table.values().length, hashes.size(), "every admitted table has a pinned digest");
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
@@ -4413,11 +4436,11 @@ class TestCdR11aObjectRetailAssets {
         assertSame(platform, objects.platform()); assertSame(flying, objects.flyingAnimal());
         assertSame(ground, objects.groundAnimal());
         assertEquals(0x388, objects.animalBaseTile(0, 1));
-        // Complete 68-table digest manifest: retain every inherited row and append the raw Powerup animations.
-        assertEquals(68, CdR11aObjectAssets.Table.values().length);
+        // Complete 72-table digest manifest: retain every inherited row and append both waterfall source tables.
+        assertEquals(91, CdR11aObjectAssets.Table.values().length);
         assertEquals(45, COLLAPSE_OLD_SHA256.length); assertEquals(6, COLLAPSE_SHA256.length);
         assertEquals(3, PLATFORM21_SHA256.length);
-        for (int i = 0; i < 68; i++) {
+        for (int i = 0; i < 72; i++) {
             var table = CdR11aObjectAssets.Table.values()[i]; var view = objects.view(table);
             String expected = i < 45 ? COLLAPSE_OLD_SHA256[i]
                     : i < 51 ? COLLAPSE_SHA256[i - 45] : i < 54 ? PLATFORM21_SHA256[i - 51]
@@ -4426,7 +4449,9 @@ class TestCdR11aObjectRetailAssets {
                     : i < 64 ? TestCdR11aObjectAssets.TUNNEL_PATH_SHA256[i - 62]
                     : i < 66 ? TestCdR11aObjectAssets.LOG_SHADOW_SHA256[i - 64]
                     : i < 67 ? "294c5d0eb7d5d0a19a3799ebf5bed56036e7f842b7d50da8488a5cfccaddce35"
-                    : TestCdR11aObjectAssets.POWERUP_ANIMATIONS_SHA256;
+                    : i < 68 ? TestCdR11aObjectAssets.POWERUP_ANIMATIONS_SHA256
+                    : i < 70 ? TestCdR11aObjectAssets.TUNNEL_DOOR_SPLASH_SHA256.get(i - 68)
+                    : TestCdR11aObjectAssets.TUNNEL_WATERFALL_SHA256.get(i - 70);
             assertEquals(expected, CdR11aProfile.sha256(view.bytes().copy()), table.name());
             assertSame(view, objects.view(table));
             assertArrayEquals(table.range().read(image).copy(), view.bytes().copy());
@@ -5021,7 +5046,7 @@ class TestCdR11aObjectRetailAssets {
         for (int i = 0; i < 5; i++) { assertSame(views.get(i),viewsFirst.view(TestCdR11aObjectAssets.TAMABBOH_TABLES.get(i))); }
         for (var objects : List.of(visualFirst,sourceFirst,viewsFirst)) {
             verifyTamabbohUnchangedSource17(objects,owner,retained);
-            for (int i = 0; i < 68; i++) {
+            for (int i = 0; i < 72; i++) {
                 var table = CdR11aObjectAssets.Table.values()[i]; var view = objects.view(table);
                 String expected = i < 45 ? COLLAPSE_OLD_SHA256[i] : i < 51 ? COLLAPSE_SHA256[i-45]
                         : i < 54 ? PLATFORM21_SHA256[i-51] : i < 59 ? TestCdR11aObjectAssets.TAMABBOH_SHA256[i-54]
@@ -5029,7 +5054,9 @@ class TestCdR11aObjectRetailAssets {
                         : i < 64 ? TestCdR11aObjectAssets.TUNNEL_PATH_SHA256[i-62]
                         : i < 66 ? TestCdR11aObjectAssets.LOG_SHADOW_SHA256[i-64]
                         : i < 67 ? "294c5d0eb7d5d0a19a3799ebf5bed56036e7f842b7d50da8488a5cfccaddce35"
-                    : TestCdR11aObjectAssets.POWERUP_ANIMATIONS_SHA256;
+                    : i < 68 ? TestCdR11aObjectAssets.POWERUP_ANIMATIONS_SHA256
+                    : i < 70 ? TestCdR11aObjectAssets.TUNNEL_DOOR_SPLASH_SHA256.get(i - 68)
+                    : TestCdR11aObjectAssets.TUNNEL_WATERFALL_SHA256.get(i - 70);
                 assertEquals(expected,CdR11aProfile.sha256(view.bytes().copy()),table.name());
                 assertSame(view,objects.view(table)); assertArrayEquals(table.range().read(retained).copy(),view.bytes().copy());
                 byte[] detached = view.bytes().copy(); detached[0] ^= 1;

@@ -8,7 +8,7 @@ import java.util.Objects;
  * No public constructor/factory, capture, generic setter or completed-result entry exists.
  * The private pass callbacks revalidate source/receiver/thread/slot/site/order/full Core/Host cut.
  */
-public final class CdR31BumperCall {
+public final class CdR31BumperCall implements CdR31PinballCall {
     private final CdPlayerFrameRuntime frame;private final CdObjectPlacementRuntime placement;
     private final CdPinballContext.Operation original;private final Runnable prepare,apply;
     private final Thread thread=Thread.currentThread();

@@ -399,6 +399,12 @@ public final class CdSpikes {
      * Public records and this pure factory grant no World invocation/origin/once-only authority: future
      * World integration still requires real owner receipts and no-op protection in its private scope.
      */
+    public static CdSpikes fromOriginalPresentAssets(CdObjectPlacementRuntime p,
+            com.openggf.game.soniccd.level.CdR11aAssets source,CdSolidObject solid,PrefixSolidCommit commit,
+            YRewindCommit rewind,HurtCommit hurt,DrawObjectCall draw) throws java.io.IOException {
+        CdOriginalPresentObjectSource.require(p,source);
+        return new CdSpikes(p,presentAssets(BodyAssets.fromObjectAssets(source.openingObjects())),solid,commit,rewind,hurt,draw);
+    }
     public static CdSpikes fromAct2AssetsWithPrefix(CdObjectPlacementRuntime placement, CdR12aObjectAssets owner,
                                                     CdSolidObject sharedSolid, PrefixSolidCommit solidCommit,
                                                     YRewindCommit yRewindCommit, HurtCommit hurtCommit, DrawObjectCall drawObject) {

@@ -45,7 +45,7 @@ class TestCdR13PlayerCollisionAssets {
     @Test void cachedViewsAndDimensionsAreImmutableWithoutChangingAnyExistingInventory()throws Exception{
         for(var a:TestCdR13FutureAssets.retail().all()){var o=CdR13PlayerCollisionAssets.fromAssets(a);for(var v:CdR13PlayerCollisionAssets.View.values()){var b=o.view(v);assertSame(b,o.view(v));byte[] before=b.copy(),copy=b.copy();Arrays.fill(copy,(byte)0x55);assertArrayEquals(before,o.view(v).copy());assertThrows(ReadOnlyBufferException.class,()->b.buffer().put(0,(byte)1));}
             assertSame(o.view(CdR13PlayerCollisionAssets.View.ENEMY_POINTS),o.enemyPoints());assertThrows(UnsupportedOperationException.class,()->o.touchDimensions().clear());assertThrows(NullPointerException.class,()->o.view(null));}
-        assertEquals(29,CdR13FutureAssets.Asset.values().length);assertEquals(25,CdR13ObjectAssets.View.values().length);}
+        assertEquals(29,CdR13FutureAssets.Asset.values().length);assertEquals(27,CdR13ObjectAssets.View.values().length);}
     @Test void sourceOnlySurfaceHasNoRawImageFactoryOrPlayerStateConstructor(){
         assertEquals(0,CdR13PlayerCollisionAssets.class.getConstructors().length);assertEquals(1,CdR13PlayerCollisionAssets.class.getDeclaredConstructors().length);assertEquals(2,CdR13PlayerCollisionAssets.View.values().length);
         assertEquals(List.of("enemyPoints/0","fromAssets/1","identity/0","ownsAssets/1","touchDimensions/0","view/1"),Arrays.stream(CdR13PlayerCollisionAssets.class.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers())).map(m->m.getName()+"/"+m.getParameterCount()).sorted().toList());}

@@ -19,6 +19,7 @@ public final class CdR11aAssets {
     private final CdR11aProfile profile;
     private final Identity identity;
     private final CdMmdImage image;
+    private final CdProgrammeReader programmeReader;
     private final NemesisRead blocks;
     private final NemesisRead tiles;
     private final CdR11aTerrain terrain;
@@ -32,6 +33,19 @@ public final class CdR11aAssets {
     CdR11aAssets(CdR11aProfile profile, Identity identity, CdMmdImage image, NemesisRead blocks, NemesisRead tiles,
                    CdR11aTerrain terrain, CdR11aLoadPlan loadPlan, CdObjectPlacements placements,
                    CdSonicVisualAssets sonic, CdR11aPlayerAssets player, CdShieldArt shield) {
+        this(profile, identity, image, blocks, tiles, terrain, loadPlan, placements, sonic, player, shield, null);
+    }
+
+    /** Actual-media loader only; the component constructor retains no shared source custody. */
+    CdR11aAssets(CdR11aProfile profile, Identity identity, CdMmdImage image, NemesisRead blocks, NemesisRead tiles,
+                   CdR11aTerrain terrain, CdR11aLoadPlan loadPlan, CdObjectPlacements placements,
+                   CdSonicVisualAssets sonic, CdR11aPlayerAssets player, CdShieldArt shield, CdProgrammeReader programmeReader) {
+        if(programmeReader!=null) {
+            programmeReader.requireOriginalR11Image(image);
+            if(sonic!=programmeReader.sonic())throw new IllegalArgumentException("Foreign original R11A Sonic source product");
+            programmeReader.requireOriginalR11TerrainProducts(blocks,tiles,terrain);
+        }
+        this.programmeReader = programmeReader;
         this.profile = profile;
         this.identity = identity;
         this.image = image;
@@ -63,9 +77,43 @@ public final class CdR11aAssets {
     }
     /** Cached optional authenticated USA-only final palette-cycle sources; no cycle is executed here. */
     public synchronized CdR11aPaletteAssets paletteCycle() throws IOException {
-        if (paletteCycle == null) { paletteCycle = CdR11aPaletteAssets.load(profile, identity, image); }
+        if (paletteCycle == null) { paletteCycle = CdR11aPaletteAssets.load(this, programmeReader); }
         return paletteCycle;
     }
+
+    /** Pure origin gate for component/regional compatibility; it is not source authority. */
+    boolean hasRetainedStandardLoadingSource() { return programmeReader!=null; }
+    /** The actual USA aggregate's SAME authenticated Reader-cached STANDARD DATA.
+     * No media reopen, Frame, source lease, clear, Ready or invocation permit is created.
+     * Legacy/component/regional aggregates keep their existing separate factories. */
+    public CdLevelLoadingSource retainedStandardLoadingSource()throws IOException {
+        if(programmeReader==null)throw new UnsupportedOperationException("No retained original R11A standard loading DATA");
+        requireProgrammeReader(programmeReader);
+        return programmeReader.levelLoadingSource();
+    }
+
+    /** Package-only exact source relation; public metadata and equal readers cannot substitute. */
+    CdProgrammeReader internalReader() {
+        if(programmeReader==null)throw new UnsupportedOperationException("No retained original R11A programme reader");
+        return programmeReader;
+    }
+    void requireProgrammeReader(CdProgrammeReader actual)throws IOException {
+        if(actual==null || actual!=programmeReader)throw new IllegalArgumentException("Foreign original R11A programme reader");
+        if(!actual.stage().equals(identity.stage()) || actual.file()!=identity.file()
+                || !actual.mmdSha().equals(identity.mmdSha256()) || !actual.discSha().equals(identity.observedWholeDiscSha256()))
+            throw new IllegalArgumentException("Original R11A reader and aggregate identity differ");
+        profile.verifyProgram(identity.file(),identity.domain(),image);
+        actual.requireOriginalR11Image(image);
+    }
+
+    private CdR11aLoadingArtInputs loadingInputs;
+    /** Original finite source binding only; no decode, current bytes, service or admission. */
+    public synchronized CdR11aLoadingArtInputs loadingArtInputs()throws IOException{
+        if(loadingInputs==null)loadingInputs=CdR11aLoadingArtInputs.bind(this,image);return loadingInputs;
+    }
+
+    private CdR11aStartupSource startup;
+    public synchronized CdR11aStartupSource startupObjects()throws IOException{if(startup==null)startup=CdR11aStartupSource.bind(this,image);return startup;}
 
     public NemesisRead blocksDecode() { return blocks; }
     public NemesisRead levelTilesDecode() { return tiles; }

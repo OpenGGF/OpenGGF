@@ -1,4 +1,6 @@
 package com.openggf.game.soniccd.resources;
+import com.openggf.game.soniccd.level.CdR11aStartupSource;
+import com.openggf.game.soniccd.level.CdR11aAssets;
 
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11bAssets;
@@ -29,6 +31,12 @@ import java.util.OptionalInt;
  * KillPlayer owner until a real Frame service-position publication is installed.
  */
 public final class CdLevelHud {
+    /** Native shared HUD font destinations, authenticated by each source facade's operands.
+     * Pure destination classification only; source/state/invocation stay with the caller. */
+    public static boolean isFontDestination(int destination){
+        return(destination>=0xB060&&destination<=0xB400)||(destination>=0xB4A0&&destination<=0xB4C0);
+    }
+
     public record Assets(CdAssetBytes numbers, CdAssetBytes resetTiles, CdAssetBytes divisors) {
         public Assets {
             Objects.requireNonNull(numbers, "HUD number source");
@@ -409,6 +417,63 @@ public final class CdLevelHud {
         private R31ArtFailure(CdR31aSectionArt.SectionArtException original,R31State state,List<NativeCall> calls){super(original);this.original=original;this.state=state;this.calls=List.copyOf(calls);}
         public CdR31aSectionArt.SectionArtException original(){return original;}
         public R31State state(){return state;}public List<NativeCall> calls(){return calls;}
+    }
+    public record OriginalR11State(CdR11aSectionArt.State section,CdRingGlobals ring,CdLevelGlobals level,
+                           CdOpeningObjectRuntime.ScoreGlobals score,CdCheckpointLiveAux.State liveTime,
+                           Optional<BonusValues> bonus) {
+        public OriginalR11State {Objects.requireNonNull(section);Objects.requireNonNull(ring);Objects.requireNonNull(level);Objects.requireNonNull(score);Objects.requireNonNull(liveTime);Objects.requireNonNull(bonus);}
+    }
+    public record OriginalR11Result(OriginalR11State state,List<NativeCall> calls) {
+        public OriginalR11Result {Objects.requireNonNull(state);calls=List.copyOf(calls);}
+    }
+    public static final class UnsupportedOriginalR11Hud extends UnsupportedOperationException {
+        private static final long serialVersionUID=1L;
+        private final Boundary boundary;private final OriginalR11State state;private final List<NativeCall> calls;
+        private final int sourceOffset,destinationWord;
+        private UnsupportedOriginalR11Hud(Stop failure,OriginalR11State state,List<NativeCall> calls){
+            super(failure.boundary+" at HUD source "+failure.sourceOffset+", destination "+failure.destinationWord,failure.getCause());
+            boundary=failure.boundary;this.state=state;this.calls=List.copyOf(calls);sourceOffset=failure.sourceOffset;destinationWord=failure.destinationWord;
+        }
+        public Boundary boundary(){return boundary;}public OriginalR11State state(){return state;}
+        public List<NativeCall> calls(){return calls;}public int sourceOffset(){return sourceOffset;}
+        public int destinationWord(){return destinationWord;}
+    }
+    /** Source-bound facade delegates every operation and fault cut to the unchanged shared Cursor. */
+    public static final class OriginalR11 {
+        private final Assets assets;private final CdR11aSectionArt art;
+        public OriginalR11(CdR11aAssets assets,CdR11aStartupSource hud,CdR11aSectionArt art){
+            Objects.requireNonNull(assets);Objects.requireNonNull(hud);this.art=Objects.requireNonNull(art);
+            if(!hud.owns(assets)||!art.ownsLoadingAssets(assets))throw new IllegalArgumentException("Foreign original OriginalR11 HUD/section source");
+            this.assets=hud.font();
+        }
+        /** Same source-format cursor for the actual selected generic programme; DATA is not invocation authority. */
+        public OriginalR11(com.openggf.game.soniccd.level.CdLevelLoadingSource source,Assets assets,CdR11aSectionArt art){
+            this.assets=Objects.requireNonNull(assets);this.art=Objects.requireNonNull(art);
+            if(!art.ownsLoadingSource(Objects.requireNonNull(source)))throw new IllegalArgumentException("Foreign original HUD loading source");
+        }
+        public OriginalR11Result run(OriginalR11State state,Inputs inputs){
+            Objects.requireNonNull(state);Objects.requireNonNull(inputs);art.validateState(state.section());
+            var initial=new Values<>(state.section(),state.ring(),state.level(),state.score(),state.liveTime(),state.bonus());
+            var cursor=new Cursor<>(initial,inputs,assets,art::writeCurrentHudTile);
+            try{cursor.run();}
+            catch(Stop failure){throw new UnsupportedOriginalR11Hud(failure,r31State(cursor.state,initial,state),cursor.calls);}
+            catch(RuntimeException original){
+                var prefix=new OriginalR11State(cursor.state.section(),cursor.state.ring(),cursor.state.level(),cursor.state.score(),cursor.state.liveTime(),cursor.state.bonus());
+                throw new OriginalR11ArtFailure(original,prefix,cursor.calls);
+            }
+            return new OriginalR11Result(r31State(cursor.state,initial,state),cursor.calls);
+        }
+    }
+    private static OriginalR11State r31State(Values<CdR11aSectionArt.State> value,Values<CdR11aSectionArt.State> initial,OriginalR11State before){
+        return value==initial?before:new OriginalR11State(value.section(),value.ring(),value.level(),value.score(),value.liveTime(),value.bonus());
+    }
+    /** Actual caller must retain this prefix and rethrow original(); the ledger is not replay authority. */
+    public static final class OriginalR11ArtFailure extends RuntimeException {
+        private static final long serialVersionUID=1L;
+        private final RuntimeException original;private final OriginalR11State state;private final List<NativeCall> calls;
+        private OriginalR11ArtFailure(RuntimeException original,OriginalR11State state,List<NativeCall> calls){super(original);this.original=original;this.state=state;this.calls=List.copyOf(calls);}
+        public RuntimeException original(){return original;}
+        public OriginalR11State state(){return state;}public List<NativeCall> calls(){return calls;}
     }
     // END explicit original R31 HUD facade 20261107.
 

@@ -5,6 +5,12 @@ import com.openggf.game.soniccd.level.CdAssetBytes;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.OptionalInt;
+import java.util.List;
+import java.util.ArrayList;
+import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.level.CdR11aLoadingArtInputs;
+import com.openggf.game.soniccd.level.CdLevelLoadingSource;
+import com.openggf.game.soniccd.level.CdStagePlayerSource;
 
 /**
  * Pure immutable sparse-known current pattern bytes at $6400..$6500, $6E00..$A400 and $D960..$DAE0.
@@ -108,9 +114,13 @@ public final class CdR11aCameraArtResidency {
      */
     public static final class State {
         private final RegionSnapshot[] regions;
+        private final CdR11aLoadingArtInputs loading;
+        private final CdLevelLoadingSource loadingSource;
+        private final List<Window> windows;
         private final CdPatternResidency.Value value;
 
         private State(RegionSnapshot[] regions) {
+            this.loading=null;this.loadingSource=null;this.windows=legacyWindows();
             this.regions = regions.clone();
             var windows = new CdPatternResidency.Window[regions.length];
             for (int i = 0; i < regions.length; i++) windows[i] = regions[i].window;
@@ -118,35 +128,52 @@ public final class CdR11aCameraArtResidency {
         }
 
         /** Fresh explicit unknown profile; no pre-clear/title history is inferred. */
-        private State(CdPatternResidency.Value value) {
-            this.value = value;
+        private State(CdPatternResidency.Value value) {this(value,(CdR11aLoadingArtInputs)null,legacyWindows());}
+        private State(CdPatternResidency.Value value,CdR11aLoadingArtInputs loading,List<Window> windows) {
+            this.loading=loading;this.loadingSource=null;this.windows=windows;this.value=value;
             regions = new RegionSnapshot[Region.values().length];
             for (Region region : Region.values()) {
                 regions[region.ordinal()] = new RegionSnapshot(region, value.window(region.ordinal()));
             }
         }
+        private State(CdPatternResidency.Value value,CdLevelLoadingSource loadingSource,List<Window> windows) {
+            this.loading=null;this.loadingSource=loadingSource;this.windows=windows;this.value=value;
+            // This selected geometry has no R11 enum-region interpretation.
+            regions=new RegionSnapshot[0];
+        }
 
-        private State(CdPatternResidency.Value value, RegionSnapshot[] previous) {
-            this.value = value;
-            regions = previous.clone();
+        private State(CdPatternResidency.Value value, State previous) {
+            this.loading=previous.loading;this.loadingSource=previous.loadingSource;this.windows=previous.windows;this.value = value;
+            var prior=previous.regions;
+            regions = prior.clone();
             for (int i = 0; i < regions.length; i++) {
-                if (previous[i].window != value.window(i)) {
-                    regions[i] = new RegionSnapshot(previous[i].region, value.window(i));
+                if (prior[i].window != value.window(i)) {
+                    regions[i] = new RegionSnapshot(prior[i].region, value.window(i));
                 }
             }
         }
 
         public RegionSnapshot region(Region region) {
+            if(loadingSource!=null)throw new IllegalStateException("Selected loading geometry uses windows, not R11 regions");
             return regions[Objects.requireNonNull(region, "region").ordinal()];
         }
 
         @Override
         public boolean equals(Object other) {
-            return this == other || other instanceof State state && Arrays.equals(regions, state.regions);
+            return this == other || other instanceof State state && loading==state.loading && loadingSource==state.loadingSource && value.equals(state.value);
         }
 
         @Override
-        public int hashCode() { return Arrays.hashCode(regions); }
+        public int hashCode() { return loadingSource!=null?31*System.identityHashCode(loadingSource)+value.hashCode():loading==null?Arrays.hashCode(regions):31*System.identityHashCode(loading)+value.hashCode(); }
+        public List<Window> windows(){return windows;}
+        public boolean ownsLoadingSource(CdLevelLoadingSource actual) {
+            return actual!=null&&(loadingSource==actual||loading!=null&&actual.ownsOriginalR11(loading.assets()));
+        }
+        /** Exact immutable scene source/player pair; unknown pixels retain their current mask. */
+        public boolean ownsLoadingSource(CdLevelLoadingSource actual,CdStagePlayerSource player){
+            return player!=null&&ownsLoadingSource(actual)&&actual.ownsPlayerSource(player);
+        }
+        public boolean ownsLoadingAssets(CdR11aAssets actual){return loading!=null&&loading.ownsAssets(actual)||loadingSource!=null&&loadingSource.ownsRetainedStandardAssets(actual);}
     }
 
     /**
@@ -197,6 +224,123 @@ public final class CdR11aCameraArtResidency {
      */
     public static State unknown() { return new State(CdPatternResidency.unknown(PROFILE)); }
 
+    public record Window(int destinationWord,int byteLength){public Window{new CdPatternResidency.Span(destinationWord,byteLength);}}
+    private static List<Window> legacyWindows(){return Arrays.stream(Region.values()).map(r->new Window(r.destinationWord(),r.byteLength())).toList();}
+    /** Full authenticated PLC destination union plus native LoadLifeIcon. All bytes UNKNOWN.
+     * Appended complementary spans never broaden a legacy factory or duplicate existing bytes. */
+    public static State unknownForLoading(CdR11aLoadingArtInputs actual){
+        Objects.requireNonNull(actual);boolean[] owned=new boolean[2048];
+        for(var r:Region.values())Arrays.fill(owned,r.destinationWord()/32,(r.destinationWord()+r.byteLength())/32,true);
+        for(var list:actual.assets().loadPlan().plcs())for(var e:list.entries()){
+            int count=actual.source(e.source()).tileCount();int start=e.vramAddress()/32;
+            if(count<=0||start+count>2048)throw new IllegalArgumentException("Original R11 PLC pattern extent");
+            Arrays.fill(owned,start,start+count,true);
+        }
+        Arrays.fill(owned,0xB420/32,0xB4A0/32,true);
+        Arrays.fill(owned,CdPowerupArtRuntime.VRAM_BYTE_ADDRESS/32,(CdPowerupArtRuntime.VRAM_BYTE_ADDRESS+CdPowerupArtRuntime.WINDOW_BYTES)/32,true);
+        try{var startup=actual.assets().startupObjects();for(int destination=0;destination<0x10000;destination+=32)if(startup.hudDestination(destination))owned[destination/32]=true;}
+        catch(java.io.IOException failure){throw new java.io.UncheckedIOException("Original R11 HUD destination source",failure);}
+
+        var geometry=unknownLegacyComplements(owned);
+        return new State(geometry.value(),actual,geometry.windows());
+    }
+
+    private record UnknownGeometry(CdPatternResidency.Value value,List<Window> windows) { }
+    /** One geometry algorithm for original aggregate and same-reader standard DATA. */
+    private static UnknownGeometry unknownLegacyComplements(boolean[] owned){
+        // Remove the existing regions before constructing disjoint complements.
+        for(var r:Region.values())Arrays.fill(owned,r.destinationWord()/32,(r.destinationWord()+r.byteLength())/32,false);
+        var windows=new ArrayList<>(legacyWindows());
+        for(int i=0;i<owned.length;){if(!owned[i]){i++;continue;}int first=i;while(i<owned.length&&owned[i])i++;windows.add(new Window(first*32,(i-first)*32));}
+        var fixed=List.copyOf(windows);var profile=new CdPatternResidency.Profile(fixed.stream().map(w->new CdPatternResidency.Span(w.destinationWord(),w.byteLength())).toArray(CdPatternResidency.Span[]::new));
+        return new UnknownGeometry(CdPatternResidency.unknown(profile),fixed);
+    }
+    private static State unknownForStandard(CdLevelLoadingSource actual)throws java.io.IOException{
+        actual.requireRetained();boolean[] owned=new boolean[2048];
+        for(var r:Region.values())Arrays.fill(owned,r.destinationWord()/32,(r.destinationWord()+r.byteLength())/32,true);
+        for(var list:actual.loadTables().plcs())for(var entry:list.entries()){
+            int count=entry.outputBytes()/32,start=entry.vramAddress()/32;
+            if((entry.vramAddress()&31)!=0||(entry.outputBytes()&31)!=0||count<=0||start+count>2048)
+                throw new IllegalArgumentException("Original R11 PLC pattern extent");
+            Arrays.fill(owned,start,start+count,true);
+        }
+        Arrays.fill(owned,0xB420/32,0xB4A0/32,true);
+        for(int destination:actual.standardPowerupDestinations())owned[destination/32]=true;
+        try{for(int destination:actual.standardHudDestinations())owned[destination/32]=true;}
+        catch(java.io.IOException failure){throw new java.io.UncheckedIOException("Original R11 HUD destination source",failure);}
+        var geometry=unknownLegacyComplements(owned);
+        return new State(geometry.value(),actual,geometry.windows());
+    }
+
+    /** TT's actual PLC destination union and the source-authenticated native life-icon writer.
+     * No inherited R11 region, unknown bytes/patterns remain unknown. This is DATA geometry,
+     * never an actual original clear or a residency certificate. R11 delegates unchanged. */
+    public static State unknownForLoading(CdLevelLoadingSource actual)throws java.io.IOException {
+        Objects.requireNonNull(actual);
+        if(actual.hasOriginalR11Aggregate())
+            return unknownForLoading(actual.originalR11Assets().loadingArtInputs());
+        if(actual.completion()==CdLevelLoadingSource.Completion.STANDARD){
+            if(actual.file()!=com.openggf.game.soniccd.CdNativeFile.R11A&&actual.file()!=com.openggf.game.soniccd.CdNativeFile.R11B)throw new IllegalArgumentException("Original PPZ standard residency required");
+            return unknownForStandard(actual);
+        }
+        boolean[] owned=new boolean[2048];
+        for(var list:actual.loadTables().plcs())for(var entry:list.entries()) {
+            int start=entry.vramAddress()/32,count=entry.outputBytes()/32;
+            if((entry.vramAddress()&31)!=0||(entry.outputBytes()&31)!=0||count<=0||start+count>2048)
+                throw new IllegalArgumentException("Original PLC pattern extent");
+            Arrays.fill(owned,start,start+count,true);
+        }
+        // AnimateStageGfx R41A writes three 512-byte windows; ownership remains unknown
+        // until the reached shared CPU-tile writer publishes each complete tile.
+        if(actual.file()==com.openggf.game.soniccd.CdNativeFile.R41A)Arrays.fill(owned,0x4500/32,0x4B00/32,true);
+        // Native LoadLifeIcon (r4/main.asm520-562) writes four tiles at B420.
+        Arrays.fill(owned,0xB420/32,0xB4A0/32,true);
+        // The actual source-authenticated shared HUD writer owns these destination tiles.
+        // Ownership only: unknownForLoading still marks every byte UNKNOWN until its real write.
+        actual.ordinaryObjectSource().ifPresent(objects->{
+            for(int destination=0;destination<0x10000;destination+=32)
+                if(objects.hudDestination(destination)||objects.powerupDestination(destination))owned[destination/32]=true;
+        });
+        var windows=new ArrayList<Window>();
+        for(int i=0;i<owned.length;){if(!owned[i]){i++;continue;}int first=i;while(i<owned.length&&owned[i])i++;windows.add(new Window(first*32,(i-first)*32));}
+        var fixed=List.copyOf(windows);
+        var profile=new CdPatternResidency.Profile(fixed.stream().map(w->new CdPatternResidency.Span(w.destinationWord(),w.byteLength())).toArray(CdPatternResidency.Span[]::new));
+        return new State(CdPatternResidency.unknown(profile),actual,fixed);
+    }
+
+    /** Pure current-value source adaptation, never a capture/entry or original clear.
+     * Retains every supplied known byte and every unknown byte; adds only the selected
+     * physical envelope. Module must supply its actual current value and own adoption. */
+    public static State withLoadingSource(State current,CdLevelLoadingSource actual)throws java.io.IOException {
+        Objects.requireNonNull(current);Objects.requireNonNull(actual);
+        if(current.ownsLoadingSource(actual))return current;
+        // Original R11's fixed enum windows keep their order and historical API.
+        if(actual.hasOriginalR11Aggregate())
+            throw new IllegalArgumentException("Original R11 retains its existing source-bound current value");
+        var selected=unknownForLoading(actual);
+        boolean[] owned=new boolean[2048];
+        for(var windows:List.of(current.windows,selected.windows))for(var w:windows)
+            Arrays.fill(owned,w.destinationWord()/32,(w.destinationWord()+w.byteLength())/32,true);
+        var windows=new ArrayList<Window>();
+        for(int i=0;i<owned.length;){if(!owned[i]){i++;continue;}int first=i;while(i<owned.length&&owned[i])i++;windows.add(new Window(first*32,(i-first)*32));}
+        var fixed=List.copyOf(windows);var spans=new CdPatternResidency.Span[fixed.size()];
+        var values=new CdPatternResidency.Window[fixed.size()];
+        for(int i=0;i<fixed.size();i++) {
+            var w=fixed.get(i);spans[i]=new CdPatternResidency.Span(w.destinationWord(),w.byteLength());
+            byte[] bytes=new byte[w.byteLength()],known=new byte[w.byteLength()];
+            for(int old=0;old<current.windows.size();old++) {
+                var prior=current.windows.get(old);int begin=Math.max(w.destinationWord(),prior.destinationWord());
+                int end=Math.min(w.destinationWord()+w.byteLength(),prior.destinationWord()+prior.byteLength());
+                for(int at=begin;at<end;at++) {
+                    var value=current.value.window(old).knownByte(at-prior.destinationWord());
+                    if(value.isPresent()){int offset=at-w.destinationWord();bytes[offset]=(byte)value.getAsInt();known[offset]=1;}
+                }
+            }
+            values[i]=new CdPatternResidency.Window(w.byteLength(),bytes,known);
+        }
+        return new State(new CdPatternResidency.Value(new CdPatternResidency.Profile(spans),values),actual,fixed);
+    }
+
     /**
      * Explicit whole-profile zero clear, preserving this strict physical envelope.
      * This pure value operation touches no player art, planes, CPU buffers, decoder,
@@ -204,7 +348,7 @@ public final class CdR11aCameraArtResidency {
      */
     public static State clear(State before) {
         Objects.requireNonNull(before, "state");
-        return new State(CdPatternResidency.clear(before.value), before.regions);
+        return new State(CdPatternResidency.clear(before.value), before);
     }
 
     /**
@@ -268,7 +412,7 @@ public final class CdR11aCameraArtResidency {
     public static State writeTile(State state, int destinationWord, CdAssetBytes tile32) {
         Objects.requireNonNull(state, "state");
         try {
-            return new State(CdPatternResidency.writeTile(state.value, destinationWord, tile32), state.regions);
+            return new State(CdPatternResidency.writeTile(state.value, destinationWord, tile32), state);
         } catch (CdPatternResidency.Fault fault) {
             throw new OwnershipBoundary(Boundary.valueOf(fault.boundary().name()), fault.destinationWord());
         }

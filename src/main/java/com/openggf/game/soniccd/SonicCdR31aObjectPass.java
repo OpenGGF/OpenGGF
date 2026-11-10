@@ -25,6 +25,7 @@ final class SonicCdR31aObjectPass {
         /** Prebuild Core/Host aggregates, validate original receipt, applyNative, adopt ready references.
          * No callback/fallible source read may intervene between the coupled owner assignments. */
         void adopt(Adoption original);
+        default void pinball(PinballPublication original){throw stop(Boundary.OBJECT_FAMILY,original.wholeIndex(),0x1e);}
         default void bumper(BumperPublication original){throw stop(Boundary.BUMPER_OWNER,original.wholeIndex(),0x1d);}
         CdPlayerBody.R31Context primaryContext();
         /** Same rule for genuine Frame R31BodyCall plus its complete nativeValues and sound ledger. */
@@ -40,23 +41,25 @@ final class SonicCdR31aObjectPass {
     record Cut(SonicCdR31aLoadingVisit.State core,CdRingGlobals ring,CdStageTerrain currentTerrain,
                CdPlayerBody.ContactGlobals contact,CdPlayerTouchResponse.WorldGlobals world,OptionalInt noBumperByte,
                int cameraXWord,int cameraYWord,int scrollLockWord,OptionalInt layerByte,
-               CdAssetBytes cpuSat,Optional<CdObjectDrawQueue.CpuSat> completedCpu,List<SonicCdGameModule.PastSound> sounds,OptionalInt amyCapturedByte) {
+               CdAssetBytes cpuSat,Optional<CdObjectDrawQueue.CpuSat> completedCpu,List<SonicCdGameModule.PastSound> sounds,OptionalInt amyCapturedByte,OptionalInt projectorByte) {
         Cut(SonicCdR31aLoadingVisit.State core,CdRingGlobals ring,CdStageTerrain terrain,CdPlayerBody.ContactGlobals contact,CdPlayerTouchResponse.WorldGlobals world,OptionalInt noBumper,int cx,int cy,int lock,OptionalInt layer,CdAssetBytes cpu,Optional<CdObjectDrawQueue.CpuSat> completed,List<SonicCdGameModule.PastSound> sounds){this(core,ring,terrain,contact,world,noBumper,cx,cy,lock,layer,cpu,completed,sounds,OptionalInt.empty());}
-        Cut {Objects.requireNonNull(amyCapturedByte);amyCapturedByte.ifPresent(SonicCdR31aObjectPass::octet);Objects.requireNonNull(core);Objects.requireNonNull(ring);Objects.requireNonNull(currentTerrain);
+        /** Legacy comparison cuts retain UNKNOWN projector, never a zero/default native operand. */
+        Cut(SonicCdR31aLoadingVisit.State core,CdRingGlobals ring,CdStageTerrain terrain,CdPlayerBody.ContactGlobals contact,CdPlayerTouchResponse.WorldGlobals world,OptionalInt noBumper,int cx,int cy,int lock,OptionalInt layer,CdAssetBytes cpu,Optional<CdObjectDrawQueue.CpuSat> completed,List<SonicCdGameModule.PastSound> sounds,OptionalInt captured){this(core,ring,terrain,contact,world,noBumper,cx,cy,lock,layer,cpu,completed,sounds,captured,OptionalInt.empty());}
+        Cut {Objects.requireNonNull(projectorByte);projectorByte.ifPresent(SonicCdR31aObjectPass::octet);Objects.requireNonNull(amyCapturedByte);amyCapturedByte.ifPresent(SonicCdR31aObjectPass::octet);Objects.requireNonNull(core);Objects.requireNonNull(ring);Objects.requireNonNull(currentTerrain);
             Objects.requireNonNull(contact);Objects.requireNonNull(world);Objects.requireNonNull(noBumperByte);
             noBumperByte.ifPresent(SonicCdR31aObjectPass::octet);word(cameraXWord);word(cameraYWord);word(scrollLockWord);
             Objects.requireNonNull(layerByte);layerByte.ifPresent(SonicCdR31aObjectPass::octet);extent(cpuSat,640);
             Objects.requireNonNull(completedCpu);sounds=List.copyOf(sounds);}
     }
     enum Boundary { OBJECT_INDEX,OBJECT_FAMILY,PHYSICAL_OWNER,PRIMARY_ROUTINE,PRIMARY_CONTEXT_OWNER,
-        PRIMARY_DISPLAY_OWNER,CURRENT_TERRAIN_OWNER,VINT,LAYER,TITLE_PLC_OWNER,INTRO_GLOBAL_OWNER,INTRO_PLC_OWNER,P2_ART_CLOCK_OWNER,P2_ANIMATION_OWNER,P2_PARENT_OWNER,SPRING_CHILD_OWNER,BUMPER_OWNER,FLOWER_POSITION_OWNER,FLOWER_COUNT_ALIAS }
+        PRIMARY_DISPLAY_OWNER,CURRENT_TERRAIN_OWNER,VINT,LAYER,TITLE_PLC_OWNER,INTRO_GLOBAL_OWNER,INTRO_PLC_OWNER,P2_ART_CLOCK_OWNER,P2_ANIMATION_OWNER,P2_PARENT_OWNER,SPRING_CHILD_OWNER,BUMPER_OWNER,FLOWER_POSITION_OWNER,FLOWER_COUNT_ALIAS,CC_ANIMAL_GLOBAL,CC_ANIMAL_PARENT_BYTE }
     static final class Unowned extends UnsupportedOperationException {
         private final Boundary boundary;private final int wholeIndex,value;
         private Unowned(Boundary b,int w,int v){super("R31 initial "+b+" at whole "+w+" value$"+Integer.toHexString(v));boundary=b;wholeIndex=w;value=v;}
         Boundary boundary(){return boundary;}int wholeIndex(){return wholeIndex;}int value(){return value;}
     }
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL,CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM,GAME_OVER,KAMA,SICKLE,EXPLOSION,POINTS,BUMPER,TIME_POST,FLOWER,SPRING }
+    private enum Kind { PRIMARY,HUD,TITLE,MONITOR,RING,INTRO,METAL,AMY,HEART,EXHAUST,ROLL,CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM,GAME_OVER,KAMA,SICKLE,EXPLOSION,POINTS,BUMPER,FLIPPER,TIME_POST,FLOWER,SPRING,TENTOU,CC_ANIMAL,GA }
     private static final class Dispatch {
         final Kind kind;final int whole,routine;final Object body;final Thread thread=Thread.currentThread();
         final Set<Object> calls=Collections.newSetFromMap(new IdentityHashMap<>());
@@ -149,7 +152,7 @@ final class SonicCdR31aObjectPass {
             poolOutput=lifecycle==null?values.snapshot():lifecycle.pool();
             var nativeNext=withNativeValues(e,values,sounds);
             if(lifecycle==null)next=nativeNext;
-            else{var w=nativeNext.world();var r=lifecycle.ring();next=new Cut(e.core().level(lifecycle.level()),r,nativeNext.currentTerrain(),nativeNext.contact(),new CdPlayerTouchResponse.WorldGlobals(r.rings(),r.lives(),r.updateHudLives(),w.score(),w.nextLifeScore(),w.updateHudScore()),nativeNext.noBumperByte(),nativeNext.cameraXWord(),nativeNext.cameraYWord(),nativeNext.scrollLockWord(),nativeNext.layerByte(),nativeNext.cpuSat(),nativeNext.completedCpu(),nativeNext.sounds(),nativeNext.amyCapturedByte());}
+            else{var w=nativeNext.world();var r=lifecycle.ring();next=new Cut(e.core().level(lifecycle.level()),r,nativeNext.currentTerrain(),nativeNext.contact(),new CdPlayerTouchResponse.WorldGlobals(r.rings(),r.lives(),r.updateHudLives(),w.score(),w.nextLifeScore(),w.updateHudScore()),nativeNext.noBumperByte(),nativeNext.cameraXWord(),nativeNext.cameraYWord(),nativeNext.scrollLockWord(),nativeNext.layerByte(),nativeNext.cpuSat(),nativeNext.completedCpu(),nativeNext.sounds(),nativeNext.amyCapturedByte(),nativeNext.projectorByte());}
             placement.pool().validateRestore(poolOutput);
         }
         SonicCdR31aObjectPass owner(){return SonicCdR31aObjectPass.this;}
@@ -248,7 +251,7 @@ final class SonicCdR31aObjectPass {
     private static Cut withNativeValues(Cut e,CdPlayerBody.R31Values values,List<SonicCdGameModule.PastSound> sounds){
         var r=e.ring();var w=values.world();
         var ring=new CdRingGlobals(w.rings(),w.lives(),r.livesFlags(),r.updateHudRings(),w.updateHudLives(),r.timeStopTimer(),r.ringAnimationTimer(),r.ringAnimationFrame());
-        return new Cut(e.core(),ring,values.terrain(),values.contact(),w,values.noBumperByte(),e.cameraXWord(),e.cameraYWord(),e.scrollLockWord(),e.layerByte(),e.cpuSat(),e.completedCpu(),sounds,e.amyCapturedByte());
+        return new Cut(e.core(),ring,values.terrain(),values.contact(),w,values.noBumperByte(),e.cameraXWord(),e.cameraYWord(),e.scrollLockWord(),e.layerByte(),e.cpuSat(),e.completedCpu(),sounds,e.amyCapturedByte(),e.projectorByte());
     }
 
     // BEGIN scoped original primary queue operation 20261107.
@@ -289,7 +292,9 @@ final class SonicCdR31aObjectPass {
     private EnemyInvocation enemy;
     private CdStageTerrain kamaTerrain;
     private CdKamaKama kama;
-    private final CdKamaSickle sickle;
+    private CdTentou tentou;private CdStageTerrain tentouTerrain;
+    private CdCcAnimal ccAnimal;private CdStageTerrain ccAnimalTerrain;private CcAnimalInvocation ccAnimalInvocation;
+    private final CdKamaSickle sickle;private final CdGa ga;
     private ChildInvocation childEffect;
     private FlowerInvocation flowerEffect;private CdFlower flower;private CdStageTerrain flowerTerrain;
     private final CdExplosion explosion;private final CdPoints points;
@@ -307,7 +312,7 @@ final class SonicCdR31aObjectPass {
                 ||placement.placements()!=assets.placements()||!common.ownsAssets(assets))
             throw new IllegalArgumentException("Exact retained original R31 assets/Frame/placement/common metadata required");
         bumperSource=CdR31aBumperSource.fromAssets(assets);bumperAssets=bumperSource.assets();bumperMath=new CdPlayerMath(frame.stageSource().player());
-        mappings=CdObjectMappings.fromR31aAssets(assets,common);
+        mappings=CdObjectMappings.fromR31aPinballAssets(assets,common);
         ring=CdRing.fromR31aAssets(placement,assets,common);
         gameOverSource=CdR31aGameOverSource.fromAssets(assets);
         gameOver=CdGameOver.withOriginalOperations(placement,gameOverSource.data(),this::gameOverDraw,this::gameOverSound,
@@ -341,9 +346,10 @@ final class SonicCdR31aObjectPass {
             public void sound(CdSpring.OriginalCall c,CdSpring.FmSound sound){springSound(c,sound);}
         },new CdSpring.NativeObserver(){public void before(CdSpring.OriginalCall c){beforeSpring(c);}public void after(CdSpring.OriginalCall c){afterSpring(c);}},
         new CdSpring.ReceiptGuard(){public void prepared(CdSpring.OriginalCall c){prepareSpring(c);}public void completed(CdSpring.OriginalCall c){completeSpring(c);}});
-        bindKama(originalTerrain);
+        bindKama(originalTerrain);bindTentou(originalTerrain);bindCcAnimal(originalTerrain);
         bindFlower(originalTerrain);
         var sicklePorts=new EnemyPorts(Kind.SICKLE);sickle=new CdKamaSickle(placement,sicklePorts,sicklePorts);sicklePorts.bind(sickle);
+        var gaPorts=new EnemyPorts(Kind.GA);ga=new CdGa(placement,gaPorts,gaPorts);gaPorts.bind(ga);
         hud=new CdReservedHud(common.reservedHudAssets(),new CdReservedHud.Slots(){
             public CdAssetBytes read(int w){requireWhole(Kind.HUD,w);return reserved(SonicCdR31aObjectPass.this.read(),w);}
             public void write(int w,CdAssetBytes e,CdAssetBytes n){reservedWrite(Kind.HUD,w,e,n);}},w->drawReserved(Kind.HUD,w));
@@ -379,13 +385,13 @@ final class SonicCdR31aObjectPass {
         var cut=read();var reservedRefs=new ArrayList<CdObjectDrawQueue.CdSlotRef>();for(int w=1;w<32;w++)reservedRefs.add(new CdObjectDrawQueue.CdSlotRef(w));
         queue=new CdObjectDrawQueue(new DrawSlots(),mappings,cut.cpuSat().copy(),reservedRefs);
         phase=Phase.WALKING;walkingThread=Thread.currentThread();
-        try{queue.beginPass();for(int w=0;w<128;w++){
-                guard();int id=id(w);if(id==0)continue;var kind=kind(w,id);if(kind==Kind.KAMA)bindKama(read().currentTerrain());if(kind==Kind.FLOWER)bindFlower(read().currentTerrain());int routine=routine(w);
+        try{queue.beginPass();CdPhysicalObjectWalk.run(0,128,w->{
+                guard();int id=id(w);if(id==0)return;var kind=kind(w,id);if(kind==Kind.KAMA)bindKama(read().currentTerrain());if(kind==Kind.TENTOU)bindTentou(read().currentTerrain());if(kind==Kind.CC_ANIMAL)bindCcAnimal(read().currentTerrain());if(kind==Kind.FLOWER)bindFlower(read().currentTerrain());int routine=routine(w);
                 dispatch=new Dispatch(kind,w,routine,body(kind));
                 try{if(kind!=Kind.PRIMARY)checkpoint();execute(kind,w,levelFrames);
                     if(dispatch.solidCut!=null)throw new IllegalStateException("Unretired original Solid call");}
                 finally{dispatch=null;}
-            }phase=Phase.WALKED;
+            });phase=Phase.WALKED;
         }catch(RuntimeException|Error original){phase=Phase.FAILED;queue.close();throw original;}
         finally{walkingThread=null;dispatch=null;primaryPending=null;pending=null;plcPending=null;primaryDraw=null;intro=null;introPlc=null;gameOverOperation=null;enemy=null;childEffect=null;timePostInvocation=null;flowerEffect=null;}
     }
@@ -406,11 +412,12 @@ final class SonicCdR31aObjectPass {
         queue.close();queue=null;phase=Phase.DONE;
     }
     void discard(){if(busy()||phase==Phase.WALKING||phase==Phase.DRAINING||dispatch!=null)throw new IllegalStateException("Active R31 pass");if(queue!=null)queue.close();queue=null;phase=Phase.DISCARDED;}
-    private boolean busy(){return springInvocation!=null||flowerEffect!=null||timePostInvocation!=null||bumper!=null||enemy!=null||childEffect!=null||gameOverOperation!=null||p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
-    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;case GAME_OVER->gameOver;case KAMA->kama;case SICKLE->sickle;case EXPLOSION->explosion;case POINTS->points;case BUMPER->CdBumper.class;case TIME_POST->timePost;case FLOWER->flower;case SPRING->spring;};}
+    private boolean busy(){return ccAnimalInvocation!=null||springInvocation!=null||flowerEffect!=null||timePostInvocation!=null||bumper!=null||enemy!=null||childEffect!=null||gameOverOperation!=null||p2!=null||intro!=null||introPlc!=null||primaryInvocation!=null||placeCall!=null||checking||reading||adopting||drawing||plc||pending!=null||primaryPending!=null||plcPending!=null||primaryDraw!=null;}
+    private Object body(Kind k){return switch(k){case PRIMARY->frame;case HUD->hud;case TITLE->title;case MONITOR->monitor;case RING->ring;case INTRO->spikes;case METAL,EXHAUST->metal;case AMY,HEART->amy;case ROLL->roll;case CC_SPIKES->ccSpikes;case BLOCK->block;case HIDDEN->hidden;case METAL_PLATFORM->metalPlatform;case DOOR->door;case FIRE->fire;case DRUM->drum;case GAME_OVER->gameOver;case KAMA->kama;case TENTOU->tentou;case CC_ANIMAL->ccAnimal;case GA->ga;case SICKLE->sickle;case EXPLOSION->explosion;case POINTS->points;case BUMPER->CdBumper.class;case FLIPPER->CdFlipper.class;case TIME_POST->timePost;case FLOWER->flower;case SPRING->spring;};}
     private void execute(Kind kind,int w,int levelFrames){var c=read();var e=frame.environment();var g=e.movement().gates();switch(kind){
         case PRIMARY->runPrimary(levelFrames);
         case BUMPER->runBumper(w);
+        case FLIPPER->runPinball(Kind.FLIPPER,w);
         case SPRING->runSpring(w);
         case TIME_POST->runTimePost(w);
         case GAME_OVER->{var result=gameOver.run(w,new CdGameOver.GlobalsPort(){
@@ -418,7 +425,8 @@ final class SonicCdR31aObjectPass {
             public void writePowerup(int value){gameOverStore(CdGameOver.Scalar.POWERUP,value);}
             public void writeTimeOver(int value){gameOverStore(CdGameOver.Scalar.TIME_OVER,value);}
         });if(result!=dispatch.gameOverResult||!result.state().equals(placement.pool().state(w))||gameOverOperation!=null)throw new IllegalStateException("No original Game Over completion");}
-        case KAMA,SICKLE->runKamaSickle(kind,w);
+        case KAMA,SICKLE,TENTOU,GA->runEnemy(kind,w);
+        case CC_ANIMAL->runCcAnimal(w);
         case EXPLOSION,POINTS->runChildEffect(kind,w);
         case FLOWER->runFlower(w);
         case CC_SPIKES,BLOCK,HIDDEN,METAL_PLATFORM,DOOR,FIRE,DRUM->runP2(kind,w);
@@ -430,7 +438,7 @@ final class SonicCdR31aObjectPass {
                 public CdRingGlobals read(){requireKind(Kind.RING);return SonicCdR31aObjectPass.this.read().ring();}
                 public void write(CdRingGlobals next){requireKind(Kind.RING);var old=SonicCdR31aObjectPass.this.read();var world=old.world();
                     var values=new CdPlayerTouchResponse.WorldGlobals(next.rings(),next.lives(),next.updateHudLives(),world.score(),world.nextLifeScore(),world.updateHudScore());
-                    publish(old,new Cut(old.core(),next,old.currentTerrain(),old.contact(),values,old.noBumperByte(),old.cameraXWord(),old.cameraYWord(),old.scrollLockWord(),old.layerByte(),old.cpuSat(),old.completedCpu(),old.sounds(),old.amyCapturedByte()),null,null);}
+                    publish(old,new Cut(old.core(),next,old.currentTerrain(),old.contact(),values,old.noBumperByte(),old.cameraXWord(),old.cameraYWord(),old.scrollLockWord(),old.layerByte(),old.cpuSat(),old.completedCpu(),old.sounds(),old.amyCapturedByte(),old.projectorByte()),null,null);}
             },new CdRing.SourceCalls(){
                 public void playFmSound(CdRing.FmSound s){requireKind(Kind.RING);sound(new SonicCdGameModule.PastRingFm(s));}
                 public void subCpuCommand(CdRing.SubCpuCommand s){requireKind(Kind.RING);sound(new SonicCdGameModule.PastRingSubCpu(s));}
@@ -510,39 +518,45 @@ final class SonicCdR31aObjectPass {
     }
     /** One reached private body invocation; no completed value can manufacture this receiver scope. */
     private final class BumperInvocation {
-        final int whole;final Thread thread=Thread.currentThread();final Object receiver=CdBumper.class;
+        final int whole;final Kind kind;final Thread thread=Thread.currentThread();final Object receiver;
         CdPinballContext context;int ordinal;BumperStep step;
-        BumperInvocation(int whole){this.whole=whole;}
+        BumperInvocation(Kind kind,int whole){this.kind=kind;this.whole=whole;receiver=body(kind);}
     }
     private final class BumperStep {
         final CdPinballContext.Operation original;final int ordinal;final int whole=bumper.whole;
-        final Cut cut;final ReadFrame before;final CdObjectPlacementRuntime.Snapshot placed;
-        final CdPinballContext.PrimaryResult prefix;
-        BumperPublication publication;boolean preparing=true,drawClearPending;
-        BumperStep(CdPinballContext.Operation op){
-            original=op;ordinal=op.ordinal();cut=read();before=readFrame();placed=placement.capture();prefix=op.primaryBefore();
-        }
+        Cut cut;ReadFrame before;CdObjectPlacementRuntime.Snapshot placed;
+        CdPinballContext.PrimaryResult prefix;
+        PinballPublication publication;boolean preparing=true,drawClearPending,attachmentSound;
+        CdSolidObject.Player solidPlayer;CdSolidObject.Globals solidGlobals;CdSolidObject.Outcome solidOutcome;
+        CdObjectState attachmentObject;CdPlayerBody.State attachmentReady;List<CdObjectState> detached;
+        BumperStep(CdPinballContext.Operation op){original=op;ordinal=op.ordinal();refresh();}
+        void refresh(){cut=read();before=readFrame();placed=placement.capture();prefix=original.primaryBefore();publication=null;preparing=true;}
     }
-    /** Original-operation publication. Each site changes ONE live owner: pool, Frame, bank or Host.
-     * Score/lives/sound are one prebuilt existing Host image; Core/reserved are retained and fenced.
-     * In particular no pool/Frame write is followed by a fallible Host/Core adoption. */
-    final class BumperPublication {
+    /** Original-operation publication: one native store owner or one prepared shared attachment.
+     * Attachment preflights pool and Frame before either changes; its last callback performs only
+     * prepared pool assignments and returns to an already-prepared Frame reference assignment.
+     * Host sound precedes GetOff stores. Core/reserved stay fenced throughout. */
+    final class BumperPublication extends PinballPublication {
+        private BumperPublication(BumperStep site){super(site);}
+    }
+    class PinballPublication {
         private final BumperStep site;private final Cut next;
         private final CdObjectPool.Snapshot poolOutput;
         private final CdPlayerFrameRuntime.BumperPlayerPublication playerOutput;
         private final CdObjectPlacementRuntime.BumperSavedPublication savedOutput;
+        private final CdPlayerFrameRuntime.PinballAttachmentPublication attachmentOutput;
         private boolean applying,applied,acknowledged;
-        private BumperPublication(BumperStep site){
-            this.site=site;site.publication=this;var call=CdR31BumperCall.fromOriginal(this);var op=site.original;var c=site.cut;Cut n=c;
+        private PinballPublication(BumperStep site){
+            this.site=site;site.publication=this;var call=CdR31PinballCall.fromOriginal(this);var op=site.original;var c=site.cut;Cut n=c;
             CdObjectPool.Snapshot pool=null;CdPlayerFrameRuntime.BumperPlayerPublication player=null;
-            CdObjectPlacementRuntime.BumperSavedPublication saved=null;
+            CdObjectPlacementRuntime.BumperSavedPublication saved=null;CdPlayerFrameRuntime.PinballAttachmentPublication attachment=null;
             if(op instanceof CdPinballContext.ObjectStore o){
                 if(o.expected()!=placement.pool().state(o.wholeIndex()))throw new IllegalArgumentException("Foreign original Bumper slot reference");
                 if(o.output().isPresent())pool=CdObjectPool.overlay(site.placed.pool(),List.of(o.output().orElseThrow()));
                 else{var stage=CdObjectPool.stagingCopy(site.placed.pool());stage.deleteObject(o.wholeIndex());pool=stage.capture();}
                 placement.pool().validateRestore(pool);
-            }else if(op instanceof CdPinballContext.PlayerStore){player=frame.prepareBumperPlayerStore(call);
-            }else if(op instanceof CdPinballContext.SavedStore){saved=placement.prepareBumperSavedStore(call);
+            }else if(op instanceof CdPinballContext.PlayerStore){player=frame.preparePinballPlayerStore(call);
+            }else if(op instanceof CdPinballContext.SavedStore){saved=placement.preparePinballSavedStore(call);
             }else if(op instanceof CdPinballContext.ScoreStore o){
                 if(!o.expected().equals(c.world()))throw new IllegalArgumentException("Changed original AddPoints input");
                 n=bumperValues(c,o.output(),c.sounds());
@@ -550,27 +564,51 @@ final class SonicCdR31aObjectPass {
                 if(o.kind()!=CdPinballContext.SoundKind.SUB_CPU||(o.nativeId()!=0x7a&&o.nativeId()!=0x7f))throw new IllegalStateException("No Bumper FM/other sound site");
                 var sounds=new ArrayList<>(c.sounds());sounds.add(new SonicCdGameModule.PastBumperSubCpu(o.nativeId()));
                 n=bumperValues(c,c.world(),sounds);
-            }else throw new IllegalArgumentException("Not a Bumper publication operation");
-            next=n;poolOutput=pool;playerOutput=player;savedOutput=saved;
+            }else if(op instanceof CdPinballContext.Attachment){
+                if(bumper.kind!=Kind.FLIPPER||site.solidOutcome==null)throw new IllegalStateException("No actual Flipper shared attachment call");
+                if(site.attachmentSound){
+                    var sounds=new ArrayList<>(c.sounds());sounds.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)));
+                    n=bumperValues(c,c.world(),sounds);
+                }else{
+                    var rows=new ArrayList<CdObjectState>();rows.add(site.attachmentObject);rows.addAll(site.detached);
+                    pool=CdObjectPool.overlay(site.placed.pool(),rows);placement.pool().validateRestore(pool);
+                    attachment=frame.preparePinballAttachment(call);site.attachmentReady=attachment.outputState();
+                }
+            }else throw new IllegalArgumentException("Not an original pinball publication operation");
+            next=n;poolOutput=pool;playerOutput=player;savedOutput=saved;attachmentOutput=attachment;
         }
         CdPlayerFrameRuntime frameOwner(){return frame;}CdObjectPlacementRuntime placementOwner(){return placement;}
         void requireCallPreparation(){if(site.publication!=this)throw new IllegalStateException("Foreign original Bumper receipt");bumperPreparation(site);}
         void requireCallApplication(){if(site.publication!=this)throw new IllegalStateException("Foreign original Bumper receipt");bumperApplication(site);}
+        private boolean attachmentPoolApplied;
+        void applyAttachmentPool(){
+            if(attachmentOutput==null||attachmentPoolApplied)throw new IllegalStateException("No original prepared attachment pool adoption");
+            requireCallApplication();placement.pool().validateRestore(poolOutput);
+            // No callbacks/allocations follow the final guard before pool/Frame adoption.
+            placement.pool().restore(poolOutput);attachmentPoolApplied=true;
+        }
         SonicCdR31aObjectPass owner(){return SonicCdR31aObjectPass.this;}
         int wholeIndex(){return site.whole;}CdPinballContext.Operation operation(){return site.original;}Cut expected(){return site.cut;}Cut next(){return next;}
-        boolean changesHost(){return site.original instanceof CdPinballContext.ScoreStore||site.original instanceof CdPinballContext.Sound;}
+        CdSolidObject.Outcome attachmentOutcome(){requireCallPreparation();return Objects.requireNonNull(site.solidOutcome);}
+        CdSolidObject.Player attachmentPlayer(){requireCallPreparation();return Objects.requireNonNull(site.solidPlayer);}
+        CdSolidObject.Globals attachmentGlobals(){requireCallPreparation();return Objects.requireNonNull(site.solidGlobals);}
+        boolean changesHost(){return site.original instanceof CdPinballContext.ScoreStore||site.original instanceof CdPinballContext.Sound||site.attachmentSound;}
         void validateBefore(){
             requireBumperSite(site);if(site.publication!=this||applied||applying||acknowledged)throw new IllegalStateException("Expired Bumper publication");
             requireCut(site.cut);requireFrame(site.before);requirePlacement(site.placed);requireBumperPrefix(site.prefix);
             if(poolOutput!=null)placement.pool().validateRestore(poolOutput);
             if(playerOutput!=null)frame.validateBumperPlayerStore(playerOutput);
             if(savedOutput!=null)placement.validateBumperSavedStore(savedOutput);
+            if(attachmentOutput!=null)frame.validatePinballAttachment(attachmentOutput);
         }
         void applyNative(){
             validateBefore();applying=true;
             try{
                 // Each branch owns one native write. All references/ledgers were prepared before here.
-                if(poolOutput!=null)placement.pool().restore(poolOutput);
+                if(attachmentOutput!=null){
+                    // Existing shared prepared pool adoption, followed by the source-bound Frame receipt.
+                    frame.applyPinballAttachment(attachmentOutput);
+                }else if(poolOutput!=null)placement.pool().restore(poolOutput);
                 else if(playerOutput!=null)frame.applyBumperPlayerStore(playerOutput);
                 else if(savedOutput!=null)placement.applyBumperSavedStore(savedOutput);
                 applied=true;
@@ -588,7 +626,9 @@ final class SonicCdR31aObjectPass {
                 int at=op.kind()==CdPinballContext.SavedKind.BUMPER_LINEAR_COUNTER?2+op.savedId():2+3*op.savedId()+op.period();bytes[at]=(byte)op.outputByte();
                 if(!Arrays.equals(bytes,now.savedFlags().copy()))throw new IllegalArgumentException("Bumper bank prefix differs");
             }else requirePlacement(site.placed);
-            if(applied&&playerOutput!=null){
+            if(applied&&attachmentOutput!=null){
+                requireAttachmentFrame(site,frame.state());
+            }else if(applied&&playerOutput!=null){
                 if(frame.state()!=((CdPinballContext.PlayerStore)site.original).output()||frame.environment()!=site.before.environment()
                         ||frame.display()!=site.before.display()||frame.artState()!=site.before.art()||frame.vIntClock()!=site.before.clock()||frame.paused()!=site.before.paused())throw new IllegalArgumentException("Bumper Frame nonwrites changed");
             }else requireFrame(site.before);
@@ -596,7 +636,7 @@ final class SonicCdR31aObjectPass {
     }
     private void requireBumperInvocation(){
         if(bumper==null||phase!=Phase.WALKING||walkingThread!=Thread.currentThread()||bumper.thread!=Thread.currentThread()
-                ||dispatch==null||dispatch.kind!=Kind.BUMPER||dispatch.body!=bumper.receiver||dispatch.whole!=bumper.whole
+                ||dispatch==null||dispatch.kind!=bumper.kind||dispatch.body!=bumper.receiver||dispatch.whole!=bumper.whole
                 ||!bumperSource.owns(assets)||bumperSource.assets()!=bumperAssets)throw new IllegalStateException("No actual cached Bumper invocation");
         guard();
     }
@@ -610,7 +650,8 @@ final class SonicCdR31aObjectPass {
     }
     private void bumperApplication(BumperStep s){
         requireBumperSite(s);if(s.publication==null||!s.publication.applying||s.publication.applied)throw new IllegalStateException("No original Bumper application");
-        requireCut(s.cut);requireFrame(s.before);requirePlacement(s.placed);requireBumperPrefix(s.prefix);
+        requireCut(s.cut);requireFrame(s.before);
+        requirePlacement(s.placed);requireBumperPrefix(s.prefix);
     }
     private void requireBumperPrefix(CdPinballContext.PrimaryResult p){
         poolCut(p.pool());var c=read();var placed=placement.capture();
@@ -618,7 +659,7 @@ final class SonicCdR31aObjectPass {
         // read()/sameCut also fence the COMPLETE Core including reserved1984/whole1, not merely pool96.
     }
     private void atBumper(CdPinballContext.Operation op,Runnable action){
-        requireKind(Kind.BUMPER);requireBumperInvocation();if(bumper.step!=null)throw new IllegalStateException("Bumper callback reentry");
+        requireBumperInvocation();requireKind(bumper.kind);if(bumper.step!=null)throw new IllegalStateException("Bumper callback reentry");
         op.requireOwner(bumper.context);if(op.ordinal()!=bumper.ordinal+1)throw new IllegalStateException("Not next original Bumper operation");claim(op);
         var s=new BumperStep(op);bumper.ordinal=s.ordinal;bumper.step=s;
         try{requireBumperPrefix(s.prefix);action.run();}
@@ -626,8 +667,8 @@ final class SonicCdR31aObjectPass {
         finally{bumper.step=null;}
     }
     private void bumperStore(CdPinballContext.Operation op,Runnable complete){atBumper(op,()->{
-        var s=bumper.step;var p=new BumperPublication(s);s.publication=p;s.preparing=false;
-        p.validateBefore();ports.bumper(p);if(!p.applied||!p.acknowledged)throw new IllegalStateException("Actual Bumper owner omitted original publication");
+        var s=bumper.step;var p=bumper.kind==Kind.BUMPER?new BumperPublication(s):new PinballPublication(s);s.publication=p;s.preparing=false;
+        p.validateBefore();if(p instanceof BumperPublication b)ports.bumper(b);else ports.pinball(p);if(!p.applied||!p.acknowledged)throw new IllegalStateException("Actual Bumper owner omitted original publication");
         p.verifyReached();checkpoint();complete.run();p.verifyReached();
     });}
     private final CdPinballContext.Ports bumperPorts=new CdPinballContext.Ports(){
@@ -636,7 +677,23 @@ final class SonicCdR31aObjectPass {
         public void scoreStore(CdPinballContext.ScoreStore o){bumperStore(o,o::applyNative);}
         public void savedStore(CdPinballContext.SavedStore o){bumperStore(o,o::applyNative);}
         public void sound(CdPinballContext.Sound o){bumperStore(o,o::completedNative);}
-        public void attachment(CdPinballContext.Attachment o){atBumper(o,()->{throw new IllegalStateException("Bumper has no attachment site");});}
+        public void attachment(CdPinballContext.Attachment o){atBumper(o,()->{
+            if(bumper.kind!=Kind.FLIPPER)throw new IllegalStateException("Bumper has no attachment site");
+            var s=bumper.step;s.solidPlayer=primary();s.solidGlobals=solidGlobals();
+            var entry=o.kind()==CdPinballContext.AttachmentKind.STAND_ON_OBJECT?CdSolidObject.Entry.STAND_ON_OBJECT:CdSolidObject.Entry.GET_OFF_OBJECT;
+            if(o.object()!=placement.pool().state(bumper.whole)||o.player()!=frame.state())throw new IllegalArgumentException("Foreign actual Flipper attachment input");
+            s.solidOutcome=solid.runWithPrefix(entry,o.object(),s.solidPlayer,gates(),s.solidGlobals,s.placed.pool());
+            List<CdPlayerTouchResponse.FmSound> sounds;
+            if(s.solidOutcome instanceof CdSolidObject.Completed c){var a=c.completedResult();s.attachmentObject=a.object();s.detached=a.otherSlots();sounds=a.fmRequests();}
+            else{var a=((CdSolidObject.NativeStopped)s.solidOutcome).prefix();s.attachmentObject=a.object();s.detached=a.otherSlots();sounds=a.fmRequests();}
+            if(!sounds.isEmpty()){
+                if(entry!=CdSolidObject.Entry.GET_OFF_OBJECT||!sounds.equals(List.of(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)))throw new IllegalStateException("Unexpected direct attachment sound graph");
+                s.attachmentSound=true;publishAttachment(s);s.refresh();s.attachmentSound=false;
+            }
+            publishAttachment(s);var output=frame.state();requireAttachmentFrame(s,output);
+            if(s.solidOutcome instanceof CdSolidObject.NativeStopped stopped){o.stoppedNative(s.attachmentObject,output,s.detached);throw stopped.stop().originalException();}
+            o.completedNative(s.attachmentObject,output,s.detached);
+        });}
         public void draw(CdPinballContext.Draw o){atBumper(o,()->{
             if(dispatch.drawn||o.wholeIndex()!=bumper.whole)throw new IllegalStateException("Repeated/foreign Bumper Draw");
             var source=o.sourceBeforeBit7Clear();var live=placement.pool().state(bumper.whole);
@@ -647,22 +704,37 @@ final class SonicCdR31aObjectPass {
             requireCut(bumper.step.cut);requireFrame(bumper.step.before);requirePlacement(bumper.step.placed);o.completedNative();
         });}
         public void despawn(CdPinballContext.Despawn o){atBumper(o,()->{
-            var source=placement.pool().state(bumper.whole);if(!o.usesSavedAnchor()||o.wholeIndex()!=bumper.whole||o.xWord()!=source.word(MOVING_SPRING_BASE_Y))throw new IllegalArgumentException("Not original Bumper anchor operand");
+            var source=placement.pool().state(bumper.whole);
+            boolean anchor=bumper.kind==Kind.BUMPER;int x=anchor?source.word(MOVING_SPRING_BASE_Y):source.centreX();
+            if(o.usesSavedAnchor()!=anchor||o.wholeIndex()!=bumper.whole||o.xWord()!=x)throw new IllegalArgumentException("Not original pinball despawn operand");
             var g=frame.environment().movement().gates();var result=despawn.despawnAtX(source,o.xWord(),new CdSpinTunnelTag.DespawnGlobals(g.timeZone(),g.timeWarpDirection(),read().cameraXWord()));
             requireCut(bumper.step.cut);requireFrame(bumper.step.before);requirePlacement(bumper.step.placed);o.completedNative(result.deleteObject());
         });}
     };
-    private void runBumper(int whole){
-        requireKind(Kind.BUMPER);if(bumper!=null)throw new IllegalStateException("Bumper invocation reentry");
-        bumper=new BumperInvocation(whole);
+    private void runBumper(int whole){runPinball(Kind.BUMPER,whole);}
+    private void runPinball(Kind kind,int whole){
+        requireKind(kind);if(bumper!=null||kind!=Kind.BUMPER&&kind!=Kind.FLIPPER)throw new IllegalStateException("Pinball invocation reentry/family");
+        bumper=new BumperInvocation(kind,whole);
         try{var c=read();var e=frame.environment();var g=e.movement().gates();var p=placement.capture();
             bumper.context=CdPinballContext.forPrimary(new CdPinballContext.PrimaryInput(p.pool(),frame.state(),e,c.world(),p.savedFlags(),g.timeZone(),c.core().program().goodFutureByte(),e.globals().debugMode(),g.zoneAct()&255),bumperAssets,bumperMath,bumperPorts);
-            var result=CdBumper.runPrimary(bumper.context,whole);if(bumper.step!=null)throw new IllegalStateException("Unretired Bumper operation");requireBumperPrefix(result);
+            var result=kind==Kind.BUMPER?CdBumper.runPrimary(bumper.context,whole):CdFlipper.runPrimary(bumper.context,whole);if(bumper.step!=null)throw new IllegalStateException("Unretired Bumper operation");requireBumperPrefix(result);
         }finally{bumper=null;}
+    }
+    private void publishAttachment(BumperStep s){
+        var p=new PinballPublication(s);s.preparing=false;p.validateBefore();ports.pinball(p);
+        if(!p.applied||!p.acknowledged)throw new IllegalStateException("Actual attachment owner omitted publication");
+        p.verifyReached();checkpoint();
+    }
+    private void requireAttachmentFrame(BumperStep s,CdPlayerBody.State output){
+        if(s.publication==null||s.publication.attachmentOutput==null||!s.publication.applied
+                ||frame.state()!=output||frame.environment()!=s.before.environment()||frame.display()!=s.before.display()
+                ||frame.artState()!=s.before.art()||frame.vIntClock()!=s.before.clock()||frame.paused()!=s.before.paused())throw new IllegalArgumentException("Changed attachment Frame nonwrites");
+        // Prepared Frame validates its own exact ready identity; retain it at the actual site as well.
+        if(s.attachmentReady!=output)throw new IllegalArgumentException("Changed prepared attachment State");
     }
     private static Cut bumperValues(Cut c,CdPlayerTouchResponse.WorldGlobals w,List<SonicCdGameModule.PastSound> sounds){
         var r=c.ring();var ring=new CdRingGlobals(w.rings(),w.lives(),r.livesFlags(),r.updateHudRings(),w.updateHudLives(),r.timeStopTimer(),r.ringAnimationTimer(),r.ringAnimationFrame());
-        return new Cut(c.core(),ring,c.currentTerrain(),c.contact(),w,c.noBumperByte(),c.cameraXWord(),c.cameraYWord(),c.scrollLockWord(),c.layerByte(),c.cpuSat(),c.completedCpu(),sounds,c.amyCapturedByte());
+        return new Cut(c.core(),ring,c.currentTerrain(),c.contact(),w,c.noBumperByte(),c.cameraXWord(),c.cameraYWord(),c.scrollLockWord(),c.layerByte(),c.cpuSat(),c.completedCpu(),sounds,c.amyCapturedByte(),c.projectorByte());
     }
 
     private void runPrimary(int levelFrames){
@@ -768,12 +840,123 @@ final class SonicCdR31aObjectPass {
         }finally{pending=null;adopting=false;}
     }
     // END original primary source-cut and flag helpers 20261107.
+    // BEGIN actual CCAnimal39 original receiver/operation join 20261108.
+    private final class CcAnimalInvocation {
+        final int whole;final Dispatch visit=dispatch;final CdCcAnimal receiver=ccAnimal;final Thread thread=Thread.currentThread();
+        final CdStageTerrain terrain=read().currentTerrain();long ordinal;CcAnimalOperation operation;
+        CcAnimalInvocation(int whole){this.whole=whole;}
+    }
+    private final class CcAnimalOperation {
+        final CdCcAnimal.Call call;final long ordinal;final CdCcAnimal.Site site;
+        final Cut cut=read();final ReadFrame before=readFrame();final CdObjectPlacementRuntime.Snapshot placed=placement.capture();
+        ReadFrame readyFrame;CdObjectPool.Snapshot drawOutput;boolean completed;
+        CcAnimalOperation(CdCcAnimal.Call call){this.call=call;ordinal=call.ordinal();site=call.site();}
+    }
+    private void bindCcAnimal(CdStageTerrain current){
+        if(ccAnimalInvocation!=null)throw new IllegalStateException("Active CCAnimal terrain borrow");
+        if(ccAnimal==null||ccAnimalTerrain!=current){
+            var next=new CdCcAnimal(placement,common.ccAnimalAssets(),bumperMath,CdPlayerTerrain.fromStageTerrain(Objects.requireNonNull(current)),ccAnimalPorts);
+            ccAnimalTerrain=current;ccAnimal=next;
+        }
+    }
+    private void requireCcAnimal(){
+        var i=ccAnimalInvocation;
+        if(i==null||i.visit!=dispatch||i.receiver!=ccAnimal||i.receiver!=dispatch.body||i.whole!=dispatch.whole||i.thread!=Thread.currentThread())
+            throw new IllegalStateException("No original cached CCAnimal physical visit");
+        requireKind(Kind.CC_ANIMAL);
+        if(i.terrain!=ccAnimalTerrain||read().currentTerrain()!=i.terrain)throw new IllegalStateException("Changed current CCAnimal terrain");
+    }
+    private CcAnimalOperation beginCcAnimal(CdCcAnimal.Call call){
+        requireCcAnimal();var i=ccAnimalInvocation;
+        if(call==null||i.operation!=null||!i.receiver.isCurrentCall(call)||call.ordinal()!=i.ordinal+1)
+            throw new IllegalStateException("Foreign/reentered/expired CCAnimal original call/cursor");
+        var source=call.expectedSource();if(source!=placement.pool().state(i.whole)||source.id()!=0x39)throw new IllegalArgumentException("Foreign CCAnimal source64");
+        identity(source.identity());requirePlacement(call.actualCut());claim(call);
+        var ready=new CcAnimalOperation(call);i.ordinal=call.ordinal();i.operation=ready;return ready;
+    }
+    private void ccAnimalOperation(CcAnimalOperation op){
+        requireCcAnimal();var i=ccAnimalInvocation;
+        if(i.operation!=op||i.ordinal!=op.ordinal||op.call.site()!=op.site||!op.completed&&!i.receiver.isCurrentCall(op.call))
+            throw new IllegalStateException("Changed original CCAnimal site/ordinal");
+    }
+    private void ccAnimalPrefix(CcAnimalOperation op){
+        ccAnimalOperation(op);requireCut(op.cut);
+        if(op.readyFrame!=null&&frame.state()==op.readyFrame.state()&&frame.environment()==op.readyFrame.environment())requireFrame(op.readyFrame);
+        else requireFrame(op.before);
+        if(op.drawOutput!=null&&placement.pool().capture().slots().equals(op.drawOutput.slots()))requirePlacementOutput(op.placed,op.drawOutput);
+        else requirePlacement(op.placed);
+    }
+    private int ccAnimalParent(CdCcAnimal.Read call){
+        if(call.site()!=CdCcAnimal.Site.PARENT)throw new IllegalStateException("Not original CCAnimal parent read");
+        var source=call.expectedSource();int base=((short)source.word(EXPLOSION_POINTS_FRAME))&0xFFFFFF;
+        int address=call.field()==CdCcAnimal.Field.PARENT_ID?base:(base+0x3F)&0xFFFFFF;
+        if(call.nativeAddress()!=address)throw new IllegalArgumentException("Not original raw parent WORD operand");
+        int relative=address-0xFFD000;
+        if(relative<0||relative>=128*64)throw stop(Boundary.CC_ANIMAL_PARENT_BYTE,ccAnimalInvocation.whole,address);
+        int whole=relative/64,at=relative%64;
+        if(whole==0){if(at==0)return frame.state().header().slotId();throw stop(Boundary.CC_ANIMAL_PARENT_BYTE,ccAnimalInvocation.whole,address);}
+        if(whole<32)return reserved(read(),whole).unsignedByte(at);
+        // Byte storage aliases, including odd/reused/cross-slot words; no ID/alignment/generation policy.
+        return Byte.toUnsignedInt(placement.pool().state(whole).copyBytes()[at]);
+    }
+    private int ccAnimalRead(CdCcAnimal.Read call,Cut cut){
+        var gate=frame.environment().movement().gates();var site=call.site();
+        return switch(call.field()){
+            case TIME_ZONE->{if(site!=CdCcAnimal.Site.PRESENCE&&site!=CdCcAnimal.Site.BASE_TILE&&site!=CdCcAnimal.Site.DESPAWN)throw new IllegalStateException("No Animal period site");yield gate.timeZone();}
+            case GOOD_FUTURE->{if(site!=CdCcAnimal.Site.PRESENCE)throw new IllegalStateException("No Animal good-future site");yield cut.core().program().goodFutureByte();}
+            case PROJECTOR_DESTROYED->{if(site!=CdCcAnimal.Site.PRESENCE)throw new IllegalStateException("No Animal projector site");yield cut.projectorByte().orElseThrow(()->stop(Boundary.CC_ANIMAL_GLOBAL,ccAnimalInvocation.whole,call.field().ordinal()));}
+            case TIME_WARP_DIRECTION->{if(site!=CdCcAnimal.Site.DESPAWN)throw new IllegalStateException("No Animal direction site");yield gate.timeWarpDirection();}
+            case CAMERA_X->{if(site!=CdCcAnimal.Site.DESPAWN)throw new IllegalStateException("No Animal camera site");yield cut.cameraXWord();}
+            case ACT->{if(site!=CdCcAnimal.Site.BASE_TILE)throw new IllegalStateException("No Animal act site");yield gate.zoneAct()&255;}
+            case PARENT_ID,PARENT_FLAG->ccAnimalParent(call);
+            case PRIMARY_ANGLE->throw new IllegalStateException("Animal has no native scratch-angle Read site");
+        };
+    }
+    private final CdCcAnimal.Ports ccAnimalPorts=new CdCcAnimal.Ports(){
+        public CdCcAnimal.Value read(CdCcAnimal.Read call){var op=beginCcAnimal(call);
+            try{int value=ccAnimalRead(call,op.cut);ccAnimalPrefix(op);var ready=call.complete(value);op.completed=true;return ready;}
+            catch(RuntimeException|Error original){verify(original,()->ccAnimalPrefix(op));throw original;}
+            finally{ccAnimalInvocation.operation=null;}
+        }
+        public CdCcAnimal.Done angle(CdCcAnimal.Angle call){var op=beginCcAnimal(call);
+            try{var source=call.expectedSource();if(call.site()!=CdCcAnimal.Site.FLOOR||(source.subtype()&127)==0||source.routine()!=2&&source.routine()!=4)throw new IllegalStateException("No original Animal ground-floor angle");
+                var ready=frame.prepareObjectPrimaryAngle(frame.environment().movement().globals().primaryAngle(),call.value());
+                op.readyFrame=new ReadFrame(ready.finalState(),ready.finalEnvironment(),op.before.display(),op.before.art(),op.before.clock(),op.before.paused());
+                ccAnimalPrefix(op);var returned=call.complete();op.completed=true; // receipt allocation precedes any owner store
+                publish(op.cut,op.cut,null,ready);ccAnimalPrefix(op);return returned;
+            }catch(RuntimeException|Error original){verify(original,()->ccAnimalPrefix(op));throw original;}
+            finally{ccAnimalInvocation.operation=null;}
+        }
+        public CdCcAnimal.Done draw(CdCcAnimal.Draw call){var op=beginCcAnimal(call);
+            try{if(call.site()!=CdCcAnimal.Site.DRAW)throw new IllegalStateException("No original Animal Draw site");
+                op.drawOutput=CdObjectPool.overlay(op.placed.pool(),List.of(call.expectedSource().moveByte(SPRITE_FLAGS,call.expectedSource().spriteFlags()&127)));placement.pool().validateRestore(op.drawOutput);
+                ccAnimalPrefix(op);var returned=call.complete();op.completed=true; // prepare Done before actual native clear/queue
+                drawDynamic(Kind.CC_ANIMAL,placement.pool(),call.expectedSource().identity());checkpoint();ccAnimalPrefix(op);return returned;
+            }catch(RuntimeException|Error original){verify(original,()->ccAnimalPrefix(op));throw original;}
+            finally{ccAnimalInvocation.operation=null;}
+        }
+    };
+    private void runCcAnimal(int whole){
+        requireWhole(Kind.CC_ANIMAL,whole);if(ccAnimalInvocation!=null)throw new IllegalStateException("CCAnimal invocation reentry");
+        var original=new CcAnimalInvocation(whole);ccAnimalInvocation=original;
+        try{var result=original.receiver.run(whole);
+            if(ccAnimalInvocation!=original||original.operation!=null||result.state()!=placement.pool().state(whole))throw new IllegalStateException("No original CCAnimal return");
+            requireCcAnimal(); // completed result is comparison metadata only
+        }finally{ccAnimalInvocation=null;}
+    }
+    // END actual CCAnimal39 original receiver/operation join 20261108.
+
     // Original R31A Kama/Sickle joins: one physical walk, no completed-effect replay.
     private enum EnemyOp { NONE,GLOBAL,PLAYER,MAPPING,ANIMATION,ANGLE,SOUND,DRAW }
     private final class EnemyInvocation {
         final Kind kind;final int whole;final Object receiver;final Thread thread=Thread.currentThread();
         final CdStageTerrain terrainAtVisit;EnemyOp op=EnemyOp.NONE;
-        EnemyInvocation(Kind kind,int whole){this.kind=kind;this.whole=whole;receiver=body(kind);terrainAtVisit=read().currentTerrain();}
+        long siteOrdinal;boolean mappingRead,animationRead;int playerReads,gaDraws;
+        final int gaDrawLimit;
+        EnemyInvocation(Kind kind,int whole){this.kind=kind;this.whole=whole;receiver=body(kind);terrainAtVisit=read().currentTerrain();
+            var source=placement.pool().state(whole);
+            gaDrawLimit=kind==Kind.GA&&!gaDust(source)&&(source.routine()==4||source.routine()==6||source.routine()==8)?2:1;
+        }
     }
     /** These factories borrow immutable references only, with NO query/decode/native byte read.
      * Native PlaceBlock may publish a new authenticated current terrain before this visit.
@@ -785,11 +968,20 @@ final class SonicCdR31aObjectPass {
             var next=new CdKamaKama(placement,port,CdPlayerTerrain.fromStageTerrain(Objects.requireNonNull(current)),port);
             port.bind(next);kamaTerrain=current;kama=next;}
     }
-    private void runKamaSickle(Kind kind,int whole){
+    private void bindTentou(CdStageTerrain current){
+        if(enemy!=null)throw new IllegalStateException("Active Tentou source borrow");
+        if(tentou==null||tentouTerrain!=current){var port=new EnemyPorts(Kind.TENTOU);
+            var next=new CdTentou(placement,port,CdPlayerTerrain.fromStageTerrain(Objects.requireNonNull(current)),port);
+            port.bind(next);tentouTerrain=current;tentou=next;}
+    }
+    private void runEnemy(Kind kind,int whole){
         requireWhole(kind,whole);if(enemy!=null)throw new IllegalStateException("Enemy invocation reentry");
         var original=new EnemyInvocation(kind,whole);enemy=original;
         try{if(kind==Kind.KAMA){if(kamaTerrain!=original.terrainAtVisit)throw new IllegalStateException("Stale current Kama terrain");kama.run(whole);}
-            else if(kind==Kind.SICKLE)sickle.run(whole);else throw new IllegalStateException("Foreign enemy receiver");
+            else if(kind==Kind.SICKLE)sickle.run(whole);
+            else if(kind==Kind.GA)ga.run(whole);
+            else if(kind==Kind.TENTOU){if(tentouTerrain!=original.terrainAtVisit)throw new IllegalStateException("Stale current Tentou terrain");tentou.run(whole);}
+            else throw new IllegalStateException("Foreign enemy receiver");
             if(enemy!=original||original.op!=EnemyOp.NONE)throw new IllegalStateException("Unretired enemy site");
             requireKind(kind);
         }finally{enemy=null;}
@@ -800,12 +992,20 @@ final class SonicCdR31aObjectPass {
                 ||current.receiver!=dispatch.body||current.receiver!=body(current.kind)||current.thread!=Thread.currentThread())
             throw new IllegalStateException("No original cached enemy receiver/physical visit");
         requireKind(current.kind);
-        if(read().currentTerrain()!=current.terrainAtVisit||current.kind==Kind.KAMA&&kamaTerrain!=current.terrainAtVisit)
+        if(read().currentTerrain()!=current.terrainAtVisit||current.kind==Kind.KAMA&&kamaTerrain!=current.terrainAtVisit
+                ||current.kind==Kind.TENTOU&&tentouTerrain!=current.terrainAtVisit)
             throw new IllegalArgumentException("Changed current terrain during original enemy invocation");
     }
     private <T>T enemyAt(EnemyPorts port,EnemyOp site,java.util.function.Supplier<T> action){
-        requireEnemy(port);var current=enemy;if(current.op!=EnemyOp.NONE)throw new IllegalStateException("Enemy site reentry");current.op=site;
-        try{return action.get();}finally{current.op=EnemyOp.NONE;}
+        requireEnemy(port);var current=enemy;if(current.op!=EnemyOp.NONE)throw new IllegalStateException("Enemy site reentry");
+        current.op=site;long ordinal=++current.siteOrdinal;
+        try{var result=action.get();requireEnemySite(current,site,ordinal);return result;}
+        catch(RuntimeException|Error original){verify(original,()->requireEnemySite(current,site,ordinal));throw original;}
+        finally{current.op=EnemyOp.NONE;}
+    }
+    private void requireEnemySite(EnemyInvocation original,EnemyOp site,long ordinal){
+        if(enemy!=original||original.thread!=Thread.currentThread()||original.op!=site||original.siteOrdinal!=ordinal)
+            throw new IllegalStateException("Changed original private enemy site/cursor");
     }
     /** Native reads have a complete read-only World/Frame/environment/full96/status/bank cut.
      * Preserve the original throwable and attach only distinct verification faults; never undo. */
@@ -815,9 +1015,18 @@ final class SonicCdR31aObjectPass {
         catch(RuntimeException|Error original){verify(original,()->{requireFrame(f);requirePlacement(placed);requireCut(cut);});throw original;}
     });}
     private void enemySource(CdObjectState expected,CdObjectPlacementRuntime.Snapshot placed){
-        if(expected!=placement.pool().state(enemy.whole)||expected.id()!=(enemy.kind==Kind.KAMA?0x24:0x25))throw new IllegalArgumentException("Not the actual enemy source image");
+        if(expected!=placement.pool().state(enemy.whole)||!enemySourceId(expected))throw new IllegalArgumentException("Not the actual enemy source image");
         identity(expected.identity());requirePlacement(placed);
     }
+    private boolean enemySourceId(CdObjectState s){
+        if(enemy.kind==Kind.KAMA)return s.id()==0x24;
+        if(enemy.kind==Kind.SICKLE)return s.id()==0x25;
+        if(enemy.kind==Kind.GA)return s.id()==0x2D;
+        // Bomb conversion is a reached store before the ORIGINAL Sound/Draw, not redispatch.
+        return enemy.kind==Kind.TENTOU&&(s.id()==0x2E||s.id()==0x18&&tentouBomb(s)&&s.routine()==0&&s.unsignedByte(ROUTINE_2)==1);
+    }
+    private static boolean tentouBomb(CdObjectState s){return (byte)(s.subtype()-1)>=0;}
+    private static boolean gaDust(CdObjectState s){return (byte)(s.subtype()-1)>=0;}
     /** One private port per cached receiver, bound exactly once and never exported. Enum/value
      * equality, a retained component call or completed sound metadata cannot enter this scope. */
     private final class EnemyPorts implements CdCczEnemyPorts,CdCczEnemyPorts.Assets {
@@ -826,8 +1035,10 @@ final class SonicCdR31aObjectPass {
         private void bind(Object original){if(receiver!=null||original==null)throw new IllegalStateException("Enemy receiver already bound");receiver=original;}
         public int global(CdCczEnemyPorts.Global field){return enemyRead(this,EnemyOp.GLOBAL,()->{
             var e=frame.environment();var g=e.movement().gates();
+            if(kind==Kind.TENTOU&&tentouBomb(placement.pool().state(enemy.whole)))throw new IllegalStateException("Bomb has no global read site");
+            if(kind==Kind.GA&&gaDust(placement.pool().state(enemy.whole)))throw new IllegalStateException("Ga dust has no global read site");
             return switch(field){
-                case GOOD_FUTURE->{if(kind!=Kind.KAMA)throw new IllegalStateException("No Sickle GoodFuture site");yield read().core().program().goodFutureByte();}
+                case GOOD_FUTURE->{if(kind!=Kind.KAMA&&kind!=Kind.GA&&(kind!=Kind.TENTOU||tentouBomb(placement.pool().state(enemy.whole))))throw new IllegalStateException("No original parent GoodFuture site");yield read().core().program().goodFutureByte();}
                 case TIME_ZONE->g.timeZone();case WARP_DIRECTION->g.timeWarpDirection();case CAMERA_X->read().cameraXWord();
                 case INVINCIBLE->{if(kind!=Kind.SICKLE||placement.pool().state(enemy.whole).routine()!=4)throw new IllegalStateException("No current Sickle invincible site");yield e.globals().invincible();}
             };
@@ -836,30 +1047,76 @@ final class SonicCdR31aObjectPass {
             int routine=placement.pool().state(enemy.whole).routine();
             if(kind==Kind.KAMA&&(routine!=4||field!=CdCczEnemyPorts.Player.X&&field!=CdCczEnemyPorts.Player.Y)
                     ||kind==Kind.SICKLE&&routine!=4)throw new IllegalStateException("No original enemy player-read site");
+            if(kind==Kind.TENTOU){
+                var source=placement.pool().state(enemy.whole);
+                if(tentouBomb(source)||routine!=4||enemy.playerReads>1||field!=(enemy.playerReads==0?CdCczEnemyPorts.Player.Y:CdCczEnemyPorts.Player.X))
+                    throw new IllegalStateException("No original Tentou conditional Y-then-X read");
+                enemy.playerReads++;
+            }
+            if(kind==Kind.GA){
+                var source=placement.pool().state(enemy.whole);
+                if(gaDust(source)||dispatch.routine!=6||routine!=8||enemy.playerReads!=0||field!=CdCczEnemyPorts.Player.X)
+                    throw new IllegalStateException("No original Ga launch primary-X read");
+                enemy.playerReads++;
+            }
             var m=frame.state().motion();return switch(field){case X->m.centreX16_16()>>>16;case Y->m.centreY16_16()>>>16;case FLAGS->m.flags();case X_VELOCITY->m.xVelocity()&65535;};
         });}
         public CdPlayerMath.SineCosine sine(int angle){requireEnemy(this);throw new IllegalStateException("Kama/Sickle native graph has no sine read");}
         public CdCczEnemyPorts.MappingView mapping(CdCczEnemyPorts.Mapping which){return enemyRead(this,EnemyOp.MAPPING,()->{
             var source=placement.pool().state(enemy.whole);
+            if(kind==Kind.GA){
+                var selected=gaDust(source)?CdCczEnemyPorts.Mapping.RING:source.subtype()<128?CdCczEnemyPorts.Mapping.GA_NORMAL:CdCczEnemyPorts.Mapping.GA_DAMAGED;
+                if(dispatch.routine!=0||source.id()!=0x2D||source.routine()!=2||which!=selected||enemy.mappingRead)
+                    throw new IllegalStateException("No original Ga post-header mapping STORE");
+                enemy.mappingRead=true;return common.gaAssets().mapping(which);
+            }
+            if(kind==Kind.TENTOU){
+                var selected=tentouBomb(source)?CdCczEnemyPorts.Mapping.BOMB:source.subtype()<128?CdCczEnemyPorts.Mapping.TENTOU_NORMAL:CdCczEnemyPorts.Mapping.TENTOU_DAMAGED;
+                if(dispatch.routine!=0||source.id()!=0x2E||source.routine()!=2||which!=selected||enemy.mappingRead)
+                    throw new IllegalStateException("No original Tentou post-header mapping STORE");
+                enemy.mappingRead=true;return common.tentouAssets().mapping(which);
+            }
             if(source.routine()!=0||kind==Kind.KAMA&&which!=CdCczEnemyPorts.Mapping.KAMA_NORMAL&&which!=CdCczEnemyPorts.Mapping.KAMA_DAMAGED
                     ||kind==Kind.SICKLE&&which!=CdCczEnemyPorts.Mapping.SICKLE)throw new IllegalStateException("No original enemy mapping STORE");
             return common.kamaSickleAssets().mapping(which);
         });}
         public CdObjectAnimation.AnimationTable animation(CdCczEnemyPorts.Animation which){return enemyRead(this,EnemyOp.ANIMATION,()->{
+            if(kind==Kind.GA){
+                var source=placement.pool().state(enemy.whole);boolean dust=gaDust(source);
+                if(source.id()!=0x2D||enemy.animationRead||which!=(dust?CdCczEnemyPorts.Animation.DUST:CdCczEnemyPorts.Animation.GA)
+                        ||dust&&source.routine()!=2||!dust&&source.routine()!=4&&source.routine()!=6&&source.routine()!=8)
+                    throw new IllegalStateException("No original selected Ga animation lookup");
+                enemy.animationRead=true;return common.gaAssets().animation(which);
+            }
+            if(kind==Kind.TENTOU){
+                var source=placement.pool().state(enemy.whole);boolean bomb=tentouBomb(source);
+                if(source.id()!=0x2E||enemy.animationRead||which!=(bomb?CdCczEnemyPorts.Animation.BOMB:CdCczEnemyPorts.Animation.TENTOU)
+                        ||bomb&&source.routine()!=6&&source.routine()!=8)throw new IllegalStateException("No original selected Tentou animation lookup");
+                enemy.animationRead=true;return common.tentouAssets().animation(which);
+            }
             if(which!=(kind==Kind.KAMA?CdCczEnemyPorts.Animation.KAMA:CdCczEnemyPorts.Animation.SICKLE))throw new IllegalStateException("Foreign selected enemy animation");
             return common.kamaSickleAssets().animation(which);
         });}
         public int chainLinkCount(){requireEnemy(this);throw new IllegalStateException("Kama/Sickle native graph has no chain-count read");}
         public void primaryAngle(CdCczEnemyPorts.AngleCall call){enemyAt(this,EnemyOp.ANGLE,()->{
-            if(kind!=Kind.KAMA||call==null||!call.isCurrent())throw new IllegalStateException("No original Kama collision-angle call");
+            if(kind!=Kind.KAMA&&kind!=Kind.TENTOU||call==null||!call.isCurrent())throw new IllegalStateException("No original Kama collision-angle call");
             enemySource(call.expectedSource(),call.callCut());claim(call);
-            int routine=call.expectedSource().routine();if(routine!=2&&routine!=10)throw new IllegalStateException("No original Kama terrain-probe routine");
+            int routine=call.expectedSource().routine();
+            if(kind==Kind.KAMA?(routine!=2&&routine!=10):tentouBomb(call.expectedSource())?routine!=2:(routine!=2&&routine!=6&&routine!=10))
+                throw new IllegalStateException("No original current enemy terrain-probe routine");
             // Prepare the existing complete Frame pair BEFORE publication. Each distinct native
             // same-value store still gets its own original call and adoption, never coalesced.
             var ready=frame.prepareObjectPrimaryAngle(frame.environment().movement().globals().primaryAngle(),call.value());
             var cut=read();publish(cut,cut,null,ready);return null;
         });}
         public void sound(CdCczEnemyPorts.SoundCall call){enemyAt(this,EnemyOp.SOUND,()->{
+            if(kind==Kind.TENTOU){
+                if(call==null||!call.isCurrent()||call.sound()!=CdCczEnemyPorts.Sound.EXPLOSION)throw new IllegalStateException("No original Tentou FM9E call");
+                enemySource(call.expectedSource(),call.callCut());claim(call);var source=call.expectedSource();
+                if(!tentouBomb(source)||source.id()!=0x18||source.routine()!=0||source.unsignedByte(ROUTINE_2)!=1||(source.spriteFlags()&128)==0||dispatch.fm)
+                    throw new IllegalStateException("No original converted bomb signed-visible FM9E site");
+                dispatch.fm=true;SonicCdR31aObjectPass.this.sound(new SonicCdGameModule.PastTentouExplosionFm());return null;
+            }
             if(kind!=Kind.SICKLE||call==null||!call.isCurrent()||call.sound()!=CdCczEnemyPorts.Sound.SICKLE)
                 throw new IllegalStateException("No original Sickle FM B9 call");
             enemySource(call.expectedSource(),call.callCut());claim(call);var source=call.expectedSource();
@@ -868,7 +1125,15 @@ final class SonicCdR31aObjectPass {
             dispatch.fm=true;SonicCdR31aObjectPass.this.sound(new SonicCdGameModule.PastKamaSickleFm());return null;
         });}
         public void draw(CdObjectPool pool,CdObjectState.Identity identity){enemyAt(this,EnemyOp.DRAW,()->{
-            drawDynamic(kind,pool,identity);checkpoint();return null;
+            if(kind==Kind.GA){
+                // Ga/Main.asm:34,114,155,191: one wrapper Draw plus one active inner Draw.
+                // Dust:240 still draws the cleared slot after Delete. No other family gains a repeat.
+                identity(identity);
+                if(pool!=placement.pool()||enemy.gaDraws>=enemy.gaDrawLimit)throw new IllegalStateException("Foreign/repeated original Ga Draw");
+                enemy.gaDraws++;dispatch.drawn=true;var source=pool.state(identity.wholeIndex());
+                SonicCdR31aObjectPass.this.draw(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(identity.wholeIndex()),source.spriteFlags(),source.centreX(),source.centreY(),source.unsignedByte(Y_RADIUS),source.unsignedByte(WIDTH),source.unsignedByte(PRIORITY)));
+            }else drawDynamic(kind,pool,identity);
+            checkpoint();return null;
         });}
     }
     // Original Explosion/Points invocation only. Result/effects are completed metadata, never commands.
@@ -1066,7 +1331,7 @@ final class SonicCdR31aObjectPass {
     }
     private void flowerDraw(CdFlower.DrawCall call){flowerUse(call);if(flowerEffect.drew)throw new IllegalStateException("Repeated Flower Draw");drawDynamic(Kind.FLOWER,placement.pool(),call.source().identity());}
     /** Native BYTE at flowerCount+period;3 aliases the already represented fade byte. No raw space. */
-    private static int flowerCountByte(CdLevelGlobals level,int period){if(period>=0&&period<3)return(level.flowerCount()>>>(8*(2-period)))&255;if(period==3)return level.fadeEnableDisplay();throw new IllegalArgumentException("Unrepresented Flower count byte");}
+    static int flowerCountByte(CdLevelGlobals level,int period){if(period>=0&&period<3)return(level.flowerCount()>>>(8*(2-period)))&255;if(period==3)return level.fadeEnableDisplay();throw new IllegalArgumentException("Unrepresented Flower count byte");}
     static CdLevelGlobals flowerCountLevel(CdLevelGlobals l,CdFlower.SavedCall c){int p=c.offset();if(p<0||p>3||c.site()!=CdFlower.SavedSite.COUNT_INCREMENT||c.value()!=((flowerCountByte(l,p)+1)&255))throw new IllegalArgumentException("Not original Flower count BYTE increment");
         int count=l.flowerCount(),fade=l.fadeEnableDisplay();if(p==3)fade=c.value();else{int shift=8*(2-p);count=(count&~(255<<shift))|(c.value()<<shift);}
         return new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),l.plcLoadFlags(),count,fade,l.powerup(),l.timeOver());}
@@ -1294,7 +1559,7 @@ final class SonicCdR31aObjectPass {
         var ready=frame.prepareObjectHurtResult(actor,globals,result);var output=CdObjectPool.overlay(pool,result.changedSlots());p2.staging.restore(output);
         var sounds=new ArrayList<>(cut.sounds());for(var event:result.calls())if(event instanceof CdPlayerTouchResponse.PlayFm f)sounds.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(f.sound())));
         var r=cut.ring();var w=result.world();var ring=new CdRingGlobals(w.rings(),w.lives(),r.livesFlags(),r.updateHudRings(),w.updateHudLives(),r.timeStopTimer(),r.ringAnimationTimer(),r.ringAnimationFrame());
-        var next=new Cut(cut.core(),ring,cut.currentTerrain(),new CdPlayerBody.ContactGlobals(result.player().timeWarp(),result.player().shield(),result.player().combineRing()),w,cut.noBumperByte(),cut.cameraXWord(),cut.cameraYWord(),cut.scrollLockWord(),cut.layerByte(),cut.cpuSat(),cut.completedCpu(),sounds,cut.amyCapturedByte());
+        var next=new Cut(cut.core(),ring,cut.currentTerrain(),new CdPlayerBody.ContactGlobals(result.player().timeWarp(),result.player().shield(),result.player().combineRing()),w,cut.noBumperByte(),cut.cameraXWord(),cut.cameraYWord(),cut.scrollLockWord(),cut.layerByte(),cut.cpuSat(),cut.completedCpu(),sounds,cut.amyCapturedByte(),cut.projectorByte());
         publish(cut,next,output,ready);p2Sync();
     }
     private void p2Despawn(boolean projectile){
@@ -1407,10 +1672,10 @@ final class SonicCdR31aObjectPass {
     private void introHurt(CdIntroSpikes.Cut call){
         var cut=read();var e=frame.environment();var g=e.movement();var p=new CdPlayerTouchResponse.PlayerGlobals(cut.contact().timeWarp(),e.globals().invincible(),cut.contact().shield(),cut.contact().combineRing(),e.globals().debugCheat(),e.globals().debugMode(),g.globals().scoreChain(),g.gates().miniSonic());
         var actor=primary().actor();var result=CdPlayerTouchResponse.hurtPlayer(actor,p,cut.world(),call.source(),call.pool());var ready=frame.prepareObjectHurtResult(actor,p,result);var output=CdObjectPool.overlay(call.pool(),result.changedSlots());var sounds=new ArrayList<>(cut.sounds());for(var event:result.calls())if(event instanceof CdPlayerTouchResponse.PlayFm f)sounds.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(f.sound())));
-        var next=new Cut(cut.core(),cut.ring(),cut.currentTerrain(),new CdPlayerBody.ContactGlobals(result.player().timeWarp(),result.player().shield(),result.player().combineRing()),result.world(),cut.noBumperByte(),cut.cameraXWord(),cut.cameraYWord(),cut.scrollLockWord(),cut.layerByte(),cut.cpuSat(),cut.completedCpu(),sounds,cut.amyCapturedByte());publish(cut,next,output,ready);
+        var next=new Cut(cut.core(),cut.ring(),cut.currentTerrain(),new CdPlayerBody.ContactGlobals(result.player().timeWarp(),result.player().shield(),result.player().combineRing()),result.world(),cut.noBumperByte(),cut.cameraXWord(),cut.cameraYWord(),cut.scrollLockWord(),cut.layerByte(),cut.cpuSat(),cut.completedCpu(),sounds,cut.amyCapturedByte(),cut.projectorByte());publish(cut,next,output,ready);
     }
-    private static Cut introCut(Cut c,SonicCdR31aLoadingVisit.State core,OptionalInt captured){return new Cut(core,c.ring(),c.currentTerrain(),c.contact(),c.world(),c.noBumperByte(),c.cameraXWord(),c.cameraYWord(),c.scrollLockWord(),c.layerByte(),c.cpuSat(),c.completedCpu(),c.sounds(),captured);}
-    private static SonicCdR31aLoadingVisit.State withNormal(SonicCdR31aLoadingVisit.State c,CdAssetBytes n){return new SonicCdR31aLoadingVisit.State(c.phase(),c.initialization(),c.section(),c.program(),c.level(),n,c.fadePalette(),c.waterPalette(),c.displayedPalette(),c.reserved(),c.blocksRam(),c.layoutRam(),c.initialFadeSteps(),c.fromFadeSteps(),c.displayEnabled(),c.calls(),c.returnKind(),c.music(),c.flowerPositions());}
+    private static Cut introCut(Cut c,SonicCdR31aLoadingVisit.State core,OptionalInt captured){return new Cut(core,c.ring(),c.currentTerrain(),c.contact(),c.world(),c.noBumperByte(),c.cameraXWord(),c.cameraYWord(),c.scrollLockWord(),c.layerByte(),c.cpuSat(),c.completedCpu(),c.sounds(),captured,c.projectorByte());}
+    private static SonicCdR31aLoadingVisit.State withNormal(SonicCdR31aLoadingVisit.State c,CdAssetBytes n){return new SonicCdR31aLoadingVisit.State(c.phase(),c.initialization(),c.section(),c.program(),c.level(),n,c.fadePalette(),c.waterPalette(),c.displayedPalette(),c.reserved(),c.blocksRam(),c.layoutRam(),c.initialFadeSteps(),c.fromFadeSteps(),c.displayEnabled(),c.calls(),c.returnKind(),c.music(),c.flowerPositions(),c.blockDefinitions());}
     /** Original conditional AddGfxQueue invocation; no public constructor or value authority. */
     final class IntroPlcSubmission {
         final IntroInvocation invocation=intro;final Thread thread=Thread.currentThread();final Cut before=read();final ReadFrame frameBefore=readFrame();final CdObjectPlacementRuntime.Snapshot placed=placement.capture();boolean acknowledged;Cut after;
@@ -1433,7 +1698,8 @@ final class SonicCdR31aObjectPass {
     private Kind kind(int w,int id){if(id<1||id>0x3C)throw stop(Boundary.OBJECT_INDEX,w,id);
         if(w==0){if(id!=1)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.PRIMARY;}
         if(w>=32&&id==0x1d)return Kind.BUMPER;
-        if(w>=32){var selected=switch(id){case 0x20->Kind.CC_SPIKES;case 0x21->Kind.BLOCK;case 0x22->Kind.HIDDEN;case 0x23->Kind.METAL_PLATFORM;case 0x24->Kind.KAMA;case 0x25->Kind.SICKLE;case 0x26->Kind.DOOR;case 0x27->Kind.FIRE;case 0x28->Kind.DRUM;default->null;};if(selected!=null)return selected;if(id==0x0A)return Kind.SPRING;}
+        if(w>=32&&id==0x1e){bumperSource.flipperHandlerAddress();return Kind.FLIPPER;}
+        if(w>=32){var selected=switch(id){case 0x20->Kind.CC_SPIKES;case 0x21->Kind.BLOCK;case 0x22->Kind.HIDDEN;case 0x23->Kind.METAL_PLATFORM;case 0x24->Kind.KAMA;case 0x25->Kind.SICKLE;case 0x26->Kind.DOOR;case 0x27->Kind.FIRE;case 0x28->Kind.DRUM;case 0x2D->Kind.GA;case 0x2E->Kind.TENTOU;case 0x39->Kind.CC_ANIMAL;default->null;};if(selected!=null)return selected;if(id==0x0A)return Kind.SPRING;}
         if(w>=32&&id>=0x30&&id<=0x35)return switch(id){case 0x30->Kind.INTRO;case 0x31->Kind.METAL;case 0x32->Kind.AMY;case 0x33->Kind.HEART;case 0x34->Kind.EXHAUST;default->Kind.ROLL;};
         if(id==0x3B){if(w<32)throw stop(Boundary.PHYSICAL_OWNER,w,id);return Kind.GAME_OVER;}
         if(id==0x3C)return Kind.TITLE;
@@ -1459,7 +1725,7 @@ final class SonicCdR31aObjectPass {
     private void requireCut(Cut e){var n=read();if(!sameCut(e,n))throw new IllegalArgumentException("Stale complete Core/Host/global cut");}
     static boolean sameCutForBumper(Cut a,Cut b){return sameCut(a,b);}
     private static boolean sameCut(Cut a,Cut b){return a.core().equals(b.core())&&a.ring().equals(b.ring())&&a.currentTerrain()==b.currentTerrain()
-        &&a.amyCapturedByte().equals(b.amyCapturedByte())&&a.contact().equals(b.contact())&&a.world().equals(b.world())&&a.noBumperByte().equals(b.noBumperByte())
+        &&a.projectorByte().equals(b.projectorByte())&&a.amyCapturedByte().equals(b.amyCapturedByte())&&a.contact().equals(b.contact())&&a.world().equals(b.world())&&a.noBumperByte().equals(b.noBumperByte())
         &&a.cameraXWord()==b.cameraXWord()&&a.cameraYWord()==b.cameraYWord()&&a.scrollLockWord()==b.scrollLockWord()
         &&a.layerByte().equals(b.layerByte())&&same(a.cpuSat(),b.cpuSat())&&a.completedCpu().equals(b.completedCpu())&&a.sounds().equals(b.sounds());}
     private void requirePlacement(CdObjectPlacementRuntime.Snapshot e){placement.validateRestore(e);var n=placement.capture();
@@ -1665,9 +1931,9 @@ final class SonicCdR31aObjectPass {
                 var p=placement.pool().capture();var s=placement.pool().state(w);publish(c,c,CdObjectPool.overlay(p,List.of(s.moveByte(SPRITE_FLAGS,(s.spriteFlags()&127)|bit))),null);}}
     }
 
-    private static Cut withReserved(Cut c,CdAssetBytes bank){extent(bank,1984);var s=c.core();var next=new SonicCdR31aLoadingVisit.State(s.phase(),s.initialization(),s.section(),s.program(),s.level(),s.normalPalette(),s.fadePalette(),s.waterPalette(),s.displayedPalette(),bank,s.blocksRam(),s.layoutRam(),s.initialFadeSteps(),s.fromFadeSteps(),s.displayEnabled(),s.calls(),s.returnKind(),s.music(),s.flowerPositions());return copy(c,next,c.scrollLockWord(),c.cpuSat(),c.completedCpu(),c.sounds());}
-    private static Cut withSectionAndCalls(Cut c,com.openggf.game.soniccd.resources.CdR31aSectionArt.State section,List<SonicCdR31aLoadingVisit.Call> calls){var s=c.core();var next=new SonicCdR31aLoadingVisit.State(s.phase(),s.initialization(),section,s.program(),s.level(),s.normalPalette(),s.fadePalette(),s.waterPalette(),s.displayedPalette(),s.reserved(),s.blocksRam(),s.layoutRam(),s.initialFadeSteps(),s.fromFadeSteps(),s.displayEnabled(),calls,s.returnKind(),s.music(),s.flowerPositions());return copy(c,next,c.scrollLockWord(),c.cpuSat(),c.completedCpu(),c.sounds());}
-    private static Cut copy(Cut c,SonicCdR31aLoadingVisit.State core,int scroll,CdAssetBytes cpu,Optional<CdObjectDrawQueue.CpuSat> completed,List<SonicCdGameModule.PastSound> sounds){return new Cut(core,c.ring(),c.currentTerrain(),c.contact(),c.world(),c.noBumperByte(),c.cameraXWord(),c.cameraYWord(),scroll,c.layerByte(),cpu,completed,sounds,c.amyCapturedByte());}
+    private static Cut withReserved(Cut c,CdAssetBytes bank){extent(bank,1984);var s=c.core();var next=new SonicCdR31aLoadingVisit.State(s.phase(),s.initialization(),s.section(),s.program(),s.level(),s.normalPalette(),s.fadePalette(),s.waterPalette(),s.displayedPalette(),bank,s.blocksRam(),s.layoutRam(),s.initialFadeSteps(),s.fromFadeSteps(),s.displayEnabled(),s.calls(),s.returnKind(),s.music(),s.flowerPositions(),s.blockDefinitions());return copy(c,next,c.scrollLockWord(),c.cpuSat(),c.completedCpu(),c.sounds());}
+    private static Cut withSectionAndCalls(Cut c,com.openggf.game.soniccd.resources.CdR31aSectionArt.State section,List<SonicCdR31aLoadingVisit.Call> calls){var s=c.core();var next=new SonicCdR31aLoadingVisit.State(s.phase(),s.initialization(),section,s.program(),s.level(),s.normalPalette(),s.fadePalette(),s.waterPalette(),s.displayedPalette(),s.reserved(),s.blocksRam(),s.layoutRam(),s.initialFadeSteps(),s.fromFadeSteps(),s.displayEnabled(),calls,s.returnKind(),s.music(),s.flowerPositions(),s.blockDefinitions());return copy(c,next,c.scrollLockWord(),c.cpuSat(),c.completedCpu(),c.sounds());}
+    private static Cut copy(Cut c,SonicCdR31aLoadingVisit.State core,int scroll,CdAssetBytes cpu,Optional<CdObjectDrawQueue.CpuSat> completed,List<SonicCdGameModule.PastSound> sounds){return new Cut(core,c.ring(),c.currentTerrain(),c.contact(),c.world(),c.noBumperByte(),c.cameraXWord(),c.cameraYWord(),scroll,c.layerByte(),cpu,completed,sounds,c.amyCapturedByte(),c.projectorByte());}
     private static CdAssetBytes reserved(Cut c,int w){if(w<1||w>31)throw new IllegalArgumentException("Reserved whole1..31");return c.core().reserved().slice((w-1)*64,64);}
     private static CdAssetBytes replace(CdAssetBytes bank,int w,CdAssetBytes row){extent(bank,1984);extent(row,64);if(w<1||w>31)throw new IllegalArgumentException("Reserved whole1..31");var next=bank.copy();System.arraycopy(row.copy(),0,next,(w-1)*64,64);return CdAssetBytes.copyOf(next);}
     private static boolean same(CdAssetBytes a,CdAssetBytes b){return Arrays.equals(a.copy(),b.copy());}

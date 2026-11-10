@@ -246,6 +246,12 @@ public final class CdTunnelPath {
         var body=new CdTunnelPath(placement,assets,player,fm);
         body.observer=Objects.requireNonNull(observer); body.receiptGuard=Objects.requireNonNull(guard); return body;
     }
+    public static CdTunnelPath fromOriginalPresentAssets(CdObjectPlacementRuntime placement,
+            com.openggf.game.soniccd.level.CdR11aAssets source,PlayerOwner player,PlayFmCall fm,
+            DispatchObserver observer,ReceiptGuard guard)throws java.io.IOException{
+        CdOriginalPresentObjectSource.require(placement,source);
+        return withWorldOwner(placement,Assets.fromObjectAssets(source.openingObjects()),player,fm,observer,guard);
+    }
     @FunctionalInterface private interface Operation<T> { T run(); }
     private <T> T observed(Object call,Operation<T> operation) {
         if(observer==null) return operation.run();

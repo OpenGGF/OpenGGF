@@ -7,6 +7,8 @@ package com.openggf.game.soniccd.objects;
 public final class CdFlipper {
     private CdFlipper() { }
     public static CdPinballContext.Result run(CdPinballContext c,int wholeIndex){return c.run(wholeIndex,0x1e,()->body(c));}
+    /** Native Main selects only objPlayerSlot; no secondary projection or invented pair. */
+    public static CdPinballContext.PrimaryResult runPrimary(CdPinballContext c,int wholeIndex){return c.runPrimary(wholeIndex,0x1e,()->body(c));}
     private static void body(CdPinballContext c){var i=c.image();CdPinballContext.routine(i,0,2);
         if(i.b(0x24)==0){i.b(0x24,2);i.l(4,c.assets.flipper().mappingAddress());i.w(2,0x49d);i.b(1,4);
             i.b(0x18,1);i.b(0x19,32);i.b(0x16,16);c.put(i);}

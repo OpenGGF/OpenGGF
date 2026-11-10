@@ -746,13 +746,35 @@ public final class HeadlessGameBoot implements AutoCloseable {
         SessionManager.armNextGameplayAdmissionPolicy(HardwareReadinessAdmissionPolicy.LIVE);
         try{
             GameplayModeContext mode=SessionManager.openGameplaySession(root,root,source,finalContext);
-            GameplaySessionFactory.attachManagers(mode,services,createGameplayCamera(services));GameModuleRegistry.setCurrent(root);
-            installAudioBackend();TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();
-            root.createGame(source); // Original selected owner performs its real privately staged FULL assembly.
-            if(!(mode.getLevelManager().getCurrentLevel() instanceof com.openggf.game.soniccd.level.SonicCdR31aLevel actual)
-                    ||actual.assets()!=source.r31aAssets().orElseThrow())throw new IllegalStateException("Original selected handoff did not assemble its actual R31 source");
-            return createLevelLoop(mode);
+            return attachSelectedProfile(source,root,mode,services);
         }catch(RuntimeException|Error failure){try{retireBootSession();}catch(RuntimeException|Error cleanup){if(cleanup!=failure)failure.addSuppressed(cleanup);}throw failure;}
+    }
+
+    /** Original privately prepared source/slot, using attempt.openSession exactly once. */
+    public GameLoop bootSonicCdSelectedProfile(com.openggf.game.soniccd.CdGameDataSource source,
+            com.openggf.game.soniccd.SonicCdGameModule.SelectedProfileAttempt attempt)throws IOException{
+        java.util.Objects.requireNonNull(source);java.util.Objects.requireNonNull(attempt);var root=attempt.module().orElseThrow();
+        var config=engineServices.configuration();String sidekick=config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
+        if(closed||bootToTitle||moduleDecoratorConfigured||logicalWidth!=320||logicalHeight!=224||gameplayWidth!=320||gameplayHeight!=224
+            ||!"sonic".equals(config.getString(SonicConfiguration.MAIN_CHARACTER_CODE))||(sidekick!=null&&!sidekick.isBlank())
+            ||config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED)||SessionManager.getCurrentWorldSession()!=null)
+            throw new IllegalArgumentException("Original selected loading requires fresh native Sonic-only boot/session");
+        retireBootSession();EngineContext services=engineServices;services.roms().setRom(null);
+        com.openggf.graphics.color.DisplayColorProfileController.applySavedSettings(services.configuration(),services.graphics());
+        SessionManager.armNextGameplayAdmissionPolicy(HardwareReadinessAdmissionPolicy.LIVE);
+        try{return attachSelectedProfile(source,root,attempt.openSession(),services);}
+        catch(RuntimeException|Error failure){try{retireBootSession();}catch(RuntimeException|Error cleanup){if(cleanup!=failure)failure.addSuppressed(cleanup);}throw failure;}
+    }
+    private GameLoop attachSelectedProfile(com.openggf.game.soniccd.CdGameDataSource source,
+            com.openggf.game.soniccd.SonicCdGameModule root,GameplayModeContext mode,EngineContext services){
+        if(mode.getWorldSession().getDataSource()!=source||mode.getWorldSession().rootGameModule()!=root)throw new IllegalArgumentException("Actual prepared selected source/World differs");
+        GameplaySessionFactory.attachManagers(mode,services,createGameplayCamera(services));GameModuleRegistry.setCurrent(root);
+        installAudioBackend();TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();root.createGame(source);
+        var level=mode.getLevelManager().getCurrentLevel();
+        boolean r31=level instanceof com.openggf.game.soniccd.level.SonicCdR31aLevel actual&&actual.assets()==source.r31aAssets().orElseThrow();
+        boolean r11=level instanceof com.openggf.game.soniccd.level.SonicCdLevel&&root.originalR11EngineLoadingAssembled();
+        if(!r31&&!r11)throw new IllegalStateException("Original selected source did not commit its actual engine geometry");
+        return createLevelLoop(mode);
     }
 
     /** Common session/loop attachment for cartridge gameplay and prepared static terrain. */

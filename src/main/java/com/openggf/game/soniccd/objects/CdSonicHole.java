@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import com.openggf.game.soniccd.level.CdR11aAssets;
 import java.util.function.Supplier;
 
 import static com.openggf.game.soniccd.objects.CdObjectState.ByteField.*;
@@ -34,6 +35,9 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE;
  * Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
  */
 public final class CdSonicHole {
+    private CdOriginalMechanismProtocol mechanismProtocol;
+    public boolean isCurrentOriginalOperation(CdOriginalMechanismProtocol.Call call){return mechanismProtocol!=null&&mechanismProtocol.current(call);}
+
     public static final int OBJECT_ID = 0x31;
 
     public record Assets(CdObjectVisualAssets visual, int mappingsAddressBits) {
@@ -159,6 +163,13 @@ public final class CdSonicHole {
     private final DrawObjectCall drawObject;
     private boolean running;
 
+
+    public static CdSonicHole fromOriginalPresentMechanism(CdObjectPlacementRuntime placement,CdR11aAssets owner,
+            PrimaryPlayerRead primary,PlayFmCall fm,DrawObjectCall draw,CdOriginalMechanismProtocol.Observer observer)throws java.io.IOException{
+        CdOriginalPresentObjectSource.require(placement,owner);
+        var body=new CdSonicHole(placement,Assets.fromObjectAssets(owner.openingObjects()),primary,fm,draw);
+        body.mechanismProtocol=new CdOriginalMechanismProtocol(placement,observer);return body;
+    }
     public CdSonicHole(CdObjectPlacementRuntime placement, Assets assets, PrimaryPlayerRead primaryPlayer,
                        PlayFmCall playFm, DrawObjectCall drawObject) {
         this.placement = Objects.requireNonNull(placement, "placement");
@@ -180,7 +191,7 @@ public final class CdSonicHole {
         if (routine != 0 && routine != 2 && routine != 4) {
             throw new UnsupportedSonicHole(UnsupportedBoundary.ROUTINE_DISPATCH, wholeIndex, routine);
         }
-        running = true;
+        running = true;if(mechanismProtocol!=null)mechanismProtocol.begin(wholeIndex);
         try {
             var effects = new ArrayList<Effect>();
             boolean display = routine == 4;
@@ -210,7 +221,7 @@ public final class CdSonicHole {
             }
             if (display) {
                 effects.add(new RoutineEntered(NativeRoutine.DISPLAY));
-                drawObject.drawObject(placement.pool(), placement.pool().state(wholeIndex).identity());
+                if(mechanismProtocol==null)drawObject.drawObject(placement.pool(), placement.pool().state(wholeIndex).identity());else mechanismProtocol.callback(CdOriginalMechanismProtocol.NativeSite.HOLE_DRAW,()->drawObject.drawObject(placement.pool(),placement.pool().state(wholeIndex).identity()));
                 effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
             }
             // Reload actual live source after any mutating Draw. Never repair its ID or old bytes.
@@ -218,7 +229,7 @@ public final class CdSonicHole {
             effects.add(new DespawnChecked(deleted));
             return new Result(placement.pool().state(wholeIndex), effects);
         } finally {
-            running = false;
+            if(mechanismProtocol!=null)mechanismProtocol.end();running = false;
         }
     }
 
@@ -235,7 +246,7 @@ public final class CdSonicHole {
         var before = placement.capture();
         var source = sourceAt(before, wholeIndex);
         readOnlyPlacementCall(before, () -> {
-            playFm.playFmSound(FmSound.FM_A3, before.pool(), source);
+            if(mechanismProtocol==null)playFm.playFmSound(FmSound.FM_A3, before.pool(), source);else mechanismProtocol.callback(FmSound.FM_A3,()->playFm.playFmSound(FmSound.FM_A3,before.pool(),source));
             return null;
         });
         effects.add(new CallReturned(NativeCall.PLAY_FM_SOUND));
@@ -246,7 +257,7 @@ public final class CdSonicHole {
     private int readPrimary(PlayerField field, int wholeIndex, List<Effect> effects) {
         var before = placement.capture();
         var source = sourceAt(before, wholeIndex);
-        int value = readOnlyPlacementCall(before, () -> primaryPlayer.read(field, before.pool(), source));
+        int value = readOnlyPlacementCall(before, () -> mechanismProtocol==null?primaryPlayer.read(field,before.pool(),source):mechanismProtocol.callback(field,()->primaryPlayer.read(field,before.pool(),source)));
         // Verification precedes width validation; neither path supplies a normalized native value.
         if (field == PlayerField.CONTROL_2C) byteValue(value, "actual primary control");
         else wordValue(value, "actual primary position");
@@ -307,8 +318,8 @@ public final class CdSonicHole {
         boolean old = (placement.savedFlag(id, period) & (1 << bit)) != 0;
         var nativeBit = bit == 6 ? CdObjectPlacementRuntime.SavedBit.MEMBER_7
                 : CdObjectPlacementRuntime.SavedBit.LOADED;
-        if (set) placement.bsetSavedFlag(id, period, nativeBit);
-        else placement.bclrSavedFlag(id, period, nativeBit);
+        Runnable write=()->{if(set)placement.bsetSavedFlag(id,period,nativeBit);else placement.bclrSavedFlag(id,period,nativeBit);};
+        if(mechanismProtocol==null)write.run();else mechanismProtocol.saved(index,set?placement.savedFlag(id,period)|(1<<bit):placement.savedFlag(id,period)&~(1<<bit),write);
         effects.add(new SavedBitWrite(index, bit, old, set));
         return old;
     }
@@ -335,7 +346,7 @@ public final class CdSonicHole {
             int index = checkedBankIndex(source, 2 + (short) ((id + id + id + period) & 0xFFFF));
             savedBitWrite(index, 7, false, effects);
         }
-        placement.pool().deleteObject(source.identity().wholeIndex());
+        if(mechanismProtocol==null)placement.pool().deleteObject(source.identity().wholeIndex());else mechanismProtocol.delete(()->placement.pool().deleteObject(source.identity().wholeIndex()));
         return true;
     }
 
@@ -348,7 +359,7 @@ public final class CdSonicHole {
     }
 
     private CdObjectState store(CdObjectState source) {
-        placement.pool().write(source);
+        if(mechanismProtocol==null)placement.pool().write(source);else mechanismProtocol.store(source,()->placement.pool().write(source));
         return source;
     }
     private static void byteValue(int value, String name) {

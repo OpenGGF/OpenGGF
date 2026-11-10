@@ -48,7 +48,9 @@ public final class CdPlayerMovement {
     public record Bounds(int left, int right, int bottom, int bossFight) {
         public Bounds { wordValue(left); wordValue(right); wordValue(bottom); byteValue(bossFight); }
     }
-    /** Native globals; the full raw zoneAct WORD/period must match the actual bound source. */
+    /** Native globals; the full raw zoneAct WORD/period must match the actual bound source.
+     * R4's windTunnel operand is the actual water_current_flag BYTE at these common call sites,
+     * never a default, derived wet bit, or permission to run currents before their after-scroll call. */
     public record Gates(int zoneAct, int timeZone, int miniSonic, int waterSlide,
                         int windTunnel, int speedShoes, int timeWarpDirection) {
         public Gates {
@@ -211,6 +213,7 @@ public final class CdPlayerMovement {
     private final CdPlayerTerrain terrain;
     private final CdPlayerMath math;
     private final CdPlayerGroundCollision ground;
+    private final CdPlayerSemanticRuntime originalRuntime;
 
     public CdPlayerMovement(CdR11aTerrain terrain, CdR11aPlayerAssets assets) {
         var terrainData = Objects.requireNonNull(terrain);
@@ -219,21 +222,45 @@ public final class CdPlayerMovement {
         math = new CdPlayerMath(assets);
         ground = new CdPlayerGroundCollision(this.terrain);
         layout = terrainData.layout().ram(); ordinaryPeriod = 1;
-        ordinaryZoneAct = 0;
+        ordinaryZoneAct = 0; originalRuntime = null;
     }
 
-    private CdPlayerMovement(CdStagePlayerSource source) {
+    private CdPlayerMovement(CdStagePlayerSource source) {this(source,null);}
+    private CdPlayerMovement(CdStagePlayerSource source,CdPlayerSemanticRuntime runtime) {
+        originalRuntime=runtime;
         Objects.requireNonNull(source, "stage player source");
         var terrainData = source.terrain();
         assets = source.player(); layout = terrainData.layout().ram(); ordinaryPeriod = source.ordinaryPeriod();
-        ordinaryZoneAct = assets.sourceGraph() == CdR11aPlayerAssets.SourceGraph.R3
+        ordinaryZoneAct = assets.sourceGraph() == CdR11aPlayerAssets.SourceGraph.R4
+                ? source.nativeZoneActWord() : assets.sourceGraph() == CdR11aPlayerAssets.SourceGraph.R3
                 ? source.ordinaryZoneActWord() : source.stage().actNumber() - 1;
         terrain = CdPlayerTerrain.fromStageTerrain(terrainData);
         math = new CdPlayerMath(assets); ground = new CdPlayerGroundCollision(terrain);
     }
 
+    /** Loading component only; no ordinary MODE is admitted through the public pure APIs. */
+    public static CdPlayerMovement forOriginalLoading(CdStagePlayerSource source) {
+        Objects.requireNonNull(source,"actual loading source");
+        if(source.player().sourceGraph()!=CdR11aPlayerAssets.SourceGraph.R4)return fromStageSource(source);
+        return new CdPlayerMovement(source);
+    }
+    public static CdPlayerMovement fromOriginalProgramme(CdStagePlayerSource source,CdPlayerSemanticRuntime runtime) {
+        Objects.requireNonNull(runtime,"actual current ports").requireSource(source);
+        return new CdPlayerMovement(source,runtime);
+    }
+    Result stepOriginalProgramme(CdPlayerMotionState state,Input input,Environment environment,
+                                Optional<ObjectContext> objects,CdPlayerSemanticRuntime.Call call,
+                                java.util.function.BiConsumer<CdPlayerMotionState,Environment> publication) {
+        if(originalRuntime==null)unsupported(UnsupportedBoundary.SOURCE_FAMILY);
+        call.requireCurrent(originalRuntime);
+        return stepPrefix(state,input,environment,objects,true,call,Objects.requireNonNull(publication));
+    }
+
     /** Borrows actual stage products; no Frame, source lease, invocation or TimeWarp context is created. */
     public static CdPlayerMovement fromStageSource(CdStagePlayerSource source) {
+        Objects.requireNonNull(source, "stage player source");
+        if(source.player().sourceGraph()==CdR11aPlayerAssets.SourceGraph.R4)
+            throw new UnsupportedMotion(UnsupportedBoundary.SOURCE_FAMILY); // No TT MODE/service grant.
         return new CdPlayerMovement(source);
     }
 
@@ -260,6 +287,7 @@ public final class CdPlayerMovement {
     }
     private enum R31CurrentImage { VALIDATED }
     private CdPlayerMovement(CdStagePlayerSource source, CdStageTerrain current, R31CurrentImage checked) {
+        originalRuntime=null;
         assets = source.player(); layout = current.layout().ram(); ordinaryPeriod = source.ordinaryPeriod();
         ordinaryZoneAct = source.ordinaryZoneActWord(); terrain = CdPlayerTerrain.fromStageTerrain(current);
         math = new CdPlayerMath(assets); ground = new CdPlayerGroundCollision(terrain);
@@ -277,6 +305,16 @@ public final class CdPlayerMovement {
         var c = new Cursor(state, new Input(0, 0), environment);
         airCollision(c);
         return new AirCollisionResult(c.motion(), c.environment(), c.effects);
+    }
+
+    AirCollisionResult collideInAirOriginal(CdPlayerMotionState state,Environment environment,
+                                             CdPlayerSemanticRuntime.Call call,
+                                             java.util.function.BiConsumer<CdPlayerMotionState,Environment> publication) {
+        if(originalRuntime==null)unsupported(UnsupportedBoundary.SOURCE_FAMILY);
+        call.requireCurrent(originalRuntime);
+        var c=new Cursor(state,new Input(0,0),environment);c.live=call;c.publication=publication;
+        try{airCollision(c);c.publish();return new AirCollisionResult(c.motion(),c.environment(),c.effects);}
+        catch(RuntimeException|Error first){call.publishMotionFailure(c::publish,first);throw first;}
     }
 
     /**
@@ -317,6 +355,14 @@ public final class CdPlayerMovement {
 
     private Result stepPrefix(CdPlayerMotionState state, Input input, Environment environment,
                               Optional<ObjectContext> objects, boolean stopAtTimeWarp) {
+        return stepPrefix(state,input,environment,objects,stopAtTimeWarp,null,null);
+    }
+    private Result stepPrefix(CdPlayerMotionState state,Input input,Environment environment,
+                              Optional<ObjectContext> objects,boolean stopAtTimeWarp,
+                              CdPlayerSemanticRuntime.Call live,
+                              java.util.function.BiConsumer<CdPlayerMotionState,Environment> publication) {
+        if(assets.sourceGraph()==CdR11aPlayerAssets.SourceGraph.R4&&live==null)
+            unsupported(UnsupportedBoundary.SOURCE_FAMILY);
         Objects.requireNonNull(state); Objects.requireNonNull(input); Objects.requireNonNull(environment);
         Objects.requireNonNull(objects);
         if (state.routine() != 2) unsupported(UnsupportedBoundary.ROUTINE);
@@ -331,7 +377,8 @@ public final class CdPlayerMovement {
         if ((state.playerControl() & 1) != 0) unsupported(UnsupportedBoundary.OBJECT_CONTROL);
         // Bar/pole owners change ObjMoveGrv and object control; do not simulate their active states.
         if ((state.playerControl() & 0xC) != 0) unsupported(UnsupportedBoundary.CONTROL_OWNER);
-        Cursor c = new Cursor(state, input, environment, objects);
+        Cursor c = new Cursor(state, input, environment, objects);c.live=live;c.publication=publication;
+        try {
         int mode = c.flags & 6;
         if (mode == 0) {
             boredom(c);
@@ -348,6 +395,11 @@ public final class CdPlayerMovement {
             unsupported(UnsupportedBoundary.TIME_WARP_ACTIVE); // TimeWarp.NotPPZ1:585-589.
         }
         return afterTimeWarp(c, mode);
+        } catch(RuntimeException|Error first){
+            // Retain completed algorithm prefix; never run a failed MODE or primitive again.
+            if(live!=null)live.publishMotionFailure(()->c.publish(),first);
+            throw first;
+        }
     }
 
     /** The exact instructions following TimeWarp's RTS, shared with the legacy no-warp MODE entry. */
@@ -379,6 +431,19 @@ public final class CdPlayerMovement {
      */
     public Result resumeAfterTimeWarp(Result stopped, Environment returnedEnvironment, Input input,
                                       Optional<ObjectContext> objects) {
+        if(assets.sourceGraph()==CdR11aPlayerAssets.SourceGraph.R4)unsupported(UnsupportedBoundary.SOURCE_FAMILY);
+        return resumeTimeWarp(stopped,returnedEnvironment,input,objects,null,null);
+    }
+    Result resumeOriginalAfterTimeWarp(Result stopped,Environment returnedEnvironment,Input input,
+                                      Optional<ObjectContext> objects,CdPlayerSemanticRuntime.Call call,
+                                      java.util.function.BiConsumer<CdPlayerMotionState,Environment> publication){
+        if(originalRuntime==null)unsupported(UnsupportedBoundary.SOURCE_FAMILY);
+        call.requireCurrent(originalRuntime);
+        return resumeTimeWarp(stopped,returnedEnvironment,input,objects,call,publication);
+    }
+    private Result resumeTimeWarp(Result stopped,Environment returnedEnvironment,Input input,
+                                  Optional<ObjectContext> objects,CdPlayerSemanticRuntime.Call live,
+                                  java.util.function.BiConsumer<CdPlayerMotionState,Environment> publication){
         Objects.requireNonNull(stopped); Objects.requireNonNull(returnedEnvironment);
         Objects.requireNonNull(input); Objects.requireNonNull(objects);
         if (stopped.boundary() != Boundary.TIME_WARP) {
@@ -408,7 +473,9 @@ public final class CdPlayerMovement {
         if (!expected.equals(returnedEnvironment)) {
             throw new IllegalArgumentException("Returned value differs in an Environment field TimeWarp never writes");
         }
-        return afterTimeWarp(new Cursor(stopped.state(), input, returnedEnvironment, objects), mode);
+        var c=new Cursor(stopped.state(),input,returnedEnvironment,objects);c.live=live;c.publication=publication;
+        try{return afterTimeWarp(c,mode);}
+        catch(RuntimeException|Error first){if(live!=null)live.publishMotionFailure(c::publish,first);throw first;}
     }
 
     /**
@@ -436,6 +503,18 @@ public final class CdPlayerMovement {
     /** Resumes only the stopped tail, borrowing the caller's same call-cut support input again. */
     public Result resumeAfterLevelBound(Result stopped, CdPlayerMotionState returnedState, Environment returnedEnvironment,
                                         Optional<ObjectContext> objects) {
+        if(assets.sourceGraph()==CdR11aPlayerAssets.SourceGraph.R4)unsupported(UnsupportedBoundary.SOURCE_FAMILY);
+        return resumeLevelBound(stopped,returnedState,returnedEnvironment,objects,null,null);
+    }
+    Result resumeOriginalAfterLevelBound(Result stopped,CdPlayerMotionState returnedState,Environment returnedEnvironment,
+                                         Optional<ObjectContext> objects,CdPlayerSemanticRuntime.Call call,
+                                         java.util.function.BiConsumer<CdPlayerMotionState,Environment> publication){
+        if(originalRuntime==null)unsupported(UnsupportedBoundary.SOURCE_FAMILY);call.requireCurrent(originalRuntime);
+        return resumeLevelBound(stopped,returnedState,returnedEnvironment,objects,call,publication);
+    }
+    private Result resumeLevelBound(Result stopped,CdPlayerMotionState returnedState,Environment returnedEnvironment,
+                                     Optional<ObjectContext> objects,CdPlayerSemanticRuntime.Call live,
+                                     java.util.function.BiConsumer<CdPlayerMotionState,Environment> publication){
         Objects.requireNonNull(stopped); Objects.requireNonNull(returnedState); Objects.requireNonNull(returnedEnvironment);
         Objects.requireNonNull(objects);
         if (stopped.boundary() != Boundary.KILL_PLAYER) {
@@ -449,7 +528,9 @@ public final class CdPlayerMovement {
         // is supplied by normal MODE admission, so a public equal Result cannot stand in for it.
         if (assets.sourceGraph() == CdR11aPlayerAssets.SourceGraph.R3) unsupported(UnsupportedBoundary.R3_KILL_OWNER);
         requireKillPlayerUnwritten(stopped, returnedState, returnedEnvironment);
-        return afterLevelBound(new Cursor(returnedState, new Input(0, 0), returnedEnvironment, objects), stopped.continuation());
+        var c=new Cursor(returnedState,new Input(0,0),returnedEnvironment,objects);c.live=live;c.publication=publication;
+        try{return afterLevelBound(c,stopped.continuation());}
+        catch(RuntimeException|Error first){if(live!=null)live.publishMotionFailure(c::publish,first);throw first;}
     }
 
     /**
@@ -465,7 +546,8 @@ public final class CdPlayerMovement {
             }
             case MD_AIR_AFTER_LEVEL_BOUND, MD_JUMP_AFTER_LEVEL_BOUND -> { // 728-736 / 768-776
                 integrate(c, true);
-                if ((c.flags & 0x40) != 0) c.yv = sw(c.yv - 0x28);
+                if ((c.flags & 0x40) != 0) c.yv = sw(c.yv - (assets.sourceGraph()==CdR11aPlayerAssets.SourceGraph.R4
+                        ? CdR4PlayerWater.rules(c.flags).afterFallSubtract() : 0x28));
                 jumpAngle(c);
                 airCollision(c);
             }
@@ -547,7 +629,11 @@ public final class CdPlayerMovement {
                 // ChkFlipper:3122-3124: sound, THEN exactly one animation store.
                 c.sound(Sound.FM_SPRING);
                 if (slot == null) c.anim = 1; // Stand byte0 aliases the current player, not dynamic RAM.
-                else c.effects.add(new ObjectPatch(new SlotPatch(slot, slot.moveByte(CdObjectState.ByteField.ANIMATION, 1))));
+                else {
+                    var patch=new SlotPatch(slot,slot.moveByte(CdObjectState.ByteField.ANIMATION,1));
+                    if(c.live!=null){c.publish();c.live.flipper(patch);}
+                    c.effects.add(new ObjectPatch(patch));
+                }
                 int objectX = supportX(c, slot), objectY = supportY(c, slot);
                 launchAngle = math.calcAngle(sw(objectX - c.x()), sw(objectY + 24 - c.y()));
                 int force = sw(c.x() - objectX + supportWidth(c, slot));
@@ -563,7 +649,8 @@ public final class CdPlayerMovement {
             int headAngle = (c.angle + 0x80) & 0xFF;
             c.pri = c.sec = headAngle;
             if (pair(c, (headAngle + 0x20) & 0xC0).distance < 6) return false;
-            speed = (c.flags & 0x40) == 0 ? 0x680 : 0x380;
+            speed = assets.sourceGraph()==CdR11aPlayerAssets.SourceGraph.R4
+                    ? CdR4PlayerWater.rules(c.flags).jumpImpulse() : (c.flags & 0x40) == 0 ? 0x680 : 0x380;
         }
         var trig = math.calcSine(launchAngle);
         c.xv = sw(c.xv + ((trig.cosine() * speed) >> 8));
@@ -616,8 +703,10 @@ public final class CdPlayerMovement {
                 }
             }
         } else {
-            c.pri = 0;
-            var balance = terrain.floor(c.x(), uw(c.y() + (byte) c.yr), 13, 0, 16, c.spr);
+            final CdPlayerTerrain.Result balance;
+            if(c.live==null){c.pri=0;balance=terrain.floor(c.x(),uw(c.y()+(byte)c.yr),13,0,16,c.spr);}
+            else balance=terrain.floorWithPrimaryZeroPrefix(c.x(),uw(c.y()+(byte)c.yr),13,0,16,c.spr,
+                    value->{c.pri=value;c.publish();});
             c.pri = balance.angleWrite().orElse(c.pri);
             // ObjGetFloorDist MOVEQ #$D,d5 (Collision Check.asm:170) clobbers only this path's register.
             settleAcceleration = 13;
@@ -632,7 +721,9 @@ public final class CdPlayerMovement {
                 }
             }
         }
-        var r = CdPlayerCharge.moveGroundAtCheckCharge(c.chargeState(), c.chargeInput());
+        c.publish();
+        var r = c.live==null ? CdPlayerCharge.moveGroundAtCheckCharge(c.chargeState(), c.chargeInput())
+                : c.live.moveGroundCharge(c.chargeState(),c.chargeInput());
         c.apply(r);
         if (r.continuation() == CdPlayerCharge.Continuation.MOVE_GROUND_RETURN) return;
         if (r.continuation() != CdPlayerCharge.Continuation.GROUND_SETTLE) throw new IllegalStateException("Ground continuation");
@@ -691,7 +782,9 @@ public final class CdPlayerMovement {
             if ((c.held & LEFT) != 0) directionRoll(c, true);
             if ((c.held & RIGHT) != 0) directionRoll(c, false);
         }
-        var r = CdPlayerCharge.moveRollAtNotRight(c.chargeState(), c.chargeInput());
+        c.publish();
+        var r = c.live==null ? CdPlayerCharge.moveRollAtNotRight(c.chargeState(), c.chargeInput())
+                : c.live.moveRollCharge(c.chargeState(),c.chargeInput());
         c.apply(r);
         switch (r.continuation()) {
             case MOVE_ROLL_RETURN -> { return; }
@@ -746,7 +839,8 @@ public final class CdPlayerMovement {
         if (c.env.gates().waterSlide() != 0) return;
         int magnitude = c.gv < 0 ? uw(-c.gv) : c.gv;
         if (magnitude >= 0x80 && (c.held & 12) == 0 && (c.held & DOWN) != 0) {
-            c.apply(CdPlayerCharge.startRoll(c.chargeState(), new CdPlayerCharge.Body(c.original.routine(), c.ctrl, c.env.gates().miniSonic())));
+            var body=new CdPlayerCharge.Body(c.original.routine(),c.ctrl,c.env.gates().miniSonic());
+            c.publish();c.apply(c.live==null?CdPlayerCharge.startRoll(c.chargeState(),body):c.live.startRoll(c.chargeState(),body));
         }
     }
 
@@ -912,6 +1006,7 @@ public final class CdPlayerMovement {
      * The borrowed Snapshot is pure input; live owner/coherence/CAS validation belongs to the caller.
      */
     private static CdObjectState supportSlot(Cursor c, String site) {
+        if(c.live!=null){c.publish();c.objects=c.live.objects();}
         if (c.objects.isEmpty()) {
             throw new UnsupportedMotion(UnsupportedBoundary.OBJECT_SUPPORT, site + ": missing stood-slot context");
         }
@@ -934,9 +1029,12 @@ public final class CdPlayerMovement {
     private static int supportX(Cursor c, CdObjectState slot) { return slot == null ? c.x() : slot.centreX(); }
     private static int supportY(Cursor c, CdObjectState slot) { return slot == null ? c.y() : slot.centreY(); }
     private void ground(Cursor c) {
-        var r = ground.ground(new CdPlayerGroundCollision.Input(
-                new CdPlayerGroundCollision.State(c.xpos, c.ypos, c.angle, c.flags, c.prev),
-                c.xr, c.yr, c.spr, c.stick));
+        var input=new CdPlayerGroundCollision.Input(
+                new CdPlayerGroundCollision.State(c.xpos,c.ypos,c.angle,c.flags,c.prev),c.xr,c.yr,c.spr,c.stick);
+        var r=c.live==null?ground.ground(input):ground.groundWithPrefix(input,new CdPlayerGroundCollision.AngleWrites(){
+            public void primary(int value){c.pri=value;c.publish();}
+            public void secondary(int value){c.sec=value;c.publish();}
+        });
         c.xpos = r.state().xPosition(); c.ypos = r.state().yPosition(); c.angle = r.state().angle();
         c.flags = r.state().flags(); c.prev = r.state().previousAnimation();
         c.pri = r.primaryAngle(); c.sec = r.secondaryAngle();
@@ -953,7 +1051,8 @@ public final class CdPlayerMovement {
     /** JumpHeight (1867-1893). */
     private static void jumpHeight(Cursor c) {
         if (c.jump != 0) {
-            int cap = (c.flags & 0x40) == 0 ? -0x400 : -0x200;
+            int cap = c.live==null ? ((c.flags & 0x40) == 0 ? -0x400 : -0x200)
+                    : CdR4PlayerWater.rules(c.flags).releaseCap();
             if (c.yv < cap && (c.held & ACTION) == 0) { c.charge = 0; c.yv = cap; }
         } else if (c.yv < -0xFC0) c.yv = -0xFC0;
     }
@@ -1054,6 +1153,10 @@ public final class CdPlayerMovement {
      * MODE admission: step() still rejects miniature Sonic before any MODE work.
      */
     public static ResetOnFloorResult resetOnFloor(CdPlayerMotionState motion, int miniSonic) {
+        return resetOnFloor(motion,miniSonic,null);
+    }
+    private static ResetOnFloorResult resetOnFloor(CdPlayerMotionState motion,int miniSonic,
+                                                   java.util.function.Consumer<CdPlayerMotionState> beforeLandSound) {
         Objects.requireNonNull(motion); byteValue(miniSonic);
         // BTST #4 / BEQ / NOP (2296-2298) has no effect; BCLR 5, 1 and 4 follow.
         int flags = motion.flags() & ~(0x20 | AIR | 0x10), xr = motion.xRadius(), yr = motion.yRadius();
@@ -1065,6 +1168,13 @@ public final class CdPlayerMovement {
             anim = 0; sounds = List.of(new SoundRequest(Sound.FM_CHARGESTOP));
         }
         var m = motion;
+        if(beforeLandSound!=null&&!sounds.isEmpty()) {
+            // N PlayerSetGroundPlayLandSound:2184-2190: AFTER flag/size/Y/animation,
+            // BEFORE jump and score-chain clears. One shared algorithm, no effect replay.
+            beforeLandSound.accept(new CdPlayerMotionState(m.centreX16_16(),y,m.xVelocity(),m.yVelocity(),
+                    m.groundVelocity(),m.routine(),m.angle(),flags,m.spriteFlags(),xr,yr,anim,m.previousAnimation(),
+                    m.playerJump(),m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle()));
+        }
         return new ResetOnFloorResult(new CdPlayerMotionState(m.centreX16_16(), y, m.xVelocity(), m.yVelocity(),
                 m.groundVelocity(), m.routine(), m.angle(), flags, m.spriteFlags(), xr, yr, anim, m.previousAnimation(),
                 0, m.charge(), m.moveLock(), m.stick(), m.playerControl(), m.previousPrimaryAngle(),
@@ -1072,11 +1182,14 @@ public final class CdPlayerMovement {
     }
     /** MODE floor landings (2104,2181,2280) delegate once; admission already rejected miniature Sonic. */
     private static void resetOnFloor(Cursor c) {
-        var reset = resetOnFloor(c.motion(), c.env.gates().miniSonic());
+        var reset = resetOnFloor(c.motion(),c.env.gates().miniSonic(),c.live==null?null:prefix->{
+            c.flags=prefix.flags();c.xr=prefix.xRadius();c.yr=prefix.yRadius();c.ypos=prefix.centreY16_16();c.anim=prefix.animation();
+            c.sound(Sound.FM_CHARGESTOP);
+        });
         var m = reset.motion();
         c.flags = m.flags(); c.xr = m.xRadius(); c.yr = m.yRadius(); c.ypos = m.centreY16_16();
         c.anim = m.animation(); c.jump = m.playerJump(); c.score = reset.scoreChain();
-        c.effects.addAll(reset.sounds());
+        if(c.live==null)c.effects.addAll(reset.sounds());
     }
     /** Player_ResetOnSteepSlope (2339-2345, called at 2230): no bit-2 resize, Y, animation or sound. */
     private static void resetOnSteepSlope(Cursor c) {
@@ -1105,6 +1218,7 @@ public final class CdPlayerMovement {
     }
     /** Single Part2 probes (Collision Check.asm:137-153,227-235,305-314,388-397). */
     private int single(Cursor c, int x, int y, int direction) {
+        if(c.live!=null){c.publish();return singleWithPrefix(c,x,y,direction,(buffer,raw)->c.publish());}
         CdPlayerTerrain.Result result = switch (direction) {
             case 0 -> terrain.floor(x, uw(y + 10), 14, 0, 16, c.spr);
             case 0x40 -> terrain.wall(uw(x - 10) ^ 15, y, 14, 0x800, -16, c.spr);
@@ -1122,24 +1236,32 @@ public final class CdPlayerMovement {
         CdPlayerTerrain.Result first, second;
         switch (direction) {
             case 0 -> {
-                first = terrain.floor(uw(x + rx), uw(y + ry), 13, 0, 16, c.spr);
+                first = c.live==null ? terrain.floor(uw(x + rx), uw(y + ry), 13, 0, 16, c.spr) : floorWithPrefix(c,AngleBuffer.PRIMARY,uw(x + rx), uw(y + ry), 13, 0, 16,
+                        (angleBuffer,raw)->c.publish());
                 c.writePrimary(first.angleWrite());
-                second = terrain.floor(uw(x - rx), uw(y + ry), 13, 0, 16, c.spr);
+                second = c.live==null ? terrain.floor(uw(x - rx), uw(y + ry), 13, 0, 16, c.spr) : floorWithPrefix(c,AngleBuffer.SECONDARY,uw(x - rx), uw(y + ry), 13, 0, 16,
+                        (angleBuffer,raw)->c.publish());
             }
             case 0x40 -> {
-                first = terrain.wall(uw(x - ry) ^ 15, uw(y - rx), 14, 0x800, -16, c.spr);
+                first = c.live==null ? terrain.wall(uw(x - ry) ^ 15, uw(y - rx), 14, 0x800, -16, c.spr) : wallWithPrefix(c,AngleBuffer.PRIMARY,uw(x - ry) ^ 15, uw(y - rx), 14, 0x800, -16,
+                        (angleBuffer,raw)->c.publish());
                 c.writePrimary(first.angleWrite());
-                second = terrain.wall(uw(x - ry) ^ 15, uw(y + rx), 14, 0x800, -16, c.spr);
+                second = c.live==null ? terrain.wall(uw(x - ry) ^ 15, uw(y + rx), 14, 0x800, -16, c.spr) : wallWithPrefix(c,AngleBuffer.SECONDARY,uw(x - ry) ^ 15, uw(y + rx), 14, 0x800, -16,
+                        (angleBuffer,raw)->c.publish());
             }
             case 0x80 -> {
-                first = terrain.floor(uw(x + rx), uw(y - ry) ^ 15, 14, 0x1000, -16, c.spr);
+                first = c.live==null ? terrain.floor(uw(x + rx), uw(y - ry) ^ 15, 14, 0x1000, -16, c.spr) : floorWithPrefix(c,AngleBuffer.PRIMARY,uw(x + rx), uw(y - ry) ^ 15, 14, 0x1000, -16,
+                        (angleBuffer,raw)->c.publish());
                 c.writePrimary(first.angleWrite());
-                second = terrain.floor(uw(x - rx), uw(y - ry) ^ 15, 14, 0x1000, -16, c.spr);
+                second = c.live==null ? terrain.floor(uw(x - rx), uw(y - ry) ^ 15, 14, 0x1000, -16, c.spr) : floorWithPrefix(c,AngleBuffer.SECONDARY,uw(x - rx), uw(y - ry) ^ 15, 14, 0x1000, -16,
+                        (angleBuffer,raw)->c.publish());
             }
             default -> {
-                first = terrain.wall(uw(x + ry), uw(y - rx), 14, 0, 16, c.spr);
+                first = c.live==null ? terrain.wall(uw(x + ry), uw(y - rx), 14, 0, 16, c.spr) : wallWithPrefix(c,AngleBuffer.PRIMARY,uw(x + ry), uw(y - rx), 14, 0, 16,
+                        (angleBuffer,raw)->c.publish());
                 c.writePrimary(first.angleWrite());
-                second = terrain.wall(uw(x + ry), uw(y + rx), 14, 0, 16, c.spr);
+                second = c.live==null ? terrain.wall(uw(x + ry), uw(y + rx), 14, 0, 16, c.spr) : wallWithPrefix(c,AngleBuffer.SECONDARY,uw(x + ry), uw(y + rx), 14, 0, 16,
+                        (angleBuffer,raw)->c.publish());
             }
         }
         c.writeSecondary(second.angleWrite());
@@ -1153,9 +1275,12 @@ public final class CdPlayerMovement {
     private static final class Cursor {
         final CdPlayerMotionState original;
         final Environment env;
-        final Optional<ObjectContext> objects; // Invocation-local borrow only.
+        Optional<ObjectContext> objects; // Invocation-local, reached current support borrow only.
         final int held, tap, previousPri, previousSec;
         final List<Effect> effects = new ArrayList<>();
+        CdPlayerSemanticRuntime.Call live;
+        java.util.function.BiConsumer<CdPlayerMotionState,Environment> publication;
+        void publish(){if(live!=null)publication.accept(motion(),environment());}
         OptionalInt writtenPrimary = OptionalInt.empty(), writtenSecondary = OptionalInt.empty();
         int xpos, ypos, xv, yv, gv, angle, flags, spr, xr, yr, anim, prev, jump, charge, lock, stick, ctrl;
         int look, cam, pri, sec, bored, score, debugAngle, debugShift, debugQuadrant, debugFloor;
@@ -1195,7 +1320,10 @@ public final class CdPlayerMovement {
         }
         int x() { return xpos >>> 16; }
         int y() { return ypos >>> 16; }
-        void sound(Sound value) { effects.add(new SoundRequest(value)); }
+        void sound(Sound value) {
+            if(live!=null){publish();live.sound(value.nativeId());}
+            effects.add(new SoundRequest(value));
+        }
         CdPlayerCharge.State chargeState() {
             return new CdPlayerCharge.State(charge, gv, xv, yv, flags, xr, yr, ypos, anim, look, cam);
         }
@@ -1214,6 +1342,7 @@ public final class CdPlayerMovement {
                     anim, prev, jump, charge, lock, stick, ctrl, previousPri, previousSec);
         }
         Result finish(Boundary boundary, Continuation continuation) {
+            publish();
             var state = motion();
             return new Result(state, environment(), effects, boundary, continuation);
         }

@@ -8,6 +8,8 @@ import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.media.CdMmdImage;
 
@@ -213,6 +215,18 @@ public final class CdResults {
     private final DrawObject drawObject;
     private final ProgrammeStore programmeStore;
     private final ProgrammeActionPort programmeAction;
+    /** Exact current original R11 source ingress. Public format records grant no invocation. */
+    public static CdResults fromOriginalPresentAssets(CdObjectPlacementRuntime placement,CdR11aAssets assets,
+            NativeRead read, BonusStore bonus, PointsPort points, LoadPlc plc, SoundPort sound, DrawObject draw, ProgrammeStore programme, ProgrammeActionPort action,CdStageClosureInvocation.Observer observer)throws java.io.IOException{
+        Objects.requireNonNull(placement);Objects.requireNonNull(assets);
+        if(!(placement.placements()==assets.placements()&&placement.sourceIdentity().equals(java.util.Optional.of(assets.identity()))))throw new IllegalArgumentException("Original closure placement/source mismatch");
+        var o=assets.openingObjects();var result=new CdResults(placement,new Assets(o.view(CdR11aObjectAssets.Table.CLOSURE_RESULTS_INIT).bytes(),o.view(CdR11aObjectAssets.Table.CLOSURE_RESULTS_MAPPINGS).bytes(),o.view(CdR11aObjectAssets.Table.CLOSURE_RESULTS_MAPPINGS).range().nativeAddress()),read,bonus,points,plc,sound,draw,programme,action);
+        result.closureIssuer=new CdStageClosureInvocation.Issuer(observer);return result;
+    }
+    private CdStageClosureInvocation.Issuer closureIssuer;
+    public boolean isCurrentOriginalCall(CdStageClosureInvocation.Call call){return running&&closureIssuer!=null&&closureIssuer.current(call);}
+    private <T>T closureRead(Object call,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,java.util.function.Supplier<T> primitive){return closureIssuer==null?primitive.get():closureIssuer.invoke(call,cut,source,primitive);}
+    private void closureInvoke(Object call,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,Runnable primitive){closureRead(call,cut,source,()->{primitive.run();return null;});}
     private boolean running;
     private final CdR13ResultsAssets futureSource;
     private Object pendingCall;
@@ -478,13 +492,17 @@ public final class CdResults {
         assertPlacement(cut, expected);
         c.state = placement.pool().state(c.whole); c.effects.add(new DrawReturned());
     }
+    private static CdObjectPlacementRuntime.Snapshot closureCut(Object call){return switch(call){case ReadCall c->c.actualCut();case BonusStoreCall c->c.actualCut();case PointsCall c->c.actualCut();case PlcCall c->c.actualCut();case SoundCall c->c.actualCut();case DrawCall c->c.actualCut();case ProgrammeStoreCall c->c.actualCut();case ProgrammeActionCall c->c.actualCut();default->throw new IllegalArgumentException("Unknown closure callback");};}
+    private static CdObjectState closureSource(Object call){return switch(call){case ReadCall c->c.expectedSource();case BonusStoreCall c->c.expectedSource();case PointsCall c->c.expectedSource();case PlcCall c->c.expectedSource();case SoundCall c->c.expectedSource();case DrawCall c->c.expectedSource();case ProgrammeStoreCall c->c.expectedSource();case ProgrammeActionCall c->c.expectedSource();default->throw new IllegalArgumentException("Unknown closure callback");};}
     private void invoke(Object call, Runnable operation) {
+        if(closureIssuer!=null){closureInvoke(call,closureCut(call),closureSource(call),operation);return;}
         if (futureSource == null) { operation.run(); return; }
         if (pendingCall != null) throw new IllegalStateException("Nested original Results callback");
         pendingCall = call;
         try { operation.run(); } finally { pendingCall = null; }
     }
     private <T> T invokeRead(Object call, java.util.function.Supplier<T> operation) {
+        if(closureIssuer!=null)return closureRead(call,closureCut(call),closureSource(call),operation);
         if (futureSource == null) return operation.get();
         if (pendingCall != null) throw new IllegalStateException("Nested original Results callback");
         pendingCall = call;

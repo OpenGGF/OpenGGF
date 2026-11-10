@@ -511,6 +511,12 @@ class TestSonicCdR31aObjectPass {
             p.validateBefore();var next=p.next();p.applyNative();cut=next;p.acknowledge();adoptions++;
             var once=afterAdopt;afterAdopt=()->{};once.run();
         }
+        SonicCdR31aObjectPass.PinballPublication lastPinball;
+        public void pinball(SonicCdR31aObjectPass.PinballPublication p){
+            lastPinball=p;p.validateBefore();beforeAdopt.run();if(fault instanceof RuntimeException e)throw e;if(fault instanceof Error e)throw e;
+            p.validateBefore();var next=p.next();p.applyNative();cut=next;p.acknowledge();adoptions++;
+            var once=afterAdopt;afterAdopt=()->{};once.run();
+        }
         public CdPlayerBody.R31Context primaryContext(){
             if(!realPrimary)throw new AssertionError("Constructed initial tests do not mint Main/Hurt context");
             return new CdPlayerBody.R31Context(frame.stageSource(),assets,cut.currentTerrain(),placement.pool().capture(),Optional.empty(),

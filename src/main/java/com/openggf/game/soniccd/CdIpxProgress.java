@@ -73,7 +73,57 @@ final class CdIpxProgress {
         }
     }
 
-    enum SaveSite { NEW_GAME, RUN_R3 }
+    enum LevelReturn { GAME_OVER, TIME_WARP, SPECIAL_STAGE, RETURN_TO_ACT_CALLER }
+    /** One shared RunLevel549-584 decision. Reads stay lazy and source ordered;
+     * this selects no file, stage index, save state or destination entry. */
+    interface LevelReturnReads {int lives();int rawPeriod();int specialStage();}
+    static LevelReturn levelReturned(LevelReturnReads reads){
+        Objects.requireNonNull(reads);int lives=reads.lives();octet(lives);
+        // RunLevel / .LevelOver (IPX.asm:549-552,575-583): distinct source reads.
+        if(lives!=0){int period=reads.rawPeriod();octet(period);if((period&0x80)!=0)return LevelReturn.TIME_WARP;}
+        lives=reads.lives();octet(lives);if(lives==0)return LevelReturn.GAME_OVER;
+        int special=reads.specialStage();octet(special);return special!=0?LevelReturn.SPECIAL_STAGE:LevelReturn.RETURN_TO_ACT_CALLER;
+    }
+
+    /** RunLevel post-WARP IPX.asm:557-573. Semantic choices, never a file/entry permit. */
+    enum WarpPeriod { PAST, PRESENT, FUTURE }
+    enum WarpCommandRow {
+        PRESENT(0), PAST(1), GOOD_FUTURE(2), BAD_FUTURE(3);
+        private final int commandByteOffset;
+        WarpCommandRow(int offset){commandByteOffset=offset;}
+        int commandByteOffset(){return commandByteOffset;}
+    }
+    /** Actual caller must own the live BYTE and authenticated retained a0 command row.
+     * Reads remain lazy/source ordered, including command bytes later superseded by another row. */
+    interface WarpDestinationReads {int rawPeriod();int commandByte(WarpCommandRow row);int goodFuture();}
+    /** rawPeriodByte is observed data; the live high marker is never written or normalized here. */
+    record WarpDestination(int rawPeriodByte,WarpPeriod period,WarpCommandRow row,int commandByte){
+        WarpDestination{
+            octet(rawPeriodByte);octet(commandByte);Objects.requireNonNull(period);Objects.requireNonNull(row);
+            int masked=rawPeriodByte&127;
+            var expected=masked==0?WarpPeriod.PAST:masked==1?WarpPeriod.PRESENT:WarpPeriod.FUTURE;
+            if(period!=expected||period==WarpPeriod.PAST&&row!=WarpCommandRow.PAST
+                    ||period==WarpPeriod.PRESENT&&row!=WarpCommandRow.PRESENT
+                    ||period==WarpPeriod.FUTURE&&row!=WarpCommandRow.BAD_FUTURE&&row!=WarpCommandRow.GOOD_FUTURE)
+                throw new IllegalArgumentException("Post-WARP semantic period/command-row mismatch");
+        }
+    }
+    static WarpDestination postWarpDestination(WarpDestinationReads reads){
+        Objects.requireNonNull(reads);
+        int raw=reads.rawPeriod();octet(raw);
+        int command=reads.commandByte(WarpCommandRow.PAST);octet(command);
+        int masked=raw&127; // Native ANDI.B acts on the local decision, never live timeZone.
+        if(masked==0)return new WarpDestination(raw,WarpPeriod.PAST,WarpCommandRow.PAST,command);
+        command=reads.commandByte(WarpCommandRow.PRESENT);octet(command);
+        if(masked==1)return new WarpDestination(raw,WarpPeriod.PRESENT,WarpCommandRow.PRESENT,command);
+        command=reads.commandByte(WarpCommandRow.BAD_FUTURE);octet(command);
+        int good=reads.goodFuture();octet(good);
+        if(good==0)return new WarpDestination(raw,WarpPeriod.FUTURE,WarpCommandRow.BAD_FUTURE,command);
+        command=reads.commandByte(WarpCommandRow.GOOD_FUTURE);octet(command);
+        return new WarpDestination(raw,WarpPeriod.FUTURE,WarpCommandRow.GOOD_FUTURE,command);
+    }
+
+    enum SaveSite { NEW_GAME, RUN_R3, RUN_R4 }
     enum SaveMode { BACKUP, TEMPORARY }
     /** Semantic request for the existing save record; its unrelated fields must be retained by that owner. */
     record ReadSaveRequest(SaveSite site, SaveMode mode) {

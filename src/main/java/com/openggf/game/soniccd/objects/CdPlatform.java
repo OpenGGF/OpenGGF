@@ -239,6 +239,8 @@ public final class CdPlatform {
     private boolean running;
     private transient SolidCall pendingSolidCall;
     private transient PrimaryAngleCall pendingPrimaryAngleCall;
+    private transient CdObjectPool.Snapshot pendingDrawCut;
+    private transient CdObjectState.Identity pendingDrawIdentity;
 
     /** Private World consumers may authenticate this one actual synchronous producer occurrence. */
     public boolean isCurrentSolidCall(SolidCall call) {
@@ -246,6 +248,20 @@ public final class CdPlatform {
     }
     public boolean isCurrentPrimaryAngleCall(PrimaryAngleCall call) {
         return running && call != null && pendingPrimaryAngleCall == call;
+    }
+
+    /** Same original A reader/placement; shared pure kernels retain actual source tables and no current-art owner. */
+    public static CdPlatform fromOriginalPresentAssets(CdObjectPlacementRuntime placement,
+            com.openggf.game.soniccd.level.CdR11aAssets owner,CdSolidObject solid,SolidCommit commit,
+            PrimaryAngleCommit angle,DrawObjectCall draw)throws java.io.IOException{
+        CdOriginalPresentObjectSource.require(placement,owner);
+        return new CdPlatform(placement,Assets.fromObjectAssets(owner.openingObjects()),new CdPlayerMath(owner.player()),
+                new CdPlayerTerrain(owner.terrain()),solid,commit,angle,draw);
+    }
+    /** Current synchronous DrawObject occurrence only; equal/copied observations grant no invocation. */
+    public boolean isCurrentDrawCall(CdObjectPool pool,CdObjectState.Identity identity){
+        return running&&pool==placement.pool()&&identity!=null&&pendingDrawIdentity==identity&&pendingDrawCut!=null
+                &&pool.capture().slots().equals(pendingDrawCut.slots());
     }
 
     /** Actual R12B source pairing; caller supplies its existing source-bound pure math/terrain/Solid helpers. */
@@ -276,7 +292,8 @@ public final class CdPlatform {
         try {
             var c = new Cursor(pool, state, inputs);
             if (routine == 0) init(c, globals); else main(c, globals);
-            draw.drawObject(pool, c.state.identity());
+            pendingDrawCut=pool.capture();pendingDrawIdentity=c.state.identity();
+            try{draw.drawObject(pool,pendingDrawIdentity);}finally{pendingDrawCut=null;pendingDrawIdentity=null;}
             c.state = pool.state(wholeIndex); c.effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
             return new Result(c.state, c.effects);
         } finally { running = false; }

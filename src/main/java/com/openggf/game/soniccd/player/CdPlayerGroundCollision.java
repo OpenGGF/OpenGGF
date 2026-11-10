@@ -55,6 +55,9 @@ public final class CdPlayerGroundCollision {
         }
     }
 
+    /** Writes the caller's existing two BYTE buffers at their reached source sites. No retained state. */
+    public interface AngleWrites {void primary(int byteValue);void secondary(int byteValue);}
+
     private enum Surface { FLOOR, RIGHT_WALL, CEILING, LEFT_WALL }
 
     private final CdPlayerTerrain terrain;
@@ -73,16 +76,24 @@ public final class CdPlayerGroundCollision {
     }
 
     /** Player_GroundCol (Collision Floor.asm:30-71), including its object bypass. */
-    public Result ground(Input input) {
+    public Result ground(Input input) {return ground(input,null);}
+    /** Same native probes/alignment, retaining reached seeds and raw angles on a later read fault.
+     * The ordinary pure entry remains throw-atomic and retains its original exception contract. */
+    public Result groundWithPrefix(Input input,AngleWrites writes){
+        Objects.requireNonNull(writes,"actual caller angle writers");return ground(input,writes);
+    }
+    private Result ground(Input input,AngleWrites writes) {
         Objects.requireNonNull(input, "input");
         if ((input.state().flags() & 8) != 0) {
+            if(writes!=null){writes.primary(0);writes.secondary(0);} // native object-supported bypass, no probe.
             return new Result(input.state(), 0, 0);
         }
+        if(writes!=null){writes.primary(3);writes.secondary(3);} // before the very first terrain read.
         return switch (quadrant(input.state().angle())) {
-            case 0x40 -> walkVertL(input);
-            case 0x80 -> walkCeiling(input);
-            case 0xC0 -> walkVertR(input);
-            default -> walkFloor(input);
+            case 0x40 -> walkVertL(input,writes);
+            case 0x80 -> walkCeiling(input,writes);
+            case 0xC0 -> walkVertR(input,writes);
+            default -> walkFloor(input,writes);
         };
     }
 
@@ -102,51 +113,60 @@ public final class CdPlayerGroundCollision {
     }
 
     /** Player_WalkFloor (Collision Floor.asm:80-141): right sensor, then left. */
-    private Result walkFloor(Input input) {
+    private Result walkFloor(Input input,AngleWrites writes) {
         int x = input.state().xPosition() >>> 16;
         int y = input.state().yPosition() >>> 16;
         int rx = (byte) input.xRadius();
         int ry = (byte) input.yRadius();
         int sensorY = word(y + ry);
-        var primary = terrain.floor(word(x + rx), sensorY, 13, 0, 16, input.actorSprFlags());
-        var secondary = terrain.floor(word(x - rx), sensorY, 13, 0, 16, input.actorSprFlags());
+        var primary = floor(writes,true,word(x + rx), sensorY, 13, 0, 16, input.actorSprFlags());
+        var secondary = floor(writes,false,word(x - rx), sensorY, 13, 0, 16, input.actorSprFlags());
         return pickAndAlign(input, Surface.FLOOR, primary, secondary);
     }
 
     /** Player_WalkVertR (Collision Floor.asm:254-314): upper sensor, then lower. */
-    private Result walkVertR(Input input) {
+    private Result walkVertR(Input input,AngleWrites writes) {
         int x = input.state().xPosition() >>> 16;
         int y = input.state().yPosition() >>> 16;
         int rx = (byte) input.xRadius();
         int ry = (byte) input.yRadius();
         int sensorX = word(x + ry);
-        var primary = terrain.wall(sensorX, word(y - rx), 13, 0, 16, input.actorSprFlags());
-        var secondary = terrain.wall(sensorX, word(y + rx), 13, 0, 16, input.actorSprFlags());
+        var primary = wall(writes,true,sensorX, word(y - rx), 13, 0, 16, input.actorSprFlags());
+        var secondary = wall(writes,false,sensorX, word(y + rx), 13, 0, 16, input.actorSprFlags());
         return pickAndAlign(input, Surface.RIGHT_WALL, primary, secondary);
     }
 
     /** Player_WalkCeiling (Collision Floor.asm:323-384): right sensor, then left. */
-    private Result walkCeiling(Input input) {
+    private Result walkCeiling(Input input,AngleWrites writes) {
         int x = input.state().xPosition() >>> 16;
         int y = input.state().yPosition() >>> 16;
         int rx = (byte) input.xRadius();
         int ry = (byte) input.yRadius();
         int sensorY = word(y - ry) ^ 0xF;
-        var primary = terrain.floor(word(x + rx), sensorY, 13, 0x1000, -16, input.actorSprFlags());
-        var secondary = terrain.floor(word(x - rx), sensorY, 13, 0x1000, -16, input.actorSprFlags());
+        var primary = floor(writes,true,word(x + rx), sensorY, 13, 0x1000, -16, input.actorSprFlags());
+        var secondary = floor(writes,false,word(x - rx), sensorY, 13, 0x1000, -16, input.actorSprFlags());
         return pickAndAlign(input, Surface.CEILING, primary, secondary);
     }
 
     /** Player_WalkVertL (Collision Floor.asm:393-454): upper sensor, then lower. */
-    private Result walkVertL(Input input) {
+    private Result walkVertL(Input input,AngleWrites writes) {
         int x = input.state().xPosition() >>> 16;
         int y = input.state().yPosition() >>> 16;
         int rx = (byte) input.xRadius();
         int ry = (byte) input.yRadius();
         int sensorX = word(x - ry) ^ 0xF;
-        var primary = terrain.wall(sensorX, word(y - rx), 13, 0x800, -16, input.actorSprFlags());
-        var secondary = terrain.wall(sensorX, word(y + rx), 13, 0x800, -16, input.actorSprFlags());
+        var primary = wall(writes,true,sensorX, word(y - rx), 13, 0x800, -16, input.actorSprFlags());
+        var secondary = wall(writes,false,sensorX, word(y + rx), 13, 0x800, -16, input.actorSprFlags());
         return pickAndAlign(input, Surface.LEFT_WALL, primary, secondary);
+    }
+
+    private CdPlayerTerrain.Result floor(AngleWrites writes,boolean primary,int x,int y,int bit,int mirror,int step,int sprite){
+        return writes==null?terrain.floor(x,y,bit,mirror,step,sprite)
+                :terrain.floorWithPrefix(x,y,bit,mirror,step,sprite,value->{if(primary)writes.primary(value);else writes.secondary(value);});
+    }
+    private CdPlayerTerrain.Result wall(AngleWrites writes,boolean primary,int x,int y,int bit,int mirror,int step,int sprite){
+        return writes==null?terrain.wall(x,y,bit,mirror,step,sprite)
+                :terrain.wallWithPrefix(x,y,bit,mirror,step,sprite,value->{if(primary)writes.primary(value);else writes.secondary(value);});
     }
 
     private static Result pickAndAlign(Input input, Surface surface,

@@ -306,11 +306,48 @@ class TestCdTamabbohPastFactory {
             assertThrows(IllegalStateException.class, reentry::run); assertTrue(reentry.draws.isEmpty());
             var thrownMutation = portHarness(port); thrownMutation.attackPort = port;
             thrownMutation.mutateSource = true; thrownMutation.throwAfterAttack = true;
-            // Existing shared finally verification replaces a simultaneous malicious callback fault.
-            // This is a named inherited limitation, not an identical-exception guarantee.
-            var verification = assertThrows(IllegalStateException.class, thrownMutation::run);
-            assertNotSame(thrownMutation.fault, verification);
+            var before = thrownMutation.placement.capture();var source = thrownMutation.state();
+            // Native stores before each reached callback survive, including the illicit FLAGS write.
+            var prefix = switch(port){
+                case "ANGLE" -> source.addLong(Y_POSITION,0x10000);
+                case "PLAYER" -> source;
+                case "FM" -> source.moveByte(ROUTINE,4).moveByte(ANIMATION,0).moveWord(TAMABBOH_COOLDOWN,0x78);
+                default -> throw new AssertionError(port);
+            };
+            // The original callback failure wins; a distinct read-only verification fault is suppressed.
+            var original = assertThrows(Fault.class, thrownMutation::run);
+            assertSame(thrownMutation.fault,original);assertEquals(1,original.getSuppressed().length);
+            var verification = assertInstanceOf(IllegalStateException.class,original.getSuppressed()[0]);
+            assertNotSame(original,verification);assertEquals("Tamabboh read-only port changed its actual full96 pool or source cut",verification.getMessage());
+            var portSource = switch(port){
+                case "ANGLE" -> thrownMutation.angleCalls.getLast().expectedSource();
+                case "PLAYER" -> thrownMutation.playerCalls.getLast().expectedSource();
+                case "FM" -> thrownMutation.fmCalls.getLast().expectedSource();
+                default -> throw new AssertionError(port);
+            };
+            var portPool = switch(port){
+                case "ANGLE" -> thrownMutation.angleCalls.getLast().callCut();
+                case "PLAYER" -> thrownMutation.playerCalls.getLast().callCut();
+                case "FM" -> thrownMutation.fmCalls.getLast().callCut();
+                default -> throw new AssertionError(port);
+            };
+            assertEquals(prefix,portSource);assertEquals(prefix,portPool.slots().get(SLOT-32));
+            assertEquals(prefix.moveByte(FLAGS,0xA5),thrownMutation.state());assertTrue(thrownMutation.draws.isEmpty());
+            assertOtherSlots(before,thrownMutation);assertEquals(before.status(),thrownMutation.placement.status());
+            assertArrayEquals(before.savedFlags().copy(),thrownMutation.placement.capture().savedFlags().copy());
         }
+        // Independent full96 control: unchanged source row, changed non-source slot, same original FM fault.
+        var otherSlot = portHarness("FM");otherSlot.attackPort="FM";otherSlot.throwAfterAttack=true;
+        var before = otherSlot.placement.capture();var oldOther = otherSlot.pool().state(127);
+        var prefix = otherSlot.state().moveByte(ROUTINE,4).moveByte(ANIMATION,0).moveWord(TAMABBOH_COOLDOWN,0x78);
+        otherSlot.beforeFm=()->otherSlot.pool().write(oldOther.moveByte(FLAGS,0xA5));
+        var original = assertThrows(Fault.class,otherSlot::run);assertSame(otherSlot.fault,original);assertEquals(1,original.getSuppressed().length);
+        var verification=assertInstanceOf(IllegalStateException.class,original.getSuppressed()[0]);assertNotSame(original,verification);
+        assertEquals("Tamabboh read-only port changed its actual full96 pool or source cut",verification.getMessage());
+        assertEquals(1,otherSlot.fmCalls.size());assertEquals(prefix,otherSlot.fmCalls.getFirst().expectedSource());assertEquals(prefix,otherSlot.state());
+        assertEquals(oldOther.moveByte(FLAGS,0xA5),otherSlot.pool().state(127));assertTrue(otherSlot.draws.isEmpty());
+        for(int whole=32;whole<128;whole++)if(whole!=SLOT&&whole!=127)assertEquals(before.pool().slots().get(whole-32),otherSlot.pool().state(whole));
+        assertEquals(before.status(),otherSlot.placement.status());assertArrayEquals(before.savedFlags().copy(),otherSlot.placement.capture().savedFlags().copy());
     }
 
     private static Harness portHarness(String port) throws Exception {

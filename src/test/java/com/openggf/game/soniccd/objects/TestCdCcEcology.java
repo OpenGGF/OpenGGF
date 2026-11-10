@@ -167,4 +167,53 @@ class TestCdCcEcology {
             });}
         CdObjectState s(){return p.pool().state(80);}void edit(java.util.function.UnaryOperator<CdObjectState> f){p.pool().write(f.apply(s()));}void run(){body.run(80);}
     }
+
+    // BEGIN original CCAnimal World-consumer controls 20261108. Constructed components, ALL JAVA UNRUN.
+    @Test void animalRawMarkedPastReadsProjectorInsteadOfGoodFutureAndRetainsNativeDespawnOrder(){
+        var h=new H(0,0);h.period=0x81;h.destroyed=0;h.run();
+        assertEquals(List.of(CdCcAnimal.Field.TIME_ZONE,CdCcAnimal.Field.PROJECTOR_DESTROYED,CdCcAnimal.Field.CAMERA_X,CdCcAnimal.Field.TIME_ZONE),h.reads);
+        assertArrayEquals(new byte[64],h.s().copyBytes());assertEquals(0,h.draws);
+    }
+    @Test void animalPresentProjectorZeroDefersTheWholeDirtyBodyWithoutInitOrDraw(){
+        var h=new H(1,0);h.destroyed=0;h.edit(v->v.moveWord(X_FRACTION,0xCAFE).moveWord(Y_FRACTION,0xBEEF).moveByte(ANIMATION,0xFE));var before=h.p.capture();
+        h.run();assertEquals(List.of(CdCcAnimal.Field.TIME_ZONE,CdCcAnimal.Field.PROJECTOR_DESTROYED,CdCcAnimal.Field.CAMERA_X,CdCcAnimal.Field.TIME_ZONE),h.reads);
+        assertEquals(before.pool().slots(),h.p.capture().pool().slots());assertEquals(before.status(),h.p.status());assertArrayEquals(before.savedFlags().copy(),h.p.capture().savedFlags().copy());assertEquals(0,h.draws);
+    }
+    @Test void animalOriginalReadRejectsForeignReceiverReentryAndExpiryAndKeepsOriginalFullPoolFault(){
+        var h=new H(0,0);var body=new CdCcAnimal[1];var retained=new CdCcAnimal.Read[1];var fault=new IllegalStateException("original CC read");
+        body[0]=new CdCcAnimal(h.p,all.getFirst().animal(),math,terrain,new AnimalTestPorts(h){public CdCcAnimal.Value read(CdCcAnimal.Read c){
+            assertTrue(body[0].isCurrentCall(c));assertFalse(h.body.isCurrentCall(c));assertThrows(IllegalStateException.class,()->body[0].run(80));
+            retained[0]=c;h.p.pool().write(h.p.pool().state(127).moveByte(FLAGS,0x55));throw fault;
+        }});
+        assertSame(fault,assertThrows(IllegalStateException.class,()->body[0].run(80)));assertEquals(1,fault.getSuppressed().length);
+        assertFalse(body[0].isCurrentCall(retained[0]));assertThrows(IllegalStateException.class,()->retained[0].complete(1));assertEquals(0,h.draws);
+    }
+    @Test void animalOddParentWordReadsReusedBytesAndCrossesSlotBoundaryWithoutAlignmentRepair(){
+        var h=new H(0x81,8);h.edit(v->v.moveWord(EXPLOSION_POINTS_FRAME,0xD801));
+        h.p.pool().write(h.p.pool().state(32).moveByte(SPRITE_FLAGS,0x38));h.p.pool().write(h.p.pool().state(33).moveByte(ID,0));
+        var seen=new ArrayList<Integer>();var body=new CdCcAnimal(h.p,all.getFirst().animal(),math,terrain,new AnimalTestPorts(h){
+            public CdCcAnimal.Value read(CdCcAnimal.Read c){seen.add(c.nativeAddress());assertEquals(CdCcAnimal.Site.PARENT,c.site());
+                if(c.field()==CdCcAnimal.Field.PARENT_ID){assertEquals(0xFFD801,c.nativeAddress());return c.complete(h.p.pool().state(32).spriteFlags());}
+                assertEquals(CdCcAnimal.Field.PARENT_FLAG,c.field());assertEquals(0xFFD840,c.nativeAddress());return c.complete(h.p.pool().state(33).id());
+            }});
+        body.run(80);assertEquals(List.of(0xFFD801,0xFFD840),seen);assertEquals(1,h.draws);assertEquals(0x39,h.s().id());
+    }
+    @Test void animalFloorFaultRetainsLongMotionGravityAndMapFrameBeforeAnyDraw(){
+        var h=new H(1,2);h.edit(v->v.moveLong(TAMABBOH_X_DELTA,0x10001).moveLong(CHECKPOINT_PARENT,-0x40001).moveWord(X_FRACTION,0xCAFE).moveWord(Y_FRACTION,0xBEEF));
+        var before=h.s();var fault=new IllegalStateException("original floor scratch angle");var retained=new CdCcAnimal.Angle[1];
+        var body=new CdCcAnimal(h.p,all.getFirst().animal(),math,terrain,new AnimalTestPorts(h){public CdCcAnimal.Done angle(CdCcAnimal.Angle c){retained[0]=c;throw fault;}});
+        assertSame(fault,assertThrows(IllegalStateException.class,()->body.run(80)));
+        var expected=before.moveLong(X_POSITION,before.longBits(X_POSITION)+0x10001).moveLong(Y_POSITION,before.longBits(Y_POSITION)-0x40001)
+            .moveLong(CHECKPOINT_PARENT,-0x3E001).moveByte(MAP_FRAME,0);
+        assertArrayEquals(expected.copyBytes(),h.s().copyBytes());assertEquals(0,h.draws);assertThrows(IllegalStateException.class,()->retained[0].complete());
+    }
+    private static class AnimalTestPorts implements CdCcAnimal.Ports {
+        final H h;AnimalTestPorts(H h){this.h=h;}
+        public CdCcAnimal.Value read(CdCcAnimal.Read c){return c.complete(switch(c.field()){
+            case TIME_ZONE->h.period;case GOOD_FUTURE->h.good;case PROJECTOR_DESTROYED->h.destroyed;case ACT->h.act;case CAMERA_X->h.camera;
+            default->throw new AssertionError("Unexpected original component read "+c.field());});}
+        public CdCcAnimal.Done angle(CdCcAnimal.Angle c){return c.complete();}
+        public CdCcAnimal.Done draw(CdCcAnimal.Draw c){h.draws++;h.p.pool().write(c.expectedSource().moveByte(SPRITE_FLAGS,c.expectedSource().spriteFlags()&127));return c.complete();}
+    }
+    // END original CCAnimal World-consumer controls 20261108.
 }

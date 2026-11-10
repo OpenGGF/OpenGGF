@@ -255,9 +255,9 @@ final class SonicCdAct3FutureObjectPass {
         word(actualLevelFrame);guard();if(frame.paused())throw new IllegalStateException("Paused loop has no unpaused object walk");
         if(frame.environment().globals().levelFrames()!=actualLevelFrame)throw new IllegalArgumentException("Not actual levelFrames");
         var cut=read();queue=new CdObjectDrawQueue(new DrawSlots(),mappings,cut.cpuSat().copy(),List.of(new CdObjectDrawQueue.CdSlotRef(1),new CdObjectDrawQueue.CdSlotRef(2),new CdObjectDrawQueue.CdSlotRef(3),new CdObjectDrawQueue.CdSlotRef(4),new CdObjectDrawQueue.CdSlotRef(5),new CdObjectDrawQueue.CdSlotRef(31)));
-        phase=Phase.WALKING;try{queue.beginPass();for(int whole=0;whole<128;whole++){
-            guard();int id=id(whole);if(id==0)continue;int handler=handler(id,whole);Kind kind=kind(id,whole,handler);dispatch=new Dispatch(kind,whole);
-            try{if(kind!=Kind.PRIMARY)checkpoint();execute(kind,whole,actualLevelFrame);if(dispatch.operation!=null||!dispatch.effects.isEmpty()||bossScope!=null||endScope!=null)throw new IllegalStateException("Unretired original object operation");}finally{dispatch=null;}}
+        phase=Phase.WALKING;try{queue.beginPass();CdPhysicalObjectWalk.run(0,128,whole->{
+            guard();int id=id(whole);if(id==0)return;int handler=handler(id,whole);Kind kind=kind(id,whole,handler);dispatch=new Dispatch(kind,whole);
+            try{if(kind!=Kind.PRIMARY)checkpoint();execute(kind,whole,actualLevelFrame);if(dispatch.operation!=null||!dispatch.effects.isEmpty()||bossScope!=null||endScope!=null)throw new IllegalStateException("Unretired original object operation");}finally{dispatch=null;}});
             phase=Phase.WALKED;
         }catch(RuntimeException|Error original){phase=Phase.FAILED;queue.close();throw original;}
     }

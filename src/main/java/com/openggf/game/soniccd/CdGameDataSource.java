@@ -16,6 +16,7 @@ import com.openggf.game.soniccd.level.CdObjectPlacements;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
 import com.openggf.game.soniccd.media.CdInitialSaveAssets;
 import com.openggf.game.soniccd.media.CdR3PcmSource;
+import com.openggf.game.soniccd.media.CdR4PcmSource;
 import com.openggf.game.soniccd.media.CdSystemProgramSource;
 import com.openggf.game.soniccd.release.CdRetailRelease;
 
@@ -84,7 +85,10 @@ public final class CdGameDataSource implements GameDataSource {
     private final Optional<CdR31aAssets> r31aAssets;
     private final Optional<CdInitialSaveAssets> initialSaveAssets;
     private final Optional<CdR3PcmSource> r3PcmSource;
+    private final Optional<CdR4PcmSource> r4PcmSource;
     private final Optional<CdSystemProgramSource> systemProgramSource;
+    private final java.util.Map<CdStageKey,com.openggf.game.soniccd.level.CdProgrammeData> programmeData;
+    private final Optional<com.openggf.game.soniccd.level.CdInitialProgramSource> initialProgramSource;
     private final String identity;
 
     CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets) {
@@ -145,6 +149,40 @@ public final class CdGameDataSource implements GameDataSource {
                      Optional<Act2PastAssets> act2PastAssets, Optional<Act3FutureAssets> act3FutureAssets,
                      Optional<CdR31aAssets> r31aAssets, Optional<CdInitialSaveAssets> initialSaveAssets,
                      Optional<CdR3PcmSource> r3PcmSource, Optional<CdSystemProgramSource> systemProgramSource) {
+        this(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2PastAssets,
+                act3FutureAssets, r31aAssets, initialSaveAssets, r3PcmSource, systemProgramSource, java.util.Map.of());
+    }
+
+    /** Same-media programme DATA directory; no per-act runtime/nullable owner is added. */
+    CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets,
+                     Optional<CdTimeWarpPrograms> timeWarpPrograms, Optional<Act2Assets> act2Assets,
+                     Optional<Act2PastAssets> act2PastAssets, Optional<Act3FutureAssets> act3FutureAssets,
+                     Optional<CdR31aAssets> r31aAssets, Optional<CdInitialSaveAssets> initialSaveAssets,
+                     Optional<CdR3PcmSource> r3PcmSource, Optional<CdSystemProgramSource> systemProgramSource,
+                     java.util.Map<CdStageKey,com.openggf.game.soniccd.level.CdProgrammeData> programmeData) {
+        this(release,assets,fmSoundAssets,timeWarpPrograms,act2Assets,act2PastAssets,act3FutureAssets,
+                r31aAssets,initialSaveAssets,r3PcmSource,systemProgramSource,programmeData,Optional.empty());
+    }
+
+    /** Extended same-media finite PCM custody; no live programme or invocation is created. */
+    CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets,
+                     Optional<CdTimeWarpPrograms> timeWarpPrograms, Optional<Act2Assets> act2Assets,
+                     Optional<Act2PastAssets> act2PastAssets, Optional<Act3FutureAssets> act3FutureAssets,
+                     Optional<CdR31aAssets> r31aAssets, Optional<CdInitialSaveAssets> initialSaveAssets,
+                     Optional<CdR3PcmSource> r3PcmSource, Optional<CdSystemProgramSource> systemProgramSource,
+                     java.util.Map<CdStageKey,com.openggf.game.soniccd.level.CdProgrammeData> programmeData, Optional<CdR4PcmSource> r4PcmSource) {
+        this(release,assets,fmSoundAssets,timeWarpPrograms,act2Assets,act2PastAssets,act3FutureAssets,r31aAssets,
+                initialSaveAssets,r3PcmSource,systemProgramSource,programmeData,r4PcmSource,Optional.empty());
+    }
+
+    /** Optional exact initial-programme DATA; legacy/component/region constructors retain absence. */
+    CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets,
+                     Optional<CdTimeWarpPrograms> timeWarpPrograms, Optional<Act2Assets> act2Assets,
+                     Optional<Act2PastAssets> act2PastAssets, Optional<Act3FutureAssets> act3FutureAssets,
+                     Optional<CdR31aAssets> r31aAssets, Optional<CdInitialSaveAssets> initialSaveAssets,
+                     Optional<CdR3PcmSource> r3PcmSource, Optional<CdSystemProgramSource> systemProgramSource,
+                     java.util.Map<CdStageKey,com.openggf.game.soniccd.level.CdProgrammeData> programmeData, Optional<CdR4PcmSource> r4PcmSource,
+                     Optional<com.openggf.game.soniccd.level.CdInitialProgramSource> initialProgramSource) {
         this.release = Objects.requireNonNull(release, "release");
         this.assets = Objects.requireNonNull(assets, "assets");
         this.fmSoundAssets = Objects.requireNonNull(fmSoundAssets, "fmSoundAssets");
@@ -270,13 +308,50 @@ public final class CdGameDataSource implements GameDataSource {
             }
         }
         // END detached same-CUE original system-program DATA.
+        this.programmeData=java.util.Map.copyOf(Objects.requireNonNull(programmeData,"same-media programme DATA"));
+        for(var e:this.programmeData.entrySet()){
+            var data=e.getValue();data.requireRetained();
+            if(release.variant()!=CdReleaseVariant.USA || !e.getKey().equals(data.programme().payload().stage())
+                    || !release.normalizedSha256().equals(data.wholeDiscSha256()))
+                throw new IllegalArgumentException("Retained programme DATA differs from the actual same-disc source");
+        }
         // Whole-disc content also covers later data. Identity never certifies capability presence.
         identity = "scd:detached-stage-v1:" + release.key() + ":" + binding.stage().nativeId()
                 + ":" + binding.observedWholeDiscSha256() + ":" + binding.mmdSha256();
+        this.r4PcmSource=Objects.requireNonNull(r4PcmSource,"r4PcmSource");
+        if(r4PcmSource.isPresent()) {
+            var pcm=r4PcmSource.orElseThrow();
+            if(release.variant()!=CdReleaseVariant.USA || binding.variant()!=CdReleaseVariant.USA
+                    || binding.file()!=CdNativeFile.R11A
+                    || binding.domain()!=com.openggf.game.soniccd.media.CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !binding.mmdSha256().equals(assets.profile().expectedMmdSha256())
+                    || pcm.file()!=CdNativeFile.R4PCM || pcm.source().variant()!=binding.variant()
+                    || !pcm.source().wholeDiscSha256().equals(binding.observedWholeDiscSha256())
+                    || !pcm.source().wholeDiscSha256().equals(release.normalizedSha256()))
+                throw new IllegalArgumentException("Detached R4PCM, original stage and retail content differ");
+        }
+        this.initialProgramSource=Objects.requireNonNull(initialProgramSource,"initialProgramSource");
+        if(initialProgramSource.isPresent()){
+            var initial=initialProgramSource.orElseThrow();
+            if(release.variant()!=CdReleaseVariant.USA||binding.variant()!=CdReleaseVariant.USA||binding.file()!=CdNativeFile.R11A)
+                throw new IllegalArgumentException("Initial-programme DATA requires original USA aggregate");
+            initial.requireDisc(binding.observedWholeDiscSha256());initial.requireDisc(release.normalizedSha256());
+        }
     }
+
+    /** Inert same-CUE IPX row/Past reader; absence grants no fallback continuation. */
+    Optional<com.openggf.game.soniccd.level.CdInitialProgramSource> initialProgramSource(){return initialProgramSource;}
 
     public CdRetailRelease release() { return release; }
     public CdR11aAssets assets() { return assets; }
+    /** Immutable retained file owner only, never native source-selection authority. */
+    Optional<CdR4PcmSource> r4PcmSource() { return r4PcmSource; }
+
+    /** Actual reader-retained DATA only. An absent entry never borrows another programme. */
+    public Optional<com.openggf.game.soniccd.level.CdProgrammeData> programmeData(CdStageKey selected) {
+        return Optional.ofNullable(programmeData.get(Objects.requireNonNull(selected)));
+    }
+
 
     /** Detached USA FM data only. JP/EU are absent; presence does not install an audio driver. */
     public Optional<CdFmSoundAssets> fmSoundAssets() { return fmSoundAssets; }

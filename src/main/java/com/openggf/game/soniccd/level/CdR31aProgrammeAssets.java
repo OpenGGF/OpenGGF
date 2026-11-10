@@ -65,12 +65,7 @@ public final class CdR31aProgrammeAssets {
      * the whole goodFuture BYTE modulo256, then uses the zone BYTE and WORD index without normalizing.
      */
     public CdCommand selectLevelMusic(int rawZoneActWord,int rawPeriodByte,int timeAttackByte,int goodFutureByte) {
-        if ((rawZoneActWord & ~65535) != 0) throw new IllegalArgumentException("Native zoneAct WORD required");
-        for (int value : new int[]{rawPeriodByte,timeAttackByte,goodFutureByte})
-            if ((value & ~255) != 0) throw new IllegalArgumentException("Native music selector BYTE required");
-        int period = rawPeriodByte & 0x7F;
-        if (timeAttackByte == 0 && period == 2) period = (period + goodFutureByte) & 255;
-        int index = ((rawZoneActWord >>> 8) * 4 + period) & 65535;
+        int index=CdLevelMusicIndex.select(rawZoneActWord,rawPeriodByte,timeAttackByte,goodFutureByte);
         if (index >= music.length()) throw new UnownedMusicByte(MUSIC_ADDRESS + index);
         return CdCommand.fromId(music.unsignedByte(index));
     }

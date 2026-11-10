@@ -153,7 +153,7 @@ class TestSonicCdR3PcmStockCustody {
         assertThrows(IllegalArgumentException.class, () -> retain(s,Optional.of(badFile)));
     }
 
-    @Test void typedBorrowIsPrivateCustodyAndThePublicSourceSurfaceRemainsEleven() throws Exception {
+    @Test void typedBorrowIsPrivateCustodyAndThePublicSourceSurfaceIncludesProgrammeData() throws Exception {
         var borrow = CdGameDataSource.class.getDeclaredMethod("r3PcmSource");
         assertFalse(Modifier.isPublic(borrow.getModifiers())); assertFalse(Modifier.isPrivate(borrow.getModifiers()));
         assertFalse(Modifier.isProtected(borrow.getModifiers()));
@@ -161,10 +161,10 @@ class TestSonicCdR3PcmStockCustody {
         var field = CdGameDataSource.class.getDeclaredField("r3PcmSource");
         assertTrue(Modifier.isPrivate(field.getModifiers())); assertTrue(Modifier.isFinal(field.getModifiers()));
         assertEquals(borrow.getGenericReturnType(),field.getGenericType());
-        assertEquals(List.of(3,4,5,6,7,8,9,10,11),Arrays.stream(CdGameDataSource.class.getDeclaredConstructors()).map(v -> v.getParameterCount()).sorted().toList());
+        assertEquals(List.of(3,4,5,6,7,8,9,10,11,12,13),Arrays.stream(CdGameDataSource.class.getDeclaredConstructors()).map(v -> v.getParameterCount()).sorted().toList());
         assertTrue(Arrays.stream(CdGameDataSource.class.getDeclaredConstructors()).noneMatch(v -> Modifier.isPublic(v.getModifiers())));
         assertEquals(List.of("act2Assets/0","act2PastAssets/0","act3FutureAssets/0","assets/0","fmSoundAssets/0","identity/0",
-                        "openAsset/1","r31aAssets/0","release/0","rom/0","timeWarpPrograms/0"),
+                        "openAsset/1","programmeData/1","r31aAssets/0","release/0","rom/0","timeWarpPrograms/0"),
                 Arrays.stream(CdGameDataSource.class.getDeclaredMethods()).filter(v -> Modifier.isPublic(v.getModifiers()))
                         .map(v -> v.getName()+"/"+v.getParameterCount()).sorted().toList());
         assertEquals(List.of("prepare"),Arrays.stream(CdStockLaunch.class.getDeclaredMethods()).filter(v -> Modifier.isPublic(v.getModifiers())).map(v -> v.getName()).sorted().toList());

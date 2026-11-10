@@ -1503,13 +1503,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 } else if (effect instanceof CdPlayerBody.ObjectTouchResponse touch) {
                     if (touchSeen) throw new IllegalStateException("Body published more than one touch result");
                     touchSeen = true;
-                    var result = touch.result(); var world = result.world();
-                    nextRing = new CdRingGlobals(world.rings(), world.lives(), ringGlobals.livesFlags(),
-                            ringGlobals.updateHudRings(), world.updateHudLives(), ringGlobals.timeStopTimer(),
-                            ringGlobals.ringAnimationTimer(), ringGlobals.ringAnimationFrame());
-                    nextScore = new ScoreGlobals(world.score(), world.nextLifeScore(), world.updateHudScore());
-                    nextContact = touch.contact();
-                    for (var image : result.changedSlots()) changed.put(image.identity().wholeIndex(), image);
+                    var values=CdPrimaryTouchValues.response(touch,ringGlobals);
+                    nextRing=values.ring();nextScore=values.score();nextContact=values.contact();
+                    for(var image:values.changed())changed.put(image.identity().wholeIndex(),image);
                     // Actor/invincible/scoreChain are already final Frame values; never re-apply them here.
                 }
             }
@@ -1719,11 +1715,11 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 @Override public void subCpuCommand(CdRing.SubCpuCommand command) { appendSound(new RingSubCpu(command)); }
                 @Override public void drawObject(CdObjectPool pool, int wholeIndex) { drawDynamic(pool, wholeIndex); }
             };
-            for (int whole = CdObjectPool.FIRST_WHOLE_INDEX; whole < CdObjectPool.END_WHOLE_INDEX; whole++) {
+            CdPhysicalObjectWalk.run(CdObjectPool.FIRST_WHOLE_INDEX,CdObjectPool.END_WHOLE_INDEX,whole->{
                 checkActive(Phase.DYNAMIC_SLOTS);
                 dispatchWholeIndex = whole;
                 int id = placement.pool().state(whole).id(); // Fetch at the real visit, never from a captured list.
-                if (id == 0) { continue; }
+                if (id == 0) { return; }
                 var environment = frame.environment();
                 var gates = environment.movement().gates();
                 if (id == 0x10) {
@@ -1931,7 +1927,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     throw new UnsupportedOperationException("Unowned CD object ID $"
                             + Integer.toHexString(id) + " at live physical slot " + whole);
                 }
-            }
+            });
             dispatchWholeIndex = -1;
             return null;
         });

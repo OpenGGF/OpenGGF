@@ -9,7 +9,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Same-World R31A FULL host assembly, admitted only by the module's original applied selected-profile RunR3 publication.
+ * Shared selected CD FULL host assembly. Historical class name retained; the Module admits
+ * its exact original R31 or R11 source-bound request, never a public context value alone.
  * Authored by OpenAI Codex GPT-6.1 Sol. Native pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff:
  * Initialization.asm:56-93 then Level/Main.asm:19-165. This profile orders existing
  * host owners; the module's real loading visit owns every native startup/fade/PLC step.
@@ -24,16 +25,16 @@ final class SonicCdR31aLevelInitProfile implements LevelInitProfile {
 
     @Override public List<InitStep> levelLoadSteps(LevelLoadContext context) {
         admitted = false;
-        module.validateR31LoadRequest(Objects.requireNonNull(context));
+        module.validateSelectedLoadingRequest(Objects.requireNonNull(context));
         return List.of(
                 new InitStep("AdmitActualR31aLoad", "Exact privately staged source/World before old owner retirement", () -> {
-                    module.validateR31LoadRequest(context); admitted = true; module.closeTerrainPlayer();
-                    context.setGameModule(module); context.setZone(1); context.setAct(0);
+                    module.validateSelectedLoadingRequest(context); admitted = true; module.prepareSelectedLoadingAssembly(context);
+                    context.setGameModule(module); context.setZone(module.selectedLoadingZone()); context.setAct(0);
                 }),
-                new InitStep("ResetR31aHost", "Existing host reset, no source loop or palette/art readiness", SonicCdR31aLevelInitProfile::resetHost),
-                io("InitR31aModule", () -> GameServices.level().initGameModule(module.getZoneRegistry().getLevelDataForZone(1).getFirst().levelIndex())),
-                io("PrepareR31aGeometry", () -> context.setLevel(GameServices.level().loadLevelData(module.getZoneRegistry().getLevelDataForZone(1).getFirst().levelIndex()))),
-                new InitStep("InstallR31aLoadingVisit", "Real Start and LevelStart prefix, ending before the first VSync", module::installR31LoadingVisit),
+                new InitStep("ResetR31aHost", "Existing host reset, no source loop or palette/art readiness", () -> resetHost(context.getZone())),
+                io("InitR31aModule", () -> GameServices.level().initGameModule(module.selectedLoadingIndex())),
+                io("PrepareR31aGeometry", () -> context.setLevel(GameServices.level().loadLevelData(module.selectedLoadingIndex()))),
+                new InitStep("InstallR31aLoadingVisit", "Real Start and LevelStart prefix, ending before the first VSync", module::installSelectedLoadingVisit),
                 new InitStep("OmitDuplicateHostHud", "Native ring/time stay solely in the loading capture; no host HUD partition", () ->
                         GameServices.level().resetLevelGamestate(module.createLevelState())),
                 io("InitR31aFeatures", () -> GameServices.level().initZoneFeatures()),
@@ -42,12 +43,12 @@ final class SonicCdR31aLevelInitProfile implements LevelInitProfile {
                 new InitStep("RegisterR31aAdapters", "Existing module/camera/tilemap keys in the new load epoch", () -> {
                     var mode = Objects.requireNonNull(SessionManager.getCurrentGameplayMode());
                     mode.registerLevelAdapters(mode.getLevelManager()); mode.registerGameModuleRewindAdapters();
-                    module.registerR31RestoreProjection();
+                    if(!module.originalR11AssemblySelected())module.registerR31RestoreProjection();
                 }));
     }
 
-    private static void resetHost() {
-        com.openggf.level.NativeLevelCourseReset.reset(GameServices.level(), 1, 0);
+    private static void resetHost(int zone) {
+        com.openggf.level.NativeLevelCourseReset.reset(GameServices.level(), zone, 0);
         GameServices.crossGameFeatures().resetState(); GameServices.sprites().resetState();
         GameServices.collision().resetState(); GameServices.water().reset(); GameServices.fade().resetState();
         GameServices.timers().resetState(); GameServices.gameState().resetForLevel(); GameServices.camera().resetState();

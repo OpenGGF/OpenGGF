@@ -84,6 +84,17 @@ public final class CdR11aTerrain {
         collision = new Collision(delegate.collision());
     }
 
+    private CdR11aTerrain(CdStageTerrain selected) {
+        delegate=Objects.requireNonNull(selected);layout=new Layout(delegate.layout());collision=new Collision(delegate.collision());
+    }
+    /** Same-reader original DATA only. It retains selected-known/unavailable semantics,
+     * never fabricates legacy Shape admission or a current block-staging clear. */
+    static CdR11aTerrain borrow(CdProgrammeReader reader,CdStageTerrain selected) {
+        Objects.requireNonNull(reader).retainedOriginalR11Image();
+        reader.requirePlayerTerrain(Objects.requireNonNull(selected));
+        return new CdR11aTerrain(selected);
+    }
+
     /** Pure component decoder, not a media/release authentication boundary. */
     public static CdR11aTerrain decode(byte[] blocks, byte[] patterns, byte[] chunks, byte[] foreground,
                                        byte[] background, byte[] ids, byte[] angles, byte[] heights, byte[] widths) {

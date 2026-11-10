@@ -48,7 +48,8 @@ import static com.openggf.game.soniccd.objects.CdObjectState.LongField.*;
  * floor-angle stores. Its guards cover this placement owner's full96/saved766/status; the caller
  * still owns actual Frame, reserved/source/current state, once-only sound and invocation authority.
  * A native stopped Solid is adopted once, then its original exception is rethrown before later work.
- * The inherited Monitor animator remains atomic on a shared step failure; no prefix is invented.
+ * The legacy constructor keeps its completed-only animator; source-owner mode uses the shared
+ * live animation kernel so every reached store survives a later selected-read fault.
  * OpenAI Codex GPT-6.1 Sol <noreply@openai.com>.
  */
 public final class CdMonitor {
@@ -256,6 +257,8 @@ public final class CdMonitor {
     // Only the distinct private Past constructor assigns this mode; constructor8 retains legacy behavior.
     private PrefixSolidOwner pastSolidOwner;
     private boolean pastRunning;
+    @FunctionalInterface public interface InvocationGuard { void requireCurrent(int wholeIndex); }
+    private InvocationGuard invocationGuard;
 
     public CdMonitor(CdObjectPlacementRuntime runtime, Assets assets, CdSolidObject solid, CdPlayerTerrain terrain,
                      SolidCommit solidCommit, PrimaryAngleCommit primaryAngleCommit,
@@ -287,6 +290,15 @@ public final class CdMonitor {
         return new CdMonitor(runtime, assets, solid, terrain, owner, primaryAngleCommit, drawObject, playFm, true);
     }
 
+    /** Actual World opt-in: reject foreign/idle/thread/reentry before the first native store.
+     * The existing constructed withPastOwner path retains its explicit prior contract. */
+    public static CdMonitor withWorldInvocationOwner(CdObjectPlacementRuntime runtime,Assets assets,
+            CdSolidObject solid,CdPlayerTerrain terrain,PrefixSolidOwner owner,PrimaryAngleCommit angle,
+            DrawObjectCall draw,PlayFmCall fm,InvocationGuard guard){
+        var body=withPastOwner(runtime,assets,solid,terrain,owner,angle,draw,fm);
+        body.invocationGuard=Objects.requireNonNull(guard);return body;
+    }
+
     /** Distinct private arity preserves public constructor8 and literal-null overload resolution. */
     private CdMonitor(CdObjectPlacementRuntime runtime, Assets assets, CdSolidObject solid, CdPlayerTerrain terrain,
                       PrefixSolidOwner owner, PrimaryAngleCommit primaryAngleCommit,
@@ -313,7 +325,7 @@ public final class CdMonitor {
     private Result runPastGuarded(int wholeIndex, NativeGlobals globals, SolidInputs inputs) {
         if (pastRunning) throw new IllegalStateException("Reentrant Past Monitor invocation");
         pastRunning = true;
-        try { return runNative(wholeIndex, globals, inputs); }
+        try { if(invocationGuard!=null)invocationGuard.requireCurrent(wholeIndex);return runNative(wholeIndex, globals, inputs); }
         finally { pastRunning = false; }
     }
 
@@ -420,6 +432,15 @@ public final class CdMonitor {
         c.enter(NativeRoutine.ANIMATE);
         c.publish(); // Any landing/solid/native prefix is live even if the selected script is unowned.
         if (globals.timeStopTimer() == 0) {
+            if (pastSolidOwner != null) {
+                var table = new CdObjectAnimation.AnimationTable(assets.visual().animationTable(), 0, 10);
+                CdObjectAnimationBinding.run(runtime, c.wholeIndex, table, () -> pastRunning,
+                        image -> c.state = image, null, operation -> { }, read -> new UnsupportedOperationException(
+                                "Monitor animation " + read.boundary() + " at whole " + c.wholeIndex
+                                        + ", reached byte " + read.value()));
+                c.effects.add(new CallReturned(NativeCall.ANIMATE_OBJECT));
+                drawTail(c, globals); return;
+            }
             var s = c.state;
             var r = CdObjectAnimation.step(new CdObjectAnimation.State(s.unsignedByte(ANIMATION),
                     s.unsignedByte(PREVIOUS_ANIMATION), s.unsignedByte(ANIMATION_FRAME), s.unsignedByte(ANIMATION_TIME),

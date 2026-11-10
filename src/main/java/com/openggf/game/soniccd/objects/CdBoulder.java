@@ -242,6 +242,20 @@ public final class CdBoulder {
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
     }
 
+    /** Original R11 DATA binding; the same plain-Solid prefix algorithm as other programmes. */
+    public static CdBoulder fromOriginalPresentAssets(CdObjectPlacementRuntime p,
+            com.openggf.game.soniccd.level.CdR11aAssets source,CdSolidObject solid,PrefixSolidCommit commit,DrawObjectCall draw) throws java.io.IOException {
+        CdOriginalPresentObjectSource.require(p,source);
+        return withPrefixPublication(p,Assets.fromObjectAssets(source.openingObjects()),solid,commit,draw);
+    }
+    /** Constructed component seam; no media or original controller authority. */
+    public static CdBoulder withPrefixPublication(CdObjectPlacementRuntime p,Assets data,CdSolidObject solid,
+            PrefixSolidCommit commit,DrawObjectCall draw){return new CdBoulder(p,presentAssets(data),solid,commit,draw);}
+    private transient CdObjectState.Identity pendingDraw;
+    public boolean isCurrentDrawCall(CdObjectPool pool,CdObjectState.Identity id){
+        return running&&pool==placement.pool()&&id!=null&&pendingDraw==id;
+    }
+
     @FunctionalInterface
     private interface TileOperand { int read(int secondary); }
     /** Explicit format binding; the public A74 Assets3 contract is unchanged. */
@@ -372,7 +386,8 @@ public final class CdBoulder {
                 state = result.object(); // Final player/globals are exposed in this same completed Result metadata.
             }
             pool.write(state);
-            drawObject.drawObject(pool, state.identity()); // Unconditional wrapper JSR DrawObject (:13).
+            pendingDraw=state.identity();
+            try{drawObject.drawObject(pool,pendingDraw);}finally{pendingDraw=null;} // Native wrapper, before despawn.
             state = pool.state(wholeIndex); // NEVER overwrite the port's actual live output with an old image.
             effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
             boolean deleted = checkObjDespawn(state, globals); // Wrapper JMP CheckObjDespawn (:14).

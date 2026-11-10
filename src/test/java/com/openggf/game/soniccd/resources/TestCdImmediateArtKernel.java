@@ -30,13 +30,55 @@ class TestCdImmediateArtKernel {
     @Test void immediateZeroHeaderAndRamPrepareFailureKeepTheirDistinctPrefixContract(){
         var zero=kernel(new byte[]{0,0,(byte)255,0,0},-1,CdAssetBytes.copyOf(new byte[0]));var z=assertThrows(Fault.class,()->zero.loadImmediateList(fresh(),1));assertEquals(CdImmediateArtKernel.Reason.IMMEDIATE_HEADER_COUNT,z.reason);assertNull(z.ram);var bad=kernel(new byte[]{0,1,(byte)255,0},-1,CdAssetBytes.copyOf(new byte[32]));var f=assertThrows(Fault.class,()->bad.decodeBlocksToRam(fresh()));assertEquals(CdImmediateArtKernel.Reason.DECODE_PREPARE,f.reason);assertEquals(CdImmediateArtKernel.Operation.BLOCKS_RAM,f.operation);assertEquals(0,f.ram.length());assertEquals(0,f.destination);
     }
-    @Test void actualRingPrefixFaultKeepsOnlyCompletedTilesInImmediateAndRamDiagnostics()throws Exception{
+    @Test void actualRingPrefixFaultKeepsTilesForGraphicsAndRowsForRam()throws Exception{
         var a=TestCdR13SectionArt.actual().good();var registry=com.openggf.game.soniccd.level.CdR13SectionSources.fromAssets(a);var id=com.openggf.game.soniccd.level.CdR13SectionSources.SourceId.ART_RINGS;var raw=registry.view(id,com.openggf.game.soniccd.level.CdR13SectionSources.ReaderKind.NATIVE);var first=CdNemesisPlcDecoder.decodeTile(CdNemesisPlcDecoder.prepare(raw,0x200100,fresh().table()));var prefix=raw.slice(0,first.state().inputOffset());var k=kernel(prefix.copy(),-1,registry.decoded(id).bytes());var before=fresh();
         var immediate=assertThrows(Fault.class,()->k.loadImmediateList(before,1));assertEquals(CdImmediateArtKernel.Reason.DECODE_TILE,immediate.reason);assertFalse(immediate.state.tiles().isEmpty());assertNull(immediate.ram);assertArrayEquals(first.bytes().copy(),immediate.state.tiles().getFirst().copy());assertTrue(before.tiles().isEmpty());
-        var ram=assertThrows(Fault.class,()->k.decodeBlocksToRam(before));assertEquals(CdImmediateArtKernel.Reason.DECODE_TILE,ram.reason);assertEquals(CdImmediateArtKernel.Operation.BLOCKS_RAM,ram.operation);assertEquals(immediate.state.tiles().size()*32,ram.ram.length());assertEquals(ram.ram.length(),ram.destination);assertArrayEquals(registry.decoded(id).bytes().slice(0,ram.ram.length()).copy(),ram.ram.copy());assertTrue(ram.state.tiles().isEmpty());assertInstanceOf(CdNemesisPlcDecoder.DecodeException.class,ram.getCause());
+        var ram=assertThrows(Fault.class,()->k.decodeBlocksToRam(before));assertEquals(CdImmediateArtKernel.Reason.DECODE_TILE,ram.reason);assertEquals(CdImmediateArtKernel.Operation.BLOCKS_RAM,ram.operation);assertTrue(ram.ram.length()>=immediate.state.tiles().size()*32);assertEquals(0,ram.ram.length()%4);assertEquals(ram.ram.length(),ram.destination);assertArrayEquals(registry.decoded(id).bytes().slice(0,ram.ram.length()).copy(),ram.ram.copy());assertTrue(ram.state.tiles().isEmpty());assertInstanceOf(CdNemesisPlcDecoder.DecodeException.class,ram.getCause());
     }
     @Test void completeRuntimeRamLoopReportsMismatchedImmutableProductWithEveryCompletedTile()throws Exception{
         var a=TestCdR13SectionArt.actual().good();var registry=com.openggf.game.soniccd.level.CdR13SectionSources.fromAssets(a);var id=com.openggf.game.soniccd.level.CdR13SectionSources.SourceId.ART_RINGS;var raw=registry.view(id,com.openggf.game.soniccd.level.CdR13SectionSources.ReaderKind.NATIVE);var k=kernel(raw.copy(),-1,com.openggf.game.soniccd.level.CdAssetBytes.copyOf(new byte[32]));var before=fresh();var f=assertThrows(Fault.class,()->k.decodeBlocksToRam(before));assertEquals(CdImmediateArtKernel.Reason.BLOCK_PRODUCT_MISMATCH,f.reason);assertArrayEquals(registry.decoded(id).bytes().copy(),f.ram.copy());assertEquals(448,f.destination);assertEquals(0x200100L+registry.source(id).expectedNativeConsumedBytes(),f.source);assertSame(before.queue(),f.state.queue());assertTrue(f.state.tiles().isEmpty());
+    }
+    @Test void faultWithinFirstTilePublishesCompletedRowsOnlyAndNoPartialRow() {
+        // 1-bit zero code: each symbol emits one 8-pixel row; prefetch leaves
+        // eight complete rows possible only with a refill. This finite input
+        // stops before the eighth symbol, after seven completed row longs.
+        byte[] raw = {0,1,(byte)0x81,0x71,0,(byte)0xFF,0,0};
+        var k = kernel(raw,-1,CdAssetBytes.copyOf(new byte[32]));
+        var before = fresh();
+        var f = assertThrows(Fault.class, () -> k.decodeBlocksToRam(before));
+        assertEquals(CdImmediateArtKernel.Reason.DECODE_TILE,f.reason);
+        assertEquals(28,f.ram.length());
+        assertEquals(28,f.destination);
+        for(int i=0;i<28;i++) assertEquals(0x11,f.ram.unsignedByte(i));
+        assertTrue(f.state.tiles().isEmpty());
+        assertSame(before.queue(),f.state.queue());
+    }
+    @Test void unfinishedFirstRowPublishesNoPixelsAsRamBytes() {
+        byte[] raw={0,1,(byte)0x81,0x01,0,(byte)0xFF,0,0};
+        var f=assertThrows(Fault.class,()->kernel(raw,-1,CdAssetBytes.copyOf(new byte[32])).decodeBlocksToRam(fresh()));
+        assertEquals(CdImmediateArtKernel.Reason.DECODE_TILE,f.reason);
+        assertEquals(0,f.ram.length());assertEquals(0,f.destination);
+        var cause=assertInstanceOf(CdNemesisPlcDecoder.DecodeException.class,f.getCause());
+        assertEquals(7,cause.diagnostic().pixelsInRow());
+    }
+    @Test void xorRowsUseActualDecoderOutputInsteadOfRepeatingRawRows() {
+        byte[] raw={(byte)0x80,1,(byte)0x81,0x71,0,(byte)0xFF,0,0,0};
+        byte[] product=new byte[32];
+        for(int row=0;row<8;row+=2)Arrays.fill(product,row*4,row*4+4,(byte)0x11);
+        var result=kernel(raw,-1,CdAssetBytes.copyOf(product)).decodeBlocksToRam(fresh());
+        for(int at=0;at<32;at++)assertEquals(Byte.toUnsignedInt(product[at]),result.blockDefinitions().unsignedByte(at));
+    }
+    @Test void ramResultCarriesKnownRowsWithoutInventingTheRestOfTheBank() {
+        byte[] raw = {0,1,(byte)0x81,0x71,0,(byte)0xFF,0,0,0};
+        byte[] product = new byte[32]; Arrays.fill(product,(byte)0x11);
+        var k = kernel(raw,-1,CdAssetBytes.copyOf(product));
+        var result = k.decodeBlocksToRam(fresh());
+        assertEquals(0x1111,result.blockDefinitions().unsignedWord(30));
+        assertEquals(32,assertThrows(CdBlockDefinitionStaging.UnknownRead.class,
+                () -> result.blockDefinitions().unsignedWord(32)).byteOffset());
+        var original = CdBlockDefinitionStaging.afterFileBufferClear()
+                .withCompletedPrefix(result.bytes());
+        assertEquals(0,original.blockWord(1023,3));
     }
     @Test void lifeWriterRetainsOneWholeTileOnDestinationFailureAndActiveQueueIsANonwrite(){
         var k=kernel(new byte[]{0,1,(byte)255,0,0},0xB440,CdAssetBytes.copyOf(new byte[32]));var before=new Value(fresh().table(),List.of(),17,CdR11aPlcBuffer.cleared());var f=assertThrows(Fault.class,()->k.loadLifeIcon(before,2));assertEquals(CdImmediateArtKernel.Operation.LIFE_ICON,f.operation);assertEquals(1,f.state.tiles().size());assertSame(before.queue(),f.state.queue());assertSame(before.table(),f.state.table());assertEquals(17,f.state.remaining());assertTrue(before.tiles().isEmpty());assertEquals(0xB440,f.destination);assertEquals(0x23305CL,f.source);

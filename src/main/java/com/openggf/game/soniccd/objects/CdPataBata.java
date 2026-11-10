@@ -9,6 +9,7 @@ import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11aPlayerAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR11bObjectData;
 import com.openggf.game.soniccd.level.CdR12aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
@@ -224,6 +225,7 @@ public final class CdPataBata {
     private final Assets assets;
     private final DrawObjectCall drawObject;
     private boolean running;
+    private CdEnemyPrimitiveScope originalPrimitives;
     private transient int runningWhole=-1;
     private transient CdObjectPool.Snapshot pendingDrawCut;
     private transient CdObjectState.Identity pendingDrawIdentity;
@@ -253,14 +255,39 @@ public final class CdPataBata {
         return new CdPataBata(placement,Assets.bindAct2Past(owner.objects(),playerAssets,sharedMath),drawObject);
     }
 
+    /** Exact retained original R11 owner. No factory/body/World authority from detached values. */
+    public static CdPataBata fromOriginalPresentAssets(CdObjectPlacementRuntime placement,
+            com.openggf.game.soniccd.level.CdR11aAssets owner,CdR11aObjectAssets objects, DrawObjectCall draw,
+            CdEnemyPrimitiveScope.Observer observer) {
+        CdOriginalPresentObjectSource.require(placement,owner);
+        if(!Objects.requireNonNull(objects,"actual original object source").identity().equals(owner.identity()))throw new IllegalArgumentException("Different original enemy object source");
+        var body=new CdPataBata(placement,Assets.fromObjectAssets(objects,owner.player()),draw);
+        body.originalPrimitives=new CdEnemyPrimitiveScope(placement,observer);return body;
+    }
+    /** Original B data relation only: shared PPZ algorithm, actual B72/read-cache/math products.
+     * Pata-Bata/Main.asm:7-79 is included unchanged by both original A and B programmes. */
+    public static CdPataBata fromOriginalStandardPastSource(CdObjectPlacementRuntime placement,
+            CdR11bObjectData owner,DrawObjectCall draw,CdEnemyPrimitiveScope.Observer observer)throws java.io.IOException{
+        Objects.requireNonNull(owner,"actual retained B object source").requirePlacement(placement);
+        var tiles=owner.view(CdR11bObjectData.Table.OBJECT_TILE_IDS).bytes();
+        if(tiles.length()!=72)throw new IllegalArgumentException("Original Past Pata requires the actual72-byte tile directory");
+        var a=new Assets(tiles,owner.pataBataNormal(),owner.pataBataDamaged(),owner.animation(CdR11bObjectData.Animation.ANI_PATA_BATA),
+                CdR11bObjectData.Table.MAP_SPR_PATA_BATA1.nativeAddress(),CdR11bObjectData.Table.MAP_SPR_PATA_BATA2.nativeAddress(),
+                new CdPlayerMath(owner.playerSource().player()));
+        var body=new CdPataBata(placement,a,draw);body.originalPrimitives=new CdEnemyPrimitiveScope(placement,observer);return body;
+    }
+    public boolean isCurrentOriginalPrimitive(CdEnemyPrimitiveScope.Call c){return running&&originalPrimitives!=null&&originalPrimitives.isCurrent(c);}
+    private void originalWrite(CdObjectState s){if(originalPrimitives==null)runtime.pool().write(s);else originalPrimitives.write(s);}
+    private void originalDelete(int w){if(originalPrimitives==null)runtime.pool().deleteObject(w);else originalPrimitives.delete(w);}
+
     public Assets assets() { return assets; }
 
     /** One body dispatch. No routine-table gate exists in the native TST/BNE entry. */
     public Result run(int wholeIndex, Globals globals) {
         if(running)throw new IllegalStateException("PataBata cannot reenter its synchronous physical dispatch");
         running=true;runningWhole=wholeIndex;
-        try{return runNative(wholeIndex,globals);}
-        finally{pendingDrawIdentity=null;pendingDrawCut=null;runningWhole=-1;running=false;}
+        try{if(originalPrimitives!=null)originalPrimitives.enter(wholeIndex,OBJECT_ID);var result=runNative(wholeIndex,globals);if(originalPrimitives!=null)originalPrimitives.returned();return result;}
+        finally{if(originalPrimitives!=null)originalPrimitives.close();pendingDrawIdentity=null;pendingDrawCut=null;runningWhole=-1;running=false;}
     }
 
     private Result runNative(int wholeIndex, Globals globals) {
@@ -276,10 +303,10 @@ public final class CdPataBata {
         if (globals.goodFuture() != 0 && (globals.timeZone() != 1 || state.subtype() != 0)) {
             int x = state.centreX();
             int y = state.centreY();
-            pool.deleteObject(wholeIndex);                                // DeleteObject: all $40 bytes.
-            pool.write(pool.state(wholeIndex).moveWord(X, x));            // Restore only integer words.
-            pool.write(pool.state(wholeIndex).moveWord(Y, y));
-            pool.write(pool.state(wholeIndex).moveByte(ID, CdExplosion.OBJECT_ID));
+            originalDelete(wholeIndex);                                // DeleteObject: all $40 bytes.
+            originalWrite(pool.state(wholeIndex).moveWord(X, x));            // Restore only integer words.
+            originalWrite(pool.state(wholeIndex).moveWord(Y, y));
+            originalWrite(pool.state(wholeIndex).moveByte(ID, CdExplosion.OBJECT_ID));
             // TST.B oSprFlags reads the CLEARED byte, so BPL skips PlayFMSound even if entry bit 7 was set.
             effects.add(new ExplosionConversion(x, y));
             return new Result(pool.state(wholeIndex), effects);           // ADDQ.L #4,SP skips the caller body.
@@ -291,14 +318,16 @@ public final class CdPataBata {
         try {
             animate(wholeIndex);
         } catch (RuntimeException cause) {
+            if(originalPrimitives!=null)throw cause;
             throw boundary(UnsupportedBoundary.ANIMATE_OBJECT, wholeIndex, effects, cause);
         }
         effects.add(new CallReturned(NativeCall.ANIMATE_OBJECT));
         try {
             pendingDrawCut=pool.capture();pendingDrawIdentity=pool.state(wholeIndex).identity();
-            try{drawObject.drawObject(pool,pendingDrawIdentity);}
+            try{if(originalPrimitives==null)drawObject.drawObject(pool,pendingDrawIdentity);else originalPrimitives.draw(()->drawObject.drawObject(pool,pendingDrawIdentity));}
             finally{pendingDrawIdentity=null;pendingDrawCut=null;}
         } catch (RuntimeException cause) {
+            if(originalPrimitives!=null)throw cause;
             throw boundary(UnsupportedBoundary.DRAW_OBJECT, wholeIndex, effects, cause);
         }
         effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
@@ -306,6 +335,7 @@ public final class CdPataBata {
             // Pata-Bata/Main.asm:79 reads oVar2A AFTER DrawObject; never reuse the earlier state.
             checkObjDespawn2(pool.state(wholeIndex), globals, effects);
         } catch (RuntimeException cause) {
+            if(originalPrimitives!=null)throw cause;
             throw boundary(UnsupportedBoundary.CHECK_OBJ_DESPAWN2, wholeIndex, effects, cause);
         }
         effects.add(new CallReturned(NativeCall.CHECK_OBJ_DESPAWN2));
@@ -323,7 +353,7 @@ public final class CdPataBata {
                 .moveByte(X_RADIUS, 0x10).moveByte(WIDTH, 0x10).moveByte(Y_RADIUS, 0x10)
                 .moveWord(PATA_BATA_ANCHOR_X, state.centreX())
                 .moveLong(PATA_BATA_ANCHOR_Y, (state.centreY() << 16) | 0x8000);
-        pool.write(state);                                                // All native writes BEFORE SetObjectTileID.
+        originalWrite(state);                                                // All native writes BEFORE SetObjectTileID.
         int tile;
         try {
             // SetObjectTileID (Object Tile ID Set.asm:7-16): MOVEQ #1; signed relative word,
@@ -335,17 +365,18 @@ public final class CdPataBata {
             }
             tile = assets.objectTileIds().unsignedWord(selected);
         } catch (RuntimeException cause) {
+            if(originalPrimitives!=null)throw cause;
             throw boundary(UnsupportedBoundary.SET_OBJECT_TILE_ID, wholeIndex, effects, cause);
         }
         state = state.moveWord(TILE, tile);
-        pool.write(state);
+        originalWrite(state);
         boolean damaged = state.subtype() != 0;
         state = state.moveLong(PATA_BATA_X_DELTA, damaged ? -0x4000 : -0x8000)
                 .moveWord(PATA_BATA_PHASE_SPEED, damaged ? -0x100 : -0x200)
                 .moveWord(PATA_BATA_SHIFT, damaged ? 4 : 3)
                 .moveByte(ANIMATION, damaged ? 1 : 0)
                 .moveLong(MAPPINGS, damaged ? assets.damagedMappingsAddress() : assets.normalMappingsAddress());
-        pool.write(state);
+        originalWrite(state);
     }
 
     /** Pata-Bata/Main.asm:48-75; all word/long operations retain their shipped wrapping width. */
@@ -354,21 +385,21 @@ public final class CdPataBata {
         var state = pool.state(wholeIndex);
         int delta = state.longBits(PATA_BATA_X_DELTA);                      // MOVE.L oVar30,d0, including HIGH word.
         state = state.addLong(X_POSITION, delta);                         // ADD.L, not velocity integration.
-        pool.write(state);
+        originalWrite(state);
         int absolute = (state.centreX() - state.word(PATA_BATA_ANCHOR_X)) & 0xFFFF;
         if ((short) absolute < 0) { absolute = (-absolute) & 0xFFFF; }     // BPL / NEG.W: $8000 remains negative.
         if ((short) absolute >= 0x80) {                                   // CMPI.W / BLT is signed.
             delta = -delta;
             state = state.moveLong(PATA_BATA_X_DELTA, delta);              // NEG.L, then reload FULL reversed d0.
-            pool.write(state);
+            originalWrite(state);
             state = state.addLong(X_POSITION, delta);                     // Second add, ONCE; no Mosqui retry loop.
-            pool.write(state);
+            originalWrite(state);
             state = state.moveByte(SPRITE_FLAGS, state.spriteFlags() ^ 1)
                     .moveByte(FLAGS, state.flags() ^ 1).moveWord(PATA_BATA_PHASE, 0);
-            pool.write(state);
+            originalWrite(state);
         }
         state = state.addWord(PATA_BATA_PHASE, state.signedWord(PATA_BATA_PHASE_SPEED));
-        pool.write(state);
+        originalWrite(state);
         int angle = state.word(PATA_BATA_PHASE) >>> 8;                     // MOVE.B oVar34 reads BIG-ENDIAN HIGH byte.
         int sine = assets.math().calcSine(angle).sine();
         // D0 trace: initial/reversed MOVE.L delta; MOVE.W X/SUB.W/NEG.W, MOVE.W speed, MOVE.B phase;
@@ -378,13 +409,14 @@ public final class CdPataBata {
         int count = state.word(PATA_BATA_SHIFT) & 63;                      // 68000 register count, NOT Java mod 32.
         int shifted = count >= 32 ? swapped >> 31 : swapped >> count;     // Count zero retains all bits.
         state = state.moveLong(Y_POSITION, state.longBits(PATA_BATA_ANCHOR_Y) + shifted);
-        pool.write(state);
+        originalWrite(state);
     }
 
     /** One shared Ani_PataBata (Main.asm:76-77,84-85); subtype never substitutes an animation table. */
     private void animate(int wholeIndex) {
         var pool = runtime.pool();
         var s = pool.state(wholeIndex);
+        if(originalPrimitives!=null){originalPrimitives.animate(assets.animations());return;}
         CdObjectAnimation.State out;
         try {
             out = CdObjectAnimation.step(new CdObjectAnimation.State(
@@ -398,7 +430,7 @@ public final class CdPataBata {
             catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
             throw original;
         }
-        pool.write(s.moveByte(ANIMATION, out.animationId()).moveByte(PREVIOUS_ANIMATION, out.previousId())
+        originalWrite(s.moveByte(ANIMATION, out.animationId()).moveByte(PREVIOUS_ANIMATION, out.previousId())
                 .moveByte(ANIMATION_FRAME, out.scriptIndex()).moveByte(ANIMATION_TIME, out.timer())
                 .moveByte(MAP_FRAME, out.mapFrame()).moveByte(SPRITE_FLAGS, out.spriteFlags())
                 .moveByte(FLAGS, out.statusFlags()).moveByte(ROUTINE, out.routine()).moveByte(ROUTINE_2, out.routine2()));
@@ -411,21 +443,21 @@ public final class CdPataBata {
         var state=original;int animation=state.unsignedByte(ANIMATION);
         if (animation!=state.unsignedByte(PREVIOUS_ANIMATION))
             state=state.moveByte(PREVIOUS_ANIMATION,animation).moveByte(ANIMATION_FRAME,0).moveByte(ANIMATION_TIME,0);
-        state=state.addByte(ANIMATION_TIME,-1);pool.write(state);
+        state=state.addByte(ANIMATION_TIME,-1);originalWrite(state);
         if (state.signedByte(ANIMATION_TIME)>=0) return;
         var table=assets.animations();var bytes=table.bytes();
         if (animation>=table.scriptCount()) return;
         long script=(long)table.tableOffset()+(short)bytes.unsignedWord(table.tableOffset()+2*animation);
         int speed=animationPrefixByte(bytes,script);if(speed<0)return;
-        state=state.moveByte(ANIMATION_TIME,speed);pool.write(state);
+        state=state.moveByte(ANIMATION_TIME,speed);originalWrite(state);
         int index=state.unsignedByte(ANIMATION_FRAME),frame=animationPrefixByte(bytes,script+1+index);
         if(frame<0)return;
         if(frame==0xFF) {
-            state=state.moveByte(ANIMATION_FRAME,0);pool.write(state);
+            state=state.moveByte(ANIMATION_FRAME,0);originalWrite(state);
             animationPrefixByte(bytes,script+1);
         } else if(frame==0xFE) {
             int back=animationPrefixByte(bytes,script+2+index);if(back<0)return;
-            index=(index-back)&255;state=state.moveByte(ANIMATION_FRAME,index);pool.write(state);
+            index=(index-back)&255;state=state.moveByte(ANIMATION_FRAME,index);originalWrite(state);
             animationPrefixByte(bytes,script+1+index);
         } else if(frame==0xFD) {
             animationPrefixByte(bytes,script+2+index);
@@ -462,10 +494,13 @@ public final class CdPataBata {
                 if (period < 0) { period = 0; }
                 else if (period >= 3) { period = 2; }
             }
-            runtime.bclrSavedFlag(savedId, period, CdObjectPlacementRuntime.SavedBit.LOADED);
+            if(originalPrimitives==null)runtime.bclrSavedFlag(savedId, period, CdObjectPlacementRuntime.SavedBit.LOADED);else originalPrimitives.saved(savedId,period);
         }
-        runtime.pool().deleteObject(state.identity().wholeIndex());
-        effects.add(new Despawn(entry, savedId, period));
+        originalDelete(state.identity().wholeIndex());
+        // The original primitive retains the raw linear address. This legacy completed-work
+        // descriptor names its canonical bank cell only; it never publishes or replays a clear.
+        if(originalPrimitives!=null&&savedId!=0){int cell=3*savedId+period;effects.add(new Despawn(entry,cell/3,cell%3));}
+        else effects.add(new Despawn(entry, savedId, period));
     }
 
     private static UnsupportedPataBata boundary(UnsupportedBoundary boundary, int wholeIndex,

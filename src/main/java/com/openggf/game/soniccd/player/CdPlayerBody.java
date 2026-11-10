@@ -229,7 +229,7 @@ public final class CdPlayerBody {
      */
     public enum NativeCall {
         CHARGE_BEFORE_DISPATCH, INIT, EXTENDED_CAMERA, WATERFALL_SPLASH_CHECK, MODE,
-        PP_SPECIAL_COLLISION, DISPLAY, RECORD_POSITION, PP_WATER, ANIMATE, SPECIAL_CHUNKS,
+        PP_SPECIAL_COLLISION, R4_SPECIAL_COLLISION, R4_WATER, DISPLAY, RECORD_POSITION, PP_WATER, ANIMATE, SPECIAL_CHUNKS,
         OBJ_MOVE, HURT_CHECK_LAND, LEVEL_COLLISION_IN_AIR, KILL_PLAYER, LEVEL_BOUND, DRAW_OBJECT,
         DEAD_CHECK_GONE, FIND_OBJ_SLOT, OBJ_MOVE_GRAVITY, STOP_Z80, START_Z80, TIME_WARP,
         R3_SPECIAL_BLOCK_COLLISION, R3_WATER_RETURN, R3_SPECIAL_CHUNKS_RETURN
@@ -474,9 +474,10 @@ public final class CdPlayerBody {
         HISTORY_ADDRESS, TOUCH_SCAN, ROLL_TUNNEL_OWNER, STANDING_OBJECT_MOVE,
         TIME_WARP_TIMER_START, TIME_WARP_RESTART_WRITE, TIME_WARP_SPAWN_MODE, TIME_WARP_STAR_SLOT,
         TIME_WARP_SLOW_RESET, TIME_WARP_STOP_RESET, LEVEL_MUSIC_GOOD_FUTURE, R3_CONTINUATION_OWNER,
-        R3_TIME_WARP_OWNER, R3_KILL_OWNER, R3_BLOCK_WORD_OWNER, R3_CHUNK_WRITE_OWNER, R3_MINIATURE_OWNER
+        R3_TIME_WARP_OWNER, R3_KILL_OWNER, R3_BLOCK_WORD_OWNER, R3_CHUNK_WRITE_OWNER, R3_MINIATURE_OWNER,
+        R4_RUNTIME_OWNER
     }
-    /** No staged state or effects escape. */
+    /** Pure calls expose no staged state/effects; current-port calls retain actual published prefixes. */
     public static final class UnsupportedBody extends UnsupportedOperationException {
         private final UnsupportedBoundary boundary;
         private UnsupportedBody(UnsupportedBoundary boundary) {
@@ -519,6 +520,7 @@ public final class CdPlayerBody {
     private final int mappingAddress;
     // BEGIN R31 component source relation only; no Frame/World invocation owner.
     private final CdStagePlayerSource sourceBinding;
+    private final CdPlayerSemanticRuntime originalRuntime;
     // END R31 component source relation.
 
     /** Production binding borrows the supplied products. Authentication remains the asset loader's responsibility. */
@@ -531,21 +533,51 @@ public final class CdPlayerBody {
         movement = new CdPlayerMovement(terrain, player); animator = new CdPlayerAnimation(player);
         layout = terrain.layout().ram(); variant = assets.profile().variant(); ordinaryPeriod = 1;
         ordinaryZoneAct = 0;
-        sourceBinding = null;
+        sourceBinding = null; originalRuntime = null;
     }
 
     private CdPlayerBody(CdStagePlayerSource source, CdPlayerMovement movement) {
+        this(source,movement,null);
+    }
+    private CdPlayerBody(CdStagePlayerSource source, CdPlayerMovement movement, CdPlayerSemanticRuntime runtime) {
         player = source.player(); sonic = source.sonic(); layout = source.terrain().layout().ram();
         mappingAddress = source.mappingAddress(); variant = source.variant(); ordinaryPeriod = source.ordinaryPeriod();
-        ordinaryZoneAct = player.sourceGraph() == CdR11aPlayerAssets.SourceGraph.R3
+        ordinaryZoneAct = player.sourceGraph() == CdR11aPlayerAssets.SourceGraph.R4
+                ? source.nativeZoneActWord() : player.sourceGraph() == CdR11aPlayerAssets.SourceGraph.R3
                 ? source.ordinaryZoneActWord() : source.stage().actNumber() - 1;
         this.movement = movement; animator = new CdPlayerAnimation(player);
-        sourceBinding = source;
+        sourceBinding = source; originalRuntime = runtime;
+    }
+
+    /** Loading-only DATA component. Init is available; ordinary R4 service remains rejected. */
+    public static CdPlayerBody forOriginalLoading(CdStagePlayerSource source) {
+        Objects.requireNonNull(source,"actual loading source");
+        if(source.player().sourceGraph()!=CdR11aPlayerAssets.SourceGraph.R4)return fromStageSource(source);
+        return new CdPlayerBody(source,CdPlayerMovement.forOriginalLoading(source));
+    }
+    /** Separate explicit current-port binding; public DATA alone cannot execute original service. */
+    public static CdPlayerBody fromOriginalProgramme(CdStagePlayerSource source,CdPlayerSemanticRuntime runtime) {
+        Objects.requireNonNull(runtime,"actual current runtime ports").requireSource(source);
+        return new CdPlayerBody(source,CdPlayerMovement.fromOriginalProgramme(source,runtime),runtime);
+    }
+    public void runOriginalProgramme() {
+        if(originalRuntime==null)unsupported(UnsupportedBoundary.R4_RUNTIME_OWNER);
+        originalRuntime.run(this);
+    }
+    void runOriginalProgramme(CdPlayerSemanticRuntime.Call call) {
+        if(originalRuntime==null)unsupported(UnsupportedBoundary.R4_RUNTIME_OWNER);
+        call.requireCurrent(originalRuntime);
+        var result=stepShared(call.state(),call.environment(),Optional.empty(),Optional.empty(),Optional.empty(),
+                Optional.empty(),Optional.empty(),false,call);
+        call.publish(result.state(),result.environment());
+        call.completed(result.boundary(),result.display()); // Exact derived observation only; no Draw/effects replay.
     }
 
     /** Actual native act/period and immutable stage-data binding only; grants no Frame, invocation, load or touch-owner admission. */
     public static CdPlayerBody fromStageSource(CdStagePlayerSource source) {
         Objects.requireNonNull(source, "stage player source");
+        if(source.player().sourceGraph()==CdR11aPlayerAssets.SourceGraph.R4)
+            unsupported(UnsupportedBoundary.SOURCE_FAMILY); // TT DATA is not a Body/lifecycle grant.
         return new CdPlayerBody(source, CdPlayerMovement.fromStageSource(source));
     }
 
@@ -607,6 +639,28 @@ public final class CdPlayerBody {
                               Optional<LevelContext> levelContext,Optional<CdPlayerMovement.ObjectContext> objects,
                               Optional<TimeWarpContext> timeWarpContext,Optional<BossSpecialContext> bossSpecialContext,
                               boolean r31Lifecycle){
+        return stepShared(state,environment,touchContext,levelContext,objects,timeWarpContext,bossSpecialContext,r31Lifecycle,null);
+    }
+    /** Narrow actual R11 TimeWarp call site; no second Body or Movement algorithm. */
+    @FunctionalInterface public interface OriginalTimeWarpPort {
+        CdPlayerTimeWarp.Result run(State working,Environment environment,CdPlayerTimeWarp.Input input,CdPlayerTimeWarp.Context context);
+    }
+    public Result stepWithOriginalTimeWarp(State state,Environment environment,Optional<TouchContext> touchContext,
+            Optional<LevelContext> levelContext,Optional<CdPlayerMovement.ObjectContext> objects,
+            Optional<TimeWarpContext> timeWarpContext,Optional<BossSpecialContext> bossSpecialContext,OriginalTimeWarpPort original){
+        if(player.sourceGraph()!=CdR11aPlayerAssets.SourceGraph.PPZ)unsupported(UnsupportedBoundary.SOURCE_FAMILY);
+        return stepShared(state,environment,touchContext,levelContext,objects,timeWarpContext,bossSpecialContext,false,null,Objects.requireNonNull(original));
+    }
+    private Result stepShared(State state,Environment environment,Optional<TouchContext> touchContext,
+                              Optional<LevelContext> levelContext,Optional<CdPlayerMovement.ObjectContext> objects,
+                              Optional<TimeWarpContext> timeWarpContext,Optional<BossSpecialContext> bossSpecialContext,
+                              boolean r31Lifecycle,CdPlayerSemanticRuntime.Call live){
+        return stepShared(state,environment,touchContext,levelContext,objects,timeWarpContext,bossSpecialContext,r31Lifecycle,live,null);
+    }
+    private Result stepShared(State state,Environment environment,Optional<TouchContext> touchContext,
+                              Optional<LevelContext> levelContext,Optional<CdPlayerMovement.ObjectContext> objects,
+                              Optional<TimeWarpContext> timeWarpContext,Optional<BossSpecialContext> bossSpecialContext,
+                              boolean r31Lifecycle,CdPlayerSemanticRuntime.Call live,OriginalTimeWarpPort originalWarp){
         Objects.requireNonNull(state); Objects.requireNonNull(environment); Objects.requireNonNull(touchContext);
         Objects.requireNonNull(levelContext); Objects.requireNonNull(objects); Objects.requireNonNull(timeWarpContext);
         Objects.requireNonNull(bossSpecialContext);
@@ -630,21 +684,28 @@ public final class CdPlayerBody {
         // R3 Main/Hurt require actual PlayerCheckBlock/no-bumper/geometry/touch owners. Reject
         // before any staged predispatch prefix, including controlled Main; no PP RTS substitutes them.
         if (r3 && state.motion().routine() != 0 && !r31Lifecycle) unsupported(UnsupportedBoundary.R3_CONTINUATION_OWNER);
-        Cursor c = new Cursor(state, environment);
+        boolean r4=player.sourceGraph()==CdR11aPlayerAssets.SourceGraph.R4;
+        if(r4 && state.motion().routine()!=0 && live==null)unsupported(UnsupportedBoundary.R4_RUNTIME_OWNER);
+        Cursor c = new Cursor(state, environment);c.live=live;c.originalWarp=originalWarp;
+        try {
         c.applyCharge(CdPlayerCharge.beforeRoutineDispatch(c.chargeState())); // EXACTLY ONCE, using prior rolling bit.
         c.returned(NativeCall.CHARGE_BEFORE_DISPATCH);
         switch (c.motion.routine()) {
             case 0 -> { initialize(c); return c.finish(Boundary.INIT_RETURN); }
             case 2 -> { return c.finish(main(c, touchContext, objects, timeWarpContext, bossSpecialContext)); }
             case 4 -> { hurt(c, objects); return c.finish(Boundary.HURT_RETURN); } // Never samples touchContext.
-            case 6 -> { dead(c, level(levelContext, UnsupportedBoundary.DEAD_ROUTINE)); return c.finish(Boundary.DEAD_RETURN); }
+            case 6 -> { dead(c,live==null?level(levelContext,UnsupportedBoundary.DEAD_ROUTINE):null); return c.finish(Boundary.DEAD_RETURN); }
             case 8 -> {
-                restart(c, level(levelContext, UnsupportedBoundary.RESTART_ROUTINE));
+                restart(c,live==null?level(levelContext,UnsupportedBoundary.RESTART_ROUTINE):null);
                 return c.finish(Boundary.RESTART_RETURN); // No DrawObject, so no display and no MODE.
             }
             default -> unsupported(UnsupportedBoundary.ROUTINE_DISPATCH);
         }
         throw new AssertionError("Unsupported routine must throw");
+        }catch(RuntimeException|Error first){
+            if(live!=null)live.publishAlgorithmFailure(c.stateValue(),c.environmentValue(),first);
+            throw first;
+        }
     }
 
     // BEGIN R31 SOURCE-ORDERED PURE BODY COMPONENT 20261107.
@@ -910,20 +971,26 @@ public final class CdPlayerBody {
         // Capture the entry selector once; later touch/animation cannot change the semantic return.
         boolean controlled = (c.motion.playerControl() & 1) != 0;
         if (controlled) {
-            touchContext = controlledTimeWarp(c, touchContext, timeWarpContext);
+            if(c.live==null)touchContext=controlledTimeWarp(c,touchContext,timeWarpContext);
+            else {c.publish();c.live.timeWarp();c.refresh();}
             c.returned(NativeCall.TIME_WARP);
         } else {
             var input = new CdPlayerMovement.Input(c.controls.logicalHeld(), c.controls.logicalTap());
-            var moved = timeWarpContext.isPresent()
+            if(c.live!=null)c.publish();
+            var moved = c.live!=null ? movement.stepOriginalProgramme(c.motion,input,c.env.movement(),objects,c.live,
+                    (motion,environment)->{c.motion=motion;c.setMovementEnvironment(environment);c.publish();}) : timeWarpContext.isPresent()
                     ? movement.stepToTimeWarp(c.motion, input, c.env.movement(), objects)
                     : movement.step(c.motion, input, c.env.movement(), objects);
             c.motion = moved.state(); c.setMovementEnvironment(moved.environment());
             if (moved.boundary() == CdPlayerMovement.Boundary.TIME_WARP) {
                 for (var effect : moved.effects()) c.effects.add(new ModeEffect(effect));
-                touchContext = timeWarp(c, touchContext, timeWarpContext.orElseThrow());
+                if(c.live==null)touchContext=timeWarp(c,touchContext,timeWarpContext.orElseThrow());
+                else {c.publish();c.live.timeWarp();c.refresh();}
                 // Return to the originally selected MODE after its one ramp/TimeWarp prefix. The same
                 // latched logical Input/support cut reaches JumpHeight/CheckJump and later KillPlayer.
-                moved = movement.resumeAfterTimeWarp(moved, c.env.movement(), input, objects);
+                moved = c.live==null?movement.resumeAfterTimeWarp(moved,c.env.movement(),input,objects)
+                        :movement.resumeOriginalAfterTimeWarp(moved,c.env.movement(),input,objects,c.live,
+                            (motion,environment)->{c.motion=motion;c.setMovementEnvironment(environment);c.publish();});
                 c.motion = moved.state(); c.setMovementEnvironment(moved.environment());
             }
             boolean stopped = moved.boundary() == CdPlayerMovement.Boundary.KILL_PLAYER;
@@ -935,17 +1002,27 @@ public final class CdPlayerBody {
             if (stopped) {
                 // KillPlayer's RTS returns into the DISPATCHED MODE routine (701/727/748/767): only its unfinished
                 // tail runs, from the adopted actor; no dispatch, charge, ramp, slope, LevelBound or input repeats.
-                moved = movement.resumeAfterLevelBound(moved, c.motion, c.env.movement(), objects);
+                moved = c.live==null?movement.resumeAfterLevelBound(moved,c.motion,c.env.movement(),objects)
+                        :movement.resumeOriginalAfterLevelBound(moved,c.motion,c.env.movement(),objects,c.live,
+                            (motion,environment)->{c.motion=motion;c.setMovementEnvironment(environment);c.publish();});
                 c.motion = moved.state(); c.setMovementEnvironment(moved.environment());
                 for (var effect : moved.effects()) c.effects.add(new ModeEffect(effect));
             }
             c.modeBoundary = Optional.of(moved.boundary()); c.returned(NativeCall.MODE);
             // PP's actual Player Special Collision.asm:7-8 is RTS, not a shared collision fallback.
-            c.returned(NativeCall.PP_SPECIAL_COLLISION);
+            // R4's actual selected src/common/player_block_check.asm is RTS.
+            c.returned(c.live==null?NativeCall.PP_SPECIAL_COLLISION:NativeCall.R4_SPECIAL_COLLISION);
         }
         display(c); recordPosition(c);
-        // ObjSonic_Water (462-467): zone0 returns before any water write or service.
-        c.returned(NativeCall.PP_WATER);
+        if(c.live!=null) {
+            // N PlayerMain:315-319. Publish the REAL completed prefix once, call the live leaf,
+            // then continue THIS stack at angle-copy, using the actual post-water current image.
+            // No pure Result is returned across this mutable cut; failure cannot replay its prefix.
+            c.publish();c.live.water();c.refresh();c.returned(NativeCall.R4_WATER);
+        } else {
+            // Existing PP/R3 pure branch remains throw-atomic and nonreading.
+            c.returned(NativeCall.PP_WATER);
+        }
         var g = c.env.movement().globals();
         c.copyAngles(g.primaryAngle(), g.secondaryAngle()); // Main:330-331, AFTER MODE and water.
         if (c.env.movement().gates().windTunnel() != 0 && c.motion.animation() == 0) {
@@ -953,7 +1030,8 @@ public final class CdPlayerBody {
         }
         animate(c);
         if ((byte) c.motion.playerControl() >= 0 && c.motion.animation() != 0x2B) {
-            touch(c, touchContext, objects, bossSpecialContext);
+            if(c.live==null)touch(c, touchContext, objects, bossSpecialContext);
+            else {c.publish();c.live.collideObjects();c.refresh();}
         }
         specialChunks(c);
         return controlled ? Boundary.CONTROLLED_MAIN_RETURN : Boundary.MAIN_RETURN;
@@ -1017,9 +1095,10 @@ public final class CdPlayerBody {
             context = new CdPlayerTimeWarp.Context(context.spawnMode(), context.reserved(),
                     Optional.of(new CdPlayerTimeWarp.SaveContext(supplied.initial(), reads)), context.levelRestartWord());
         }
-        var warp = CdPlayerTimeWarp.step(new CdPlayerTimeWarp.Input(gates.zoneAct(), gates.timeZone(),
-                c.x(), c.motion.charge(), c.motion.groundVelocity() & 0xFFFF, gates.timeWarpDirection(),
-                c.timeWarpTimer, borrowed.contact().timeWarp()), context);
+        var input=new CdPlayerTimeWarp.Input(gates.zoneAct(),gates.timeZone(),c.x(),c.motion.charge(),
+                c.motion.groundVelocity()&0xFFFF,gates.timeWarpDirection(),c.timeWarpTimer,borrowed.contact().timeWarp());
+        var warp=c.originalWarp==null?CdPlayerTimeWarp.step(input,context)
+                :c.originalWarp.run(c.stateValue(),c.environmentValue(),input,context);
         c.timeWarpTimer = warp.state().timer();
         int period = warp.saveResult().map(CdPlayerTimeWarp.SaveResult::finalPeriodByte).orElse(gates.timeZone());
         c.setMovementEnvironment(new CdPlayerMovement.Environment(before.physics(), before.bounds(),
@@ -1148,12 +1227,15 @@ public final class CdPlayerBody {
      */
     private void hurt(Cursor c, Optional<CdPlayerMovement.ObjectContext> objects) {
         requireBoundMapping(c);
+        if(c.live!=null&&(c.motion.flags()&8)!=0){c.publish();objects=c.live.objects();}
         objMove(c, objects);
         // ADDI.W #$30 then underwater SUBI.W #$20 (2354-2357): two native word writes, no ObjMoveGrv fall cap.
-        c.setYVelocity((short) (c.motion.yVelocity() + 0x30));
-        if ((c.motion.flags() & 0x40) != 0) c.setYVelocity((short) (c.motion.yVelocity() - 0x20));
+        int gravity=c.live==null?0x30:CdR4PlayerWater.rules(c.motion.flags()).hurtGravity();
+        c.setYVelocity((short) (c.motion.yVelocity() + gravity));
+        if ((c.motion.flags() & 0x40) != 0) c.setYVelocity((short) (c.motion.yVelocity()
+                - (c.live==null?0x20:CdR4PlayerWater.rules(c.motion.flags()).hurtAfterGravitySubtract())));
         // PP's actual Player Special Collision.asm:7-8 is RTS, not a shared collision fallback.
-        c.returned(NativeCall.PP_SPECIAL_COLLISION);
+        c.returned(c.live==null?NativeCall.PP_SPECIAL_COLLISION:NativeCall.R4_SPECIAL_COLLISION);
         hurtCheckLand(c);
         levelBound(c);
         recordPosition(c);
@@ -1184,6 +1266,7 @@ public final class CdPlayerBody {
             c.setYVelocity(-0x38); // MOVE.W #-$38,oYVel (2416).
             c.setRoutine((c.motion.routine() + 2) & 0xFF); // ADDQ.B #2,oRoutine (2417).
             c.level(LevelField.UPDATE_HUD_TIME, 0); // CLR.B updateHUDTime (2419).
+            if(c.live!=null){c.publish();level=c.live.level();} // first actual level/ring read, after the earlier native stores
             int hudLives = (level.ring().updateHudLives() + 1) & 0xFF; // ADDQ.B wraps (2420).
             c.level(LevelField.UPDATE_HUD_LIVES, hudLives);
             int lives = (level.ring().lives() - 1) & 0xFF; // SUBQ.B #1,lives (2421).
@@ -1196,6 +1279,11 @@ public final class CdPlayerBody {
                 c.setResetTimer(60);
             } else {
                 // .LoadGameOver (2435-2444): the unchecked FindObjSlot answer gets oID $3B with no branch.
+                if(c.live!=null){
+                    c.publish();c.live.spawnGameOver(); // actual current full96, not snapshot-as-invocation
+                    c.setResetTimer(8*60);if(lives!=0)c.setResetTimer(60);
+                    c.returned(NativeCall.DEAD_CHECK_GONE);return;
+                }
                 var found = findObjSlot(level.snapshot());
                 c.returned(NativeCall.FIND_OBJ_SLOT);
                 allocation = Optional.of(new CdPlayerTouchResponse.FindObjSlot(found));
@@ -1232,13 +1320,16 @@ public final class CdPlayerBody {
         if (c.resetTimer == 0) return; // TST.W / BEQ.W .End (2454-2455).
         c.setResetTimer(uw(c.resetTimer - 1)); // SUBQ.W #1 (2456).
         if (c.resetTimer != 0) return; // BNE.W .End (2457).
-        var level = context.level();
         c.level(LevelField.LEVEL_RESTART, 1); // MOVE.W #1,levelRestart (2459).
         c.returned(NativeCall.STOP_Z80); // JSR StopZ80 (2461).
+        if(c.live!=null){c.publish();c.live.restartSoundFlag();}
         c.effects.add(new Z80RamWrite(0x1C3E, 1)); // MOVE.B #1,Z80RAM+$1C3E (2462).
         c.returned(NativeCall.START_Z80); // JSR StartZ80 (2463).
+        if(c.live!=null){c.publish();c.live.resetSavedObjectFlags();}
         c.effects.add(new ResetSavedObjectFlagsRequest()); // BSR.W ResetSavedObjFlags (2465).
         c.level(LevelField.FLOWER_COUNT_LONG, 0); // CLR.L flowerCount, including fadeEnableDisplay (2466).
+        if(c.live!=null){c.publish();context=c.live.level();} // first actual checkpoint/flow read
+        var level=context.level();
         int timeZone = c.env.movement().gates().timeZone(), plc = level.plcLoadFlags(), spawn = level.spawnMode();
         if (level.checkpoint() == 0 && timeZone == 1) { // TST.B checkpoint, CMPI.B #1,timeZone (2468-2471).
             plc &= ~2; c.level(LevelField.PLC_LOAD_FLAGS, plc); // BCLR #1 always stores the byte (2472).
@@ -1295,7 +1386,9 @@ public final class CdPlayerBody {
         if (uw(c.env.movement().bounds().bottom() + 224) < c.y()) {
             killPlayer(c);
         } else {
-            var collided = movement.collideInAir(c.motion, c.env.movement()); // BSR.W Player_LevelColInAir (2378).
+            var collided = c.live==null?movement.collideInAir(c.motion,c.env.movement())
+                    :movement.collideInAirOriginal(c.motion,c.env.movement(),c.live,
+                        (motion,environment)->{c.motion=motion;c.setMovementEnvironment(environment);c.publish();});
             c.motion = collided.state(); c.setMovementEnvironment(collided.environment());
             for (var effect : collided.effects()) c.effects.add(new AirCollisionEffect(effect));
             c.returned(NativeCall.LEVEL_COLLISION_IN_AIR);
@@ -1325,8 +1418,14 @@ public final class CdPlayerBody {
      */
     private static void killPlayer(Cursor c) {
         var e = c.env.movement();
-        var result = CdPlayerTouchResponse.killPlayer(c.responseActor(), c.invincible, c.debugMode,
-                e.globals().scoreChain(), e.gates().miniSonic());
+        var result = c.live==null
+                ?CdPlayerTouchResponse.killPlayer(c.responseActor(),c.invincible,c.debugMode,e.globals().scoreChain(),e.gates().miniSonic())
+                :CdPlayerTouchResponse.visitKillPlayer(c.responseActor(),c.invincible,c.debugMode,e.globals().scoreChain(),e.gates().miniSonic(),c.live,step->{
+                    step.claim(c.live);c.adopt(step.actor());c.invincible=step.invincible();c.setScoreChain(step.scoreChain());
+                    c.publish(); // Exact reached reset/death prefix BEFORE the actual sound call.
+                    int sound=switch(step.sound()){case FM_CHARGESTOP->0xAB;case FM_HURT->0x93;default->throw new IllegalStateException("Unreviewed KillPlayer sound");};
+                    c.live.sound(sound);
+                });
         c.adopt(result.actor()); c.invincible = result.invincible(); c.setScoreChain(result.scoreChain());
         c.effects.add(new KillPlayerCall(result)); c.returned(NativeCall.KILL_PLAYER);
     }
@@ -1336,6 +1435,7 @@ public final class CdPlayerBody {
         c.displayEligible = true;
         c.effects.add(new DisplayEligibility(true, c.x(), c.y(), c.motion.yRadius(), c.motion.spriteFlags(),
                 c.header.width(), c.header.priority()));
+        if(c.live!=null){c.publish();c.live.draw();c.refresh();}
         c.returned(NativeCall.DRAW_OBJECT);
     }
 
@@ -1361,6 +1461,9 @@ public final class CdPlayerBody {
 
     /** MakeWaterfallSplash/GetChunkAtPos (161-224). Only this helper masks the returned raw byte to $7F. */
     private void waterfall(Cursor c) {
+        if(player.sourceGraph()==CdR11aPlayerAssets.SourceGraph.R4 && (ordinaryZoneAct>>>8)!=0){
+            c.returned(NativeCall.WATERFALL_SPLASH_CHECK);return; // N PlayerMakeSplash:171-173.
+        }
         if ((c.levelFrames & 1) == 0) {
             int y = uw(c.y() + (byte) c.motion.yRadius());
             int chunk = rawChunk(c.x(), y) & 0x7F;
@@ -1383,6 +1486,7 @@ public final class CdPlayerBody {
         c.displayEligible = eligible;
         c.effects.add(new DisplayEligibility(eligible, c.x(), c.y(), c.motion.yRadius(), c.motion.spriteFlags(),
                 c.header.width(), c.header.priority()));
+        if(c.live!=null && eligible){c.publish();c.live.draw();c.refresh();}
         if (c.invincible != 0 && c.invincibilityTimer != 0) {
             c.invincibilityTimer = uw(c.invincibilityTimer - 1); c.actor(ActorField.INVINCIBILITY_TIMER, c.invincibilityTimer);
             if (c.invincibilityTimer == 0) {
@@ -1403,6 +1507,10 @@ public final class CdPlayerBody {
 
     /** Display expiry: raw Past fade, then the PP row of PlayLevelMusic's masked-period table. */
     private static void restoreLevelMusic(Cursor c) {
+        if(c.live!=null){
+            if(c.env.movement().gates().timeZone()==0)c.sound(Sound.SCMD_FADECDA);
+            c.publish();c.live.stageMusic();return; // actual selected PlayStageMusic, never PP row.
+        }
         // BEGIN actual R31 UpdatePowerups PlayStageMusic request, kept separate from touch and PPZ table choice.
         if(c.r31Planning!=null){c.effects.add(new R31MusicRequest(c.env.movement().gates().zoneAct(),c.env.movement().gates().timeZone(),c.timeAttack));return;}
         // END actual R31 UpdatePowerups PlayStageMusic request.
@@ -1451,14 +1559,16 @@ public final class CdPlayerBody {
     /** ObjSonic_SpecialChunks (2500-2603), PP branch; compare RAW bytes, X byte is big-endian oX high. */
     private void specialChunks(Cursor c) {
         int raw = rawChunk(c.x(), c.y()); var ids = player.specialChunks();
-        boolean tunnel = raw == ids.unsignedByte(2) ? (c.y() & 0xFF) >= 0x90 : raw == ids.unsignedByte(3);
+        boolean tunnel = raw == ids.unsignedByte(2)
+                ? (player.sourceGraph()==CdR11aPlayerAssets.SourceGraph.R4 || (c.y() & 0xFF)>=0x90)
+                : raw == ids.unsignedByte(3);
         if (tunnel) {
             // Reuse StartRoll only where its admitted contract matches the source call.
             if ((c.motion.flags() & 2) != 0 || (c.motion.playerControl() & 3) != 0
                     || c.env.movement().gates().miniSonic() != 0) unsupported(UnsupportedBoundary.ROLL_TUNNEL_OWNER);
             if (variant != CdReleaseVariant.USA && (c.motion.flags() & 4) == 0) c.sound(Sound.FM_9C);
-            c.applyCharge(CdPlayerCharge.startRoll(c.chargeState(), new CdPlayerCharge.Body(c.motion.routine(),
-                    c.motion.playerControl(), c.env.movement().gates().miniSonic())));
+            var body=new CdPlayerCharge.Body(c.motion.routine(),c.motion.playerControl(),c.env.movement().gates().miniSonic());
+            c.publish();c.applyCharge(c.live==null?CdPlayerCharge.startRoll(c.chargeState(),body):c.live.startRoll(c.chargeState(),body));
         } else if (raw == ids.unsignedByte(0)) {
             loopPath(c);
         } else if (raw == ids.unsignedByte(1)) {
@@ -1486,6 +1596,7 @@ public final class CdPlayerBody {
 
     /** Detached per-call staging. Never retained by this owner or exposed on failure. */
     private static final class Cursor {
+        OriginalTimeWarpPort originalWarp;
         CdPlayerMotionState motion;
         AnimationCursor animation;
         Header header;
@@ -1498,6 +1609,20 @@ public final class CdPlayerBody {
         private final int rotationAngle;
         boolean displayEligible;
         private R31Planning r31Planning;
+        private CdPlayerSemanticRuntime.Call live;
+        void publish(){if(live!=null)live.publish(stateValue(),environmentValue());}
+        void refresh(){
+            var s=live.state();var e=live.environment();var g=e.globals();
+            // Water/touch may change actual actor/physics; clocks and complete caller ingress remain owned.
+            if(g.levelFrames()!=levelFrames||g.timeAttackMode()!=timeAttack||g.debugMode()!=debugMode
+                    ||g.debugCheat()!=debugCheat||g.bossMusic()!=bossMusic
+                    ||s.rotationAngle()!=rotationAngle||!s.objectLinks().equals(objectLinks)){
+                live.rejectCurrent();throw new IllegalStateException("Leaf changed an unowned Body ingress field");
+            }
+            motion=s.motion();animation=s.animation();header=s.header();history=s.history();rotationDistance=s.rotationDistance();
+            hurt=s.timers().hurt();invincibilityTimer=s.timers().invincibility();shoesTimer=s.timers().speedShoes();resetTimer=s.timers().reset();
+            env=e;controls=e.controls();camX=g.cameraXCentre();timeWarpTimer=g.timeWarpTimer();invincible=g.invincible();
+        }
         Optional<CdPlayerMovement.Boundary> modeBoundary = Optional.empty();
         final List<Effect> effects = new ArrayList<>();
         Cursor(State state, Environment environment) {
@@ -1515,8 +1640,18 @@ public final class CdPlayerBody {
         void actor(ActorField field, int value) { effects.add(new ActorWrite(field, value)); }
         void global(GlobalField field, int value) { effects.add(new GlobalWrite(field, value)); }
         void returned(NativeCall call) { effects.add(new CallReturned(call)); }
-        void sound(Sound sound) { effects.add(new SoundRequest(sound)); }
-        void level(LevelField field, int value) { effects.add(new LevelWrite(field, value)); }
+        void sound(Sound sound) {
+            if(live!=null){
+                int id=switch(sound){case FM_9C->0x9C;case SCMD_FADECDA->0xE;
+                    default->throw new IllegalStateException("R4 must use actual stage music owner");};
+                publish();live.sound(id);
+            }
+            effects.add(new SoundRequest(sound));
+        }
+        void level(LevelField field, int value) {
+            if(live!=null){publish();live.level(field,value);}
+            effects.add(new LevelWrite(field,value));
+        }
         /** oPlayerReset ($3A word): staged once in the cursor, each native write logged. */
         void setResetTimer(int value) { resetTimer = value; actor(ActorField.RESET_TIMER, value); }
         void setMovementEnvironment(CdPlayerMovement.Environment movement) {

@@ -391,6 +391,26 @@ public final class CdSpring {
         var body=new CdSpring(runtime,new SourceProfile(objects.springAssets()),math,solid,c->{throw new IllegalStateException("Original prefix Solid required");},c->{throw new IllegalStateException("Original launch required");},(p,id)->{throw new IllegalStateException("Original Draw required");},sound->{throw new IllegalStateException("Original FM required");},true);
         body.livePorts=Objects.requireNonNull(ports);body.observer=Objects.requireNonNull(observer);body.receiptGuard=Objects.requireNonNull(guard);return body;
     }
+    /** Original Present DATA only. Reuses the existing live Spring programme, animation prefix and ports. */
+    public static CdSpring fromOriginalPresentAssets(CdObjectPlacementRuntime runtime,
+            com.openggf.game.soniccd.level.CdR11aAssets source,CdPlayerMath math,CdSolidObject solid,
+            LivePorts ports,NativeObserver observer,ReceiptGuard guard) throws java.io.IOException {
+        CdOriginalPresentObjectSource.require(runtime,source);
+        var body=new CdSpring(runtime,Assets.fromObjectAssets(source.openingObjects()),math,solid,
+                c->{throw new IllegalStateException("Original Solid required");},c->{throw new IllegalStateException("Original launch required");},
+                (p,id)->{throw new IllegalStateException("Original Draw required");},v->{throw new IllegalStateException("Original FM required");});
+        body.livePorts=Objects.requireNonNull(ports);body.observer=Objects.requireNonNull(observer);body.receiptGuard=Objects.requireNonNull(guard);return body;
+    }
+    /** Actual original programme DATA and this exact placement; same shared native body/ports. */
+    public static CdSpring fromProgrammeSource(CdObjectPlacementRuntime runtime,
+            com.openggf.game.soniccd.level.CdProgrammeObjectSource source,CdPlayerMath math,CdSolidObject solid,
+            LivePorts ports,NativeObserver observer,ReceiptGuard guard){
+        Objects.requireNonNull(source).requirePlacement(runtime);
+        var body=new CdSpring(runtime,new SourceProfile(source.springProfile()),math,solid,
+                c->{throw new IllegalStateException("Original Solid required");},c->{throw new IllegalStateException("Original launch required");},
+                (p,id)->{throw new IllegalStateException("Original Draw required");},v->{throw new IllegalStateException("Original FM required");},true);
+        body.livePorts=Objects.requireNonNull(ports);body.observer=Objects.requireNonNull(observer);body.receiptGuard=Objects.requireNonNull(guard);return body;
+    }
     private int original(Cursor c,Site site,CdObjectState output,Object payload,IntSupplier action){
         if(pending!=null)throw new IllegalStateException("Nested original Spring call");
         var call=new OriginalCall(this,++ordinal,site,runtime.capture(),c.pool.state(c.wholeIndex),output,payload);pending=call;

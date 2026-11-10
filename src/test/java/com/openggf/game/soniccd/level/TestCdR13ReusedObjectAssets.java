@@ -25,7 +25,7 @@ MAP_SPR_POWERUP 3c404 3c602 274 d79b2da45d7a63478f2f38d9288704bea375982e1d35d8aa
         var f=TestCdR13FutureAssets.retail();assertEquals(11,CdR13ReusedObjectAssets.View.values().length);
         for(var a:f.all()){var o=CdR13ObjectAssets.fromAssets(a);var r=CdR13ReusedObjectAssets.fromAssets(a,o);assertTrue(r.ownsAssets(a,o));
             for(var row:MANIFEST.strip().split("\n")){var cells=row.strip().split(" ");var v=CdR13ReusedObjectAssets.View.valueOf(cells[0]);var range=v.range(a.identity().file());assertEquals(Integer.parseInt(cells[a.identity().file()==CdNativeFile.R13C?1:2],16),range.fileOffset());assertEquals(Integer.parseInt(cells[3]),range.length());assertEquals(cells[4],v.sha256(a.identity().file()));assertEquals(cells[4],TestCdR13FutureAssets.hash(r.view(v).copy()));assertArrayEquals(f.image(a.identity().file()).readFile(range.fileOffset(),range.length()),r.view(v).copy());assertSame(r.view(v),r.view(v));}
-            assertEquals(25,CdR13ObjectAssets.View.values().length);assertEquals(29,CdR13FutureAssets.Asset.values().length);assertEquals(19,CdR13SectionSources.SourceId.values().length);}
+            assertEquals(27,CdR13ObjectAssets.View.values().length);assertEquals(29,CdR13FutureAssets.Asset.values().length);assertEquals(19,CdR13SectionSources.SourceId.values().length);}
     }
     @Test void actualInitAndLeaOperandsSelectLiveCopiesRatherThanEqualDormantTables()throws Exception {
         var f=TestCdR13FutureAssets.retail();for(var a:f.all()){var image=f.image(a.identity().file());boolean c=a.identity().file()==CdNativeFile.R13C;int d=c?0:24;

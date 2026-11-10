@@ -844,8 +844,8 @@ public final class CdSolidObject {
                                  CdObjectPool.Snapshot callCut) {
         Objects.requireNonNull(entry, "entry");
         if (entry != Entry.SOLID_OBJECT && entry != Entry.TOP_SOLID_OBJECT
-                && entry != Entry.BTM_SOLID_OBJECT && entry != Entry.GET_OFF_OBJECT) {
-            throw new IllegalArgumentException("Native prefixes support only SolidObject, TopSolidObject, BtmSolidObject and GetOffObject");
+                && entry != Entry.BTM_SOLID_OBJECT && entry != Entry.GET_OFF_OBJECT && entry != Entry.STAND_ON_OBJECT) {
+            throw new IllegalArgumentException("Native prefixes support SolidObject, TopSolidObject, BtmSolidObject, GetOffObject and StandOnObject");
         }
         Objects.requireNonNull(object, "object"); Objects.requireNonNull(player, "player");
         Objects.requireNonNull(gates, "gates"); Objects.requireNonNull(globals, "globals");
@@ -859,6 +859,8 @@ public final class CdSolidObject {
                 c.objectByte(ByteField.SOLID_TYPE, 1); solidObject(c);
             } else if (entry == Entry.BTM_SOLID_OBJECT) {
                 c.objectByte(ByteField.SOLID_TYPE, 2); solidObject(c); // BtmSolidObject:160-161, same native cursor.
+            } else if (entry == Entry.STAND_ON_OBJECT) {
+                standOnObject(c); c.routineReturn();
             } else {
                 getOffObject(c); c.routineReturn();
             }

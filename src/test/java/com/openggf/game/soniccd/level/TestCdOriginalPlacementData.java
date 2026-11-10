@@ -86,7 +86,10 @@ class TestCdOriginalPlacementData {
         doReturn(CdProgrammeDefinition.select(CdStagePayload.R73D.stage())).when(r).definition();assertThrows(IllegalArgumentException.class,r::placements);
         doReturn(own).when(r).definition();var reached=new AssertionError("first placement source unavailable");doThrow(reached).when(r).view(key);
         assertSame(reached,assertThrows(AssertionError.class,r::placements));doReturn(bytes).when(r).view(key);var success=r.placements();clearInvocations(r);assertSame(success,r.placements());verify(r,never()).view(any());
-        var unavailable=spy(CdProgrammeReader.open(media(),CdStagePayload.R73C.stage()));doReturn(CdProgrammeDefinition.select(CdStagePayload.R41A.stage())).when(unavailable).definition();clearInvocations(unavailable);
+        // TT now has a real placement binding; keep the absent-profile nonread control explicit.
+        var unavailable=spy(CdProgrammeReader.open(media(),CdStagePayload.R73C.stage()));
+        var absent=mock(CdProgrammeDefinition.class);when(absent.placements()).thenReturn(Optional.empty());
+        doReturn(absent).when(unavailable).definition();clearInvocations(unavailable);
         assertEquals("No authenticated original placement profile",assertThrows(UnsupportedOperationException.class,unavailable::placements).getMessage());verify(unavailable,never()).view(any());
     }
     @Test void publicEqualValuesAndWrongImageNeverCreateAnAuthenticatedSource()throws Exception {

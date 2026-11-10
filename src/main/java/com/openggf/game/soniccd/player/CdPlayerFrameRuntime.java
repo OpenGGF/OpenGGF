@@ -4,6 +4,7 @@ import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdR31BumperCall;
+import com.openggf.game.soniccd.CdR31PinballCall;
 import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.media.CdMmdImage;
@@ -637,6 +638,9 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     private CdPlayerBody.Environment environment;
     private Optional<CdPlayerBody.DisplayPublication> display = Optional.empty();
     private VIntClock vIntClock = new VIntClock(OptionalLong.empty(), 0);
+    // True only for the separate explicit original-programme loading birth.
+    // DATA/factory values cannot bind ordinary Module/World invocation.
+    private boolean originalLoadingOnly;
     private boolean paused;
     private boolean closed;
     private boolean inOperation;
@@ -671,6 +675,53 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         body = CdPlayerBody.fromStageSource(source);
         art = new CdPlayerArtRuntime(source.sonic(), artIngress);
         this.state = state; this.environment = environment; vIntClock = clock;
+    }
+
+    /** Complete-value original programme loading ingress. No clear, SpawnPlayer, clock seed,
+     * art preparation or invocation authority. The actual Module validates its private source,
+     * thread/generation and Boot continuation before adopting this component pair. */
+    public static CdPlayerFrameRuntime fromProgrammeEntry(CdStagePlayerSource source,
+            CdPlayerBody.State state, CdPlayerBody.Environment environment,
+            CdPlayerArtRuntime.State artIngress, VIntClock clock) {
+        Objects.requireNonNull(source);Objects.requireNonNull(state);Objects.requireNonNull(environment);
+        Objects.requireNonNull(artIngress);Objects.requireNonNull(clock);
+        if(source.variant()!=CdReleaseVariant.USA
+                ||environment.movement().gates().zoneAct()!=source.nativeZoneActWord()
+                ||environment.movement().gates().timeZone()!=source.ordinaryPeriod())
+            throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY,"Exact original programme loading source required");
+        return new CdPlayerFrameRuntime(source,state,environment,artIngress,clock,true);
+    }
+
+    /**
+     * Complete-value birth for an original marked PPZ loading visit, not an ordinary Frame.
+     * Shared Level/Main.asm:129-145 consumes the raw marker for the white initial palette;
+     * only Main:315 clears bit7 before FadeFromWhite at pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+     * Preserve the caller's marked environment until that separately owned native write.
+     * This performs no Start/clear, LoadPlayer, clock seed, art preparation, service, source
+     * switch, FULL admission or retirement of another Frame. The private destination caller
+     * still owns source/thread/generation and the actual transfer/loading continuation.
+     */
+    public static CdPlayerFrameRuntime fromMarkedProgrammeEntry(CdStagePlayerSource source,
+            CdPlayerBody.State state, CdPlayerBody.Environment environment,
+            CdPlayerArtRuntime.State artIngress, VIntClock clock) {
+        Objects.requireNonNull(source);Objects.requireNonNull(state);Objects.requireNonNull(environment);
+        Objects.requireNonNull(artIngress);Objects.requireNonNull(clock);
+        if(source.variant()!=CdReleaseVariant.USA || !source.hasRetainedPpzProgrammeSource()
+                ||environment.movement().gates().zoneAct()!=source.nativeZoneActWord()
+                ||environment.movement().gates().timeZone()!=(source.ordinaryPeriod()|0x80))
+            throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY,
+                    "Exact retained original PPZ marked loading source required");
+        return new CdPlayerFrameRuntime(source,state,environment,artIngress,clock,true);
+    }
+
+    private CdPlayerFrameRuntime(CdStagePlayerSource source, CdPlayerBody.State state,
+            CdPlayerBody.Environment environment,CdPlayerArtRuntime.State artIngress,VIntClock clock,
+            boolean originalLoadingOnly) {
+        assets=null;pastSource=source;variant=source.variant();
+        body=CdPlayerBody.forOriginalLoading(source);
+        art=new CdPlayerArtRuntime(source.sonic(),artIngress);
+        this.state=state;this.environment=environment;vIntClock=clock;
+        this.originalLoadingOnly=originalLoadingOnly;
     }
 
     /** Original USA Present component birth from complete actually owned values. No DEV cut,
@@ -927,18 +978,43 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
 
     /**
-     * Privately minted for one construction callback. No whole-state restore, input, Body,
+     * Privately minted for one construction callback or the private original StartPos call. No whole-state restore, input, Body,
      * display, art, clock, saved bytes, camera or sound authority exists here. Retained ports
      * reject after either normal return or failure, including after later rewind restore.
      */
     public static final class CheckpointLoadPort {
         private final CdPlayerFrameRuntime owner;
         private boolean active = true;
-        private CheckpointLoadPort(CdPlayerFrameRuntime owner) { this.owner = owner; }
+        private final Thread thread = Thread.currentThread();
+        private final com.openggf.game.soniccd.SonicCdGameModule.OriginalR11CheckpointLoadCall original;
+        private CdPlayerBody.State expectedState;
+        private CdPlayerBody.Environment expectedEnvironment;
+        private final Object expectedDisplay, expectedArt;
+        private final boolean expectedPaused;
+        private final VIntClock expectedClock;
+        private CheckpointLoadPort(CdPlayerFrameRuntime owner) { this(owner, null); }
+        private CheckpointLoadPort(CdPlayerFrameRuntime owner,
+                com.openggf.game.soniccd.SonicCdGameModule.OriginalR11CheckpointLoadCall original) {
+            this.owner = owner; this.original = original;
+            expectedState = owner.state; expectedEnvironment = owner.environment;
+            expectedDisplay = owner.display; expectedArt = owner.art.capture();
+            expectedPaused = owner.paused; expectedClock = owner.vIntClock;
+        }
         private void requireActive() {
-            if (!active || owner.closed || !owner.inOperation || owner.pending != null || owner.bodyEntitled) {
-                throw new IllegalStateException("Checkpoint load port is outside its fresh construction cut");
+            if (!active || thread != Thread.currentThread() || owner.closed || !owner.inOperation
+                    || owner.pending != null || owner.bodyEntitled || owner.state != expectedState
+                    || owner.environment != expectedEnvironment || owner.display != expectedDisplay
+                    || owner.art.capture() != expectedArt || owner.paused != expectedPaused
+                    || owner.vIntClock != expectedClock) {
+                throw new IllegalStateException("Checkpoint load port is outside its complete current Frame pair");
             }
+            if (original != null) original.requireFrame(owner);
+        }
+        /** Identity of this privately minted, still-active original call; values grant no authority. */
+        public boolean isOriginalInvocation(
+                com.openggf.game.soniccd.SonicCdGameModule.OriginalR11CheckpointLoadCall call,
+                CdPlayerFrameRuntime frame) {
+            requireActive(); return original != null && original == call && owner == frame;
         }
         public int read(CheckpointLoadField field) {
             requireActive(); Objects.requireNonNull(field, "checkpoint load field");
@@ -964,6 +1040,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 int y = field == CheckpointLoadField.PRIMARY_Y
                         ? (value << 16) | (motion.centreY16_16() & 0xFFFF) : motion.centreY16_16();
                 owner.state = checkpointPosition(owner.state, x, y);
+                expectedState = owner.state;
                 return;
             }
             var e = owner.environment; var movement = e.movement(); var bounds = movement.bounds();
@@ -978,6 +1055,26 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
             var nextMovement = new CdPlayerMovement.Environment(movement.physics(), nextBounds, nextGates, movement.globals());
             var nextEnvironment = new CdPlayerBody.Environment(nextMovement, e.controls(), e.globals(), e.dynamicSlots());
             owner.environment = nextEnvironment;
+            expectedEnvironment = owner.environment;
+        }
+    }
+
+    /** Original LevelSizeLoad_StartPos:65, on the existing closed Frame. The private
+     * Module call supplies invocation authority; no construction, hydration or new birth.
+     * The same addressed writer is borrowed by the DEV construction callback below. */
+    public void loadOriginalCheckpoint(
+            com.openggf.game.soniccd.SonicCdGameModule.OriginalR11CheckpointLoadCall original) {
+        requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
+        Objects.requireNonNull(original, "private original checkpoint call");
+        original.requireFrame(this);
+        inOperation = true;
+        CheckpointLoadPort port = null;
+        try {
+            port = new CheckpointLoadPort(this, original);
+            original.load(this, port);
+        } finally {
+            if (port != null) port.active = false;
+            inOperation = false;
         }
     }
 
@@ -1126,10 +1223,18 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      */
     public void serviceVBlank(PlcLifecyclePhase phase, Runnable palettePublication, Runnable levelArtService,
                              Runnable mainMusic) {
+        serviceVBlankCut(phase,palettePublication,levelArtService,mainMusic,()->{},false);
+    }
+    private void serviceVBlankCut(PlcLifecyclePhase phase,Runnable palettePublication,Runnable levelArtService,
+                                 Runnable mainMusic,Runnable afterFinish,boolean originalProgramme){
+        Objects.requireNonNull(afterFinish,"actual source after-Finish cut");
         Objects.requireNonNull(palettePublication, "palette publication after ReadControllers");
         Objects.requireNonNull(levelArtService, "level-art service at the selector-eight source cut");
         Objects.requireNonNull(mainMusic, "Main pause/music publication after Finish");
         requireOpenIdle();
+        if(originalLoadingOnly&&!originalProgramme)throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY,
+                "Original programme loading returned; actual ordinary World/runtime binding is not installed");
+        if(originalProgramme){if(originalStandardService)requireOriginalStandardProgrammeSource();else requireOriginalProgrammeSource();if(originalProgrammeCall==null)throw new IllegalStateException("No private original cycle");originalProgrammeCall.check();}
         boolean advanced = false;
         bodyEntitled = false;
         mainFrameAdvanced = false;
@@ -1148,16 +1253,29 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 advanced = true; // Raw is now actually ReadController-committed, even if a bank later fails.
                 environment = withControls(environment, new CdPlayerBody.Controls(sample.held(), tap,
                         controls.logicalHeld(), controls.logicalTap(), controls.controlLocked()));
+                if(originalProgramme){originalProgrammeCall.inputRead=true;originalAdopt();}
                 palettePublication.run();
                 var request = art.serviceVInt(state.header().slotId() != 0, state.animation().mapFrame());
+                if(originalProgramme)originalAdopt();
                 if (request.isPresent()) artPublication.publish(request.orElseThrow(), art.capture());
+                if(originalProgramme)originalProgrammeCall.check();
                 levelArtService.run();
             }
             advanced = true;
-            environment = finishTimers(environment, paused, state.motion().charge());
-            vIntClock = vIntClock.increment();
+            if(originalProgramme&&phase!=PlcLifecyclePhase.LAG
+                    &&originalProgrammeCall.owner instanceof OriginalWaterStageOwner water){
+                // r4/main VBlankStageResume: both actual copy groups precede the split test.
+                var call=originalProgrammeCall;
+                call.external(()->water.copyCamerasAndFlags(call));
+                call.waterTail=new CdDeferredWaterService(new OriginalDeferredWater(call,water));
+                call.waterTail.runStageTail();
+                call.waterTail.requireClosedCut();
+            }else finishServicedVBlank(originalProgramme);
+            afterFinish.run();
+            if(originalProgramme)originalProgrammeCall.check();
             if (phase != PlcLifecyclePhase.LAG) {
                 paused = prospectivePause(environment.controls().rawTap()); // Only AFTER Finish/count.
+                if(originalProgramme)originalAdopt();
                 mainMusic.run();
                 if (paused && pausedResetRequested(environment.controls().rawTap())) {
                     throw new UnsupportedFrame(UnsupportedBoundary.PAUSED_RESET,
@@ -1173,6 +1291,14 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
             pending = null;
             inOperation = false;
         }
+    }
+
+    /** One source-position Finish/count producer shared by standard and deferred stage service. */
+    private void finishServicedVBlank(boolean originalProgramme){
+        if(!inOperation)throw new IllegalStateException("Finish outside original Frame operation");
+        finishTimers(paused,state.motion().charge());
+        vIntClock=vIntClock.increment();
+        if(originalProgramme)originalAdopt();
     }
 
     /**
@@ -1643,7 +1769,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
             palettePublication.run();
             if (copyAndDraw != null) copyAndDraw.run();
             fastPlcService.run();
-            environment = finishTimers(environment, paused, state.motion().charge());
+            finishTimers(paused, state.motion().charge());
             vIntClock = vIntClock.increment();
         } catch (RuntimeException | Error failure) {
             bodyEntitled = false;
@@ -1676,11 +1802,13 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      */
     public int advanceLevelMainFrame() {
         requireBodyEntitlement();
+        if(originalProgrammeCall!=null)originalProgrammeCall.check();
         if (mainFrameAdvanced) throw new IllegalStateException("Native Main level frame already advanced for this service");
         int next = (environment.globals().levelFrames() + 1) & 0xFFFF;
         var ready = withLevelFrames(environment, next);
         environment = ready;
         mainFrameAdvanced = true;
+        originalAdopt();
         return next;
     }
 
@@ -1744,17 +1872,520 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                                    Optional<CdPlayerMovement.ObjectContext> objects,
                                    Optional<CdPlayerBody.TimeWarpContext> timeWarpContext,
                                    Optional<CdPlayerBody.BossSpecialContext> bossSpecialContext) {
+        return runBodyWithOriginalTimeWarp(levelFrames,touchContext,levelContext,objects,timeWarpContext,bossSpecialContext,null);
+    }
+
+    /** Only the actual original World can mint this entry; captures and values cannot do so.
+     * The same Body/Movement owners run. A native TimeWarp call publishes its earlier working
+     * actor prefix and each actual primitive synchronously; no result effect is replayed. */
+    public BodyPublication runBodyWithOriginalTimeWarp(int levelFrames,Optional<CdPlayerBody.TouchContext> touchContext,
+            Optional<CdPlayerBody.LevelContext> levelContext,Optional<CdPlayerMovement.ObjectContext> objects,
+            Optional<CdPlayerBody.TimeWarpContext> timeWarpContext,Optional<CdPlayerBody.BossSpecialContext> bossSpecialContext,
+            com.openggf.game.soniccd.CdOriginalTimeWarpEntry original){
         requireBodyEntitlement();
-        bodyEntitled = false;
-        inOperation = true;
-        try {
-            var result = body.step(state, withLevelFrames(environment, levelFrames & 0xFFFF), touchContext, levelContext, objects, timeWarpContext,bossSpecialContext);
-            var publication = new BodyPublication(result, collectSounds(result.effects()));
-            state = result.state(); environment = result.environment(); display = result.display();
-            return publication;
-        } finally {
-            pending = null;
-            inOperation = false;
+        if(original!=null)original.requireFrame(this);
+        bodyEntitled=false;inOperation=true;
+        try{
+            var env=withLevelFrames(environment,levelFrames&0xFFFF);
+            var result=original==null?body.step(state,env,touchContext,levelContext,objects,timeWarpContext,bossSpecialContext)
+                :body.stepWithOriginalTimeWarp(state,env,touchContext,levelContext,objects,timeWarpContext,bossSpecialContext,
+                    (working,workingEnv,input,context)->originalTimeWarp(original,working,workingEnv,input,context));
+            var publication=new BodyPublication(result,collectSounds(result.effects()));
+            state=result.state();environment=result.environment();display=result.display();return publication;
+        }finally{pending=null;inOperation=false;originalR11TimeWarpCall=null;}
+    }
+    private OriginalR11TimeWarpCall originalR11TimeWarpCall;
+    private CdPlayerTimeWarp.Result originalTimeWarp(com.openggf.game.soniccd.CdOriginalTimeWarpEntry entry,
+            CdPlayerBody.State working,CdPlayerBody.Environment workingEnv,CdPlayerTimeWarp.Input input,CdPlayerTimeWarp.Context context){
+        if(!inOperation||originalR11TimeWarpCall!=null)throw new IllegalStateException("Nested original R11 TimeWarp");
+        var call=new OriginalR11TimeWarpCall(entry);originalR11TimeWarpCall=call;
+        try{
+            entry.beforeBodyPrefix(call); // Refusal precedes adoption of the trusted Body's current working pair.
+            state=Objects.requireNonNull(working);environment=Objects.requireNonNull(workingEnv);
+            entry.beginNative(call);
+            var result=CdPlayerTimeWarp.stepOriginalActive(input,context,call);
+            entry.completedNative(call,result);return result;
+        }finally{call.open=false;originalR11TimeWarpCall=null;}
+    }
+    /** Frame-issued occurrence, private construction and exact original-entry/kernel identity. */
+    public final class OriginalR11TimeWarpCall implements CdPlayerTimeWarp.ActiveOwner {
+        private final com.openggf.game.soniccd.CdOriginalTimeWarpEntry entry;
+        private final Thread thread=Thread.currentThread();private boolean open=true;
+        private CdPlayerTimeWarp.OriginalCall primitive;private boolean scalarPublished;
+        private OriginalR11TimeWarpCall(com.openggf.game.soniccd.CdOriginalTimeWarpEntry entry){this.entry=entry;}
+        public void requireCurrent(CdPlayerFrameRuntime actual){if(actual!=CdPlayerFrameRuntime.this||!open||thread!=Thread.currentThread()||!inOperation||originalR11TimeWarpCall!=this)throw new IllegalStateException("No current original R11 TimeWarp Frame occurrence");}
+        public void requireEntry(com.openggf.game.soniccd.CdOriginalTimeWarpEntry actual){requireCurrent(CdPlayerFrameRuntime.this);if(actual!=entry)throw new IllegalStateException("Foreign original R11 World entry");}
+        public void before(CdPlayerTimeWarp.OriginalCall c){requireCurrent(CdPlayerFrameRuntime.this);c.requireCurrent(this);if(primitive!=null)throw new IllegalStateException("Nested original TimeWarp source");primitive=c;scalarPublished=false;entry.beforeNative(this,c);}
+        public com.openggf.game.soniccd.objects.CdReservedObjectBank.Snapshot reserved(CdPlayerTimeWarp.OriginalCall c){requirePrimitive(c);return entry.reserved(this,c);}
+        public void store(CdPlayerTimeWarp.OriginalCall c){requirePrimitive(c);entry.store(this,c);}
+        public int scalar(CdPlayerTimeWarp.OriginalCall c){requirePrimitive(c);return entry.scalar(this,c);}
+        public com.openggf.game.soniccd.objects.CdTimeWarpSaveData.State saved(CdPlayerTimeWarp.OriginalCall c){requirePrimitive(c);return entry.saved(this,c);}
+        public int source(CdPlayerTimeWarp.OriginalCall c){requirePrimitive(c);return entry.source(this,c);}
+        public void activeStore(CdPlayerTimeWarp.OriginalCall c){requirePrimitive(c);entry.activeStore(this,c);}
+        public void after(CdPlayerTimeWarp.OriginalCall c){requireCurrent(CdPlayerFrameRuntime.this);if(primitive!=c)throw new IllegalStateException("Foreign TimeWarp completion");entry.afterNative(this,c);primitive=null;}
+        public void failed(CdPlayerTimeWarp.OriginalCall c,Throwable first){requireCurrent(CdPlayerFrameRuntime.this);try{entry.failedNative(this,c,first);}finally{primitive=null;}}
+        private void requirePrimitive(CdPlayerTimeWarp.OriginalCall c){requireCurrent(CdPlayerFrameRuntime.this);if(primitive!=c)throw new IllegalStateException("Foreign original TimeWarp primitive");c.requirePrimitive(this);}
+        /** Actual current period BYTE only; the private World owns lock/save/spawn/restart. */
+        public void publishPeriod(CdPlayerTimeWarp.OriginalCall c){
+            requirePrimitive(c);if(scalarPublished||!(c.saveEffect() instanceof CdPlayerTimeWarp.PeriodWrite write))throw new IllegalStateException("No unused native period store");
+            var e=environment;var g=e.movement().gates();if(g.timeZone()!=write.expected())throw new IllegalStateException("Changed actual period BYTE");
+            var gates=new CdPlayerMovement.Gates(g.zoneAct(),write.value(),g.miniSonic(),g.waterSlide(),g.windTunnel(),g.speedShoes(),g.timeWarpDirection());
+            var move=new CdPlayerMovement.Environment(e.movement().physics(),e.movement().bounds(),gates,e.movement().globals());
+            environment=new CdPlayerBody.Environment(move,e.controls(),e.globals(),e.dynamicSlots());scalarPublished=true;
+        }
+        /** Only TIMER/DIRECTION are Frame fields; contact/reserved bytes retain the actual World owner. */
+        public void publishGlobal(CdPlayerTimeWarp.OriginalCall c){
+            requirePrimitive(c);if(scalarPublished)throw new IllegalStateException("Repeated original Frame TimeWarp store");if(!(c.store() instanceof CdPlayerTimeWarp.GlobalWrite write)||write.field()==CdPlayerTimeWarp.GlobalField.TIME_WARP_BYTE)throw new IllegalArgumentException("Not an original Frame time-warp store");
+            var e=environment;var g=e.movement().gates();var b=e.globals();
+            int actual=write.field()==CdPlayerTimeWarp.GlobalField.TIMER_WORD?b.timeWarpTimer():g.timeWarpDirection();
+            if(actual!=write.expectedValue())throw new IllegalArgumentException("Changed native TimeWarp Frame field");
+            var gates=write.field()==CdPlayerTimeWarp.GlobalField.DIRECTION_BYTE?new CdPlayerMovement.Gates(g.zoneAct(),g.timeZone(),g.miniSonic(),g.waterSlide(),g.windTunnel(),g.speedShoes(),write.value()):g;
+            var movement=new CdPlayerMovement.Environment(e.movement().physics(),e.movement().bounds(),gates,e.movement().globals());
+            var globals=write.field()==CdPlayerTimeWarp.GlobalField.TIMER_WORD?new CdPlayerBody.Globals(b.levelFrames(),b.cameraXCentre(),b.timeAttackMode(),b.debugMode(),b.debugCheat(),write.value(),b.invincible(),b.bossMusic()):b;
+            environment=new CdPlayerBody.Environment(movement,e.controls(),globals,e.dynamicSlots());scalarPublished=true;
+        }
+    }
+
+    /** Source-position World callbacks. All are required; no DATA, captured values or this
+     * interface authenticates a Module/World invocation. The private real owner must fence its
+     * current source, load generation, water palette, pool, clocks and every external partition. */
+    public interface OriginalProgrammeOwner {
+        long generation();
+        void requireCurrent(OriginalProgrammeCall call);
+        void palette(OriginalProgrammeCall call);
+        void levelArt(OriginalProgrammeCall call);
+        /** Actual TT deferred-water tail AFTER Finish/count and BEFORE Main pause/music. */
+        void afterFinish(OriginalProgrammeCall call);
+        void mainMusic(OriginalProgrammeCall call);
+        int levelFrames(OriginalProgrammeCall call);
+        Optional<CdPlayerMovement.ObjectContext> objects(OriginalProgrammeCall call);
+        void flipperAnimation(OriginalProgrammeCall call,CdPlayerMovement.SlotPatch patch);
+        CdR4WaterAirPorts.Calls water(OriginalProgrammeCall call);
+        void draw(OriginalProgrammeCall call);
+        void sound(OriginalProgrammeCall call,int nativeId);
+        void chargeSound(OriginalProgrammeCall call,CdPlayerCharge.Sound sound);
+        void beforeCharge(OriginalProgrammeCall call,CdPlayerCharge.Primitive primitive);
+        void afterCharge(OriginalProgrammeCall call,CdPlayerCharge.Primitive primitive);
+        void restoreStageMusic(OriginalProgrammeCall call);
+        void collideObjects(OriginalProgrammeCall call);
+        void timeWarp(OriginalProgrammeCall call);
+        CdPlayerBody.LevelContext level(OriginalProgrammeCall call);
+        void storeLevel(OriginalProgrammeCall call,CdPlayerBody.LevelField field,int value);
+        void spawnGameOver(OriginalProgrammeCall call);
+        void restartSoundFlag(OriginalProgrammeCall call);
+        void resetSavedObjectFlags(OriginalProgrammeCall call);
+        void completed(OriginalProgrammeCall call,CdPlayerBody.Boundary boundary);
+    }
+    /** Genuine TT stage ordering under this Frame's one operation and input entitlement.
+     * Palette() owns UpdateWater, initial normal/water selection and the actual arm store.
+     * LevelArt() owns the source animation gate. Copies are always before the split test;
+     * the deferred helper alone sequences Draw/slow PLC/HUD and the existing Finish producer.
+     * All values live in the actual World/Module image. No public continuation can be saved.
+     */
+    public interface OriginalWaterStageOwner extends OriginalProgrammeOwner {
+        void copyCamerasAndFlags(OriginalProgrammeCall call);
+        int splitByte(OriginalProgrammeCall call);
+        int splitArmWord(OriginalProgrammeCall call);
+        int pendingByte(OriginalProgrammeCall call);
+        void clearSplitArm(OriginalProgrammeCall call);
+        void pendingByte(OriginalProgrammeCall call,int value);
+        int currentWaterPaletteLong(OriginalProgrammeCall call,int byteOffset);
+        void selectWaterPaletteLong(OriginalProgrammeCall call,int byteOffset,int valueBits);
+        void drawStage(OriginalProgrammeCall call);
+        void slowPlc(OriginalProgrammeCall call);
+        void updateHud(OriginalProgrammeCall call);
+    }
+    /** Actual post-object CheckWaterCurrents callbacks. The private World must already be in
+     * POST_OBJECT_CAMERA after a returned physical walk. No public factory issues its receipt. */
+    public interface OriginalWaterCurrentOwner extends OriginalWaterStageOwner {
+        void requireCurrentTail(OriginalProgrammeCall call);
+        CdR4WaterAirPorts.Calls currentWater(OriginalProgrammeCall call);
+        com.openggf.game.soniccd.level.CdAssetBytes currentRecords(OriginalProgrammeCall call);
+        int currentSwitchByte(OriginalProgrammeCall call,int unsignedIndex);
+        void beforeCurrentStore(OriginalWaterStore store);
+        void afterCurrentStore(OriginalWaterStore store);
+    }
+    /** Native CheckWaterCurrents stores only these aliases; there is no LONG store in this routine. */
+    public enum OriginalWaterStoreField { WATER_CURRENT, CHARGE, X_VELOCITY, Y_VELOCITY, ANIMATION, FLAGS, X, Y }
+    /** Frame-issued synchronous occurrence, never a captured value or an ad-hoc State adopter.
+     * All preimages and landed images are taken by this Frame around its one actual store. */
+    public final class OriginalWaterStore {
+        private final OriginalProgrammeCall cycle;
+        private final OriginalWaterStoreField field;
+        private final int value;
+        private final CdPlayerBody.State beforeState=state;
+        private final CdPlayerBody.Environment beforeEnvironment=environment;
+        private CdPlayerBody.State completedState;
+        private CdPlayerBody.Environment completedEnvironment;
+        private boolean landed,open=true;
+        private OriginalWaterStore(OriginalProgrammeCall cycle,OriginalWaterStoreField field,int value){this.cycle=cycle;this.field=field;this.value=value;}
+        public void requireCurrent(CdPlayerFrameRuntime actual){
+            cycle.requireCurrent(actual);
+            if(actual!=CdPlayerFrameRuntime.this||!open||!inOperation||!cycle.inCurrents||cycle.currentStore!=this)
+                throw new IllegalStateException("No current Frame-issued CheckWaterCurrents store");
+        }
+        public OriginalProgrammeCall cycle(){requireCurrent(CdPlayerFrameRuntime.this);return cycle;}
+        public OriginalWaterStoreField field(){requireCurrent(CdPlayerFrameRuntime.this);return field;}
+        public int value(){requireCurrent(CdPlayerFrameRuntime.this);return value;}
+        public CdPlayerBody.State beforeState(){requireCurrent(CdPlayerFrameRuntime.this);return beforeState;}
+        public CdPlayerBody.Environment beforeEnvironment(){requireCurrent(CdPlayerFrameRuntime.this);return beforeEnvironment;}
+        public CdPlayerBody.State completedState(){requireCurrent(CdPlayerFrameRuntime.this);if(!landed)throw new IllegalStateException("Current store did not land");return completedState;}
+        public CdPlayerBody.Environment completedEnvironment(){requireCurrent(CdPlayerFrameRuntime.this);if(!landed)throw new IllegalStateException("Current store did not land");return completedEnvironment;}
+        /** Inert completed-prefix observation; it cannot publish or reopen a retired occurrence. */
+        public boolean landed(){return landed;}
+    }
+    /** Frame-private join: helper calls authenticate both the actual helper occurrence and the
+     * actual original cycle, including complete Frame preimages around each external primitive.
+     * It has no state/capture owner and never obtains a new input or invokes Body.
+     */
+    private final class OriginalDeferredWater implements CdDeferredWaterService.Owners {
+        private final OriginalProgrammeCall cycle;private final OriginalWaterStageOwner owner;
+        OriginalDeferredWater(OriginalProgrammeCall cycle,OriginalWaterStageOwner owner){this.cycle=cycle;this.owner=owner;}
+        public void requireCurrent(CdDeferredWaterService.Call call){
+            call.requireCurrent(this);cycle.check();
+            if(!inOperation||cycle.inBody||cycle.owner!=owner||!cycle.inputRead)
+                throw new IllegalStateException("No original water-stage Frame tail");
+        }
+        public int splitByte(CdDeferredWaterService.Call c){requireCurrent(c);return cycle.externalValue(()->owner.splitByte(cycle));}
+        public int armWord(CdDeferredWaterService.Call c){requireCurrent(c);return cycle.externalValue(()->owner.splitArmWord(cycle));}
+        public int deferredByte(CdDeferredWaterService.Call c){requireCurrent(c);return cycle.externalValue(()->owner.pendingByte(cycle));}
+        public void clearArm(CdDeferredWaterService.Call c){requireCurrent(c);cycle.external(()->owner.clearSplitArm(cycle));}
+        public void setDeferred(CdDeferredWaterService.Call c,int v){requireCurrent(c);cycle.external(()->owner.pendingByte(cycle,v));}
+        public int waterPaletteLong(CdDeferredWaterService.Call c,int at){requireCurrent(c);return cycle.externalValue(()->owner.currentWaterPaletteLong(cycle,at));}
+        public void selectPaletteLong(CdDeferredWaterService.Call c,int at,int bits){requireCurrent(c);cycle.external(()->owner.selectWaterPaletteLong(cycle,at,bits));}
+        public void drawStage(CdDeferredWaterService.Call c){requireCurrent(c);cycle.external(()->owner.drawStage(cycle));}
+        public void slowPlc(CdDeferredWaterService.Call c){requireCurrent(c);cycle.external(()->owner.slowPlc(cycle));}
+        public void updateHud(CdDeferredWaterService.Call c){requireCurrent(c);cycle.external(()->owner.updateHud(cycle));}
+        public void finishVBlank(CdDeferredWaterService.Call c){requireCurrent(c);finishServicedVBlank(true);}
+    }
+    public static final class OriginalProgrammeUnavailable extends UnsupportedOperationException {
+        public OriginalProgrammeUnavailable(String operation){super("Actual original-programme owner unavailable: "+Objects.requireNonNull(operation));}
+    }
+    /** Private-issued synchronous Frame cycle. No factory, value hydration or state-adoption API.
+     * It may survive only the actual VBlank-to-Body entitlement; capture/restore cannot retain it. */
+    /** Typed labels alone confer no authority; the private synchronous port receipt must match. */
+    public enum OriginalWaterPortKind { VALUE_READ,VALUE_WRITE,RESERVED,SPAWN,RANDOM,SOUND,MUSIC,SINE,
+        GROUND,MOVE,ANIMATE,DRAW,DELETE,SLOT_READ,SLOT_WRITE }
+    private record OriginalWaterPort(OriginalWaterPortKind kind,Object receiver,Object field,int value) { }
+    /** Actual same-thread Frame water leaf only; idle/copied/cross-frame descriptors reject. */
+    public OriginalProgrammeCall originalWaterPortCall(){
+        var call=originalProgrammeCall;if(call==null||call.waterPort==null)throw new IllegalStateException("No actual original water port");
+        call.water();return call;
+    }
+    public OriginalProgrammeCall requireOriginalWaterPort(OriginalWaterPortKind kind,Object receiver,Object field,int value){
+        var call=originalWaterPortCall();var port=call.waterPort;
+        if(port.kind()!=kind||port.receiver()!=receiver||port.field()!=field||port.value()!=value)
+            throw new IllegalStateException("Foreign original water primitive/target/operand");
+        return call;
+    }
+    public final class OriginalProgrammeCall {
+        private final OriginalProgrammeOwner owner;
+        private final CdStagePlayerSource source=pastSource;
+        private final Thread thread=Thread.currentThread();
+        private final long generation,ownerGeneration;
+        private CdPlayerBody.State expectedState=state;
+        private CdPlayerBody.Environment expectedEnvironment=environment;
+        private Optional<CdPlayerBody.DisplayPublication> expectedDisplay=display;
+        private CdPlayerArtRuntime.State expectedArt=art.capture();
+        private VIntClock expectedClock=vIntClock;
+        private boolean expectedPaused=paused,open=true,inputRead,ready,inBody,inCurrents;
+        private OriginalWaterStore currentStore;
+        private OriginalWaterPort waterPort;
+        private CdPlayerBody.Boundary completedBoundary;
+        private CdDeferredWaterService waterTail;
+        private OriginalProgrammeCall(OriginalProgrammeOwner owner){this.owner=Objects.requireNonNull(owner);generation=++originalProgrammeGeneration;ownerGeneration=owner.generation();}
+        public void requireCurrent(CdPlayerFrameRuntime actual){
+            if(actual!=CdPlayerFrameRuntime.this||originalProgrammeCall!=this||!open||closed||thread!=Thread.currentThread()
+                    ||generation!=originalProgrammeGeneration||owner.generation()!=ownerGeneration||source!=pastSource
+                    ||state!=expectedState||environment!=expectedEnvironment||!display.equals(expectedDisplay)
+                    ||!art.capture().equals(expectedArt)||!vIntClock.equals(expectedClock)||paused!=expectedPaused)
+                throw new IllegalStateException("Foreign/stale/off-thread or changed complete original Frame cycle");
+        }
+        private void check(){requireCurrent(CdPlayerFrameRuntime.this);owner.requireCurrent(this);if(inCurrents)((OriginalWaterCurrentOwner)owner).requireCurrentTail(this);requireCurrent(CdPlayerFrameRuntime.this);}
+        private void adopt(){expectedState=state;expectedEnvironment=environment;expectedDisplay=display;expectedArt=art.capture();expectedClock=vIntClock;expectedPaused=paused;}
+        private void external(Runnable callback){
+            if(!inCurrents){check();callback.run();check();return;}
+            externalValue(()->{callback.run();return Boolean.TRUE;});
+        }
+        private <T>T externalValue(java.util.function.Supplier<T> callback){
+            check();T value;
+            try{value=callback.get();}
+            catch(RuntimeException|Error first){if(inCurrents)try{check();}catch(RuntimeException|Error guard){if(guard!=first)first.addSuppressed(guard);}throw first;}
+            check();return value;
+        }
+        private void body(){check();if(!inOperation||!inBody||originalSemanticCall==null)throw new IllegalStateException("No current original semantic primitive");}
+        private void water(){
+            if(!inCurrents){body();return;}
+            check();if(!inOperation||inBody||originalSemanticCall!=null||!(owner instanceof OriginalWaterCurrentOwner))
+                throw new IllegalStateException("No actual post-object water-current scope");
+        }
+        private <T>T waterPort(OriginalWaterPortKind kind,Object receiver,Object field,int value,java.util.function.Supplier<T> action){
+            water();if(waterPort!=null)throw new IllegalStateException("Recursive original water port");
+            waterPort=new OriginalWaterPort(kind,receiver,field,value);
+            try{return externalValue(action);}finally{waterPort=null;}
+        }
+        private void waterStore(OriginalWaterStoreField field,int value,Runnable nativeStore){
+            water();if(!inCurrents){nativeStore.run();return;}
+            if(currentStore!=null)throw new IllegalStateException("Recursive native current store");
+            var p=new OriginalWaterStore(this,field,value);currentStore=p;Throwable first=null;
+            try{
+                external(()->((OriginalWaterCurrentOwner)owner).beforeCurrentStore(p));
+                p.requireCurrent(CdPlayerFrameRuntime.this);nativeStore.run();
+                p.completedState=state;p.completedEnvironment=environment;p.landed=true;
+            }catch(RuntimeException|Error original){first=original;throw original;}
+            finally{
+                Throwable verification=null;
+                try{((OriginalWaterCurrentOwner)owner).afterCurrentStore(p);}
+                catch(RuntimeException|Error after){verification=after;}
+                try{check();}catch(RuntimeException|Error guard){if(verification==null)verification=guard;else if(guard!=verification)verification.addSuppressed(guard);}
+                finally{p.open=false;currentStore=null;}
+                if(verification!=null){
+                    if(first!=null){if(verification!=first)first.addSuppressed(verification);}
+                    else if(verification instanceof RuntimeException runtime)throw runtime;else throw (Error)verification;
+                }
+            }
+        }
+        public CdStagePlayerSource source(){requireCurrent(CdPlayerFrameRuntime.this);return source;}
+        public CdPlayerBody.State state(){requireCurrent(CdPlayerFrameRuntime.this);return state;}
+        public CdPlayerBody.Environment environment(){requireCurrent(CdPlayerFrameRuntime.this);return environment;}
+        public VIntClock clock(){requireCurrent(CdPlayerFrameRuntime.this);return vIntClock;}
+        public boolean paused(){requireCurrent(CdPlayerFrameRuntime.this);return paused;}
+        /** Only the synchronous native Body Draw callback may publish this existing sprite flag. */
+        public void publishDrawOnScreen(boolean value){body();publishDrawObjectOnScreenValue(value);adopt();check();}
+        private void retire(){open=false;ready=false;inBody=false;inCurrents=false;waterPort=null;if(currentStore!=null)currentStore.open=false;currentStore=null;if(originalProgrammeCall==this)originalProgrammeCall=null;originalSemanticCall=null;}
+    }
+    private long originalProgrammeGeneration;
+    private OriginalProgrammeCall originalProgrammeCall;
+    private CdPlayerSemanticRuntime originalSemanticRuntime;
+    private CdPlayerSemanticRuntime.Call originalSemanticCall;
+    private CdPlayerBody originalSemanticBody;
+    private CdPlayerCharge.Live originalCharge;
+    private void requireOriginalProgrammeSource(){
+        if(!originalLoadingOnly||pastSource==null||pastSource.player().sourceGraph()!=CdR11aPlayerAssets.SourceGraph.R4
+                ||variant!=CdReleaseVariant.USA||environment.movement().gates().zoneAct()!=pastSource.nativeZoneActWord())
+            throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY,"Exact original TT Frame birth/source required");
+        requireSourceFamily();
+    }
+    private void originalAdopt(){if(originalProgrammeCall!=null)originalProgrammeCall.adopt();}
+    /** Same existing native Frame service, with required source owner callbacks and one explicit
+     * after-Finish cut. No World loop, pending-water implementation or fake secondary is supplied. */
+    public void serviceOriginalProgrammeVBlank(PlcLifecyclePhase phase,OriginalProgrammeOwner owner){
+        requireOpenIdle();requireOriginalProgrammeSource();
+        if(originalProgrammeCall!=null)throw new IllegalStateException("Original cycle already has unconsumed input");
+        if(finishTimersOwner==null)throw new UnownedSecondaryBoredTimer();
+        var call=new OriginalProgrammeCall(owner);originalProgrammeCall=call;
+        try{
+            call.check();ensureOriginalSemanticRuntime();
+            serviceVBlankCut(phase,()->call.external(()->owner.palette(call)),()->call.external(()->owner.levelArt(call)),
+                ()->call.external(()->owner.mainMusic(call)),()->call.external(()->owner.afterFinish(call)),true);
+            call.adopt();call.check();call.ready=bodyEntitled&&call.inputRead;
+            if(!call.ready)call.retire();
+        }catch(RuntimeException|Error first){
+            if(call.inputRead||closed){closed=true;artPublication=null;bodyEntitled=false;}
+            call.retire();throw first;
+        }
+    }
+    private boolean originalStandardService;
+    private void requireOriginalStandardProgrammeSource(){
+        if(!originalLoadingOnly||pastSource==null||!pastSource.hasRetainedPpzProgrammeSource()
+                ||variant!=CdReleaseVariant.USA||environment.movement().gates().zoneAct()!=pastSource.nativeZoneActWord()
+                ||environment.movement().gates().timeZone()!=pastSource.ordinaryPeriod())
+            throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY,"Exact original retained standard PPZ Frame required");
+        requireSourceFamily();
+    }
+    /** Standard original PPZ reaches the same selector-eight/Finish owner. This does not
+     * relabel a standard owner as TT water, create a second Body, or reopen public VBlank.
+     * The temporary cycle retires after Finish while the existing PPZ Body entitlement stays. */
+    public void serviceOriginalStandardProgrammeVBlank(PlcLifecyclePhase phase,OriginalProgrammeOwner owner){
+        requireOpenIdle();requireOriginalStandardProgrammeSource();Objects.requireNonNull(owner);
+        if(owner instanceof OriginalWaterStageOwner||originalProgrammeCall!=null||originalStandardService)
+            throw new IllegalStateException("Different/reentrant original standard cycle");
+        if(finishTimersOwner==null)throw new UnownedSecondaryBoredTimer();
+        var call=new OriginalProgrammeCall(owner);originalProgrammeCall=call;originalStandardService=true;
+        try{
+            call.check();
+            serviceVBlankCut(phase,()->call.external(()->owner.palette(call)),()->call.external(()->owner.levelArt(call)),
+                ()->call.external(()->owner.mainMusic(call)),()->call.external(()->owner.afterFinish(call)),true);
+            call.adopt();call.check();
+        }catch(RuntimeException|Error first){
+            if(call.inputRead||closed){closed=true;artPublication=null;bodyEntitled=false;}
+            throw first;
+        }finally{originalStandardService=false;call.retire();}
+    }
+    /** Consume ONLY the matching real serviced input. The native stage clock is borrowed from
+     * the actual owner at its reached Body site, never a caller-injected Frame counter argument. */
+    public CdPlayerBody.Boundary runOriginalProgrammeBody(OriginalProgrammeOwner owner){
+        requireOpenIdle();requireOriginalProgrammeSource();var call=originalProgrammeCall;
+        if(call==null||call.owner!=owner)throw new IllegalStateException("No matching original serviced input owner");
+        try{
+            call.check();if(!call.ready||!call.inputRead||!bodyEntitled||pending!=null||paused)throw new IllegalStateException("No returned unpaused original input entitlement");
+            int frames=call.externalValue(()->owner.levelFrames(call));if((frames&~0xFFFF)!=0)throw new IllegalArgumentException("Actual stage_frames WORD required");
+            bodyEntitled=false;inOperation=true;call.inBody=true;environment=withLevelFrames(environment,frames);call.adopt();
+            originalSemanticBody.runOriginalProgramme();call.check();
+            if(call.completedBoundary==null)throw new IllegalStateException("Original Body has no actual completion");
+            return call.completedBoundary;
+        }catch(RuntimeException|Error first){closed=true;artPublication=null;bodyEntitled=false;throw first;}
+        finally{pending=null;inOperation=false;call.retire();}
+    }
+    /** The actual World invokes this once at native StageMainLoopDraw after camera/death
+     * bounds and before DrawObjects. Reuses OriginalWater and the sole current kernel; no
+     * input, Body, timing, display, art, clear, switch-bank or capture owner is manufactured. */
+    public void runOriginalProgrammeWaterCurrents(OriginalWaterCurrentOwner owner){
+        requireOpenIdle();requireClosedFrame();requireOriginalProgrammeSource();
+        var call=new OriginalProgrammeCall(Objects.requireNonNull(owner));originalProgrammeCall=call;call.inCurrents=true;
+        try{
+            call.check(); // Refused private World tail cannot poison a healthy Frame.
+            inOperation=true;
+            var ports=call.externalValue(()->Objects.requireNonNull(owner.currentWater(call)));
+            var records=call.externalValue(()->Objects.requireNonNull(owner.currentRecords(call)));
+            CdR4WaterCurrents.check(new OriginalWater(call,ports),records,
+                    index->call.externalValue(()->owner.currentSwitchByte(call,index)));
+            call.check();
+        }catch(RuntimeException|Error first){if(inOperation){closed=true;artPublication=null;bodyEntitled=false;}throw first;}
+        finally{inOperation=false;call.retire();}
+    }
+    private OriginalProgrammeCall originalSemantic(CdPlayerSemanticRuntime.Call nativeCall){
+        var call=originalProgrammeCall;if(call==null)throw new IllegalStateException("No original Frame semantic owner");
+        nativeCall.requireCurrent(originalSemanticRuntime);
+        if(!call.inBody||!inOperation||originalSemanticCall!=null&&originalSemanticCall!=nativeCall)
+            throw new IllegalStateException("Foreign original semantic primitive");
+        originalSemanticCall=nativeCall;call.check();return call;
+    }
+    private void ensureOriginalSemanticRuntime(){
+        if(originalSemanticRuntime!=null)return;
+        originalSemanticRuntime=CdPlayerSemanticRuntime.fromOriginalProgramme(pastSource,new OriginalSemanticPorts());
+        originalSemanticBody=CdPlayerBody.fromOriginalProgramme(pastSource,originalSemanticRuntime);
+        originalCharge=CdPlayerCharge.bindLive(new OriginalChargePorts());
+    }
+    private final class OriginalSemanticPorts implements CdPlayerSemanticRuntime.Ports,CdPlayerSemanticRuntime.CompletionObservation {
+        public void displayValue(CdPlayerSemanticRuntime.Call c,Optional<CdPlayerBody.DisplayPublication> exactBodyValue){
+            var q=originalSemantic(c);Objects.requireNonNull(exactBodyValue);q.check();display=exactBodyValue;q.adopt();q.check();
+        }
+        public long generation(){return originalProgrammeGeneration;}
+        public void requireCurrent(CdPlayerSemanticRuntime.Call c){originalSemantic(c);}
+        public CdPlayerBody.State state(CdPlayerSemanticRuntime.Call c){originalSemantic(c);return state;}
+        public CdPlayerBody.Environment environment(CdPlayerSemanticRuntime.Call c){originalSemantic(c);return environment;}
+        public void publish(CdPlayerSemanticRuntime.Call c,CdPlayerBody.State before,CdPlayerBody.Environment env,CdPlayerBody.State next,CdPlayerBody.Environment nextEnv){
+            var call=originalSemantic(c);if(state!=before||environment!=env)throw new IllegalArgumentException("Stale complete original algorithm prefix");
+            Objects.requireNonNull(next);Objects.requireNonNull(nextEnv);call.check();state=next;environment=nextEnv;call.adopt();call.check();
+        }
+        public Optional<CdPlayerMovement.ObjectContext> objects(CdPlayerSemanticRuntime.Call c){var q=originalSemantic(c);return q.externalValue(()->Objects.requireNonNull(q.owner.objects(q)));}
+        public void flipperAnimation(CdPlayerSemanticRuntime.Call c,CdPlayerMovement.SlotPatch patch){var q=originalSemantic(c);q.external(()->q.owner.flipperAnimation(q,patch));}
+        public CdR4WaterAirPorts.Calls water(CdPlayerSemanticRuntime.Call c){var q=originalSemantic(c);var external=q.externalValue(()->Objects.requireNonNull(q.owner.water(q)));return new OriginalWater(q,external);}
+        public void draw(CdPlayerSemanticRuntime.Call c){var q=originalSemantic(c);q.external(()->q.owner.draw(q));}
+        public void sound(CdPlayerSemanticRuntime.Call c,int id){var q=originalSemantic(c);q.external(()->q.owner.sound(q,id));}
+        public void restoreStageMusic(CdPlayerSemanticRuntime.Call c){var q=originalSemantic(c);q.external(()->q.owner.restoreStageMusic(q));}
+        public void collideObjects(CdPlayerSemanticRuntime.Call c){var q=originalSemantic(c);q.external(()->q.owner.collideObjects(q));}
+        public void timeWarp(CdPlayerSemanticRuntime.Call c){var q=originalSemantic(c);q.external(()->q.owner.timeWarp(q));}
+        public CdPlayerCharge.Result moveGroundCharge(CdPlayerSemanticRuntime.Call c,CdPlayerCharge.State before,CdPlayerCharge.Input input){originalSemantic(c);return originalCharge.moveGroundAtCheckCharge(before,input);}
+        public CdPlayerCharge.Result moveRollCharge(CdPlayerSemanticRuntime.Call c,CdPlayerCharge.State before,CdPlayerCharge.Input input){originalSemantic(c);return originalCharge.moveRollAtNotRight(before,input);}
+        public CdPlayerCharge.Result startRoll(CdPlayerSemanticRuntime.Call c,CdPlayerCharge.State before,CdPlayerCharge.Body body){originalSemantic(c);return originalCharge.startRoll(before,body);}
+        public CdPlayerBody.LevelContext level(CdPlayerSemanticRuntime.Call c){var q=originalSemantic(c);return q.externalValue(()->Objects.requireNonNull(q.owner.level(q)));}
+        public void storeLevel(CdPlayerSemanticRuntime.Call c,CdPlayerBody.LevelField f,int v){var q=originalSemantic(c);q.external(()->q.owner.storeLevel(q,f,v));}
+        public void spawnGameOver(CdPlayerSemanticRuntime.Call c){var q=originalSemantic(c);q.external(()->q.owner.spawnGameOver(q));}
+        public void restartSoundFlag(CdPlayerSemanticRuntime.Call c){var q=originalSemantic(c);q.external(()->q.owner.restartSoundFlag(q));}
+        public void resetSavedObjectFlags(CdPlayerSemanticRuntime.Call c){var q=originalSemantic(c);q.external(()->q.owner.resetSavedObjectFlags(q));}
+        public void completed(CdPlayerSemanticRuntime.Call c,CdPlayerBody.Boundary b){var q=originalSemantic(c);q.external(()->q.owner.completed(q,b));q.completedBoundary=b;}
+    }
+    private CdPlayerCharge.State originalChargeState(){
+        var m=state.motion();var g=environment.movement().globals();return new CdPlayerCharge.State(m.charge(),m.groundVelocity(),m.xVelocity(),m.yVelocity(),m.flags(),m.xRadius(),m.yRadius(),m.centreY16_16(),m.animation(),g.lookMode(),g.cameraYCentre());
+    }
+    private final class OriginalChargePorts implements CdPlayerCharge.LivePorts {
+        public long generation(){return originalProgrammeGeneration;}
+        public void requireCurrent(CdPlayerCharge.LiveCall call){call.requireCurrent(originalCharge);var q=originalProgrammeCall;if(q==null)throw new IllegalStateException("No current Charge Frame");q.body();}
+        public CdPlayerCharge.State readState(CdPlayerCharge.LiveCall call){requireCurrent(call);return originalChargeState();}
+        public void before(CdPlayerCharge.Primitive p){p.requireCurrent(originalCharge);var q=originalProgrammeCall;q.body();q.external(()->q.owner.beforeCharge(q,p));}
+        public void actor(CdPlayerCharge.ActorCall p){
+            p.requireCurrent(originalCharge);var q=originalProgrammeCall;q.body();var m=state.motion();int v=p.value();
+            var ready=originalMotion(state,new CdPlayerMotionState(m.centreX16_16(),p.field()==CdPlayerCharge.ActorField.CENTRE_Y_WORD?(v<<16)|(m.centreY16_16()&65535):m.centreY16_16(),
+                p.field()==CdPlayerCharge.ActorField.STORED_X_VELOCITY?v:m.xVelocity(),p.field()==CdPlayerCharge.ActorField.STORED_Y_VELOCITY?v:m.yVelocity(),p.field()==CdPlayerCharge.ActorField.GROUND_VELOCITY?v:m.groundVelocity(),
+                m.routine(),m.angle(),p.field()==CdPlayerCharge.ActorField.FLAGS?v:m.flags(),m.spriteFlags(),p.field()==CdPlayerCharge.ActorField.X_RADIUS?v:m.xRadius(),p.field()==CdPlayerCharge.ActorField.Y_RADIUS?v:m.yRadius(),
+                p.field()==CdPlayerCharge.ActorField.ANIMATION?v:m.animation(),m.previousAnimation(),m.playerJump(),p.field()==CdPlayerCharge.ActorField.CHARGE?v:m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle()));
+            q.check();p.consume(originalCharge);state=ready;q.adopt();q.check();
+        }
+        public void global(CdPlayerCharge.GlobalCall p){
+            p.requireCurrent(originalCharge);var q=originalProgrammeCall;q.body();var e=environment;var m=e.movement();var g=m.globals();
+            var globals=new CdPlayerMovement.Globals(p.field()==CdPlayerCharge.GlobalField.LOOK_MODE?p.value():g.lookMode(),p.field()==CdPlayerCharge.GlobalField.CAMERA_Y_CENTRE?p.value():g.cameraYCentre(),g.primaryAngle(),g.secondaryAngle(),g.boredTimer(),g.scoreChain(),g.debugAngle(),g.debugAngleShift(),g.debugQuadrant(),g.debugFloorDistance());
+            var ready=new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(),m.bounds(),m.gates(),globals),e.controls(),e.globals(),e.dynamicSlots());
+            q.check();p.consume(originalCharge);environment=ready;q.adopt();q.check();
+        }
+        public void sound(CdPlayerCharge.SoundCall p){p.requireCurrent(originalCharge);var q=originalProgrammeCall;q.body();p.consume(originalCharge);q.external(()->q.owner.chargeSound(q,p.sound()));}
+        public void after(CdPlayerCharge.Primitive p){p.requireCurrent(originalCharge);var q=originalProgrammeCall;q.body();q.external(()->q.owner.afterCharge(q,p));}
+    }
+    private static CdPlayerBody.State originalMotion(CdPlayerBody.State s,CdPlayerMotionState motion){return new CdPlayerBody.State(motion,s.animation(),s.header(),s.timers(),s.history(),s.rotationDistance(),s.objectLinks(),s.rotationAngle());}
+    /** Primary writes alias the existing Frame values. Extra water/global/reserved/pool storage
+     * remains the real supplied owner; no second water bank, secondary timer or 64-byte CPU image. */
+    private final class OriginalWater implements CdR4WaterAirPorts.Calls {
+        private final OriginalProgrammeCall call;private final CdR4WaterAirPorts.Calls external;
+        private final CdR4WaterAirPorts.Slot primary=new OriginalWaterPrimary();
+        private OriginalWater(OriginalProgrammeCall call,CdR4WaterAirPorts.Calls external){this.call=call;this.external=external;}
+        public int read(CdR4WaterAirPorts.Value f){
+            call.water();var e=environment;var m=e.movement();var g=m.gates();int v=switch(f){
+                case ZONE->pastSource.nativeZoneActWord()>>>8;case ACT->pastSource.nativeZoneActWord()&255;case ZONE_WORD->g.zoneAct();case TIME_ZONE->g.timeZone();case PAUSED->paused?1:0;
+                case INVINCIBLE->e.globals().invincible();case MAX_SPEED->m.physics().topSpeed()&65535;case ACCELERATION->m.physics().acceleration()&65535;case DECELERATION->m.physics().deceleration()&65535;
+                case WATER_CURRENT->g.windTunnel();case DEBUG_MODE->e.globals().debugMode();case STAGE_FRAMES->e.globals().levelFrames();case STAGE_FRAMES_LOW->e.globals().levelFrames()&255;case HELD->e.controls().logicalHeld();
+                default->call.waterPort(OriginalWaterPortKind.VALUE_READ,null,f,0,()->external.read(f));};call.check();return v;
+        }
+        public void write(CdR4WaterAirPorts.Value f,int v){
+            call.water();CdR4WaterAirPorts.checked(v,f.bytes,f.name());var e=environment;var m=e.movement();var p=m.physics();var g=m.gates();
+            if(f==CdR4WaterAirPorts.Value.MAX_SPEED||f==CdR4WaterAirPorts.Value.ACCELERATION||f==CdR4WaterAirPorts.Value.DECELERATION){
+                var ready=new CdPlayerMovement.Physics(f==CdR4WaterAirPorts.Value.MAX_SPEED?(short)v:p.topSpeed(),f==CdR4WaterAirPorts.Value.ACCELERATION?(short)v:p.acceleration(),f==CdR4WaterAirPorts.Value.DECELERATION?(short)v:p.deceleration());
+                environment=new CdPlayerBody.Environment(new CdPlayerMovement.Environment(ready,m.bounds(),g,m.globals()),e.controls(),e.globals(),e.dynamicSlots());call.adopt();
+            }else if(f==CdR4WaterAirPorts.Value.WATER_CURRENT){
+                var gates=new CdPlayerMovement.Gates(g.zoneAct(),g.timeZone(),g.miniSonic(),g.waterSlide(),v,g.speedShoes(),g.timeWarpDirection());
+                call.waterStore(OriginalWaterStoreField.WATER_CURRENT,v,()->{environment=new CdPlayerBody.Environment(new CdPlayerMovement.Environment(p,m.bounds(),gates,m.globals()),e.controls(),e.globals(),e.dynamicSlots());call.adopt();});
+            }else{call.waterPort(OriginalWaterPortKind.VALUE_WRITE,null,f,v,()->{external.write(f,v);return null;});}call.check();
+        }
+        public CdR4WaterAirPorts.Slot player(){call.water();return primary;}
+        private CdR4WaterAirPorts.Slot wrapped(CdR4WaterAirPorts.Slot slot){return new ExternalWaterSlot(Objects.requireNonNull(slot));}
+        private CdR4WaterAirPorts.Slot raw(CdR4WaterAirPorts.Slot slot){
+            if(!(slot instanceof ExternalWaterSlot value)||value.owner()!=this)throw new IllegalArgumentException("Foreign original water slot wrapper");return value.actual;
+        }
+        public CdR4WaterAirPorts.Slot reservedBubbles(){return wrapped(call.waterPort(OriginalWaterPortKind.RESERVED,null,null,0,external::reservedBubbles));}
+        public Optional<CdR4WaterAirPorts.Slot> spawn(){return call.waterPort(OriginalWaterPortKind.SPAWN,null,null,0,external::spawn).map(this::wrapped);}
+        public int random(){return call.waterPort(OriginalWaterPortKind.RANDOM,null,null,0,external::random);}
+        public void sound(int id){call.waterPort(OriginalWaterPortKind.SOUND,null,null,id,()->{external.sound(id);return null;});}
+        public void music(int id){call.waterPort(OriginalWaterPortKind.MUSIC,null,null,id,()->{external.music(id);return null;});}
+        public CdPlayerMath.SineCosine sineCosine(int angle){return call.waterPort(OriginalWaterPortKind.SINE,null,null,angle,()->external.sineCosine(angle));}
+        public void setPlayerGround(){call.waterPort(OriginalWaterPortKind.GROUND,null,null,0,()->{external.setPlayerGround();return null;});}
+        private CdR4WaterAirPorts.Slot child(CdR4WaterAirPorts.Slot slot){call.water();if(slot==primary)throw new OriginalProgrammeUnavailable("primary Move/Animate/Draw/Delete owner at this leaf");return raw(slot);}
+        public void move(CdR4WaterAirPorts.Slot slot){var value=child(slot);call.waterPort(OriginalWaterPortKind.MOVE,value,null,0,()->{external.move(value);return null;});}
+        public void animate(CdR4WaterAirPorts.Slot slot,CdR4WaterAirPorts.Animation a){var value=child(slot);call.waterPort(OriginalWaterPortKind.ANIMATE,value,a,0,()->{external.animate(value,a);return null;});}
+        public void draw(CdR4WaterAirPorts.Slot slot){var value=child(slot);call.waterPort(OriginalWaterPortKind.DRAW,value,null,0,()->{external.draw(value);return null;});}
+        public void delete(CdR4WaterAirPorts.Slot slot){var value=child(slot);call.waterPort(OriginalWaterPortKind.DELETE,value,null,0,()->{external.delete(value);return null;});}
+        private final class ExternalWaterSlot implements CdR4WaterAirPorts.Slot {
+            final CdR4WaterAirPorts.Slot actual;ExternalWaterSlot(CdR4WaterAirPorts.Slot actual){this.actual=actual;}
+            OriginalWater owner(){return OriginalWater.this;}
+            public int read(CdR4WaterAirPorts.B f){return call.waterPort(OriginalWaterPortKind.SLOT_READ,actual,f,0,()->actual.read(f));}
+            public int read(CdR4WaterAirPorts.W f){return call.waterPort(OriginalWaterPortKind.SLOT_READ,actual,f,0,()->actual.read(f));}
+            public int read(CdR4WaterAirPorts.L f){return call.waterPort(OriginalWaterPortKind.SLOT_READ,actual,f,0,()->actual.read(f));}
+            public void write(CdR4WaterAirPorts.B f,int v){call.waterPort(OriginalWaterPortKind.SLOT_WRITE,actual,f,v,()->{actual.write(f,v);return null;});}
+            public void write(CdR4WaterAirPorts.W f,int v){call.waterPort(OriginalWaterPortKind.SLOT_WRITE,actual,f,v,()->{actual.write(f,v);return null;});}
+            public void write(CdR4WaterAirPorts.L f,int v){call.waterPort(OriginalWaterPortKind.SLOT_WRITE,actual,f,v,()->{actual.write(f,v);return null;});}
+        }
+        private final class OriginalWaterPrimary implements CdR4WaterAirPorts.Slot {
+            public int read(CdR4WaterAirPorts.B f){call.water();var m=state.motion();return switch(f){
+                case ID->state.header().slotId();case SPRITE_FLAGS->m.spriteFlags();case TILE_HIGH->state.header().tile()>>>8;case HEIGHT->m.yRadius();case WIDTH->m.xRadius();case LAYER->state.header().priority();case WIDTH_2->state.header().width();case MAP_FRAME->state.animation().mapFrame();
+                case ANIM->m.animation();case FLAGS->m.flags();case ROUTINE->m.routine();case ANGLE->m.angle();case PHASE->m.charge();case CONTROL->m.playerControl();case CHARGE->m.playerJump();default->throw new OriginalProgrammeUnavailable("primary BYTE "+f);};}
+            public int read(CdR4WaterAirPorts.W f){call.water();var m=state.motion();return switch(f){case TILE->state.header().tile();case X->m.centreX16_16()>>>16;case SCREEN_Y->m.centreX16_16()&65535;case Y->m.centreY16_16()>>>16;case VX->m.xVelocity()&65535;case VY->m.yVelocity()&65535;case GROUND_SPEED->m.groundVelocity()&65535;default->throw new OriginalProgrammeUnavailable("primary WORD "+f);};}
+            public int read(CdR4WaterAirPorts.L f){call.water();if(f==CdR4WaterAirPorts.L.MAPPINGS)return state.header().mappingAddress();throw new OriginalProgrammeUnavailable("primary LONG "+f);}
+            public void write(CdR4WaterAirPorts.B f,int v){
+                call.water();CdR4WaterAirPorts.checked(v,1,f.name());var m=state.motion();
+                if(f!=CdR4WaterAirPorts.B.FLAGS&&f!=CdR4WaterAirPorts.B.ANIM&&f!=CdR4WaterAirPorts.B.PHASE&&f!=CdR4WaterAirPorts.B.CHARGE&&f!=CdR4WaterAirPorts.B.CONTROL)throw new OriginalProgrammeUnavailable("primary BYTE store "+f);
+                var motion=new CdPlayerMotionState(m.centreX16_16(),m.centreY16_16(),m.xVelocity(),m.yVelocity(),m.groundVelocity(),m.routine(),m.angle(),f==CdR4WaterAirPorts.B.FLAGS?v:m.flags(),m.spriteFlags(),m.xRadius(),m.yRadius(),f==CdR4WaterAirPorts.B.ANIM?v:m.animation(),m.previousAnimation(),f==CdR4WaterAirPorts.B.CHARGE?v:m.playerJump(),f==CdR4WaterAirPorts.B.PHASE?v:m.charge(),m.moveLock(),m.stick(),f==CdR4WaterAirPorts.B.CONTROL?v:m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle());
+                OriginalWaterStoreField field=null;
+                if(call.inCurrents)field=switch(f){case CHARGE->OriginalWaterStoreField.CHARGE;case ANIM->OriginalWaterStoreField.ANIMATION;case FLAGS->OriginalWaterStoreField.FLAGS;default->throw new OriginalProgrammeUnavailable("non-current primary BYTE store "+f);};
+                call.waterStore(field,v,()->{state=originalMotion(state,motion);call.adopt();});call.check();
+            }
+            public void write(CdR4WaterAirPorts.W f,int v){
+                call.water();CdR4WaterAirPorts.checked(v,2,f.name());var m=state.motion();
+                if(f!=CdR4WaterAirPorts.W.X&&f!=CdR4WaterAirPorts.W.Y&&f!=CdR4WaterAirPorts.W.VX&&f!=CdR4WaterAirPorts.W.VY&&f!=CdR4WaterAirPorts.W.GROUND_SPEED)throw new OriginalProgrammeUnavailable("primary WORD store "+f);
+                var motion=new CdPlayerMotionState(f==CdR4WaterAirPorts.W.X?(v<<16)|(m.centreX16_16()&65535):m.centreX16_16(),f==CdR4WaterAirPorts.W.Y?(v<<16)|(m.centreY16_16()&65535):m.centreY16_16(),f==CdR4WaterAirPorts.W.VX?(short)v:m.xVelocity(),f==CdR4WaterAirPorts.W.VY?(short)v:m.yVelocity(),f==CdR4WaterAirPorts.W.GROUND_SPEED?(short)v:m.groundVelocity(),m.routine(),m.angle(),m.flags(),m.spriteFlags(),m.xRadius(),m.yRadius(),m.animation(),m.previousAnimation(),m.playerJump(),m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle());
+                OriginalWaterStoreField field=null;
+                if(call.inCurrents)field=switch(f){case X->OriginalWaterStoreField.X;case Y->OriginalWaterStoreField.Y;case VX->OriginalWaterStoreField.X_VELOCITY;case VY->OriginalWaterStoreField.Y_VELOCITY;default->throw new OriginalProgrammeUnavailable("non-current primary WORD store "+f);};
+                call.waterStore(field,v,()->{state=originalMotion(state,motion);call.adopt();});call.check();
+            }
+            public void write(CdR4WaterAirPorts.L f,int v){call.water();throw new OriginalProgrammeUnavailable("primary LONG store "+f);}
         }
     }
 
@@ -2105,6 +2736,29 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         var nextEnvironment=new CdPlayerBody.Environment(nextMovement,currentEnvironment.controls(),currentEnvironment.globals(),currentEnvironment.dynamicSlots());
         return new ObjectSolidPublication(currentState,currentEnvironment,currentState,nextEnvironment);
     }
+    /** Pure native primary Y WORD projection. Exact complete pair CAS, fraction preserved.
+     * Actual private source-issued family ownership remains outside this value preparation. */
+    public ObjectSolidPublication prepareObjectYWord(CdPlayerBody.State expected,CdPlayerBody.Environment env,int oldWord,int valueWord){
+        requireOpenIdle();requireClosedFrame();
+        if(state!=expected||environment!=env||((oldWord|valueWord)&~65535)!=0||(state.motion().centreY16_16()>>>16)!=oldWord)
+            throw new IllegalArgumentException("Stale complete primary Y WORD cut");
+        var s=state;var m=s.motion();
+        var n=new CdPlayerMotionState(m.centreX16_16(),(valueWord<<16)|(m.centreY16_16()&65535),m.xVelocity(),m.yVelocity(),m.groundVelocity(),m.routine(),m.angle(),m.flags(),m.spriteFlags(),m.xRadius(),m.yRadius(),m.animation(),m.previousAnimation(),m.playerJump(),m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle());
+        return new ObjectSolidPublication(s,environment,new CdPlayerBody.State(n,s.animation(),s.header(),s.timers(),s.history(),s.rotationDistance(),s.objectLinks(),s.rotationAngle()),environment);
+    }
+    /** Pure native Y velocity WORD store. The caller owns the actual synchronous producer. */
+    public ObjectSolidPublication prepareObjectYVelocity(CdPlayerBody.State expectedState,
+            CdPlayerBody.Environment expectedEnvironment,int expectedWord,int valueWord){
+        requireOpenIdle();requireClosedFrame();
+        if(state!=Objects.requireNonNull(expectedState)||environment!=Objects.requireNonNull(expectedEnvironment)
+                ||((expectedWord|valueWord)&~65535)!=0||(state.motion().yVelocity()&65535)!=expectedWord)
+            throw new IllegalArgumentException("Stale complete native Y velocity cut/width");
+        var s=state;var m=s.motion();
+        var n=new CdPlayerMotionState(m.centreX16_16(),m.centreY16_16(),m.xVelocity(),(short)valueWord,
+                m.groundVelocity(),m.routine(),m.angle(),m.flags(),m.spriteFlags(),m.xRadius(),m.yRadius(),
+                m.animation(),m.previousAnimation(),m.playerJump(),m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle());
+        return new ObjectSolidPublication(s,environment,new CdPlayerBody.State(n,s.animation(),s.header(),s.timers(),s.history(),s.rotationDistance(),s.objectLinks(),s.rotationAngle()),environment);
+    }
     /** Existing strict launch validator and the same complete actor projection, prepared before any owner assignment. */
     public ObjectSolidPublication prepareObjectSpringLaunch(CdSpring.LaunchCall call) {
         validateObjectSpringLaunch(call);
@@ -2430,7 +3084,9 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      * post-Body boundary; semantic phase ownership remains with root.
      */
     public void publishDrawObjectOnScreen(boolean onScreen) {
-        requireOpenIdle(); requireClosedFrame();
+        requireOpenIdle(); requireClosedFrame();publishDrawObjectOnScreenValue(onScreen);
+    }
+    private void publishDrawObjectOnScreenValue(boolean onScreen){
         var m = state.motion();
         int bit = onScreen ? 0x80 : 0;
         var motion = new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), m.xVelocity(), m.yVelocity(), m.groundVelocity(),
@@ -2488,31 +3144,33 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
     /** Validate both partition owners before root starts a composite restore; no mutation. */
     public void validateActorRestore(ActorState snapshot) {
-        requireOpenIdle(); requireOwner(Objects.requireNonNull(snapshot, "snapshot").owner());
+        requireOpenIdle(); requireNoOriginalCycle(); requireOwner(Objects.requireNonNull(snapshot, "snapshot").owner());
     }
     public void validateSharedRestore(SharedState snapshot) {
-        requireOpenIdle(); requireOwner(Objects.requireNonNull(snapshot, "snapshot").owner());
+        requireOpenIdle(); requireNoOriginalCycle(); requireOwner(Objects.requireNonNull(snapshot, "snapshot").owner());
     }
     /** Root owns roster/world guards and post-composite projection; no initialization/effects are replayed. */
     public void restoreActor(ActorState snapshot) {
         validateActorRestore(snapshot);
-        state = snapshot.state(); display = snapshot.display(); pending = null; bodyEntitled = false;
+        originalProgrammeGeneration++;state = snapshot.state(); display = snapshot.display(); pending = null; bodyEntitled = false;
     }
     /** Root rebinds the complete resident bank after composite restore; this never invokes publication/service. */
     public void restoreShared(SharedState snapshot) {
         validateSharedRestore(snapshot);
-        environment = snapshot.environment(); art.restore(snapshot.artState()); paused = snapshot.paused(); vIntClock = snapshot.vIntClock();
+        originalProgrammeGeneration++;environment = snapshot.environment(); art.restore(snapshot.artState()); paused = snapshot.paused(); vIntClock = snapshot.vIntClock();
         pending = null; bodyEntitled = false;
     }
 
     /** Cancel/transition/end-frame cleanup, preserving last actually read raw AND retained logical pairs. */
     public void clearPendingInput() {
         if (inOperation) throw new IllegalStateException("Cannot cancel inside an active source operation");
+        if(originalProgrammeCall!=null)originalProgrammeCall.retire();originalProgrammeGeneration++;
         pending = null; bodyEntitled = false;
     }
     /** Idempotent teardown; failed admission cannot be reopened by restore or callback replacement. */
     @Override public void close() {
         if (inOperation) throw new IllegalStateException("Cannot close inside an active source operation");
+        if(originalProgrammeCall!=null)originalProgrammeCall.retire();originalProgrammeGeneration++;
         pending = null; bodyEntitled = false; artPublication = null; closed = true;
     }
 
@@ -2537,9 +3195,10 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
             return; // Shared service values only; Body separately fences every unowned R3 continuation.
         }
         // The bound program continues while native timeZone carries an active destination marker.
-        boolean activePeriod = gates.timeZone() >= 0x80 && gates.timeZone() <= 0x82;
+        boolean activePeriod = (pastSource==null || pastSource.player().sourceGraph()!=CdR11aPlayerAssets.SourceGraph.R4)
+                && gates.timeZone() >= 0x80 && gates.timeZone() <= 0x82;
         int ordinaryPeriod = pastSource == null ? 1 : pastSource.ordinaryPeriod();
-        int ordinaryZoneAct = pastSource == null ? 0 : pastSource.stage().actNumber() - 1;
+        int ordinaryZoneAct = pastSource == null ? 0 : pastSource.nativeZoneActWord();
         if (gates.zoneAct() != ordinaryZoneAct || (gates.timeZone() != ordinaryPeriod && !activePeriod)) {
             throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY, pastSource == null
                     ? "Only the bound R11A present/active-warp program is admitted"
@@ -2555,25 +3214,100 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         if (closed) throw new IllegalStateException("CD player frame admission is closed; a known rebuild is required");
         if (inOperation || bumperApplying) throw new IllegalStateException("Reentrant CD frame mutation is not admitted");
     }
+    private void requireNoOriginalCycle(){if(originalProgrammeCall!=null)throw new IllegalStateException("Unfinished original Frame cycle");}
     private void requireClosedFrame() {
+        requireNoOriginalCycle();
         if (pending != null || bodyEntitled) throw new IllegalStateException("A closed frame cut requires no pending input or body entitlement");
     }
     private void requireOwner(CaptureOwner owner) {
         if (owner != captureOwner) throw new IllegalArgumentException("Snapshot belongs to another CD runtime/source owner");
     }
 
-    /** VInt_Finish/RunBoredTimer/RunTimeWarp: old paused gates active words; charge gates only warp. */
-    private static CdPlayerBody.Environment finishTimers(CdPlayerBody.Environment e, boolean oldPaused, int charge) {
-        if (oldPaused) return e;
-        var m = e.movement(); var g = m.globals(); var b = e.globals();
-        int bored = g.boredTimer() == 0 ? 0 : (g.boredTimer() + 1) & 0xFFFF;
-        int warp = charge != 0 || b.timeWarpTimer() == 0 ? b.timeWarpTimer() : (b.timeWarpTimer() + 1) & 0xFFFF;
-        var globals = new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(),
-                bored, g.scoreChain(), g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance());
-        var movement = new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(), globals);
-        var bodyGlobals = new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), b.debugMode(),
-                b.debugCheat(), warp, b.invincible(), b.bossMusic());
-        return new CdPlayerBody.Environment(movement, e.controls(), bodyGlobals, e.dynamicSlots());
+    /** Actual source/lifetime owner of the existing captured secondary WORD. No second timer,
+     * capture participant, synthetic zero or public setter is supplied by the Frame. */
+    public static final class UnownedSecondaryBoredTimer extends UnsupportedOperationException {
+        public UnownedSecondaryBoredTimer(){super("Actual captured secondary bored WORD is absent at Finish read");}
+    }
+    public interface FinishTimersOwner {
+        int readSecondary(FinishTimerCall original);
+        void writeSecondary(FinishTimerCall original,int word);
+    }
+    /** Private-issued synchronous Finish call. Observations/captures cannot construct or replay it. */
+    public final class FinishTimerCall {
+        private final boolean writing;
+        private final Thread issuedThread=Thread.currentThread();
+        private FinishTimerCall(boolean writing){this.writing=writing;}
+        public boolean writing(){return writing;}
+        public void requireCurrent(CdPlayerFrameRuntime actual){
+            if(actual!=CdPlayerFrameRuntime.this || currentFinishTimerCall!=this || !finishingTimers
+                    || !inOperation || closed || issuedThread!=Thread.currentThread()
+                    || finishTimersOwner==null || stageSource()!=finishTimersSource)
+                throw new IllegalStateException("No original current Frame Finish timer call");
+        }
+    }
+    private FinishTimersOwner finishTimersOwner;
+    private CdStagePlayerSource finishTimersSource;
+    private FinishTimerCall currentFinishTimerCall;
+    private boolean finishingTimers;
+    /** Bind once from the real original assembly. The callback additionally enforces that
+     * Module/Host's active source, phase, World, thread, load generation and lifetime. */
+    public void bindFinishTimersOwner(FinishTimersOwner actual){
+        requireOpenIdle();requireClosedFrame();
+        if(finishTimersOwner!=null)throw new IllegalStateException("Original Finish owner already bound");
+        finishTimersOwner=Objects.requireNonNull(actual,"actual captured secondary timer owner");
+        finishTimersSource=stageSource();
+    }
+    private int readSecondaryBored(){
+        var call=new FinishTimerCall(false);currentFinishTimerCall=call;
+        try{call.requireCurrent(this);int word=finishTimersOwner.readSecondary(call);call.requireCurrent(this);return word;}
+        finally{currentFinishTimerCall=null;}
+    }
+    private void writeSecondaryBored(int word){
+        var call=new FinishTimerCall(true);currentFinishTimerCall=call;
+        try{call.requireCurrent(this);finishTimersOwner.writeSecondary(call,word);call.requireCurrent(this);}
+        finally{currentFinishTimerCall=null;}
+    }
+    /** VInt_Finish: old pause gates the pair and warp; charge gates warp only. Native pair
+     * publishes primary BEFORE borrowing secondary. A later fault preserves that first store,
+     * prevents warp/count, and is terminal through the enclosing existing Frame service guard. */
+    private void finishTimers(boolean oldPaused,int charge){
+        if(!inOperation||finishingTimers)throw new IllegalStateException("No original Finish operation");
+        if(oldPaused)return;
+        if(finishTimersOwner==null){
+            // Historical component/DEV callers keep the same explicitly primary-only scope.
+            // This neither admits TT nor interprets an absent secondary as a zero WORD.
+            environment=finishTimers(environment,false,charge);return;
+        }
+        finishingTimers=true;
+        try{
+            CdBoredTimers.updatePair(new CdBoredTimers.TimerPair(){
+                public int readPrimary(){return environment.movement().globals().boredTimer();}
+                public void writePrimary(int word){storePrimaryBored(word);}
+                public int readSecondary(){return readSecondaryBored();}
+                public void writeSecondary(int word){writeSecondaryBored(word);}
+            });
+            environment=finishWarpTimer(environment,charge);
+        }finally{currentFinishTimerCall=null;finishingTimers=false;}
+    }
+    /** Existing bounded primary-only projection retained for historical callers/controls;
+     * actual original lifetimes call the paired instance service above. No secondary default. */
+    private static CdPlayerBody.Environment finishTimers(CdPlayerBody.Environment e,boolean oldPaused,int charge){
+        if(oldPaused)return e;
+        return finishWarpTimer(withPrimaryBored(e,CdBoredTimers.advanceActiveWord(e.movement().globals().boredTimer())),charge);
+    }
+    private static CdPlayerBody.Environment finishWarpTimer(CdPlayerBody.Environment e,int charge){
+        var b=e.globals();int warp=charge!=0||b.timeWarpTimer()==0?b.timeWarpTimer():(b.timeWarpTimer()+1)&0xFFFF;
+        return new CdPlayerBody.Environment(e.movement(),e.controls(),
+                new CdPlayerBody.Globals(b.levelFrames(),b.cameraXCentre(),b.timeAttackMode(),b.debugMode(),
+                    b.debugCheat(),warp,b.invincible(),b.bossMusic()),e.dynamicSlots());
+    }
+    private void storePrimaryBored(int word){environment=withPrimaryBored(environment,word);originalAdopt();}
+    private static CdPlayerBody.Environment withPrimaryBored(CdPlayerBody.Environment e,int word){
+        var m=e.movement();var g=m.globals();
+        var globals=new CdPlayerMovement.Globals(g.lookMode(),g.cameraYCentre(),g.primaryAngle(),g.secondaryAngle(),
+                word,g.scoreChain(),g.debugAngle(),g.debugAngleShift(),g.debugQuadrant(),g.debugFloorDistance());
+        return new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(),m.bounds(),m.gates(),globals),
+                e.controls(),e.globals(),e.dynamicSlots());
     }
     private static CdPlayerBody.Environment withControls(CdPlayerBody.Environment e, CdPlayerBody.Controls controls) {
         return new CdPlayerBody.Environment(e.movement(), controls, e.globals(), e.dynamicSlots());
@@ -2914,6 +3648,10 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
 
     /** Adopt the validated prebuilt pair only; no Body, store replay, service, sound or callback runs. */
+    public ObjectSolidPublication prepareOriginalMechanismDisc(CdSpinningDisc.PlayerCall call){
+        Objects.requireNonNull(call);validateObjectDiscPlayerResult(call.expectedPlayer().state(),call.expectedPlayer().environment(),call.result());
+        return new ObjectSolidPublication(state,environment,call.result().finalState(),call.result().finalEnvironment());
+    }
     public void applyObjectDiscPlayerResult(CdPlayerBody.State expectedState,
                                             CdPlayerBody.Environment expectedEnvironment,
                                             CdSpinningDisc.PlayerResult result) {
@@ -2985,6 +3723,13 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     public ObjectSolidPublication prepareObjectGoalPostReached(CdPlayerBody.State expectedState,
                                                                CdPlayerBody.Environment expectedEnvironment,
                                                                int cameraXWord) {
+        return prepareObjectGoalPostReached(expectedState,expectedEnvironment,cameraXWord,true);
+    }
+    /** Native GoalPost suffix after leftBound/destLeftBound have both returned. */
+    public ObjectSolidPublication prepareObjectGoalPostTimeWarpReset(CdPlayerBody.State expectedState,CdPlayerBody.Environment expectedEnvironment){
+        return prepareObjectGoalPostReached(expectedState,expectedEnvironment,expectedEnvironment.movement().bounds().left(),false);
+    }
+    private ObjectSolidPublication prepareObjectGoalPostReached(CdPlayerBody.State expectedState,CdPlayerBody.Environment expectedEnvironment,int cameraXWord,boolean writeLeft){
         requireOpenIdle(); requireClosedFrame();
         Objects.requireNonNull(expectedState, "Goal Post player State");
         Objects.requireNonNull(expectedEnvironment, "Goal Post player Environment");
@@ -2998,7 +3743,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         var movement = actualEnvironment.movement(); var bounds = movement.bounds(); var gates = movement.gates();
         var body = actualEnvironment.globals();
         var nextMovement = new CdPlayerMovement.Environment(movement.physics(),
-                new CdPlayerMovement.Bounds(cameraXWord, bounds.right(), bounds.bottom(), bounds.bossFight()),
+                new CdPlayerMovement.Bounds(writeLeft?cameraXWord:bounds.left(), bounds.right(), bounds.bottom(), bounds.bossFight()),
                 new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), gates.miniSonic(), gates.waterSlide(),
                         gates.windTunnel(), gates.speedShoes(), 0), movement.globals());
         var nextEnvironment = new CdPlayerBody.Environment(nextMovement, actualEnvironment.controls(),
@@ -3197,16 +3942,18 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     /** Already-built complete primary pair, tied to one original live Bumper PlayerStore.
      * No secondary claim. Environment/display/art/clock/pause are explicit nonwrites. */
     public static final class BumperPlayerPublication {
-        private final CdPlayerFrameRuntime owner;private final CdR31BumperCall original;
+        private final CdPlayerFrameRuntime owner;private final CdR31PinballCall original;
         private final CdPlayerBody.State before,ready;private final CdPlayerBody.Environment environment;
         private final Optional<CdPlayerBody.DisplayPublication> display;private final CdPlayerArtRuntime.State art;
         private final VIntClock clock;private final boolean paused;private boolean used;
-        private BumperPlayerPublication(CdPlayerFrameRuntime owner,CdR31BumperCall original){
+        private BumperPlayerPublication(CdPlayerFrameRuntime owner,CdR31PinballCall original){
             this.owner=owner;this.original=original;before=owner.state;ready=original.playerStore().output();
             environment=owner.environment;display=owner.display;art=owner.art.capture();clock=owner.vIntClock;paused=owner.paused;
         }
     }
-    public BumperPlayerPublication prepareBumperPlayerStore(CdR31BumperCall original){
+    public BumperPlayerPublication prepareBumperPlayerStore(CdR31BumperCall original){return preparePinballPlayerStore(original);}
+    /** Shared original receipt; legacy publication type/name retained for source compatibility. */
+    public BumperPlayerPublication preparePinballPlayerStore(CdR31PinballCall original){
         requireOpenIdle();requireClosedFrame();Objects.requireNonNull(original).requirePlayerPreparation(this);
         if(original.playerStore().expected()!=state)throw new IllegalArgumentException("Not original primary reference");
         return new BumperPlayerPublication(this,original);
@@ -3226,6 +3973,44 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         try{bumperPair(p);p.original.requirePlayerApplication(this);bumperPair(p);
             // All checks/callbacks complete. Only already-built original primary State is assigned.
             p.used=true;state=p.ready;
+        }finally{bumperApplying=false;}
+    }
+
+    /** One actual primary attachment, never prepared from a caller's arbitrary Result. */
+    public static final class PinballAttachmentPublication {
+        private final CdPlayerFrameRuntime owner;private final CdR31PinballCall original;
+        private final CdPlayerBody.State before,ready;private final CdPlayerBody.Environment environment;
+        private final Optional<CdPlayerBody.DisplayPublication> display;private final CdPlayerArtRuntime.State art;
+        private final VIntClock clock;private final boolean paused;private boolean used;
+        private PinballAttachmentPublication(CdPlayerFrameRuntime owner,CdR31PinballCall original,ObjectSolidPublication p){
+            this.owner=owner;this.original=original;before=owner.state;ready=p.finalState().equals(before)?before:p.finalState();environment=owner.environment;
+            display=owner.display;art=owner.art.capture();clock=owner.vIntClock;paused=owner.paused;
+            // Direct Stand/GetOff has no native globals/environment writes.
+            if(!p.finalEnvironment().equals(environment))throw new IllegalArgumentException("Attachment changed globals/environment");
+        }
+        /** Inert prepared value, not authority to apply it. */
+        public CdPlayerBody.State outputState(){return ready;}
+    }
+    public PinballAttachmentPublication preparePinballAttachment(CdR31PinballCall original){
+        requireOpenIdle();requireClosedFrame();Objects.requireNonNull(original).requirePlayerPreparation(this);
+        var outcome=original.attachmentOutcome();ObjectSolidPublication p;
+        if(outcome instanceof CdSolidObject.Completed c)p=prepareObjectSolidResult(original.attachmentPlayer(),original.attachmentGlobals(),c.completedResult());
+        else p=prepareObjectSolidPrefix(original.attachmentPlayer(),original.attachmentGlobals(),((CdSolidObject.NativeStopped)outcome).prefix());
+        return new PinballAttachmentPublication(this,original,p);
+    }
+    private void pinballAttachmentCut(PinballAttachmentPublication p){
+        if(p==null||p.owner!=this||p.used||closed||state!=p.before||environment!=p.environment||display!=p.display
+                ||!art.capture().equals(p.art)||vIntClock!=p.clock||paused!=p.paused)throw new IllegalArgumentException("Changed complete attachment Frame cut");
+    }
+    public void validatePinballAttachment(PinballAttachmentPublication p){
+        requireOpenIdle();requireClosedFrame();pinballAttachmentCut(p);p.original.requirePlayerPreparation(this);pinballAttachmentCut(p);
+    }
+    public void applyPinballAttachment(PinballAttachmentPublication p){
+        requireOpenIdle();requireClosedFrame();bumperApplying=true;
+        try{pinballAttachmentCut(p);p.original.requirePlayerApplication(this);pinballAttachmentCut(p);
+            // Last callback validates both owners before its allocation-free pool assignments.
+            // Once it returns, only these already-prepared references/flags are assigned.
+            p.original.applyAttachmentPool(this);p.used=true;state=p.ready;
         }finally{bumperApplying=false;}
     }
 

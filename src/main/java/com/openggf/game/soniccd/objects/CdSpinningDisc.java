@@ -17,6 +17,7 @@ import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import com.openggf.game.soniccd.level.CdR11aAssets;
 
 import static com.openggf.game.soniccd.objects.CdObjectState.ByteField.*;
 import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
@@ -48,6 +49,9 @@ import static com.openggf.game.soniccd.objects.CdSpinningDisc.DiscPlayerField.*;
  * Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
  */
 public final class CdSpinningDisc {
+    private CdOriginalMechanismProtocol mechanismProtocol;
+    public boolean isCurrentOriginalOperation(CdOriginalMechanismProtocol.Call call){return mechanismProtocol!=null&&mechanismProtocol.current(call);}
+
     public static final int OBJECT_ID = 0x09;
     public static final int TILE_SELECTOR = 6;
 
@@ -236,6 +240,14 @@ public final class CdSpinningDisc {
         return body;
     }
 
+
+    public static CdSpinningDisc fromOriginalPresentMechanism(CdObjectPlacementRuntime placement,CdR11aAssets owner,
+            CdPlayerMath math,CdSolidObject solid,SolidCommit commit,PlayerOwner player,PlayFmCall fm,DrawObjectCall draw,
+            CdOriginalMechanismProtocol.Observer observer)throws java.io.IOException{
+        CdOriginalPresentObjectSource.require(placement,owner);
+        var body=new CdSpinningDisc(placement,Assets.fromObjectAssets(owner.openingObjects()),math,solid,commit,player,fm,draw);
+        body.mechanismProtocol=new CdOriginalMechanismProtocol(placement,observer);return body;
+    }
     public CdSpinningDisc(CdObjectPlacementRuntime placement, Assets assets, CdPlayerMath math, CdSolidObject sharedSolid,
                           SolidCommit solidCommit, PlayerOwner playerOwner, PlayFmCall playFm, DrawObjectCall drawObject) {
         this.placement = Objects.requireNonNull(placement, "placement"); this.assets = Objects.requireNonNull(assets, "assets");
@@ -248,6 +260,7 @@ public final class CdSpinningDisc {
     public Result run(int wholeIndex, Globals globals) {
         if (running) throw new IllegalStateException("Disc cannot reenter its synchronous physical dispatch");
         running = true;
+        if(mechanismProtocol!=null)mechanismProtocol.begin(wholeIndex);
         try {
             Objects.requireNonNull(globals, "globals"); var pool = placement.pool(); var source = pool.state(wholeIndex);
             if (source.id() != OBJECT_ID) throw new IllegalArgumentException("Selected slot is not Disc ID $09");
@@ -259,7 +272,7 @@ public final class CdSpinningDisc {
             }
             if (globals.timeStopTimerWord() == 0) animate(c);
             draw(c); despawn(c, globals); return new Result(c.state, c.effects);
-        } finally { pendingAnimation.retire(); currentCursor = null; running = false; }
+        } finally { if(mechanismProtocol!=null)mechanismProtocol.end();pendingAnimation.retire(); currentCursor = null; running = false; }
     }
     /** Init:36-44: map and header prefix precede the reached selector6/subtype2 read. */
     private void init(Cursor c) {
@@ -353,7 +366,8 @@ public final class CdSpinningDisc {
     /** Actual immutable read under a fresh source64/full96 nonwriting cut, also on throws. */
     private PlayerCut readPlayer(Cursor c) {
         var cut = c.pool.capture(); var source = c.state; requireCurrentCut(c, cut, source);
-        try { return Objects.requireNonNull(playerOwner.read(), "actual immutable player pair"); }
+        if(mechanismProtocol!=null)return originalChecked(()->Objects.requireNonNull(mechanismProtocol.callback(CdOriginalMechanismProtocol.NativeSite.DISC_READ,playerOwner::read)),()->requireCurrentCut(c,cut,source));
+        try { return Objects.requireNonNull(mechanismProtocol==null?playerOwner.read():mechanismProtocol.callback(CdOriginalMechanismProtocol.NativeSite.DISC_READ,playerOwner::read), "actual immutable player pair"); }
         finally { requireCurrentCut(c, cut, source); }
     }
     private void requirePlayer(Cursor c, PlayerCut expected) {
@@ -364,7 +378,8 @@ public final class CdSpinningDisc {
         requireCurrentCut(c, cut, source); requirePlayer(c, expected);
         var call = new PlayerCall(cut, source, expected, result);
         // The player port must leave EVERY dynamic image intact, including on callback failure.
-        try { playerOwner.commit(call); } finally { requireCurrentCut(c, cut, source); }
+        if(mechanismProtocol!=null)originalChecked(()->{mechanismProtocol.callback(call,()->playerOwner.commit(call));return null;},()->requireCurrentCut(c,cut,source));
+        else {try { playerOwner.commit(call); } finally { requireCurrentCut(c,cut,source); }}
         requirePlayer(c, new PlayerCut(result.finalState(), result.finalEnvironment()));
         c.effects.add(new PlayerCommitted(result));
     }
@@ -372,25 +387,27 @@ public final class CdSpinningDisc {
         var expected = readPlayer(c); var cut = c.pool.capture(); var source = c.state;
         requireCurrentCut(c, cut, source); requirePlayer(c, expected);
         var call = new FmCall(cut, source, expected, FmSound.FM_A0);
-        try { playFm.play(call); }
-        finally { requireCurrentCut(c, cut, source); requirePlayer(c, expected); }
+        if(mechanismProtocol!=null)originalChecked(()->{mechanismProtocol.callback(call,()->playFm.play(call));return null;},()->{requireCurrentCut(c,cut,source);requirePlayer(c,expected);});
+        else {try { playFm.play(call); } finally { requireCurrentCut(c,cut,source);requirePlayer(c,expected); }}
         c.effects.add(new FmPlayed(FmSound.FM_A0)); c.returned(NativeCall.PLAY_FM_SOUND);
     }
     private CdSolidObject.Result solid(Cursor c) {
         var player = readPlayer(c); var cut = c.pool.capture(); var source = c.state;
         requireCurrentCut(c, cut, source); requirePlayer(c, player);
         CdSolidObject.Outcome outcome;
-        try {
-            outcome = sharedSolid.runWithPrefix(CdSolidObject.Entry.SOLID_OBJECT, source, solidPlayer(player),
-                    new CdSolidObject.Gates(player.environment().globals().debugMode(), player.environment().movement().gates().miniSonic()),
-                    solidGlobals(player), cut);
-        } finally { requireCurrentCut(c, cut, source); requirePlayer(c, player); }
+        if(mechanismProtocol!=null){
+            mechanismProtocol.callback(CdOriginalMechanismProtocol.NativeSite.DISC_SOLID_OWNER,()->{});
+            outcome=originalChecked(()->sharedSolid.runWithPrefix(CdSolidObject.Entry.SOLID_OBJECT,source,solidPlayer(player),new CdSolidObject.Gates(player.environment().globals().debugMode(),player.environment().movement().gates().miniSonic()),solidGlobals(player),cut),()->{requireCurrentCut(c,cut,source);requirePlayer(c,player);});
+        }else{
+            try {outcome=sharedSolid.runWithPrefix(CdSolidObject.Entry.SOLID_OBJECT,source,solidPlayer(player),new CdSolidObject.Gates(player.environment().globals().debugMode(),player.environment().movement().gates().miniSonic()),solidGlobals(player),cut);}
+            finally{requireCurrentCut(c,cut,source);requirePlayer(c,player);}
+        }
         var output = solidImages(outcome); var images = new ArrayList<CdObjectState>();
         images.add(output.object()); images.addAll(output.otherSlots());
         var finalPool = CdObjectPool.overlay(cut, images); // Pure preflight of every same-owner final image.
         var call = new SolidCall(cut, source, player, outcome);
         requireCurrentCut(c, cut, source); requirePlayer(c, player);
-        solidCommit.commit(call); // Root stages actual Frame+pool+FM ledger before any live assignment.
+        if(mechanismProtocol==null)solidCommit.commit(call);else mechanismProtocol.callback(call,()->solidCommit.commit(call)); // Root stages actual Frame+pool+FM ledger before any live assignment.
         c.state = c.pool.state(c.wholeIndex);
         if (!c.pool.capture().slots().equals(finalPool.slots()) || !c.state.equals(output.object())) {
             throw new IllegalStateException("Solid port did not publish the genuine complete96 output images");
@@ -570,6 +587,7 @@ public final class CdSpinningDisc {
     /** One reached native AnimateObject call; the shared kernel publishes every completed store. */
     private void animate(Cursor c) {
         var table = new CdObjectAnimation.AnimationTable(assets.visual().animationTable(), 0, assets.visual().animations().size());
+        if(mechanismProtocol!=null){mechanismProtocol.animate(table,()->running&&currentCursor==c,state->c.state=state,read->unsupported(animationBoundary(read.boundary()),c,read.value()));c.returned(NativeCall.ANIMATE_OBJECT);return;}
         CdObjectAnimationBinding.run(placement, c.wholeIndex, table,
                 () -> running && currentCursor == c, state -> c.state = state,
                 pendingAnimation.wrap(animationGuard), op -> { }, read -> unsupported(animationBoundary(read.boundary()), c, read.value()));
@@ -586,7 +604,7 @@ public final class CdSpinningDisc {
     }
 
     private void draw(Cursor c) {
-        try { drawObject.drawObject(c.pool, c.state.identity()); }
+        try { if(mechanismProtocol==null)drawObject.drawObject(c.pool,c.state.identity());else mechanismProtocol.callback(CdOriginalMechanismProtocol.NativeSite.DISC_DRAW,()->drawObject.drawObject(c.pool,c.state.identity())); }
         finally { c.state = c.pool.state(c.wholeIndex); }
         c.returned(NativeCall.DRAW_OBJECT);
     }
@@ -598,10 +616,10 @@ public final class CdSpinningDisc {
         if (outside || (globals.rawTimeZoneByte() & 0x80) != 0) {
             if (c.state.savedFlagsId() != 0) {
                 var at = savedAddress(c, globals); int old = placement.savedFlag(at.id(), at.period());
-                placement.bclrSavedFlag(at.id(), at.period(), CdObjectPlacementRuntime.SavedBit.LOADED);
+                if(mechanismProtocol==null)placement.bclrSavedFlag(at.id(),at.period(),CdObjectPlacementRuntime.SavedBit.LOADED);else mechanismProtocol.saved(at.byteIndex(),old&127,()->placement.bclrSavedFlag(at.id(),at.period(),CdObjectPlacementRuntime.SavedBit.LOADED));
                 c.effects.add(new SavedFlagChanged(at.byteIndex(), old, placement.savedFlag(at.id(), at.period())));
             }
-            c.pool.deleteObject(c.wholeIndex); c.state = c.pool.state(c.wholeIndex); c.effects.add(new Deleted());
+            if(mechanismProtocol==null)c.pool.deleteObject(c.wholeIndex);else mechanismProtocol.delete(()->c.pool.deleteObject(c.wholeIndex)); c.state = c.pool.state(c.wholeIndex); c.effects.add(new Deleted());
         }
         c.returned(NativeCall.CHECK_OBJ_DESPAWN);
     }
@@ -617,7 +635,7 @@ public final class CdSpinningDisc {
         return new SavedAddress((index - 2) / 3, (index - 2) % 3, index);
     }
     private static UnsupportedSpinningDisc unsupported(UnsupportedBoundary boundary, Cursor c, int value) { return new UnsupportedSpinningDisc(boundary, c, value); }
-    private static final class Cursor {
+    private final class Cursor {
         final CdObjectPool pool;
         final int wholeIndex;
         final List<Effect> effects = new ArrayList<>();
@@ -625,7 +643,11 @@ public final class CdSpinningDisc {
         Cursor(CdObjectPool pool, CdObjectState state) { this.pool = pool; this.state = state; wholeIndex = state.identity().wholeIndex(); }
         void enter(NativeRoutine routine) { effects.add(new RoutineEntered(routine)); }
         void returned(NativeCall call) { effects.add(new CallReturned(call)); }
-        void publish() { pool.write(state); }
+        void publish() { if(mechanismProtocol==null)pool.write(state);else mechanismProtocol.store(state,()->pool.write(state)); }
+    }
+    private static <T>T originalChecked(java.util.function.Supplier<T> action,Runnable check){
+        Throwable original=null;try{return action.get();}catch(RuntimeException|Error failure){original=failure;throw failure;}
+        finally{try{check.run();}catch(RuntimeException|Error verification){if(original==null)throw verification;if(original!=verification)original.addSuppressed(verification);}}
     }
     private static void byteValue(int value) { if ((value & ~255) != 0) throw new IllegalArgumentException("Expected unsigned native byte"); }
     private static void wordValue(int value) { if ((value & ~65535) != 0) throw new IllegalArgumentException("Expected unsigned native word"); }

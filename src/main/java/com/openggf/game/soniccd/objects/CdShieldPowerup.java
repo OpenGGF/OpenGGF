@@ -18,8 +18,8 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * There is no FixBugs alternative in these routines.
  *
  * <p>Finite reads occur only when reached, in source order. Every completed store
- * prefix survives failure. Animation runs once on its original image; separately
- * published read prefixes model only stores preceding potentially missing bytes.
+ * prefix survives failure. Animation runs once through the shared Prefix kernel;
+ * each reached byte store uses this body's original synchronous publication.
  * No mapping pointer is dereferenced here, including on a held animation timer.
  * Returned effects are completed scalar observations, never commands to replay.
  *
@@ -44,6 +44,8 @@ public final class CdShieldPowerup {
         void drawObject(CdReservedObjectBank bank, CdReservedObjectBank.Identity identity);
     }
     public enum NativeRoutine { INIT, SHIELD }
+    /** Native STAGE_ZONE=2 removes the complete MMZ read block; no redundant source read. */
+    public enum LayerPolicy { READ_ZONE_AND_OPTIONAL_LAYER, OMIT_ZONE_AND_LAYER }
     public sealed interface Effect permits RoutineEntered, ValueRead, AnimationReturned,
             PowerupRead, PowerupWritten, DrawReturned, Deleted { }
     public record RoutineEntered(NativeRoutine routine) implements Effect {
@@ -107,6 +109,7 @@ public final class CdShieldPowerup {
     private final ReadPort reads;
     private final PowerupPort powerup;
     private final DrawReserved draw;
+    private final LayerPolicy layerPolicy;
     private DispatchObserver observer;
     private ReceiptGuard receiptGuard;
     private boolean running, primitiveActive, resultReady;
@@ -117,9 +120,13 @@ public final class CdShieldPowerup {
     /** Reuse CdTimeStars.Assets.fromAct2Assets(actualOwner); no second media/table owner. */
     public CdShieldPowerup(CdReservedObjectBank bank, CdTimeStars.Assets assets, ReadPort reads,
                            PowerupPort powerup, DrawReserved draw) {
+        this(bank,assets,reads,powerup,draw,LayerPolicy.READ_ZONE_AND_OPTIONAL_LAYER);
+    }
+    private CdShieldPowerup(CdReservedObjectBank bank,CdTimeStars.Assets assets,ReadPort reads,
+            PowerupPort powerup,DrawReserved draw,LayerPolicy layerPolicy){
         this.bank = Objects.requireNonNull(bank); this.assets = Objects.requireNonNull(assets);
         this.reads = Objects.requireNonNull(reads); this.powerup = Objects.requireNonNull(powerup);
-        this.draw = Objects.requireNonNull(draw);
+        this.draw = Objects.requireNonNull(draw);this.layerPolicy=Objects.requireNonNull(layerPolicy);
     }
     public static CdShieldPowerup withWorldOwner(CdReservedObjectBank bank, CdTimeStars.Assets assets,
                                                 ReadPort reads, PowerupPort powerup, DrawReserved draw,
@@ -127,6 +134,13 @@ public final class CdShieldPowerup {
         var body = new CdShieldPowerup(bank, assets, reads, powerup, draw);
         body.observer = Objects.requireNonNull(observer); body.receiptGuard = Objects.requireNonNull(guard);
         return body;
+    }
+    /** Same guarded kernel and legacy default; the caller authenticates its compiled semantic profile. */
+    public static CdShieldPowerup withWorldOwnerLayerPolicy(CdReservedObjectBank bank,CdTimeStars.Assets assets,
+            ReadPort reads,PowerupPort powerup,DrawReserved draw,DispatchObserver observer,
+            ReceiptGuard guard,LayerPolicy layerPolicy){
+        var body=new CdShieldPowerup(bank,assets,reads,powerup,draw,layerPolicy);
+        body.observer=Objects.requireNonNull(observer);body.receiptGuard=Objects.requireNonNull(guard);return body;
     }
     public CdTimeStars.Assets assets() { return assets; }
     public boolean isCurrentCall(Object call) { return running && call != null && call == pendingOperation; }
@@ -196,7 +210,7 @@ public final class CdShieldPowerup {
         c.state = c.state.moveWord(Y, y); publish(c);
         int flags = read(c, ReadField.PLAYER_FLAGS);
         c.state = c.state.moveByte(FLAGS, flags); publish(c);
-        if (read(c, ReadField.ZONE) == 6) {
+        if (layerPolicy==LayerPolicy.READ_ZONE_AND_OPTIONAL_LAYER && read(c, ReadField.ZONE) == 6) {
             c.state = c.state.moveByteAt(2, c.state.byteAt(2) | 0x80); publish(c);
             if (read(c, ReadField.LAYER) != 0) {
                 c.state = c.state.moveByteAt(2, c.state.byteAt(2) & 0x7F); publish(c);
@@ -217,51 +231,49 @@ public final class CdShieldPowerup {
     }
 
     private void animate(Cursor c) {
-        var original = c.state;
-        var table = animationReadPrefixes(c);
-        var result = CdObjectAnimation.step(new CdObjectAnimation.State(original.unsignedByte(ANIMATION),
-                original.unsignedByte(PREVIOUS_ANIMATION), original.unsignedByte(ANIMATION_FRAME), original.unsignedByte(ANIMATION_TIME),
-                original.unsignedByte(MAP_FRAME), original.unsignedByte(SPRITE_FLAGS), original.unsignedByte(FLAGS),
-                original.unsignedByte(ROUTINE), original.unsignedByte(ROUTINE_2)), table);
-        c.state = original.moveByte(ANIMATION, result.animationId()).moveByte(PREVIOUS_ANIMATION, result.previousId())
-                .moveByte(ANIMATION_FRAME, result.scriptIndex()).moveByte(ANIMATION_TIME, result.timer()).moveByte(MAP_FRAME, result.mapFrame())
-                .moveByte(SPRITE_FLAGS, result.spriteFlags()).moveByte(FLAGS, result.statusFlags())
-                .moveByte(ROUTINE, result.routine()).moveByte(ROUTINE_2, result.routine2());
-        publish(c); c.effects.add(new AnimationReturned());
-    }
-
-    /** Reached reset/SUBQ/speed/FF/FE prefixes, as in the saved TimeStars implementation. */
-    private CdObjectAnimation.AnimationTable animationReadPrefixes(Cursor c) {
-        int animation = c.state.unsignedByte(ANIMATION);
-        if (animation != c.state.unsignedByte(PREVIOUS_ANIMATION)) {
-            c.state = c.state.moveByte(PREVIOUS_ANIMATION, animation); publish(c);
-            c.state = c.state.moveByte(ANIMATION_FRAME, 0); publish(c);
-            c.state = c.state.moveByte(ANIMATION_TIME, 0); publish(c);
+        final class Call implements CdObjectAnimation.Guard {
+            CdObjectAnimation.Prefix prefix;
+            private void verify(CdObjectAnimation.Operation operation) {
+                if (!running || !prefix.isCurrent(operation))
+                    throw new IllegalStateException("Retired original reserved Shield animation");
+                callbackCut(c); // Existing actual own-image/owner guard, before and after every cut.
+            }
+            @Override public void before(CdObjectAnimation.Operation operation) { verify(operation); }
+            @Override public void after(CdObjectAnimation.Operation operation) { verify(operation); }
         }
-        c.state = c.state.moveByte(ANIMATION_TIME, (c.state.unsignedByte(ANIMATION_TIME) - 1) & 255); publish(c);
-        var table = assets.animations();
-        if (c.state.signedByte(ANIMATION_TIME) >= 0) return table;
-        if (animation >= table.scriptCount()) throw unsupported(UnsupportedBoundary.ANIMATION_DIRECTORY_ADDRESS, 2 * animation);
-        int script = (short) table.bytes().unsignedWord(2 * animation);
-        int speed = animationByte(table, UnsupportedBoundary.ANIMATION_SPEED_ADDRESS, script);
-        c.state = c.state.moveByte(ANIMATION_TIME, speed); publish(c);
-        int index = c.state.unsignedByte(ANIMATION_FRAME);
-        int frame = animationByte(table, UnsupportedBoundary.ANIMATION_FRAME_ADDRESS, script + 1 + index);
-        if (frame == 0xFF) {
-            c.state = c.state.moveByte(ANIMATION_FRAME, 0); publish(c);
-            animationByte(table, UnsupportedBoundary.ANIMATION_FRAME_ADDRESS, script + 1);
-        } else if (frame == 0xFE) {
-            int back = animationByte(table, UnsupportedBoundary.ANIMATION_OPERAND_ADDRESS, script + 2 + index);
-            index = (index - back) & 255; c.state = c.state.moveByte(ANIMATION_FRAME, index); publish(c);
-            animationByte(table, UnsupportedBoundary.ANIMATION_FRAME_ADDRESS, script + 1 + index);
-        } else if (frame == 0xFD) {
-            animationByte(table, UnsupportedBoundary.ANIMATION_OPERAND_ADDRESS, script + 2 + index);
+        var call = new Call();
+        call.prefix = new CdObjectAnimation.Prefix(bank, WHOLE_INDEX, call, (field, value) -> {
+            var previous = c.state;
+            c.state = previous.moveByte(field, value);
+            try {
+                publish(c); // The real privately issued Publication, exactly once per native byte store.
+            } catch (RuntimeException | Error original) {
+                // A refused primitive retains the old native prefix; a landed store keeps the
+                // proposed image. Reconcile only this cursor, never retry or roll back the bank.
+                try { if (bank.state(WHOLE_INDEX).equals(previous)) c.state = previous; }
+                catch (RuntimeException | Error check) { if (check != original) original.addSuppressed(check); }
+                throw original;
+            }
+        });
+        try {
+            call.prefix.step(assets.animations());
+        } catch (CdObjectAnimation.SelectedReadFailure failure) {
+            // A callback may throw an unrelated previously issued failure. Only this actual
+            // kernel's reached immutable read may be translated into the legacy typed boundary.
+            if (!failure.selectedBy(call.prefix)) throw failure;
+            var boundary = switch (failure.boundary()) {
+                case DIRECTORY -> UnsupportedBoundary.ANIMATION_DIRECTORY_ADDRESS;
+                case SPEED -> UnsupportedBoundary.ANIMATION_SPEED_ADDRESS;
+                case FRAME, FF_FIRST, FE_TARGET -> UnsupportedBoundary.ANIMATION_FRAME_ADDRESS;
+                case FE_OPERAND, FD_OPERAND -> UnsupportedBoundary.ANIMATION_OPERAND_ADDRESS;
+                default -> throw new IllegalStateException("Not a selected animation read", failure);
+            };
+            var mapped = unsupported(boundary, Math.toIntExact(failure.selectedAddress()));
+            mapped.initCause(failure);
+            for (Throwable check : failure.getSuppressed()) if (check != mapped) mapped.addSuppressed(check);
+            throw mapped;
         }
-        return table;
-    }
-    private static int animationByte(CdObjectAnimation.AnimationTable table, UnsupportedBoundary boundary, int offset) {
-        if (offset < 0 || offset >= table.bytes().length()) throw unsupported(boundary, offset);
-        return table.bytes().unsignedByte(offset);
+        c.effects.add(new AnimationReturned());
     }
 
     private int read(Cursor c, ReadField field) {

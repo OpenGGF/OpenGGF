@@ -362,4 +362,47 @@ class TestCdCczEnemyFamily {
         }
         @Override public int chainLinkCount() { return links; }
     }
+
+    // BEGIN Tentou original-family source controls 20261108 (ALL JAVA UNRUN).
+    @Test void tentouInitMappingFaultRetainsOnlyTheReachedDirtyHeaderPrefix() {
+        var h=new H(0x2E,0);h.edit(v->v.moveWord(Y_FRACTION,0xBEEF).moveByte(X_RADIUS,0x55));var before=h.s();
+        Assets a=new Assets(){public MappingView mapping(Mapping m){assertEquals(Mapping.TENTOU_NORMAL,m);throw h.fault;}
+            public CdObjectAnimation.AnimationTable animation(Animation a){throw new AssertionError("No animation before mapping STORE");}public int chainLinkCount(){throw new AssertionError();}};
+        var body=new CdTentou(h.placement,a,terrain(),h);
+        assertSame(h.fault,assertThrows(Fault.class,()->body.run(W)));
+        var expected=CdCczEnemySupport.byteAt(before.moveByte(ROUTINE,2).moveByte(SPRITE_FLAGS,0x84).moveByte(PRIORITY,1)
+            .moveByte(COLLISION_TYPE,6).moveByte(WIDTH,14).moveByte(Y_RADIUS,14).moveWord(TILE,0xA46A),0x3F,255);
+        assertArrayEquals(expected.copyBytes(),h.s().copyBytes());assertEquals(0,h.draws);assertTrue(h.angles.isEmpty());assertTrue(h.sounds.isEmpty());
+        assertFalse(body.running);assertNull(body.s);
+    }
+    @Test void tentouFloorFaultRetainsInitAndLongYBeforeAngleAndRetiresTheOriginalCall() {
+        var h=new H(0x2E,0);h.edit(v->v.moveWord(Y_FRACTION,0xBEEF));int before=h.s().longBits(Y_POSITION);h.angleFailure=true;
+        assertSame(h.fault,assertThrows(Fault.class,h::run));assertEquals(before+0x10000,h.s().longBits(Y_POSITION));
+        assertEquals(2,h.s().routine());assertEquals(0xA46A,h.s().word(TILE));assertEquals(14,h.s().unsignedByte(Y_RADIUS));
+        assertNotNull(h.retainedAngle);assertFalse(h.retainedAngle.isCurrent());assertEquals(0,h.draws);assertFalse(h.body.running);assertNull(h.body.s);
+    }
+    @Test void tentouBombOriginalSoundSeesConversionBeforeDrawAndRejectsCloneReentryAndExpiry() {
+        var h=new H(0x2E,8);h.edit(v->v.moveByte(SUBTYPE,1).moveByte(SPRITE_FLAGS,0x84));var order=new ArrayList<String>();
+        SoundCall[] retained={null};CdTentou[] body={null};
+        var port=new TentouPorts(h){public void sound(SoundCall c){
+            assertTrue(c.isCurrent());assertSame(h.s(),c.expectedSource());assertEquals(0x18,h.s().id());assertEquals(0,h.s().routine());assertEquals(1,h.s().unsignedByte(ROUTINE_2));
+            assertEquals(Sound.EXPLOSION,c.sound());assertFalse(new SoundCall(body[0],c.sound()).isCurrent());
+            assertThrows(IllegalStateException.class,()->body[0].run(W));retained[0]=c;order.add("sound");
+        }public void draw(CdObjectPool p,CdObjectState.Identity i){assertSame(h.pool,p);assertEquals(0x18,p.state(W).id());order.add("draw");super.draw(p,i);}};
+        body[0]=new CdTentou(h.placement,h,terrain(),port);body[0].run(W);
+        assertEquals(List.of("sound","draw"),order);assertFalse(retained[0].isCurrent());assertTrue(h.angles.isEmpty());assertFalse(body[0].running);
+    }
+    @Test void tentouBombSoundFaultKeepsConversionAndSameThrowableWithoutDrawOrRecursiveExplosion() {
+        var h=new H(0x2E,6);h.edit(v->v.moveByte(SUBTYPE,1).moveByte(COLLISION_STATUS,1).moveByte(SPRITE_FLAGS,0x84));var before=h.s();
+        var port=new TentouPorts(h){public void sound(SoundCall c){assertTrue(c.isCurrent());throw h.fault;}};
+        var body=new CdTentou(h.placement,h,terrain(),port);assertSame(h.fault,assertThrows(Fault.class,()->body.run(W)));
+        assertArrayEquals(before.moveByte(ID,0x18).moveByte(ROUTINE,0).moveByte(ROUTINE_2,1).copyBytes(),h.s().copyBytes());assertEquals(0,h.draws);assertTrue(h.angles.isEmpty());assertFalse(body.running);
+    }
+    private static class TentouPorts implements CdCczEnemyPorts {
+        final H h;TentouPorts(H h){this.h=h;}
+        public int global(Global g){return h.global(g);}public int player(Player p){return h.player(p);}
+        public CdPlayerMath.SineCosine sine(int a){return h.sine(a);}public void sound(SoundCall c){h.sound(c);}
+        public void primaryAngle(AngleCall c){h.primaryAngle(c);}public void draw(CdObjectPool p,CdObjectState.Identity i){h.draw(p,i);}
+    }
+    // END Tentou original-family source controls 20261108.
 }

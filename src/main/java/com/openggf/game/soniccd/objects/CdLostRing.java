@@ -309,6 +309,22 @@ public final class CdLostRing {
     private CdRing.GlobalsPort pendingCollectGlobals;
     private CdRing.SourceCalls pendingCollectCalls;
 
+    private CdObjectAnimation.Guard originalAnimationGuard;
+    private CdObjectAnimation.Prefix originalAnimator;
+    /** Actual original R11 relation, existing ring/sine/terrain/reward owners, no new algorithm. */
+    public static CdLostRing fromOriginalPresentAssets(CdObjectPlacementRuntime runtime,
+            com.openggf.game.soniccd.level.CdR11aAssets owner,CdPlayerMath math,CdPlayerTerrain terrain,
+            PrimaryAngleCommit angle,SoundPort sound,DrawObjectCall draw,CollectRingCall collect,
+            CdObjectAnimation.Guard animationGuard)throws java.io.IOException {
+        CdOriginalPresentObjectSource.require(runtime,owner);
+        var body=new CdLostRing(runtime,Assets.fromObjectAssets(owner.openingObjects()),math,terrain,draw,collect);
+        body.sourceAngle=Objects.requireNonNull(angle);body.sourceSound=Objects.requireNonNull(sound);
+        body.originalAnimationGuard=Objects.requireNonNull(animationGuard);body.sourceBinding=true;return body;
+    }
+    public boolean isCurrentAnimationCall(CdObjectAnimation.Operation operation){
+        return sourceBinding&&running&&originalAnimator!=null&&originalAnimator.isCurrent(operation);
+    }
+
     // BEGIN R13 SOURCE FACTORY 20261106
     public static CdLostRing fromAct3FutureAssets(CdObjectPlacementRuntime runtime,CdR13FutureAssets assets,CdR13ReusedObjectAssets owner,
             CdPlayerMath math,CdPlayerTerrain terrain,PrimaryAngleCommit angle,SoundPort sound,DrawObjectCall draw,CollectRingCall collect) {
@@ -602,6 +618,13 @@ public final class CdLostRing {
     /** ObjLostRing_Sparkle (Ring/Main.asm:449-452): LEA Ani_Ring,a1 / BSR.W AnimateObject / BRA.W DrawObject. */
     private void sparkle(int whole, List<Effect> effects) {
         var pool = runtime.pool();
+        if(originalAnimationGuard!=null){
+            // This real original caller reaches the one shared native-store/read Prefix kernel.
+            originalAnimator=new CdObjectAnimation.Prefix(pool,whole,originalAnimationGuard);
+            try{originalAnimator.step(aniRing);}finally{originalAnimator=null;}
+            effects.add(new CallReturned(NativeCall.SPARKLE));
+            sourceDraw(pool,pool.state(whole).identity());effects.add(new CallReturned(NativeCall.DRAW_OBJECT));return;
+        }
         var s = pool.state(whole);
         // $FC advances the routine to 8; the deletion belongs to the NEXT dispatch. Dirty animator bytes are not primed.
         var out = CdObjectAnimation.step(new CdObjectAnimation.State(s.unsignedByte(ANIMATION),

@@ -29,8 +29,8 @@ class TestCdR31aObjectAssets {
     @Test void wrapperIsFinitePrivateSourceBindingWithExactlyTenPublicMethods() {
         assertEquals(0,CdR31aObjectAssets.class.getConstructors().length);
         assertEquals(1,CdR31aObjectAssets.class.getDeclaredConstructors().length);
-        assertEquals(List.of("explosionAssets/0","flowerAssets/0","fromAssets/1","hudVisuals/0","identity/0","kamaSickleAssets/0","monitorAssets/0","monitorTime/0",
-                        "ownsAssets/1","pointsAssets/0","reservedHudAssets/0","ringData/0","springAssets/0","titleCard/0","titleCardAssets/0"),
+        assertEquals(List.of("ccAnimalAssets/0","explosionAssets/0","flowerAssets/0","fromAssets/1","gaAssets/0","hudVisuals/0","identity/0","kamaSickleAssets/0","monitorAssets/0","monitorTime/0",
+                        "ownsAssets/1","pointsAssets/0","reservedHudAssets/0","ringData/0","springAssets/0","tentouAssets/0","titleCard/0","titleCardAssets/0"),
                 Arrays.stream(CdR31aObjectAssets.class.getDeclaredMethods()).filter(m->Modifier.isPublic(m.getModifiers()))
                         .map(m->m.getName()+"/"+m.getParameterCount()).sorted().toList());
         assertThrows(NullPointerException.class,()->CdR31aObjectAssets.fromAssets(null));
@@ -175,6 +175,107 @@ class TestCdR31aObjectAssets {
             assertTrue(Arrays.stream(CdR31aObjectAssets.class.getDeclaredMethods()).noneMatch(m->List.of("view","read","art","decoded","originalImage").contains(m.getName())));
         }
     }
+
+    // BEGIN Tentou original R31 operand/source controls 20261108 (ALL JAVA UNRUN).
+    @Nested class TentouActualUsa {
+        @BeforeAll static void openOriginal()throws Exception{ActualUsa.originalViewsOnly();}
+        @Test void actualTentouViewsUseSelectedOperandsAndKeepNormalDamagedAndBombRootsDistinct(){
+            var data=ActualUsa.common.tentouAssets();assertSame(data,ActualUsa.common.tentouAssets());
+            var load=CdR31aLoadMetadata.fromAssets(ActualUsa.assets);
+            var initial=load.plcs().stream().filter(p->load.immediatePlcIds().contains(p.nativeId())).flatMap(p->p.entries().stream()).toList();
+            assertTrue(initial.stream().anyMatch(e->e.source()==CdR31aLoadMetadata.SourceId.TENTOU_GFX&&e.vramAddress()==0x8D40));
+            assertTrue(initial.stream().anyMatch(e->e.source()==CdR31aLoadMetadata.SourceId.SPIKE_BOMB_GFX&&e.vramAddress()==0x92A0));
+            assertEquals(43*32,load.source(CdR31aLoadMetadata.SourceId.TENTOU_GFX).outputBytes());
+            assertEquals(8*32,load.source(CdR31aLoadMetadata.SourceId.SPIKE_BOMB_GFX).outputBytes());
+
+            var keys=List.of(com.openggf.game.soniccd.objects.CdCczEnemyPorts.Mapping.TENTOU_NORMAL,com.openggf.game.soniccd.objects.CdCczEnemyPorts.Mapping.TENTOU_DAMAGED,com.openggf.game.soniccd.objects.CdCczEnemyPorts.Mapping.BOMB);
+            int[] roots={0x20BBC2,0x20BB50,0x20BD10},sizes={114,114,16},frames={3,3,2};
+            var resolver=CdObjectMappings.fromR31aAssets(ActualUsa.assets,ActualUsa.common);
+            for(int n=0;n<keys.size();n++){
+                var view=data.mapping(keys.get(n));assertEquals(roots[n],view.address());assertEquals(sizes[n],view.bytes().length());
+                for(int f=0;f<frames[n];f++){var expected=body(view.bytes(),f);assertEquals(n<2?7:1,expected.pieces().size());assertEquals(expected,resolver.resolve(roots[n],false,f));}
+                final int root=roots[n],limit=frames[n];assertThrows(UnsupportedOperationException.class,()->resolver.resolve(root,false,limit));
+                assertThrows(UnsupportedOperationException.class,()->resolver.resolve(root,true,0));
+            }
+            assertFalse(Arrays.equals(data.mapping(keys.get(0)).bytes().copy(),data.mapping(keys.get(1)).bytes().copy()));
+            var a=data.animation(com.openggf.game.soniccd.objects.CdCczEnemyPorts.Animation.TENTOU);
+            var b=data.animation(com.openggf.game.soniccd.objects.CdCczEnemyPorts.Animation.BOMB);
+            assertEquals(1,a.scriptCount());assertEquals(7,a.bytes().length());assertEquals(3,a.bytes().unsignedByte(2));
+            assertEquals(1,b.scriptCount());assertEquals(6,b.bytes().length());assertEquals(1,b.bytes().unsignedByte(2));
+            assertThrows(UnsupportedOperationException.class,()->data.mapping(com.openggf.game.soniccd.objects.CdCczEnemyPorts.Mapping.GA_NORMAL));
+        }
+        @Test void equalMediaOwnerCannotSupplyTentouPlacementAuthority(){
+            var other=CdR31aObjectAssets.fromAssets(ActualUsa.equalButForeign);assertNotSame(ActualUsa.common.tentouAssets(),other.tentouAssets());
+            assertFalse(other.ownsAssets(ActualUsa.assets));assertFalse(ActualUsa.common.ownsAssets(ActualUsa.equalButForeign));
+            assertThrows(IllegalArgumentException.class,()->CdObjectMappings.fromR31aAssets(ActualUsa.assets,other));
+        }
+    }
+    // END Tentou original R31 operand/source controls 20261108.
+
+    // BEGIN actual R31 CCAnimal operands 20261108. ALL JAVA UNRUN.
+    @Nested class CcAnimalActualUsa {
+        @BeforeAll static void original()throws Exception{ActualUsa.originalViewsOnly();}
+        @Test void selectedAnimalDataKeepsIndependentMapsScriptsAndRawBaseTileTable(){
+            var data=ActualUsa.common.ccAnimalAssets();assertSame(data,ActualUsa.common.ccAnimalAssets());assertEquals(0x20E924,data.flyingAddress());assertEquals(0x20E938,data.groundAddress());
+            assertEquals(3,data.flying().mappingFrames().size());assertEquals(5,data.ground().mappingFrames().size());assertEquals(2,data.flying().animations().size());assertEquals(1,data.ground().animations().size());
+            int[] tiles={0x797,0x3DA,0x3DA,0,0x797,0x3DA,0x3DA,0,0,0,0x3DA};assertEquals(22,data.baseTiles().length());
+            for(int n=0;n<tiles.length;n++)assertEquals(tiles[n],data.baseTiles().unsignedWord(2*n));
+            var mapper=CdObjectMappings.fromR31aAssets(ActualUsa.assets,ActualUsa.common);
+            for(int n=0;n<3;n++)assertEquals(body(data.flying().mappings(),n),mapper.resolve(data.flyingAddress(),false,n));
+            for(int n=0;n<5;n++)assertEquals(body(data.ground().mappings(),n),mapper.resolve(data.groundAddress(),false,n));
+            assertThrows(UnsupportedOperationException.class,()->mapper.resolve(data.flyingAddress(),false,3));assertThrows(UnsupportedOperationException.class,()->mapper.resolve(data.groundAddress(),false,5));
+        }
+        @Test void equalAnimalDataNeverGrantsAnotherProgrammeOrPlacementSource(){
+            var other=CdR31aObjectAssets.fromAssets(ActualUsa.equalButForeign);assertNotSame(ActualUsa.common.ccAnimalAssets(),other.ccAnimalAssets());assertFalse(other.ownsAssets(ActualUsa.assets));
+            assertThrows(IllegalArgumentException.class,()->CdObjectMappings.fromR31aAssets(ActualUsa.assets,other));
+        }
+    }
+    // END actual R31 CCAnimal operands 20261108.
+
+    // Ga DATA controls only; all Java/media execution UNRUN by this author.
+    @Nested class GaActualUsa {
+        @BeforeAll static void original()throws Exception{ActualUsa.originalViewsOnly();}
+        @Test void selectedGaRootAndAnimationHullAreIndependentNativeLiterals(){
+            var a=ActualUsa.common.gaAssets();assertSame(a,ActualUsa.common.gaAssets());
+            assertEquals(0x20B328L,ActualUsa.assets.view(CdR31aAssets.Asset.OBJECT_INDEX).unsignedLong((0x2D-1)*4));
+            var normal=a.mapping(com.openggf.game.soniccd.objects.CdCczEnemyPorts.Mapping.GA_NORMAL).table();
+            var damaged=a.mapping(com.openggf.game.soniccd.objects.CdCczEnemyPorts.Mapping.GA_DAMAGED).table();
+            assertEquals(0x20B4F2,normal.tableAddressBits());assertEquals(66,normal.tableOffset());assertEquals(6,normal.frameCount());
+            assertEquals(0x20B4B0,damaged.tableAddressBits());assertEquals(0,damaged.tableOffset());assertEquals(6,damaged.frameCount());
+            assertEquals(159,normal.bytes().length());assertArrayEquals(normal.bytes().copy(),damaged.bytes().copy());
+            assertEquals("ec1000af9b25b68f3247120256c7ded529247e0f36401bac93f646171ee4ee4a",gaSha(normal.bytes()));
+            var anim=a.animation(com.openggf.game.soniccd.objects.CdCczEnemyPorts.Animation.GA);
+            assertEquals(3,anim.scriptCount());assertEquals("bafadabc4592a6b0dd7728dc37d4c8b955b5db02e60dcba9922e51c930a2d8cb",gaSha(anim.bytes()));
+            assertEquals("9e1a182a96f146ef3e54a4e37e2230e859b5255e21879f2742da4a7af4bc4f13",gaSha(a.animation(com.openggf.game.soniccd.objects.CdCczEnemyPorts.Animation.DUST).bytes()));
+        }
+        @Test void normalAndDamagedGaResolveAllSixFramesWithoutReplacingOldRoots(){
+            var data=ActualUsa.common.gaAssets();var mapper=CdObjectMappings.fromR31aAssets(ActualUsa.assets,ActualUsa.common);
+            for(var key:List.of(com.openggf.game.soniccd.objects.CdCczEnemyPorts.Mapping.GA_NORMAL,com.openggf.game.soniccd.objects.CdCczEnemyPorts.Mapping.GA_DAMAGED)){
+                var table=data.mapping(key).table();var bytes=table.bytes().slice(table.tableOffset(),table.bytes().length()-table.tableOffset());
+                for(int f=0;f<6;f++)assertEquals(body(bytes,f),mapper.resolve(data.mapping(key).address(),false,f));
+                assertThrows(UnsupportedOperationException.class,()->mapper.resolve(data.mapping(key).address(),false,6));
+                assertThrows(UnsupportedOperationException.class,()->mapper.resolve(data.mapping(key).address(),true,0));
+            }
+            assertEquals(0x209BE4,data.mapping(com.openggf.game.soniccd.objects.CdCczEnemyPorts.Mapping.RING).address());
+            var expectedRing=ActualUsa.common.ringData().visuals().mappingFrames().get(4);
+            var actualRing=assertInstanceOf(FrameMapping.class,mapper.resolve(0x209BE4,false,4));
+            assertEquals(expectedRing.pieces().size(),actualRing.countByte());
+            for(int i=0;i<expectedRing.pieces().size();i++){
+                var expectedPiece=expectedRing.pieces().get(i);var actualPiece=actualRing.pieces().get(i);
+                assertEquals(expectedPiece.y(),actualPiece.y());
+                assertEquals(expectedPiece.sizeByte(),actualPiece.sizeByte());
+                assertEquals(expectedPiece.rawTileWord(),actualPiece.rawTileWord());
+                assertEquals(expectedPiece.x(),actualPiece.x());
+            }
+        }
+        @Test void gaViewsDoNotGrantAnotherEqualSourcePlacementAuthority(){
+            var other=CdR31aObjectAssets.fromAssets(ActualUsa.equalButForeign);
+            assertNotSame(ActualUsa.common.gaAssets(),other.gaAssets());
+            assertThrows(IllegalArgumentException.class,()->CdObjectMappings.fromR31aAssets(ActualUsa.assets,other));
+            assertThrows(UnsupportedOperationException.class,()->ActualUsa.common.gaAssets().mapping(com.openggf.game.soniccd.objects.CdCczEnemyPorts.Mapping.BOMB));
+        }
+    }
+    private static String gaSha(CdAssetBytes b){try{return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(b.copy()));}catch(java.security.NoSuchAlgorithmException e){throw new AssertionError(e);}}
 
     /** Independent native counted-byte oracle; never calls production resolver/visual output. */
     private static FrameMapping body(CdAssetBytes bytes,int frame) {

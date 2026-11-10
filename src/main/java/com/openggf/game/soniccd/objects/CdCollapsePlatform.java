@@ -307,6 +307,14 @@ public final class CdCollapsePlatform {
     private void observePublication(Object operation) {
         if (publicationObserver != null) publicationObserver.published(operation);
     }
+    /** Original A shares this complete Init/Main/Delay/Fall and fracture kernel. No asset/default substitution. */
+    public static CdCollapsePlatform fromOriginalPresentAssets(CdObjectPlacementRuntime placement,
+            com.openggf.game.soniccd.level.CdR11aAssets owner,CdSolidObject solid,SolidCommit commit,
+            DrawObjectCall draw,FmCommit fm,PublicationObserver observer)throws java.io.IOException{
+        CdOriginalPresentObjectSource.require(placement,owner);
+        return new CdCollapsePlatform(placement,Assets.fromObjectAssets(owner.openingObjects()),solid,commit,draw,fm,observer);
+    }
+
     /** Bind the actual R12B relation before metadata; native prefix observers/callbacks stay caller-owned. */
     public static CdCollapsePlatform fromAct2PastAssets(CdObjectPlacementRuntime placement,CdR12bTerrainAssets owner,
                                                         CdSolidObject solid,SolidCommit commit,DrawObjectCall draw,FmCommit fm,PublicationObserver observer) {

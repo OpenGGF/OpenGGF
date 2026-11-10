@@ -20,23 +20,48 @@ import java.util.Objects;
  */
 public final class SonicCdLevel extends SonicCdLevelGeometry {
     private final CdR11aAssets assets;
+    private final CdLevelLoadingSource loadingSource;
 
     /** Accepts the authenticated loader result; there is no ROM or reference-asset fallback. */
     public SonicCdLevel(CdR11aAssets assets) {
         super(Objects.requireNonNull(assets, "assets").terrain(), assets.loadPlan().initialPalette(),
                 assets.loadPlan().bounds());
         this.assets = assets;
+        this.loadingSource=CdLevelLoadingSource.fromOriginalR11(assets);
     }
 
     /** Immutable source identity, native geometry/words and load prerequisites, never live engine state. */
-    public CdR11aAssets assets() { return assets; }
+    public CdR11aAssets assets() {
+        if(assets==null)throw new UnsupportedOperationException("Actual "+loadingSource.stage().nativeId()+" geometry is not an R11 asset aggregate");
+        return assets;
+    }
+    public CdLevelLoadingSource loadingSource(){return loadingSource;}
+
+    /** DATA conversion only; the private Module/LevelManager assembly supplies runtime authority. */
+    public static SonicCdLevel fromLoadingSource(CdLevelLoadingSource source)throws java.io.IOException {
+        return new SonicCdLevel(Objects.requireNonNull(source),source.terrain());
+    }
+    private SonicCdLevel(CdLevelLoadingSource source,CdStageTerrain terrain) {
+        super(terrain,sourcePalette(source),source.nativeZoneActWord()>>>8,source.bounds().left(),
+                source.bounds().right(),source.bounds().top(),source.bounds().bottom(),source.stage().nativeId());
+        loadingSource=source;
+        assets=source.hasOriginalR11Aggregate()?source.originalR11Assets():null;
+    }
+    private static CdAssetBytes sourcePalette(CdLevelLoadingSource source) {
+        var player=source.playerPalette();var level=source.levelPalette();
+        if(player.length()!=32||level.length()!=96)throw new IllegalArgumentException("Actual complete player/stage palette source required");
+        byte[] palette=new byte[player.length()+level.length()];
+        System.arraycopy(player.copy(),0,palette,0,player.length());
+        System.arraycopy(level.copy(),0,palette,player.length(),level.length());
+        return CdAssetBytes.copyOf(palette);
+    }
 
     /** Native object centre coordinates from LevelStartLoc, not a camera origin or sprite top-left. */
-    public CdR11aLoadPlan.InitialCentre initialCentre() { return assets.loadPlan().initialCentre(); }
+    public CdR11aLoadPlan.InitialCentre initialCentre() { return loadingSource.initialCentre(); }
 
     /**
      * Complete native ordered placement stream, including period flags and subtype2.
      * It is deliberately not converted to executable ObjectSpawn or RingSpawn records.
      */
-    public CdObjectPlacements nativePlacements() { return assets.placements(); }
+    public CdObjectPlacements nativePlacements() { return loadingSource.placements(); }
 }

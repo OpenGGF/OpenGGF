@@ -10,7 +10,7 @@ import java.util.Optional;
 /**
  * Shared standard Main333-432 / VInt_Level821-847 scheduling, N1ecc5f3a.
  * Original source-bound Worlds supply their actual primary, zone and transfer owners.
- * Tidal deferred frame service is a different semantic programme, not admitted here.
+ * Tidal deferred service uses the same Main coordinator with its typed original Frame owner.
  * The real private ports own source/World/epoch/thread/current pair and every reached
  * producer. This component owns no native values, input/clock algorithm, pool,
  * capture participant, current art, physical walk or World invocation authority.
@@ -29,6 +29,9 @@ final class CdOrdinaryLoop {
     interface Ports {
         /** Actual private invocation/source/epoch/current-pair validation at each reached cut. */
         void requireCurrent(Cut cut, CdPlayerFrameRuntime frame, CdStagePlayerSource source);
+        default Optional<CdPlayerFrameRuntime.OriginalProgrammeOwner> originalProgrammeOwner(){return Optional.empty();}
+        /** Standard retained PPZ VBlank owner, distinct from TT deferred-water service. */
+        default Optional<CdPlayerFrameRuntime.OriginalProgrammeOwner> originalStandardProgrammeOwner(){return Optional.empty();}
         /** Source VScroll selection and the existing OLD CPU image; never a newly built SAT. */
         Optional<CpuSat> beforeSelector8();
         /** After actual ReadControllers, before the Frame's bound Sonic art publication. */
@@ -80,6 +83,9 @@ final class CdOrdinaryLoop {
         // A caught nested entry or invalid idle input must not poison a healthy outer run.
         requireIdle();
         if ((heldByte & ~0xFF) != 0) throw new IllegalArgumentException("Expected an unsigned native held byte");
+        var water=Objects.requireNonNull(ports.originalProgrammeOwner(),"water programme selection");
+        var standard=Objects.requireNonNull(ports.originalStandardProgrammeOwner(),"standard programme selection");
+        if(water.isPresent()&&standard.isPresent())throw new IllegalStateException("Mutually exclusive ordinary programme owners required");
         running = true;
         try {
             check(Cut.BEFORE_SELECTOR8);
@@ -87,7 +93,9 @@ final class CdOrdinaryLoop {
             check(Cut.PREPARE_INPUT);
             var selected = frame.prepareInput(heldByte);
             boolean[] published = {false}; // Ephemeral completed callback observation, never owner/capture authority.
-            frame.serviceVBlank(selected.phase(),
+            if(standard.isPresent()){frame.serviceOriginalStandardProgrammeVBlank(selected.phase(),standard.orElseThrow());published[0]=selected.phase()!=com.openggf.game.resources.PlcLifecyclePhase.LAG;}
+            else if(water.isPresent()){frame.serviceOriginalProgrammeVBlank(selected.phase(),water.orElseThrow());published[0]=selected.phase()!=com.openggf.game.resources.PlcLifecyclePhase.LAG;}
+            else frame.serviceVBlank(selected.phase(),
                     () -> {
                         at(Cut.PUBLISH_LEVEL, () -> ports.publishLevel(selectedCpu));
                         published[0] = true;

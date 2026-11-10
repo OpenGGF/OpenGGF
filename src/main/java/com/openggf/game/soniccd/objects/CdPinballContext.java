@@ -125,6 +125,13 @@ public final class CdPinballContext {
         public CdPlayerBody.State player(){current();return actor;}
         /** The existing shared Solid owner supplies its complete result; no generic field-write port. */
         public void completedNative(CdObjectState object,CdPlayerBody.State player,List<CdObjectState> detached){
+            adoptNative(object,player,detached);finish(kind.name());
+        }
+        /** A real stopped shared Stand prefix, followed immediately by the original native exception. */
+        public void stoppedNative(CdObjectState object,CdPlayerBody.State player,List<CdObjectState> detached){
+            adoptNative(object,player,detached);
+        }
+        private void adoptNative(CdObjectState object,CdPlayerBody.State player,List<CdObjectState> detached){
             current();if(object.identity().wholeIndex()!=whole)throw new IllegalArgumentException("Attachment slot changed");
             Objects.requireNonNull(player);detached=List.copyOf(detached);pool.validateWrite(object);
             if(detached.size()>1)throw new IllegalArgumentException("Stand releases at most one old physical parent");
@@ -133,7 +140,7 @@ public final class CdPinballContext {
                     throw new IllegalArgumentException("Not the native previous stand parent");
                 var expected=pool.state(index).moveByte(CdObjectState.ByteField.FLAGS,pool.state(index).flags()&~8);
                 if(!old.equals(expected))throw new IllegalArgumentException("Old parent may only clear stand bit");}
-            pool.write(object);for(var old:detached)pool.write(old);actor=player;finish(kind.name());
+            pool.write(object);for(var old:detached)pool.write(old);actor=player;
         }
     }
     private final PrimaryInput input;private final Optional<Pair> legacyPair;final CdR31PinballAssets assets;final CdPlayerMath math;

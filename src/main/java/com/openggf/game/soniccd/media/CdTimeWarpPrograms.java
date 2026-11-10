@@ -37,7 +37,6 @@ public final class CdTimeWarpPrograms {
 
     private static final String WARP_SHA256 = "a417c910f61e0d95b33f292b3e84206e1f71018c4478c83da86737b10d0ffe06";
     private static final String R11B_SHA256 = "b7ebd9d362e91b213d53e984f737642f3e09cd2a511d3c5f1142c660e6aff265";
-    private static final String R1PCM_SHA256 = "fd7ab10c908bd26545afc5bf5da0765e7178fe8fe2929b15957acf9bd7d6e558";
     private static final CdMmdHeader WARP_HEADER = new CdMmdHeader(0, 0, 0xFF2000, 0x0BFF, 0xFF2000, 0, 0);
     private static final CdMmdHeader R11B_HEADER = new CdMmdHeader(0, 0, 0, 0, 0x200100, 0x20010C, 0x200112);
 
@@ -67,16 +66,9 @@ public final class CdTimeWarpPrograms {
         var warpHash = verifyProgram(warp, 7242, WARP_HEADER, 6986, 5302, WARP_SHA256, "WARP");
         var r11b = programs.mmd(CdNativeFile.R11B);
         var pastHash = verifyProgram(r11b, 262144, R11B_HEADER, 0, 0, R11B_SHA256, "R11B");
-        int pcmFileBytes = 217866;
-        if (programs.entry(CdNativeFile.R1PCM).size() != pcmFileBytes) {
-            throw new IOException("USA R1PCM file extent does not match its authenticated source");
-        }
-        byte[] r1Pcm = programs.read(CdNativeFile.R1PCM, 0, pcmFileBytes);
-        if (r1Pcm.length != pcmFileBytes || !R1PCM_SHA256.equals(sha256(r1Pcm))) {
-            throw new IOException("USA R1PCM content does not match its authenticated source");
-        }
+        var r1Pcm = CdPcmFileSource.read(programs, CdPcmFileSource.R1);
         return new CdTimeWarpPrograms(new Source(release.variant(), programs.identity().normalizedSha256(),
-                warpHash, pastHash), warp, r11b, CdAssetBytes.copyOf(r1Pcm));
+                warpHash, pastHash), warp, r11b, r1Pcm);
     }
 
     public Source source() { return source; }

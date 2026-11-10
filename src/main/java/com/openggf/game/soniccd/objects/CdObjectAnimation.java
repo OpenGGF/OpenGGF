@@ -11,8 +11,9 @@ import java.util.Objects;
  * The inspected routine has no FixBugs alternative; no repaired behavior is introduced.
  *
  * <p>The pure step publishes only a successful value. The additive Prefix entry borrows
- * one existing dynamic slot and publishes native stores synchronously under a mandatory
+ * one existing slot and publishes native stores synchronously under a mandatory
  * enclosing original-call Guard. Neither entry dispatches, deletes, draws or services art.
+ * The package-private reserved join uses its original caller publication, never a dynamic surrogate.
  * Construction and waiting do not prime frames.</p>
  */
 public final class CdObjectAnimation {
@@ -125,10 +126,16 @@ public final class CdObjectAnimation {
     public static final class SelectedReadFailure extends UnsupportedOperationException {
         private static final long serialVersionUID = 1L;
         private final Kind boundary;
-        private SelectedReadFailure(Kind boundary, UnsupportedOperationException cause) {
+        private final long selectedAddress;
+        private final Prefix issuer;
+        private SelectedReadFailure(Kind boundary, long selectedAddress, Prefix issuer, UnsupportedOperationException cause) {
             super(cause.getMessage(), cause); this.boundary = boundary;
+            this.selectedAddress = selectedAddress; this.issuer = issuer;
         }
         public Kind boundary() { return boundary; }
+        // Actual reached read metadata only; no second directory read or publication authority.
+        long selectedAddress() { return selectedAddress; }
+        boolean selectedBy(Prefix prefix) { return issuer == prefix; }
     }
 
     /**
@@ -142,18 +149,34 @@ public final class CdObjectAnimation {
      */
     public static final class Prefix {
         private final CdObjectPool pool;
+        private final CdReservedObjectBank reserved;
+        private final java.util.function.BiConsumer<CdObjectState.ByteField, Integer> reservedStore;
         private final int wholeIndex;
         private final Guard guard;
         private final Thread thread = Thread.currentThread();
         private boolean running;
         private Operation current;
         private java.util.List<CdObjectState> expected;
+        private java.util.List<CdReservedObjectBank.Image> reservedExpected;
 
         public Prefix(CdObjectPool pool, int wholeIndex, Guard guard) {
             this.pool = Objects.requireNonNull(pool, "pool");
+            this.reserved = null; this.reservedStore = null;
             pool.state(wholeIndex); // Existing dynamic-only bounds, before any invocation/publication.
             this.wholeIndex = wholeIndex;
             this.guard = Objects.requireNonNull(guard, "guard");
+        }
+
+        /** Original reserved caller join only. The publisher must execute its existing synchronous
+         * native store/receipt operation; equal images and this constructor grant no adoption authority.
+         * No bank write, mirror pool, capture partition or invocation source is supplied here. */
+        Prefix(CdReservedObjectBank bank, int wholeIndex, Guard guard,
+               java.util.function.BiConsumer<CdObjectState.ByteField, Integer> publication) {
+            this.pool = null; this.reserved = Objects.requireNonNull(bank, "reserved bank");
+            bank.state(wholeIndex); // Real reserved identity, never relabeled as a dynamic slot.
+            this.wholeIndex = wholeIndex;
+            this.guard = Objects.requireNonNull(guard, "guard");
+            this.reservedStore = Objects.requireNonNull(publication, "original reserved publication");
         }
 
         public boolean isCurrent(Operation operation) {
@@ -167,29 +190,48 @@ public final class CdObjectAnimation {
             Objects.requireNonNull(table, "table");
             running = true;
             try {
-                expected = new java.util.ArrayList<>(pool.capture().slots());
+                if (reserved == null) expected = new java.util.ArrayList<>(pool.capture().slots());
+                else reservedExpected = new java.util.ArrayList<>(reserved.capture().slots());
                 call(Kind.ENTER, null, 0, () -> null);
-                var result = animate(new Cursor(fromSlot(pool.state(wholeIndex)), this), table);
+                var source = reserved == null ? fromSlot(pool.state(wholeIndex)) : fromReserved(reserved.state(wholeIndex));
+                var result = animate(new Cursor(source, this), table);
                 call(Kind.RETURN, null, 0, () -> null);
                 return result;
             } finally {
-                current = null; expected = null; running = false;
+                current = null; expected = null; reservedExpected = null; running = false;
             }
         }
 
         private void publish(CdObjectState.ByteField field, int value) {
             call(Kind.STORE, field, value, () -> {
-                var image = expected.get(wholeIndex - 32).moveByte(field, value);
-                pool.write(image);
-                expected.set(wholeIndex - 32, image);
+                if (reserved == null) {
+                    var image = expected.get(wholeIndex - 32).moveByte(field, value);
+                    pool.write(image);
+                    expected.set(wholeIndex - 32, image);
+                } else publishReserved(field, value);
                 return null;
             });
         }
 
-        private <T> T read(Kind kind, java.util.function.Supplier<T> action) {
+        private void publishReserved(CdObjectState.ByteField field, int value) {
+            int index = wholeIndex - CdReservedObjectBank.FIRST_WHOLE_INDEX;
+            var before = reservedExpected.get(index);
+            var image = before.moveByte(field, value);
+            reservedExpected.set(index, image);
+            try { reservedStore.accept(field, value); }
+            catch (RuntimeException | Error original) {
+                // A caller may reject before its primitive or throw after the byte really lands.
+                // Admit only those two exact values; never adopt an arbitrary observed mutation.
+                try { if (reserved.state(wholeIndex).equals(before)) reservedExpected.set(index, before); }
+                catch (RuntimeException | Error check) { retain(original, check); }
+                throw original;
+            }
+        }
+
+        private <T> T read(Kind kind, long address, java.util.function.Supplier<T> action) {
             return call(kind, null, 0, () -> {
                 try { return action.get(); }
-                catch (UnsupportedOperationException failure) { throw new SelectedReadFailure(kind, failure); }
+                catch (UnsupportedOperationException failure) { throw new SelectedReadFailure(kind, address, this, failure); }
             });
         }
 
@@ -219,6 +261,14 @@ public final class CdObjectAnimation {
         }
 
         private void verifyPool() {
+            if (reserved != null) {
+                var actual = reserved.capture().slots();
+                for (int n = 0; n < CdReservedObjectBank.RESERVED_COUNT; n++) {
+                    if (!reservedExpected.get(n).equals(actual.get(n)))
+                        throw new IllegalStateException("CD animation callback changed reserved slot " + (n + 1));
+                }
+                return;
+            }
             for (int n = 0; n < CdObjectPool.DYNAMIC_COUNT; n++) {
                 if (!expected.get(n).equals(pool.state(n + CdObjectPool.FIRST_WHOLE_INDEX))) {
                     throw new IllegalStateException("CD animation callback changed dynamic slot " + (n + 32));
@@ -239,6 +289,16 @@ public final class CdObjectAnimation {
                 state.unsignedByte(CdObjectState.ByteField.ANIMATION_TIME),
                 state.unsignedByte(CdObjectState.ByteField.MAP_FRAME), state.spriteFlags(), state.flags(),
                 state.routine(), state.unsignedByte(CdObjectState.ByteField.ROUTINE_2));
+    }
+
+    private static State fromReserved(CdReservedObjectBank.Image state) {
+        return new State(state.unsignedByte(CdObjectState.ByteField.ANIMATION),
+                state.unsignedByte(CdObjectState.ByteField.PREVIOUS_ANIMATION),
+                state.unsignedByte(CdObjectState.ByteField.ANIMATION_FRAME),
+                state.unsignedByte(CdObjectState.ByteField.ANIMATION_TIME),
+                state.unsignedByte(CdObjectState.ByteField.MAP_FRAME), state.unsignedByte(CdObjectState.ByteField.SPRITE_FLAGS),
+                state.unsignedByte(CdObjectState.ByteField.FLAGS), state.unsignedByte(CdObjectState.ByteField.ROUTINE),
+                state.unsignedByte(CdObjectState.ByteField.ROUTINE_2));
     }
 
     /** Nine scalar fields only. The pure and live entries run this same finite algorithm once. */
@@ -268,11 +328,11 @@ public final class CdObjectAnimation {
         }
         private long directory(AnimationTable table) {
             return prefix == null ? table.scriptAddress(animation)
-                    : prefix.read(Kind.DIRECTORY, () -> table.scriptAddress(animation));
+                    : prefix.read(Kind.DIRECTORY, (long) table.tableOffset() + 2 * animation, () -> table.scriptAddress(animation));
         }
         private int read(AnimationTable table, long script, int at, Kind kind) {
             return prefix == null ? table.read(animation, script, at)
-                    : prefix.read(kind, () -> table.read(animation, script, at));
+                    : prefix.read(kind, script + at, () -> table.read(animation, script, at));
         }
         private State state() { return new State(animation, previous, index, timer, frame, sprite, status, routine, routine2); }
     }

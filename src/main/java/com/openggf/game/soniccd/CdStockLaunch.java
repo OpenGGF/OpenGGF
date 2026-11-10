@@ -13,6 +13,7 @@ import com.openggf.game.soniccd.media.CdProgramAssets;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
 import com.openggf.game.soniccd.media.CdInitialSaveAssets;
 import com.openggf.game.soniccd.media.CdR3PcmSource;
+import com.openggf.game.soniccd.media.CdR4PcmSource;
 import com.openggf.game.soniccd.media.CdSystemProgramSource;
 import com.openggf.game.soniccd.release.CdRetailRelease;
 import com.openggf.game.soniccd.release.CdRetailReleases;
@@ -93,7 +94,21 @@ public final class CdStockLaunch {
             // Presence never acknowledges SPX startup, its clear, driver selection or boot completion.
             Optional<CdSystemProgramSource> systemProgramSource = release.variant() == CdReleaseVariant.USA
                     ? Optional.of(CdSystemProgramSource.fromPrograms(media)) : Optional.empty();
-            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2Past, act3Future, r31a, initialSave, r3PcmSource, systemProgramSource);
+            // One shared reader, original full image/header/span/operand checks, THIS media lifetime.
+            // No TT terrain/player/World/PCM owner is minted by retaining these data.
+            var programmeData=release.variant()==CdReleaseVariant.USA
+                    ? java.util.Map.of(CdStagePayload.R41A.stage(),com.openggf.game.soniccd.level.CdProgrammeData.open(
+                            media,com.openggf.game.soniccd.level.CdR4DataLayout.Programme.R41A))
+                    : java.util.Map.<CdStageKey,com.openggf.game.soniccd.level.CdProgrammeData>of();
+            // Preserve every earlier source rejection; read R4 only from this same still-open owner.
+            Optional<CdR4PcmSource> r4PcmSource=release.variant()==CdReleaseVariant.USA
+                    ? Optional.of(CdR4PcmSource.fromPrograms(media)) : Optional.empty();
+            // The real RunR11 a0 row and its one Past reader survive THIS same-CUE close.
+            // No continuation reopens media; old/component/region constructors keep typed absence.
+            var initialProgramSource=release.variant()==CdReleaseVariant.USA
+                    ? Optional.of(com.openggf.game.soniccd.level.CdInitialProgramSource.fromPrograms(media))
+                    : Optional.<com.openggf.game.soniccd.level.CdInitialProgramSource>empty();
+            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets, act2Past, act3Future, r31a, initialSave, r3PcmSource, systemProgramSource, programmeData,r4PcmSource,initialProgramSource);
         }
     }
 

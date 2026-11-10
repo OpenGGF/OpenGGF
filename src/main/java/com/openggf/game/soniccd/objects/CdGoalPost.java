@@ -5,6 +5,8 @@ import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.level.CdR12bObjectAssets;
+import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
@@ -135,6 +137,18 @@ public final class CdGoalPost {
     private final LoadPlc loadPlc;
     private final PlcHeadRead plcHeadRead;
     private final DrawObjectCall drawObject;
+    /** Exact current original R11 source ingress. Public format records grant no invocation. */
+    public static CdGoalPost fromOriginalPresentAssets(CdObjectPlacementRuntime placement,CdR11aAssets assets,
+            PlayerWordRead read, GoalReached goal, LoadPlc plc, PlcHeadRead head, DrawObjectCall draw,CdStageClosureInvocation.Observer observer)throws java.io.IOException{
+        Objects.requireNonNull(placement);Objects.requireNonNull(assets);
+        if(!(placement.placements()==assets.placements()&&placement.sourceIdentity().equals(java.util.Optional.of(assets.identity()))))throw new IllegalArgumentException("Original closure placement/source mismatch");
+        var o=assets.openingObjects();var result=new CdGoalPost(placement,new Assets(CdObjectVisualAssets.decodeStatic(o.view(CdR11aObjectAssets.Table.CLOSURE_GOAL_SIGNPOST_MAPPINGS).bytes().copy(),6,76),o.view(CdR11aObjectAssets.Table.CLOSURE_GOAL_SIGNPOST_MAPPINGS).range().nativeAddress(),o.view(CdR11aObjectAssets.Table.CLOSURE_GOAL_BASE_TILES).bytes()),read,goal,plc,head,draw);
+        result.closureIssuer=new CdStageClosureInvocation.Issuer(observer);return result;
+    }
+    private CdStageClosureInvocation.Issuer closureIssuer;
+    public boolean isCurrentOriginalCall(CdStageClosureInvocation.Call call){return running&&closureIssuer!=null&&closureIssuer.current(call);}
+    private <T>T closureRead(Object call,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,java.util.function.Supplier<T> primitive){return closureIssuer==null?primitive.get():closureIssuer.invoke(call,cut,source,primitive);}
+    private void closureInvoke(Object call,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,Runnable primitive){closureRead(call,cut,source,()->{primitive.run();return null;});}
     private boolean running;
 
     /** plcHeadRead may be absent: it stops only the genuinely reached Tidal Tempest wait read. */
@@ -203,29 +217,29 @@ public final class CdGoalPost {
         if (readPlayer(c, PlayerField.X_WORD) < c.state.centreX()) return;
         c.write(c.state.addByte(ROUTINE, 2));
         var cut = capture(c); var call = new GoalReachedCall(cut, c.state, c.globals().cameraXWord());
-        readOnly(cut, () -> goalReached.store(call));
+        readOnly(cut, () -> closureInvoke(call,cut,c.state,() -> goalReached.store(call)));
         c.clearedDirection = true; c.effects.add(new GoalStored(call.cameraXWord()));
         plc(c, PlcSite.GOAL_REACHED);
     }
     private int readPlayer(Cursor c, PlayerField field) {
         var cut = capture(c); var call = new ReadCall(field, cut, c.state);
-        int value = readValue(cut, () -> playerRead.read(call)); wordValue(value);
+        int value = readValue(cut, () -> closureRead(call,cut,c.state,() -> playerRead.read(call))); wordValue(value);
         c.effects.add(new PlayerWordReadReturned(field, value)); return value;
     }
     private int plcHead(Cursor c) {
         if (plcHeadRead == null) throw unsupported(UnsupportedBoundary.PLC_HEAD_OWNER, c.whole, 0);
         var cut = capture(c); var call = new PlcHeadCall(cut, c.state);
-        int value = readValue(cut, () -> plcHeadRead.read(call)); c.effects.add(new PlcHeadReadReturned(value)); return value;
+        int value = readValue(cut, () -> closureRead(call,cut,c.state,() -> plcHeadRead.read(call))); c.effects.add(new PlcHeadReadReturned(value)); return value;
     }
     private void plc(Cursor c, PlcSite site) {
         var cut = capture(c); int id = site == PlcSite.TIDAL_INIT ? TIDAL_PLC : GOAL_PLC;
-        var call = new PlcCall(site, cut, c.state, id); readOnly(cut, () -> loadPlc.load(call));
+        var call = new PlcCall(site, cut, c.state, id); readOnly(cut, () -> closureInvoke(call,cut,c.state,() -> loadPlc.load(call)));
         c.effects.add(new PlcRequested(site, id));
     }
     private void draw(Cursor c) {
         var cut = capture(c); var call = new DrawCall(cut, c.state);
         var expected = CdObjectPool.overlay(cut.pool(), List.of(c.state.moveByte(SPRITE_FLAGS, c.state.spriteFlags() & 0x7F)));
-        try { drawObject.drawObject(call); assertPlacement(cut, expected); }
+        try { closureInvoke(call,cut,c.state,() -> drawObject.drawObject(call)); assertPlacement(cut, expected); }
         catch (RuntimeException | Error original) {
             suppress(original, () -> { if (!samePlacement(cut, cut.pool())) assertPlacement(cut, expected); }); throw original;
         }

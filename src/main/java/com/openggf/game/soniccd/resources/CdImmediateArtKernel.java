@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.resources;
 
+// Bounded SOURCE packet; authored Java UNRUN. Root owns queued validation.
+
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import java.util.Arrays;
 import java.util.List;
@@ -16,7 +18,7 @@ final class CdImmediateArtKernel<S,R> {
     enum Reason { PLC_LIST,DECODE_PREPARE,DECODE_TILE,RESIDENCY,ACTIVE_QUEUED_DECODE,
                   IMMEDIATE_HEADER_COUNT,LIFE_ICON_SOURCE,BLOCK_PRODUCT_MISMATCH }
     enum Operation { IMMEDIATE_LIST,BLOCKS_RAM,LIFE_ICON }
-    record Blocks<S>(S state,CdAssetBytes bytes){}
+    record Blocks<S>(S state,CdAssetBytes bytes,CdBlockDefinitionStaging blockDefinitions){}
     interface States<S,R> {
         void checked(S state);
         CdAssetBytes codeTable(S state);
@@ -72,34 +74,66 @@ final class CdImmediateArtKernel<S,R> {
     }
 
     /**
-     * Native NemDecToRAM for LevelBlocks. Full successful output is compared with
-     * the already authenticated immutable format product, then that same value is
-     * returned; no second persistent block bank or pattern write is created.
+     * Actual shared NemDecToRAM writer. Both complete tiles and the reached
+     * complete LONG rows of a faulting tile are RAM writes. The decoder's private
+     * exception can describe these only at this actual call; no public diagnostic
+     * or value adoption API is added. Graphics still publish complete tiles only.
+     * The produced knowledge has UNKNOWN suffix: the actual lifetime owner must
+     * overlay these writes on its own bank (which may have a genuine clear).
      */
     Blocks<S> decodeBlocksToRam(S state) {
         states.checked(state); requireInactive(state, Operation.BLOCKS_RAM);
         var empty = CdAssetBytes.copyOf(new byte[0]);
         var decoder = prepareImmediate(state, blocksInput, Operation.BLOCKS_RAM, 0, empty);
         S current = states.withValues(state, decoder.codeTable(), states.residency(state));
-        byte[] bytes = new byte[decoder.remainingTiles() * 32];
+        byte[] bytes = new byte[CdBlockDefinitionStaging.BYTE_LENGTH];
         int at = 0;
         while (decoder.remainingTiles() != 0) {
+            // Stop before asking the tile decoder to read beyond this finite
+            // writer's owned bank. Oversized products have no supported native
+            // continuation here; do not decode a later tile merely to reject it.
+            if (at == bytes.length) {
+                throw states.failure(Reason.BLOCK_PRODUCT_MISMATCH, current, Operation.BLOCKS_RAM,
+                        decoder.sourcePointer(), at, CdAssetBytes.copyOf(bytes),
+                        new IndexOutOfBoundsException("Block definitions exceed owned8192 bytes"));
+            }
             CdNemesisPlcDecoder.TileResult tile;
             try { tile = CdNemesisPlcDecoder.decodeTile(decoder); }
             catch (CdNemesisPlcDecoder.DecodeException fault) {
-                throw states.failure(Reason.DECODE_TILE, current, Operation.BLOCKS_RAM, fault.diagnostic().sourcePointer(),
-                        at, CdAssetBytes.copyOf(Arrays.copyOf(bytes, at)), fault);
+                // Only this invocation's actually emitted LONGs. Never append
+                // row/pixel scratch or synthesize the remainder of a tile.
+                at = retainRamRows(current, bytes, at, fault.diagnostic().emittedRows(),
+                        fault.diagnostic().sourcePointer(), fault);
+                throw states.failure(Reason.DECODE_TILE, current, Operation.BLOCKS_RAM,
+                        fault.diagnostic().sourcePointer(), at,
+                        CdAssetBytes.copyOf(Arrays.copyOf(bytes, at)), fault);
             }
-            System.arraycopy(tile.bytes().copy(), 0, bytes, at, 32);
-            at += 32; decoder = tile.state();
+            at = retainRamRows(current, bytes, at, tile.bytes(), decoder.sourcePointer(), null);
+            decoder = tile.state();
         }
-        var actual = CdAssetBytes.copyOf(bytes);
+        var actual = CdAssetBytes.copyOf(Arrays.copyOf(bytes, at));
         var product = blocksProduct.get();
-        if (!Arrays.equals(bytes, product.copy())) {
-            throw states.failure(Reason.BLOCK_PRODUCT_MISMATCH, current, Operation.BLOCKS_RAM, decoder.sourcePointer(),
-                    at, actual, null);
+        if (!Arrays.equals(actual.copy(), product.copy())) {
+            throw states.failure(Reason.BLOCK_PRODUCT_MISMATCH, current, Operation.BLOCKS_RAM,
+                    decoder.sourcePointer(), at, actual, null);
         }
-        return new Blocks<>(current, product);
+        return new Blocks<>(current, product,
+                CdBlockDefinitionStaging.unknown().withCompletedPrefix(actual));
+    }
+
+    private int retainRamRows(S current, byte[] bytes, int at, CdAssetBytes rows,
+                              long source, Throwable decoderCause) {
+        for (int row = 0; row < rows.length(); row += 4) {
+            if (at > bytes.length - 4) {
+                var outside = new IndexOutOfBoundsException("Block-definition row outside owned8192 bytes");
+                if (decoderCause != null) outside.initCause(decoderCause);
+                throw states.failure(Reason.BLOCK_PRODUCT_MISMATCH, current, Operation.BLOCKS_RAM,
+                        source, at, CdAssetBytes.copyOf(Arrays.copyOf(bytes, at)), outside);
+            }
+            for (int i = 0; i < 4; i++) bytes[at + i] = rows.signedByte(row + i);
+            at += 4;
+        }
+        return at;
     }
 
     /** Actual scratch (raw BYTE &7F)*128; raw period and every queued/table field are nonwrites. */

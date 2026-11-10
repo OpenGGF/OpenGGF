@@ -16,7 +16,7 @@ import com.openggf.game.soniccd.release.CdRetailReleases;
  * physics, CalcAngle/CalcSine arithmetic, DPLC residency or hardware parity is implemented.
  * Production bytes come through authenticated programme factories; this decoder grants no execution.
  * The explicit 167-frame source retains latent high-frame scripts; selected-frame bounds stay with animation.
- * Original R31A borrows this common contract with an explicit R3 graph and unowned PPZ ramp access.
+ * Original R3 and R4 DATA borrow this common contract with explicit graphs and unowned PPZ ramp access.
  */
 public final class CdR11aPlayerAssets {
     public static final int ANIMATION_COUNT = 60;
@@ -45,15 +45,15 @@ public final class CdR11aPlayerAssets {
     }
 
     /** Finite data graph only; it grants no routine/source-family execution admission. */
-    public enum SourceGraph { PPZ, R3 }
-    /** The R3 product deliberately has no PPZ table; access cannot manufacture an empty/default view. */
+    public enum SourceGraph { PPZ, R3, R4 }
+    /** The R3/R4 products deliberately have no PPZ table; access cannot manufacture an empty/default view. */
     public static final class UnownedPpzRamp extends UnsupportedOperationException {
-        private UnownedPpzRamp() { super("R3 source does not own the PPZ 3D ramp chunk table"); }
+        private UnownedPpzRamp(String graph) { super(graph+" source does not own the PPZ 3D ramp chunk table"); }
     }
-    // Private tagged inputs preserve legacy validation order without supplying ANY ramp bytes for R3.
-    private sealed interface RampInput permits PpzRampInput, R3RampInput { }
+    // Private tagged inputs preserve legacy validation order without supplying ANY ramp bytes for R3/R4.
+    private sealed interface RampInput permits PpzRampInput, ProgrammeRampInput { }
     private record PpzRampInput(byte[] bytes) implements RampInput { }
-    private enum R3RampInput implements RampInput { UNOWNED }
+    private enum ProgrammeRampInput implements RampInput { UNOWNED }
 
     private CdR11aPlayerAssets(byte[] animations, byte[] miniAnimations, RampInput rampInput,
                                 byte[] specialChunks, byte[] sineTable, byte[] arcTanTable,
@@ -83,7 +83,7 @@ public final class CdR11aPlayerAssets {
             }
             this.rampChunks = Optional.of(ramp);
         } else {
-            if (rampInput != R3RampInput.UNOWNED || r3Source == null)
+            if (rampInput != ProgrammeRampInput.UNOWNED || r3Source == null)
                 throw new IllegalArgumentException("Only actual retained R3 programme owns the R3 core-data profile");
             this.rampChunks = Optional.empty();
         }
@@ -157,12 +157,59 @@ public final class CdR11aPlayerAssets {
         var sonic=actual.sonic();
         if(sonic.sourceFormat()!=CdSonicVisualAssets.SourceFormat.FRAMES_167 || sonic.mappingFrames().size()!=167)
             throw new IllegalArgumentException("R3 requires retained 167-frame visuals");
-        return new CdR11aPlayerAssets(actual.role(CdProgrammeReader.Role.ANI).copy(),
-            actual.role(CdProgrammeReader.Role.MINI).slice(0,ANIMATION_COUNT).copy(),R3RampInput.UNOWNED,
-            actual.role(CdProgrammeReader.Role.SPECIAL).copy(),actual.role(CdProgrammeReader.Role.SINE).copy(),
-            actual.role(CdProgrammeReader.Role.ATAN).slice(0,257).copy(),sonic,actual);
+        return decodeProgramme(actual,sonic);
     }
-    public SourceGraph sourceGraph() { return r3Source == null ? SourceGraph.PPZ : SourceGraph.R3; }
+    /** Retained semantic profile only; no gameplay-family admission follows from DATA compatibility. */
+    static CdR11aPlayerAssets fromProgramme(CdProgrammeReader actual) {
+        Objects.requireNonNull(actual,"actual retained programme");
+        if(actual.definition().player().map(p->p.graph()==SourceGraph.PPZ).orElse(false))
+            return actual.ppzPlayerAssets();
+        if(actual.definition().tt().isEmpty())return fromR3Programme(actual);
+        actual.requireRetained();var binding=actual.playerBinding();var sonic=actual.sonic();
+        if(sonic.sourceFormat()!=binding.visual().format() || sonic.mappingFrames().size()!=binding.frames())
+            throw new IllegalArgumentException("Programme requires its retained visual format");
+        return decodeProgramme(actual,sonic);
+    }
+    /** Fixed original R11A DATA decoder, called only by that reader's cached product owner.
+     * Reuses every existing validator and its argument order. No 167-frame/R3 relabel,
+     * padded tables, future binding, runtime source admission or new arithmetic is supplied. */
+    static CdR11aPlayerAssets fromOriginalR11Programme(CdProgrammeReader actual) {
+        Objects.requireNonNull(actual,"actual retained original R11A").retainedOriginalR11Image();
+        var binding=actual.playerBinding();var sonic=actual.sonic();
+        if(binding.graph()!=SourceGraph.PPZ || binding.ordinaryZoneActWord()!=0 || binding.ordinaryPeriod()!=1
+                || sonic.sourceFormat()!=CdSonicVisualAssets.SourceFormat.FRAMES_198_WITH_EVEN_BYTE
+                || sonic.mappingFrames().size()!=198 || binding.visual().format()!=sonic.sourceFormat())
+            throw new IllegalArgumentException("Original R11A requires its retained 198-frame PPZ player DATA");
+        actual.requirePlayerRelation(sonic,actual.playerMappingAddress());
+        return decodePpzProgrammeInputs(actual,sonic);
+    }
+    /** Same immutable PPZ format, with actual canonical programme roles and retained source.
+     * Profile metadata selects the ordinary period; no R3/R4 relabel, runtime admission or
+     * replacement A bridge is created. The common constructor retains all existing validators. */
+    static CdR11aPlayerAssets fromPpzProgramme(CdProgrammeReader actual){
+        Objects.requireNonNull(actual,"actual retained PPZ programme").requireRetained();
+        var binding=actual.playerBinding();var sonic=actual.sonic();
+        if(binding.graph()!=SourceGraph.PPZ
+                || sonic.sourceFormat()!=CdSonicVisualAssets.SourceFormat.FRAMES_198_WITH_EVEN_BYTE
+                || sonic.mappingFrames().size()!=198 || binding.visual().format()!=sonic.sourceFormat())
+            throw new IllegalArgumentException("PPZ requires its retained 198-frame player DATA");
+        actual.requirePlayerRelation(sonic,actual.playerMappingAddress());
+        return decodePpzProgrammeInputs(actual,sonic);
+    }
+    private static CdR11aPlayerAssets decodePpzProgrammeInputs(CdProgrammeReader actual,CdSonicVisualAssets sonic){
+        return new CdR11aPlayerAssets(actual.playerRole(CdProgrammeReader.Role.ANI).copy(),
+            actual.playerRole(CdProgrammeReader.Role.MINI).copy(),new PpzRampInput(actual.playerRole(CdProgrammeReader.Role.RAMP).copy()),
+            actual.playerRole(CdProgrammeReader.Role.SPECIAL).copy(),actual.playerRole(CdProgrammeReader.Role.SINE).copy(),
+            actual.playerRole(CdProgrammeReader.Role.ATAN).copy(),sonic,actual);
+    }
+    private static CdR11aPlayerAssets decodeProgramme(CdProgrammeReader actual,CdSonicVisualAssets sonic) {
+        if(actual.definition().tt().isPresent())actual.requirePlayerRelation(sonic,actual.playerMappingAddress());
+        return new CdR11aPlayerAssets(actual.playerRole(CdProgrammeReader.Role.ANI).copy(),
+            actual.playerRole(CdProgrammeReader.Role.MINI).slice(0,ANIMATION_COUNT).copy(),ProgrammeRampInput.UNOWNED,
+            actual.playerRole(CdProgrammeReader.Role.SPECIAL).copy(),actual.playerRole(CdProgrammeReader.Role.SINE).copy(),
+            actual.playerRole(CdProgrammeReader.Role.ATAN).slice(0,257).copy(),sonic,actual);
+    }
+    public SourceGraph sourceGraph() { return r3Source == null ? SourceGraph.PPZ : r3Source.playerBinding().graph(); }
     public boolean ownsR31aAssets(CdR31aAssets assets) { return assets!=null && r3Source!=null && r3Source==assets.internalReader(); }
     boolean ownsProgramme(CdProgrammeReader actual){return r3Source!=null && r3Source==actual;}
 
@@ -248,7 +295,7 @@ public final class CdR11aPlayerAssets {
     public CdAssetBytes miniAnimations() { return miniAnimations; }
     public int miniAnimationId(int nativeId) { return miniAnimations.unsignedByte(nativeId); }
     /** PPZ-only five raw layout-byte IDs and signed-negative sentinel; R3 access is explicitly unowned. */
-    public CdAssetBytes rampChunks() { return rampChunks.orElseThrow(UnownedPpzRamp::new); }
+    public CdAssetBytes rampChunks() { return rampChunks.orElseThrow(()->new UnownedPpzRamp(sourceGraph().name())); }
     /** Native order: loop, special loop, special roll tunnel, regular roll tunnel. */
     public CdAssetBytes specialChunks() { return specialChunks; }
     public CdAssetBytes sineTable() { return sineTable; }

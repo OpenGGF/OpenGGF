@@ -16,7 +16,9 @@ public final class CdObjectPlacements {
     public enum Layout {
         LEGACY_497(497, 64), R31A_517(517, 60),
         ORIGINAL_461_60(461,60,true), ORIGINAL_358_60(358,60,true), ORIGINAL_72_64(72,64,true),
-        ORIGINAL_640_60(640,60,true), ORIGINAL_822_60(822,60,true), ORIGINAL_79_60(79,60,true);
+        ORIGINAL_640_60(640,60,true), ORIGINAL_822_60(822,60,true), ORIGINAL_79_60(79,60,true),
+        ORIGINAL_TT1_360_82(360,82,true), ORIGINAL_TT2_426_82(426,82,true), ORIGINAL_TT3_32_80(32,80,true),
+        ORIGINAL_PPZ1_497_64(497,64,true), ORIGINAL_PPZ2_488_64(488,64,true), ORIGINAL_PPZ3_61_64(61,64,true);
         final int rows; private final int objectIds;
         private final boolean rawMaskByte;
         Layout(int rows,int objectIds) { this(rows,objectIds,false); }
@@ -63,6 +65,7 @@ public final class CdObjectPlacements {
     private final List<CdAssetBytes> rawRows;
     private final CdAssetBytes forwardSentinel;
     private final Optional<CdAssetBytes> layoutHeader,backwardSentinel,nullList;
+    private CdProgrammeReader programmeSource;
     private final CdR31aAssets r31aSource;
     private CdObjectPlacements(List<Placement> records,List<CdAssetBytes> rawRows,CdAssetBytes sentinel,
                                Optional<CdAssetBytes> header,Optional<CdAssetBytes> backward,
@@ -99,7 +102,13 @@ public final class CdObjectPlacements {
                 .orElseThrow(()->new IllegalArgumentException("Foreign original placement span"));
         if(bytes.length()!=span.length() || !span.sha().equals(CdR11aProfile.sha256(bytes.copy())))
             throw new IllegalArgumentException("Authenticated original placement source differs");
+        result.programmeSource=owner;
         return result;
+    }
+
+    /** Exact private reader provenance; public decoded rows cannot manufacture it. */
+    public boolean isRetainedOriginalProgramme() {
+        if(programmeSource==null)return false;programmeSource.requireRetained();return programmeSource.placements()==this;
     }
 
     /** One header/row/query algorithm. Profiles are finite values, never source identity certificates. */

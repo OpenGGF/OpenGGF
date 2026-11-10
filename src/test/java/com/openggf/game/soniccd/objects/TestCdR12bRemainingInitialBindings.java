@@ -39,9 +39,12 @@ class TestCdR12bRemainingInitialBindings {
         for(int i=0;i<types.length;i++){
             assertEquals(1,types[i].getConstructors().length);assertEquals(ctors[i],types[i].getConstructors()[0].getParameterCount());
             var methods=Arrays.stream(types[i].getDeclaredMethods()).filter(m->m.getName().equals("fromAct2PastAssets")).toList();
-            assertEquals(1,methods.size());assertEquals(arities[i],methods.getFirst().getParameterCount());
-            assertTrue(java.lang.reflect.Modifier.isPublic(methods.getFirst().getModifiers()));assertTrue(java.lang.reflect.Modifier.isStatic(methods.getFirst().getModifiers()));
+            // Animal retains its legacy2 factory beside the source-bound active9 closure.
+            assertEquals(i==3?List.of(2,9):List.of(arities[i]),methods.stream().map(m->m.getParameterCount()).sorted().toList());
+            for(var method:methods){assertTrue(java.lang.reflect.Modifier.isPublic(method.getModifiers()));assertTrue(java.lang.reflect.Modifier.isStatic(method.getModifiers()));}
         }
+        assertEquals(CdAnimal.class,CdAnimal.class.getMethod("fromAct2PastAssets",CdObjectPlacementRuntime.class,CdR12bTerrainAssets.class).getReturnType());
+        assertEquals(CdAnimal.class,CdAnimal.class.getMethod("fromAct2PastAssets",CdObjectPlacementRuntime.class,CdR12bTerrainAssets.class,CdR12bPlayerAssets.class,CdPlayerMath.class,CdPlayerTerrain.class,CdActiveAnimal.PrimaryAngleCommit.class,CdActiveAnimal.DrawObjectCall.class,CdActiveAnimal.DispatchObserver.class,CdActiveAnimal.ReceiptGuard.class).getReturnType());
         assertEquals(2,CdMonitor.Assets.class.getRecordComponents().length);assertEquals(10,CdCollapsePlatform.Assets.class.getRecordComponents().length);
         assertEquals(5,CdRobotGenerator.Assets.class.getRecordComponents().length);assertEquals(4,CdPlatform.Assets.class.getRecordComponents().length);
     }

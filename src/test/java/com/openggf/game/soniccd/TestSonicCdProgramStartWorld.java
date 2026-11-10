@@ -106,7 +106,7 @@ class TestSonicCdProgramStartWorld {
             assertEquals(source().assets().identity().observedWholeDiscSha256(), mdInit.wholeDiscSha256());
             assertEquals(source().release().normalizedSha256(), mdInit.wholeDiscSha256());
             String[] oldNames = {"LOAD_LEVEL_PCM", "WRITE_VERSION_CACHE", "WRITE_INIT_MARKER", "INIT_VDP", "INIT_CONTROLLERS", "DECLARED_BEGIN_LEVEL_INGRESS"};
-            var calls = SonicCdGameModule.ProgramStartCall.values(); assertEquals(7, calls.length);
+            var calls = SonicCdGameModule.ProgramStartCall.values(); assertEquals(9, calls.length);
             for (int i = 0; i < oldNames.length; i++) assertEquals(oldNames[i], calls[i].name());
             assertEquals(6, SonicCdGameModule.ProgramStartCall.CLEAR_MAIN_VARIABLES.ordinal());
             assertEquals(SonicCdProgramLoadServices.LoadPrefix.SOURCE_INSTALLED, value.loads().lastLoad().prefix());
