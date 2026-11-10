@@ -5863,3 +5863,118 @@ triage command through a path with spaces/quotes. No broad or domain result is
 claimed here. PR271 remains the sole draft destination. The original Competition
 black-pixel failure still blocks merging; the stronger six-trial target remains
 unmet, and no new rubric score or route/run-chain certification is inferred.
+
+### Recorded-field qualification and actual diagnostic command — 2026-11-10
+
+The single planned candidate run completed on clean
+`4d5e5921655d7f26d569359923f3b67ae9f66559`, fingerprint
+`cdc234e36a3575b8509a4bb65411217fb6c27a7c8b755823d52b4d412536afc3`.
+It selected the same ordered 4,641 classes as the actual retained `c327` run:
+94/94 ordinary batches and 1/1 full guards. Ordinary results were 37,960 cases,
+29 failures, zero errors and 49 allowed skips; all 846 guards passed. The raw
+result is retained exactly, rather than relabeled green:
+
+```text
+VERDICT FAILED: head=4d5e5921655d source=cdc234e36a35 change-based 4641/4641 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38806 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+The baseline remains the source actually tested, `c327c5487e`, not a renamed
+`a175` result. Their program, test, fixture, policy, POM and submodule bytes are
+identical; only audit prose differs. The current command was
+`python3 tools/testing/run_categories.py --base a1756270a674299c7774512ba40b8147ed06662d --workers 2 --headless-gl surfaceless-egl --max-minutes 40 --keep-diagnostics --run`.
+It used Java25/Lua5.4, displays unset and the same configuration, ROM discovery,
+skip inputs, worker/batch policy and execution cap. The cap excludes queue wait.
+
+All 29 failure identities, kinds and types match. Twenty-five complete assertion
+and stack records are byte-identical. Four differences were reviewed separately:
+the Three Islands field/story assertion differs only in its two default object
+identity hashes; the Sonic, Tails and wide MHZ assertions differ only in expected
+`Set.of` display order. Expected members and multiplicities, complete actual
+renderings, source lines and trailing stacks are equal. All four test blobs are
+unchanged. These are explicit source-specific dispositions; neither comparator
+nor evidence was normalized. The original strict comparator still asks for
+review of those differences.
+
+Every one of the 49 complete skip dictionaries, including projection metadata,
+matches. Unclassified, required, undeclared and unidentified skips are all zero.
+The ordered selection and all compared input fields match; omission counters and
+message/detail/skip cap checks are clear. Fresh guards output explicitly includes
+the four passing broad-catch cases. Category XML is deliberately removed by the
+runner after summarization; retained class logs and the existing focused named-
+case XML supply the actual evidence, without inventing category XML or reruns.
+
+One fresh original HCZ leaf then passed, with exactly one fresh JUnit owner and
+zero failures, errors or skips. Its ALL gate was reached with 3,519 retained rows
+and 3,574 planned rows, zero gameplay/bootstrap errors and zero counted warnings.
+Its independently derived owner key is
+`69be43f91cad214294a85197202569a6ed612cf7dfd6b75e68198a394231c219`.
+The report contains 46 canonical recorded field names. Removing only the exact
+new root `recorded_fields` JSON member yields the complete baseline report bytes,
+SHA-256 `481b5a554c03165ecc8d2d12dc9cbcf1c1594518febf25677e045a336a32ab70`.
+No reserialization or count/string/order normalization was used. Neither report
+needs a context file.
+
+The report directory deliberately contains spaces and literal double quotes.
+The supervisor extracted this run's single actual printed `triage:` command,
+parsed its outer POSIX quoting with `shlex.split`, and executed the resulting
+unchanged wrapper arguments without a shell. Maven's real argument parser and
+the actual CLI then exited zero, reading the published file and displaying the
+same 46-name list, explicit exempt-MATCH/bootstrap disclaimer, gate and counts.
+This establishes this Linux/Maven command boundary; it does not certify a shell
+process, PowerShell, Windows, all pathname characters or automatic compilation
+by `exec:java`. The preceding HCZ invocation compiled this exact source.
+
+The HCZ report still advertises eight absent auxiliary schemas, listed in the
+preceding qualification. The actual log retains deprecation and FAST-without-
+manifest/NONE warnings; zero counted trace warnings is not a warning-free log.
+The EHZ1 and HCZ2 evidence remains the preceding `c327` qualification and was not
+rerun for this reporting-only increment. No chain or route parity is inferred.
+
+| Invocation | Reported queue seconds | Execution/preparation seconds | Wall seconds | User wait | Unseparated overhead/rounding |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Complete candidate smoke and guards | 2296 | 1962.86 | 4275.250197 | 0 | 16.390197 |
+| Original HCZ leaf | 346 | 43.202 | 390.923222 | 0 | 1.721222 |
+| Actual printed triage command | 0 | 0.336 | 1.378956 | 0 | 1.042956 |
+
+The broad run had 95 admissions. Exact argv, full negative/skip/selection/input
+exports, individually reviewed display differences, guard logs and timing are
+indexed by `target/code-climb/recorded-field-evidence/candidate-category/publication-disposition.json`.
+Fresh owner/XML/report hashes, the actual printed command and executed argv,
+and the raw-byte proof are in the adjacent
+`domain/control/paired-report-and-route-proof.json`. A collector initially used
+the wrong package for an optional guard-log check and stopped before writing
+any disposition; it was corrected from `tests` to the actual `tools` package.
+A status path/object mismatch interrupted bookkeeping after domain launch; the
+durable receipt and exact existing PID were recovered without restarting or
+duplicating the job. Both owned units are terminal and retired. Raw diagnostics,
+source trees and unknown ignored assets remain retained for unified accounting.
+
+Fresh original-F static assessment at `4d5` scored 68.75/100, vector
+`[3, 2.5, 2.5, 3, 2, 3, 3, 3]`. No runtime or first-divergence result was known
+to the assessor. User memory-index summaries were preloaded and one AGENTS
+content comparison was performed despite the no-diff brief; those disclosures
+remain attached, and this is not represented as uncontaminated. Pinned source
+checks were used rather than an off-pin checkout. Root separately verified that
+the older `trace-replay.md` example names an S1 test, for which its profile is
+correct; it is not a drop-in HCZ command. A clean incomplete prefix can also
+accompany an assertion failure, not only a Surefire error. Neither qualification
+nor these factual notes adjusts the assessor's score. Other trial grades remain
+at their own earlier sources; the stronger six-trial target remains unmet.
+
+Bounded next-sweep source research corroborated Shellcracker's exact parent link
+and independently falling lifetime at S2 pin
+`34fc7f130a96db171e1a1c43e28e0bad81cd6ca7`, read from the existing main submodule
+object store without changing any checkout. The spawn stores its actual body
+address at `loc_38296 (s2.asm:75918-75939)`; parent loss selects routine4/timer
+`$40` and returns at `loc_381D0 (s2.asm:75812-75815)`. Falling executes independently
+at `loc_38280 (s2.asm:75907-75911)`. Pinned configuration uses `fixBugs=0`.
+This supports an ordinary two-parent RED witness plus a surviving FALLING
+control, not immediate deletion when a parent is missing. A separate possible
+pre-existing Java mismatch processes falling on the parent-loss row instead of
+the next execution; it is recorded as untested and is not silently bundled into
+this increment. No next-sweep patch or test job was started before publication.
+
+Only this audit prose changes after `4d5` qualification. Publication remains
+task-branch-only to draft PR271; no destination branch write or merge is
+authorized. The original `2dd` Competition black-pixel failure is still
+unattributed and merge-blocking. Later passes do not explain it.
