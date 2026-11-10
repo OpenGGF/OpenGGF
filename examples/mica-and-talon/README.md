@@ -49,6 +49,10 @@ player sets, continue poses, data-select portrait and counters, ICZ snowboard
 rider, and all three games' ending sets. Missing slots retain native fallback art;
 vehicles, companions, choreography and timing remain host-owned.
 
+The [powered-pose research checkpoint](art/mica/powered/README.md) inventories
+all 70 S2/S3K powered script obligations. Its separate-sheet seam is a design
+proposal; the playable powered sheet and in-game comparison captures remain open.
+
 Gilded Super is available in all three hosts; S3K also supports Hyper. Her jade
 slots cycle to gold while the normal sheet and homing move remain her own.
 Enable **Gilded form settings** in the host overlay to override the per-game form

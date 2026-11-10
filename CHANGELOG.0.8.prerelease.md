@@ -114,6 +114,10 @@ under the matching area heading; see the
   [tutorial](docs/modding/guides/original-character.md) explains the workflow.
   TALON is included as a playable leader and follower; this is not a released mod or full-route certification.
 
+  Powered-pose research now inventories the 70 S2/S3K script obligations,
+  implicit slope/alternate-walk frames and a proposed optional GGFP bank. This
+  checkpoint adds no powered gameplay sheet or art-coverage claim.
+
 - **Character API on the 0.7 candidate:** canonical playable animation tables
   share host speed timing, slope cycles, explicit end actions and fallbacks across
   S1/S2/S3K. Owner-bound underwater palette suppliers complement zone-aware water
