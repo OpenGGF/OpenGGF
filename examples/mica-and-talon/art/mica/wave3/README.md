@@ -82,3 +82,36 @@ unchanged TALON, exact-tick 60 fps movies and a 2× production capture entering
 from CNZ at (11616,1612), then running, turning and jumping. The capture eventually
 hits a red sphere; it is presentation evidence, not layout completion.
 The coverage slots were already authored, so no fallback counts move.
+
+## Production ownership correction (2026-11-10)
+
+The owner rejected the first redraw checkpoint (`7cb2009310`): its source-PNG
+review omitted the runtime shadow pass, and its constant-speed movies were not
+actual gameplay timing. That checkpoint is superseded by
+`$HOME/scratch/agent-tmp/mica-blue-fix-20261110/review.html`. Every current review
+picture comes from production captures; the 60 fps, lossless RGB, 3× movies show
+stock Sonic and MICA at the same tick with the same recipe/input.
+
+The PNG reader supplies indices, not a special-stage palette. The packed playable
+palette supplies MICA's jade/coral/cream/white at private logical line 0. Native
+Sonic uses scene line 0; its red-sphere colours must not be overwritten with a
+creator palette. The private row already participates in stage white fades and
+rewind. Its earlier draw bypassed Blue Sphere's indexed SAT ownership, so the
+later shadow darkened shoes and gloves. Creator tiles now claim ownership at the
+same actor slot, priority and logical line as native tiles, before spheres and
+shadows. This applies to every creator stage body, including the sidekick.
+
+Standing capture frame 300 matches all 879 authored opaque pixels exactly:
+jade `(0,146,109)`, coral `(255,73,73)`, white `(255,255,255)` and cream
+`(255,219,146)`. All 870 failure-take ticks and 1,200 clear-take ticks have zero
+mapping/motion/fade-state differences; all seven run contact phases match.
+The native failure-exit palette rule matches the private palette on all 60 ticks.
+No animation-rate change was needed. Area ratios and audit totals are unchanged.
+
+S2's MICA and TALON already use the native slot/SAT assembly and its shadow
+ordering. Their private rows remain inside the completed-frame white fade.
+Its 1,200-tick pair has zero main/sidekick mapping differences and matching shared
+scene fade luminance. No S2 code/art change was needed. The captures declare S2
+stage admission at tick 240 and debug completion at 780; S3K clear requests debug
+completion at 465. Natural red-sphere failure is shown separately; these are
+presentation checks, not route completion.

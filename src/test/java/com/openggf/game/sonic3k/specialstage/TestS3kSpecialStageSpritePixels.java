@@ -128,6 +128,57 @@ class TestS3kSpecialStageSpritePixels {
     }
 
     @Test
+    void creatorPlayerClaimsNativePixelsBeforeGridAndShadowAndUsesTheStageFade() throws Exception {
+        withGraphics((graphics, width) -> {
+            var renderer = renderer(graphics, width, mapping(0), 0x54, 0, 150);
+            var manager = manager();
+            renderer.setPlayerPatternBase(REAR);
+            renderer.setSonicMappingData(character(), character());
+            byte[] scalars = new byte[512];
+            word(scalars, 0xE0 * 2, -11585); word(scalars, 0x20 * 2, 11585);
+            renderer.setPlayerProjectionScalars(scalars);
+            renderer.setShadowPatternBase(0x6000);
+            for (int i = 0; i < 16; i++) graphics.cachePatternTexture(solid(15), 0x6000 + i);
+            set(manager, "initialized", true);
+            set(manager, "mainLoopSpritesPublished", true);
+            manager.getGrid().setCellByIndex(0x2C8, Sonic3kSpecialStageConstants.CELL_BLUE);
+            byte[] pixels = new byte[64]; java.util.Arrays.fill(pixels, (byte) 10);
+            pixels[8] = 12;
+            var set = new com.openggf.game.StageSpriteSet(java.util.Map.of(0,
+                    new com.openggf.game.StageSpriteSet.Frame(
+                            new com.openggf.game.CharacterPresentation.Image(8, 8, pixels), 0, 12)));
+            var art = com.openggf.game.presentation.StageSpriteCompiler.compile(set, null);
+            var creator = new com.openggf.sprites.render.PlayerSpriteRenderer(art, graphics);
+            var context = RenderContext.createSidekickContext(com.openggf.game.GameId.S3K);
+            var palette = new Palette();
+            palette.setColor(10, new Palette.Color((byte) 255, (byte) 73, (byte) 73));
+            palette.setColor(12, new Palette.Color((byte) 255, (byte) 255, (byte) 255));
+            context.setPalette(0, palette); creator.setRenderContext(context);
+            set(renderer, "characterStageRenderer", creator);
+            var fadeOwner = new Sonic3kSpecialStagePalette();
+            fadeOwner.bindCharacterContext(context);
+            for (boolean batching : new boolean[]{false, true}) {
+                graphics.setBatchingEnabled(batching);
+                context.setPalette(0, palette.deepCopy());
+                fadeOwner.getPalettes()[0] = palette.deepCopy();
+                for (int pass = 0; pass <= 21; pass++) {
+                    var current = context.getPalette(0);
+                    graphics.cachePaletteTexture(current, context.getEffectivePaletteLine(0));
+                    draw(graphics, renderer, manager, width);
+                    assertTrue(current.dataEquals(fadeOwner.getPalette(0)),
+                            "creator and native palette receive the identical white-fade pass");
+                    var c = fadeOwner.getPalette(0).getColor(10);
+                    int expected = ((c.r & 255) << 16) | ((c.g & 255) << 8) | (c.b & 255);
+                    assertPixel(width / 2 + 2, 151, expected,
+                            "creator precedes grid/shadow and retains fade pass " + pass);
+                    assertPixel(width / 2, 151, 0xFFFFFF, "white glove survives shadow");
+                    fadeOwner.fadeTowardWhiteOneStep(37);
+                }
+            }
+        });
+    }
+
+    @Test
     void firstOpaqueSatPixelOwnsPriorityBeforePlaneComparison() throws Exception {
         withGraphics((graphics, width) -> {
             for (boolean batching : new boolean[]{false, true}) {

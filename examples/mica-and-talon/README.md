@@ -262,3 +262,8 @@ External review: `$HOME/scratch/agent-tmp/mt-carry-20261110/review.html`, includ
 unlabelled native/pair gates, onion skins, WAIT anatomy guides and before/after
 60 fps lossless RGB AIZ carry clips. These verify a positioned encounter and
 art binding, not complete routes or identical species anatomy.
+
+Blue Sphere creator bodies share native sprite ownership before spheres/shadows,
+with their own indexed palette included in native white fades. The runtime review
+samples actual capture colours and compares stock/creator mapping IDs every tick;
+S2's existing native sprite list already covers MICA and TALON correctly.

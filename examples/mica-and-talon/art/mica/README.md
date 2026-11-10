@@ -67,3 +67,9 @@ External review: `$HOME/scratch/agent-tmp/mt-carry-20261110/review.html`, includ
 unlabelled native/pair gates, onion skins, WAIT anatomy guides and before/after
 60 fps lossless RGB AIZ carry clips. These verify a positioned encounter and
 art binding, not complete routes or identical species anatomy.
+
+The Blue Sphere runtime follow-up fixes creator pixel ownership before the later
+shadow pass; the PNG palette was already supplied correctly. The current review
+uses real stock/creator lockstep captures, not the superseded source-PNG style
+gate. Exact capture sampling matches all 879 opaque standing pixels; native
+mapping selections and white-fade passes match. See the wave3 runtime checkpoint.

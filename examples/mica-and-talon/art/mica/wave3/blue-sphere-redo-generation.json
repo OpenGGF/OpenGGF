@@ -2483,5 +2483,306 @@
     "SStage_PLCLoad_91A2 (sonic3k.asm:11597-11627)",
     "byte_91E8 (sonic3k.asm:11628-11629)",
     "byte_91F6 (sonic3k.asm:11630-11631)"
-  ]
+  ],
+  "runtime_correction": {
+    "date": "2026-11-10",
+    "rejected_commit": "7cb2009310",
+    "rejection": "The art-only review missed a production draw-path bypass: the later stage shadow darkened creator pixels; assumed velocity previews were not runtime animation evidence.",
+    "root_cause": "Native player tiles claimed Blue Sphere indexed SAT ownership; creator PlayerSpriteRenderer.drawFrame bypassed it. Route creator tiles through renderNativePattern at the native actor slot, priority and logical palette line.",
+    "palette": "No special-stage palette supplied by the PNG. PresentationImages retains its indices; CharacterDefinition.paletteSupplier supplies the packed playable palette, bound at private logical line 0 and included by Sonic3kSpecialStagePalette in fade/rewind. Shared scene line 0 remains native for red spheres.",
+    "review": "$HOME/scratch/agent-tmp/mica-blue-fix-20261110/review.html",
+    "palette_samples": {
+      "frame": 300,
+      "logical_line": 0,
+      "physical_line": "8",
+      "sampled_opaque": 879,
+      "different_pixels": 0,
+      "colors": [
+        {
+          "index": 2,
+          "expected": [
+            0,
+            73,
+            73
+          ],
+          "observed": {
+            "(0, 73, 73)": 272
+          },
+          "sample_xy": [
+            162,
+            128
+          ],
+          "mismatch": 0
+        },
+        {
+          "index": 3,
+          "expected": [
+            0,
+            109,
+            109
+          ],
+          "observed": {
+            "(0, 109, 109)": 112
+          },
+          "sample_xy": [
+            156,
+            127
+          ],
+          "mismatch": 0
+        },
+        {
+          "index": 4,
+          "expected": [
+            0,
+            146,
+            109
+          ],
+          "observed": {
+            "(0, 146, 109)": 119
+          },
+          "sample_xy": [
+            152,
+            130
+          ],
+          "mismatch": 0
+        },
+        {
+          "index": 5,
+          "expected": [
+            36,
+            182,
+            146
+          ],
+          "observed": {
+            "(36, 182, 146)": 164
+          },
+          "sample_xy": [
+            156,
+            128
+          ],
+          "mismatch": 0
+        },
+        {
+          "index": 6,
+          "expected": [
+            109,
+            219,
+            182
+          ],
+          "observed": {
+            "(109, 219, 182)": 29
+          },
+          "sample_xy": [
+            147,
+            153
+          ],
+          "mismatch": 0
+        },
+        {
+          "index": 7,
+          "expected": [
+            255,
+            219,
+            146
+          ],
+          "observed": {
+            "(255, 219, 146)": 4
+          },
+          "sample_xy": [
+            147,
+            133
+          ],
+          "mismatch": 0
+        },
+        {
+          "index": 10,
+          "expected": [
+            255,
+            73,
+            73
+          ],
+          "observed": {
+            "(255, 73, 73)": 113
+          },
+          "sample_xy": [
+            169,
+            165
+          ],
+          "mismatch": 0
+        },
+        {
+          "index": 12,
+          "expected": [
+            255,
+            255,
+            255
+          ],
+          "observed": {
+            "(255, 255, 255)": 42
+          },
+          "sample_xy": [
+            169,
+            157
+          ],
+          "mismatch": 0
+        },
+        {
+          "index": 15,
+          "expected": [
+            73,
+            36,
+            0
+          ],
+          "observed": {
+            "(73, 36, 0)": 24
+          },
+          "sample_xy": [
+            147,
+            165
+          ],
+          "mismatch": 0
+        }
+      ]
+    },
+    "frame_diffs": {
+      "failure": {
+        "total_ticks": 870,
+        "stage_ticks": 395,
+        "different_ticks": 0
+      },
+      "clear": {
+        "total_ticks": 1200,
+        "stage_ticks": 301,
+        "different_ticks": 0
+      }
+    },
+    "native_white_fade": {
+      "compared_ticks": 60,
+      "different_ticks": 0,
+      "rule": "Pal_AddColor2 order R then G then B; manager calls once per three exit waits"
+    },
+    "contacts": [
+      {
+        "mapping": 2,
+        "tick": 453,
+        "native_nearest_boot": "both",
+        "mica_nearest_boot": "both",
+        "match": true
+      },
+      {
+        "mapping": 3,
+        "tick": 466,
+        "native_nearest_boot": "left",
+        "mica_nearest_boot": "left",
+        "match": true
+      },
+      {
+        "mapping": 4,
+        "tick": 468,
+        "native_nearest_boot": "left",
+        "mica_nearest_boot": "left",
+        "match": true
+      },
+      {
+        "mapping": 5,
+        "tick": 470,
+        "native_nearest_boot": "left",
+        "mica_nearest_boot": "left",
+        "match": true
+      },
+      {
+        "mapping": 6,
+        "tick": 454,
+        "native_nearest_boot": "right",
+        "mica_nearest_boot": "right",
+        "match": true
+      },
+      {
+        "mapping": 7,
+        "tick": 456,
+        "native_nearest_boot": "right",
+        "mica_nearest_boot": "right",
+        "match": true
+      },
+      {
+        "mapping": 8,
+        "tick": 458,
+        "native_nearest_boot": "right",
+        "mica_nearest_boot": "right",
+        "match": true
+      }
+    ],
+    "s2_audit": {
+      "total_ticks": 1200,
+      "stage_ticks": 563,
+      "different_ticks": 0,
+      "different_tick_indices": [],
+      "shared_scene_max_channel_difference": 0,
+      "main_native_line": 1,
+      "sidekick_native_line": 2,
+      "main_private_line": "12",
+      "sidekick_private_line": "16",
+      "finding": "Creator bodies already use native S2 slot/SAT assembly, priority and shadow groups. White overlay covers the completed frame including private rows. No shared bypass or fade exclusion found.",
+      "samples": [
+        {
+          "material": "MICA jade",
+          "rgb": [
+            0,
+            146,
+            109
+          ],
+          "tick": 658,
+          "xy": [
+            133,
+            145
+          ],
+          "count": 73
+        },
+        {
+          "material": "TALON slate",
+          "rgb": [
+            109,
+            109,
+            146
+          ],
+          "tick": 750,
+          "xy": [
+            104,
+            87
+          ],
+          "count": 76
+        },
+        {
+          "material": "coral shoes",
+          "rgb": [
+            255,
+            73,
+            73
+          ],
+          "tick": 658,
+          "xy": [
+            140,
+            169
+          ],
+          "count": 15
+        },
+        {
+          "material": "white gloves",
+          "rgb": [
+            255,
+            255,
+            255
+          ],
+          "tick": 658,
+          "xy": [
+            117,
+            161
+          ],
+          "count": 22
+        }
+      ]
+    },
+    "verification": "124 focused rendering/API/S3K tests and 61 example/audit/S2 tests pass, zero skips; final pixel regression rerun 7 pass; Python discovery 57 pass; native-pose rebuild unchanged",
+    "limits": "S3K failure is natural red-sphere contact; clear take declares debug completion at tick 465. S2 declares production stage admission at 240 and completion at 780. Shared-scene luminance and fade passes match; different base character colours are not equal-luminance. No all-layout certification."
+  }
 }

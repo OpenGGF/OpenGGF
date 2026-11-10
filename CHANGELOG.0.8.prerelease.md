@@ -75,6 +75,9 @@ under the matching area heading; see the
   half-pipe and Blue Sphere body sprites independently as solo lead or follower. MICA’s
   Blue Sphere rear-view bank follows native special-stage shading, colour budgets
   and run/jump contact phases, with readable ears, face edges and scaled tail.
+  Blue Sphere creator bodies share native pixel ownership before spheres and
+  shadows, preserving their colours and stage fades; real stock/creator captures
+  verify native mapping selections and timing.
   S1 supplements spell TALON; S3K uses the longest native-cell prefix TALO;
   results retain his full name. The candidate API adds default sidekick
   selection, flight declarations and the native Tails respawn factory.

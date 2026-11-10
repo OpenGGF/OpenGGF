@@ -10,8 +10,8 @@
     "skdisasm": "8b2cf3c4178f2382f844da67798de4befc50c5e0"
   },
   "method": "Fresh built-in GPT Image candidates from real special-stage palette native 8x + approved concept + WAIT/ROLL. Native surface canvas/hotspot and head/torso guide lock, nearest-neighbour reduction and semantic material quantization within each native frame colour count; phase 3 widened one pixel after area check; native mapping coverage only. No black outline added. Final original indexed rows reproduce without references.",
-  "review": "$HOME/scratch/agent-tmp/mica-blue-redo-20261110/review.html",
-  "limitations": "Constant-velocity 60 Hz script previews plus positioned native-control capture; no all-layout route certification. Fixed variants are blue compatibility art, not the installed jade palette.",
+  "review": "$HOME/scratch/agent-tmp/mica-blue-fix-20261110/review.html",
+  "limitations": "Current acceptance images are real lockstep gameplay captures. Prior source-PNG and constant-velocity previews missed native shadow ownership and are superseded; see runtime_correction in blue-sphere-redo-generation.json. No all-layout route certification.",
   "frames": [
     {
       "id": 0,
@@ -698,5 +698,6 @@
       ]
     }
   ],
-  "generation_provenance": "blue-sphere-redo-generation.json"
+  "generation_provenance": "blue-sphere-redo-generation.json",
+  "previous_art_only_review": "$HOME/scratch/agent-tmp/mica-blue-redo-20261110/review.html"
 }
