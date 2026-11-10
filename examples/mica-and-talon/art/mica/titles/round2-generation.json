@@ -1,0 +1,141 @@
+{
+  "origin": "Lane A title round2, based on 7a5d73912b, 2026-11-10",
+  "method": "Fresh built-in GPT Image native-pose transformations; native title palette renders enlarged8x nearest, approved model sheets and core WAIT references. Per-frame two alternatives; no chained edits. Alpha threshold128, fixed15colour nearest palette, native canvas/hotspots. Detached entrance spark components discarded. No decoded native art packaged.",
+  "scratch": "$HOME/scratch/agent-tmp/title-r2-s1s2",
+  "prompts": {
+    "shared": "Match native 1991/1992 title cel sprite style, dark one-pixel outline,2shade steps,upper-left light,15colours. Use native only for pose/hotspots. MICA has jade overlapping rounded scale dome never quills, cream tapered pangolin snout, long lashes separate brown eyes, coral ears. Glove IN FRONT of scales.",
+    "s1": "Two alternatives per native selector0..7 with native head/torso/hand pose. Corrective selector4: head LEFT, index glove RIGHT; prior right-facing generation rejected. Gold alternatives rejected.",
+    "s2_talon": "4columns selectors5,6,7,18 x2independent attempts, folded compact connected wings, slate falcon crest, amber goggles, hooked yellow beak, cream barred chest, no separate glove or hand or rotor. Top row selected; lower row ragged chest rejected.",
+    "s2_mica": "5columns native Tails selectors0..4 x2alternatives. Original palm attempt rejected. Corrective fresh bust: HER RIGHT hand to screenLEFT, palm viewer, curled fingers horizontal arcs, thumb viewerRIGHT, cuff belowRIGHT. Two alternatives; left selected. First2 entrance poses retain native tilt; cell1 mirrored to native facing. HAND19 transparent because entire gesture integrated BODY2..4.",
+    "s1_wag_correction": "Native5/6/7, 3columns x2independent attempts. Same head/torso, only finger wag changes straight/outward/inward. Jade rounded scale dome, cream pangolin snout, long lashes. Glove fist at EYE HEIGHT, index tip at TOP OF EAR, wrist at MUZZLE HEIGHT, IN FRONT of hood. Native1991 cel2shade15colour. Prior low-fist frames rejected by real-capture onion."
+  },
+  "frames": [
+    {
+      "game": "S1",
+      "character": "mica",
+      "selector": 0,
+      "native_area": 4065,
+      "authored_area": 4250,
+      "source_sha256": "bc962500988f82ae60497029f92add4ed01326715ae9ba14494e02851c8c0b4e",
+      "selection": "left; right rejected for gold transformation or weaker landmarks",
+      "mirror": false
+    },
+    {
+      "game": "S1",
+      "character": "mica",
+      "selector": 1,
+      "native_area": 4258,
+      "authored_area": 4378,
+      "source_sha256": "78d80ef1e4a7d0d3b2264a75300f61a6b87043f306fe2a763752e74b1fdbffaa",
+      "selection": "left; right rejected for gold transformation or weaker landmarks",
+      "mirror": false
+    },
+    {
+      "game": "S1",
+      "character": "mica",
+      "selector": 2,
+      "native_area": 4212,
+      "authored_area": 4249,
+      "source_sha256": "a8a5d95d936cc6c94c48b799850dab7737d946936216eb33c6cc7061723ed34d",
+      "selection": "left; right rejected for gold transformation or weaker landmarks",
+      "mirror": false
+    },
+    {
+      "game": "S1",
+      "character": "mica",
+      "selector": 3,
+      "native_area": 4392,
+      "authored_area": 4739,
+      "source_sha256": "0e899be44128e96a697da3b8fbd067d1a7bbd4dc9f5f5654ddcb4d02ae61cb9f",
+      "selection": "left; right rejected for gold transformation or weaker landmarks",
+      "mirror": false
+    },
+    {
+      "game": "S1",
+      "character": "mica",
+      "selector": 4,
+      "native_area": 4375,
+      "authored_area": 4620,
+      "source_sha256": "b5944952ad88ac6a29267ffcb66250e34ba088bdccc9355c89c13616ea4784a7",
+      "selection": "left; right rejected for gold transformation or weaker landmarks",
+      "mirror": false
+    },
+    {
+      "game": "S2",
+      "character": "mica",
+      "selector": 0,
+      "native_area": 2226,
+      "authored_area": 2777,
+      "source_sha256": "98541bedd842117fdcce7896c1e51b3f0bea19030f39b7a96d5224f7d49514aa",
+      "selection": "left corrective palm; first atlas palm rejected; entrance cell1 mirrored to native facing"
+    },
+    {
+      "game": "S2",
+      "character": "mica",
+      "selector": 1,
+      "native_area": 2482,
+      "authored_area": 2186,
+      "source_sha256": "98541bedd842117fdcce7896c1e51b3f0bea19030f39b7a96d5224f7d49514aa",
+      "selection": "left corrective palm; first atlas palm rejected; entrance cell1 mirrored to native facing"
+    },
+    {
+      "game": "S2",
+      "character": "mica",
+      "selector": 2,
+      "native_area": 2468,
+      "authored_area": 2829,
+      "source_sha256": "a7cbf3660fda997d4b3a96ac332c5488c909a59644b4895f9460a6b98354950d",
+      "selection": "left corrective palm; first atlas palm rejected; entrance cell1 mirrored to native facing"
+    },
+    {
+      "game": "S2",
+      "character": "mica",
+      "selector": 3,
+      "native_area": 2759,
+      "authored_area": 2667,
+      "source_sha256": "a7cbf3660fda997d4b3a96ac332c5488c909a59644b4895f9460a6b98354950d",
+      "selection": "left corrective palm; first atlas palm rejected; entrance cell1 mirrored to native facing"
+    },
+    {
+      "game": "S2",
+      "character": "mica",
+      "selector": 4,
+      "native_area": 2930,
+      "authored_area": 3248,
+      "source_sha256": "a7cbf3660fda997d4b3a96ac332c5488c909a59644b4895f9460a6b98354950d",
+      "selection": "left corrective palm; first atlas palm rejected; entrance cell1 mirrored to native facing"
+    },
+    {
+      "game": "S1",
+      "character": "mica",
+      "selector": 5,
+      "native_area": 4820,
+      "authored_area": 5577,
+      "source_sha256": "08de73dbdefcead2e958a46e4246474a81f6030bbe1c8d8a3d4e31de03e5154a",
+      "selection": "upper row; lower row weaker dome. Prior low fist rejected by capture onion. Background flood only outside outline; isolated white glove/eye preserved."
+    },
+    {
+      "game": "S1",
+      "character": "mica",
+      "selector": 6,
+      "native_area": 4831,
+      "authored_area": 5621,
+      "source_sha256": "08de73dbdefcead2e958a46e4246474a81f6030bbe1c8d8a3d4e31de03e5154a",
+      "selection": "upper row; lower row weaker dome. Prior low fist rejected by capture onion. Background flood only outside outline; isolated white glove/eye preserved."
+    },
+    {
+      "game": "S1",
+      "character": "mica",
+      "selector": 7,
+      "native_area": 4615,
+      "authored_area": 5581,
+      "source_sha256": "08de73dbdefcead2e958a46e4246474a81f6030bbe1c8d8a3d4e31de03e5154a",
+      "selection": "upper row; lower row weaker dome. Prior low fist rejected by capture onion. Background flood only outside outline; isolated white glove/eye preserved."
+    }
+  ],
+  "size_checks": {
+    "S1": 1.0473361234415564,
+    "S2": 1.032205838165803
+  },
+  "limits": "Visual acceptance is MICA lead / TALON sidekick pair and S1 MICA. Inherited alternate-role art unchanged except native S2 origins; native title object timing retained."
+}

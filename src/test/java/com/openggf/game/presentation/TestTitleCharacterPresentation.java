@@ -7,6 +7,12 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestTitleCharacterPresentation {
+    @Test void slotExchangeIsExplicitAndLegacyBanksKeepNativeRoles() {
+        var legacy = new CharacterPresentation.TitleMascot(Map.of(), Map.of(), new int[16]);
+        var exchanged = new CharacterPresentation.TitleMascot(Map.of(), Map.of(), new int[16], true);
+        assertFalse(new TitleCharacterPresentation(legacy, false).swapsS2Slots());
+        assertTrue(new TitleCharacterPresentation(exchanged, false).swapsS2Slots());
+    }
     @Test void stockAndUnknownDefaultsLeaveNativeTitlesUntouched() throws Exception {
         for (var host : CharacterPresentation.Host.values()) {
             var registry=PlayableCharacterRegistry.empty();

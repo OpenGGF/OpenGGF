@@ -102,7 +102,14 @@ public record CharacterPresentation(String displayName, String hudName,
      * S1 uses BODY 0..7. S2 uses BODY and HAND with native Map_0E selectors.
      * S3K uses PLANE_LEFT/PLANE_RIGHT 1..13 (160x224 halves) and FINGER/WINK native sprite selectors. */
     @ModApi public enum TitlePart { BODY, HAND, PLANE_LEFT, PLANE_RIGHT, FINGER, WINK }
-    @ModApi public record TitleMascot(Map<TitlePart, StageSpriteSet> parts, Map<Integer, TitlePlaneMask> planeMasks, int[] rgb) {
+    /** Native title bank. swapS2Slots requests that a configured creator pair exchange the native S2
+     * Sonic/Tails presentation slots. Only the lead bank requests the exchange;
+     * both banks must exist. Selectors, hotspots, rise paths and occlusion then
+     * belong to the destination slot. Other hosts ignore this option. */
+    @ModApi public record TitleMascot(Map<TitlePart, StageSpriteSet> parts, Map<Integer, TitlePlaneMask> planeMasks, int[] rgb, boolean swapS2Slots) {
+        public TitleMascot(Map<TitlePart, StageSpriteSet> parts, Map<Integer, TitlePlaneMask> planeMasks, int[] rgb) {
+            this(parts, planeMasks, rgb, false);
+        }
         public TitleMascot {
             parts = Map.copyOf(parts);
             planeMasks = Map.copyOf(planeMasks);

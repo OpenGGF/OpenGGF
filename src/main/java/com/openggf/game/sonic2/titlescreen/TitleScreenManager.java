@@ -64,6 +64,12 @@ public class TitleScreenManager implements TitleScreenProvider {
         titleCharactersResolved = true;
         titleLead = TitleCharacterPresentation.configured(Host.S2, false);
         titleSidekick = TitleCharacterPresentation.configured(Host.S2, true);
+        // Exchange presentation owners, never object state or native drawing passes.
+        if (titleLead != null && titleSidekick != null && titleLead.swapsS2Slots()) {
+            var originalLead = titleLead;
+            titleLead = titleSidekick;
+            titleSidekick = originalLead;
+        }
     }
 
     private static final Logger LOGGER = Logger.getLogger(TitleScreenManager.class.getName());

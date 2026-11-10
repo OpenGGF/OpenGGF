@@ -43,7 +43,7 @@ are unchanged. MICA sidekick and TALON solo retain their previous banks.
 
 MICA's S1 bank is regenerated for all eight native poses with the native boxes
 and hotspots. Final5/6/7 use a shared generated head/torso and their generated
-hand regions, keeping the wag behind the hood. Review includes eight unlabelled
+hand regions, superseded by round2 foreground glove art. Review includes eight unlabelled
 pairs, native-aligned cyan/magenta onion skins and shared head/torso guides.
 
 MICA's S3K bank is freshly generated in the native baked 3D style: upper-left
@@ -120,3 +120,27 @@ equal stock. Native animated sprite context exclusions are explicit. This is a
 bounded 900-presentation title check, not gameplay parity. Plane12 remains a
 separate component view because ordinary timing never exposes it. Coverage rows
 stay authored; no fallback obligations move.
+
+## S1/S2 title correction round 2 (2026-11-10)
+
+MICA's eight S1 poses are fresh native-pose generations with a rounded scale
+dome, pangolin snout, eyelashes and coral ears. The generated glove overlaps
+the hood in the foreground. Native canvases and hotspots remain unchanged.
+
+S2 uses the additive, default-off `TitleMascot.swapS2Slots` option. When the
+configured lead requests it and both creator banks exist, the host exchanges
+presentation owners only: MICA inherits the left Tails-slot rise and native
+passes; TALON inherits the right Sonic-slot rise. Crop origins are native,
+without the previous lateral displacement. Single/missing banks keep native
+roles. TALON's new right-slot bust has folded connected wings and no separate
+glove; hand selectors9/19 are explicitly empty. MICA's left-slot BODY2–4 carry
+a palm-facing right-hand thumbs-up, curled fingers toward the viewer, thumb
+on viewer right and cuff below/right. HAND19 is empty to avoid a second glove.
+The independent native hand objects still run their native clocks.
+
+`round2-generation.json` records prompts, attempts, selections, source hashes
+and size checks. Raw generations and real stock/mod capture frames remain at
+`$HOME/scratch/agent-tmp/title-r2-s1s2/`; `review.html` contains 3× lockstep
+strips, 60fps paired films and a real-capture palm before/after zoom. S3K is
+unchanged by this lane. Alternate-role/solo art is inherited and not visually
+certified here. Coverage counts stay unchanged: this corrects authored banks.

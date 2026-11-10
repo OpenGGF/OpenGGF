@@ -58,6 +58,9 @@ public final class TitleCharacterPresentation {
         }
     }
 
+    /** Pair-only opt-in keeps partial and native fallback on their original paths. */
+    public boolean swapsS2Slots() { return mascot.swapS2Slots(); }
+
     public boolean owns(CharacterPresentation.TitlePart part, int selector) {
         var set = mascot.parts().get(part);
         return set != null && set.frames().containsKey(selector);

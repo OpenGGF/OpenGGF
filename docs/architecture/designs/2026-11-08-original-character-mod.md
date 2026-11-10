@@ -3166,3 +3166,31 @@ Current capture-only checkpoint:
 S3K failure is ordinary red-sphere contact; its clear take declares debug
 completion at 465. S2 declares native stage admission at 240 and completion at
 780. These observations do not certify a route. Coverage and size are unchanged.
+
+### S1/S2 title correction round2 (2026-11-10)
+
+The pair opts into `TitleMascot.swapS2Slots` (three-argument constructor remains
+compatible, default false). S2 exchanges creator presentation owners only when
+both banks exist. Native selectors, trajectories, clipping passes and object
+clocks stay owned by their destination slots. This removes invented lateral
+crop offsets: MICA uses the left Tails slot; TALON uses the right Sonic slot.
+The candidate descriptor remains at unpublished0.7.0, with additive signature
+pin and version notes updated. No production code branches on character names.
+
+Fresh S1 MICA drawings replace all eight poses, with rounded overlapping scales,
+cream pangolin face, lashes, coral ears and gloves over the hood. Fresh S2
+right-slot TALON busts have folded connected wings, no separate hand; MICA's
+left-slot thumbs-up shows her right palm, curled fingers and thumb on viewer
+right. BODY2–4 include the whole gesture and HAND19 is empty. Native hand
+object clocks continue, with no invented alternate wag. Per-character
+`titles/round2-generation.json` records generation and palette reduction.
+
+This is correction of already-authored title rows, so audit totals do not move.
+Independent area ratios: MICA S1 1.047; MICA S2 left-slot bodies1.032; TALON S2
+right-slot bodies1.004. The latter excludes the deliberately absent separate
+hand. Real 900-tick stock/mod captures for each host record identical native
+object states; review includes139 S1 and35 S2 distinct portrait pixel
+differences at3×, paired60fps films and a palm before/after zoom. Review lives
+in `$HOME/scratch/agent-tmp/title-r2-s1s2/review.html`. Limits: configured pair
+and S1 MICA only; no gameplay routes or inherited alternate-role art certified.
+S3K assets are untouched.
