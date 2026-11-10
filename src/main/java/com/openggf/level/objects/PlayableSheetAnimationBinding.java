@@ -148,6 +148,16 @@ public final class PlayableSheetAnimationBinding {
         profile.setRunSlopeFrameStride(canonicalProfile.strides.getOrDefault(resolve(CanonicalAnimation.RUN, art.animationSet(), host), -1));
         var nativePoses = host.getNativeFramePoses();
         if (!nativePoses.isEmpty() && !canonicalProfile.nativeFrames.isEmpty()) {
+            // Native tumble selectors address object-owned mapping bytes, not relocated
+            // script indices. Admit the selector only with its complete authored bank;
+            // partial sheets keep their established canonical fallback.
+            int tumbleBase = nativeProfile.getTumbleFrameBase();
+            boolean completeTumble = nativeProfile.hasTumbleFrames();
+            for (int frame = tumbleBase; completeTumble && frame < tumbleBase + 12; frame++) {
+                var pose = nativePoses.get(frame);
+                completeTumble = pose != null && canonicalProfile.nativeFrames.containsKey(pose.key());
+            }
+            if (completeTumble) profile.setTumbleFrameBase(tumbleBase);
             // Keep object-owned bytes and authored indices in disjoint namespaces.
             // Scripts (including slope bases) move together; stock art never enters this path.
             var mappings = new java.util.ArrayList<com.openggf.level.render.SpriteMappingFrame>();

@@ -28,6 +28,29 @@ class TestCanonicalPlayableSheet {
     @Test @RequiresRom(SonicGame.SONIC_3K)
     void sonic3k() throws Exception { verify(new Sonic3kGameModule()); }
 
+    @Test @RequiresRom(SonicGame.SONIC_3K)
+    void completeRawTumbleBankEnablesNativeSelectorOnlyWhenAllPhasesExist() throws Exception {
+        TestEnvironment.activeGameplayMode();
+        var host = new Sonic3kGameModule().getDonorCapabilities();
+        var nativeArt = host.getPlayerArtProvider(RomByteReader.fromRom(TestEnvironment.currentRom()))
+                .loadPlayerSpriteArt("sonic");
+        var nativeProfile = (ScriptedVelocityAnimationProfile) nativeArt.animationProfile();
+        var source = sheet();
+        var aliases = new HashMap<String, Integer>();
+        int base = nativeProfile.getTumbleFrameBase();
+        for (int i = 0; i < 12; i++) aliases.put(host.getNativeFramePoses().get(base + i).key(), 3);
+        for (boolean complete : List.of(true, false)) {
+            if (!complete) aliases.remove(host.getNativeFramePoses().get(base + 11).key());
+            var authored = new SpriteArtSet(source.artTiles(), source.mappingFrames(), source.dplcFrames(),
+                    source.paletteIndex(), source.basePatternIndex(), source.frameDelay(), source.bankSize(),
+                    new PlayableSheetAnimationBinding.CanonicalProfile(Map.of(), aliases), source.animationSet());
+            var bound = PlayableSheetAnimationBinding.bind(authored, host, nativeProfile);
+            var profile = (ScriptedVelocityAnimationProfile) bound.animationProfile();
+            assertEquals(complete, profile.hasTumbleFrames());
+            if (complete) assertEquals(base, profile.getTumbleFrameBase());
+        }
+    }
+
     private void verify(GameModule module) throws Exception {
         TestEnvironment.activeGameplayMode();
         var host = module.getDonorCapabilities();

@@ -1,0 +1,37 @@
+{
+  "frames": [
+    {
+      "id": "object4-s3k-82",
+      "mapping": 130,
+      "host": "S3K",
+      "attempt": 2,
+      "ratio": 1.043206624251783,
+      "size": [
+        32,
+        44
+      ],
+      "method": "built-in GPT Image native-pose transformation; excluded native fox tails; native-aspect reduction and fixed palette, alpha/inside-ink cleanup",
+      "raw_sha256": "556c8fa22edf4e10503f75d2bdbfb5e5e572d2bf34f4287066ffb1464d95c7e7"
+    },
+    {
+      "id": "object4-s3k-8d",
+      "mapping": 141,
+      "host": "S3K",
+      "attempt": 2,
+      "ratio": 0.981452758130011,
+      "size": [
+        31,
+        26
+      ],
+      "method": "built-in GPT Image native-pose transformation; excluded native fox tails; native-aspect reduction and fixed palette, alpha/inside-ink cleanup",
+      "raw_sha256": "556c8fa22edf4e10503f75d2bdbfb5e5e572d2bf34f4287066ffb1464d95c7e7"
+    }
+  ],
+  "aliases": {
+    "S2/0A": "BLANK; native $82 is tail-only art, TALON has no separate tail",
+    "S2/0B": "GET_UP first pose then BLANK tail-only $09",
+    "S2/0C": "BLANK tail-only $09",
+    "S2/1D,1E": "native idle/fidget $01-$08 with lookup $04",
+    "S3K/1D,1E": "native walk $01-$08, preserved phase order"
+  }
+}

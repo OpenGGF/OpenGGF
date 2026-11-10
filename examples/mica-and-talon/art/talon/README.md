@@ -13,8 +13,8 @@ python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/talon
 python3 -m unittest discover -s tools/modding -p test_playable_art_assemble.py
 ```
 
-The sheet has 169 indexed drawings and 47 animation keys: the 82 core drawings
-below plus 87 shared-family drawings (see the end of this file). All use one
+The sheet has 171 indexed drawings and 47 animation keys: the 82 core drawings
+below plus 87 shared-family drawings and two rare object poses (see the end of this file). All use one
 transparent plus 15 opaque Mega Drive ladder colours. Core set:
 WAIT 7; WALK 8×4 orientations; RUN 4×4; ROLL 3 plus blur; SPINDASH 3 plus blur;
 SPRING/HURT/DEATH/DUCK/LOOK_UP one each; SKID 2; TAILS_FLY 6;
@@ -277,3 +277,15 @@ Queued Java selection `TestAnimationFamilies,TestCanonicalPlayableSheet,TestMica
 with `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl` and DISPLAY/WAYLAND_DISPLAY
 unset: 53 passed, zero failures/errors/skips, all ROM properties found.
 This is the requested focused selection, not a full-suite claim.
+
+## Rare native scripts (2026-11-10)
+
+`rare-poses/` records two native S3K redraws ($82 hanging and $8D curling), each
+chosen from two built-in GPT Image attempts. The prompt excludes fox tails and
+rotors; feathers and wing-hands remain integrated. Their independent opaque-area
+ratios are 1.043 and 0.981 relative to the native references.
+S2 dummy $0A/$0C contain tail-only mappings and bind the approved blank; $0B
+retains its get-up/get-up/blank sequence. Dummy $1D/$1E preserve native phase order
+using existing idle/look-up drawings in S2 and walk drawings in S3K. See the
+provenance for the mapping-level reasons; these are explicit bindings, not a
+claim that legacy unused scripts are reached in ordinary play.

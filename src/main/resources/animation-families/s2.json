@@ -358,19 +358,19 @@
   },
   "18": {
     "animation": null,
-    "family": null,
+    "family": "SPINDASH",
     "phases": [
-      0,
-      0,
-      0
+      1,
+      1,
+      1
     ]
   },
   "19": {
     "animation": null,
-    "family": null,
+    "family": "SPINDASH",
     "phases": [
-      0,
-      1
+      1,
+      2
     ]
   },
   "20": {
@@ -489,9 +489,9 @@
   },
   "33": {
     "animation": null,
-    "family": null,
+    "family": "WAIT",
     "phases": [
-      0
+      6
     ]
   }
 }

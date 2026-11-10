@@ -2241,6 +2241,32 @@
       "angle_set": "flat",
       "duration_ticks": 16,
       "notes": "Original GPT Image S3K yawn/stretch pose, attempt 2 of 3; uniform 13.5:1 reduction; no painted contours. Feet registered to native centre+16."
+    },
+    {
+      "id": "object4-s3k-82",
+      "animation": "NATIVE_POSE",
+      "order": 200,
+      "file": "frames/object4-s3k-82.png",
+      "hotspot": [
+        16,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Rare native-pose redraw, two attempts, no separate fox tails; rare-poses/provenance.json."
+    },
+    {
+      "id": "object4-s3k-8d",
+      "animation": "NATIVE_POSE",
+      "order": 201,
+      "file": "frames/object4-s3k-8d.png",
+      "hotspot": [
+        15,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Rare native-pose redraw, two attempts, no separate fox tails; rare-poses/provenance.json."
     }
   ],
   "scripts": {
@@ -3152,6 +3178,10 @@
     "family-blink/4": "family-blink-04",
     "family-blink/5": "walk-02",
     "family-blink/6": "walk-03",
-    "family-blink/7": "walk-04"
+    "family-blink/7": "walk-04",
+    "family-wait/9": "look_up-00",
+    "family-get-up/2": "family-blank-00",
+    "family-hang/2": "object4-s3k-82",
+    "family-roll/5": "object4-s3k-8d"
   }
 }

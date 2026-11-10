@@ -304,11 +304,11 @@
   },
   "18": {
     "animation": null,
-    "family": null,
+    "family": "LEAP1",
     "phases": [
-      0,
-      0,
-      0
+      2,
+      2,
+      2
     ]
   },
   "19": {
@@ -446,7 +446,7 @@
   },
   "33": {
     "animation": null,
-    "family": null,
+    "family": "WALK",
     "phases": [
       0
     ]

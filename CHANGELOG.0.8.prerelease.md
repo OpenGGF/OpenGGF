@@ -38,7 +38,7 @@ under the matching area heading; see the
 - **MICA, an original character framework example:** TALON now joins as her
   default sidekick and is selectable solo. His Tails archetype uses native S3K
   flight and explicitly declared S1/S2 flight; Solar doubles flap acceleration
-  without Flickies. His own 167-frame sheet and palette replace the placeholder;
+  without Flickies. His own 171-frame sheet and palette replace the placeholder;
   generated Solar tables use white-gold plumage and flame wingtips. Shared family
   art adds ledge, hanging, tumble, air pickup, recoil, recovery and flight/swim
   variants; TALON's private flight scripts select the native pose branch and
@@ -57,7 +57,7 @@ under the matching area heading; see the
   single-player physics, native S2/S3K spindash (disabled in S1), character-owned
   homing (including an untargeted forward
   dash), a four-frame HOMING_DIVE pose, and powered Instagib strikes. Its
-  rerunnable original sheet has 208 frames, 52 canonical animations, slope cycles,
+  rerunnable original sheet has 274 frames, 52 canonical animations, slope cycles,
   a shared palette and a breathing/fidget idle. Canonical sheets preserve native
   partial-loop WAIT tails and finite hold/next endings. Shared module animation
   families bind MICA and TALON phase art at host ROM timing, using separate
@@ -73,7 +73,13 @@ under the matching area heading; see the
   bar release and crane release. Forty additional native-pose aliases cover early
   S3K vine swings, hollow-tree tumbles, twist front/back views, poles and bars;
   33 generated drawings and seven verified quarter-turns retain the shared palette.
-  Other raw poses keep named canonical fallbacks. The
+  Sixty further generated object poses and three approved-art aliases close the
+  remaining 63 S3K direct mappings, including gravity loops, cage entry,
+  parachutes and corkscrews. Six rare/normal-transformation drawings and two TALON
+  legacy poses close the requested rare scripts; tail-only TALON dummy frames
+  bind blank. Complete authored tumble banks enable native rotation selection;
+  partial sheets retain canonical fallbacks. Other raw poses keep named canonical
+  fallbacks. The
   AIZ intro retains MICA's own art and powered palette. The 36 rotated WALK/RUN poses
   use native phase coordinates and pixel-edited contact edges; all 12 steep
   WALK/RUN hood contours are completed without changing sole support. S3K transformation

@@ -6,7 +6,7 @@ TALON is also selectable solo. The [character reference](concept/README.md) has
 both approved model sheets, the in-game palettes, the on-model rules and the
 candidate selection.
 
-The playable sheet contains 98 original indexed poses and 18 canonical animations,
+The playable sheet contains 274 original indexed poses and 52 canonical animations,
 including four slope cycles for WALK and RUN, the breathing idle loop, and
 HOMING_DIVE. Homing is MICA’s air move; powered Gilded forms use Instagib. Python 3 with Pillow is required to rebuild the sheet.
 
@@ -54,7 +54,7 @@ slots cycle to gold while the normal sheet and homing move remain her own.
 Enable **Gilded form settings** in the host overlay to override the per-game form
 switches, S1 emerald requirement, ring requirement and S1 music at the next full
 load. S1's six-emerald/50-ring default is mod-defined and requires no donor ROM.
-S2 and S3K retain their native default emerald gates. TALON uses his own 169-frame, 47-animation sheet and palette. His native flight
+S2 and S3K retain their native default emerald gates. TALON uses his own 171-frame, 47-animation sheet and palette. His native flight
 flaps normally; airborne down previews a target and down+jump dives onto it.
 Solar uses white-gold plumage with flame wingtips, Instagib dives and twice the
 native flap lift, with no Flickies or Hyper tier. Regenerate Solar Java tables
@@ -73,7 +73,7 @@ for the concept-to-capture workflow and source map.
 ## Acceptance
 
 `TestMicaCharacterIntegration` compiles and packages these exact sources, then
-checks the packed 98-frame/18-animation sheet and full palette, the roster,
+checks the packed 274-frame/52-animation sheet and full palette, the roster,
 first-level load, identity, native Sonic physics equality, homing kills, powered
 Instagib, dive pose selection, strike rewind replay, save retention and disabled
 owner fallback for each host, plus real LZ, CPZ2 and HCZ water palette inputs.
@@ -110,3 +110,22 @@ vocabulary. S3K uses its native flight IDs. Airborne down requests the target
 reticle; down+jump takes over flight with a targeted divebomb. Without down,
 jump retains native flight/flaps. Solar palettes are generated from his own
 presentation data. HUD glyph and missing presentation limits are listed above.
+
+## Object-pose closure (2026-11-10)
+
+MICA supplies all 63 remaining S3K object aliases: FBZ gravity-loop and cage
+entry, chain grips, carry balls, final hang, cutscene overhead poses, crane
+release, emerald look, wall run, parachute yaw and LRZ/SSZ corkscrew yaw.
+Sixty new object drawings and six rare-script/transformation drawings follow
+native-pose generation; three aliases reuse approved spin/grip art. The complete
+12-phase raw tumble bank enables the native selector; incomplete sheets retain
+their canonical fallback. Native timing and terminators remain ROM-owned.
+
+Rare animation IDs are also supplied in both characters' Sonic 2/S3K profiles.
+TALON adds two legacy hanging/curling poses. S2 tail-only dummy frames deliberately
+bind his existing blank (he has no separate fox tails); legacy idle/walk dummy
+scripts reuse their exact authored family phases. MICA's normal transformation
+has five phase aliases; powered-bank artwork remains a separate obligation.
+See [MICA provenance](art/mica/object-poses-wave4/native-pose-provenance.json) and
+[TALON provenance](art/talon/rare-poses/provenance.json). This closes the specified
+normal animation/direct-pose audit rows, not presentation or powered-bank coverage.

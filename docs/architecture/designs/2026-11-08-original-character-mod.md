@@ -1656,6 +1656,21 @@ or blockers remain; the lead owns subsequent integration. No merge or push.
 
 ## Coverage audit (2026-11-09)
 
+**Object-pose closure, 2026-11-10:** the maintained sheets now contain MICA
+274 frames / 52 keys and TALON 171 / 47. All 63 outstanding MICA S3K direct-pose
+rows and all 16 requested rare animation rows bind authored art or explicit
+aliases. Fallback totals move MICA S2 **38 → 34**, S3K **102 → 36**; TALON S2
+**44 → 39**, S3K **71 → 67**. S1 is unchanged. Remaining totals include powered
+and presentation obligations and are not normal-play pose counts. The raw tumble
+selector is admitted only when every phase of its native bank is explicitly
+authored. Normal transformation aliases retain ROM script timing; separate powered
+banks remain distinct. TALON S2 tail-only dummy frames intentionally bind blank.
+Sources and independent size checks are under each character's art directory.
+Positioned native-object encounters use production headless EGL rendering; they
+are review evidence, not route certification. The historical audit below remains
+as the earlier baseline.
+
+
 Research branch `feature/ai-character-art-audit` starts at `24bfe483c7` and merges
 approved TALON art `71fefca894`, independently of the TALON engine lane.
 Current sources: **MICA 132 frames / 22 canonical keys; TALON 82 / 13**.
