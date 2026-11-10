@@ -34,7 +34,9 @@ public final class EndingSpriteRenderSupport {
     public static void draw(ObjectServices services, String key, int mappingAddress,
                             int tileBase, int paletteBase, int frame, int worldX, int worldY,
                             boolean flipX, boolean flipY, boolean highPriority, int priorityBucket) {
-        var surface = mappingAddress == S3kEndingResources.MAP_SONIC_TAILS_POSE && frame <= 2
+        var surface = mappingAddress == S3kEndingResources.MAP_ENDING_PLANE && frame == 12
+                ? com.openggf.game.EndingSpriteSet.Surface.S3K_TORNADO_PILOT
+                : mappingAddress == S3kEndingResources.MAP_SONIC_TAILS_POSE && frame <= 4
                 ? (S3kEndingCoordinator.state(services).progress() < 0
                     ? com.openggf.game.EndingSpriteSet.Surface.S3K_NORMAL_POSE
                     : com.openggf.game.EndingSpriteSet.Surface.S3K_POWERED_POSE)

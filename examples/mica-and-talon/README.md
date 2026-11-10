@@ -64,7 +64,7 @@ The S2 HUD spells TALON; S3K retains TAL because the native glyphs exceed its
 
 The build copies presentation, wave3 stage, continue, portrait, snowboard and
 ending PNGs into the jar alongside `art/mica.ggfp`. Presentation is currently a
-code-supplied contract; GGFP presentation sections are pending. S2 2P, title art and custom Tornado pilots remain open. Optional 32×32 reel
+code-supplied contract; GGFP presentation sections are pending. S2 2P and title art remain open; TALON cockpit assets await presentation-lane wiring. Optional 32×32 reel
 portraits replace lead/sidekick symbols in S2 CNZ and S3K Slots, including
 TALON solo and the Gilded/Solar symbol. Native rewards, other symbols and
 scrolling remain host-owned. See each character’s `art/*/reels/README.md`.
@@ -112,3 +112,27 @@ vocabulary. S3K uses its native flight IDs. Airborne down requests the target
 reticle; down+jump takes over flight with a targeted divebomb. Without down,
 jump retains native flight/flaps. Solar palettes are generated from his own
 presentation data. HUD glyph and missing presentation limits are listed above.
+
+## Ending ownership (2026-11-10)
+
+`TalonEndings` supplies eight S2 ending object poses, three monochrome search
+photos, five 24×16 goggles-down cockpit crops, and S3K reunion selectors 3/4.
+Built-in GPT Image transformed real-palette native references against the approved
+model and WAIT. Native decoded pixels and raw candidates remain in external
+scratch; provenance and indexed authored images live in `art/talon/endings/`.
+The first configured sidekick owns photos and the new optional
+`S2_TORNADO_PILOT` set. The ending and SCZ/WFZ renderers replace only the cockpit
+piece, keeping native sequence clocks, vehicle pieces and DPLC decisions.
+Missing sidekick/slot retains native art. The unpublished API remains 0.7.0.
+
+Ending object/reunion sets apply to TALON's solo Tails route; MICA's native S3K
+reunion does not include a sidekick portrait. S1 credits demos use the configured
+team's ordinary playable sheet. S2 credits are text slides, and S3K scrolls ROM
+text (`S3kCreditsState`); neither has a credits gameplay bank to redraw.
+Presentation-lane merge must add `TalonEndings.load(assets)` to its endings map;
+this lane leaves the character definition and TalonPresentation untouched.
+
+The S3K reunion plane also has a separate sidekick pilot (native selector 12).
+`S3K_TORNADO_PILOT` aliases the generated S2 side-view cockpit with hotspot
+(12,8). Native alpha geometry is identical; native palettes differ. This keeps
+TALON visible in MICA's team reunion without adding a reunion portrait actor.

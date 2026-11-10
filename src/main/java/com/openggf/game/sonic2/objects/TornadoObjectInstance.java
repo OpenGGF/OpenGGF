@@ -278,6 +278,8 @@ public class TornadoObjectInstance extends AbstractObjectInstance
 
     // ObjB2_Animate_Pilot state (s2.asm:79653-79671):
     // objoff_37 = 9-frame countdown, objoff_36 = pilot-frame table cursor.
+    private final com.openggf.game.presentation.TornadoPilotPresentation customPilot =
+            new com.openggf.game.presentation.TornadoPilotPresentation();
     private int pilotTimer;
     private int pilotTableCursor;
 
@@ -1161,7 +1163,13 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        renderer.drawFrameIndex(mappingFrame, currentX, currentY, false, false);
+        // Map_objB2_a 0..3 piece 3 is the six-tile Tails cockpit at (-48,-8).
+        // Draw the pilot before the vehicle so its foreground retains native occlusion.
+        if (Sonic2ObjectArtKeys.TORNADO.equals(key) && mappingFrame >= 0 && mappingFrame < 4
+                && customPilot.draw(TAILS_PILOT_FRAMES[pilotTableCursor], currentX, currentY)) {
+            for (int i = 9; i >= 0; i--) if (i != 3)
+                renderer.drawFramePieceByIndex(mappingFrame, i, currentX, currentY, false, false);
+        } else renderer.drawFrameIndex(mappingFrame, currentX, currentY, false, false);
     }
 
     @Override

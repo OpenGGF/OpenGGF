@@ -282,3 +282,27 @@ This is the requested focused selection, not a full-suite claim.
 
 See [reels](reels/README.md) for the native-pose-generated 32×32 head and Solar
 palette alias, size measurements and exact provenance. Titles remain native.
+
+## Ending ownership (2026-11-10)
+
+`TalonEndings` supplies eight S2 ending object poses, three monochrome search
+photos, five 24×16 goggles-down cockpit crops, and S3K reunion selectors 3/4.
+Built-in GPT Image transformed real-palette native references against the approved
+model and WAIT. Native decoded pixels and raw candidates remain in external
+scratch; provenance and indexed authored images live in `art/talon/endings/`.
+The first configured sidekick owns photos and the new optional
+`S2_TORNADO_PILOT` set. The ending and SCZ/WFZ renderers replace only the cockpit
+piece, keeping native sequence clocks, vehicle pieces and DPLC decisions.
+Missing sidekick/slot retains native art. The unpublished API remains 0.7.0.
+
+Ending object/reunion sets apply to TALON's solo Tails route; MICA's native S3K
+reunion does not include a sidekick portrait. S1 credits demos use the configured
+team's ordinary playable sheet. S2 credits are text slides, and S3K scrolls ROM
+text (`S3kCreditsState`); neither has a credits gameplay bank to redraw.
+Presentation-lane merge must add `TalonEndings.load(assets)` to its endings map;
+this lane leaves the character definition and TalonPresentation untouched.
+
+The S3K reunion plane also has a separate sidekick pilot (native selector 12).
+`S3K_TORNADO_PILOT` aliases the generated S2 side-view cockpit with hotspot
+(12,8). Native alpha geometry is identical; native palettes differ. This keeps
+TALON visible in MICA's team reunion without adding a reunion portrait actor.

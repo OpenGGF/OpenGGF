@@ -380,6 +380,7 @@ public class Sonic2EndingCutsceneManager {
         default boolean drawPlayer(int frame, int x, int y) { return false; }
         default boolean hasObjectFrame(int frame) { return false; }
         default boolean drawObject(int frame, int x, int y) { return false; }
+        default boolean drawPilot(int frame, int x, int y) { return false; }
         default boolean drawPhoto(int index, int x, int y) { return false; }
         default void paletteStep(boolean toWhite) { }
         default void update() { }
@@ -1849,7 +1850,7 @@ public class Sonic2EndingCutsceneManager {
             SpriteMappingPiece piece = pieces.get(i);
             // ObjCF 7..11 combines a line-1 rider with line-0 vehicle pieces.
             // ArtNem_EndingMiniTornado begins at $493; keep its native pieces.
-            if (custom && (frameIndex < 7 || frameIndex > 11
+            if (custom && ((frameIndex < 7 || frameIndex > 11) && frameIndex != 24 && frameIndex != 25
                     || piece.tileIndex() < Sonic2Constants.ART_TILE_ENDING_MINI_TORNADO)) continue;
             boolean piecePriority = piece.priority();
             SpritePieceRenderer.renderPiece(
@@ -1878,9 +1879,12 @@ public class Sonic2EndingCutsceneManager {
         if (frames == null || frameIndex < 0 || frameIndex >= frames.size()) {
             return;
         }
+        boolean pilot = frames == tornadoFrames && frameIndex < 4 && pilotAnimSequence != null && presentation != null
+                && presentation.drawPilot(pilotAnimSequence[pilotAnimIndex], screenXForWidth(originX, viewportWidth), originY);
         SpriteMappingFrame frame = frames.get(frameIndex);
         List<SpriteMappingPiece> pieces = frame.pieces();
         for (int i = pieces.size() - 1; i >= 0; i--) {
+            if (pilot && i == 3) continue;
             SpriteMappingPiece piece = pieces.get(i);
             boolean piecePriority = piece.priority();
             SpritePieceRenderer.renderPiece(

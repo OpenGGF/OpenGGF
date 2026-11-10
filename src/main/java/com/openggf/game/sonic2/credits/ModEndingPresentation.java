@@ -39,11 +39,14 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
         }
         // Photos depict the search party, not the missing main character.
         sets.remove(EndingSpriteSet.Surface.S2_PHOTOS);
+        sets.remove(EndingSpriteSet.Surface.S2_TORNADO_PILOT);
         var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
         var sidekicks = com.openggf.game.session.ActiveGameplayTeamResolver.resolveSidekicks(GameServices.configuration());
         var photos = world == null ? null : sidekickPhotos(world.getPlayableCharacterRegistry(), sidekicks);
         if (photos != null) sets.put(EndingSpriteSet.Surface.S2_PHOTOS, photos);
-        if (!sets.containsKey(EndingSpriteSet.Surface.S2_ENDING) && !sets.containsKey(EndingSpriteSet.Surface.S2_PHOTOS)) return null;
+        var pilot = EndingCharacterPresentation.sidekick(EndingSpriteSet.Surface.S2_TORNADO_PILOT);
+        if (pilot != null) sets.put(EndingSpriteSet.Surface.S2_TORNADO_PILOT, pilot);
+        if (!sets.containsKey(EndingSpriteSet.Surface.S2_TORNADO_PILOT) && !sets.containsKey(EndingSpriteSet.Surface.S2_ENDING) && !sets.containsKey(EndingSpriteSet.Surface.S2_PHOTOS)) return null;
         return new ModEndingPresentation(rom, definition, sets);
     }
     static EndingSpriteSet sidekickPhotos(PlayableCharacterRegistry registry, List<String> sidekicks) throws IOException {
@@ -56,11 +59,15 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
     private ModEndingPresentation(Rom rom, CharacterDefinition definition,
             Map<EndingSpriteSet.Surface, EndingSpriteSet> sets) throws IOException {
         this.rom=rom; this.definition=definition; this.sets=sets;
-        nativePlayer = new Sonic2PlayerArt(RomByteReader.fromRom(rom)).loadSonic();
+        var nativeArt = new Sonic2PlayerArt(RomByteReader.fromRom(rom));
+        nativePlayer = Sonic2EndingArt.determineEndingRoutine() == Sonic2EndingArt.EndingRoutine.TAILS
+                ? nativeArt.loadTails() : nativeArt.loadSonic();
         characterArt=definition == null ? nativePlayer : definition.artSupplier().load(definition.key().persisted());
         playable = new PlayerSpriteRenderer(StageCharacterPresentation.playable(nativePlayer));
         StageCharacterPresentation.bindPalette(playable, definition);
-        for (var entry:sets.entrySet()) if(entry.getKey()!=EndingSpriteSet.Surface.S1_ENDING)
+        for (var entry:sets.entrySet()) if(java.util.EnumSet.of(EndingSpriteSet.Surface.S2_ENDING,
+                EndingSpriteSet.Surface.S2_SUPER, EndingSpriteSet.Surface.S2_FLOAT,
+                EndingSpriteSet.Surface.S2_PHOTOS, EndingSpriteSet.Surface.S2_TORNADO_PILOT).contains(entry.getKey()))
             renderers.put(entry.getKey(),EndingCharacterPresentation.renderer(entry.getValue()));
         var profile=definition==null || definition.superFormSupplier()==null?null:definition.superFormSupplier().load(definition.key().persisted());
         powered=profile==null?null:profile.games().getOrDefault(GameId.S2,Map.of()).get(SuperFormProfile.Tier.SUPER);
@@ -96,6 +103,9 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
         return draw(EndingSpriteSet.Surface.S2_ENDING,frame,x,y)
                 || draw(EndingSpriteSet.Surface.S2_SUPER,frame,x,y);
     }
+    @Override public boolean drawPilot(int frame,int x,int y) {
+        return draw(EndingSpriteSet.Surface.S2_TORNADO_PILOT,frame,x,y);
+    }
     @Override public boolean drawPhoto(int index,int x,int y) {
         var set=sets.get(EndingSpriteSet.Surface.S2_PHOTOS);
         if(index == 0 || set==null || !set.sprites().frames().containsKey(index)) return false;
@@ -117,7 +127,8 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
         for(var entry:renderers.entrySet()) {
             var palette=new Palette(); int[] rgb=sets.get(entry.getKey()).rgb();
             boolean gilded=endingRoutine()==Sonic2EndingArt.EndingRoutine.SUPER_SONIC
-                    && entry.getKey()!=EndingSpriteSet.Surface.S2_PHOTOS;
+                    && entry.getKey()!=EndingSpriteSet.Surface.S2_PHOTOS
+                    && entry.getKey()!=EndingSpriteSet.Surface.S2_TORNADO_PILOT;
             for(int i=0;i<16;i++) {
                 var color=new Palette.Color((byte)(rgb[i]>>16),(byte)(rgb[i]>>8),(byte)rgb[i]);
                 if(gilded && powered!=null) color.fromSegaFormat(powered.dryCycle().get((ticks/powered.cycleTicks())%powered.dryCycle().size()).get(i));
