@@ -1724,6 +1724,8 @@ class TestMicaCharacterIntegration {
                     Files.writeString(output.resolve(label).resolve("states.csv"),csv);
                 }
             }
+        }
+    }
 
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
     void talonS2EndingCapture() throws Exception { captureS2Ending(false, "mica-and-talon:talon"); }
