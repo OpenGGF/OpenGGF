@@ -39,7 +39,10 @@ under the matching area heading; see the
   default sidekick and is selectable solo. Native-cell, locally paletted reel
   portraits now cover S2 CNZ and S3K Slots lead/sidekick symbols, TALON solo
   and Gilded/Solar symbols through optional candidate character presentation;
-  slot rewards and other symbols remain native. Title mascot art remains open. His Tails archetype uses native S3K
+  slot rewards and other symbols remain native. Title mascot art remains open. S3K Competition renders MICA/TALON with
+  independent native-ID miniature banks and hotspots, per-frame native fallback
+  and private palettes; configured creator team members occupy their native
+  archetype wheel slots while the miniature simulation stays native. His Tails archetype uses native S3K
   flight and explicitly declared S1/S2 flight; Solar doubles flap acceleration
   without Flickies. His own 167-frame sheet and palette replace the placeholder;
   generated Solar tables use white-gold plumage and flame wingtips. Shared family

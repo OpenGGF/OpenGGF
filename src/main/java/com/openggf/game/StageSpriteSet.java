@@ -6,7 +6,11 @@ import java.util.Objects;
 /** Optional indexed frames keyed by the host stage's unchanged mapping-frame IDs. */
 @ModApi
 public record StageSpriteSet(Map<Integer, Frame> frames) {
-    @ModApi public enum Surface { S2_HALF_PIPE, S3K_BLUE_SPHERE, S3K_SLOT_MACHINE }
+    @ModApi public enum Surface { S2_HALF_PIPE, S3K_BLUE_SPHERE, S3K_SLOT_MACHINE,
+        /** Native miniature body mapping IDs; missing IDs retain archetype art. */
+        S3K_COMPETITION,
+        /** Native miniature appendage IDs; transparent authored frames suppress tails. */
+        S3K_COMPETITION_TAIL }
     @ModApi public record Frame(CharacterPresentation.Image image, int hotspotX, int hotspotY) {
         public Frame {
             Objects.requireNonNull(image, "image");

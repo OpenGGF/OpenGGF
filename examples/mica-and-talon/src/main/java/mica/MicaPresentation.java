@@ -21,7 +21,7 @@ final class MicaPresentation {
                     pose(assets,prefix+"-spin1"),null,pose(assets,prefix+"-spin3")),MicaScreenFrames.load(assets,host)));
         }
         return new CharacterPresentation("MICA","MICA",art,Map.of(new Font(Host.S1,Style.HUD),
-                Map.of('M',image(assets,"s1-name-M"),'A',image(assets,"s1-name-A"))), stages(assets), endings(assets)).withReelFaces(ReelPresentation.load(assets,"mica"));
+                Map.of('M',image(assets,"s1-name-M"),'A',image(assets,"s1-name-A"))), CompetitionPresentation.merge(stages(assets),CompetitionPresentation.mica(assets)), endings(assets)).withReelFaces(ReelPresentation.load(assets,"mica"));
     }
     /** S1/S2 and S3K ending sets share one map keyed by surface. */
     private static Map<com.openggf.game.EndingSpriteSet.Surface,com.openggf.game.EndingSpriteSet> endings(ModAssetRoot assets) throws IOException {

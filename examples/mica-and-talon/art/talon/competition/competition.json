@@ -1,0 +1,1094 @@
+{
+  "character": "TALON",
+  "surface": "S3K_COMPETITION",
+  "native_bank": "Tails 2P",
+  "frames": [
+    {
+      "id": 0,
+      "file": "00.png",
+      "hotspot": [
+        0,
+        0
+      ],
+      "status": "N/A",
+      "native_size": [
+        1,
+        1
+      ],
+      "native_area": 0,
+      "opaque_area": 0
+    },
+    {
+      "id": 1,
+      "file": "01.png",
+      "hotspot": [
+        13,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        25,
+        19
+      ],
+      "native_area": 218,
+      "opaque_area": 237,
+      "batch": 0,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.12697800426349284,
+      "source_crop": [
+        172,
+        149
+      ]
+    },
+    {
+      "id": 2,
+      "file": "02.png",
+      "hotspot": [
+        13,
+        7
+      ],
+      "status": "authored",
+      "native_size": [
+        23,
+        19
+      ],
+      "native_area": 205,
+      "opaque_area": 223,
+      "batch": 0,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.12768527484312633,
+      "source_crop": [
+        157,
+        148
+      ]
+    },
+    {
+      "id": 3,
+      "file": "03.png",
+      "hotspot": [
+        15,
+        7
+      ],
+      "status": "authored",
+      "native_size": [
+        23,
+        19
+      ],
+      "native_area": 213,
+      "opaque_area": 234,
+      "batch": 0,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.12949750021616685,
+      "source_crop": [
+        162,
+        148
+      ]
+    },
+    {
+      "id": 4,
+      "file": "04.png",
+      "hotspot": [
+        8,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        20,
+        22
+      ],
+      "native_area": 213,
+      "opaque_area": 232,
+      "batch": 0,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.12381891607037143,
+      "source_crop": [
+        161,
+        160
+      ]
+    },
+    {
+      "id": 5,
+      "file": "05.png",
+      "hotspot": [
+        7,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        19,
+        23
+      ],
+      "native_area": 204,
+      "opaque_area": 222,
+      "batch": 0,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.11962455047386793,
+      "source_crop": [
+        149,
+        178
+      ]
+    },
+    {
+      "id": 6,
+      "file": "06.png",
+      "hotspot": [
+        8,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        23,
+        20
+      ],
+      "native_area": 205,
+      "opaque_area": 214,
+      "batch": 0,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.12208637111198514,
+      "source_crop": [
+        175,
+        151
+      ]
+    },
+    {
+      "id": 7,
+      "file": "07.png",
+      "hotspot": [
+        8,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        19,
+        25
+      ],
+      "native_area": 218,
+      "opaque_area": 234,
+      "batch": 0,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.1231986523862611,
+      "source_crop": [
+        160,
+        181
+      ]
+    },
+    {
+      "id": 8,
+      "file": "08.png",
+      "hotspot": [
+        7,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        19,
+        23
+      ],
+      "native_area": 205,
+      "opaque_area": 220,
+      "batch": 0,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.12350168262775577,
+      "source_crop": [
+        157,
+        177
+      ]
+    },
+    {
+      "id": 9,
+      "file": "09.png",
+      "hotspot": [
+        7,
+        7
+      ],
+      "status": "authored",
+      "native_size": [
+        19,
+        23
+      ],
+      "native_area": 213,
+      "opaque_area": 229,
+      "batch": 1,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.08328293322603317,
+      "source_crop": [
+        231,
+        259
+      ]
+    },
+    {
+      "id": 10,
+      "file": "0a.png",
+      "hotspot": [
+        9,
+        11
+      ],
+      "status": "authored",
+      "native_size": [
+        22,
+        20
+      ],
+      "native_area": 213,
+      "opaque_area": 228,
+      "batch": 1,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.08627795257941441,
+      "source_crop": [
+        241,
+        224
+      ]
+    },
+    {
+      "id": 11,
+      "file": "0b.png",
+      "hotspot": [
+        9,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        23,
+        19
+      ],
+      "native_area": 204,
+      "opaque_area": 232,
+      "batch": 1,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.08467799399702344,
+      "source_crop": [
+        269,
+        185
+      ]
+    },
+    {
+      "id": 12,
+      "file": "0c.png",
+      "hotspot": [
+        9,
+        11
+      ],
+      "status": "authored",
+      "native_size": [
+        20,
+        23
+      ],
+      "native_area": 205,
+      "opaque_area": 225,
+      "batch": 1,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.08467367200862023,
+      "source_crop": [
+        248,
+        212
+      ]
+    },
+    {
+      "id": 13,
+      "file": "0d.png",
+      "hotspot": [
+        10,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        22,
+        21
+      ],
+      "native_area": 222,
+      "opaque_area": 233,
+      "batch": 1,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.08471617295915382,
+      "source_crop": [
+        229,
+        252
+      ]
+    },
+    {
+      "id": 14,
+      "file": "0e.png",
+      "hotspot": [
+        10,
+        7
+      ],
+      "status": "authored",
+      "native_size": [
+        23,
+        19
+      ],
+      "native_area": 183,
+      "opaque_area": 193,
+      "batch": 1,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.07825458113805389,
+      "source_crop": [
+        245,
+        244
+      ]
+    },
+    {
+      "id": 15,
+      "file": "0f.png",
+      "hotspot": [
+        13,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        22,
+        29
+      ],
+      "native_area": 220,
+      "opaque_area": 247,
+      "batch": 1,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.08175371218955194,
+      "source_crop": [
+        240,
+        301
+      ]
+    },
+    {
+      "id": 16,
+      "file": "10.png",
+      "hotspot": [
+        8,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        16,
+        23
+      ],
+      "native_area": 181,
+      "opaque_area": 199,
+      "batch": 1,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.07666866616627656,
+      "source_crop": [
+        206,
+        260
+      ]
+    },
+    {
+      "id": 17,
+      "file": "11.png",
+      "hotspot": [
+        8,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        21,
+        22
+      ],
+      "native_area": 222,
+      "opaque_area": 249,
+      "batch": 2,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.10699895793417202,
+      "source_crop": [
+        184,
+        184
+      ]
+    },
+    {
+      "id": 18,
+      "file": "12.png",
+      "hotspot": [
+        6,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        19,
+        23
+      ],
+      "native_area": 183,
+      "opaque_area": 196,
+      "batch": 2,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.10937687182700843,
+      "source_crop": [
+        158,
+        195
+      ]
+    },
+    {
+      "id": 19,
+      "file": "13.png",
+      "hotspot": [
+        9,
+        7
+      ],
+      "status": "authored",
+      "native_size": [
+        29,
+        22
+      ],
+      "native_area": 220,
+      "opaque_area": 243,
+      "batch": 2,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.10885319941099462,
+      "source_crop": [
+        216,
+        185
+      ]
+    },
+    {
+      "id": 20,
+      "file": "14.png",
+      "hotspot": [
+        9,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        23,
+        16
+      ],
+      "native_area": 181,
+      "opaque_area": 203,
+      "batch": 2,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.10446273865889187,
+      "source_crop": [
+        190,
+        161
+      ]
+    },
+    {
+      "id": 21,
+      "file": "15.png",
+      "hotspot": [
+        9,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        15,
+        20
+      ],
+      "native_area": 175,
+      "opaque_area": 191,
+      "batch": 2,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.09754682500507272,
+      "source_crop": [
+        165,
+        206
+      ]
+    },
+    {
+      "id": 22,
+      "file": "16.png",
+      "hotspot": [
+        7,
+        5
+      ],
+      "status": "authored",
+      "native_size": [
+        13,
+        13
+      ],
+      "native_area": 110,
+      "opaque_area": 124,
+      "batch": 2,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.08217021177735613,
+      "source_crop": [
+        153,
+        149
+      ]
+    },
+    {
+      "id": 23,
+      "file": "17.png",
+      "hotspot": [
+        8,
+        6
+      ],
+      "status": "authored",
+      "native_size": [
+        14,
+        15
+      ],
+      "native_area": 119,
+      "opaque_area": 127,
+      "batch": 2,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.10216215891532138,
+      "source_crop": [
+        153,
+        111
+      ]
+    },
+    {
+      "id": 24,
+      "file": "18.png",
+      "hotspot": [
+        6,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        12,
+        19
+      ],
+      "native_area": 143,
+      "opaque_area": 164,
+      "batch": 2,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.0934923496363201,
+      "source_crop": [
+        156,
+        169
+      ]
+    },
+    {
+      "id": 25,
+      "file": "19.png",
+      "hotspot": [
+        6,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        11,
+        17
+      ],
+      "native_area": 136,
+      "opaque_area": 148,
+      "batch": 3,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.08728616146634752,
+      "source_crop": [
+        128,
+        190
+      ]
+    },
+    {
+      "id": 26,
+      "file": "1a.png",
+      "hotspot": [
+        9,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        13,
+        16
+      ],
+      "native_area": 117,
+      "opaque_area": 123,
+      "batch": 3,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.08897818337725893,
+      "source_crop": [
+        181,
+        170
+      ]
+    },
+    {
+      "id": 27,
+      "file": "1b.png",
+      "hotspot": [
+        6,
+        7
+      ],
+      "status": "authored",
+      "native_size": [
+        13,
+        19
+      ],
+      "native_area": 167,
+      "opaque_area": 185,
+      "batch": 3,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.10065331488590375,
+      "source_crop": [
+        127,
+        190
+      ]
+    },
+    {
+      "id": 28,
+      "file": "1c.png",
+      "hotspot": [
+        6,
+        7
+      ],
+      "status": "authored",
+      "native_size": [
+        13,
+        19
+      ],
+      "native_area": 166,
+      "opaque_area": 183,
+      "batch": 3,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.10282666544163793,
+      "source_crop": [
+        116,
+        183
+      ]
+    },
+    {
+      "id": 29,
+      "file": "1d.png",
+      "hotspot": [
+        6,
+        7
+      ],
+      "status": "authored",
+      "native_size": [
+        13,
+        19
+      ],
+      "native_area": 171,
+      "opaque_area": 194,
+      "batch": 3,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.10227700038890246,
+      "source_crop": [
+        133,
+        183
+      ]
+    },
+    {
+      "id": 30,
+      "file": "1e.png",
+      "hotspot": [
+        6,
+        7
+      ],
+      "status": "authored",
+      "native_size": [
+        13,
+        19
+      ],
+      "native_area": 169,
+      "opaque_area": 186,
+      "batch": 3,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.10173756570869333,
+      "source_crop": [
+        137,
+        183
+      ]
+    },
+    {
+      "id": 31,
+      "file": "1f.png",
+      "hotspot": [
+        9,
+        4
+      ],
+      "status": "authored",
+      "native_size": [
+        18,
+        19
+      ],
+      "native_area": 211,
+      "opaque_area": 233,
+      "batch": 3,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.10893655398408046,
+      "source_crop": [
+        180,
+        147
+      ]
+    },
+    {
+      "id": 32,
+      "file": "20.png",
+      "hotspot": [
+        10,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        18,
+        19
+      ],
+      "native_area": 219,
+      "opaque_area": 241,
+      "batch": 3,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.11066071725868763,
+      "source_crop": [
+        177,
+        165
+      ]
+    },
+    {
+      "id": 33,
+      "file": "21.png",
+      "hotspot": [
+        9,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        19,
+        19
+      ],
+      "native_area": 244,
+      "opaque_area": 277,
+      "batch": 4,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.09801822367430926,
+      "source_crop": [
+        191,
+        199
+      ]
+    },
+    {
+      "id": 34,
+      "file": "22.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "status": "authored",
+      "native_size": [
+        24,
+        18
+      ],
+      "native_area": 230,
+      "opaque_area": 241,
+      "batch": 4,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.10092270021297045,
+      "source_crop": [
+        220,
+        189
+      ]
+    },
+    {
+      "id": 35,
+      "file": "23.png",
+      "hotspot": [
+        14,
+        2
+      ],
+      "status": "authored",
+      "native_size": [
+        28,
+        14
+      ],
+      "native_area": 195,
+      "opaque_area": 214,
+      "batch": 4,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.10034840238897468,
+      "source_crop": [
+        220,
+        147
+      ]
+    },
+    {
+      "id": 36,
+      "file": "24.png",
+      "hotspot": [
+        12,
+        2
+      ],
+      "status": "authored",
+      "native_size": [
+        28,
+        14
+      ],
+      "native_area": 196,
+      "opaque_area": 225,
+      "batch": 4,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.09588081644784834,
+      "source_crop": [
+        183,
+        173
+      ]
+    },
+    {
+      "id": 37,
+      "file": "25.png",
+      "hotspot": [
+        11,
+        5
+      ],
+      "status": "authored",
+      "native_size": [
+        22,
+        18
+      ],
+      "native_area": 199,
+      "opaque_area": 208,
+      "batch": 4,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.09507403818306769,
+      "source_crop": [
+        214,
+        182
+      ]
+    },
+    {
+      "id": 38,
+      "file": "26.png",
+      "hotspot": [
+        11,
+        6
+      ],
+      "status": "authored",
+      "native_size": [
+        22,
+        18
+      ],
+      "native_area": 189,
+      "opaque_area": 212,
+      "batch": 4,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.09673602035087915,
+      "source_crop": [
+        213,
+        181
+      ]
+    },
+    {
+      "id": 39,
+      "file": "27.png",
+      "hotspot": [
+        11,
+        6
+      ],
+      "status": "native alias",
+      "native_size": [
+        22,
+        18
+      ],
+      "native_area": 189,
+      "opaque_area": 212,
+      "alias": 38
+    },
+    {
+      "id": 40,
+      "file": "28.png",
+      "hotspot": [
+        8,
+        8
+      ],
+      "status": "authored",
+      "native_size": [
+        17,
+        17
+      ],
+      "native_area": 189,
+      "opaque_area": 194,
+      "batch": 4,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.09044428156178196,
+      "source_crop": [
+        179,
+        182
+      ]
+    },
+    {
+      "id": 41,
+      "file": "29.png",
+      "hotspot": [
+        8,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        17,
+        17
+      ],
+      "native_area": 193,
+      "opaque_area": 212,
+      "batch": 4,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.08837817145569701,
+      "source_crop": [
+        181,
+        190
+      ]
+    },
+    {
+      "id": 42,
+      "file": "2a.png",
+      "hotspot": [
+        8,
+        9
+      ],
+      "status": "authored",
+      "native_size": [
+        17,
+        17
+      ],
+      "native_area": 197,
+      "opaque_area": 219,
+      "batch": 5,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "ba1a373aef9c655a87b89fbbf9743543702b831e5fa8a2b2cb18505e927921ad",
+      "uniform_reduction": 0.09501497301937765,
+      "source_crop": [
+        174,
+        178
+      ]
+    },
+    {
+      "id": 43,
+      "file": "2b.png",
+      "hotspot": [
+        4,
+        4
+      ],
+      "status": "authored",
+      "native_size": [
+        13,
+        12
+      ],
+      "native_area": 120,
+      "opaque_area": 129,
+      "batch": 5,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "ba1a373aef9c655a87b89fbbf9743543702b831e5fa8a2b2cb18505e927921ad",
+      "uniform_reduction": 0.06902722440639708,
+      "source_crop": [
+        150,
+        227
+      ]
+    },
+    {
+      "id": 44,
+      "file": "2c.png",
+      "hotspot": [
+        11,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        22,
+        20
+      ],
+      "native_area": 237,
+      "opaque_area": 264,
+      "batch": 5,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "ba1a373aef9c655a87b89fbbf9743543702b831e5fa8a2b2cb18505e927921ad",
+      "uniform_reduction": 0.103274828840887,
+      "source_crop": [
+        191,
+        183
+      ]
+    },
+    {
+      "id": 45,
+      "file": "2d.png",
+      "hotspot": [
+        10,
+        10
+      ],
+      "status": "authored",
+      "native_size": [
+        21,
+        20
+      ],
+      "native_area": 234,
+      "opaque_area": 245,
+      "batch": 5,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "ba1a373aef9c655a87b89fbbf9743543702b831e5fa8a2b2cb18505e927921ad",
+      "uniform_reduction": 0.10500550776577572,
+      "source_crop": [
+        184,
+        182
+      ]
+    }
+  ]
+}

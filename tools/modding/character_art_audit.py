@@ -152,6 +152,33 @@ def main():
             add('talon',g,surface_name,f'{i:02X}','N/A' if na else 'fallback','wings integrated in body' if na else 'stock Tails',
                 rank='competition/2P only' if 'competition'in surface_name else 'rare/cutscene',evidence=f'{label} ({path}:{n})',
                 notes='Do not generate tail appendage pixels; body wings must communicate this motion' if na else 'Independent mapping bank; not normal player IDs')
+    # Sonic miniature bank is independent of MICA's full-size and stage mappings.
+    path='docs/skdisasm/General/Sprites/Sonic/Map - Sonic 2P.asm'
+    entries=[]
+    for n,line in enumerate(pathlib.Path(path).read_text().splitlines(),1):
+        m=re.search(r'dc.w\s+([\w.]+)-Map_',line)
+        if m: entries.append((n,m[1]))
+        elif entries: break
+    for i,(n,label) in enumerate(entries):
+        add('mica','S3K','competition miniature',f'{i:02X}','fallback','stock Sonic',
+            rank='competition/2P only',evidence=f'{label} ({path}:{n})',
+            notes='Independent mapping bank; not normal player IDs')
+    # Competition manifests contain native miniature selectors, never full-size aliases.
+    for character in ['mica','talon']:
+        manifest_path=ART/character/'competition/competition.json'
+        if not manifest_path.exists(): continue
+        manifest=load(manifest_path)
+        by_id={f['id']:f for f in manifest['frames']}
+        for row in rows:
+            if row['character']!=character.upper() or row['game']!='S3K' or row['surface']!='competition miniature': continue
+            frame=by_id.get(int(row['native_frame_or_animation'],16))
+            if frame is None: continue
+            image=manifest_path.parent/frame['file']
+            if not image.is_file(): raise SystemExit(f'Missing competition image {image}')
+            row['status']=frame['status']
+            row['target']=str(image.relative_to(ROOT))
+            row['provenance']=str((manifest_path.parent/'generation.json').relative_to(ROOT))
+            row['notes']='native miniature bank, per-frame hotspot; $27 aliases $26, $00 is an empty sentinel'
     # S2 uses the shared Tails mapping bank for its separate appendage object.
     for f in [0,*range(9,14),*range(0x49,0x59),*range(0x81,0x85),*range(0x87,0x8B)]:
         add('talon','S2','separate tails object',f'{f:02X}','N/A','integrated body wings',

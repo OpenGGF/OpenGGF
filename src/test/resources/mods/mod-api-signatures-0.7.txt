@@ -3013,6 +3013,8 @@ FIELD com.openggf.game.SpecialStageViewport public,static,final int NATIVE_HEIGH
 FIELD com.openggf.game.SpecialStageViewport public,static,final int NATIVE_WIDTH
 FIELD com.openggf.game.StageSpriteSet$Surface public,static,final com.openggf.game.StageSpriteSet$Surface S2_HALF_PIPE
 FIELD com.openggf.game.StageSpriteSet$Surface public,static,final com.openggf.game.StageSpriteSet$Surface S3K_BLUE_SPHERE
+FIELD com.openggf.game.StageSpriteSet$Surface public,static,final com.openggf.game.StageSpriteSet$Surface S3K_COMPETITION
+FIELD com.openggf.game.StageSpriteSet$Surface public,static,final com.openggf.game.StageSpriteSet$Surface S3K_COMPETITION_TAIL
 FIELD com.openggf.game.StageSpriteSet$Surface public,static,final com.openggf.game.StageSpriteSet$Surface S3K_SLOT_MACHINE
 FIELD com.openggf.game.SuperFormProfile$Tier public,static,final com.openggf.game.SuperFormProfile$Tier HYPER
 FIELD com.openggf.game.SuperFormProfile$Tier public,static,final com.openggf.game.SuperFormProfile$Tier SUPER

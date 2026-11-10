@@ -282,3 +282,12 @@ This is the requested focused selection, not a full-suite claim.
 
 See [reels](reels/README.md) for the native-pose-generated 32×32 head and Solar
 palette alias, size measurements and exact provenance. Titles remain native.
+
+## Competition miniature bank (2026-11-10)
+
+The independent [Competition bank](competition/README.md) covers all 46 native
+Tails 2P selectors: 44 authored, one alias and one empty sentinel. Integrated
+wings replace the separate rotor/tail bank, whose 16 rows remain N/A. The native
+miniature proportions and actual Competition palette are the reference; the
+opaque-area size ratio is 1.045. The shared review includes native and custom
+split-screen race captures and full-frame 60Hz motion comparisons.

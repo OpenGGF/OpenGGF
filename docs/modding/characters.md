@@ -730,3 +730,22 @@ Selected main owns Sonic's symbol; first sidekick owns Tails'. A Tails-archetype
 solo main supplies both portraits, plus the powered portrait when supplied.
 Other prize symbols never change. This extends the unpublished 0.7 candidate;
 rebuild compiled mods against the refreshed normalized signature pin.
+
+### S3K Competition miniature presentation
+
+The unpublished candidate supports `StageSpriteSet.Surface.S3K_COMPETITION`
+(body) and `S3K_COMPETITION_TAIL` (appendage) in
+`CharacterPresentation.stages`. Keys are the native **2P** mapping IDs, separate
+from normal player and Blue Sphere IDs. Each indexed image has its own hotspot.
+Omitting a surface or an ID preserves that archetype's native art. To remove a
+native appendage, supply a transparent frame for each of its IDs; omitting the
+bank means fallback, not suppression. The character's palette supplier owns
+private presentation rows without replacing arena palettes.
+
+Competition uses the configured lead and sidekick team to substitute registered
+creator characters into the existing Sonic/Tails/Knuckles wheel slots. The first
+configured character for each archetype wins. With a native team, the wheel
+launches native art. Wheel portraits/names, records and the miniature simulation
+remain native archetype-owned: campaign sprite factories, physics and abilities
+are not invoked. The maintained MICA/TALON example shows all body selectors,
+explicit transparent tail frames and independent per-frame hotspots.

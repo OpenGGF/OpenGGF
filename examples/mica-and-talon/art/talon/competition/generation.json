@@ -1,0 +1,579 @@
+{
+  "method": "Built-in GPT Image native-pose transformation, two alternatives per grid; nearest fixed-palette reduction with inside ink",
+  "native_reference_palette": "arenaPalette line 0 (ROM $A8A3C); line 1 competition override is $6C0C, not the Sonic body palette",
+  "scratch": "$HOME/scratch/agent-tmp/talon-competition-20261110",
+  "attempts": [
+    {
+      "native_id": 1,
+      "batch": 0,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.12697800426349284,
+      "source_crop": [
+        172,
+        149
+      ]
+    },
+    {
+      "native_id": 2,
+      "batch": 0,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.12768527484312633,
+      "source_crop": [
+        157,
+        148
+      ]
+    },
+    {
+      "native_id": 3,
+      "batch": 0,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.12949750021616685,
+      "source_crop": [
+        162,
+        148
+      ]
+    },
+    {
+      "native_id": 4,
+      "batch": 0,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.12381891607037143,
+      "source_crop": [
+        161,
+        160
+      ]
+    },
+    {
+      "native_id": 5,
+      "batch": 0,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.11962455047386793,
+      "source_crop": [
+        149,
+        178
+      ]
+    },
+    {
+      "native_id": 6,
+      "batch": 0,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.12208637111198514,
+      "source_crop": [
+        175,
+        151
+      ]
+    },
+    {
+      "native_id": 7,
+      "batch": 0,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.1231986523862611,
+      "source_crop": [
+        160,
+        181
+      ]
+    },
+    {
+      "native_id": 8,
+      "batch": 0,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "3723de33ce91048161f06ff85bad3b40e941d867d0e1b9a9fe1090da479d7705",
+      "uniform_reduction": 0.12350168262775577,
+      "source_crop": [
+        157,
+        177
+      ]
+    },
+    {
+      "native_id": 9,
+      "batch": 1,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.08328293322603317,
+      "source_crop": [
+        231,
+        259
+      ]
+    },
+    {
+      "native_id": 10,
+      "batch": 1,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.08627795257941441,
+      "source_crop": [
+        241,
+        224
+      ]
+    },
+    {
+      "native_id": 11,
+      "batch": 1,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.08467799399702344,
+      "source_crop": [
+        269,
+        185
+      ]
+    },
+    {
+      "native_id": 12,
+      "batch": 1,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.08467367200862023,
+      "source_crop": [
+        248,
+        212
+      ]
+    },
+    {
+      "native_id": 13,
+      "batch": 1,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.08471617295915382,
+      "source_crop": [
+        229,
+        252
+      ]
+    },
+    {
+      "native_id": 14,
+      "batch": 1,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.07825458113805389,
+      "source_crop": [
+        245,
+        244
+      ]
+    },
+    {
+      "native_id": 15,
+      "batch": 1,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.08175371218955194,
+      "source_crop": [
+        240,
+        301
+      ]
+    },
+    {
+      "native_id": 16,
+      "batch": 1,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "8f4fe9abcfaa89c854488e235c7ad96f09ca333da69309686e0dad74363aec18",
+      "uniform_reduction": 0.07666866616627656,
+      "source_crop": [
+        206,
+        260
+      ]
+    },
+    {
+      "native_id": 17,
+      "batch": 2,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.10699895793417202,
+      "source_crop": [
+        184,
+        184
+      ]
+    },
+    {
+      "native_id": 18,
+      "batch": 2,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.10937687182700843,
+      "source_crop": [
+        158,
+        195
+      ]
+    },
+    {
+      "native_id": 19,
+      "batch": 2,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.10885319941099462,
+      "source_crop": [
+        216,
+        185
+      ]
+    },
+    {
+      "native_id": 20,
+      "batch": 2,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.10446273865889187,
+      "source_crop": [
+        190,
+        161
+      ]
+    },
+    {
+      "native_id": 21,
+      "batch": 2,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.09754682500507272,
+      "source_crop": [
+        165,
+        206
+      ]
+    },
+    {
+      "native_id": 22,
+      "batch": 2,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.08217021177735613,
+      "source_crop": [
+        153,
+        149
+      ]
+    },
+    {
+      "native_id": 23,
+      "batch": 2,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.10216215891532138,
+      "source_crop": [
+        153,
+        111
+      ]
+    },
+    {
+      "native_id": 24,
+      "batch": 2,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "73b8a57da16a20528063064f846f514016a44957a59fa440f00bc5ac2ab4f4a0",
+      "uniform_reduction": 0.0934923496363201,
+      "source_crop": [
+        156,
+        169
+      ]
+    },
+    {
+      "native_id": 25,
+      "batch": 3,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.08728616146634752,
+      "source_crop": [
+        128,
+        190
+      ]
+    },
+    {
+      "native_id": 26,
+      "batch": 3,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.08897818337725893,
+      "source_crop": [
+        181,
+        170
+      ]
+    },
+    {
+      "native_id": 27,
+      "batch": 3,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.10065331488590375,
+      "source_crop": [
+        127,
+        190
+      ]
+    },
+    {
+      "native_id": 28,
+      "batch": 3,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.10282666544163793,
+      "source_crop": [
+        116,
+        183
+      ]
+    },
+    {
+      "native_id": 29,
+      "batch": 3,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.10227700038890246,
+      "source_crop": [
+        133,
+        183
+      ]
+    },
+    {
+      "native_id": 30,
+      "batch": 3,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.10173756570869333,
+      "source_crop": [
+        137,
+        183
+      ]
+    },
+    {
+      "native_id": 31,
+      "batch": 3,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.10893655398408046,
+      "source_crop": [
+        180,
+        147
+      ]
+    },
+    {
+      "native_id": 32,
+      "batch": 3,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "41715addefba2ccf1727d9a807e90ed246bcf79d426292b19439308d53b46a4c",
+      "uniform_reduction": 0.11066071725868763,
+      "source_crop": [
+        177,
+        165
+      ]
+    },
+    {
+      "native_id": 33,
+      "batch": 4,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.09801822367430926,
+      "source_crop": [
+        191,
+        199
+      ]
+    },
+    {
+      "native_id": 34,
+      "batch": 4,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.10092270021297045,
+      "source_crop": [
+        220,
+        189
+      ]
+    },
+    {
+      "native_id": 35,
+      "batch": 4,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.10034840238897468,
+      "source_crop": [
+        220,
+        147
+      ]
+    },
+    {
+      "native_id": 36,
+      "batch": 4,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.09588081644784834,
+      "source_crop": [
+        183,
+        173
+      ]
+    },
+    {
+      "native_id": 37,
+      "batch": 4,
+      "cell": 4,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.09507403818306769,
+      "source_crop": [
+        214,
+        182
+      ]
+    },
+    {
+      "native_id": 38,
+      "batch": 4,
+      "cell": 5,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.09673602035087915,
+      "source_crop": [
+        213,
+        181
+      ]
+    },
+    {
+      "native_id": 40,
+      "batch": 4,
+      "cell": 6,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.09044428156178196,
+      "source_crop": [
+        179,
+        182
+      ]
+    },
+    {
+      "native_id": 41,
+      "batch": 4,
+      "cell": 7,
+      "variant": 0,
+      "source_sha256": "050344e1c1849d2e9243215a625e5dae0576aa5ec0cd21b68f966fc287e9d3d8",
+      "uniform_reduction": 0.08837817145569701,
+      "source_crop": [
+        181,
+        190
+      ]
+    },
+    {
+      "native_id": 42,
+      "batch": 5,
+      "cell": 0,
+      "variant": 0,
+      "source_sha256": "ba1a373aef9c655a87b89fbbf9743543702b831e5fa8a2b2cb18505e927921ad",
+      "uniform_reduction": 0.09501497301937765,
+      "source_crop": [
+        174,
+        178
+      ]
+    },
+    {
+      "native_id": 43,
+      "batch": 5,
+      "cell": 1,
+      "variant": 0,
+      "source_sha256": "ba1a373aef9c655a87b89fbbf9743543702b831e5fa8a2b2cb18505e927921ad",
+      "uniform_reduction": 0.06902722440639708,
+      "source_crop": [
+        150,
+        227
+      ]
+    },
+    {
+      "native_id": 44,
+      "batch": 5,
+      "cell": 2,
+      "variant": 0,
+      "source_sha256": "ba1a373aef9c655a87b89fbbf9743543702b831e5fa8a2b2cb18505e927921ad",
+      "uniform_reduction": 0.103274828840887,
+      "source_crop": [
+        191,
+        183
+      ]
+    },
+    {
+      "native_id": 45,
+      "batch": 5,
+      "cell": 3,
+      "variant": 0,
+      "source_sha256": "ba1a373aef9c655a87b89fbbf9743543702b831e5fa8a2b2cb18505e927921ad",
+      "uniform_reduction": 0.10500550776577572,
+      "source_crop": [
+        184,
+        182
+      ]
+    }
+  ],
+  "generations": {
+    "talon-0": {
+      "path": "$HOME/scratch/agent-tmp/talon-competition-20261110/raw/talon-0.png",
+      "columns": 8,
+      "prompt": "Native miniature transformation of Tails grid to TALON; two alternatives; approved model and wait frame."
+    },
+    "talon-1": {
+      "path": "$HOME/scratch/agent-tmp/talon-competition-20261110/raw/talon-1.png",
+      "columns": 4,
+      "rejected": {
+        "path": "$HOME/scratch/agent-tmp/talon-competition-20261110/raw/talon-1-rejected.png",
+        "columns": 8,
+        "prompt": "Precise pixel sprite transformation: input 1 is native miniature pose choreography, input 2 identity model sheet, input 3 approved character frame. Replace each native actor with TALON slate peregrine courier: amber goggles, yellow hooked beak, falcon eye stripe, cream barred chest, satchel, red-white shoes, gloved wing-hands. No fox ears, NO tails or rotor or mast. For last batch flight replace rotor completely with integrated flapping wings. Rolled frames wings wrap body with goggles visible. Retain EXACT pose and rotation for EACH frame, every limb contact/lift phase and native miniature squat large-head body proportions (NOT full-size height).  Crisp 16bit pixel sprites enlarged 8x on uniform #d0d0d0 background, no text or shadow. Exactly 4 columns x 2 rows per version. Provide two alternatives side by side (8 columns total x2 rows, 2048x768). Cell positions must match input. Preserve native pose's aspect ratio, proportion and direction, prioritize recognition at 20px tall."
+      },
+      "prompt": "Explicit rotated slope correction: 09 tilted backward; 0A upside down; 0B horizontal; 0C upside down. Retain native head torso boot locations, slate falcon identity, squat miniature proportions; remaining phases run with contact/lift. No fox anatomy or rotor."
+    },
+    "talon-2": {
+      "path": "$HOME/scratch/agent-tmp/talon-competition-20261110/raw/talon-2.png",
+      "columns": 8,
+      "prompt": "Precise pixel sprite transformation: input 1 is native miniature pose choreography, input 2 identity model sheet, input 3 approved character frame. Replace each native actor with TALON slate peregrine courier: amber goggles, yellow hooked beak, falcon eye stripe, cream barred chest, satchel, red-white shoes, gloved wing-hands. No fox ears, NO tails or rotor or mast. For last batch flight replace rotor completely with integrated flapping wings. Rolled frames wings wrap body with goggles visible. Retain EXACT pose and rotation for EACH frame, every limb contact/lift phase and native miniature squat large-head body proportions (NOT full-size height).  Crisp 16bit pixel sprites enlarged 8x on uniform #d0d0d0 background, no text or shadow. Exactly 4 columns x 2 rows per version. Provide two alternatives side by side (8 columns total x2 rows, 2048x768). Cell positions must match input. Preserve native pose's aspect ratio, proportion and direction, prioritize recognition at 20px tall."
+    },
+    "talon-3": {
+      "path": "$HOME/scratch/agent-tmp/talon-competition-20261110/raw/talon-3.png",
+      "columns": 8,
+      "prompt": "Precise pixel sprite transformation: input 1 is native miniature pose choreography, input 2 identity model sheet, input 3 approved character frame. Replace each native actor with TALON slate peregrine courier: amber goggles, yellow hooked beak, falcon eye stripe, cream barred chest, satchel, red-white shoes, gloved wing-hands. No fox ears, NO tails or rotor or mast. For last batch flight replace rotor completely with integrated flapping wings. Rolled frames wings wrap body with goggles visible. Retain EXACT pose and rotation for EACH frame, every limb contact/lift phase and native miniature squat large-head body proportions (NOT full-size height).  Crisp 16bit pixel sprites enlarged 8x on uniform #d0d0d0 background, no text or shadow. Exactly 4 columns x 2 rows per version. Provide two alternatives side by side (8 columns total x2 rows, 2048x768). Cell positions must match input. Preserve native pose's aspect ratio, proportion and direction, prioritize recognition at 20px tall."
+    },
+    "talon-4": {
+      "path": "$HOME/scratch/agent-tmp/talon-competition-20261110/raw/talon-4.png",
+      "columns": 8,
+      "prompt": "Precise pixel sprite transformation: input 1 is native miniature pose choreography, input 2 identity model sheet, input 3 approved character frame. Replace each native actor with TALON slate peregrine courier: amber goggles, yellow hooked beak, falcon eye stripe, cream barred chest, satchel, red-white shoes, gloved wing-hands. No fox ears, NO tails or rotor or mast. For last batch flight replace rotor completely with integrated flapping wings. Rolled frames wings wrap body with goggles visible. Retain EXACT pose and rotation for EACH frame, every limb contact/lift phase and native miniature squat large-head body proportions (NOT full-size height).  Crisp 16bit pixel sprites enlarged 8x on uniform #d0d0d0 background, no text or shadow. Exactly 4 columns x 2 rows per version. Provide two alternatives side by side (8 columns total x2 rows, 2048x768). Cell positions must match input. Preserve native pose's aspect ratio, proportion and direction, prioritize recognition at 20px tall."
+    },
+    "talon-5": {
+      "path": "$HOME/scratch/agent-tmp/talon-competition-20261110/raw/talon-5.png",
+      "columns": 8,
+      "prompt": "Precise pixel sprite transformation: input 1 is native miniature pose choreography, input 2 identity model sheet, input 3 approved character frame. Replace each native actor with TALON slate peregrine courier: amber goggles, yellow hooked beak, falcon eye stripe, cream barred chest, satchel, red-white shoes, gloved wing-hands. No fox ears, NO tails or rotor or mast. For last batch flight replace rotor completely with integrated flapping wings. Rolled frames wings wrap body with goggles visible. Retain EXACT pose and rotation for EACH frame, every limb contact/lift phase and native miniature squat large-head body proportions (NOT full-size height). Only cells containing actors need redrawing; leave empty cells blank. Crisp 16bit pixel sprites enlarged 8x on uniform #d0d0d0 background, no text or shadow. Exactly 4 columns x 2 rows per version. Provide two alternatives side by side (8 columns total x2 rows, 2048x768). Cell positions must match input. Preserve native pose's aspect ratio, proportion and direction, prioritize recognition at 20px tall."
+    }
+  },
+  "native_mapping_source": "docs/skdisasm/General/Sprites/Tails/Map - Tails 2P.asm",
+  "rom_sha1": "cfbf98c36c776677290a872547ac47c53d2761d6",
+  "reference_inputs": {
+    "model_sheet": "examples/mica-and-talon/concept/talon.png",
+    "approved_frame": "examples/mica-and-talon/art/talon/frames/wait-00.png",
+    "native_render_directory": "$HOME/scratch/agent-tmp/talon-competition-20261110/talon"
+  }
+}
