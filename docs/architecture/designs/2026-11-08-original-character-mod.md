@@ -1656,6 +1656,53 @@ or blockers remain; the lead owns subsequent integration. No merge or push.
 
 ## Coverage audit (2026-11-09)
 
+**Title polish, 2026-11-10:** no coverage row changes: all six existing title
+obligations remain authored, with zero fallback obligations in the current audit.
+S2 stages MICA left (thumbs-up), TALON right (connected wings; separate hand 19
+explicitly transparent). All eight MICA S1 poses are regenerated with native
+boxes/hotspots; the final wag shares its generated head/torso, avoiding a head
+tilt/wink. The review includes unlabelled pairs and native-aligned onion skins.
+
+All 13 MICA S3K plane selectors and the finger/wink/resting patches are reworked
+from fresh native 8× references and approved models in the 1994 baked 3D style:
+upper-left specular light, volumetric shade ramps, ordered dither, 15 opaque colour
+creator bank. Frame 1 is semantic transparency. Late native composed art can use
+more colours across native rows; the creator bank retains its 16-entry API budget.
+The root box fix is optional `TitlePlaneMask.clearedPixels`, defaulting to
+transparent 0 for existing one-argument constructors. A second bounded 320×224
+array supplies native palette indices for each owned pixel, retaining black 15
+inside the ring aperture and clearing to transparency outside it. This fixes both
+sky holes and the original portrait's black backing protruding above the ring.
+Both arrays are defensive copies; unowned pixels must have replacement 0.
+Native inner-boundary landmarks and the original ownership mask derive these
+index-only coverage arrays. Shared native tiles and unowned gold remain unchanged.
+Hand decomposition follows only the generated glove silhouette; wink borders
+match the generated portrait. No asset-level black matte is baked in. `ModApiVersion` notes and the normalized pin are updated. The repository commit
+contract forbids descriptor edits for ordinary candidate regeneration, so the
+release descriptor remains unchanged at unpublished 0.7.0.
+
+Independent ratios: S1 **1.038**, changed S2 MICA **0.986**, TALON bodies **0.998**
+(hand 19 deliberately blank), S3K plane silhouettes **1.039**. Prompts, attempts,
+selections and source hashes are under `art/mica/titles/style-*.json` and each
+character's `polish-s2-provenance.json`. Review and paired 900-presentation 60 Hz
+films: `$HOME/scratch/agent-tmp/title-polish-lane/review.html`.
+**Zero box frames** in the recorded ring/aperture pixel comparisons. Comparison excludes
+both the authored silhouette and native animated mascot patches covering ring
+pixels, so native hand occlusion is not mistaken for a ring defect. All 13 planes
+are additionally rendered through the engine in a component fixture (zero missing
+ring pixels); the ordinary 900-presentation capture exposes 12 selectors and does
+not display plane 12. The fixture is separate from native timing evidence.
+TALON solo and MICA sidekick drawings retain their inherited style. No complete
+route or full-suite certification is claimed.
+
+Validation: 57 Python tests and 130 queued Java tests pass with zero skips,
+including title coverage, mask flip/opaque/default tests, integration, signature
+surface and all four required S3K loading/bootstrap classes. Verified ROMs,
+Java 25, `-Dmse=off`, no display connection and surfaceless EGL. Initial Python
+palette failures were corrected by making the S3K host palette explicit in the
+manifest and keeping S1/S2 palettes unchanged. The earlier asset-backed matte
+and the head-tilt/wink redraw were rejected under the widened owner brief.
+
 **TALON object-pose closure, 2026-11-10:** 282 frames / 47 keys. The existing
 archetype-selected Tails vocabulary and shared NFRM binder now include the S2
 $75–$80 tumble bank and S3K object-driven views. 111 added drawings comprise

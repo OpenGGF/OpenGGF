@@ -17,12 +17,16 @@ public final class TitleCharacterPresentation {
     private final EnumMap<CharacterPresentation.TitlePart, PlayerSpriteRenderer> renderers =
             new EnumMap<>(CharacterPresentation.TitlePart.class);
     private final java.util.Map<Integer, byte[]> masks = new java.util.HashMap<>();
+    private final java.util.Map<Integer, byte[]> clearedPixels = new java.util.HashMap<>();
     private final java.util.Map<Integer, Integer> planeTiles = new java.util.HashMap<>();
     private int residentPlaneFrame = -1;
     TitleCharacterPresentation(CharacterPresentation.TitleMascot mascot, boolean sidekick) {
         roleBankOffset = sidekick ? 0x8000 : 0;
         this.mascot = mascot;
-        mascot.planeMasks().forEach((frame, mask) -> masks.put(frame,mask.pixels()));
+        mascot.planeMasks().forEach((frame, mask) -> {
+            masks.put(frame,mask.pixels());
+            clearedPixels.put(frame,mask.clearedPixels());
+        });
     }
 
     public static CharacterPresentation.TitleMascot resolve(CharacterPresentation.Host host,
@@ -73,22 +77,29 @@ public final class TitleCharacterPresentation {
         if (residentPlaneFrame != frame) { planeTiles.clear(); residentPlaneFrame = frame; }
         var resident = planeTiles.get(cell);
         if (resident != null) return resident;
+        var pattern = maskedPattern(pixels, clearedPixels.get(frame), cell, word,
+                nativeArt[word & 0x7ff]);
+        if (pattern == null) { planeTiles.put(cell,-1); return -1; }
+        int id=com.openggf.graphics.PatternAtlasRange.S3K_TITLE_SCREEN_ANIMATION.base()+0x4000+cell;
+        GameServices.graphics().cachePatternTexture(pattern,id);
+        planeTiles.put(cell,id);
+        return id;
+    }
+
+    /** Replace owned screen pixels in a private tile; native flips still apply at draw time. */
+    static com.openggf.level.Pattern maskedPattern(byte[] pixels, byte[] replacements,
+            int cell, int word, com.openggf.level.Pattern source) {
         int sx = cell % 40 * 8, sy = cell / 40 * 8;
         boolean changed = false;
         var pattern = new com.openggf.level.Pattern();
-        var source = nativeArt[word & 0x7ff];
         for (int y=0;y<8;y++) for (int x=0;x<8;x++) {
             boolean clear = pixels[(sy+y)*320+sx+x] != 0;
             changed |= clear;
             int px = (word & 0x800) != 0 ? 7-x : x;
             int py = (word & 0x1000) != 0 ? 7-y : y;
-            pattern.setPixel(px,py,clear ? (byte)0 : source.getPixel(px,py));
+            pattern.setPixel(px,py,clear ? replacements[(sy+y)*320+sx+x] : source.getPixel(px,py));
         }
-        if (!changed) { planeTiles.put(cell,-1); return -1; }
-        int id=com.openggf.graphics.PatternAtlasRange.S3K_TITLE_SCREEN_ANIMATION.base()+0x4000+cell;
-        GameServices.graphics().cachePatternTexture(pattern,id);
-        planeTiles.put(cell,id);
-        return id;
+        return changed ? pattern : null;
     }
 
     public void drawPlane(int frame, int x, int y) {

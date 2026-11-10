@@ -23,5 +23,6 @@
     5122
   ],
   "sqrt_mean_area_ratio": 1.0322210068234299,
-  "scratch": "$HOME/scratch/agent-tmp/mt-titles-20261110"
+  "scratch": "$HOME/scratch/agent-tmp/mt-titles-20261110",
+  "status": "Historical generation; superseded by style-generation.json and style-reduction.json"
 }

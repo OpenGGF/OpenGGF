@@ -54,5 +54,6 @@
     1536,
     1536
   ],
-  "wink_sqrt_mean_area_ratio": 1.0512069117081668
+  "wink_sqrt_mean_area_ratio": 1.0512069117081668,
+  "status": "Historical generation; superseded by style-generation.json and style-reduction.json"
 }

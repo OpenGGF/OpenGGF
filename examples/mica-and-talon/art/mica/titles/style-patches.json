@@ -1,0 +1,15 @@
+{
+  "source_sha256": "8146a58155434da352a7568d693580fe3daa83143aaf24d18f6e1252381555a0",
+  "selection": "TakeA matches round glove volume and stronger upper-left light; takeB retained in scratch.",
+  "method": "Fresh native8x GPT Image patches; silhouette-only resting-hand split; normal generated face crop supplies identical borders around independently generated eye inset. No backing pixels painted.",
+  "hand_origin": [
+    160,
+    63
+  ],
+  "wink_origin": [
+    128,
+    40
+  ],
+  "resting_glove_pixels": 705,
+  "coverage": "Final owned pixels use per-pixel native aperture indices0/15; see aperture-provenance.json"
+}

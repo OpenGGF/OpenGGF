@@ -111,16 +111,28 @@ public record CharacterPresentation(String displayName, String hudName,
         }
         @Override public int[] rgb() { return rgb.clone(); }
     }
-    /** Native pixels to clear in a 320x224 title plane; zero keeps host art.
+    /** Native pixels to replace in a 320x224 title plane; zero mask bytes keep host art.
      * The replacement halves must leave logo/emblem pixels transparent. */
-    @ModApi public record TitlePlaneMask(byte[] pixels) {
+    @ModApi public record TitlePlaneMask(byte[] pixels, byte[] clearedPixels) {
+        /** Existing masks clear to transparency. Replacement indices refer to each native
+         * tile's palette line; they may retain an opaque aperture while clearing outside it. */
+        public TitlePlaneMask(byte[] pixels) { this(pixels, new byte[320*224]); }
         public TitlePlaneMask {
-            if (pixels.length != 320*224) throw new IllegalArgumentException("Title mask must be 320x224");
+            if (pixels.length != 320*224 || clearedPixels.length != 320*224)
+                throw new IllegalArgumentException("Title masks must be 320x224");
             pixels = pixels.clone();
-            for (byte pixel : pixels) if (pixel != 0 && pixel != 1)
-                throw new IllegalArgumentException("Title mask is binary");
+            clearedPixels = clearedPixels.clone();
+            for (int i=0;i<pixels.length;i++) {
+                if (pixels[i] != 0 && pixels[i] != 1)
+                    throw new IllegalArgumentException("Title ownership mask is binary");
+                if (clearedPixels[i] < 0 || clearedPixels[i] > 15)
+                    throw new IllegalArgumentException("Title cleared pixel indices must be 0..15");
+                if (pixels[i] == 0 && clearedPixels[i] != 0)
+                    throw new IllegalArgumentException("Unowned title pixels cannot have a replacement index");
+            }
         }
         @Override public byte[] pixels() { return pixels.clone(); }
+        @Override public byte[] clearedPixels() { return clearedPixels.clone(); }
     }
     /** Semantic sign poses; null poses retain the native frame. Spin images are already oriented. */
     @ModApi public record Sign(SignFrame face, SignFrame alternate, SignFrame spin1,
