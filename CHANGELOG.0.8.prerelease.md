@@ -44,8 +44,10 @@ under the matching area heading; see the
   variants; TALON's private flight scripts select the native pose branch and
   preserve relocated mapping indices. Airborne
   down previews targets; down+jump divebombs (Instagib in Solar), while ordinary
-  jump retains flight/flaps. S2 spells TALON on the HUD; S1 glyph supplements
-  and wider S3K names remain open. The candidate API adds default sidekick
+  jump retains flight/flaps. TALON owns HUD/1-up portraits, signs, continue and save portraits,
+  half-pipe and Blue Sphere body sprites independently as solo lead or follower.
+  S1 supplements spell TALON; S3K uses the longest native-cell prefix TALO;
+  results retain his full name. The candidate API adds default sidekick
   selection, flight declarations and the native Tails respawn factory.
   Optional directional homing
   previews airborne homing targets, locks the reticle during strikes, and draws

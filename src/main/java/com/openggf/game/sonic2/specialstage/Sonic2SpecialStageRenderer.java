@@ -58,20 +58,29 @@ public class Sonic2SpecialStageRenderer {
     }
 
 
-    private com.openggf.sprites.art.SpriteArtSet characterStageArt;
-    private int characterStagePalette;
+    private com.openggf.sprites.art.SpriteArtSet characterStageArt, tailsStageArt;
+    private int characterStagePalette, tailsStagePalette;
     void loadCharacterStageArt() throws java.io.IOException {
+        var sonic = loadStageBank(com.openggf.game.presentation.StageCharacterPresentation.sonicDefinition(), 0);
+        characterStageArt = sonic == null ? null : sonic.art();
+        characterStagePalette = sonic == null || sonic.renderer().getRenderContext() == null ? 1 : sonic.renderer().getRenderContext().getEffectivePaletteLine(0);
+        var tails = loadStageBank(com.openggf.game.presentation.StageCharacterPresentation.tailsDefinition(), 0x8000);
+        tailsStageArt = tails == null ? null : tails.art();
+        tailsStagePalette = tails == null || tails.renderer().getRenderContext() == null ? 2 : tails.renderer().getRenderContext().getEffectivePaletteLine(0);
+    }
+    private record StageBank(com.openggf.sprites.art.SpriteArtSet art, com.openggf.sprites.render.PlayerSpriteRenderer renderer) { }
+    private StageBank loadStageBank(
+            com.openggf.game.CharacterDefinition definition, int offset) throws java.io.IOException {
         var set = com.openggf.game.presentation.StageCharacterPresentation.stage(
-                com.openggf.game.StageSpriteSet.Surface.S2_HALF_PIPE);
-        if (set == null) return;
-        characterStageArt = com.openggf.game.presentation.StageSpriteCompiler.compile(set, null);
-        var paletteOwner = new com.openggf.sprites.render.PlayerSpriteRenderer(characterStageArt, graphicsManager);
-        com.openggf.game.presentation.StageCharacterPresentation.bindPalette(paletteOwner,
-                com.openggf.game.presentation.StageCharacterPresentation.activeDefinition());
-        var context = paletteOwner.getRenderContext();
-        characterStagePalette = context == null ? 1 : context.getEffectivePaletteLine(0);
-        for (int i=0;i<characterStageArt.artTiles().length;i++)
-            graphicsManager.cachePatternTexture(characterStageArt.artTiles()[i],characterStageArt.basePatternIndex()+i);
+                com.openggf.game.StageSpriteSet.Surface.S2_HALF_PIPE, definition);
+        if (set == null) return null;
+        var art = com.openggf.game.presentation.StageSpriteCompiler.compile(set, null,
+                com.openggf.graphics.PatternAtlasRange.CHARACTER_STAGE_PRESENTATION.base() + offset);
+        var renderer = new com.openggf.sprites.render.PlayerSpriteRenderer(art, graphicsManager);
+        com.openggf.game.presentation.StageCharacterPresentation.bindPalette(renderer, definition);
+        for (int i = 0; i < art.artTiles().length; i++)
+            graphicsManager.cachePatternTexture(art.artTiles()[i], art.basePatternIndex() + i);
+        return new StageBank(art, renderer);
     }
 
     /** One native SAT for bodies, UI, objects and shadows; geometry comes from live owners. */
@@ -85,6 +94,7 @@ public class Sonic2SpecialStageRenderer {
         int origin = specialStageViewport.innerH32OriginX();
         var assembly = new Sonic2SpecialStageSpriteAssembly(dataLoader, art, origin);
         assembly.setCharacterArt(characterStageArt, characterStagePalette);
+        assembly.setTailsArt(tailsStageArt, tailsStagePalette);
         var groups = assembly.assemble(states, composition,
                 intro == null ? List.of() : intro.getNativeCounterPayloads(),
                 intro == null ? 0 : intro.getNativeRingsToGoBcd(),

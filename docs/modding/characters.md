@@ -366,23 +366,38 @@ graphics-region setting. Sign objects in all three hosts consume the optional
 face, spin and backing poses, retaining native poles, timing and fallback frames.
 `CharacterPresentation.stages` optionally supplies `StageSpriteSet` entries for
 `S2_HALF_PIPE`, `S3K_BLUE_SPHERE` and `S3K_SLOT_MACHINE`. Each entry maps the host's
-native mapping-frame ID to a bounded indexed image and its hotspot. Animation,
+native mapping-frame ID to a bounded indexed image and its hotspot. Each actor
+has a 32,768-pattern compilation budget within the reserved presentation range. Animation,
 movement, jump projection and flips stay with the native stage owner. Empty maps
 retain stock art; supplied sets must cover every frame used by their archetype.
 S1 instead binds the ordinary canonical playable sheet to its native roll scripts.
 The stage player uses the character palette supplier in an isolated render-context
 row; native palette lines remain available to stage art and stock sidekicks.
-MICA packages the wave3 PNG sets through `PresentationImages` and `ModAssetRoot`.
+In S2 and S3K, native Tails-body banks resolve independently: a Tails-role solo
+main owns that actor; otherwise the first selected follower owns it. The leader's
+set remains separate in team play. Supplying a Tails body set suppresses the native
+separate tail object; integrate appendages into the authored body frames. Pattern
+addresses and palettes are isolated between the two owners. The blank S3K mapping
+0 can be omitted while mappings 1–11 remain present.
+MICA and TALON package their PNG sets through `PresentationImages` and `ModAssetRoot`.
 
 `Art.screenFrames` optionally supplies immutable indexed poses with hotspots and
 sixteen RGB colours. Continue consumers use `continue/player`, `continue/icon`
 and the S1 `continue/floor` / S3K `continue/team-idle` banks, keyed by native
 mapping frame. They retain the native animation and movement owners. Separate
 screen palette lines preserve native text and Tails; omitted banks/frames fall
-back to ROM art. Existing four/five-argument `Art` constructors remain supported.
+back to ROM art. S2's Tails actor additionally uses `continue/nag` mappings 2/3
+before acceptance, `continue/player` for its native walk/run mappings and
+`continue/icon` 4/5. S3K's Tails actor uses `continue/team-idle` 5/6,
+`continue/player` $AD and $21–$24, and `continue/icon` 2/3. Supply aliases at 0/1
+for data-select counters. These actors resolve from the Tails-role solo main or
+the selected follower independently from the Sonic actor. Existing four/five-argument
+`Art` constructors remain supported.
 The S3K `portrait` bank (frame 5) supplies the data-select bust, composed with
 stock team portraits using its authored hotspot. Its palette is isolated in a
-renderer-owned graphics bank; no native menu line is replaced.
+renderer-owned graphics bank; no native menu line is replaced. Custom portrait
+art faces right canonically; the right team member is mirrored inward, while
+solo and left portraits retain their authored orientation.
 Data-select saved-slot life counters also use `hudLifeIcon` with the character's
 palette; miniature continue counters reuse S3K `continue/icon` frame 0 when its
 visible pixels fit the 16×24 menu figure cell. Native crosses/digits and every

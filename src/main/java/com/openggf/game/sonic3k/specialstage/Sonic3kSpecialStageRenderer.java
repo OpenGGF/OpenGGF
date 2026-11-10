@@ -42,13 +42,28 @@ public class Sonic3kSpecialStageRenderer {
     private int digitsPatternBase;
     private int iconsPatternBase;
     private int playerPatternBase;
-    private com.openggf.sprites.render.PlayerSpriteRenderer characterStageRenderer;
+    private com.openggf.sprites.render.PlayerSpriteRenderer characterStageRenderer, tailsStageRenderer;
     com.openggf.graphics.RenderContext characterPaletteContext() {
         return characterStageRenderer == null ? null : characterStageRenderer.getRenderContext();
     }
+    com.openggf.graphics.RenderContext tailsPaletteContext() {
+        return tailsStageRenderer == null ? null : tailsStageRenderer.getRenderContext();
+    }
     void loadCharacterStageArt() throws java.io.IOException {
+        tailsStageRenderer = null;
         characterStageRenderer = com.openggf.game.presentation.StageCharacterPresentation.renderer(
                 com.openggf.game.StageSpriteSet.Surface.S3K_BLUE_SPHERE);
+        var definition = com.openggf.game.presentation.StageCharacterPresentation.tailsDefinition();
+        // A Tails-role solo player is already owned by characterStageRenderer.
+        if (definition == com.openggf.game.presentation.StageCharacterPresentation.activeDefinition()) return;
+        var set = com.openggf.game.presentation.StageCharacterPresentation.stage(
+                com.openggf.game.StageSpriteSet.Surface.S3K_BLUE_SPHERE, definition);
+        if (set != null) {
+            tailsStageRenderer = new com.openggf.sprites.render.PlayerSpriteRenderer(
+                    com.openggf.game.presentation.StageSpriteCompiler.compile(set, null,
+                    com.openggf.graphics.PatternAtlasRange.CHARACTER_STAGE_PRESENTATION.base() + 0x8000));
+            com.openggf.game.presentation.StageCharacterPresentation.bindPalette(tailsStageRenderer, definition);
+        }
     }
     private int emeraldPatternBase;
     private int tailsPatternBase;
@@ -955,7 +970,7 @@ public class Sonic3kSpecialStageRenderer {
     private void renderPlayers(Sonic3kSpecialStageManager manager, Sonic3kSpecialStagePlayer player) {
         graphicsManager.beginPatternBatch();
         PlayerCharacter playerCharacter = manager.getPlayerCharacter();
-        if (playerCharacter == PlayerCharacter.TAILS_ALONE
+        if (playerCharacter == PlayerCharacter.TAILS_ALONE && characterStageRenderer == null
                 && tailsTailsPatternBase > 0 && tailsTailsMappingData != null) {
             int ttFrame = manager.getTailsTailsMappingFrame();
             if (ttFrame >= 0 && ttFrame < tailsTailsMappingFrameCount) {
@@ -1260,6 +1275,10 @@ public class Sonic3kSpecialStageRenderer {
     private void renderTailsSprite(Sonic3kSpecialStageManager manager, int centerX) {
         int tailsY = projectedPlayerY(manager.getTailsJumpHeight(), -0x20);
 
+        if (tailsStageRenderer != null) {
+            tailsStageRenderer.drawFrame(manager.getTailsMappingFrame(), centerX, tailsY, false, false);
+            return;
+        }
         // Render Tails' tails before the sidekick body in native SAT order
         if (tailsTailsPatternBase > 0 && tailsTailsMappingData != null) {
             int ttFrame = manager.getTailsTailsMappingFrame();

@@ -193,7 +193,7 @@ final class S3kCustomTeamPortraitComposer {
             case "sonic" -> position == Position.RIGHT;
             case "tails" -> position != Position.CENTER;
             case "knuckles" -> position == Position.LEFT;
-            default -> false;
+            default -> position == Position.RIGHT;
         };
     }
 

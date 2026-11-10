@@ -85,7 +85,7 @@ final class S3kSlotPlayerArt {
                                 piece.hFlip(),piece.vFlip(),piece.paletteIndex(),false)).toList())).toList();
                 body = new SpriteArtSet(body.artTiles(),maps,body.dplcFrames(),body.paletteIndex(),body.basePatternIndex(),
                         body.frameDelay(),body.bankSize(),body.animationProfile(),body.animationSet());
-                var result = new S3kSlotPlayerArt(SONIC, body, body, null, slotPlayer);
+                var result = new S3kSlotPlayerArt(character, body, body, null, slotPlayer);
                 com.openggf.game.presentation.StageCharacterPresentation.bindPalette(result.body,
                         com.openggf.game.presentation.StageCharacterPresentation.activeDefinition());
                 return result;

@@ -277,3 +277,45 @@ Queued Java selection `TestAnimationFamilies,TestCanonicalPlayableSheet,TestMica
 with `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl` and DISPLAY/WAYLAND_DISPLAY
 unset: 53 passed, zero failures/errors/skips, all ROM properties found.
 This is the requested focused selection, not a full-suite claim.
+
+## Presentation (2026-11-10)
+
+`TalonPresentation` supplies independent host HUD/life and 1-up portraits, sign
+faces/spins/backings (including S2 alternate), continue drawings, save portrait,
+18 half-pipe mappings and 11 nonblank Blue Sphere mappings. The S3K slot bonus
+uses approved ROLL aliases at native Tails mappings $96–$98, plus approved
+duck/balance aliases at $99/$9A for the shipped goal-fade held-bank selectors; S1 maze play reuses
+the canonical ROLL sheet. Mapping 0 in the
+12-entry Blue Sphere bank is deliberately empty. The separate native tail banks
+are N/A: wing motion belongs to TALON's body. Endings/competition remain other
+lanes. The standalone Blue Sphere completion pose is authored reserve art; the
+engine currently has no standalone Blue Sphere completion-screen host.
+
+Art comes from two built-in GPT Image native-pose attempts per set, using the
+model sheet and approved WAIT. `presentation/generation.json` records prompts
+and selections; raw generations and native comparisons stay in
+`$HOME/scratch/agent-tmp/talon-presentation-20261110/`. The selected original
+indexed rows in `presentation/native-pose.json` reproduce all PNGs:
+
+```sh
+python3 examples/mica-and-talon/art/talon/presentation/rebuild.py --check
+```
+
+S1 adds generated 6×8 T/A/L HUD glyphs; native O/N complete TALON in 32 pixels.
+S2 uses its native small-font TALON. S3K's native glyph widths are T=8, A=7,
+L=6, O=7, N=7: TALON needs 35 pixels; TALO fits the native 32-pixel cell at
+28 pixels. The composer deliberately gives native glyphs precedence, so
+supplementary glyphs cannot silently replace or squeeze them. Results retain
+full TALON. No API surface expansion is needed: the existing character-owned
+`StageSpriteSet` contract now routes the native Tails actor independently.
+
+S2/S3K select TALON's Tails banks when he leads solo and when he follows MICA.
+MICA retains leader HUD, signs and results. Half-pipe team setup resolves declared
+archetypes, and its domestic/overseas name banks remain independently owned. Continue follows each native actor,
+including the native Sonic actor on Tails-only screens. Save-menu custom
+portraits use canonical right-facing art and mirror the right team member inward.
+
+Review: `review.html` in the scratch directory, with native comparisons,
+per-tick motion previews, common origins and the independent area-ratio table.
+Motion previews preserve native phase order; Blue Sphere speed is illustrative
+because its production timer depends on velocity. They are not route certification.

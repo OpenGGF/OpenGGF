@@ -88,13 +88,13 @@ def main():
         # Source drawings are listed separately, excluding them from obligation totals.
         for i,f in enumerate(manifest['frames']):
             inventory.append(dict(character=c.upper(),game='shared',bank='authored source',frame=i,script_ids=f.get('animation',''),evidence='; '.join(prov.get(f['id'],['older/other method; frames.yaml notes'])),actual_raw_targets=f['id'],image=str((ART/c/f['file']).relative_to(ROOT))))
-    # Presentation manifests: MICA supplied original source frames; TALON deliberately has none.
+    # Presentation manifests describe supplied original frames; native Tails banks retain their own selectors.
     def surface(g,s,f,base,meta):
         image=base/f.get('file',''); label=f.get('native_source_label',meta.get('native_source_label',''))
         ev=citation(f.get('mapping_source',meta.get('mapping_source',meta.get('source',''))),label)
         records=list(base.glob('native-pose*.json'));ps='; '.join(str(x.relative_to(ROOT)) for x in records) or 'older method / manifest original indexed rows'
         sentinel=(not f.get('pieces',[1])) or f.get('native_dimensions')==[0,0]
-        add('mica',g,s,f.get('id',f.get('index',f.get('surface','image'))),'N/A' if sentinel else 'authored',str(image.relative_to(ROOT)),ps,'rare/cutscene',ev,'empty native sentinel' if sentinel else '')
+        add(meta.get('character','mica'),g,s,f.get('id',f.get('index',f.get('surface','image'))),'N/A' if sentinel else 'authored',str(image.relative_to(ROOT)),ps,'rare/cutscene',ev,'empty native sentinel' if sentinel else '')
     for rel in ['continue/continue.yaml','portrait/portrait.yaml','snowboard/snowboard.yaml','endings/s1/s1.yaml','endings/s2/s2.yaml','endings/s3k/s3k.yaml','wave3/wave3.yaml','presentation/presentation.yaml']:
         p=ART/'mica'/rel;d=load(p);base=p.parent
         if 'games'in d:
@@ -106,14 +106,29 @@ def main():
         else:
             g=d.get('game','s3k')
             for f in d.get('frames',[]):surface(g,f.get('frame_set',rel.split('/')[0]),f,base,d)
+    for rel in ['continue/continue.yaml', 'portrait/portrait.yaml', 'presentation/presentation.yaml']:
+        p=ART/'talon'/rel
+        if not p.exists(): continue
+        d=load(p);base=p.parent
+        if 'games' in d:
+            for game in d['games']:
+                for f in game['frames']: surface(game['game'],'continue/'+f['bank'],f,base,dict(game,character='talon'))
+        elif 'surfaces' in d:
+            for entry in d['surfaces']: surface(entry['game'],entry['surface'],entry,base,dict(entry,character='talon'))
+        else:
+            for f in d.get('frames',[]): surface(d.get('game','s3k'),'portrait',f,base,dict(d,character='talon'))
+    talon_contract=(ROOT/'examples/mica-and-talon/src/main/java/mica/TalonPresentation.java').exists()
+    talon_halfpipe={f['id']:f for f in load(ART/'talon/wave3/halfpipe.json')} if talon_contract else {}
+    talon_blue={f['id']:f for f in load(ART/'talon/wave3/bluesphere.json')} if talon_contract else {}
     for g in ['S1','S2','S3K']:
         for c in ['mica','talon']:
-            add(c,g,'HUD/results names','composed text','authored' if c=='mica' else 'fallback','ROM glyph composition + supplements' if c=='mica' else 'native name until TALON presentation is wired',rank='normal early-zone play',evidence='MicaPresentation.java; CharacterPresentation consumers',notes='text composition is not an animation frame')
+            add(c,g,'HUD/results names','composed text','authored' if c=='mica' or talon_contract else 'fallback','ROM glyph composition + supplements',rank='normal early-zone play',evidence='MicaPresentation.java; CharacterPresentation consumers',notes='text composition is not an animation frame')
         if g=='S1':
-            add('mica',g,'maze special stage','ROLL','native alias','canonical ROLL',rank='normal early-zone special stage',evidence='MicaPresentation.java / S1 canonical stage art')
-            add('talon',g,'native presentation','all','N/A',notes='No native S1 Tails presentation. Mod-defined surfaces still need a separate design and art contract.')
+            for character in ['mica','talon']:
+                add(character,g,'maze special stage','ROLL','native alias','canonical ROLL',rank='normal early-zone special stage',evidence='StageCharacterPresentation.playable / S1 canonical stage art')
+            add('talon',g,'native presentation','all','N/A',notes='S1 has no native Tails bank; TALON supplies mod-defined Sonic-host surface selectors separately.')
         else:
-            add('talon',g,'presentation contract','all','fallback','stock Tails',rank='normal early-zone play',notes='No TALON CharacterPresentation implementation on this branch. Individual native banks listed in native-inventory.csv; do not substitute Sonic presentation frame IDs.')
+            add('talon',g,'presentation contract','all','authored' if talon_contract else 'fallback','TalonPresentation.java',rank='normal early-zone play',notes='Native actor ownership selects solo Tails-role main or active follower independently from the Sonic leader.')
     add('mica','S2','ending search photos','1..3','N/A',notes='Active first sidekick owns these selectors; photo 0 remains native. MICA may own them only when selected as sidekick, outside agreed Sonic lead role.')
     for f in [1,2,3]:add('talon','S2','ending search photos',f,'fallback','stock search party photograph',evidence=citation('docs/s2disasm/s2.asm','ArtNem_EndingPics'),notes='S2_PHOTOS is sidekick-owned; no TALON photos supplied.')
     add('talon','S2','Tornado pilot','native pilot sequence','fallback','stock Tails pilot',evidence=citation('docs/s2disasm/s2.asm','ObjB2_Animate_Pilot'),notes='Separate pilot pipeline loads other character ROM art; needs sidekick-owned custom pilot seam.')
@@ -133,9 +148,18 @@ def main():
             if m: entries.append((n,m[1]))
             elif entries:break
         for i,(n,label) in enumerate(entries):
-            add('talon',g,surface_name,f'{i:02X}','N/A' if na else 'fallback','wings integrated in body' if na else 'stock Tails',
-                rank='competition/2P only' if 'competition'in surface_name else 'rare/cutscene',evidence=f'{label} ({path}:{n})',
-                notes='Do not generate tail appendage pixels; body wings must communicate this motion' if na else 'Independent mapping bank; not normal player IDs')
+            status,target,notes='fallback','stock Tails','Independent mapping bank; not normal player IDs'
+            if na:
+                status,target,notes='N/A','wings integrated in body','No separate appendage pixels; body wings own this motion'
+            elif surface_name=='Blue Sphere player' and i==0:
+                status,target,notes='N/A','empty native sentinel','Native mapping 0 is blank; omitted from runtime set'
+            elif surface_name=='Blue Sphere result pose':
+                status,target,notes='N/A','authored reserve pose','Standalone Blue Sphere completion host is not implemented; reserve original art is in art/talon/wave3'
+            elif surface_name=='Blue Sphere player' and i in talon_blue:
+                status,target='authored','art/talon/wave3'
+            add('talon',g,surface_name,f'{i:02X}',status,target,
+                rank='competition/2P only' if 'competition'in surface_name else 'rare/cutscene',
+                evidence=f'{label} ({path}:{n})',notes=notes)
     # S2 uses the shared Tails mapping bank for its separate appendage object.
     for f in [0,*range(9,14),*range(0x49,0x59),*range(0x81,0x85),*range(0x87,0x8B)]:
         add('talon','S2','separate tails object',f'{f:02X}','N/A','integrated body wings',
@@ -146,8 +170,12 @@ def main():
     for g in ['S2','S3K']:
         add('mica',g,'Tails-only actor and appendage roles','all','N/A',notes='Sonic-archetype lead does not own native Tails appendage or Tails-alone actor banks; team sidekick owns its own art')
     for i in range(18):
-        add('talon','S2','half-pipe player',f'{i:02X}','fallback','stock Tails',rank='normal early-zone special stage',
+        add('talon','S2','half-pipe player',f'{i:02X}','authored' if i in talon_halfpipe else 'fallback','art/talon/wave3' if i in talon_halfpipe else 'stock Tails',rank='normal early-zone special stage',
             evidence=citation('docs/s2disasm/s2.asm','Obj10_MapUnc_34B3E'),notes='Body set 0..17; wings must replace separate tail motion in body poses')
+    for i,file in enumerate(["roll-00", "roll-01", "roll-02", "duck-00", "family-balance-00"]):
+        add('talon','S3K','slot machine player',f'{0x96+i:02X}','native alias',f'art/talon/frames/{file}.png',
+            evidence=citation('docs/skdisasm/General/Sprites/Tails/Anim - Tails.asm','AniTails02:'),
+            notes='Approved core aliases; three native roll phases plus two FixBugs=0 goal-fade mapping selectors, no separate tail')
     for f in [1,2,3,4,0x10]:
         add('talon','S2','Tornado pilot mapping',f'{f:02X}','fallback','stock Tails',
             evidence=citation('docs/s2disasm/s2.asm','Tails_pilot_frames'),notes='24 sequence steps, five unique normal-Tails mappings; body art may be reused after pilot binding exists')
@@ -162,7 +190,7 @@ def main():
             add(c,g,'credits gameplay','native replay','native alias' if c=='mica' else 'fallback',
                 'gameplay binding' if c=='mica' else 'stock Tails until character integration',notes='No separate credit roll animation sheet; scene-specific cast/text remains native.')
     for f in [5,6]:
-        add('talon','S3K','continue team sprite',f'{f:02X}','fallback','stock Tails',
+        add('talon','S3K','continue team sprite',f'{f:02X}','authored' if talon_contract else 'fallback','TalonScreenFrames.java' if talon_contract else 'stock Tails',
             evidence=citation('docs/skdisasm/sonic3k.asm','loc_5C74A'),notes='Team idle bank; later run uses normal Tails WAIT/WALK scripts')
     # Complete textual inventories of relevant split native mapping/animation banks.
     candidates=[]

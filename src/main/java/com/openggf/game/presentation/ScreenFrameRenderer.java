@@ -14,7 +14,11 @@ public final class ScreenFrameRenderer {
     private final Map<String, Map<Integer, Integer>> indices = new HashMap<>();
     private final PatternSpriteRenderer renderer;
     public static PresentationFrameSet active(CharacterPresentation.Host host) throws IOException {
-        var presentation = StageCharacterPresentation.active();
+        return active(host, StageCharacterPresentation.activeDefinition());
+    }
+    public static PresentationFrameSet active(CharacterPresentation.Host host, CharacterDefinition definition) throws IOException {
+        var presentation = definition == null || definition.presentationSupplier() == null ? null
+                : definition.presentationSupplier().load(definition.key().persisted(), GameId.valueOf(host.name()));
         var art = presentation == null ? null : presentation.art().get(host);
         return art == null ? null : art.screenFrames();
     }
@@ -36,6 +40,11 @@ public final class ScreenFrameRenderer {
         renderer = new PatternSpriteRenderer(new ObjectSpriteSheet(patterns.toArray(Pattern[]::new), frames, 0, 1), graphics);
         renderer.ensurePatternsCached(graphics, base);
         if (uploadPalette) graphics.cachePaletteTexture(palette(set), line);
+    }
+    public static ScreenFrameRenderer privatePalette(PresentationFrameSet set, GraphicsManager graphics, int base) {
+        var context = com.openggf.graphics.RenderContext.createSidekickContext(GameServices.module().getGameId());
+        context.setPalette(0, palette(set));
+        return new ScreenFrameRenderer(set, graphics, base, context.getEffectivePaletteLine(0));
     }
     public static Palette palette(PresentationFrameSet set) {
         var palette = new Palette();

@@ -34,6 +34,19 @@ public final class Sonic2SpecialStageHudPresentation {
         }
     }
 
+    record NameBanks(Pattern[] hud, Pattern[] tails) { }
+    static NameBanks applyBanks(Pattern[] hud, Pattern[] tails, CharacterPresentation leader, CharacterPresentation follower) {
+        Pattern[] leaderHud = apply(hud, tails, leader);
+        Pattern[] followerHud = apply(hud, tails, follower);
+        if (followerHud == hud) return new NameBanks(leaderHud, tails);
+        Pattern[] both = leaderHud == hud ? hud.clone() : leaderHud;
+        Pattern[] followerWord = tails.clone();
+        // The domestic MILES row and overseas TAILS word select the same actor.
+        System.arraycopy(followerHud, 0, both, 5, 5);
+        System.arraycopy(followerHud, 0, followerWord, 0, 5);
+        return new NameBanks(both, followerWord);
+    }
+
     public static Pattern[] apply(Pattern[] hud, Pattern[] tails, CharacterPresentation presentation) {
         if (presentation == null) return hud;
         String name = presentation.hudName() == null ? presentation.displayName() : presentation.hudName();
