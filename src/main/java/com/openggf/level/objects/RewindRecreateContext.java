@@ -14,7 +14,7 @@ import java.util.Objects;
  *
  * <p>For an owned child, {@link #hasKnownConstructionFamily()} and
  * {@link #capturedParent(Class)} identify its captured parent in the admitted
- * population. A missing or refused parent is unavailable; a parent-dependent
+ * population. A parent missing from that population is unavailable; a parent-dependent
  * hook must not substitute a nearby object.
  * Legacy or explicitly unknown families retain their class's compatibility path.
  * Family ownership is separate from a sibling or predecessor relationship.
@@ -55,7 +55,7 @@ public record RewindRecreateContext(
 
     /**
      * Resolves only the captured identity in the admitted population. Returns null
-     * for known absence, refused membership or a different type; never borrows a
+     * for known absence, missing membership or a different type; never borrows a
      * nearby owner. Do not filter a destroyed flag before captured fields restore.
      */
     public <T extends ObjectInstance> T capturedParent(Class<T> type) {

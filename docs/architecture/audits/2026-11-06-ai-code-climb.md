@@ -6339,3 +6339,35 @@ before moving collision/event generations. No HCZ source or test expectations
 were changed, and the earlier tiny end-helper proposal is not substituted for
 that full journey. All six original trial targets remain unmet or unproven.
 The unexplained Original2dd Competition pixel failure remains a merge blocker.
+
+
+### Captured-population review and witness consolidation
+
+Independent Opus source review of `346ad0af..9391e7c3` found no blocking or
+correctness defect. It confirmed captured publication, policy/direction ordering,
+creator/host checks and unchanged ordinary admission. Four low test/doc findings
+were handled by root: remove the duplicated scene-parent fixture, select the new
+witness and creator-owner control in the guide, replace stale refused-parent
+wording, and observe actual execution/allocator behavior. No new review was
+started for these bounded repairs.
+
+The retired `TestRewindParentAdmission` two parameter cases map to the new
+Shellcracker family's clear=false/true cases, retaining every membership,
+identity, owner-eligibility, fresh-factory and alive-parent check. The replacement
+also checks slots, captured family/ordinal and target names. This deliberate
+source-class retirement must be accounted in combined selection comparison;
+no old negative or skip is removed. The owned build output was checked for retired
+fixture bytecode after compilation; none remained, and root deleted no files.
+
+Repeated constructor restoration now executes the actual manager and checks the
+parent slot runs before its child; the warm reused placement also executes.
+Recapture checks the exact used-slot bitmap. Fresh focused checks passed nine
+cases in two named suites, zero failures/errors/skips, including all four existing
+course/creator restore-owner controls. Queue/Maven/wall were
+59/99/159.961566 seconds; user wait 0 and residual 1.961566 seconds, with Maven
+rounded as logged. Source matched before/after. These nine overlap the earlier
+335 selection and are not added to it. Only context Javadoc and test/guide/audit
+content changed after the reviewed population logic. A directed placed-root
+witness and the inherited manager-replacement adapter-order hypothesis remain
+unqualified; this is not scene/route certification. Exact mapping, XML, source
+proof and timing are under `target/code-climb/authored-readmission/`.

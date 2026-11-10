@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -78,7 +79,9 @@ class TestCapturedPlacedPopulationRestore {
                 fixture.objects.objectQuery().resolve(parentEntry.objectId()).orElse(null),
                 "the captured placed body must be active, even under clearObjects");
         assertSame(fixture.constructed.getLast(), restoredParent);
+        assertEquals(2, fixture.constructed.size(), "restore must construct exactly one replacement body");
         assertNotSame(original, restoredParent);
+        assertFalse(restoredParent.isDestroyed());
         assertEquals(parentEntry.slotIndex(), restoredParent.getSlotIndex());
         assertEquals(9, fixture.objects.getActiveObjects().size());
         assertEquals(CAPTURED_ACTOR, fixture.direction.authoredId(restoredParent));
@@ -122,6 +125,7 @@ class TestCapturedPlacedPopulationRestore {
             fixture.rewind.restore(target);
 
             var rebuilt = assertInstanceOf(ConstructorParent.class, fixture.constructed.getLast());
+            assertEquals(repeat + 2, fixture.constructed.size(), "one placement factory call per restore");
             var child = assertInstanceOf(ConstructorChild.class,
                     fixture.objects.objectQuery().resolve(childEntry.objectId()).orElse(null),
                     "adoption must publish the actual constructor child, whose independent hook returns null");
@@ -130,8 +134,8 @@ class TestCapturedPlacedPopulationRestore {
             assertSame(rebuilt.child, child);
             assertSame(rebuilt, child.parent);
             assertFalse(rebuilt.isDestroyed());
-            // A child can currently be adopted using a refused parent's table
-            // entry. Check membership after proving actual adoption, not only links.
+            // The causal RED adopted this child while leaving its parent absent.
+            // Check membership after proving actual adoption, not only links.
             assertSame(rebuilt, fixture.objects.objectQuery().resolve(parentEntry.objectId()).orElse(null),
                     "an adopted child must not be the only live member of its captured placed family");
             assertEquals(parentEntry.slotIndex(), rebuilt.getSlotIndex());
@@ -146,7 +150,10 @@ class TestCapturedPlacedPopulationRestore {
             assertEquals(1, fixture.direction.graph(rebuilt).stream().filter(member -> member == child).count());
             fixture.assertRecapturedRoster(objectState);
             target = fixture.capture(); // The last pass restores a real recapture, not a fabricated entry list.
-            child.update(10 + repeat, null);
+            fixture.objects.update(0, null, List.of(), 10 + repeat, false);
+            assertEquals(1, rebuilt.updates, "the restored parent execution slot must run");
+            assertEquals(6, child.updates, "the adopted child execution slot must run once");
+            assertEquals(1, child.parentUpdatesSeen, "captured parent slot must execute before its child");
             previousParent = rebuilt;
             previousChild = child;
         }
@@ -185,6 +192,8 @@ class TestCapturedPlacedPopulationRestore {
         assertTrue(fixture.objects.objectQuery().resolve(futureId).isEmpty());
         assertNull(fixture.direction.authoredId(future));
         assertEquals(List.of(warmed), new ArrayList<>(fixture.objects.getActiveObjects()));
+        fixture.objects.update(0, null, List.of(), 0, false);
+        assertEquals(18, warmed.value, "the reused placement must run through its restored execution slot");
 
         // This uses the ordinary placement registration path, outside explicit
         // casting. Captured publication must not reopen fresh scene admission.
@@ -271,17 +280,21 @@ class TestCapturedPlacedPopulationRestore {
             assertEquals(expected.dynamicObjects().stream().map(ObjectManagerSnapshot.DynamicObjectEntry::constructionFamily).toList(),
                     recaptured.dynamicObjects().stream().map(ObjectManagerSnapshot.DynamicObjectEntry::constructionFamily).toList());
             assertEquals(expected.dynamicObjectIdCounter(), recaptured.dynamicObjectIdCounter());
+            assertArrayEquals(expected.usedSlotsBits(), recaptured.usedSlotsBits(),
+                    "restored membership must retain captured allocator occupancy");
         }
     }
 
     private static final class ConstructorParent extends AbstractObjectInstance implements SpawnRewindRecreatable {
         final ConstructorChild child;
+        int updates;
 
         ConstructorParent(ObjectSpawn spawn) {
             super(spawn, "placed-constructor-parent");
             child = spawnChild(() -> new ConstructorChild(this));
         }
 
+        @Override public void update(int vIntRunCount, PlayableEntity player) { updates++; }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
     }
 
@@ -289,6 +302,7 @@ class TestCapturedPlacedPopulationRestore {
         final ConstructorParent parent;
         int currentX;
         int updates;
+        int parentUpdatesSeen;
 
         private ConstructorChild(ObjectSpawn spawn) {
             super(spawn, "adoption-only-child-probe");
@@ -304,7 +318,11 @@ class TestCapturedPlacedPopulationRestore {
         }
 
         @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) { return null; }
-        @Override public void update(int vIntRunCount, PlayableEntity player) { currentX += 3; updates++; }
+        @Override public void update(int vIntRunCount, PlayableEntity player) {
+            currentX += 3;
+            updates++;
+            parentUpdatesSeen = parent.updates;
+        }
         @Override public int getX() { return currentX; }
         @Override public ObjectSpawn getSpawn() { return buildSpawnAt(currentX, spawn.y()); }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
@@ -318,6 +336,7 @@ class TestCapturedPlacedPopulationRestore {
     private static final class ReusableParent extends AbstractObjectInstance implements SpawnRewindRecreatable {
         int value;
         ReusableParent(ObjectSpawn spawn) { super(spawn, "reusable-placed-parent"); }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { value++; }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
     }
 }

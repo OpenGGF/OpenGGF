@@ -504,7 +504,7 @@ python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestConstructorChildFamil
 For exact parent lookup, scene admission and detached claws, also select:
 
 ```bash
-python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestRewindRecreateContext,TestRewindParentAdmission,TestS2BadnikChildGraphRewind,TestShellcrackerClawInstance' test -B
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestRewindRecreateContext,TestCapturedPlacedPopulationRestore,TestCourseRestoreCreatorOwnerScope,TestS2BadnikChildGraphRewind,TestShellcrackerClawInstance' test -B
 ```
 
 For retirement changes, also select the real boss and TurboSpiker neighbors:
