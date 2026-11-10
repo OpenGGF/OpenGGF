@@ -25,3 +25,9 @@ opaque-area check. See `object-poses-wave4/size-check.json` for delivered set
 measurements. Review raw attempts and native pixels stay in the task's external
 scratch directory, linked in provenance. Native script timing and camera/facing
 stay host-owned; these are artwork obligations, not all-route certification.
+
+Blue Sphere's eleven nonblank rear-view poses use a fresh native-style generation
+set with native per-frame colour budgets, exact native script previews, aligned
+style gates and a positioned run/turn/jump capture. See [the wave3 handoff](wave3/README.md#blue-sphere-native-style-redraw-2026-11-10).
+The set's independent area ratio is 0.983; native selectors and hotspots stay
+unchanged. Coverage remains authored rather than claiming new fallback closure.

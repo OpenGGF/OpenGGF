@@ -217,3 +217,9 @@ raw setters from animation requests, and record native labels and size checks.
 Unknown bytes use creator WAIT, zero stays invisible, native Tails bypasses
 binding, and the six-phase integrated wing scripts retain their own timing.
 The audit now reports per-ID Tails rows instead of its stale namespace blocker.
+
+MICA's Blue Sphere rear-view set now follows the native special-stage shading
+and per-frame colour budgets, with distinct ears, cream cheek edges, a tapered
+scale tail and alternating shoes. The [art checkpoint](art/mica/wave3/README.md#blue-sphere-native-style-redraw-2026-11-10)
+records all selectors, native-timed 60 fps previews and positioned run/turn/jump
+capture evidence. TALON's stage art and native stage mechanics are unchanged.

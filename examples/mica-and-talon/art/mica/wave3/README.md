@@ -1,4 +1,9 @@
-# MICA wave 3 — partial art handoff
+# MICA wave 3 art handoff
+
+The initial handoff below is historical. Installed Blue Sphere art and verification
+are described in the [2026-11-10 checkpoint](#blue-sphere-native-style-redraw-2026-11-10).
+
+## Initial handoff (2026-11-08)
 
 Run from the repository root, with Python 3, Pillow and the pinned disassemblies:
 
@@ -41,3 +46,39 @@ GGFP bake and actual stage playback have not been verified.
 
 This handoff stops after requested item 3. Slot bonus, all continue sets and the
 data-select/team portrait remain unmade. No build, merge or push is part of this lane.
+
+## Blue Sphere native-style redraw (2026-11-10)
+
+All eleven nonblank Blue Sphere frames now use fresh native-pose GPT Image
+candidates; selector 0 remains transparent. The approved concept supplies identity,
+while the actual special-stage palette renders supply the drawing style: deep
+jade contours, faceted upper-left highlights and shaded plate relief instead of
+black comic scale borders. Standing/running use at most the native 8–9 visible
+colours, detailed balls six and the blur five. Coral ears share the shoe colour;
+cream edges and soles share the remaining warm slots. TALON is unchanged.
+
+`blue-sphere-redo-generation.json` records prompts, attempts, selections, native
+mapping/DPLC inventory, palette counts, guide boxes and independent areas.
+`native-pose-blue_sphere.json` contains the final indexed rows. Rebuild and verify:
+
+```bash
+python3 examples/mica-and-talon/art/mica/wave3/native_pose_stages.py --rebuild blue_sphere --verify blue_sphere
+```
+
+The actor uses standing 1, running 2–8 and jumping 9–11; turning rotates the
+stage and reuses the same body frames. Start/clear do not add a separate pose.
+The native run and jump tables remain host-owned. At velocity 0x1000 their phase
+interval is two 60 Hz ticks; this review states its velocity rather than calling
+an illustrative fixed frame delay native timing.
+
+Opaque-area square-root ratios: standing 0.969, run 0.988, jump 0.971, overall
+0.983. Canvas, object origin, native mapping coverage and tile budgets are
+unchanged. The narrow run phase 3 was re-reduced one pixel wider; only rectangular
+mapping-mask overflow was removed. No native sprite pixels are retained.
+
+External review: `$HOME/scratch/agent-tmp/mica-blue-redo-20261110/review.html`.
+It includes unlabelled per-frame style gates, aligned guides, previous MICA and
+unchanged TALON, exact-tick 60 fps movies and a 2× production capture entering
+from CNZ at (11616,1612), then running, turning and jumping. The capture eventually
+hits a red sphere; it is presentation evidence, not layout completion.
+The coverage slots were already authored, so no fallback counts move.

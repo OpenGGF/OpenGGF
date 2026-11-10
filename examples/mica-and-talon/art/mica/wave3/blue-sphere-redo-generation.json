@@ -1,0 +1,2487 @@
+{
+  "origin": "MICA Blue Sphere polish lane 2026-11-10",
+  "tool": "Built-in GPT Image; no model identifier exposed",
+  "scratch": "$HOME/scratch/agent-tmp/mica-blue-redo-20261110",
+  "attempts": [
+    {
+      "id": 1,
+      "attempt": "A",
+      "prompt": "Use case: style-transfer. Make ONE crisp 16-bit game sprite on transparent background. Reference 1 is the native Sonic Blue Sphere special-stage sprite enlarged 8x, reference 2 is MICA's approved pangolin model, reference 3 approved MICA sprite. Transform native pose into MICA, exact BACK VIEW and compact proportions, both shoes planted. Distinct rounded HEAD above smaller torso, two pink round EARS, narrow cream cheek/muzzle edges at sides, jade rounded overlapping scale rows following back, long tapered scaled tail clearly distinct from legs, white gloves, coral shoes with tan soles. Head must not merge into torso or become a green blob. No quills, no spikes, no blue, no front face. Preserve native position, pose, limb proportions, 28x40 native footprint, chunky pixel clusters, dark outline, 15 colours. Single isolated sprite, no text, no shadow. Attempt A.",
+      "sha256": "2c9bd3a19736f6e200ca3ddd26ff41cd0b6baa96c0bfcded8f031f00349206ae",
+      "selected": false,
+      "raw_archive": "archived-attempts/01-A.png"
+    },
+    {
+      "id": 1,
+      "attempt": "B",
+      "prompt": "Use case: style-transfer. Make ONE crisp 16-bit game sprite on transparent background. Reference 1 is the native Sonic Blue Sphere special-stage sprite enlarged 8x, reference 2 is MICA's approved pangolin model, reference 3 approved MICA sprite. Transform native pose into MICA, exact BACK VIEW and compact proportions, both shoes planted. Distinct rounded HEAD above smaller torso, two pink round EARS, narrow cream cheek/muzzle edges at sides, jade rounded overlapping scale rows following back, long tapered scaled tail clearly distinct from legs, white gloves, coral shoes with tan soles. Head must not merge into torso or become a green blob. No quills, no spikes, no blue, no front face. Preserve native position, pose, limb proportions, 28x40 native footprint, chunky pixel clusters, dark outline, 15 colours. Single isolated sprite, no text, no shadow. Attempt A. Attempt B: improve the distinction between the domed head and small torso; put cream face edges up beside head, not down by hips. Keep tail narrower than boots.",
+      "sha256": "0f425da931bdfb17fbf8d27061477ef990c6e379f3cc5a0f663eb4603f74ff5f",
+      "selected": false,
+      "raw_archive": "archived-attempts/01-B.png"
+    },
+    {
+      "id": 3,
+      "attempt": "A",
+      "prompt": "Use case: style-transfer. One original 16-bit MICA pangolin game sprite, transparent background. Image 1 exact native pose at 8x nearest; image 2 identity model, image 3 approved style. Back view run: viewer LEFT foot low and back, RIGHT shoe lifted high by hip; right glove ahead. Native phase 3. Match native rear viewpoint, limb placement and native surface head/torso proportions EXACTLY. Distinct rounded head above smaller torso, pink round ears, small cream muzzle edge high at sides of head, rows of jade overlapping rounded scales following the dome and back, narrower tapered scaled tail separate from legs. White gloves; coral hiking boots with tan soles. Clearly alternate legs, lifted foot and planted foot must be visibly different heights. NOT static standing. NO quills, blue fur, spikes, front portrait, text, shadow. Compact native 28x48-ish footprint. Chunky large pixel clusters, simple 15-colour shading, dark outline. Attempt A.",
+      "sha256": "aa411efd7dcd5cb1d109294b63947fd2c50b7eb992cffd75ef26f113a527b9d0",
+      "selected": false,
+      "raw_archive": "archived-attempts/03-A.png"
+    },
+    {
+      "id": 2,
+      "attempt": "A",
+      "prompt": "Use case: style-transfer. One original 16-bit MICA pangolin game sprite, transparent background. Image 1 exact native pose at 8x nearest; image 2 identity model, image 3 approved style. Back view run neutral contact: BOTH boots low and visible, separated. Native phase 2. Match native rear viewpoint, limb placement and native surface head/torso proportions EXACTLY. Distinct rounded head above smaller torso, pink round ears, small cream muzzle edge high at sides of head, rows of jade overlapping rounded scales following the dome and back, narrower tapered scaled tail separate from legs. White gloves; coral hiking boots with tan soles. Clearly alternate legs, lifted foot and planted foot must be visibly different heights. NOT static standing. NO quills, blue fur, spikes, front portrait, text, shadow. Compact native 28x48-ish footprint. Chunky large pixel clusters, simple 15-colour shading, dark outline. Attempt A.",
+      "sha256": "7ff3be8e9d8cf7784d565f4d2650ee7d0e2529eb66a3528ed93e81bbce8b8268",
+      "selected": false,
+      "raw_archive": "archived-attempts/02-A.png"
+    },
+    {
+      "id": 3,
+      "attempt": "B",
+      "prompt": "Use case: style-transfer. One original 16-bit MICA pangolin game sprite, transparent background. Image 1 exact native pose at 8x nearest; image 2 identity model, image 3 approved style. Back view run: viewer LEFT foot low and back, RIGHT shoe lifted high by hip; right glove ahead. Native phase 3. Match native rear viewpoint, limb placement and native surface head/torso proportions EXACTLY. Distinct rounded head above smaller torso, pink round ears, small cream muzzle edge high at sides of head, rows of jade overlapping rounded scales following the dome and back, narrower tapered scaled tail separate from legs. White gloves; coral hiking boots with tan soles. Clearly alternate legs, lifted foot and planted foot must be visibly different heights. NOT static standing. NO quills, blue fur, spikes, front portrait, text, shadow. Compact native 28x48-ish footprint. Chunky large pixel clusters, simple 15-colour shading, dark outline. Attempt B, emphasize separated boots, clear bent knee and small tail; fewer simpler scale rows.",
+      "sha256": "21df624f90a94ac6b0b38651a7f92f6386b17cd78c7f0315c4b04bc0d24ea1c8",
+      "selected": false,
+      "raw_archive": "archived-attempts/03-B.png"
+    },
+    {
+      "id": 2,
+      "attempt": "B",
+      "prompt": "Use case: style-transfer. One original 16-bit MICA pangolin game sprite, transparent background. Image 1 exact native pose at 8x nearest; image 2 identity model, image 3 approved style. Back view run neutral contact: BOTH boots low and visible, separated. Native phase 2. Match native rear viewpoint, limb placement and native surface head/torso proportions EXACTLY. Distinct rounded head above smaller torso, pink round ears, small cream muzzle edge high at sides of head, rows of jade overlapping rounded scales following the dome and back, narrower tapered scaled tail separate from legs. White gloves; coral hiking boots with tan soles. Clearly alternate legs, lifted foot and planted foot must be visibly different heights. NOT static standing. NO quills, blue fur, spikes, front portrait, text, shadow. Compact native 28x48-ish footprint. Chunky large pixel clusters, simple 15-colour shading, dark outline. Attempt B, emphasize separated boots, clear bent knee and small tail; fewer simpler scale rows.",
+      "sha256": "c611a543a5c9f371ad1a1826a5a53781b5417e7413a5243ed531dc7ca0cca7d5",
+      "selected": false,
+      "raw_archive": "archived-attempts/02-B.png"
+    },
+    {
+      "id": 11,
+      "attempt": "A",
+      "prompt": "One pixel-art pangolin mascot game sprite on a transparent background. Use attached enlarged game pose for viewpoint and pose, illustrated pangolin sheet for character identity, approved pixel sprite for style. Jump motion blur ball: smooth jade spherical shell, SIMPLE solid highlight glint at top-left, deep jade lower crescent. NO busy scale grid, no limbs. Native 28x28 globe. Jade green overlapping ROUND scale plates, dark outlines, simple flat shading, coral boots and cream face edges when visible. Match reference width-to-height proportions and silhouette size precisely. Keep head and torso landmarks matching native reference. No text, no floor, no shadow, no quills. This is one frame in a coherent rear-view game animation. Variation A: simple clean scale clusters.",
+      "sha256": "663c0963958633eccd44938bee0527a44ea5d68de97cea9d3f388cb4e6b784b3",
+      "selected": false,
+      "raw_archive": "archived-attempts/11-A.png"
+    },
+    {
+      "id": 11,
+      "attempt": "B",
+      "prompt": "One pixel-art pangolin mascot game sprite on a transparent background. Use attached enlarged game pose for viewpoint and pose, illustrated pangolin sheet for character identity, approved pixel sprite for style. Jump motion blur ball: smooth jade spherical shell, SIMPLE solid highlight glint at top-left, deep jade lower crescent. NO busy scale grid, no limbs. Native 28x28 globe. Jade green overlapping ROUND scale plates, dark outlines, simple flat shading, coral boots and cream face edges when visible. Match reference width-to-height proportions and silhouette size precisely. Keep head and torso landmarks matching native reference. No text, no floor, no shadow, no quills. This is one frame in a coherent rear-view game animation. Variation B: broader dome, stronger silhouette and simplified highlights.",
+      "sha256": "6238a6f14c44e87329871c84918bbd606a251432025df549c05686f8419a1036",
+      "selected": false,
+      "raw_archive": "archived-attempts/11-B.png"
+    },
+    {
+      "id": 9,
+      "attempt": "A",
+      "prompt": "One pixel-art pangolin mascot game sprite on a transparent background. Use attached enlarged game pose for viewpoint and pose, illustrated pangolin sheet for character identity, approved pixel sprite for style. Jump spin ball: tightly CLOSED overlapping rounded jade armour scales spherical with tapered tail tucked fully, no ears, hands or feet. Back view shell, bright top left highlight, large simple scale plates; native 28x28 globe. Jade green overlapping ROUND scale plates, dark outlines, simple flat shading, coral boots and cream face edges when visible. Match reference width-to-height proportions and silhouette size precisely. Keep head and torso landmarks matching native reference. No text, no floor, no shadow, no quills. This is one frame in a coherent rear-view game animation. Variation A: simple clean scale clusters.",
+      "sha256": "20948feb69486da30d2df3de0bd4023baf0d019f2edd2f3b3b82373d2b379197",
+      "selected": false,
+      "raw_archive": "archived-attempts/09-A.png"
+    },
+    {
+      "id": 4,
+      "attempt": "A",
+      "prompt": "One pixel-art pangolin mascot game sprite on a transparent background. Use attached enlarged game pose for viewpoint and pose, illustrated pangolin sheet for character identity, approved pixel sprite for style. Back view run: viewer LEFT boot low reaching BACK toward viewer, RIGHT foot tucked, torso leans left, left glove tucked, right glove low. Native phase 4. Jade green overlapping ROUND scale plates, dark outlines, simple flat shading, coral boots and cream face edges when visible. Match reference width-to-height proportions and silhouette size precisely. Keep head and torso landmarks matching native reference. No text, no floor, no shadow, no quills. This is one frame in a coherent rear-view game animation. Variation A: simple clean scale clusters.",
+      "sha256": "bd23a3975ea416f39f28e77035493f554c0597d141185cfcf2c43eb227ca9712",
+      "selected": false,
+      "raw_archive": "archived-attempts/04-A.png"
+    },
+    {
+      "id": 10,
+      "attempt": "A",
+      "prompt": "One pixel-art pangolin mascot game sprite on a transparent background. Use attached enlarged game pose for viewpoint and pose, illustrated pangolin sheet for character identity, approved pixel sprite for style. Jump spin ball second rotation: closed jade scale sphere, central long plate vertical and two side plates; tail tucked fully. No hands/feet/ears. Native 28x28 globe. Jade green overlapping ROUND scale plates, dark outlines, simple flat shading, coral boots and cream face edges when visible. Match reference width-to-height proportions and silhouette size precisely. Keep head and torso landmarks matching native reference. No text, no floor, no shadow, no quills. This is one frame in a coherent rear-view game animation. Variation A: simple clean scale clusters.",
+      "sha256": "7efb5213b9130fb42c0176af53fdf6453c042a6572905a643bac8d36ebe5a3a8",
+      "selected": false,
+      "raw_archive": "archived-attempts/10-A.png"
+    },
+    {
+      "id": 9,
+      "attempt": "B",
+      "prompt": "One pixel-art pangolin mascot game sprite on a transparent background. Use attached enlarged game pose for viewpoint and pose, illustrated pangolin sheet for character identity, approved pixel sprite for style. Jump spin ball: tightly CLOSED overlapping rounded jade armour scales spherical with tapered tail tucked fully, no ears, hands or feet. Back view shell, bright top left highlight, large simple scale plates; native 28x28 globe. Jade green overlapping ROUND scale plates, dark outlines, simple flat shading, coral boots and cream face edges when visible. Match reference width-to-height proportions and silhouette size precisely. Keep head and torso landmarks matching native reference. No text, no floor, no shadow, no quills. This is one frame in a coherent rear-view game animation. Variation B: broader dome, stronger silhouette and simplified highlights.",
+      "sha256": "870eebc9bb74ee6bb297cc3c0223967d57d8693f5324c69c1789ccee7a542000",
+      "selected": false,
+      "raw_archive": "archived-attempts/09-B.png"
+    },
+    {
+      "id": 4,
+      "attempt": "B",
+      "prompt": "One pixel-art pangolin mascot game sprite on a transparent background. Use attached enlarged game pose for viewpoint and pose, illustrated pangolin sheet for character identity, approved pixel sprite for style. Back view run: viewer LEFT boot low reaching BACK toward viewer, RIGHT foot tucked, torso leans left, left glove tucked, right glove low. Native phase 4. Jade green overlapping ROUND scale plates, dark outlines, simple flat shading, coral boots and cream face edges when visible. Match reference width-to-height proportions and silhouette size precisely. Keep head and torso landmarks matching native reference. No text, no floor, no shadow, no quills. This is one frame in a coherent rear-view game animation. Variation B: broader dome, stronger silhouette and simplified highlights.",
+      "sha256": "ba660c5a3caf3241843805c6153df913e22e6c23705eb9d14674659e9a476e41",
+      "selected": false,
+      "raw_archive": "archived-attempts/04-B.png"
+    },
+    {
+      "id": 10,
+      "attempt": "B",
+      "prompt": "One pixel-art pangolin mascot game sprite on a transparent background. Use attached enlarged game pose for viewpoint and pose, illustrated pangolin sheet for character identity, approved pixel sprite for style. Jump spin ball second rotation: closed jade scale sphere, central long plate vertical and two side plates; tail tucked fully. No hands/feet/ears. Native 28x28 globe. Jade green overlapping ROUND scale plates, dark outlines, simple flat shading, coral boots and cream face edges when visible. Match reference width-to-height proportions and silhouette size precisely. Keep head and torso landmarks matching native reference. No text, no floor, no shadow, no quills. This is one frame in a coherent rear-view game animation. Variation B: broader dome, stronger silhouette and simplified highlights.",
+      "sha256": "ec0de9bad2bcf0325eef260c5b7f449362720f652bee63bb4c84db8a10afb3e9",
+      "selected": false,
+      "raw_archive": "archived-attempts/10-B.png"
+    },
+    {
+      "id": 11,
+      "attempt": "C",
+      "prompt": "Draw exactly one smooth jade-green spin-ball sprite on transparent background for MICA the pangolin. Match the enlarged native ball in image 1: circular globe, no visible limbs, NO scale outlines or internal lines on this motion-blur frame. Solid jade midtone upper surface, curved deep jade lower crescent, single white glint near top left. Image 2 is identity reference only; do not draw the animal. Image 3 is approved pixel style. Dark ink outer contour, simple pixel clusters, about 28x28 native pixels, match native width and height exactly. No text, floor or shadow. This is the solid blur phase between two detailed scaled ball frames.",
+      "sha256": "3a18b698eabb982a412e7659e57c027c1e658af01779a044410d6c6b2bd24083",
+      "selected": false,
+      "raw_archive": "archived-attempts/11-C.png"
+    },
+    {
+      "id": 5,
+      "attempt": "S1",
+      "prompt": "Fresh original MICA pangolin game sprite. Reference 1 is exact native special-stage pose enlarged 8x, reference 2 is MICA identity model, reference 3 approved pixel frame for identity. Back view run extreme: LEFT boot sole stretched down BACK toward viewer, RIGHT foot high out of sight; right glove low. Native phase 5. STRICT REAR VIEW: small round ears, slim cream cheek edges, jade dome and rounded overlapping scale rows down her back, tapered scaled tail distinct from legs, white gloves and coral boots. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look.  Exact native pose proportions and native head/torso landmarks. Transparent background, one sprite, no words, no floor. Candidate S1.",
+      "sha256": "bfb269e0dc883472461d6ec62c412c8e06bf44f574cc2932620f8e40b7d1ab23",
+      "selected": false,
+      "raw_archive": "archived-attempts/05-S1.png"
+    },
+    {
+      "id": 5,
+      "attempt": "S2",
+      "prompt": "Fresh original MICA pangolin game sprite. Reference 1 is exact native special-stage pose enlarged 8x, reference 2 is MICA identity model, reference 3 approved pixel frame for identity. Back view run extreme: LEFT boot sole stretched down BACK toward viewer, RIGHT foot high out of sight; right glove low. Native phase 5. STRICT REAR VIEW: small round ears, slim cream cheek edges, jade dome and rounded overlapping scale rows down her back, tapered scaled tail distinct from legs, white gloves and coral boots. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look.  Exact native pose proportions and native head/torso landmarks. Transparent background, one sprite, no words, no floor. Candidate S2, simplify clusters further, subdued rounded plate relief instead of outlined scales.",
+      "sha256": "87807619d9e44769dcee296fd1520d492f9adb3d79eca250579d6d20005ffa13",
+      "selected": true,
+      "raw_archive": "archived-attempts/05-S2.png"
+    },
+    {
+      "id": 6,
+      "attempt": "S2",
+      "prompt": "Fresh original MICA pangolin game sprite. Reference 1 is exact native special-stage pose enlarged 8x, reference 2 is MICA identity model, reference 3 approved pixel frame for identity. Opposite contact of phase 3: viewer RIGHT boot low and back, LEFT shoe lifted high by hip, left glove ahead. Native phase 6. STRICT REAR VIEW: small round ears, slim cream cheek edges, jade dome and rounded overlapping scale rows down her back, tapered scaled tail distinct from legs, white gloves and coral boots. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look.  Exact native pose proportions and native head/torso landmarks. Transparent background, one sprite, no words, no floor. Candidate S2, simplify clusters further, subdued rounded plate relief instead of outlined scales.",
+      "sha256": "a155295156405896e06337819cf6c0aa11703a44ef7e33f80ad80a0feb5048e8",
+      "selected": true,
+      "raw_archive": "archived-attempts/06-S2.png"
+    },
+    {
+      "id": 7,
+      "attempt": "S1",
+      "prompt": "Fresh original MICA pangolin game sprite. Reference 1 is exact native special-stage pose enlarged 8x, reference 2 is MICA identity model, reference 3 approved pixel frame for identity. Opposite phase 4: RIGHT boot low reaching BACK, LEFT foot tucked, torso leans right, left glove low. Native phase 7. STRICT REAR VIEW: small round ears, slim cream cheek edges, jade dome and rounded overlapping scale rows down her back, tapered scaled tail distinct from legs, white gloves and coral boots. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look.  Exact native pose proportions and native head/torso landmarks. Transparent background, one sprite, no words, no floor. Candidate S1.",
+      "sha256": "8e2456d718c5684aafbdcb3556cf389b609581894f3c804efa67ae2f10b6d6e7",
+      "selected": false,
+      "raw_archive": "archived-attempts/07-S1.png"
+    },
+    {
+      "id": 11,
+      "attempt": "S1",
+      "prompt": "Fresh original MICA pangolin game sprite. Reference 1 is exact native special-stage pose enlarged 8x, reference 2 is MICA identity model, reference 3 approved pixel frame for identity. Jump motion blur ball: smooth jade spherical shell, SIMPLE solid highlight glint at top-left, deep jade lower crescent. NO busy scale grid, no limbs. Native 28x28 globe. This is a solid motion-blur sphere, do NOT show scale grooves or limbs. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look. Ball palette budget only five shades, highlight on upper left, dark lower crescent. Do not add shoe/face colours. Exact native pose proportions and native head/torso landmarks. Transparent background, one sprite, no words, no floor. Candidate S1.",
+      "sha256": "94b4e9e24fd4c7b4c9853699c2dab61d4d14373a23b9070bbd05a2ac4292d637",
+      "selected": true,
+      "raw_archive": "archived-attempts/11-S1.png"
+    },
+    {
+      "id": 10,
+      "attempt": "S1",
+      "prompt": "Fresh original MICA pangolin game sprite. Reference 1 is exact native special-stage pose enlarged 8x, reference 2 is MICA identity model, reference 3 approved pixel frame for identity. Jump spin ball second rotation: closed jade scale sphere, central long plate vertical and two side plates; tail tucked fully. No hands/feet/ears. Native 28x28 globe. Closed rounded scale armour ball with no limbs or ears. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look. Ball palette budget only six shades, highlight on upper left, dark lower crescent. Do not add shoe/face colours. Exact native pose proportions and native head/torso landmarks. Transparent background, one sprite, no words, no floor. Candidate S1.",
+      "sha256": "11f1746c97a59841fe79ce2fe1a7327ba2c1dd134a4f9feeaef9044ce651bedd",
+      "selected": true,
+      "raw_archive": "archived-attempts/10-S1.png"
+    },
+    {
+      "id": 7,
+      "attempt": "S2",
+      "prompt": "Fresh original MICA pangolin game sprite. Reference 1 is exact native special-stage pose enlarged 8x, reference 2 is MICA identity model, reference 3 approved pixel frame for identity. Opposite phase 4: RIGHT boot low reaching BACK, LEFT foot tucked, torso leans right, left glove low. Native phase 7. STRICT REAR VIEW: small round ears, slim cream cheek edges, jade dome and rounded overlapping scale rows down her back, tapered scaled tail distinct from legs, white gloves and coral boots. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look.  Exact native pose proportions and native head/torso landmarks. Transparent background, one sprite, no words, no floor. Candidate S2, simplify clusters further, subdued rounded plate relief instead of outlined scales.",
+      "sha256": "f3af5e0eed8510375903deea4b15a97287f154445361aa6570b98ddbd87afecb",
+      "selected": true,
+      "raw_archive": "archived-attempts/07-S2.png"
+    },
+    {
+      "id": 9,
+      "attempt": "S1",
+      "prompt": "Fresh original MICA pangolin game sprite. Reference 1 is exact native special-stage pose enlarged 8x, reference 2 is MICA identity model, reference 3 approved pixel frame for identity. Jump spin ball: tightly CLOSED overlapping rounded jade armour scales spherical with tapered tail tucked fully, no ears, hands or feet. Back view shell, bright top left highlight, large simple scale plates; native 28x28 globe. Closed rounded scale armour ball with no limbs or ears. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look. Ball palette budget only six shades, highlight on upper left, dark lower crescent. Do not add shoe/face colours. Exact native pose proportions and native head/torso landmarks. Transparent background, one sprite, no words, no floor. Candidate S1.",
+      "sha256": "9d5080f520401677d7a68716417ab35dd02334b5212bb8c30811d4f09a9e62c6",
+      "selected": false,
+      "raw_archive": "archived-attempts/09-S1.png"
+    },
+    {
+      "id": 11,
+      "attempt": "S2",
+      "prompt": "Fresh original MICA pangolin game sprite. Reference 1 is exact native special-stage pose enlarged 8x, reference 2 is MICA identity model, reference 3 approved pixel frame for identity. Jump motion blur ball: smooth jade spherical shell, SIMPLE solid highlight glint at top-left, deep jade lower crescent. NO busy scale grid, no limbs. Native 28x28 globe. This is a solid motion-blur sphere, do NOT show scale grooves or limbs. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look. Ball palette budget only five shades, highlight on upper left, dark lower crescent. Do not add shoe/face colours. Exact native pose proportions and native head/torso landmarks. Transparent background, one sprite, no words, no floor. Candidate S2, simplify clusters further, subdued rounded plate relief instead of outlined scales.",
+      "sha256": "70ec91ce6d3c6dfaa114549ef11fcb813f2950c3791818083809565cbb9db12e",
+      "selected": false,
+      "raw_archive": "archived-attempts/11-S2.png"
+    },
+    {
+      "id": 10,
+      "attempt": "S2",
+      "prompt": "Fresh original MICA pangolin game sprite. Reference 1 is exact native special-stage pose enlarged 8x, reference 2 is MICA identity model, reference 3 approved pixel frame for identity. Jump spin ball second rotation: closed jade scale sphere, central long plate vertical and two side plates; tail tucked fully. No hands/feet/ears. Native 28x28 globe. Closed rounded scale armour ball with no limbs or ears. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look. Ball palette budget only six shades, highlight on upper left, dark lower crescent. Do not add shoe/face colours. Exact native pose proportions and native head/torso landmarks. Transparent background, one sprite, no words, no floor. Candidate S2, simplify clusters further, subdued rounded plate relief instead of outlined scales.",
+      "sha256": "dff3b5207e31e000e7619ef07a817a2ab3403c94d6bb571ebc15f9fabf40bc40",
+      "selected": false,
+      "raw_archive": "archived-attempts/10-S2.png"
+    },
+    {
+      "id": 8,
+      "attempt": "S1",
+      "prompt": "Fresh original MICA pangolin game sprite. Reference 1 is exact native special-stage pose enlarged 8x, reference 2 is MICA identity model, reference 3 approved pixel frame for identity. Opposite phase 5: RIGHT boot sole stretched down BACK, LEFT foot high out of sight, left glove low. Native phase 8. STRICT REAR VIEW: small round ears, slim cream cheek edges, jade dome and rounded overlapping scale rows down her back, tapered scaled tail distinct from legs, white gloves and coral boots. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look.  Exact native pose proportions and native head/torso landmarks. Transparent background, one sprite, no words, no floor. Candidate S1.",
+      "sha256": "3fc917a3c93a2b5b8db4052c713227f71edb106308b9a1e4d20ada1e7f7f1395",
+      "selected": true,
+      "raw_archive": "archived-attempts/08-S1.png"
+    },
+    {
+      "id": 9,
+      "attempt": "S2",
+      "prompt": "Fresh original MICA pangolin game sprite. Reference 1 is exact native special-stage pose enlarged 8x, reference 2 is MICA identity model, reference 3 approved pixel frame for identity. Jump spin ball: tightly CLOSED overlapping rounded jade armour scales spherical with tapered tail tucked fully, no ears, hands or feet. Back view shell, bright top left highlight, large simple scale plates; native 28x28 globe. Closed rounded scale armour ball with no limbs or ears. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look. Ball palette budget only six shades, highlight on upper left, dark lower crescent. Do not add shoe/face colours. Exact native pose proportions and native head/torso landmarks. Transparent background, one sprite, no words, no floor. Candidate S2, simplify clusters further, subdued rounded plate relief instead of outlined scales.",
+      "sha256": "43fec11b88c2d3e300ef1f429c313ba6d80c8b4e4b6c051c46684c962bc2c0e4",
+      "selected": true,
+      "raw_archive": "archived-attempts/09-S2.png"
+    },
+    {
+      "id": 8,
+      "attempt": "S2",
+      "prompt": "Fresh original MICA pangolin game sprite. Reference 1 is exact native special-stage pose enlarged 8x, reference 2 is MICA identity model, reference 3 approved pixel frame for identity. Opposite phase 5: RIGHT boot sole stretched down BACK, LEFT foot high out of sight, left glove low. Native phase 8. STRICT REAR VIEW: small round ears, slim cream cheek edges, jade dome and rounded overlapping scale rows down her back, tapered scaled tail distinct from legs, white gloves and coral boots. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look.  Exact native pose proportions and native head/torso landmarks. Transparent background, one sprite, no words, no floor. Candidate S2, simplify clusters further, subdued rounded plate relief instead of outlined scales.",
+      "sha256": "4c6bb2f0383a8e060e3ac6909c488e024a5117ef3e0db8f62f7e8da006188ca4",
+      "selected": false,
+      "raw_archive": "archived-attempts/08-S2.png"
+    },
+    {
+      "id": 1,
+      "attempt": "S1",
+      "prompt": "Fresh original MICA pangolin sprite, using image 1 native 8x as exact pose, image 2 identity sheet and image 3 approved playable frame as identity only. Stand still facing away, both shoes planted, compact head above short body. STRICT REAR VIEW. Small round ears, thin cream face edges high at head sides, jade scale dome, clear narrower torso, tapered scale tail separate from boots, white gloves and coral shoes. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look. Use native pose width/height ratio, canvas and hotspots, one sprite, transparent background, no shadow/text. Candidate S1.",
+      "sha256": "eeb9b0e24114ee3c0f203cab87676dbddb2b09347dfab5d0ac528ae99f967a8e",
+      "selected": false,
+      "raw_archive": "archived-attempts/01-S1.png"
+    },
+    {
+      "id": 1,
+      "attempt": "S2",
+      "prompt": "Fresh original MICA pangolin sprite, using image 1 native 8x as exact pose, image 2 identity sheet and image 3 approved playable frame as identity only. Stand still facing away, both shoes planted, compact head above short body. STRICT REAR VIEW. Small round ears, thin cream face edges high at head sides, jade scale dome, clear narrower torso, tapered scale tail separate from boots, white gloves and coral shoes. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look. Use native pose width/height ratio, canvas and hotspots, one sprite, transparent background, no shadow/text. Candidate S2 with even simpler shade-defined scale rows and stronger native-like side shading.",
+      "sha256": "40205b1044e464ac06947c89f25f9f5ec6bca0266074644e02d577667227e94f",
+      "selected": true,
+      "raw_archive": "archived-attempts/01-S2.png"
+    },
+    {
+      "id": 2,
+      "attempt": "S1",
+      "prompt": "Fresh original MICA pangolin sprite, using image 1 native 8x as exact pose, image 2 identity sheet and image 3 approved playable frame as identity only. Running neutral contact, BOTH feet low and side by side, same height, arms mostly hidden. STRICT REAR VIEW. Small round ears, thin cream face edges high at head sides, jade scale dome, clear narrower torso, tapered scale tail separate from boots, white gloves and coral shoes. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look. Use native pose width/height ratio, canvas and hotspots, one sprite, transparent background, no shadow/text. Candidate S1.",
+      "sha256": "70a477f51a475446ab140bad0fa96efa68a599fba3e5ec3689ed72ad87d757e0",
+      "selected": false,
+      "raw_archive": "archived-attempts/02-S1.png"
+    },
+    {
+      "id": 2,
+      "attempt": "S2",
+      "prompt": "Fresh original MICA pangolin sprite, using image 1 native 8x as exact pose, image 2 identity sheet and image 3 approved playable frame as identity only. Running neutral contact, BOTH feet low and side by side, same height, arms mostly hidden. STRICT REAR VIEW. Small round ears, thin cream face edges high at head sides, jade scale dome, clear narrower torso, tapered scale tail separate from boots, white gloves and coral shoes. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look. Use native pose width/height ratio, canvas and hotspots, one sprite, transparent background, no shadow/text. Candidate S2 with even simpler shade-defined scale rows and stronger native-like side shading.",
+      "sha256": "b131f95de174a0d57b140650d13eb846e87a7f2a2230f48971f8cd0feb1156c2",
+      "selected": true,
+      "raw_archive": "archived-attempts/02-S2.png"
+    },
+    {
+      "id": 3,
+      "attempt": "S1",
+      "prompt": "Fresh original MICA pangolin sprite, using image 1 native 8x as exact pose, image 2 identity sheet and image 3 approved playable frame as identity only. Back view run: viewer LEFT foot low and back, RIGHT shoe lifted high by hip; right glove ahead. Native phase 3. STRICT REAR VIEW. Small round ears, thin cream face edges high at head sides, jade scale dome, clear narrower torso, tapered scale tail separate from boots, white gloves and coral shoes. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look. Use native pose width/height ratio, canvas and hotspots, one sprite, transparent background, no shadow/text. Candidate S1.",
+      "sha256": "e0fad0e4b9191e4b7e9ab0e7009e208a59c857ff899096f35fcc8b03f3a95008",
+      "selected": true,
+      "raw_archive": "archived-attempts/03-S1.png"
+    },
+    {
+      "id": 3,
+      "attempt": "S2",
+      "prompt": "Fresh original MICA pangolin sprite, using image 1 native 8x as exact pose, image 2 identity sheet and image 3 approved playable frame as identity only. Back view run: viewer LEFT foot low and back, RIGHT shoe lifted high by hip; right glove ahead. Native phase 3. STRICT REAR VIEW. Small round ears, thin cream face edges high at head sides, jade scale dome, clear narrower torso, tapered scale tail separate from boots, white gloves and coral shoes. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look. Use native pose width/height ratio, canvas and hotspots, one sprite, transparent background, no shadow/text. Candidate S2 with even simpler shade-defined scale rows and stronger native-like side shading.",
+      "sha256": "e202a812ee457621dc5b5032049806092705f4d97893b7c124bc4236f2b0bca5",
+      "selected": false,
+      "raw_archive": "archived-attempts/03-S2.png"
+    },
+    {
+      "id": 4,
+      "attempt": "S1",
+      "prompt": "Fresh original MICA pangolin sprite, using image 1 native 8x as exact pose, image 2 identity sheet and image 3 approved playable frame as identity only. Back view run: viewer LEFT boot low reaching BACK toward viewer, RIGHT foot tucked, torso leans left, left glove tucked, right glove low. Native phase 4. STRICT REAR VIEW. Small round ears, thin cream face edges high at head sides, jade scale dome, clear narrower torso, tapered scale tail separate from boots, white gloves and coral shoes. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look. Use native pose width/height ratio, canvas and hotspots, one sprite, transparent background, no shadow/text. Candidate S1.",
+      "sha256": "73b07e8b45d8b67b4b71dd0ce8f7220a11844f1ae4ad9c99ae1543d85e4df26d",
+      "selected": true,
+      "raw_archive": "archived-attempts/04-S1.png"
+    },
+    {
+      "id": 4,
+      "attempt": "S2",
+      "prompt": "Fresh original MICA pangolin sprite, using image 1 native 8x as exact pose, image 2 identity sheet and image 3 approved playable frame as identity only. Back view run: viewer LEFT boot low reaching BACK toward viewer, RIGHT foot tucked, torso leans left, left glove tucked, right glove low. Native phase 4. STRICT REAR VIEW. Small round ears, thin cream face edges high at head sides, jade scale dome, clear narrower torso, tapered scale tail separate from boots, white gloves and coral shoes. Match the actual 1994 Blue Sphere special-stage back-view rendering, NOT a modern illustrated sprite: deep hue-coloured one-pixel contour (deep jade, never black ink), solid shaded volume with 4 jade shade bands plus a small fifth pale glint, upper-left/front light, dark underside/right side, narrow faceted vertical highlights like native. No black internal scale borders, no thick cartoon outlines, no checkerboard dither (native uses contiguous shade clusters), no smooth airbrush. Large overlapping rounded scale plates must be suggested by shade transitions, NOT drawn with comic linework. Native uses only 9 visible colours (5 jade shades, white, sand-cream/tan, coral, dark sole); reuse coral for ear interior. Keep this native colour budget. The approved concept is IDENTITY only; its thick outline style must NOT be copied. Lock head and torso dimensions/placement against native. Back dome should be broad and compact, torso short, legs at exact native contacts. Pixel art with dense faceted surface shading, no vector/cel look. Use native pose width/height ratio, canvas and hotspots, one sprite, transparent background, no shadow/text. Candidate S2 with even simpler shade-defined scale rows and stronger native-like side shading.",
+      "sha256": "9d0a3939895c10a78b581aa8555c5f62bb75961c242672d84abf919305dfebe1",
+      "selected": false,
+      "raw_archive": "archived-attempts/04-S2.png"
+    },
+    {
+      "id": 2,
+      "attempt": "A-redo",
+      "prompt": "Transform the enlarged native mascot pose in image 1 into the original jade pangolin in image 2, using pixel style of image 3. Rear view running neutral contact. BOTH boots next to each other at SAME LOW HEIGHT, toes forward into scene, same pose as reference. White gloves mostly hidden by the body. BOTH legs equally extended downward. One compact rear-view game sprite only. Rounded scaled head above smaller torso, pink ears at head sides, narrow cream cheek edges, overlapping jade back armour and slim tapered scaled tail. Coral shoes and white gloves. Retain exact pose and WIDTH/HEIGHT ratio of native reference. Large clean pixel clusters and dark outline, flat palette. Transparent background. No text or floor shadow. Candidate A.",
+      "sha256": "8495f79b380a2dba388737138b99ad48e98072e153e62219e1b1f7b563725201",
+      "selected": false,
+      "raw_archive": "archived-attempts/02-A-redo.png"
+    },
+    {
+      "id": 2,
+      "attempt": "B-redo",
+      "prompt": "Transform the enlarged native mascot pose in image 1 into the original jade pangolin in image 2, using pixel style of image 3. Rear view running neutral contact. BOTH boots next to each other at SAME LOW HEIGHT, toes forward into scene, same pose as reference. White gloves mostly hidden by the body. BOTH legs equally extended downward. One compact rear-view game sprite only. Rounded scaled head above smaller torso, pink ears at head sides, narrow cream cheek edges, overlapping jade back armour and slim tapered scaled tail. Coral shoes and white gloves. Retain exact pose and WIDTH/HEIGHT ratio of native reference. Large clean pixel clusters and dark outline, flat palette. Transparent background. No text or floor shadow. Candidate B.",
+      "sha256": "c2c7521bdcabb32920bd4d336ea1fe871cd3140ce7a145fdc491d299eb6b41da",
+      "selected": false,
+      "raw_archive": "archived-attempts/02-B-redo.png"
+    },
+    {
+      "id": 5,
+      "attempt": "A",
+      "prompt": "Use case: style-transfer. One original 16-bit MICA pangolin game sprite on transparent background. Image 1 exact native 8x pose; image 2 identity model; image 3 approved style. Back view run extreme: LEFT boot sole stretched down BACK toward viewer, RIGHT foot high out of sight; right glove low. Native phase 5. Copy the native limb positions and lean closely; this is a RUN frame, not idle. STRICT BACK VIEW: domed head distinct above smaller torso, two round pink ears and narrow cream cheek edges at head sides, jade rounded overlapping scale rows along back, slim tapered scaled tail between legs but NOT hiding shoes. White gloves, coral boots tan soles. Distinct bent legs with one shoe high and other low, strong alternation. Match native head/torso dimensions and compact 28x48 surface footprint. Pixel clusters large and simple, 15 flat colours, dark outline. No quills, spikes, front face, text, shadow. Attempt A.",
+      "sha256": "1cdbad2a9d28bdf957e8bc2139fa11c478bd366c91364e9b13cd6460a1dd4d38",
+      "selected": false,
+      "raw_archive": "archived-attempts/05-A.png"
+    },
+    {
+      "id": 5,
+      "attempt": "B",
+      "prompt": "Transform the enlarged native mascot pose in image 1 into the original jade pangolin in image 2, using pixel style of image 3. Back view run extreme: LEFT boot sole stretched down BACK toward viewer, RIGHT foot high out of sight; right glove low. Native phase 5. One compact rear-view game sprite only. Rounded scaled head above smaller torso, pink ears at head sides, narrow cream cheek edges, overlapping jade back armour and slim tapered scaled tail. Coral shoes and white gloves. Retain exact pose and WIDTH/HEIGHT ratio of native reference. Large clean pixel clusters and dark outline, flat palette. Transparent background. No text or floor shadow. Candidate B.",
+      "sha256": "8bf88631bd3bcdd83ead8d4bd862fb77d50d35ae77e353072eca410a4820ca32",
+      "selected": false,
+      "raw_archive": "archived-attempts/05-B.png"
+    },
+    {
+      "id": 6,
+      "attempt": "A",
+      "prompt": "Use case: style-transfer. One original 16-bit MICA pangolin game sprite on transparent background. Image 1 exact native 8x pose; image 2 identity model; image 3 approved style. Opposite contact of phase 3: viewer RIGHT boot low and back, LEFT shoe lifted high by hip, left glove ahead. Native phase 6. Copy the native limb positions and lean closely; this is a RUN frame, not idle. STRICT BACK VIEW: domed head distinct above smaller torso, two round pink ears and narrow cream cheek edges at head sides, jade rounded overlapping scale rows along back, slim tapered scaled tail between legs but NOT hiding shoes. White gloves, coral boots tan soles. Distinct bent legs with one shoe high and other low, strong alternation. Match native head/torso dimensions and compact 28x48 surface footprint. Pixel clusters large and simple, 15 flat colours, dark outline. No quills, spikes, front face, text, shadow. Attempt A.",
+      "sha256": "1f3546c976dd7c83a1a43719a9646b978872f7ca0d05e54eae9f3753dc003d16",
+      "selected": false,
+      "raw_archive": "archived-attempts/06-A.png"
+    },
+    {
+      "id": 6,
+      "attempt": "B",
+      "prompt": "Transform the enlarged native mascot pose in image 1 into the original jade pangolin in image 2, using pixel style of image 3. Opposite contact of phase 3: viewer RIGHT boot low and back, LEFT shoe lifted high by hip, left glove ahead. Native phase 6. One compact rear-view game sprite only. Rounded scaled head above smaller torso, pink ears at head sides, narrow cream cheek edges, overlapping jade back armour and slim tapered scaled tail. Coral shoes and white gloves. Retain exact pose and WIDTH/HEIGHT ratio of native reference. Large clean pixel clusters and dark outline, flat palette. Transparent background. No text or floor shadow. Candidate B.",
+      "sha256": "c02c123213937e9c2566c63228bc6ab3f60ff97b57eac52e5f08f7563c3773d6",
+      "selected": false,
+      "raw_archive": "archived-attempts/06-B.png"
+    },
+    {
+      "id": 7,
+      "attempt": "A",
+      "prompt": "Use case: style-transfer. One original 16-bit MICA pangolin game sprite on transparent background. Image 1 exact native 8x pose; image 2 identity model; image 3 approved style. Opposite phase 4: RIGHT boot low reaching BACK, LEFT foot tucked, torso leans right, left glove low. Native phase 7. Copy the native limb positions and lean closely; this is a RUN frame, not idle. STRICT BACK VIEW: domed head distinct above smaller torso, two round pink ears and narrow cream cheek edges at head sides, jade rounded overlapping scale rows along back, slim tapered scaled tail between legs but NOT hiding shoes. White gloves, coral boots tan soles. Distinct bent legs with one shoe high and other low, strong alternation. Match native head/torso dimensions and compact 28x48 surface footprint. Pixel clusters large and simple, 15 flat colours, dark outline. No quills, spikes, front face, text, shadow. Attempt A.",
+      "sha256": "e4d5be9e365d07aa2016333aa1e9f9d5c1a1507dba7f41f1eac40f1eb593dd4e",
+      "selected": false,
+      "raw_archive": "archived-attempts/07-A.png"
+    },
+    {
+      "id": 7,
+      "attempt": "B",
+      "prompt": "Transform the enlarged native mascot pose in image 1 into the original jade pangolin in image 2, using pixel style of image 3. Opposite phase 4: RIGHT boot low reaching BACK, LEFT foot tucked, torso leans right, left glove low. Native phase 7. One compact rear-view game sprite only. Rounded scaled head above smaller torso, pink ears at head sides, narrow cream cheek edges, overlapping jade back armour and slim tapered scaled tail. Coral shoes and white gloves. Retain exact pose and WIDTH/HEIGHT ratio of native reference. Large clean pixel clusters and dark outline, flat palette. Transparent background. No text or floor shadow. Candidate B.",
+      "sha256": "ff8cd3aca22d44c308b02620ffc6cb4375e7a2ec9c76f3dc07e9b3546277521c",
+      "selected": false,
+      "raw_archive": "archived-attempts/07-B.png"
+    },
+    {
+      "id": 8,
+      "attempt": "A",
+      "prompt": "Use case: style-transfer. One original 16-bit MICA pangolin game sprite on transparent background. Image 1 exact native 8x pose; image 2 identity model; image 3 approved style. Opposite phase 5: RIGHT boot sole stretched down BACK, LEFT foot high out of sight, left glove low. Native phase 8. Copy the native limb positions and lean closely; this is a RUN frame, not idle. STRICT BACK VIEW: domed head distinct above smaller torso, two round pink ears and narrow cream cheek edges at head sides, jade rounded overlapping scale rows along back, slim tapered scaled tail between legs but NOT hiding shoes. White gloves, coral boots tan soles. Distinct bent legs with one shoe high and other low, strong alternation. Match native head/torso dimensions and compact 28x48 surface footprint. Pixel clusters large and simple, 15 flat colours, dark outline. No quills, spikes, front face, text, shadow. Attempt A.",
+      "sha256": "295159e19ed42bda52e2ddba7131376965583e37150e8707e55505c2e2812e99",
+      "selected": false,
+      "raw_archive": "archived-attempts/08-A.png"
+    },
+    {
+      "id": 8,
+      "attempt": "B",
+      "prompt": "Transform the enlarged native mascot pose in image 1 into the original jade pangolin in image 2, using pixel style of image 3. Opposite phase 5: RIGHT boot sole stretched down BACK, LEFT foot high out of sight, left glove low. Native phase 8. One compact rear-view game sprite only. Rounded scaled head above smaller torso, pink ears at head sides, narrow cream cheek edges, overlapping jade back armour and slim tapered scaled tail. Coral shoes and white gloves. Retain exact pose and WIDTH/HEIGHT ratio of native reference. Large clean pixel clusters and dark outline, flat palette. Transparent background. No text or floor shadow. Candidate B.",
+      "sha256": "2f53f1ac5ced9c9906ebca5dd9bb0c06f2d7178bb7d9dce3b9477fd30b718816",
+      "selected": false,
+      "raw_archive": "archived-attempts/08-B.png"
+    }
+  ],
+  "style_measurements": [
+    {
+      "id": 1,
+      "colors": 9,
+      "counts": {
+        "11": 282,
+        "9": 266,
+        "15": 61,
+        "10": 180,
+        "1": 32,
+        "8": 55,
+        "13": 24,
+        "12": 30,
+        "14": 6
+      },
+      "boundary_colors": {
+        "11": 89,
+        "9": 2,
+        "10": 7,
+        "13": 17,
+        "15": 4,
+        "1": 2,
+        "12": 10
+      },
+      "palette": {
+        "11": [
+          0,
+          0,
+          73
+        ],
+        "9": [
+          36,
+          36,
+          255
+        ],
+        "15": [
+          109,
+          109,
+          182
+        ],
+        "10": [
+          36,
+          0,
+          182
+        ],
+        "1": [
+          255,
+          255,
+          255
+        ],
+        "8": [
+          73,
+          73,
+          255
+        ],
+        "13": [
+          146,
+          73,
+          36
+        ],
+        "12": [
+          255,
+          0,
+          0
+        ],
+        "14": [
+          255,
+          182,
+          146
+        ]
+      },
+      "box": [
+        1,
+        0,
+        29,
+        40
+      ]
+    },
+    {
+      "id": 2,
+      "colors": 8,
+      "counts": {
+        "11": 261,
+        "8": 66,
+        "9": 288,
+        "15": 39,
+        "1": 54,
+        "10": 172,
+        "13": 54,
+        "12": 42
+      },
+      "boundary_colors": {
+        "11": 104,
+        "10": 13,
+        "9": 5,
+        "13": 42,
+        "15": 4,
+        "12": 4
+      },
+      "palette": {
+        "11": [
+          0,
+          0,
+          73
+        ],
+        "8": [
+          73,
+          73,
+          255
+        ],
+        "9": [
+          36,
+          36,
+          255
+        ],
+        "15": [
+          109,
+          109,
+          182
+        ],
+        "1": [
+          255,
+          255,
+          255
+        ],
+        "10": [
+          36,
+          0,
+          182
+        ],
+        "13": [
+          146,
+          73,
+          36
+        ],
+        "12": [
+          255,
+          0,
+          0
+        ]
+      },
+      "box": [
+        2,
+        0,
+        29,
+        48
+      ]
+    },
+    {
+      "id": 3,
+      "colors": 9,
+      "counts": {
+        "11": 239,
+        "9": 286,
+        "15": 41,
+        "1": 50,
+        "8": 71,
+        "10": 152,
+        "13": 64,
+        "12": 37,
+        "14": 3
+      },
+      "boundary_colors": {
+        "11": 86,
+        "9": 5,
+        "10": 7,
+        "8": 2,
+        "15": 10,
+        "13": 47
+      },
+      "palette": {
+        "11": [
+          0,
+          0,
+          73
+        ],
+        "9": [
+          36,
+          36,
+          255
+        ],
+        "15": [
+          109,
+          109,
+          182
+        ],
+        "1": [
+          255,
+          255,
+          255
+        ],
+        "8": [
+          73,
+          73,
+          255
+        ],
+        "10": [
+          36,
+          0,
+          182
+        ],
+        "13": [
+          146,
+          73,
+          36
+        ],
+        "12": [
+          255,
+          0,
+          0
+        ],
+        "14": [
+          255,
+          182,
+          146
+        ]
+      },
+      "box": [
+        2,
+        0,
+        30,
+        51
+      ]
+    },
+    {
+      "id": 4,
+      "colors": 9,
+      "counts": {
+        "11": 217,
+        "15": 65,
+        "9": 255,
+        "1": 49,
+        "10": 179,
+        "8": 71,
+        "13": 61,
+        "14": 12,
+        "12": 34
+      },
+      "boundary_colors": {
+        "11": 67,
+        "15": 18,
+        "10": 10,
+        "9": 19,
+        "13": 32,
+        "14": 1,
+        "12": 1,
+        "1": 2
+      },
+      "palette": {
+        "11": [
+          0,
+          0,
+          73
+        ],
+        "15": [
+          109,
+          109,
+          182
+        ],
+        "9": [
+          36,
+          36,
+          255
+        ],
+        "1": [
+          255,
+          255,
+          255
+        ],
+        "10": [
+          36,
+          0,
+          182
+        ],
+        "8": [
+          73,
+          73,
+          255
+        ],
+        "13": [
+          146,
+          73,
+          36
+        ],
+        "14": [
+          255,
+          182,
+          146
+        ],
+        "12": [
+          255,
+          0,
+          0
+        ]
+      },
+      "box": [
+        0,
+        0,
+        30,
+        52
+      ]
+    },
+    {
+      "id": 5,
+      "colors": 9,
+      "counts": {
+        "11": 233,
+        "9": 247,
+        "15": 59,
+        "1": 65,
+        "10": 190,
+        "8": 77,
+        "14": 14,
+        "13": 77,
+        "12": 18
+      },
+      "boundary_colors": {
+        "11": 85,
+        "10": 8,
+        "15": 13,
+        "8": 1,
+        "14": 5,
+        "13": 19,
+        "1": 16,
+        "9": 5,
+        "12": 11
+      },
+      "palette": {
+        "11": [
+          0,
+          0,
+          73
+        ],
+        "9": [
+          36,
+          36,
+          255
+        ],
+        "15": [
+          109,
+          109,
+          182
+        ],
+        "1": [
+          255,
+          255,
+          255
+        ],
+        "10": [
+          36,
+          0,
+          182
+        ],
+        "8": [
+          73,
+          73,
+          255
+        ],
+        "14": [
+          255,
+          182,
+          146
+        ],
+        "13": [
+          146,
+          73,
+          36
+        ],
+        "12": [
+          255,
+          0,
+          0
+        ]
+      },
+      "box": [
+        0,
+        0,
+        32,
+        53
+      ]
+    },
+    {
+      "id": 6,
+      "colors": 9,
+      "counts": {
+        "11": 239,
+        "15": 41,
+        "9": 286,
+        "8": 71,
+        "1": 50,
+        "10": 152,
+        "13": 64,
+        "12": 37,
+        "14": 3
+      },
+      "boundary_colors": {
+        "11": 86,
+        "9": 6,
+        "10": 7,
+        "8": 2,
+        "15": 10,
+        "13": 47
+      },
+      "palette": {
+        "11": [
+          0,
+          0,
+          73
+        ],
+        "15": [
+          109,
+          109,
+          182
+        ],
+        "9": [
+          36,
+          36,
+          255
+        ],
+        "8": [
+          73,
+          73,
+          255
+        ],
+        "1": [
+          255,
+          255,
+          255
+        ],
+        "10": [
+          36,
+          0,
+          182
+        ],
+        "13": [
+          146,
+          73,
+          36
+        ],
+        "12": [
+          255,
+          0,
+          0
+        ],
+        "14": [
+          255,
+          182,
+          146
+        ]
+      },
+      "box": [
+        2,
+        0,
+        30,
+        51
+      ]
+    },
+    {
+      "id": 7,
+      "colors": 9,
+      "counts": {
+        "11": 217,
+        "15": 65,
+        "9": 255,
+        "1": 49,
+        "10": 179,
+        "8": 71,
+        "13": 61,
+        "14": 12,
+        "12": 34
+      },
+      "boundary_colors": {
+        "11": 67,
+        "15": 19,
+        "10": 10,
+        "9": 20,
+        "13": 32,
+        "14": 1,
+        "12": 2,
+        "1": 2
+      },
+      "palette": {
+        "11": [
+          0,
+          0,
+          73
+        ],
+        "15": [
+          109,
+          109,
+          182
+        ],
+        "9": [
+          36,
+          36,
+          255
+        ],
+        "1": [
+          255,
+          255,
+          255
+        ],
+        "10": [
+          36,
+          0,
+          182
+        ],
+        "8": [
+          73,
+          73,
+          255
+        ],
+        "13": [
+          146,
+          73,
+          36
+        ],
+        "14": [
+          255,
+          182,
+          146
+        ],
+        "12": [
+          255,
+          0,
+          0
+        ]
+      },
+      "box": [
+        2,
+        0,
+        32,
+        52
+      ]
+    },
+    {
+      "id": 8,
+      "colors": 9,
+      "counts": {
+        "11": 233,
+        "15": 59,
+        "9": 247,
+        "10": 190,
+        "1": 65,
+        "8": 77,
+        "14": 14,
+        "13": 77,
+        "12": 18
+      },
+      "boundary_colors": {
+        "11": 85,
+        "15": 13,
+        "10": 8,
+        "8": 1,
+        "14": 5,
+        "13": 19,
+        "1": 16,
+        "9": 5,
+        "12": 11
+      },
+      "palette": {
+        "11": [
+          0,
+          0,
+          73
+        ],
+        "15": [
+          109,
+          109,
+          182
+        ],
+        "9": [
+          36,
+          36,
+          255
+        ],
+        "10": [
+          36,
+          0,
+          182
+        ],
+        "1": [
+          255,
+          255,
+          255
+        ],
+        "8": [
+          73,
+          73,
+          255
+        ],
+        "14": [
+          255,
+          182,
+          146
+        ],
+        "13": [
+          146,
+          73,
+          36
+        ],
+        "12": [
+          255,
+          0,
+          0
+        ]
+      },
+      "box": [
+        0,
+        0,
+        32,
+        53
+      ]
+    },
+    {
+      "id": 9,
+      "colors": 6,
+      "counts": {
+        "11": 209,
+        "10": 279,
+        "9": 151,
+        "8": 39,
+        "15": 12,
+        "1": 2
+      },
+      "boundary_colors": {
+        "11": 71,
+        "10": 9,
+        "9": 4
+      },
+      "palette": {
+        "11": [
+          0,
+          0,
+          73
+        ],
+        "10": [
+          36,
+          0,
+          182
+        ],
+        "9": [
+          36,
+          36,
+          255
+        ],
+        "8": [
+          73,
+          73,
+          255
+        ],
+        "15": [
+          109,
+          109,
+          182
+        ],
+        "1": [
+          255,
+          255,
+          255
+        ]
+      },
+      "box": [
+        3,
+        0,
+        29,
+        32
+      ]
+    },
+    {
+      "id": 10,
+      "colors": 6,
+      "counts": {
+        "10": 326,
+        "9": 187,
+        "15": 40,
+        "1": 8,
+        "11": 99,
+        "8": 32
+      },
+      "boundary_colors": {
+        "10": 26,
+        "9": 9,
+        "11": 49
+      },
+      "palette": {
+        "10": [
+          36,
+          0,
+          182
+        ],
+        "9": [
+          36,
+          36,
+          255
+        ],
+        "15": [
+          109,
+          109,
+          182
+        ],
+        "1": [
+          255,
+          255,
+          255
+        ],
+        "11": [
+          0,
+          0,
+          73
+        ],
+        "8": [
+          73,
+          73,
+          255
+        ]
+      },
+      "box": [
+        3,
+        0,
+        29,
+        32
+      ]
+    },
+    {
+      "id": 11,
+      "colors": 5,
+      "counts": {
+        "9": 370,
+        "8": 38,
+        "1": 12,
+        "10": 108,
+        "11": 112
+      },
+      "boundary_colors": {
+        "9": 30,
+        "10": 12,
+        "11": 38
+      },
+      "palette": {
+        "9": [
+          36,
+          36,
+          255
+        ],
+        "8": [
+          73,
+          73,
+          255
+        ],
+        "1": [
+          255,
+          255,
+          255
+        ],
+        "10": [
+          36,
+          0,
+          182
+        ],
+        "11": [
+          0,
+          0,
+          73
+        ]
+      },
+      "box": [
+        3,
+        1,
+        29,
+        31
+      ]
+    }
+  ],
+  "inventory": [
+    {
+      "id": 0,
+      "label": "word_ABE2C",
+      "dimensions": [
+        1,
+        1
+      ],
+      "hotspot": [
+        0,
+        0
+      ],
+      "pieces": [],
+      "dplc_label": "word_ABE2C",
+      "dplc_entries": [],
+      "opaque": 0
+    },
+    {
+      "id": 1,
+      "label": "word_ABE2E",
+      "dimensions": [
+        32,
+        40
+      ],
+      "hotspot": [
+        16,
+        35
+      ],
+      "pieces": [
+        [
+          -16,
+          -35,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -14,
+          -3,
+          3,
+          1,
+          16,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "word_ABEDA",
+      "dplc_entries": [
+        [
+          16,
+          0
+        ],
+        [
+          3,
+          16
+        ]
+      ],
+      "opaque": 936
+    },
+    {
+      "id": 2,
+      "label": "word_ABE3C",
+      "dimensions": [
+        32,
+        48
+      ],
+      "hotspot": [
+        16,
+        43
+      ],
+      "pieces": [
+        [
+          -16,
+          -43,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -15,
+          -11,
+          3,
+          2,
+          16,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "word_ABEE0",
+      "dplc_entries": [
+        [
+          16,
+          19
+        ],
+        [
+          6,
+          35
+        ]
+      ],
+      "opaque": 976
+    },
+    {
+      "id": 3,
+      "label": "word_ABE4A",
+      "dimensions": [
+        32,
+        56
+      ],
+      "hotspot": [
+        16,
+        43
+      ],
+      "pieces": [
+        [
+          -16,
+          -43,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -14,
+          -11,
+          3,
+          1,
+          16,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -14,
+          -3,
+          2,
+          2,
+          19,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "word_ABEE6",
+      "dplc_entries": [
+        [
+          16,
+          41
+        ],
+        [
+          3,
+          57
+        ],
+        [
+          4,
+          60
+        ]
+      ],
+      "opaque": 943
+    },
+    {
+      "id": 4,
+      "label": "word_ABE5E",
+      "dimensions": [
+        32,
+        56
+      ],
+      "hotspot": [
+        16,
+        43
+      ],
+      "pieces": [
+        [
+          -16,
+          -43,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -14,
+          -11,
+          3,
+          1,
+          16,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -14,
+          -3,
+          2,
+          2,
+          19,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "word_ABEEE",
+      "dplc_entries": [
+        [
+          16,
+          64
+        ],
+        [
+          3,
+          80
+        ],
+        [
+          4,
+          83
+        ]
+      ],
+      "opaque": 943
+    },
+    {
+      "id": 5,
+      "label": "word_ABE72",
+      "dimensions": [
+        32,
+        56
+      ],
+      "hotspot": [
+        18,
+        43
+      ],
+      "pieces": [
+        [
+          -18,
+          -43,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -10,
+          -11,
+          3,
+          1,
+          16,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          -10,
+          -3,
+          1,
+          2,
+          19,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "word_ABEF6",
+      "dplc_entries": [
+        [
+          16,
+          87
+        ],
+        [
+          3,
+          103
+        ],
+        [
+          2,
+          106
+        ]
+      ],
+      "opaque": 980
+    },
+    {
+      "id": 6,
+      "label": "word_ABE86",
+      "dimensions": [
+        32,
+        56
+      ],
+      "hotspot": [
+        17,
+        43
+      ],
+      "pieces": [
+        [
+          -17,
+          -43,
+          4,
+          4,
+          0,
+          1,
+          0,
+          0,
+          1
+        ],
+        [
+          -9,
+          -11,
+          3,
+          1,
+          16,
+          1,
+          0,
+          0,
+          1
+        ],
+        [
+          -1,
+          -3,
+          2,
+          2,
+          19,
+          1,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "word_ABEFE",
+      "dplc_entries": [
+        [
+          16,
+          41
+        ],
+        [
+          3,
+          57
+        ],
+        [
+          4,
+          60
+        ]
+      ],
+      "opaque": 943
+    },
+    {
+      "id": 7,
+      "label": "word_ABE9A",
+      "dimensions": [
+        32,
+        56
+      ],
+      "hotspot": [
+        17,
+        43
+      ],
+      "pieces": [
+        [
+          -17,
+          -43,
+          4,
+          4,
+          0,
+          1,
+          0,
+          0,
+          1
+        ],
+        [
+          -9,
+          -11,
+          3,
+          1,
+          16,
+          1,
+          0,
+          0,
+          1
+        ],
+        [
+          -1,
+          -3,
+          2,
+          2,
+          19,
+          1,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "word_ABF06",
+      "dplc_entries": [
+        [
+          16,
+          64
+        ],
+        [
+          3,
+          80
+        ],
+        [
+          4,
+          83
+        ]
+      ],
+      "opaque": 943
+    },
+    {
+      "id": 8,
+      "label": "word_ABEAE",
+      "dimensions": [
+        32,
+        56
+      ],
+      "hotspot": [
+        16,
+        43
+      ],
+      "pieces": [
+        [
+          -16,
+          -43,
+          4,
+          4,
+          0,
+          1,
+          0,
+          0,
+          1
+        ],
+        [
+          -16,
+          -11,
+          3,
+          1,
+          16,
+          1,
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          -3,
+          1,
+          2,
+          19,
+          1,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "word_ABF0E",
+      "dplc_entries": [
+        [
+          16,
+          87
+        ],
+        [
+          3,
+          103
+        ],
+        [
+          2,
+          106
+        ]
+      ],
+      "opaque": 980
+    },
+    {
+      "id": 9,
+      "label": "word_ABEC2",
+      "dimensions": [
+        32,
+        32
+      ],
+      "hotspot": [
+        16,
+        38
+      ],
+      "pieces": [
+        [
+          -16,
+          -38,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "word_ABF16",
+      "dplc_entries": [
+        [
+          16,
+          108
+        ]
+      ],
+      "opaque": 692
+    },
+    {
+      "id": 10,
+      "label": "word_ABECA",
+      "dimensions": [
+        32,
+        32
+      ],
+      "hotspot": [
+        16,
+        38
+      ],
+      "pieces": [
+        [
+          -16,
+          -38,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "word_ABF1A",
+      "dplc_entries": [
+        [
+          16,
+          124
+        ]
+      ],
+      "opaque": 692
+    },
+    {
+      "id": 11,
+      "label": "word_ABED2",
+      "dimensions": [
+        32,
+        32
+      ],
+      "hotspot": [
+        16,
+        38
+      ],
+      "pieces": [
+        [
+          -16,
+          -38,
+          4,
+          4,
+          0,
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "dplc_label": "word_ABF1E",
+      "dplc_entries": [
+        [
+          16,
+          140
+        ]
+      ],
+      "opaque": 640
+    }
+  ],
+  "frames": [
+    {
+      "id": 1,
+      "selected": "S2",
+      "area": 879,
+      "native_area": 936,
+      "ratio": 0.969073043739513,
+      "native_colors": 9,
+      "authored_colors": 9,
+      "mapping_mask_pixels_removed": 3,
+      "canvas": [
+        32,
+        40
+      ],
+      "hotspot": [
+        16,
+        35
+      ],
+      "native_head_guide": [
+        2,
+        0,
+        30,
+        26
+      ],
+      "native_torso_guide": [
+        5,
+        26,
+        27,
+        39
+      ],
+      "reduction": {
+        "id": 1,
+        "attempt": "S2",
+        "area": 882,
+        "native_area": 936,
+        "ratio": 0.970725343394151,
+        "raw_box": [
+          210,
+          59,
+          912,
+          1367
+        ],
+        "reduced_size": [
+          28,
+          40
+        ]
+      },
+      "previous_generation": {
+        "id": 1,
+        "file": "s3k-blue-sphere-01.png",
+        "prompt": "One original 16-bit MICA pangolin sprite. Image 1: exact native pose, dimensions, viewpoint. Image 2: MICA concept identity. Image 3: approved pixel-art style. STRICT BACK VIEW, standing still facing away from viewer. Both feet planted beside each other at same height, arms relaxed, NOT running or stepping. Preserve native short compact standing silhouette and viewpoint. Jade rounded overlapping scales and tapered scale tail, coral boots, white gloves. Original redraw, no recolouring, no Sonic quills/spikes/blue fur. Crisp dark outline and chunky pixel clusters with restrained highlights. Same framing as image 1, transparent background, one isolated sprite, no shadows/text/effects.\n",
+        "raw_sha256": "99bfd66f5562856297ac71415114dee0014fb04f2c1e6118e54cf9482fbe9b70",
+        "native_ink_box": [
+          1,
+          0,
+          29,
+          40
+        ],
+        "rejected_raw_sha256": "fd326840b8ff444cd6a5b002fcdc67e5909c70b9bf6bccf08ff80edd155294bd",
+        "rejection_reason": "Initial pose drift: horizontal orientation, stationary feet or behind-view curl; replaced with a targeted GPT redraw.",
+        "rejected_generations": [
+          {
+            "prompt": "Use case: style-transfer. Asset: one native game sprite, s3k-blue-sphere-01. Reference 1 is the 8x nearest-neighbour native POSE ONLY. Reference 2 is MICA's identity concept. Reference 3 is the approved MICA pixel style. Redraw the character from scratch as MICA the ORIGINAL pangolin; never recolour Sonic. Follow EXACT BACK VIEW running pose, limb positions, viewpoint and orientation of reference 1. Character faces away, with back scales visible, not a front-facing portrait. Preserve the native lean even for diagonal or horizontal poses. Preserve exact pose, bounding-box proportions, framing and relative limb sizes. Jade rounded overlapping scales, tapered scaled tail, cream skin, coral hiking boots with tan soles, white gloves. Faithful chunky 16-bit pixel art with crisp clusters, dark outline, restrained highlights, no blur. Transparent background; one isolated sprite only, no text, no floor/shadow, no effects. NO Sonic quills, spikes, blue fur or Sonic shoes. No added front face when viewed from behind. This frame belongs to a coherent animation; keep scale size and body proportions consistent with the anchors.\n",
+            "raw_sha256": "fd326840b8ff444cd6a5b002fcdc67e5909c70b9bf6bccf08ff80edd155294bd"
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "selected": "S2",
+      "area": 967,
+      "native_area": 976,
+      "ratio": 0.9953786658978533,
+      "native_colors": 8,
+      "authored_colors": 8,
+      "mapping_mask_pixels_removed": 23,
+      "canvas": [
+        32,
+        48
+      ],
+      "hotspot": [
+        16,
+        43
+      ],
+      "native_head_guide": [
+        2,
+        0,
+        30,
+        26
+      ],
+      "native_torso_guide": [
+        5,
+        26,
+        27,
+        39
+      ],
+      "reduction": {
+        "id": 2,
+        "attempt": "S2",
+        "area": 990,
+        "native_area": 976,
+        "ratio": 1.0071465942429045,
+        "raw_box": [
+          161,
+          76,
+          863,
+          1472
+        ],
+        "reduced_size": [
+          27,
+          48
+        ]
+      },
+      "previous_generation": {
+        "id": 2,
+        "file": "s3k-blue-sphere-02.png",
+        "prompt": "Use case: style-transfer. Asset: one native game sprite, s3k-blue-sphere-02. Reference 1 is the 8x nearest-neighbour native POSE ONLY. Reference 2 is MICA's identity concept. Reference 3 is the approved MICA pixel style. Redraw the character from scratch as MICA the ORIGINAL pangolin; never recolour Sonic. Follow EXACT BACK VIEW running pose, limb positions, viewpoint and orientation of reference 1. Character faces away, with back scales visible, not a front-facing portrait. Preserve the native lean even for diagonal or horizontal poses. Preserve exact pose, bounding-box proportions, framing and relative limb sizes. Jade rounded overlapping scales, tapered scaled tail, cream skin, coral hiking boots with tan soles, white gloves. Faithful chunky 16-bit pixel art with crisp clusters, dark outline, restrained highlights, no blur. Transparent background; one isolated sprite only, no text, no floor/shadow, no effects. NO Sonic quills, spikes, blue fur or Sonic shoes. No added front face when viewed from behind. This frame belongs to a coherent animation; keep scale size and body proportions consistent with the anchors.\n",
+        "raw_sha256": "aa1ce6538388bc030ceb5fa0d49841f3499cbb0a895d2c06f3ccc1ef1cc0e7fb",
+        "native_ink_box": [
+          2,
+          0,
+          29,
+          48
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "selected": "S1",
+      "area": 881,
+      "native_area": 943,
+      "ratio": 0.9665673209881043,
+      "native_colors": 9,
+      "authored_colors": 9,
+      "mapping_mask_pixels_removed": 0,
+      "canvas": [
+        32,
+        56
+      ],
+      "hotspot": [
+        16,
+        43
+      ],
+      "native_head_guide": [
+        2,
+        0,
+        30,
+        26
+      ],
+      "native_torso_guide": [
+        5,
+        26,
+        27,
+        39
+      ],
+      "reduction": {
+        "id": 3,
+        "attempt": "S1",
+        "area": 848,
+        "native_area": 943,
+        "ratio": 0.9482919846909263,
+        "raw_box": [
+          104,
+          79,
+          905,
+          1601
+        ],
+        "reduced_size": [
+          28,
+          51
+        ]
+      },
+      "previous_generation": {
+        "id": 3,
+        "file": "s3k-blue-sphere-03.png",
+        "prompt": "Use case: style-transfer. Asset: one native game sprite, s3k-blue-sphere-03. Reference 1 is the 8x nearest-neighbour native POSE ONLY. Reference 2 is MICA's identity concept. Reference 3 is the approved MICA pixel style. Redraw the character from scratch as MICA the ORIGINAL pangolin; never recolour Sonic. Follow EXACT BACK VIEW running pose, limb positions, viewpoint and orientation of reference 1. Character faces away, with back scales visible, not a front-facing portrait. Preserve the native lean even for diagonal or horizontal poses. Preserve exact pose, bounding-box proportions, framing and relative limb sizes. Jade rounded overlapping scales, tapered scaled tail, cream skin, coral hiking boots with tan soles, white gloves. Faithful chunky 16-bit pixel art with crisp clusters, dark outline, restrained highlights, no blur. Transparent background; one isolated sprite only, no text, no floor/shadow, no effects. NO Sonic quills, spikes, blue fur or Sonic shoes. No added front face when viewed from behind. This frame belongs to a coherent animation; keep scale size and body proportions consistent with the anchors.\n",
+        "raw_sha256": "6e33a8b6de0c921d401188a743a9a6a6af7b315bf694735c053a7ebea3560d5a",
+        "native_ink_box": [
+          2,
+          0,
+          30,
+          51
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "selected": "S1",
+      "area": 902,
+      "native_area": 943,
+      "ratio": 0.9780192938436515,
+      "native_colors": 9,
+      "authored_colors": 9,
+      "mapping_mask_pixels_removed": 1,
+      "canvas": [
+        32,
+        56
+      ],
+      "hotspot": [
+        16,
+        43
+      ],
+      "native_head_guide": [
+        2,
+        0,
+        30,
+        26
+      ],
+      "native_torso_guide": [
+        5,
+        26,
+        27,
+        39
+      ],
+      "reduction": {
+        "id": 4,
+        "attempt": "S1",
+        "area": 903,
+        "native_area": 943,
+        "ratio": 0.9785612829646886,
+        "raw_box": [
+          40,
+          85,
+          834,
+          1590
+        ],
+        "reduced_size": [
+          30,
+          52
+        ]
+      },
+      "previous_generation": {
+        "id": 4,
+        "file": "s3k-blue-sphere-04.png",
+        "prompt": "Use case: style-transfer. Asset: one native game sprite, s3k-blue-sphere-04. Reference 1 is the 8x nearest-neighbour native POSE ONLY. Reference 2 is MICA's identity concept. Reference 3 is the approved MICA pixel style. Redraw the character from scratch as MICA the ORIGINAL pangolin; never recolour Sonic. Follow EXACT BACK VIEW running pose, limb positions, viewpoint and orientation of reference 1. Character faces away, with back scales visible, not a front-facing portrait. Preserve the native lean even for diagonal or horizontal poses. Preserve exact pose, bounding-box proportions, framing and relative limb sizes. Jade rounded overlapping scales, tapered scaled tail, cream skin, coral hiking boots with tan soles, white gloves. Faithful chunky 16-bit pixel art with crisp clusters, dark outline, restrained highlights, no blur. Transparent background; one isolated sprite only, no text, no floor/shadow, no effects. NO Sonic quills, spikes, blue fur or Sonic shoes. No added front face when viewed from behind. This frame belongs to a coherent animation; keep scale size and body proportions consistent with the anchors.\n",
+        "raw_sha256": "c36c543fcdc049c351847e7f80d2935a894731f72850a7221cebd8beb3cd4380",
+        "native_ink_box": [
+          0,
+          0,
+          30,
+          52
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "selected": "S2",
+      "area": 929,
+      "native_area": 980,
+      "ratio": 0.9736319549364993,
+      "native_colors": 9,
+      "authored_colors": 9,
+      "mapping_mask_pixels_removed": 24,
+      "canvas": [
+        32,
+        56
+      ],
+      "hotspot": [
+        18,
+        43
+      ],
+      "native_head_guide": [
+        2,
+        0,
+        30,
+        26
+      ],
+      "native_torso_guide": [
+        5,
+        26,
+        27,
+        39
+      ],
+      "reduction": {
+        "id": 5,
+        "attempt": "S2",
+        "area": 953,
+        "native_area": 980,
+        "ratio": 0.9861282774527038,
+        "raw_box": [
+          51,
+          111,
+          907,
+          1613
+        ],
+        "reduced_size": [
+          32,
+          53
+        ]
+      },
+      "previous_generation": {
+        "id": 5,
+        "file": "s3k-blue-sphere-05.png",
+        "prompt": "Use case: style-transfer. Asset: one native game sprite, s3k-blue-sphere-05. Reference 1 is the 8x nearest-neighbour native POSE ONLY. Reference 2 is MICA's identity concept. Reference 3 is the approved MICA pixel style. Redraw the character from scratch as MICA the ORIGINAL pangolin; never recolour Sonic. Follow EXACT BACK VIEW running pose, limb positions, viewpoint and orientation of reference 1. Character faces away, with back scales visible, not a front-facing portrait. Preserve the native lean even for diagonal or horizontal poses. Preserve exact pose, bounding-box proportions, framing and relative limb sizes. Jade rounded overlapping scales, tapered scaled tail, cream skin, coral hiking boots with tan soles, white gloves. Faithful chunky 16-bit pixel art with crisp clusters, dark outline, restrained highlights, no blur. Transparent background; one isolated sprite only, no text, no floor/shadow, no effects. NO Sonic quills, spikes, blue fur or Sonic shoes. No added front face when viewed from behind. This frame belongs to a coherent animation; keep scale size and body proportions consistent with the anchors.\n",
+        "raw_sha256": "535efc96f58c2f666534242c6b7ae794be2512914b34a5ee81aae76846990daa",
+        "native_ink_box": [
+          0,
+          0,
+          32,
+          53
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "selected": "S2",
+      "area": 933,
+      "native_area": 943,
+      "ratio": 0.9946836412293982,
+      "native_colors": 9,
+      "authored_colors": 9,
+      "mapping_mask_pixels_removed": 6,
+      "canvas": [
+        32,
+        56
+      ],
+      "hotspot": [
+        17,
+        43
+      ],
+      "native_head_guide": [
+        2,
+        0,
+        30,
+        26
+      ],
+      "native_torso_guide": [
+        5,
+        26,
+        27,
+        39
+      ],
+      "reduction": {
+        "id": 6,
+        "attempt": "S2",
+        "area": 939,
+        "native_area": 943,
+        "ratio": 0.9978768553542815,
+        "raw_box": [
+          66,
+          76,
+          845,
+          1578
+        ],
+        "reduced_size": [
+          28,
+          51
+        ]
+      },
+      "previous_generation": {
+        "id": 6,
+        "file": "s3k-blue-sphere-06.png",
+        "prompt": "Use case: style-transfer. Asset: one native game sprite, s3k-blue-sphere-06. Reference 1 is the 8x nearest-neighbour native POSE ONLY. Reference 2 is MICA's identity concept. Reference 3 is the approved MICA pixel style. Redraw the character from scratch as MICA the ORIGINAL pangolin; never recolour Sonic. Follow EXACT BACK VIEW running pose, limb positions, viewpoint and orientation of reference 1. Character faces away, with back scales visible, not a front-facing portrait. Preserve the native lean even for diagonal or horizontal poses. Preserve exact pose, bounding-box proportions, framing and relative limb sizes. Jade rounded overlapping scales, tapered scaled tail, cream skin, coral hiking boots with tan soles, white gloves. Faithful chunky 16-bit pixel art with crisp clusters, dark outline, restrained highlights, no blur. Transparent background; one isolated sprite only, no text, no floor/shadow, no effects. NO Sonic quills, spikes, blue fur or Sonic shoes. No added front face when viewed from behind. This frame belongs to a coherent animation; keep scale size and body proportions consistent with the anchors.\n",
+        "raw_sha256": "8f0628e6c5f35aaef22e969d67663ef088403315a70933141459d573ccf8f02b",
+        "native_ink_box": [
+          2,
+          0,
+          30,
+          51
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "selected": "S2",
+      "area": 944,
+      "native_area": 943,
+      "ratio": 1.0005300821999619,
+      "native_colors": 9,
+      "authored_colors": 9,
+      "mapping_mask_pixels_removed": 13,
+      "canvas": [
+        32,
+        56
+      ],
+      "hotspot": [
+        17,
+        43
+      ],
+      "native_head_guide": [
+        2,
+        0,
+        30,
+        26
+      ],
+      "native_torso_guide": [
+        5,
+        26,
+        27,
+        39
+      ],
+      "reduction": {
+        "id": 7,
+        "attempt": "S2",
+        "area": 957,
+        "native_area": 943,
+        "ratio": 1.0073957690098148,
+        "raw_box": [
+          43,
+          120,
+          903,
+          1553
+        ],
+        "reduced_size": [
+          30,
+          52
+        ]
+      },
+      "previous_generation": {
+        "id": 7,
+        "file": "s3k-blue-sphere-07.png",
+        "prompt": "Use case: style-transfer. Asset: one native game sprite, s3k-blue-sphere-07. Reference 1 is the 8x nearest-neighbour native POSE ONLY. Reference 2 is MICA's identity concept. Reference 3 is the approved MICA pixel style. Redraw the character from scratch as MICA the ORIGINAL pangolin; never recolour Sonic. Follow EXACT BACK VIEW running pose, limb positions, viewpoint and orientation of reference 1. Character faces away, with back scales visible, not a front-facing portrait. Preserve the native lean even for diagonal or horizontal poses. Preserve exact pose, bounding-box proportions, framing and relative limb sizes. Jade rounded overlapping scales, tapered scaled tail, cream skin, coral hiking boots with tan soles, white gloves. Faithful chunky 16-bit pixel art with crisp clusters, dark outline, restrained highlights, no blur. Transparent background; one isolated sprite only, no text, no floor/shadow, no effects. NO Sonic quills, spikes, blue fur or Sonic shoes. No added front face when viewed from behind. This frame belongs to a coherent animation; keep scale size and body proportions consistent with the anchors.\n",
+        "raw_sha256": "dedd9c9a8c0df245c7bd937ce181fa3dc252a4e96e9e15c322b741fc1e4eb6bd",
+        "native_ink_box": [
+          2,
+          0,
+          32,
+          52
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "selected": "S1",
+      "area": 992,
+      "native_area": 980,
+      "ratio": 1.0061038206662292,
+      "native_colors": 9,
+      "authored_colors": 9,
+      "mapping_mask_pixels_removed": 46,
+      "canvas": [
+        32,
+        56
+      ],
+      "hotspot": [
+        16,
+        43
+      ],
+      "native_head_guide": [
+        2,
+        0,
+        30,
+        26
+      ],
+      "native_torso_guide": [
+        5,
+        26,
+        27,
+        39
+      ],
+      "reduction": {
+        "id": 8,
+        "attempt": "S1",
+        "area": 1038,
+        "native_area": 980,
+        "ratio": 1.0291664945330214,
+        "raw_box": [
+          78,
+          75,
+          869,
+          1606
+        ],
+        "reduced_size": [
+          32,
+          53
+        ]
+      },
+      "previous_generation": {
+        "id": 8,
+        "file": "s3k-blue-sphere-08.png",
+        "prompt": "Use case: style-transfer. Asset: one native game sprite, s3k-blue-sphere-08. Reference 1 is the 8x nearest-neighbour native POSE ONLY. Reference 2 is MICA's identity concept. Reference 3 is the approved MICA pixel style. Redraw the character from scratch as MICA the ORIGINAL pangolin; never recolour Sonic. Follow EXACT BACK VIEW running pose, limb positions, viewpoint and orientation of reference 1. Character faces away, with back scales visible, not a front-facing portrait. Preserve the native lean even for diagonal or horizontal poses. Preserve exact pose, bounding-box proportions, framing and relative limb sizes. Jade rounded overlapping scales, tapered scaled tail, cream skin, coral hiking boots with tan soles, white gloves. Faithful chunky 16-bit pixel art with crisp clusters, dark outline, restrained highlights, no blur. Transparent background; one isolated sprite only, no text, no floor/shadow, no effects. NO Sonic quills, spikes, blue fur or Sonic shoes. No added front face when viewed from behind. This frame belongs to a coherent animation; keep scale size and body proportions consistent with the anchors.\n",
+        "raw_sha256": "4ce69771e09fedb94dfe4e2a0147374aa3a8184b681bd55fb3c9fcc6c65ad565",
+        "native_ink_box": [
+          0,
+          0,
+          32,
+          53
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "selected": "S2",
+      "area": 657,
+      "native_area": 692,
+      "ratio": 0.9743828638260831,
+      "native_colors": 6,
+      "authored_colors": 6,
+      "mapping_mask_pixels_removed": 0,
+      "canvas": [
+        32,
+        32
+      ],
+      "hotspot": [
+        16,
+        38
+      ],
+      "native_head_guide": [
+        2,
+        0,
+        30,
+        26
+      ],
+      "native_torso_guide": [
+        5,
+        26,
+        27,
+        39
+      ],
+      "reduction": {
+        "id": 9,
+        "attempt": "S2",
+        "area": 657,
+        "native_area": 692,
+        "ratio": 0.9743828638260831,
+        "raw_box": [
+          120,
+          111,
+          1135,
+          1116
+        ],
+        "reduced_size": [
+          27,
+          32
+        ]
+      },
+      "previous_generation": {
+        "id": 9,
+        "file": "s3k-blue-sphere-09.png",
+        "prompt": "One original 16-bit MICA pangolin sprite. Image 1: exact native pose, dimensions, viewpoint. Image 2: MICA concept identity. Image 3: approved pixel-art style. STRICT BACK VIEW FULLY CURLED pangolin scale-armour BALL. Entire outer silhouette is rounded jade scale armour. NO FACE, NO EYES, NO MUZZLE, NO WHITE GLOVES, NO BOOTS visible: they are fully tucked INSIDE the armoured sphere. Match native ellipsoid proportions exactly, reflect its rolling phase with scale orientation; do not draw a standing pangolin or front view. Original redraw, no recolouring, no Sonic quills/spikes/blue fur. Crisp dark outline and chunky pixel clusters with restrained highlights. Same framing as image 1, transparent background, one isolated sprite, no shadows/text/effects.\n",
+        "raw_sha256": "98067f65af47e2acb0d0cfa55c8a9de46339d9abc00c8b8d9d325eba3929c10f",
+        "native_ink_box": [
+          3,
+          0,
+          29,
+          32
+        ],
+        "rejected_raw_sha256": "efd5cbf86076297944dda20c682b28b36f4fcf972f4826e79aa570c37bc3a07b",
+        "rejection_reason": "Initial pose drift: horizontal orientation, stationary feet or behind-view curl; replaced with a targeted GPT redraw.",
+        "rejected_generations": [
+          {
+            "prompt": "Use case: style-transfer. Asset: one native game sprite, s3k-blue-sphere-09. Reference 1 is the 8x nearest-neighbour native POSE ONLY. Reference 2 is MICA's identity concept. Reference 3 is the approved MICA pixel style. Redraw the character from scratch as MICA the ORIGINAL pangolin; never recolour Sonic. Follow EXACT curled/rolling pose and orientation in reference 1; show rounded overlapping jade scale armour wrapping the pangolin, with tucked cream muzzle, gloves or boots ONLY where this pose reveals them. Preserve exact pose, bounding-box proportions, framing and relative limb sizes. Jade rounded overlapping scales, tapered scaled tail, cream skin, coral hiking boots with tan soles, white gloves. Faithful chunky 16-bit pixel art with crisp clusters, dark outline, restrained highlights, no blur. Transparent background; one isolated sprite only, no text, no floor/shadow, no effects. NO Sonic quills, spikes, blue fur or Sonic shoes. No added front face when viewed from behind. This frame belongs to a coherent animation; keep scale size and body proportions consistent with the anchors.\n",
+            "raw_sha256": "efd5cbf86076297944dda20c682b28b36f4fcf972f4826e79aa570c37bc3a07b"
+          }
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "selected": "S1",
+      "area": 661,
+      "native_area": 692,
+      "ratio": 0.9773445206981662,
+      "native_colors": 6,
+      "authored_colors": 6,
+      "mapping_mask_pixels_removed": 0,
+      "canvas": [
+        32,
+        32
+      ],
+      "hotspot": [
+        16,
+        38
+      ],
+      "native_head_guide": [
+        2,
+        0,
+        30,
+        26
+      ],
+      "native_torso_guide": [
+        5,
+        26,
+        27,
+        39
+      ],
+      "reduction": {
+        "id": 10,
+        "attempt": "S1",
+        "area": 661,
+        "native_area": 692,
+        "ratio": 0.9773445206981662,
+        "raw_box": [
+          107,
+          69,
+          1147,
+          1164
+        ],
+        "reduced_size": [
+          27,
+          32
+        ]
+      },
+      "previous_generation": {
+        "id": 10,
+        "file": "s3k-blue-sphere-10.png",
+        "prompt": "One original 16-bit MICA pangolin sprite. Image 1: exact native pose, dimensions, viewpoint. Image 2: MICA concept identity. Image 3: approved pixel-art style. STRICT BACK VIEW FULLY CURLED pangolin scale-armour BALL. Entire outer silhouette is rounded jade scale armour. NO FACE, NO EYES, NO MUZZLE, NO WHITE GLOVES, NO BOOTS visible: they are fully tucked INSIDE the armoured sphere. Match native ellipsoid proportions exactly, reflect its rolling phase with scale orientation; do not draw a standing pangolin or front view. Original redraw, no recolouring, no Sonic quills/spikes/blue fur. Crisp dark outline and chunky pixel clusters with restrained highlights. Same framing as image 1, transparent background, one isolated sprite, no shadows/text/effects.\n",
+        "raw_sha256": "6c249b9cc92882ea5176292406f1d98e211e9eed968897223727fea402ea1262",
+        "native_ink_box": [
+          3,
+          0,
+          29,
+          32
+        ],
+        "rejected_raw_sha256": "b03534eb76897277a0e7e4ad331cdc86dd6765df2c0f2d853b8f9cb5d4394aa1",
+        "rejection_reason": "Initial pose drift: horizontal orientation, stationary feet or behind-view curl; replaced with a targeted GPT redraw.",
+        "rejected_generations": [
+          {
+            "prompt": "Use case: style-transfer. Asset: one native game sprite, s3k-blue-sphere-10. Reference 1 is the 8x nearest-neighbour native POSE ONLY. Reference 2 is MICA's identity concept. Reference 3 is the approved MICA pixel style. Redraw the character from scratch as MICA the ORIGINAL pangolin; never recolour Sonic. Follow EXACT curled/rolling pose and orientation in reference 1; show rounded overlapping jade scale armour wrapping the pangolin, with tucked cream muzzle, gloves or boots ONLY where this pose reveals them. Preserve exact pose, bounding-box proportions, framing and relative limb sizes. Jade rounded overlapping scales, tapered scaled tail, cream skin, coral hiking boots with tan soles, white gloves. Faithful chunky 16-bit pixel art with crisp clusters, dark outline, restrained highlights, no blur. Transparent background; one isolated sprite only, no text, no floor/shadow, no effects. NO Sonic quills, spikes, blue fur or Sonic shoes. No added front face when viewed from behind. This frame belongs to a coherent animation; keep scale size and body proportions consistent with the anchors.\n",
+            "raw_sha256": "b03534eb76897277a0e7e4ad331cdc86dd6765df2c0f2d853b8f9cb5d4394aa1"
+          }
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "selected": "S1",
+      "area": 590,
+      "native_area": 640,
+      "ratio": 0.960143218483576,
+      "native_colors": 5,
+      "authored_colors": 5,
+      "mapping_mask_pixels_removed": 0,
+      "canvas": [
+        32,
+        32
+      ],
+      "hotspot": [
+        16,
+        38
+      ],
+      "native_head_guide": [
+        2,
+        0,
+        30,
+        26
+      ],
+      "native_torso_guide": [
+        5,
+        26,
+        27,
+        39
+      ],
+      "reduction": {
+        "id": 11,
+        "attempt": "S1",
+        "area": 590,
+        "native_area": 640,
+        "ratio": 0.960143218483576,
+        "raw_box": [
+          52,
+          38,
+          1203,
+          1210
+        ],
+        "reduced_size": [
+          27,
+          30
+        ]
+      },
+      "previous_generation": {
+        "id": 11,
+        "file": "s3k-blue-sphere-11.png",
+        "prompt": "One original 16-bit MICA pangolin sprite. Image 1: exact native pose, dimensions, viewpoint. Image 2: MICA concept identity. Image 3: approved pixel-art style. STRICT BACK VIEW FULLY CURLED pangolin scale-armour BALL. Entire outer silhouette is rounded jade scale armour. NO FACE, NO EYES, NO MUZZLE, NO WHITE GLOVES, NO BOOTS visible: they are fully tucked INSIDE the armoured sphere. Match native ellipsoid proportions exactly, reflect its rolling phase with scale orientation; do not draw a standing pangolin or front view. Original redraw, no recolouring, no Sonic quills/spikes/blue fur. Crisp dark outline and chunky pixel clusters with restrained highlights. Same framing as image 1, transparent background, one isolated sprite, no shadows/text/effects.\n",
+        "raw_sha256": "b9abc70588a288418150fa529c1b141117aec6dc4cb1f8ebd2f2928981e04797",
+        "native_ink_box": [
+          3,
+          1,
+          29,
+          31
+        ],
+        "rejected_raw_sha256": "24086c96791913ef57ab0c73c67529ce8c7bfa0ef1054ef4cabf0e5119ac2637",
+        "rejection_reason": "Initial pose drift: horizontal orientation, stationary feet or behind-view curl; replaced with a targeted GPT redraw.",
+        "rejected_generations": [
+          {
+            "prompt": "Use case: style-transfer. Asset: one native game sprite, s3k-blue-sphere-11. Reference 1 is the 8x nearest-neighbour native POSE ONLY. Reference 2 is MICA's identity concept. Reference 3 is the approved MICA pixel style. Redraw the character from scratch as MICA the ORIGINAL pangolin; never recolour Sonic. Follow EXACT curled/rolling pose and orientation in reference 1; show rounded overlapping jade scale armour wrapping the pangolin, with tucked cream muzzle, gloves or boots ONLY where this pose reveals them. Preserve exact pose, bounding-box proportions, framing and relative limb sizes. Jade rounded overlapping scales, tapered scaled tail, cream skin, coral hiking boots with tan soles, white gloves. Faithful chunky 16-bit pixel art with crisp clusters, dark outline, restrained highlights, no blur. Transparent background; one isolated sprite only, no text, no floor/shadow, no effects. NO Sonic quills, spikes, blue fur or Sonic shoes. No added front face when viewed from behind. This frame belongs to a coherent animation; keep scale size and body proportions consistent with the anchors.\n",
+            "raw_sha256": "24086c96791913ef57ab0c73c67529ce8c7bfa0ef1054ef4cabf0e5119ac2637"
+          }
+        ]
+      }
+    }
+  ],
+  "style_gate": "All eleven nonblank native/new pairs independently inspected without labels at 4x, alongside guides and prior art. Reject black-contour A/B candidates; select native-like shade-defined S candidates. Assessment remains visual, not a numerical style equivalence proof.",
+  "style_observations": {
+    "outline": "one-pixel deep hue-coloured outer edge; thicker clusters are underside shadows, not black strokes",
+    "lighting": "upper-left/front highlight and dark lower/right faces",
+    "dither": "native 2x2 diagonal transitions: standing 15, running 10-12, balls 2-3, blur 0; sparse cluster corners rather than all-over checkerboard",
+    "materials": "native blue ramp 8/9/10/11 plus 15 glint maps to jade ramp 2-6; coral, white and warm sole/face share remaining slots",
+    "highlight": "short faceted upper-left streaks; blur has isolated glint"
+  },
+  "size_checks": {
+    "standing": {
+      "native_mean": 936.0,
+      "authored_mean": 879.0,
+      "ratio": 0.969073043739513
+    },
+    "run": {
+      "native_mean": 958.2857142857143,
+      "authored_mean": 935.4285714285714,
+      "ratio": 0.9880019651420878
+    },
+    "jump": {
+      "native_mean": 674.6666666666666,
+      "authored_mean": 636.0,
+      "ratio": 0.970921081775225
+    },
+    "all": {
+      "native_mean": 878.9090909090909,
+      "authored_mean": 848.6363636363636,
+      "ratio": 0.9826273326999253
+    }
+  },
+  "failed_attempts": [
+    {
+      "id": 4,
+      "attempt": "first-A",
+      "reason": "image service output moderation, category other; no image returned"
+    },
+    {
+      "id": 6,
+      "attempt": "S1",
+      "reason": "image service output moderation, category other; no image returned"
+    },
+    {
+      "batch": "initial frames 5-8",
+      "reason": "image service output moderation, category other; rejected request cannot be assigned to a returned image"
+    }
+  ],
+  "validation": {
+    "base": "b8c105a986",
+    "python": "57 passed",
+    "java": "72 passed, zero failures/errors/skips",
+    "art": "12 selectors: palette, dimensions, native mapping coverage, tile aliases, DPLC capacity, fixed variants and byte-identical rebuild",
+    "media": "60 fps lossless RGB MP4; decoded run frame 9 and gameplay frame 425 exactly match source RGB",
+    "audit": "all totals unchanged; no fallback rows moved",
+    "review": "$HOME/scratch/agent-tmp/mica-blue-redo-20261110/review.html",
+    "capture": "870 native-control frames from positioned CNZ giant-ring entry; jump visible 425/450, turn visible 480, running visible 515, then red-sphere failure; no route completion claim"
+  },
+  "source_citations": [
+    "Obj_SStage_8FAA (sonic3k.asm:11449-11501)",
+    "loc_907E (sonic3k.asm:11502-11542)",
+    "loc_90EE (sonic3k.asm:11543-11581)",
+    "SStage_PLCLoad_91A2 (sonic3k.asm:11597-11627)",
+    "byte_91E8 (sonic3k.asm:11628-11629)",
+    "byte_91F6 (sonic3k.asm:11630-11631)"
+  ]
+}
