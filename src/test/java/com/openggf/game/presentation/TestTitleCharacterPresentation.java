@@ -52,4 +52,34 @@ class TestTitleCharacterPresentation {
         assertThrows(IllegalArgumentException.class,()->new CharacterPresentation.TitlePlaneMask(new byte[64]));
         pixels[0]=2;assertThrows(IllegalArgumentException.class,()->new CharacterPresentation.TitlePlaneMask(pixels));
     }
+    @Test void ownedAperturePixelsRemainOpaqueUnderEveryNativeTileFlip() {
+        var source = new com.openggf.level.Pattern();
+        for (int y=0;y<8;y++) for (int x=0;x<8;x++) source.setPixel(x,y,(byte)3);
+        byte[] mask = new byte[320*224];
+        // A sparse ownership mask must never clear the rest of the sprite's rectangular cell.
+        mask[11*320+18] = 1; mask[11*320+19] = 1;
+        byte[] replacements = new byte[320*224]; replacements[11*320+18]=15;
+        int cell = 1*40+2;
+        for (int flip : new int[]{0,0x800,0x1000,0x1800}) {
+            var opaque = TitleCharacterPresentation.maskedPattern(
+                    mask,replacements,cell,flip,source);
+            var transparent = TitleCharacterPresentation.maskedPattern(
+                    mask,new byte[320*224],cell,flip,source);
+            for (int y=0;y<8;y++) for (int x=0;x<8;x++) {
+                int px=(flip&0x800)==0 ? x : 7-x, py=(flip&0x1000)==0 ? y : 7-y;
+                assertEquals(y==3 && x==2 ? 15 : y==3 && x==3 ? 0 : 3,opaque.getPixel(px,py));
+                assertEquals(y==3 && (x==2 || x==3) ? 0 : 3,transparent.getPixel(px,py));
+                assertEquals(3,source.getPixel(x,y),"shared native tiles must stay unchanged");
+            }
+        }
+        assertNull(TitleCharacterPresentation.maskedPattern(
+                mask,replacements,0,0,source));
+        var value=new CharacterPresentation.TitlePlaneMask(mask,replacements);
+        replacements[11*320+18]=0; assertEquals(15,value.clearedPixels()[11*320+18]);
+        value.clearedPixels()[11*320+18]=0; assertEquals(15,value.clearedPixels()[11*320+18]);
+        replacements[11*320+18]=16;
+        assertThrows(IllegalArgumentException.class,()->new CharacterPresentation.TitlePlaneMask(mask,replacements));
+        assertThrows(IllegalArgumentException.class,()->new CharacterPresentation.TitlePlaneMask(mask,new byte[4]));
+        assertThrows(IllegalArgumentException.class,()->new CharacterPresentation.TitlePlaneMask(new byte[320*224],replacements));
+    }
 }

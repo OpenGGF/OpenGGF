@@ -29,5 +29,6 @@
     191
   ],
   "sqrt_mean_area_ratio": 1.0526221251595136,
-  "scratch": "$HOME/scratch/agent-tmp/mt-titles-20261110"
+  "scratch": "$HOME/scratch/agent-tmp/mt-titles-20261110",
+  "status": "Lead body/hand regenerated; see polish-s2-provenance.json. Sidekick bank remains unchanged."
 }

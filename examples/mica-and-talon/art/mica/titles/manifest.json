@@ -66,6 +66,7 @@
         "s3k-plane-12.mask",
         "s3k-plane-13-left.png",
         "s3k-plane-13-right.png",
+        "s3k-plane-13.clear",
         "s3k-plane-13.mask",
         "s3k-plane-2-left.png",
         "s3k-plane-2-right.png",
@@ -111,7 +112,8 @@
         11,
         12,
         13
-      ]
+      ],
+      "palette": "s3k-palette.json"
     }
   },
   "source": "TitlePresentation.java; official CharacterPresentation.titleMascots"

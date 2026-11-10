@@ -54,7 +54,10 @@ under the matching area heading; see the
   slot rewards and other symbols remain native. Optional per-host title mascot banks
   now supply native-selector body/hand frames and masked S3K plane art, with
   independent role palettes and native fallback; MICA and TALON supply all three
-  hosts while title timing, branding and occlusion remain native. S3K Competition wheel, arena selection, results panels and record icons now
+  hosts while title timing, branding and occlusion remain native. The S2 duo
+  stages MICA left/TALON right with a thumbs-up and connected-wing pose; all S1
+  poses follow native geometry, and MICA's S3K bank uses baked3D shading. Native
+  opaque palette clearing prevents sky holes around animated patches. S3K Competition wheel, arena selection, results panels and record icons now
   use original MICA/TALON portraits with independent palettes and native origins;
   absent portraits retain native art. Native Competition has no character-name
   strings. S3K Competition renders MICA/TALON with

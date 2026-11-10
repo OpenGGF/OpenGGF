@@ -16,22 +16,28 @@ class TitleArtTest(unittest.TestCase):
                 'S2': {f's2-{i}.png' for i in (0,1,2,3,4,5,6,7,9,18,19)},
                 'S3K': {f's3k-plane-{i}-{half}.png' for i in range(1,14) for half in ('left','right')}
                        | {f's3k-sprite-{i}.png' for i in range(5)}
-                       | {f's3k-plane-{i}.mask' for i in range(1,14)},
+                       | {f's3k-plane-{i}.mask' for i in range(1,14)}
+                       | {'s3k-plane-13.clear'},
             }
             colors = json.loads((ROOT / character / 'palette.yaml').read_text())['colors']
             for host, files in expected.items():
+                host_colors = colors if "palette" not in manifest[host] else json.loads(
+                    (root / manifest[host]["palette"]).read_text())["colors"]
                 self.assertEqual(files, set(manifest[host]['files']))
                 for name in files:
                     with self.subTest(character=character, host=host, name=name):
                         path = root / name
-                        if path.suffix == '.mask':
+                        if path.suffix in ('.mask', '.clear'):
                             mask = path.read_bytes()
                             self.assertEqual(320*224, len(mask))
-                            self.assertLessEqual(set(mask), {0,1})
+                            self.assertLessEqual(set(mask), {0,1} if path.suffix == '.mask' else {0,15})
+                            if path.suffix == '.clear':
+                                ownership=(root / 's3k-plane-13.mask').read_bytes()
+                                self.assertTrue(all(not ink or owned for ink,owned in zip(mask,ownership)))
                         else:
                             with Image.open(path) as image:
                                 self.assertEqual('P', image.mode)
-                                self.assertEqual(sum(colors, []), image.getpalette()[:48])
+                                self.assertEqual(sum(host_colors, []), image.getpalette()[:48])
                                 self.assertLessEqual(max(image.get_flattened_data()),15)
                                 self.assertEqual(0,image.info['transparency'])
 

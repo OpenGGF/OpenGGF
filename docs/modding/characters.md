@@ -851,7 +851,18 @@ texture residency. Host controllers continue to own clocks, placement and occlus
 | S2 | Lead `BODY` 5/6/7/18, `HAND` 9; sidekick `BODY` 0–4, `HAND` 19 |
 | S3K | `PLANE_LEFT`/`PLANE_RIGHT` 1–13, `FINGER` 0/1 (optional resting patch 4), `WINK` 2/3 |
 
-S3K plane halves are 160×224 at zero hotspots. A `TitlePlaneMask` contains exactly
+S3K plane halves are 160×224 at zero hotspots. `TitlePlaneMask(pixels,
+clearedPixels)` supplies native palette indices for owned pixels after removal.
+The one-argument constructor retains transparent clearing (all zero). Both arrays
+are 320×224: ownership stays binary; replacement indices are 0–15 and must be zero
+outside ownership. Arrays are copied defensively. Indices refer to the original
+tile's native palette line. Verify every used row: S3K final art uses black 15
+inside the ring aperture and transparency outside it. This removes native portrait
+backing above the ring without exposing sky through the aperture. Neither array
+contains RGB or native tile data. Use transparent sprite contours rather than
+cutting rectangular holes in the authored plane.
+
+A `TitlePlaneMask` contains exactly
 320×224 binary bytes: one removes the native mascot pixel, zero retains the host
 pixel. Masks must exclude the logo/emblem; replacement pixels must also leave that
 branding transparent. The engine masks per-cell copies, so shared native tiles
