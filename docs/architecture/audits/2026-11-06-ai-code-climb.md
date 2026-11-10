@@ -5757,3 +5757,109 @@ Only this audit prose changes after c327 validation. All production, test, POM,
 policy, fixture and submodule bytes remain those actually tested. Owned units
 are terminal and retired; source trees, original receipts and unknown ignored
 assets are retained. PR269 is already merged and was not written or retired here.
+
+### Retained trace field evidence and review repairs — 2026-11-10
+
+The original trace journey could not tell which fields had retained results
+without rebuilding the driver's optional-comparison rules. The new optional
+`recorded_fields` array derives solely from the final
+`FrameComparison.fields` map keys already owned by `DivergenceReport`.
+It includes MATCH, observed-mismatch, WARNING and ERROR results, deduplicated and
+sorted globally. It introduces no comparator-family table, instrumentation,
+phase model, fixture input or admission rule. Bootstrap storage is mismatch-only
+and cannot supply an execution census; frame replacement also retains only the
+final stored row. These limits rule out presenting this array as executed-family
+coverage. The rejected intended-family facade would duplicate policy rather
+than establish observed execution.
+
+Triage distinguishes unpublished/unknown metadata from a present empty census.
+Its list is global even during narrow verification; gate, scope, totals,
+severity, bootstrap, grouping, context and frontier decisions are unchanged.
+A listed name may represent an exempt MATCH and never proves strict equality.
+The brief says per-frame only and explicitly excludes bootstrap. Indexed slot
+and art keys can make its literal line long; the JSON remains exact. A future
+name containing comma-space could be ambiguous in the joined brief, not in JSON.
+No completeness or score gain is inferred from this diagnostic addition.
+
+Present metadata is fail-closed for malformed arrays, non-text/blank/duplicate
+names, a nonempty census with zero retained rows, or omission of any published
+per-frame divergence. Older absent metadata remains readable. The public tooling
+record gains an optional component; its in-repository direct callers are updated,
+and the caller list is copied before validating the exact retained snapshot.
+This is not a candidate Mod API or signature-pin change. Saved-state formats,
+native execution, binder comparisons, trace inputs and fixture payloads are
+untouched. Adjacent comments and the guide now describe `total_frames` as
+retained comparison rows, including structural-only rows, rather than claiming
+it counts only gameplay comparisons.
+
+Compile-valid RED on unchanged production source ran 106 cases with exactly
+18 intended assertion failures, zero errors/skips and 88 prior passing cases.
+The first functional characterization ran 230 cases: all 226 functional cases
+and three guard controls passed; its only failure was the expected old/new
+fingerprint mismatch for the existing serialization handler. That raw failure
+is retained, not renamed GREEN.
+
+Independent Opus 5.5 source scrutiny found no runtime blocker and approved that
+one-for-one inventory re-key. It identified a Medium test-validity gap: blank
+and duplicate inputs on a zero-row report could be rejected by the wrong rule.
+Those cases now use one retained empty row; only the zero-row contradiction
+uses zero rows. A compile-valid temporary mutation disabled blank/duplicate
+rejection while retaining set insertion, null/type validation and the zero-row
+rule. Its eleven cases produced exactly three intended failures (blank,
+whitespace and duplicate) and eight passing controls, with zero errors/skips.
+The exact good source was then restored, verified against all eight file hashes.
+This control, rather than the initial broad RED alone, establishes the repaired
+cases discriminate against missing name checks.
+
+Final focused GREEN passed 230 cases in six fresh suites, with zero failures,
+errors or skips. The selection was `TestTraceTriageTool` (110),
+`TestTraceTriageVerificationScope` (50), `TestDivergenceReport` (33),
+`TestTraceGateCompletionReport` (8), `TestTraceCarriedEntryDiagnostics` (25)
+and `TestBroadCatchSwallowingGuard` (4). The repaired cases and all inventory
+checks are present and green in the fresh XML. Tested source fingerprint:
+`ecf9e2804ae27e190323168511b5155e61c3a2b75865351b9054581182f9afb0`
+on base `a1756270a674299c7774512ba40b8147ed06662d` with the recorded dirty
+eight-file patch. Only this audit prose is appended after that GREEN.
+
+The existing catch type and handler/error document are unchanged. Its single
+count-1 row moves from fingerprint `8605ab231ec928aa366822d293172f147f217b07397099f41def83539e0e622e` to `f7303e52dacf223d7a54601c45cb297721fbc67fa4e2cb1cadac56b8dd22bfd8`. No inventory
+row, allowance, scanner or budget grows; the unresolved-legacy-recovery reason
+and relocation history remain, followed by the explicit Opus decision.
+A null or concurrently changed externally supplied map could theoretically
+reach the existing error-document recovery through the new census calculation;
+all in-repository producers use valid fixed/prefixed keys. This is a retained
+limit, not a new allowance or a claim the legacy recovery debt is resolved.
+
+| Invocation | Reported queue seconds | Maven seconds | Wrapper wall seconds | User wait | Unseparated overhead/rounding |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Initial compile-valid RED | 72 | 37.427 | 110.867325 | 0 | 1.440325 |
+| Functional/inventory characterization | 308 | 102 | 411.955275 | 0 | 1.955275 |
+| Repaired-test negative control | 16 | 96 | 113.977172 | 0 | 1.977172 |
+| Final focused GREEN | 0 | 234 | 235.934362 | 0 | 1.934362 |
+
+All invocations used queued normal-memory Java25/Lua5.4, displays unset, one fork,
+alphabetical order and explicit surfaceless EGL. Initial RED and the eleven-case
+control used ordinary selectors; characterization and GREEN used `-Pguards`
+with the six explicit classes. Printed Maven/queue durations can be rounded.
+Exact argv, source patches/hashes, complete named-case XML, the temporary
+mutation and restoration, full guard failure and approval are indexed by
+`target/code-climb/recorded-field-evidence/continuation.json`. Root-owned
+focused units are terminal and retired. An initial observer clean-tree assumption
+was corrected to use its existing sealed-dirty-source mode; the original job
+stayed alive.
+
+Read-only compatibility inspection found count-only validators ignore this
+additional diagnostic key. The release comparator preserves full payload keys
+and will flag the intentional change; it remains strict and unmodified.
+Generic comparators and validators are not taught to normalize or ignore it.
+
+Final combined qualification remains pending. The unchanged impact planner
+selects all 4,641 smoke classes plus guards. The actual retained `c327` run
+has that same ordered selection; `a175` differs from it only in audit prose,
+so its actual tested source is reused without relabeling its SHA or verdict.
+Root plans one complete candidate run with two workers and a 40-minute execution
+cap excluding queue, then an original HCZ leaf and execution of its actual printed
+triage command through a path with spaces/quotes. No broad or domain result is
+claimed here. PR271 remains the sole draft destination. The original Competition
+black-pixel failure still blocks merging; the stronger six-trial target remains
+unmet, and no new rubric score or route/run-chain certification is inferred.

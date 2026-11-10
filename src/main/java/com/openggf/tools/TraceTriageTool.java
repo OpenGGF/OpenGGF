@@ -99,7 +99,11 @@ public final class TraceTriageTool {
         }
     }
 
-    /** Immutable view of the published global evidence, before diagnostic scope selection. */
+    /**
+     * Immutable global evidence before diagnostic scope selection. A null
+     * recorded-fields list means unpublished/unknown; an empty list means no
+     * per-frame result keys were retained. It never inventories comparator execution.
+     */
     public record TraceReport(
             int errorCount,
             int warningCount,
@@ -110,17 +114,45 @@ public final class TraceTriageTool {
             List<Divergence> warnings,
             ReplayGate replayGate,
             CarriedEntryDiagnostics carriedEntryDiagnostics,
-            List<String> missingAdvertisedAuxSchemas) {
+            List<String> missingAdvertisedAuxSchemas,
+            List<String> recordedFields) {
 
         public TraceReport {
             bootstrap = List.copyOf(bootstrap);
             errors = List.copyOf(errors);
             warnings = List.copyOf(warnings);
             missingAdvertisedAuxSchemas = List.copyOf(missingAdvertisedAuxSchemas);
+            recordedFields = validatedRecordedFields(recordedFields, totalFrames, errors, warnings);
             if (replayGate != null && replayGate.verification() != TraceVerificationScope.ALL) {
                 requireClassifiedGroups(errors);
                 requireClassifiedGroups(warnings);
             }
+        }
+
+        /** Null means unpublished/unknown; a present empty census means no retained field results. */
+        private static List<String> validatedRecordedFields(
+                List<String> fields, int totalFrames, List<Divergence> errors, List<Divergence> warnings) {
+            if (fields == null) {
+                return null;
+            }
+            List<String> snapshot = new ArrayList<>(fields);
+            Set<String> names = new LinkedHashSet<>();
+            for (String field : snapshot) {
+                if (field == null || field.isBlank() || !names.add(field)) {
+                    throw new IllegalArgumentException("recorded_fields requires unique nonblank field names");
+                }
+            }
+            if (totalFrames == 0 && !names.isEmpty()) {
+                throw new IllegalArgumentException("recorded_fields cannot name fields without retained comparison rows");
+            }
+            for (List<Divergence> groups : List.of(errors, warnings)) {
+                for (Divergence group : groups) {
+                    if (!names.contains(group.field())) {
+                        throw new IllegalArgumentException("recorded_fields omits published field '" + group.field() + "'");
+                    }
+                }
+            }
+            return List.copyOf(snapshot);
         }
 
         /**
@@ -231,12 +263,30 @@ public final class TraceTriageTool {
         try {
             return new TraceReport(errorCount, warningCount, totalFrames, summary,
                     bootstrap, errors, warnings, gate,
-                    CarriedEntryDiagnostics.readOptionalFrom(root), missingAuxSchemas);
+                    CarriedEntryDiagnostics.readOptionalFrom(root), missingAuxSchemas, readRecordedFields(root));
         } catch (IllegalArgumentException failure) {
             // Wire readers retain their checked failure contract; direct model
             // callers receive the same invariant from the value constructor.
             throw new IOException(failure.getMessage(), failure);
         }
+    }
+
+    private static List<String> readRecordedFields(JsonNode report) throws IOException {
+        JsonNode fields = report.get("recorded_fields");
+        if (fields == null) {
+            return null;
+        }
+        if (!fields.isArray()) {
+            throw new IOException("recorded_fields must be an array");
+        }
+        List<String> names = new ArrayList<>();
+        for (JsonNode field : fields) {
+            if (!field.isTextual()) {
+                throw new IOException("recorded_fields requires textual field names");
+            }
+            names.add(field.textValue());
+        }
+        return names;
     }
 
     private static List<Divergence> parseGroups(JsonNode array, String severity) throws IOException {
@@ -615,6 +665,16 @@ public final class TraceTriageTool {
         if (report.totalFrames() == 0) {
             sb.append("Comparison coverage: absent (0 frames compared); gameplay comparison coverage is not established.\n");
         }
+        List<String> recordedFields = report.recordedFields();
+        if (recordedFields == null) {
+            sb.append("Recorded comparison fields: not reported (unknown).\n");
+        } else if (recordedFields.isEmpty()) {
+            sb.append("Recorded comparison fields: none retained.\n");
+        } else {
+            sb.append("Recorded comparison fields (all verification groups): ")
+                    .append(String.join(", ", recordedFields)).append("\n");
+        }
+        sb.append("Per-frame results only; listed fields may be exempt MATCHes; bootstrap is excluded. Not a census of executed comparators or full reference coverage.\n");
         if (!report.missingAdvertisedAuxSchemas().isEmpty()) {
             sb.append("Reference/coverage limits: missing advertised aux schemas: ")
                     .append(String.join(", ", report.missingAdvertisedAuxSchemas())).append(".\n");

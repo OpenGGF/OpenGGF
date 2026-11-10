@@ -21,7 +21,7 @@ import java.util.Set;
 
 public class DivergenceReport {
 
-    /** The driver's prescribed gate completion, distinct from gameplay comparison count. */
+    /** The driver's prescribed gate completion, distinct from retained comparison-row count. */
     public record ReplayGate(int plannedTraceRows, boolean comparisonGateReached,
                              TraceVerificationScope verification) {
         public ReplayGate {
@@ -426,6 +426,7 @@ public class DivergenceReport {
             root.put("bootstrap_error_count", bootstrapErrorCount());
             root.put("bootstrap_warning_count", bootstrapWarningCount());
             root.put("total_frames", allComparisons.size());
+            appendRecordedFields(root);
             root.put("summary", toCompactSummary());
 
             ObjectNode verificationNode = root.putObject("verification_groups");
@@ -478,6 +479,16 @@ public class DivergenceReport {
         } catch (Exception failure) {
             return new Serialization(serializationErrorJson(failure), true);
         }
+    }
+
+    /** Retained per-frame results, independent of gate/scope and comparator admission. */
+    private void appendRecordedFields(ObjectNode root) {
+        ArrayNode fields = root.putArray("recorded_fields");
+        allComparisons.stream()
+                .flatMap(comparison -> comparison.fields().keySet().stream())
+                .distinct()
+                .sorted()
+                .forEach(fields::add);
     }
 
     public String getContextWindow(int centreFrame, int radius) {

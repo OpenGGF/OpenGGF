@@ -273,7 +273,11 @@ under the matching area heading; see the
   no longer reparses and rewrites its own JSON. Standalone reports retain the
   existing carried-entry evaluation's provenance, disagreements and unresolved
   notes; triage keeps those conditional entry diagnostics separate from mismatch
-  and completion decisions. Scene presentation spells out
+  and completion decisions. Reports also identify retained per-frame result fields,
+  including matches, while distinguishing an unpublished list from an empty one.
+  Triage keeps this evidence separate from completion and does not equate field
+  presence with strict equality, comparator execution or bootstrap coverage.
+  Scene presentation spells out
   capture, restoration and failure cleanup in operation order. Retained raw-field
   diagnostics follow that storage and are exercised on successful test paths.
 

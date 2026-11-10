@@ -624,10 +624,16 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCou
    or triage brief that this invocation reached its intended gate. The brief
    distinguishes a completed comparison gate, an incomplete prefix and reports with no published
    gate, whose completion is UNKNOWN. Triage reads saved evidence and does not
-   certify freshness or process success. Planned trace rows and gameplay
-   comparisons count different boundaries, so totals need not match. Auxiliary
-   availability is best effort: an absent or unrecognised optional field does
-   not establish full reference coverage. Standalone segments are instrumentation;
+   certify freshness or process success. Planned trace rows and retained
+   comparison rows count different boundaries, so totals need not match.
+   The report's optional `recorded_fields` lists retained per-frame result keys
+   across all verification groups, including MATCHes and exemptions. Absent
+   metadata means unknown; an empty list means no field results were retained.
+   Names do not prove strict equality, comparator execution or bootstrap coverage.
+   Indexed object/art fields can make the literal brief list long; the JSON
+   retains the full list. Auxiliary availability is best effort: an absent or
+   unrecognised optional field does not establish full reference coverage.
+   Standalone segments are instrumentation;
    run chains supply release-gate evidence. A completed leaf does not establish
    run-chain parity.
 

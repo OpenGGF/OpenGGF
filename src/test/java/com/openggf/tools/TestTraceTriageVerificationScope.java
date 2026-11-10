@@ -235,7 +235,7 @@ class TestTraceTriageVerificationScope {
 
         assertThrows(IllegalArgumentException.class, () -> new TraceReport(error ? 1 : 0, error ? 0 : 1,
                 1, "unclassified evidence", List.of(), error ? List.of(unknown) : List.of(),
-                error ? List.of() : List.of(unknown), new ReplayGate(10, true, scope), null, List.of()));
+                error ? List.of() : List.of(unknown), new ReplayGate(10, true, scope), null, List.of(), null));
     }
 
     @ParameterizedTest
@@ -247,7 +247,7 @@ class TestTraceTriageVerificationScope {
                 "x", severity, 9, 9, 1, "10", "11", false, VerificationGroup.PHYSICS)));
         TraceReport report = new TraceReport(error ? 1 : 0, error ? 0 : 1, 1, "classified evidence",
                 List.of(), error ? callerGroups : List.of(), error ? List.of() : callerGroups,
-                new ReplayGate(10, true, TraceVerificationScope.PHYSICS), null, List.of());
+                new ReplayGate(10, true, TraceVerificationScope.PHYSICS), null, List.of(), null);
         callerGroups.set(0, new Divergence("x", severity, 9, 9, 1, "10", "11", false, null));
 
         String brief = TraceTriageTool.renderBrief("s2", "ehz1", report, "", "");

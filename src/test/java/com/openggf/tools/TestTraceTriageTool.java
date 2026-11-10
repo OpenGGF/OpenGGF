@@ -31,6 +31,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -179,6 +180,7 @@ class TestTraceTriageTool {
         assertTrue(result.output().contains("10 planned trace rows; " + scopeLabel + " verification"));
         assertTrue(result.output().contains("Totals: 0 errors, 0 warnings, 0 frames compared"));
         assertTrue(result.output().contains("Comparison coverage: absent (0 frames compared)"));
+        assertTrue(result.output().contains("Recorded comparison fields: none retained."));
         assertTrue(result.output().contains("gameplay comparison coverage is not established"));
         assertFalse(result.output().contains("Replay completion: INCOMPLETE"),
                 "No compared frames must not override the driver's completed gate.");
@@ -200,6 +202,133 @@ class TestTraceTriageTool {
                 "Current report producers also legitimately omit the optional gate.");
         assertTrue(result.output().contains("Comparison coverage: absent (0 frames compared)"));
         assertFalse(result.output().contains("Replay completion: INCOMPLETE"));
+    }
+
+    @ParameterizedTest
+    @EnumSource(TraceVerificationScope.class)
+    void recordedFieldsDescribeRetainedMapKeysAcrossEveryResultAndScope(
+            TraceVerificationScope scope, @TempDir Path tempDir) throws Exception {
+        DivergenceReport report = new DivergenceReport(List.of(
+                new FrameComparison(0, Map.of(
+                        "z_match", new FieldComparison("z_match", "1", "1", Severity.MATCH, 0),
+                        "warning_field", new FieldComparison("warning_field", "1", "2", Severity.WARNING, 1),
+                        "animation_field", FieldComparison.animation("animation_field", "1", "2", Severity.ERROR, 1),
+                        "tolerated", new FieldComparison("tolerated", "1", "2", Severity.MATCH, 1, true))),
+                new FrameComparison(1, Map.of(
+                        "z_match", new FieldComparison("z_match", "1", "1", Severity.MATCH, 0),
+                        "map_key", new FieldComparison("different_internal_name", "1", "1", Severity.MATCH, 0))),
+                new FrameComparison(2, Map.of())), null, List.of(new BootstrapDivergence(
+                        "bootstrap_only", BootstrapDivergence.Severity.ERROR, "1", "2", "prelude")));
+        Path reportPath = publishReport(tempDir, report, true, scope);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(reportPath.toFile());
+
+        assertEquals(mapper.readTree("[\"animation_field\",\"map_key\",\"tolerated\",\"warning_field\",\"z_match\"]"),
+                payload.get("recorded_fields"), "Record all retained result keys, including MATCH, once in canonical order");
+        assertEquals(3, payload.path("total_frames").intValue());
+        assertEquals(2, payload.path("error_count").intValue());
+        assertEquals(1, payload.path("warning_count").intValue());
+        TriageResult result = runTriage("--report", reportPath.toString());
+        assertEquals(0, result.status(), result.errors());
+        assertTrue(result.output().contains("Recorded comparison fields (all verification groups): "
+                + "animation_field, map_key, tolerated, warning_field, z_match"));
+        assertTrue(result.output().contains("Per-frame results only; listed fields may be exempt MATCHes; bootstrap is excluded. Not a census of executed comparators or full reference coverage."));
+        assertTrue(result.output().contains("Replay completion: COMPLETE"));
+    }
+
+    @ParameterizedTest
+    @EnumSource(TraceVerificationScope.class)
+    void aRetainedEmptyRowDoesNotInventFieldsOrClaimBootstrapCoverage(
+            TraceVerificationScope scope, @TempDir Path tempDir) throws Exception {
+        DivergenceReport report = new DivergenceReport(List.of(new FrameComparison(0, Map.of())),
+                null, List.of(new BootstrapDivergence("bootstrap_only", BootstrapDivergence.Severity.ERROR,
+                        "1", "2", "prelude")));
+        Path path = publishReport(tempDir, report, true, scope);
+        ObjectNode payload = (ObjectNode) new ObjectMapper().readTree(path.toFile());
+        assertEquals(new ObjectMapper().readTree("[]"), payload.get("recorded_fields"));
+        TriageResult result = runTriage("--report", path.toString());
+        assertEquals(0, result.status(), result.errors());
+        assertTrue(result.output().contains("Totals: 1 errors, 0 warnings, 1 frames compared"));
+        assertTrue(result.output().contains("Recorded comparison fields: none retained."));
+        assertTrue(result.output().contains("Replay completion: COMPLETE"));
+    }
+
+    @Test
+    void oldReportsHaveUnknownRecordedFieldsRatherThanAnEmptyCensus(@TempDir Path tempDir)
+            throws Exception {
+        Path path = tempDir.resolve("old-report.json");
+        Files.writeString(path, SYNTHETIC_REPORT);
+        TriageResult result = runTriage("--report", path.toString());
+        assertEquals(0, result.status(), result.errors());
+        assertTrue(result.output().contains("Recorded comparison fields: not reported (unknown)."));
+        assertFalse(result.output().contains("Recorded comparison fields: none retained."));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "{}", "42", "false", "[null]", "[7]", "[\"\"]",
+            "[\" \"]", "[\"x\",\"x\"]", "[\"x\",false]", "[\"x\"]"})
+    void malformedRecordedFieldsFailBeforeAnyBrief(String literal, @TempDir Path tempDir)
+            throws Exception {
+        // Keep only the zero-row contradiction on an empty report. Other
+        // invalid names must fail their own rule, not the zero-row rule.
+        List<FrameComparison> rows = literal.equals("[\"x\"]") ? List.of()
+                : List.of(new FrameComparison(0, Map.of()));
+        Path path = publishReport(tempDir, new DivergenceReport(rows), true);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(path.toFile());
+        payload.set("recorded_fields", mapper.readTree(literal));
+        Files.writeString(path, payload.toString());
+        TriageResult result = runTriage("--report", path.toString());
+        assertEquals(1, result.status());
+        assertEquals("", result.output());
+        assertTrue(result.errors().contains("recorded_fields"));
+    }
+
+    @Test
+    void recordedFieldReaderAcceptsUnknownNamesAndPreservesLiteralEvidence(@TempDir Path tempDir)
+            throws Exception {
+        DivergenceReport report = new DivergenceReport(List.of(new FrameComparison(0, Map.of(
+                "z.future", new FieldComparison("z.future", "1", "1", Severity.MATCH, 0),
+                "a.future", new FieldComparison("a.future", "1", "1", Severity.MATCH, 0)))));
+        Path path = publishReport(tempDir, report, false);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(path.toFile());
+        payload.set("recorded_fields", mapper.readTree("[\"z.future\",\"a.future\"]"));
+        Files.writeString(path, payload.toString());
+        TriageResult result = runTriage("--report", path.toString());
+        assertEquals(0, result.status(), result.errors());
+        assertTrue(result.output().contains("Recorded comparison fields (all verification groups): z.future, a.future"));
+        assertTrue(result.output().contains("Replay completion: INCOMPLETE"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"errors", "warnings"})
+    void recordedFieldsCannotOmitPublishedDivergenceGroups(String omitted, @TempDir Path tempDir)
+            throws Exception {
+        DivergenceReport report = new DivergenceReport(List.of(new FrameComparison(0, Map.of(
+                "error_field", new FieldComparison("error_field", "1", "2", Severity.ERROR, 1),
+                "warning_field", new FieldComparison("warning_field", "1", "2", Severity.WARNING, 1)))));
+        Path path = publishReport(tempDir, report, true);
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode payload = (ObjectNode) mapper.readTree(path.toFile());
+        payload.set("recorded_fields", mapper.createArrayNode().add(
+                omitted.equals("errors") ? "warning_field" : "error_field"));
+        Files.writeString(path, payload.toString());
+        TriageResult result = runTriage("--report", path.toString());
+        assertEquals(1, result.status());
+        assertEquals("", result.output());
+        assertTrue(result.errors().contains("recorded_fields omits published field"));
+    }
+
+    @Test
+    void callerCannotEraseRecordedFieldsAfterModelValidation() {
+        var fields = new ArrayList<>(List.of("x"));
+        TraceReport report = new TraceReport(0, 0, 1, "matching row", List.of(), List.of(), List.of(),
+                null, null, List.of(), fields);
+        fields.clear();
+        assertTrue(TraceTriageTool.renderBrief("s2", "ehz1", report, "", "")
+                .contains("Recorded comparison fields (all verification groups): x"));
+        assertThrows(UnsupportedOperationException.class, () -> report.recordedFields().add("late"));
     }
 
     @ParameterizedTest

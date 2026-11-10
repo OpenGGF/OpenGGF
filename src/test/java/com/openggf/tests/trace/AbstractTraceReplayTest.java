@@ -535,7 +535,7 @@ public abstract class AbstractTraceReplayTest {
                     // has zero divergences, and a divergence-gated write left no
                     // report at all -- indistinguishable from a run that never
                     // started. Preserve whether the prescribed gate was reached;
-                    // total_frames counts only gameplay comparisons.
+                    // total_frames counts retained rows, including structural-only comparisons.
                     TestSessionOutputPaths.ReportAllocation allocation = writeReport(reportDirectory,
                             buildDivergenceReport(binder, meta, trace), meta,
                             new ReplayGate(
