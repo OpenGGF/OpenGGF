@@ -1,5 +1,5 @@
 {
-  "method": "Visual readings on the 6x native coordinate panels, rounded to whole pixels. Skull excludes crest and strap; torso is exposed neck-to-waist. Placement uncertainty about one native pixel. Hidden/foreshortened anatomy is null, not an invented measurement. Forehead boxes and exact uniform reductions are in family-generation.json.",
+  "method": "Visual readings on the 6x native coordinate panels, rounded to whole pixels. Skull excludes crest and strap; torso is exposed neck-to-waist. Placement uncertainty about one native pixel. Hidden/foreshortened anatomy is null, not an invented measurement. Forehead boxes and exact uniform reductions are in family-generation.json. 2026-11-10 flagged-family readings supersede the initial annotations; earlier values are retained only as explicitly unreliable history. Area ratios are an independent whole-pose sanity check, not anatomical scale inputs.",
   "reference": {
     "id": "wait-00",
     "skullWidth": 11,
@@ -49,25 +49,40 @@
       "sourcePixelsPerNativePixel": 8.7
     },
     "family-balance2-00": {
-      "skullWidth": 10,
-      "torsoHeight": 8,
+      "skullWidth": 12,
+      "torsoHeight": 9,
       "exception": null,
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 7.304347826086957
+      "sourcePixelsPerNativePixel": 6.640316205533597,
+      "previousUnreliableReading": {
+        "skullWidth": 10,
+        "torsoHeight": 8
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-balance2-01": {
       "skullWidth": 12,
-      "torsoHeight": 8,
+      "torsoHeight": 9,
       "exception": null,
       "attempt": 1,
-      "sourcePixelsPerNativePixel": 6.695652173913044
+      "sourcePixelsPerNativePixel": 6.08695652173913,
+      "previousUnreliableReading": {
+        "skullWidth": 12,
+        "torsoHeight": 8
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-balance2-02": {
       "skullWidth": 12,
       "torsoHeight": 9,
       "exception": null,
       "attempt": 3,
-      "sourcePixelsPerNativePixel": 6.7
+      "sourcePixelsPerNativePixel": 6.090909090909091,
+      "previousUnreliableReading": {
+        "skullWidth": 12,
+        "torsoHeight": 9
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-balance3-00": {
       "skullWidth": 12,
@@ -84,39 +99,64 @@
       "sourcePixelsPerNativePixel": 10.5
     },
     "family-balance4-00": {
-      "skullWidth": 10,
+      "skullWidth": 11,
       "torsoHeight": 9,
       "exception": null,
       "attempt": 1,
-      "sourcePixelsPerNativePixel": 6.739130434782608
+      "sourcePixelsPerNativePixel": 6.071288679984331,
+      "previousUnreliableReading": {
+        "skullWidth": 10,
+        "torsoHeight": 9
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-balance4-01": {
-      "skullWidth": 12,
-      "torsoHeight": 10,
+      "skullWidth": 11,
+      "torsoHeight": 9,
       "exception": null,
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 5.760869565217391
+      "sourcePixelsPerNativePixel": 5.189972581276928,
+      "previousUnreliableReading": {
+        "skullWidth": 12,
+        "torsoHeight": 10
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-balance4-02": {
       "skullWidth": 11,
       "torsoHeight": 9,
       "exception": null,
       "attempt": 3,
-      "sourcePixelsPerNativePixel": 5.760869565217391
+      "sourcePixelsPerNativePixel": 5.189972581276928,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": 9
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-balance4-03": {
       "skullWidth": 12,
-      "torsoHeight": 10,
+      "torsoHeight": 9,
       "exception": null,
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 5.5434782608695645
+      "sourcePixelsPerNativePixel": 4.99412455934195,
+      "previousUnreliableReading": {
+        "skullWidth": 12,
+        "torsoHeight": 10
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-balance4-04": {
       "skullWidth": 11,
       "torsoHeight": 9,
       "exception": null,
       "attempt": 3,
-      "sourcePixelsPerNativePixel": 6.41304347826087
+      "sourcePixelsPerNativePixel": 5.777516647081865,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": 9
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-hang-00": {
       "skullWidth": 12,
@@ -147,102 +187,172 @@
       "sourcePixelsPerNativePixel": 10.9
     },
     "family-bubble-00": {
-      "skullWidth": 11,
-      "torsoHeight": 8,
+      "skullWidth": 12,
+      "torsoHeight": 9,
       "exception": null,
       "attempt": 1,
-      "sourcePixelsPerNativePixel": 6.9642857142857135
+      "sourcePixelsPerNativePixel": 5.616359447004608,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": 8
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-bubble-01": {
-      "skullWidth": 11,
-      "torsoHeight": 8,
+      "skullWidth": 12,
+      "torsoHeight": 9,
       "exception": null,
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 6.874999999999999
+      "sourcePixelsPerNativePixel": 5.544354838709677,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": 8
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-bubble-02": {
-      "skullWidth": 10,
-      "torsoHeight": 8,
+      "skullWidth": 12,
+      "torsoHeight": 9,
       "exception": null,
       "attempt": 3,
-      "sourcePixelsPerNativePixel": 7.053571428571428
+      "sourcePixelsPerNativePixel": 5.688364055299538,
+      "previousUnreliableReading": {
+        "skullWidth": 10,
+        "torsoHeight": 8
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-hurt-fall-00": {
-      "skullWidth": 10,
-      "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "skullWidth": 12,
+      "torsoHeight": 9,
+      "exception": null,
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 11.339285714285712
+      "sourcePixelsPerNativePixel": 8.790143964562567,
+      "previousUnreliableReading": {
+        "skullWidth": 10,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-hurt-fall-01": {
-      "skullWidth": 11,
-      "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
-      "attempt": 3,
-      "sourcePixelsPerNativePixel": 11.607142857142856
-    },
-    "family-drown-00": {
-      "skullWidth": 11,
-      "torsoHeight": 8,
+      "skullWidth": 12,
+      "torsoHeight": 9,
       "exception": null,
       "attempt": 3,
-      "sourcePixelsPerNativePixel": 20.535714285714285
+      "sourcePixelsPerNativePixel": 8.997785160575857,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
+    },
+    "family-drown-00": {
+      "skullWidth": 12,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 15.796703296703296,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": 8
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-float2-00": {
-      "skullWidth": 11,
+      "skullWidth": 12,
       "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "exception": "Torso foreshortened/hidden; not measurable.",
       "attempt": 1,
-      "sourcePixelsPerNativePixel": 8
+      "sourcePixelsPerNativePixel": 5.442176870748299,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-float2-01": {
-      "skullWidth": 11,
+      "skullWidth": 12,
       "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "exception": "Torso foreshortened/hidden; not measurable.",
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 8
+      "sourcePixelsPerNativePixel": 5.442176870748299,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-float2-02": {
-      "skullWidth": 11,
+      "skullWidth": 13,
       "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "exception": "Torso foreshortened/hidden; not measurable.",
       "attempt": 1,
-      "sourcePixelsPerNativePixel": 8
+      "sourcePixelsPerNativePixel": 5.442176870748299,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-float2-03": {
-      "skullWidth": 10,
+      "skullWidth": 12,
       "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "exception": "Torso foreshortened/hidden; not measurable.",
       "attempt": 3,
-      "sourcePixelsPerNativePixel": 8
+      "sourcePixelsPerNativePixel": 5.442176870748299,
+      "previousUnreliableReading": {
+        "skullWidth": 10,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-float2-04": {
-      "skullWidth": 11,
+      "skullWidth": 12,
       "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "exception": "Torso foreshortened/hidden; not measurable.",
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 8
+      "sourcePixelsPerNativePixel": 5.442176870748299,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-float2-05": {
       "skullWidth": 11,
       "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "exception": "Torso foreshortened/hidden; not measurable.",
       "attempt": 3,
-      "sourcePixelsPerNativePixel": 8
+      "sourcePixelsPerNativePixel": 5.442176870748299,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-float2-06": {
-      "skullWidth": 11,
+      "skullWidth": 12,
       "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "exception": "Torso foreshortened/hidden; not measurable.",
       "attempt": 1,
-      "sourcePixelsPerNativePixel": 8
+      "sourcePixelsPerNativePixel": 5.442176870748299,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-float2-07": {
       "skullWidth": 11,
       "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "exception": "Torso foreshortened/hidden; not measurable.",
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 8
+      "sourcePixelsPerNativePixel": 5.442176870748299,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-blink-00": {
       "skullWidth": 11,
@@ -280,88 +390,148 @@
       "sourcePixelsPerNativePixel": 11.0
     },
     "family-victory-00": {
-      "skullWidth": 10,
-      "torsoHeight": 10,
+      "skullWidth": 11,
+      "torsoHeight": 9,
       "exception": null,
       "attempt": 1,
-      "sourcePixelsPerNativePixel": 8.5
+      "sourcePixelsPerNativePixel": 6.538461538461538,
+      "previousUnreliableReading": {
+        "skullWidth": 10,
+        "torsoHeight": 10
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-victory-01": {
-      "skullWidth": 10,
-      "torsoHeight": 10,
+      "skullWidth": 11,
+      "torsoHeight": 9,
       "exception": null,
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 8.6
+      "sourcePixelsPerNativePixel": 6.615384615384615,
+      "previousUnreliableReading": {
+        "skullWidth": 10,
+        "torsoHeight": 10
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-victory-02": {
-      "skullWidth": 10,
-      "torsoHeight": 10,
+      "skullWidth": 11,
+      "torsoHeight": 9,
       "exception": null,
       "attempt": 3,
-      "sourcePixelsPerNativePixel": 8.7
+      "sourcePixelsPerNativePixel": 6.692307692307692,
+      "previousUnreliableReading": {
+        "skullWidth": 10,
+        "torsoHeight": 10
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-victory-03": {
-      "skullWidth": 10,
-      "torsoHeight": 10,
+      "skullWidth": 11,
+      "torsoHeight": 9,
       "exception": null,
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 8.5
+      "sourcePixelsPerNativePixel": 6.538461538461538,
+      "previousUnreliableReading": {
+        "skullWidth": 10,
+        "torsoHeight": 10
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-tails-carried-00": {
       "skullWidth": 11,
       "torsoHeight": 9,
       "exception": null,
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 6.7
+      "sourcePixelsPerNativePixel": 5.775862068965518,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": 9
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-tails-carried-01": {
       "skullWidth": 11,
-      "torsoHeight": 8,
+      "torsoHeight": 9,
       "exception": null,
       "attempt": 1,
-      "sourcePixelsPerNativePixel": 6.5
+      "sourcePixelsPerNativePixel": 5.603448275862069,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": 8
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-tails-carried-02": {
       "skullWidth": 11,
       "torsoHeight": 9,
       "exception": null,
       "attempt": 3,
-      "sourcePixelsPerNativePixel": 6.8
+      "sourcePixelsPerNativePixel": 5.862068965517242,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": 9
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-super-transform-00": {
-      "skullWidth": 11,
+      "skullWidth": 12,
       "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "exception": "Torso foreshortened/hidden; not measurable.",
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 6.0227272727272725
+      "sourcePixelsPerNativePixel": 4.742304939155333,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-super-transform-01": {
-      "skullWidth": 11,
-      "torsoHeight": 10,
+      "skullWidth": 12,
+      "torsoHeight": 9,
       "exception": null,
       "attempt": 3,
-      "sourcePixelsPerNativePixel": 6.1
+      "sourcePixelsPerNativePixel": 4.803149606299212,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": 10
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-super-transform-02": {
       "skullWidth": null,
       "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "exception": "Torso foreshortened/hidden; not measurable.",
       "attempt": 1,
-      "sourcePixelsPerNativePixel": 6.733333333333333
+      "sourcePixelsPerNativePixel": 5.301837270341207,
+      "previousUnreliableReading": {
+        "skullWidth": null,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-super-transform-03": {
       "skullWidth": 11,
-      "torsoHeight": 10,
+      "torsoHeight": 9,
       "exception": null,
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 7.111111111111112
+      "sourcePixelsPerNativePixel": 5.599300087489064,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": 10
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-super-transform-04": {
-      "skullWidth": 10,
+      "skullWidth": 11,
       "torsoHeight": 9,
       "exception": null,
       "attempt": 3,
-      "sourcePixelsPerNativePixel": 7.222222222222222
+      "sourcePixelsPerNativePixel": 5.686789151356081,
+      "previousUnreliableReading": {
+        "skullWidth": 10,
+        "torsoHeight": 9
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-tails-fly-ascend-00": {
       "skullWidth": 10,
@@ -491,38 +661,63 @@
     },
     "family-tails-swim-00": {
       "skullWidth": 11,
-      "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "torsoHeight": 9,
+      "exception": null,
       "attempt": 1,
-      "sourcePixelsPerNativePixel": 7.5
+      "sourcePixelsPerNativePixel": 6.147540983606557,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-tails-swim-01": {
       "skullWidth": 11,
-      "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "torsoHeight": 9,
+      "exception": null,
       "attempt": 3,
-      "sourcePixelsPerNativePixel": 7.2
+      "sourcePixelsPerNativePixel": 5.901639344262295,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-tails-swim-02": {
       "skullWidth": 11,
-      "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "torsoHeight": 9,
+      "exception": null,
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 7.3
+      "sourcePixelsPerNativePixel": 5.983606557377049,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-tails-swim-03": {
-      "skullWidth": 10,
-      "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
       "attempt": 3,
-      "sourcePixelsPerNativePixel": 7.3
+      "sourcePixelsPerNativePixel": 5.983606557377049,
+      "previousUnreliableReading": {
+        "skullWidth": 10,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-tails-swim-04": {
       "skullWidth": 11,
-      "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "torsoHeight": 9,
+      "exception": null,
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 7.3
+      "sourcePixelsPerNativePixel": 5.983606557377049,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-tails-swim-ascend-00": {
       "skullWidth": 11,
@@ -575,24 +770,53 @@
     },
     "family-tails-swim-tired-00": {
       "skullWidth": 11,
-      "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "torsoHeight": 9,
+      "exception": null,
       "attempt": 2,
-      "sourcePixelsPerNativePixel": 10.9
+      "sourcePixelsPerNativePixel": 8.384615384615385,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-tails-swim-tired-01": {
       "skullWidth": 11,
-      "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
+      "torsoHeight": 9,
+      "exception": null,
       "attempt": 1,
-      "sourcePixelsPerNativePixel": 11.4
+      "sourcePixelsPerNativePixel": 8.76923076923077,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
     },
     "family-tails-swim-tired-02": {
+      "skullWidth": 12,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 3,
+      "sourcePixelsPerNativePixel": 8.615384615384615,
+      "previousUnreliableReading": {
+        "skullWidth": 11,
+        "torsoHeight": null
+      },
+      "measurement20261110": "Manual tight-crop coordinate panel reading, excluding crest/goggle strap, approximately +/-1px; replaces earlier unreliable family annotations."
+    },
+    "family-blink-03": {
+      "skullWidth": 11,
+      "torsoHeight": 9,
+      "exception": null,
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 13.5
+    },
+    "family-blink-04": {
       "skullWidth": 11,
       "torsoHeight": null,
-      "exception": "Foreshortened/curled/flash anatomy; compare along native pose axis, not upright height.",
-      "attempt": 3,
-      "sourcePixelsPerNativePixel": 11.2
+      "exception": "Seated torso folded/partly hidden by satchel.",
+      "attempt": 2,
+      "sourcePixelsPerNativePixel": 13.5
     }
   }
 }

@@ -1446,7 +1446,7 @@ class TestMicaCharacterIntegration {
             var encoded = Files.readAllBytes(temp.resolve("classes/art/talon.ggfp"));
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(encoded);
             var materialized = com.openggf.level.objects.PlayableSheetMaterializer.read(encoded);
-            assertEquals(167, sheet.frames().size());
+            assertEquals(169, sheet.frames().size());
             assertEquals(47, sheet.animations().size());
             assertEquals(6, sheet.animations().get("TAILS_FLY").steps().size());
             assertEquals(6, sheet.animations().get("TAILS_FLY_TIRED").steps().size());

@@ -192,11 +192,11 @@
     "fallback": "HANG"
   },
   "165": {
-    "key": "family-blink/0",
+    "key": "family-blink/3",
     "fallback": "BLINK"
   },
   "166": {
-    "key": "family-blink/1",
+    "key": "family-blink/4",
     "fallback": "BLINK"
   },
   "145": {
@@ -304,7 +304,7 @@
     "fallback": "SUPER_TRANSFORM"
   },
   "237": {
-    "key": "family-super-transform/4",
+    "key": "family-super-transform/2",
     "fallback": "SUPER_TRANSFORM"
   }
 }

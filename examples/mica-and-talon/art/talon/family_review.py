@@ -12,6 +12,12 @@ ROOT=Path(__file__).resolve().parents[4];ART=Path(__file__).resolve().parent
 sys.path.insert(0,str(ROOT/'tools/modding/playable_art'));import native_pose as n
 N=Image.Resampling.NEAREST
 
+def guide_boxes(draw, x, y):
+    # Fixed WAIT anatomy at the shared engine centre; never fit boxes to wings.
+    for box, color in [((36,32,47,42),'#f4a0b0'), ((38,44,47,53),'#70d0f0')]:
+        draw.rectangle(tuple((x if i%2==0 else y)+v*4 for i,v in enumerate(box)), outline=color, width=2)
+
+
 def tails(game,index):
     import re
     if game=='S2':
@@ -23,7 +29,8 @@ def tails(game,index):
         base=ROOT/'docs/skdisasm/General/Sprites/Tails';maps=(base/'Map - Tails.asm').read_text();plc=(base/'DPLC - Tails.asm').read_text()
         def block(t):
             labels=re.findall(r'dc.w\s+(\w+)-',t);return re.split(r'\n[A-Za-z_]\w*:',t.split(labels[index]+':')[1])[0]
-        raw=(base/'Art/Tails.unc').read_bytes();words=[n.num(v) for v in re.findall(r'dc.w\s+([^\n;]+)',block(plc))][1:];data=b''.join(raw[(v&4095)*32:((v&4095)+(v>>12)+1)*32] for v in words);pieces=[];colors=n.palette(ROOT/'docs/skdisasm/General/Sprites/Sonic/Palettes/SonicAndTails.bin')
+        # Tails_Load_PLC2 selects the extra art bank at mapping $D1.
+        raw=(base/('Art/Tails Extra.unc' if index >= 0xD1 else 'Art/Tails.unc')).read_bytes();words=[n.num(v) for v in re.findall(r'dc.w\s+([^\n;]+)',block(plc))][1:];data=b''.join(raw[(v&4095)*32:((v&4095)+(v>>12)+1)*32] for v in words);pieces=[];colors=n.palette(ROOT/'docs/skdisasm/General/Sprites/Sonic/Palettes/SonicAndTails.bin')
         for a in re.findall(r'dc.b\s+([^\n;]+)',block(maps)):
             y,size,hi,lo,xh,xl=map(n.num,a.split(','));x=xh*256+xl;t=hi*256+lo;pieces.append([x-65536 if x>32767 else x,y-256 if y>127 else y,(size>>2)+1,(size&3)+1,t&2047,bool(t&2048),bool(t&4096)])
     c=Image.new('RGBA',(128,128))
@@ -75,6 +82,14 @@ def review(dest):
         for row,game in enumerate(('S1','S2','S3K')):
             old=a['TALON/'+game]['fallback'];new=b['TALON/'+game]['fallback'];y=15+row*50;page+=f'<text x="0" y="{y+20}" fill="currentColor">{game}</text><rect x="45" y="{y}" width="{old*2.5}" height="12" fill="var(--muted-foreground,#888)"/><rect x="45" y="{y+16}" width="{new*2.5}" height="12" fill="var(--chart-1,#4695ee)"/><text x="310" y="{y+20}" fill="currentColor">{old} → {new}</text>'
         page+='</svg>'
+    scale = gen.get('scaleReview20261110', {}).get('areaComparison', {})
+    if scale:
+        page += '<h2>Opaque-area sanity check</h2><p>sqrt(mean TALON area / mean original source-reference area). Gray before, blue after; green line is 1.0. Source references include Sonic for families absent from native Tails. Head widths are in the anatomical table below.</p><svg viewBox="0 0 650 450" style="max-width:900px;width:100%" role="img" aria-label="Before and after family size ratios">'
+        for row, (family, frames) in enumerate(scale.items()):
+            old, new = [math.sqrt(sum(f[k] for f in frames) / sum(f['nativeArea'] for f in frames)) for k in ('beforeArea','afterArea')]
+            y = row * 38 + 10
+            page += f'<text x="0" y="{y+16}" fill="currentColor" font-size="13">{family}</text><rect x="180" y="{y}" width="{old*280}" height="10" fill="#999"/><rect x="180" y="{y+12}" width="{new*280}" height="10" fill="#4695ee"/><text x="500" y="{y+16}" fill="currentColor" font-size="13">{old:.3f} → {new:.3f}</text>'
+        page += '<path d="M460 0V430" stroke="#22884a" stroke-width="2"/></svg>'
     cache={}
     for family in groups:
         page+=f'<h2>{family}</h2>'
@@ -109,7 +124,7 @@ def review(dest):
     # Every source phase, including slopes, shares one engine centre and reference guides.
     fs=man['frames'];w=320;h=360;out=Image.new('RGB',(w*8,h*((len(fs)+7)//8)),'#888888');draw=ImageDraw.Draw(out)
     for i,f in enumerate(fs):
-        x=i%8*w;y=i//8*h;im=placed(Image.open(ART/f['file']),f['hotspot']).resize((320,320),N);out.paste(im,(x,y),im);draw.text((x+3,y+325),f['id'],fill='white')
+        x=i%8*w;y=i//8*h;im=placed(Image.open(ART/f['file']),f['hotspot']).resize((320,320),N);out.paste(im,(x,y),im);draw.text((x+3,y+325),f['id'],fill='white');guide_boxes(draw,x,y)
         for yy,col in [(28,'#f4a0b0'),(38,'#70d0f0'),(53,'#eec16c'),(59,'#88d897')]:draw.line((x,y+yy*4,x+w,y+yy*4),fill=col)
     out.save(dest/'lineup-source.png')
     sheet=json.loads((ROOT/'examples/mica-and-talon/src/main/mod/talon-sheet.yaml').read_text())
@@ -118,11 +133,11 @@ def review(dest):
     for animation,script in sheet['animations'].items():
         indices=list(dict.fromkeys(script['frames']));block_rows=math.ceil(len(indices)/8)
         for i,index in enumerate(indices):
-            f=fs[index];x=i%8*320;y=(row+i//8)*360;im=placed(Image.open(ART/f['file']),f['hotspot']).resize((320,320),N);out.paste(im,(x,y),im);draw.text((x+3,y+325),animation+' / '+f['id'],fill='white')
+            f=fs[index];x=i%8*320;y=(row+i//8)*360;im=placed(Image.open(ART/f['file']),f['hotspot']).resize((320,320),N);out.paste(im,(x,y),im);draw.text((x+3,y+325),animation+' / '+f['id'],fill='white');guide_boxes(draw,x,y)
         for subrow in range(block_rows):
             for yy,color in [(28,'#f4a0b0'),(38,'#70d0f0'),(53,'#eec16c'),(59,'#88d897')]:draw.line((0,(row+subrow)*360+yy*4,out.width,(row+subrow)*360+yy*4),fill=color)
         row+=block_rows
-    out.save(dest/'lineup-all.png');page+='<h2>Whole-character baseline</h2><p>All 47 canonical animations, one block per key with long slope banks wrapped, repeated steps collapsed only in this static lineup. All source frames including slope banks are below. Pink skull top, cyan eye, amber waist, green exclusive foot baseline from approved WAIT. All frames share the engine centre; airborne and rotated poses retain their pose-relative offsets.</p><section><img src="lineup-all.png"></section><h2>All source drawings and slope banks</h2><section><img src="lineup-source.png"></section><h2>Landmark reduction table</h2><p>Source forehead rectangle and uniform source pixels per native pixel are measured reduction inputs. Anatomical manual review uses skull width excluding crest/strap and neck-to-waist distance along the torso axis. Hidden/curled/flash anatomy is not measurable. The previous approved core remains unchanged.</p><table><tr><th>Frame</th><th>Attempt</th><th>Forehead source rectangle</th><th>Uniform reduction</th><th>Hotspot</th></tr>'
+    out.save(dest/'lineup-all.png');page+='<h2>Whole-character baseline</h2><p>All 47 canonical animations, one block per key with long slope banks wrapped, repeated steps collapsed only in this static lineup. All source frames including slope banks are below. Pink skull and cyan torso guide boxes show the fixed 11px skull width and 9px torso of approved WAIT; guides are reference positions, not measurements of pitched poses. Pink skull top, cyan eye, amber waist, green exclusive foot baseline from approved WAIT. All frames share the engine centre; airborne and rotated poses retain their pose-relative offsets.</p><section><img src="lineup-all.png"></section><h2>All source drawings and slope banks</h2><section><img src="lineup-source.png"></section><h2>Landmark reduction table</h2><p>Source forehead rectangle and uniform source pixels per native pixel are measured reduction inputs. Anatomical manual review uses skull width excluding crest/strap and neck-to-waist distance along the torso axis. Hidden/curled/flash anatomy is not measurable. The previous approved core remains unchanged.</p><table><tr><th>Frame</th><th>Attempt</th><th>Forehead source rectangle</th><th>Uniform reduction</th><th>Hotspot</th></tr>'
     for key,rec in gen['frames'].items():page+=f'<tr><td>{key}</td><td>{rec["attempt"]}</td><td>{rec["goggleSourceBox"]}</td><td>{rec.get("finalScale",rec["scale"]):.4f}</td><td>{by[key]["hotspot"]}</td></tr>'
     landmarks=json.loads((ART/'family-landmarks.json').read_text())
     page+='</table><h2>Anatomical landmarks</h2><p>'+html.escape(landmarks['method'])+'</p><table><tr><th>Frame</th><th>Skull width</th><th>Torso height</th><th>Exception</th></tr>'
