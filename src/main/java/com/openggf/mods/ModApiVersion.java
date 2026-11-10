@@ -7,6 +7,7 @@ import java.util.Objects;
 
 public final class ModApiVersion {
     /**
+     * Sidekick-owned S2/S3K Tornado cockpit crops extend the unpublished candidate.
      * Optional per-host normal/powered 32x32 reel portraits extend the unpublished candidate.
      * S3K Competition miniature body/tail surfaces extend indexed presentation frames.
      * Optional per-form powered GGFP banks and explicit normal aliases extend the unpublished candidate.

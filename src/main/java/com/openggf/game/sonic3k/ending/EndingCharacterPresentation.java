@@ -18,10 +18,12 @@ final class EndingCharacterPresentation {
     static boolean draw(ObjectServices services, EndingSpriteSet.Surface surface, int frame,
             int x, int y, boolean flipX, boolean flipY, boolean high, int bucket) {
         var definition = StageCharacterPresentation.activeDefinition();
-        if (definition == null || definition.presentationSupplier() == null) return false;
+        boolean sidekick = surface == EndingSpriteSet.Surface.S3K_TORNADO_PILOT;
+        if (!sidekick && (definition == null || definition.presentationSupplier() == null)) return false;
         try {
-            var presentation = definition.presentationSupplier().load(definition.key().persisted());
-            var set = presentation == null ? null : presentation.endings().get(surface);
+            var presentation = sidekick ? null : definition.presentationSupplier().load(definition.key().persisted());
+            var set = sidekick ? com.openggf.game.presentation.EndingCharacterPresentation.sidekick(surface)
+                    : presentation == null ? null : presentation.endings().get(surface);
             if (set == null || !set.sprites().frames().containsKey(frame)) return false;
             var renderers = CACHE.computeIfAbsent(services.currentLevel(), ignored -> new HashMap<>());
             var renderer = renderers.get(surface);

@@ -132,9 +132,15 @@ def main():
         else:
             add('talon',g,'presentation contract','all','fallback','stock Tails',rank='normal early-zone play',notes='No TALON CharacterPresentation implementation on this branch. Individual native banks listed in native-inventory.csv; do not substitute Sonic presentation frame IDs.')
     add('mica','S2','ending search photos','1..3','N/A',notes='Active first sidekick owns these selectors; photo 0 remains native. MICA may own them only when selected as sidekick, outside agreed Sonic lead role.')
-    for f in [1,2,3]:add('talon','S2','ending search photos',f,'fallback','stock search party photograph',evidence=citation('docs/s2disasm/s2.asm','ArtNem_EndingPics'),notes='S2_PHOTOS is sidekick-owned; no TALON photos supplied.')
-    add('talon','S2','Tornado pilot','native pilot sequence','fallback','stock Tails pilot',evidence=citation('docs/s2disasm/s2.asm','ObjB2_Animate_Pilot'),notes='Separate pilot pipeline loads other character ROM art; needs sidekick-owned custom pilot seam.')
-    add('mica','S3K','ICZ snowboard','Tails route','N/A',notes='MICA uses Sonic rider bank; TALON uses Tails route and needs no Sonic snowboard art.')
+    def talon_ending(group, frame):
+        path=ART/'talon/endings'/f'{group}-{frame:02x}.png'
+        return path.is_file()
+    for f in [1,2,3]:add('talon' ,'S2','ending search photos',f,'authored' if talon_ending('photos',f) else 'fallback','TalonEndings S2_PHOTOS',evidence=citation('docs/s2disasm/s2.asm','ArtNem_EndingPics'),notes='Sidekick-owned search photographs; TalonEndings awaits presentation-lane wiring.')
+    add('talon','S2','Tornado pilot','native pilot sequence','native alias' if talon_ending('pilot',16) else 'fallback','native 24-step / nine-clock sequence',evidence=citation('docs/s2disasm/s2.asm','ObjB2_Animate_Pilot'),notes='S2_TORNADO_PILOT supplies cockpit crops in ending and SCZ/WFZ. Native DPLC/timing retained; presentation wiring pending.')
+    add('talon','S3K','Tornado pilot','0C','native alias' if talon_ending('pilot',16) else 'fallback',
+        'TalonEndings S3K_TORNADO_PILOT: S2 side-view cockpit crop; hotspot 12,8',
+        evidence='EndingKnucklesFlightChildObjectInstance PILOT',notes='Native S3K/S2 pilot alpha/index geometry matches; native palettes differ; first configured sidekick owns this reunion pilot; presentation wiring pending.')
+    add('mica','S3K','ICZ snowboard' ,'Tails route','N/A',notes='MICA uses Sonic rider bank; TALON uses Tails route and needs no Sonic snowboard art.')
     add('talon','S3K','ICZ snowboard','all','N/A',notes='Native Tails route skips Sonic rider choreography; do not generate 13 falcon snowboard frames by assumption.')
     # Tails-specific independent banks; native split maps establish exact selector counts.
     for g,surface_name,path,na in [
@@ -193,18 +199,18 @@ def main():
         add('talon','S2','half-pipe player',f'{i:02X}','fallback','stock Tails',rank='normal early-zone special stage',
             evidence=citation('docs/s2disasm/s2.asm','Obj10_MapUnc_34B3E'),notes='Body set 0..17; wings must replace separate tail motion in body poses')
     for f in [1,2,3,4,0x10]:
-        add('talon','S2','Tornado pilot mapping',f'{f:02X}','fallback','stock Tails',
-            evidence=citation('docs/s2disasm/s2.asm','Tails_pilot_frames'),notes='24 sequence steps, five unique normal-Tails mappings; body art may be reused after pilot binding exists')
+        add('talon','S2','Tornado pilot mapping',f'{f:02X}','authored' if talon_ending('pilot',f) else 'fallback','TalonEndings S2_TORNADO_PILOT',
+            evidence=citation('docs/s2disasm/s2.asm','Tails_pilot_frames'),notes='Five generated 24x16 cockpit crops; native 24-step/nine-clock sequence retained in ending and SCZ/WFZ; TalonPresentation merge pending')
     for f in [0x18,0x19,9,10,11,15,16,17]:
-        add('talon','S2','ending object bank',f'{f:02X}','fallback','stock Tails',
-            evidence=citation('docs/s2disasm/s2.asm','ObjCE_Init'),notes='Tails Tornado rotation and final leap; separate ObjCF bank')
+        add('talon','S2','ending object bank',f'{f:02X}','authored' if talon_ending('s2',f) else 'fallback','TalonEndings S2_ENDING',
+            evidence=citation('docs/s2disasm/s2.asm','ObjCE_Init'),notes='TalonEndings: solo Tails route rotation/final leap; separate ObjCF bank; presentation merge pending')
     for f in [3,4]:
-        add('talon','S3K','ending reunion pose',f'{f:02X}','fallback','stock Tails',
-            evidence=citation('docs/skdisasm/sonic3k.asm','loc_5E334'),notes='Tails-alone starts mapping 3, then increments to 4; not Sonic selectors 0/1')
+        add('talon','S3K','ending reunion pose',f'{f:02X}','authored' if talon_ending('s3k',f) else 'fallback','TalonEndings S3K_NORMAL/POWERED_POSE',
+            evidence=citation('docs/skdisasm/sonic3k.asm','loc_5E334'),notes='TalonEndings: Tails-alone 3 then 4; team Sonic/MICA reunion has no companion portrait; presentation merge pending')
     for g in ['S1','S2','S3K']:
         for c in ['mica','talon']:
-            add(c,g,'credits gameplay','native replay','native alias' if c=='mica' else 'fallback',
-                'gameplay binding' if c=='mica' else 'stock Tails until character integration',notes='No separate credit roll animation sheet; scene-specific cast/text remains native.')
+            add(c,g,'credits gameplay','native replay','native alias' if g=='S1' else 'N/A',
+                'configured gameplay team / canonical sheet' if g=='S1' else 'no gameplay demos in this native credit roll',notes='S1 EndingDemoLevelAssembly uses configured main and ordinary playable art; S2 Sonic2EndingProvider uses text slides; S3K S3kCreditsState/sub_5B18E scrolls ROM text. No separate credits sprite sheet.')
     for f in [5,6]:
         add('talon','S3K','continue team sprite',f'{f:02X}','fallback','stock Tails',
             evidence=citation('docs/skdisasm/sonic3k.asm','loc_5C74A'),notes='Team idle bank; later run uses normal Tails WAIT/WALK scripts')

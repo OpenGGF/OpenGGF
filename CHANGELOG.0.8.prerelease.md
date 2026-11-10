@@ -36,7 +36,9 @@ under the matching area heading; see the
 ## Modding and tools
 
 - **MICA, an original character framework example:** TALON now joins as her
-  default sidekick and is selectable solo. Native-cell, locally paletted reel
+  default sidekick and is selectable solo.
+  TALON ending assets now cover solo S2/Tails poses, sidekick search photos,
+  goggles-down ending/SCZ/WFZ cockpit crops, a shared S3K reunion pilot and solo S3K reunion poses. Native-cell, locally paletted reel
   portraits now cover S2 CNZ and S3K Slots lead/sidekick symbols, TALON solo
   and Gilded/Solar symbols through optional candidate character presentation;
   slot rewards and other symbols remain native. Title mascot art remains open. S3K Competition renders MICA/TALON with

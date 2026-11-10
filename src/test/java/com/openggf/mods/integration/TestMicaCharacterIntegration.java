@@ -35,7 +35,10 @@ class TestMicaCharacterIntegration {
     private static final String CODE = "mica-and-talon:mica";
     @TempDir Path temp;
 
-    @AfterEach void cleanup() { TestEnvironment.resetAll(); }
+    @AfterEach void cleanup() {
+        TestEnvironment.resetAll();
+        com.openggf.graphics.RenderContext.reset();
+    }
 
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
     void sonic1() throws Exception { acceptance(new com.openggf.game.sonic1.Sonic1GameModule(), "s1", 1, 0); }
@@ -545,12 +548,13 @@ class TestMicaCharacterIntegration {
     void micaS2EndingWithTailsCapture() throws Exception { captureS2Ending(false, "tails"); }
 
     private void captureS2Ending(boolean powered, String sidekick) throws Exception {
-        Path output=Path.of(System.getProperty("mica.s2.captureRoot", "target/mica-s2-ending-captures")).resolve(powered?"s2-super":sidekick.isEmpty()?"mica-alone":"mica-tails");
+        Path output=Path.of(System.getProperty("mica.s2.captureRoot", "target/mica-s2-ending-captures")).resolve(powered?(sidekick.equals("mica-and-talon:talon")?"mica-talon-super":"s2-super"):sidekick.isEmpty()?"mica-alone":sidekick.equals("tails")?"mica-tails":"mica-talon");
         Files.createDirectories(output);
         var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,sidekick,"off",null,null,null);
         try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
             session.applyMod(buildSample());
             session.boot(com.openggf.tests.RomTestUtils.ensureSonic2RomAvailable().toPath(),10,0,settings);
+            if (sidekick.equals("mica-and-talon:talon")) installTalonEndings();
             session.loop().closePresence();
             var engine=new com.openggf.Engine();
             engine.setInputHandler(new com.openggf.control.InputHandler());
@@ -614,7 +618,8 @@ class TestMicaCharacterIntegration {
                     assertEquals(expected.artTiles()[t].getPixel(x,y),actual.artTiles()[t].getPixel(x,y));
                 assertTrue(entry.getValue().getRenderContext().getEffectivePaletteLine(0)>3);
                 var palette=entry.getValue().getRenderContext().getPalette(0);
-                if(!powered || entry.getKey()==EndingSpriteSet.Surface.S2_PHOTOS) {
+                if(!powered || entry.getKey()==EndingSpriteSet.Surface.S2_PHOTOS
+                        || entry.getKey()==EndingSpriteSet.Surface.S2_TORNADO_PILOT) {
                     for(int i=0;i<16;i++) {
                         var c=palette.getColor(i);
                         assertEquals(sets.get(entry.getKey()).rgb()[i],((c.r&255)<<16)|((c.g&255)<<8)|(c.b&255));
@@ -1719,6 +1724,92 @@ class TestMicaCharacterIntegration {
                     Files.writeString(output.resolve(label).resolve("states.csv"),csv);
                 }
             }
+
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void talonS2EndingCapture() throws Exception { captureS2Ending(false, "mica-and-talon:talon"); }
+
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void talonS2SuperEndingCapture() throws Exception { captureS2Ending(true, "mica-and-talon:talon"); }
+
+    /** Test-only direct presentation assembly until the parallel presentation lane wires it. */
+    private void installTalonEndings() throws Exception {
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        var old = world.getPlayableCharacterRegistry();
+        var key = CharacterKey.parsePersisted("mica-and-talon:talon");
+        var d = old.find(key).orElseThrow();
+        var loader = new java.net.URLClassLoader(new java.net.URL[]{temp.resolve("classes").toUri().toURL()}, getClass().getClassLoader());
+        var method = Class.forName("mica.TalonEndings", true, loader).getDeclaredMethod("load", com.openggf.io.ModAssetRoot.class);
+        method.setAccessible(true);
+        var assets = com.openggf.io.ModAssetRoot.directory(Path.of("examples/mica-and-talon").toAbsolutePath(),
+                Path.of("examples/mica-and-talon").toAbsolutePath(), ModInputLimits.production(),
+                com.openggf.io.DirectoryAccess.TEST);
+        @SuppressWarnings("unchecked")
+        var sets = (Map<EndingSpriteSet.Surface, EndingSpriteSet>)method.invoke(null, assets);
+        assets.close(); loader.close();
+        assertEquals(8, sets.get(EndingSpriteSet.Surface.S2_ENDING).sprites().frames().size());
+        assertEquals(Set.of(1,2,3,4,16), sets.get(EndingSpriteSet.Surface.S2_TORNADO_PILOT).sprites().frames().keySet());
+        var replacement = new CharacterDefinition(d.key(), d.displayName(), d.spriteFactory(), d.respawnStrategyFactory(),
+                d.behavesLike(), d.secondaryAbility(), d.supportsSuperForm(), d.artSupplier(), d.paletteSupplier(),
+                d.movementAbilities(), d.underwaterPaletteSupplier(), ignored -> new CharacterPresentation("TALON", "TALON",
+                Map.of(), Map.of(), Map.of(), sets), d.superFormSupplier(), d.defaultSidekick());
+        var field = PlayableCharacterRegistry.class.getDeclaredField("definitions"); field.setAccessible(true);
+        @SuppressWarnings("unchecked") var entries = (Map<CharacterKey,CharacterDefinition>)field.get(old);
+        var registry = PlayableCharacterRegistry.empty();
+        for (var entry : entries.entrySet()) registry = registry.register(entry.getKey(), entry.getKey().equals(key) ? replacement : entry.getValue());
+        var registryField = world.getClass().getDeclaredField("playableCharacterRegistry"); registryField.setAccessible(true);
+        registryField.set(world, registry);
+    }
+
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void talonS3kReunionCapture() throws Exception {
+        Path output = Path.of(System.getProperty("talon.captureRoot", "target/talon-endings"));
+        for (String main : new String[]{"mica-and-talon:mica", "mica-and-talon:talon", "sonic", "tails"}) {
+            var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320,main,
+                    main.equals(CODE) ? "mica-and-talon:talon" : "", "off", null,null,null);
+            try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+                session.applyMod(buildSample());
+                session.boot(com.openggf.tests.RomTestUtils.ensureSonic3kRomAvailable().toPath(),13,1,settings);
+                installTalonEndings();
+                var manager = GameServices.level().getObjectManager();
+                for (var object : List.copyOf(manager.getActiveObjects())) manager.removeDynamicObject(object);
+                var director=manager.createDynamicObject(() -> new com.openggf.game.sonic3k.ending.EndingRescueDirectorObjectInstance(
+                        com.openggf.game.sonic3k.ending.EndingRescueDirectorObjectInstance.REUNION));
+                // Positioned component entry at native beginReunion: prepare its real SSZ
+                // resource handoff and let ScreenEvents load/fade/scroll credits normally.
+                com.openggf.game.sonic3k.ending.EndingSceneResourceHandoff.queueSsz(manager.getObjectServices());
+                ((com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState)GameServices.zoneRuntimeState())
+                        .screen().foregroundRoutine=40;
+                Path dest = output.resolve("s3k-"+main.replace(':','-')); Files.createDirectories(dest);
+                var csv = new StringBuilder("input,scene,routine,mapping\n");
+                int finalPoseAt=-1;
+                boolean soloTails=main.equals("tails")||main.equals("mica-and-talon:talon");
+                for (int i=0; i<(soloTails?18000:2000); i++) {
+                    session.step(null); session.renderFrame();
+                    if (i%60==0) com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), dest.resolve("frame-"+i+".png"));
+                    int frame=(int)privateField(director,"mappingFrame");
+                    int routine=(int)privateField(director,"routine");
+                    csv.append(i).append(",debug-reunion-component-entry,").append(routine).append(',').append(frame).append('\n');
+                    if (soloTails && routine>=8 && (frame==3||frame==4)) {
+                        com.openggf.graphics.ScreenshotCapture.savePNG(session.render(),dest.resolve("reunion-pose-"+frame+".png"));
+                        if(frame==4&&finalPoseAt<0)finalPoseAt=i;
+                    }
+                    if(finalPoseAt>=0&&i>finalPoseAt+120)break;
+                }
+                if (main.startsWith("mica-and-talon:")) {
+                    var cacheField=Class.forName("com.openggf.game.sonic3k.ending.EndingCharacterPresentation").getDeclaredField("CACHE");
+                    cacheField.setAccessible(true);
+                    @SuppressWarnings("unchecked") var cache=(Map<Object,Map<EndingSpriteSet.Surface,PlayerSpriteRenderer>>)cacheField.get(null);
+                    assertTrue(cache.getOrDefault(GameServices.level().getCurrentLevel(),Map.of()).containsKey(
+                            main.equals(CODE) ? EndingSpriteSet.Surface.S3K_TORNADO_PILOT :
+                            EndingSpriteSet.Surface.S3K_NORMAL_POSE), "TALON reunion reached the renderer");
+                }
+                Files.writeString(dest.resolve("state.csv"),csv);
+            }
+            Files.delete(temp.resolve("mica-and-talon.jar"));
+            TestEnvironment.resetAll();
+            com.openggf.graphics.RenderContext.reset();
+            // buildSample owns this disposable test build and expects an empty destination.
+            try (var files = Files.walk(temp.resolve("classes"))) { for (var file : files.sorted(Comparator.reverseOrder()).toList()) Files.delete(file); }
         }
     }
 
@@ -1782,6 +1873,12 @@ class TestMicaCharacterIntegration {
         try(var files=Files.list(stages)) {
             for(var file:files.filter(p -> p.toString().endsWith(".png") && !p.toString().endsWith("-fixed.png")).toList())
                 Files.copy(file,classes.resolve("art/mica/wave3").resolve(file.getFileName()));
+        }
+        try(var files=Files.walk(project.resolve("art/talon/endings"))) {
+            for(var file:files.filter(Files::isRegularFile).filter(p->p.toString().endsWith(".png")).toList()) {
+                Path destination=classes.resolve("art/talon/endings").resolve(file.getFileName());
+                Files.createDirectories(destination.getParent()); Files.copy(file,destination);
+            }
         }
         Path endings = project.resolve("art/mica/endings");
         try(var files=Files.walk(endings)) {

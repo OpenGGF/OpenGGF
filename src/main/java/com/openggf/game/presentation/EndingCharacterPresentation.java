@@ -15,6 +15,20 @@ public final class EndingCharacterPresentation {
         var presentation = definition.presentationSupplier().load(definition.key().persisted());
         return presentation == null ? null : presentation.endings().get(surface);
     }
+    /** First configured companion owns search photos and the Tornado cockpit. */
+    public static EndingSpriteSet sidekick(EndingSpriteSet.Surface surface) throws IOException {
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        var codes = com.openggf.game.session.ActiveGameplayTeamResolver.resolveSidekicks(GameServices.configuration());
+        return world == null ? null : sidekick(world.getPlayableCharacterRegistry(), codes, surface);
+    }
+    public static EndingSpriteSet sidekick(PlayableCharacterRegistry registry, java.util.List<String> codes,
+            EndingSpriteSet.Surface surface) throws IOException {
+        if (codes.isEmpty()) return null;
+        var definition = registry.find(CharacterKey.parsePersisted(codes.getFirst())).orElse(null);
+        if (definition == null || definition.key().isBuiltin() || definition.presentationSupplier() == null) return null;
+        var presentation = definition.presentationSupplier().load(definition.key().persisted());
+        return presentation == null ? null : presentation.endings().get(surface);
+    }
     public static PlayerSpriteRenderer renderer(EndingSpriteSet set) {
         if (set == null) return null;
         var renderer = new PlayerSpriteRenderer(StageSpriteCompiler.compile(set.sprites(), null));

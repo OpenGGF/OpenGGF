@@ -416,9 +416,18 @@ remain intact for the emeralds, flowers, logo and companions.
 
 S2 consumes `S2_ENDING` (normal ObjCF selectors), `S2_SUPER` (powered
 ObjCF selectors), `S2_FLOAT` (native Float2 frame IDs), and `S2_PHOTOS` (0–3).
-Photo panels are complete solo illustrations. Normal rider overlays contain no
+Photo panels 1–3 are complete search-party illustrations owned by the first
+configured sidekick; photo 0 stays native. They show the search for the missing
+hero. Normal rider overlays contain no
 vehicle pixels: the host retains the native Tornado pieces and separate Tails
-pilot. Normal and Super paths retain their native choreography. Powered poses
+pilot unless that sidekick supplies `S2_TORNADO_PILOT`. This optional set uses
+native Tails pilot mapping IDs 1, 2, 3, 4 and 16, each a 24×16 cockpit crop with
+hotspot (48, 8) relative to the Tornado origin. The host retains its 24-step,
+nine-clock sequence and DPLC submissions. The ending and SCZ/WFZ vehicles share
+this override; the Sonic pilot on Tails-alone routes remains native. Missing
+character, set or selector retains the native cockpit. Ending fades apply to the
+private pilot palette; powered lead palettes never recolour the sidekick.
+Normal and Super paths retain their native choreography. Powered poses
 use the character's S2 Super profile palette cycle; native fade steps also apply
 to the private rows. The existing KiS2 presentation keeps its own route behavior.
 
@@ -765,3 +774,8 @@ launches native art. Wheel portraits/names, records and the miniature simulation
 remain native archetype-owned: campaign sprite factories, physics and abilities
 are not invoked. The maintained MICA/TALON example shows all body selectors,
 explicit transparent tail frames and independent per-frame hotspots.
+
+`S3K_TORNADO_PILOT` belongs to the first configured sidekick on the Sonic/team
+ending route. It replaces native plane selector 12 at hotspot (12,8). The 24×16
+crop shares the S2 side-view cockpit geometry, so creators may reuse that image.
+Tails-alone's Sonic pilot stays native. Missing slots retain native art.

@@ -2769,3 +2769,35 @@ API signature surface, and the four standard S3K bootstrap/loading tests.
 Capture real headless S2/S3K stand/run/jump and S3K Hyper beside native Super
 Sonic; annotate positioned versus route-driven captures. Neither a static pilot
 nor an inventory JSON is in-game acceptance.
+
+## Ending ownership (2026-11-10)
+
+`TalonEndings` supplies eight S2 ending object poses, three monochrome search
+photos, five 24×16 goggles-down cockpit crops, and S3K reunion selectors 3/4.
+Built-in GPT Image transformed real-palette native references against the approved
+model and WAIT. Native decoded pixels and raw candidates remain in external
+scratch; provenance and indexed authored images live in `art/talon/endings/`.
+The first configured sidekick owns photos and the new optional
+`S2_TORNADO_PILOT` set. The ending and SCZ/WFZ renderers replace only the cockpit
+piece, keeping native sequence clocks, vehicle pieces and DPLC decisions.
+Missing sidekick/slot retains native art. The unpublished API remains 0.7.0.
+
+Ending object/reunion sets apply to TALON's solo Tails route; MICA's native S3K
+reunion does not include a sidekick portrait. S1 credits demos use the configured
+team's ordinary playable sheet. S2 credits are text slides, and S3K scrolls ROM
+text (`S3kCreditsState`); neither has a credits gameplay bank to redraw.
+Presentation-lane merge must add `TalonEndings.load(assets)` to its endings map;
+this lane leaves the character definition and TalonPresentation untouched.
+
+The S3K reunion plane also has a separate sidekick pilot (native selector 12).
+`S3K_TORNADO_PILOT` aliases the generated S2 side-view cockpit with hotspot
+(12,8). Native alpha geometry is identical; native palettes differ. This keeps
+TALON visible in MICA's team reunion without adding a reunion portrait actor.
+
+Ending-lane verification: 181 distinct bounded Java cases covered (180 passing
+in the combined run; corrected positioned S3K capture passing on rerun), zero
+skips; Python modding discovery 52 passing. Final TALON audit authored / alias /
+fallback / N/A: S1 0/1/2/2, S2 45/1/27/52, S3K 42/1/69/78. The extra S3K pilot
+obligation was discovered in the actual team capture. See the ending art README
+for independent size measurements and scope. Main presentation wiring remains
+with the parallel lane; no definition or TalonPresentation file was edited.
