@@ -75,7 +75,7 @@ gate. Exact capture sampling matches all 879 opaque standing pixels; native
 mapping selections and white-fade passes match. See the wave3 runtime checkpoint.
 
 
-## Native special-stage orientation (2026-11-10)
+## Native special-stage orientation checkpoint (superseded art)
 
 MICA and TALON now supply dedicated final-orientation drawings for Blue Sphere's
 mirrored selectors 6–8 and all 40 S2 half-pipe H/V/HV combinations per character.
@@ -98,3 +98,29 @@ Its acceptance gates use real capture pixels or the exact sampled capture
 palette, full-60-Hz lossless RGB lockstep movies at 3×, every-tick two-cycle strips,
 centroid plots and per-tick selector diffs. The positioned probes certify these
 presentation encounters, not complete special-stage routes.
+
+## Current locked special-stage bank (2026-11-10)
+
+Owner review of `176d974b06` rejected temporal head/ear and shading drift. The
+current runtime bank is `consistent-stage/`, superseding `oriented-stage/`.
+A fresh canonical dome/ears/scale rows/torso is reused exactly for every upright
+phase. One separate canonical scale-ball supplies jumps, with native-measured
+glint sizes/heights and blur envelopes. Generated calves, white fists and coral
+boots track Sonic's native phases; the short tail stays behind the legs. S2
+rotates the same identity geometry while keeping its broad light field fixed.
+
+The per-frame head/ear layer IoU is 1.000, with zero RGB differences. Maximum glove
+centroid errors are 0.959 px S3K/0.595 px S2; shoe-contact boundary errors reach
+1.803/3.163 px. Independent size ratios are 0.9954 S3K and1.0079 S2. The source
+components,32-candidate shared generation provenance, native numeric landmarks
+and deterministic placement/glint recipes live in `consistent-stage/native-pose-generation.json`.
+No native pixels or raw generations ship. Rebuild/check with
+`python3 tools/modding/playable_art/locked_stage.py examples/mica-and-talon/art/mica/consistent-stage --check`.
+
+The shared real-capture review is
+`$HOME/scratch/agent-tmp/mt-bluesphere-consistency-20261110/review.html`.
+It includes all 144 native/new style gates, four-row 6× strips,60 fps paired films,
+head-material centroid plots, exact runtime colour samples, shadow/fade pixels
+and zero per-tick main mapping/motion differences. The existing draw/API path is
+unchanged; these replace authored rows, so coverage moves 0. Limits and the
+rejected independent-generation approach are recorded in the design audit.

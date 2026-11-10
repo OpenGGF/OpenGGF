@@ -37,6 +37,10 @@ public final class SpecialStageCharacterProbe {
       s3?11616:3500,s3?1612:150,null,false,false,null,null,false, s3?42:70);
     Path rom=TraceToolRomLocations.resolve(game,GameServices.configuration(),Path.of(""));
     try(var session=new GameplayCaptureSession(settings);var csv=Files.newBufferedWriter(out.resolve("stage.csv"));var orientation=Files.newBufferedWriter(out.resolve("orientation.csv"));var legacy=Files.newBufferedWriter(out.resolve("state.csv"))) {
+      // GameplayCaptureSession restores the caller's configuration on close.
+      // Native pixel comparisons use the same scanline budget as ROM capture.
+      GameServices.configuration().setSessionOverride(
+          com.openggf.configuration.SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
       if(!args[3].equals("-"))session.applyMod(Path.of(args[3]));
       session.boot(rom,GameplayCaptureTool.ZoneIds.resolve(game,s3?"cnz":"ehz"),0,settings);session.declareTimer(s3?9600:6600);
       legacy.write(GameplayCaptureSession.stateHeader()+"\n");

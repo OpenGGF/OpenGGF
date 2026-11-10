@@ -2194,8 +2194,8 @@ class TestMicaCharacterIntegration {
         }
         Path stages = project.resolve("art/mica/wave3");
         for (String character : List.of("mica", "talon")) {
-            Path source = project.resolve("art/" + character + "/oriented-stage");
-            Path destination = classes.resolve("art/" + character + "/oriented-stage");
+            Path source = project.resolve("art/" + character + "/consistent-stage");
+            Path destination = classes.resolve("art/" + character + "/consistent-stage");
             Files.createDirectories(destination);
             try (var files = Files.list(source)) {
                 for (var file : files.filter(p -> p.toString().endsWith(".png")).toList())
