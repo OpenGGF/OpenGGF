@@ -32,7 +32,8 @@ public final class TalonCharacter extends AbstractPlayableSprite {
                     public CharacterPresentation load(String code) { return load(code, GameId.S3K); }
                     public CharacterPresentation load(String code, GameId host) {
                         return new CharacterPresentation("TALON", host == GameId.S3K ? "TALO" : "TALON",
-                                presentation.art(), presentation.supplementaryGlyphs(), presentation.stages());
+                                presentation.art(), presentation.supplementaryGlyphs(), presentation.stages(),
+                                presentation.endings());
                     }
                 },
                 ignored -> TalonSolar.profile());
