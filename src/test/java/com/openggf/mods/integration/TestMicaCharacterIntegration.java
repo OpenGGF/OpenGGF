@@ -1596,6 +1596,69 @@ class TestMicaCharacterIntegration {
         }
     }
 
+    /** Positioned presentation probe: live host boot/controller, production animations and renderer.
+     * Pose controls are declared; this does not certify traversal or wall contact. */
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void poweredBankCaptureAndRewind() throws Exception {
+        Path jar = buildSample();
+        Path output = Path.of(System.getProperty("mica.powered.captureRoot","target/mica-powered-captures"));
+        for (String game : List.of("s2","s3k")) for (boolean nativeCharacter : List.of(false,true)) {
+            int tiers = game.equals("s3k") ? 2 : 1;
+            for (int tier = 0; tier < tiers; tier++) {
+                String label = game+"-"+(nativeCharacter?"native":"mica")+"-"+(tier==1?"hyper":"super");
+                var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320,nativeCharacter?"sonic":CODE,"","off",null,null,null);
+                try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+                    if (!nativeCharacter) session.applyMod(jar);
+                    session.boot(Path.of(System.getProperty(game.equals("s2")?"sonic2.rom.path":"s3k.rom.path")),0,1,settings);
+                    for (int tick=0;tick<120;tick++) session.step(null);
+                    var player=session.player(); var controller=player.getSuperStateController();
+                    assertNotNull(controller);
+                    var state=player.currentGameState();
+                    for (int e=0;e<state.getChaosEmeraldCount();e++) state.markEmeraldCollected(e);
+                    if(tier==1) for(int e=0;e<7;e++) state.markSuperEmeraldCollected(e);
+                    player.currentLevelState().resumeTimer();
+                    com.openggf.sprites.playable.ObjectControlState.none().applyTo(player);
+                    player.addRings(80-player.getRingCount()); player.setAir(true); player.setJumping(true); player.setYSpeed((short)0x28);
+                    player.setInvincibleFrames(0);
+                    if(game.equals("s3k")) assertTrue(controller.activateFromAirAbility()); else controller.checkTransformationBeforeMove();
+                    assertTrue(controller.isSuper());
+                    var transforming=player.captureRewindState(true);
+                    var transformScripts=player.getAnimationSet();
+                    for(int tick=0;tick<100;tick++) session.step(null);
+                    assertEquals(com.openggf.sprites.playable.SuperState.SUPER,controller.getState());
+                    assertEquals(tier==1,controller.isHyperFormActive());
+                    var active=player.captureRewindState(true);
+                    if(!nativeCharacter) {
+                        controller.debugDeactivate(); player.restoreRewindState(transforming);
+                        assertEquals(transformScripts.getAllScripts(),player.getAnimationSet().getAllScripts());
+                        assertEquals(com.openggf.sprites.playable.SuperState.TRANSFORMING,controller.getState());
+                        GameServices.level().refreshPlayableSpriteArt();
+                        assertEquals(transformScripts.getAllScripts(),player.getAnimationSet().getAllScripts());
+                        player.restoreRewindState(active);
+                    }
+                    player.setAir(false); player.setJumping(false); player.setYSpeed((short)0);
+                    com.openggf.sprites.playable.ObjectControlState.none().applyTo(player);
+                    player.setDirection(com.openggf.physics.Direction.RIGHT); player.setAngle((byte)0);
+                    Files.createDirectories(output.resolve(label));
+                    var csv=new StringBuilder("pose,animation,mapping,centre_x,centre_y,rings,tier\n");
+                    for(var pose:List.of(CanonicalAnimation.WAIT,CanonicalAnimation.WALK,CanonicalAnimation.RUN,CanonicalAnimation.PUSH,CanonicalAnimation.DUCK)) {
+                        int id=player.resolveAnimationId(pose);
+                        if(pose==CanonicalAnimation.RUN) id=player.resolveAnimationId(CanonicalAnimation.WALK);
+                        player.setPushing(pose==CanonicalAnimation.PUSH);
+                        player.setMovementInputActive(pose==CanonicalAnimation.WALK||pose==CanonicalAnimation.RUN);
+                        player.setGSpeed((short)(pose==CanonicalAnimation.RUN?0x900:pose==CanonicalAnimation.WALK?0x300:0));
+                        player.setForcedAnimationId(id); player.setAnimationId(id); player.setAnimationFrameIndex(0); player.setAnimationTick(0);
+                        com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(player);
+                        for(int tick=0;tick<12;tick++) session.step(null);
+                        com.openggf.graphics.ScreenshotCapture.savePNG(session.render(),output.resolve(label).resolve(pose.name().toLowerCase(java.util.Locale.ROOT)+".png"));
+                        csv.append(pose).append(',').append(player.getAnimationId()).append(',').append(player.getMappingFrame()).append(',').append(player.getCentreX()).append(',').append(player.getCentreY()).append(',').append(player.getRingCount()).append(',').append(tier).append('\n');
+                    }
+                    Files.writeString(output.resolve(label).resolve("states.csv"),csv);
+                }
+            }
+        }
+    }
+
     private Path buildSample() throws Exception {
         Path project = Path.of("examples/mica-and-talon"), classes = temp.resolve("classes");
         Files.createDirectories(classes.resolve("art"));
@@ -1616,6 +1679,12 @@ class TestMicaCharacterIntegration {
                 "--image",project.resolve("src/main/mod/talon.png").toString(),
                 "--sheet",project.resolve("src/main/mod/talon-sheet.yaml").toString(),
                 "--out",classes.resolve("art/talon.ggfp").toString()},System.out));
+        for (String host : List.of("s2", "s3k")) {
+            assertEquals(0,com.openggf.tools.modsdk.GgfModCli.run(new String[]{"convert","art","--playable",
+                    "--image",project.resolve("src/main/mod/mica_powered_"+host+".png").toString(),
+                    "--sheet",project.resolve("src/main/mod/mica_powered_"+host+"-sheet.yaml").toString(),
+                    "--out",classes.resolve("art/mica-powered-"+host+".ggfp").toString()},System.out));
+        }
         for (String surface : List.of("continue", "portrait", "snowboard")) {
             Path source = project.resolve("art/mica/" + surface);
             Path destination = classes.resolve("art/mica/" + surface);

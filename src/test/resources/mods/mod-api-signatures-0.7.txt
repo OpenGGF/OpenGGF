@@ -270,6 +270,7 @@ CF-ANNOTATION TYPE com.openggf.game.PlayableEntity visible @com.openggf.game.Mod
 CF-ANNOTATION TYPE com.openggf.game.PlayerCharacter visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.PowerUpObject visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.PowerUpSpawner visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.PoweredPlayableSheet visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.PresentationFrameSet visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.PresentationFrameSet$Pose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.RespawnState visible @com.openggf.game.ModApi
@@ -1535,6 +1536,8 @@ CONSTRUCTOR com.openggf.game.MusicReference$Stock public  <init>(int)
 CONSTRUCTOR com.openggf.game.PhysicsModifiers public  <init>(float,float,float,float,short,short,short,float,float,float,float)
 CONSTRUCTOR com.openggf.game.PhysicsProfile public  <init>(short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,boolean,short)
 CONSTRUCTOR com.openggf.game.PlayableCharacterRegistry$Resolution public  <init>(com.openggf.game.CharacterKey,com.openggf.game.CharacterKey,java.util.Optional<com.openggf.game.CharacterDefinition>,com.openggf.game.PlayableCharacterRegistry$FallbackReason)
+CONSTRUCTOR com.openggf.game.PoweredPlayableSheet public  <init>(com.openggf.sprites.art.SpriteArtSet,java.util.Set<com.openggf.game.CanonicalAnimation>)
+CONSTRUCTOR com.openggf.game.PoweredPlayableSheet public  <init>(com.openggf.sprites.art.SpriteArtSet,java.util.Set<com.openggf.game.CanonicalAnimation>,java.util.Map<java.lang.String,java.lang.String>)
 CONSTRUCTOR com.openggf.game.PresentationFrameSet public  <init>(java.util.Map<java.lang.String,java.util.Map<java.lang.Integer,com.openggf.game.PresentationFrameSet$Pose>>,int[])
 CONSTRUCTOR com.openggf.game.PresentationFrameSet$Pose public  <init>(com.openggf.game.CharacterPresentation$Image,int,int)
 CONSTRUCTOR com.openggf.game.RomDataSource public  <init>(com.openggf.data.Rom,java.lang.String)
@@ -1547,6 +1550,7 @@ CONSTRUCTOR com.openggf.game.StandaloneGameSpec$Act public  <init>(int,com.openg
 CONSTRUCTOR com.openggf.game.StaticFixup public  <init>(java.lang.String,java.lang.String,java.lang.Runnable)
 CONSTRUCTOR com.openggf.game.SuperFormProfile public  <init>(java.util.Map<com.openggf.game.GameId,java.util.Map<com.openggf.game.SuperFormProfile$Tier,com.openggf.game.SuperFormProfile$Form>>)
 CONSTRUCTOR com.openggf.game.SuperFormProfile$Form public  <init>(java.util.List<java.util.List<java.lang.Integer>>,java.util.List<java.util.List<java.lang.Integer>>,java.util.List<java.util.List<java.lang.Integer>>,int,int,com.openggf.game.PhysicsProfile,com.openggf.game.CanonicalAnimation,java.util.Map<com.openggf.game.CanonicalAnimation,com.openggf.sprites.animation.SpriteAnimationScript>,boolean,boolean)
+CONSTRUCTOR com.openggf.game.SuperFormProfile$Form public  <init>(java.util.List<java.util.List<java.lang.Integer>>,java.util.List<java.util.List<java.lang.Integer>>,java.util.List<java.util.List<java.lang.Integer>>,int,int,com.openggf.game.PhysicsProfile,com.openggf.game.CanonicalAnimation,java.util.Map<com.openggf.game.CanonicalAnimation,com.openggf.sprites.animation.SpriteAnimationScript>,boolean,boolean,com.openggf.game.PoweredPlayableSheet)
 CONSTRUCTOR com.openggf.game.ZoneArtProvider$ArtLoadRequest public  <init>(java.lang.String,int,int,com.openggf.tools.disasm.CompressionType)
 CONSTRUCTOR com.openggf.game.ZoneArtProvider$ObjectArtConfig public  <init>(int,int,com.openggf.tools.disasm.CompressionType)
 CONSTRUCTOR com.openggf.game.ZoneKey$Mod public  <init>(java.lang.String,java.lang.String)
@@ -6916,6 +6920,12 @@ METHOD com.openggf.game.PowerUpSpawner public,abstract  com.openggf.game.PowerUp
 METHOD com.openggf.game.PowerUpSpawner public,abstract  com.openggf.game.PowerUpObject spawnShield(com.openggf.game.PlayableEntity,com.openggf.game.ShieldType)
 METHOD com.openggf.game.PowerUpSpawner public,abstract  void registerObject(com.openggf.game.PowerUpObject)
 METHOD com.openggf.game.PowerUpSpawner public,abstract  void spawnSplash(com.openggf.game.PlayableEntity)
+METHOD com.openggf.game.PoweredPlayableSheet public  com.openggf.sprites.art.SpriteArtSet art()
+METHOD com.openggf.game.PoweredPlayableSheet public  java.util.Map<java.lang.String,java.lang.String> normalPhaseAliases()
+METHOD com.openggf.game.PoweredPlayableSheet public  java.util.Set<com.openggf.game.CanonicalAnimation> normalAliases()
+METHOD com.openggf.game.PoweredPlayableSheet public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.PoweredPlayableSheet public,final  int hashCode()
+METHOD com.openggf.game.PoweredPlayableSheet public,final  java.lang.String toString()
 METHOD com.openggf.game.PresentationFrameSet public  int[] rgb()
 METHOD com.openggf.game.PresentationFrameSet public  java.util.Map<java.lang.String,java.util.Map<java.lang.Integer,com.openggf.game.PresentationFrameSet$Pose>> banks()
 METHOD com.openggf.game.PresentationFrameSet public,final  boolean equals(java.lang.Object)
@@ -7139,6 +7149,7 @@ METHOD com.openggf.game.SuperFormProfile$Form public  boolean afterImages()
 METHOD com.openggf.game.SuperFormProfile$Form public  boolean stars()
 METHOD com.openggf.game.SuperFormProfile$Form public  com.openggf.game.CanonicalAnimation transformationAnimation()
 METHOD com.openggf.game.SuperFormProfile$Form public  com.openggf.game.PhysicsProfile physics()
+METHOD com.openggf.game.SuperFormProfile$Form public  com.openggf.game.PoweredPlayableSheet poweredArt()
 METHOD com.openggf.game.SuperFormProfile$Form public  int cycleTicks()
 METHOD com.openggf.game.SuperFormProfile$Form public  int fadeTicks()
 METHOD com.openggf.game.SuperFormProfile$Form public  java.util.List<java.util.List<java.lang.Integer>> dryCycle()
@@ -18145,6 +18156,9 @@ RECORD-COMPONENT com.openggf.game.PlayableCharacterRegistry$Resolution definitio
 RECORD-COMPONENT com.openggf.game.PlayableCharacterRegistry$Resolution fallbackReason com.openggf.game.PlayableCharacterRegistry$FallbackReason
 RECORD-COMPONENT com.openggf.game.PlayableCharacterRegistry$Resolution requestedKey com.openggf.game.CharacterKey
 RECORD-COMPONENT com.openggf.game.PlayableCharacterRegistry$Resolution resolvedKey com.openggf.game.CharacterKey
+RECORD-COMPONENT com.openggf.game.PoweredPlayableSheet art com.openggf.sprites.art.SpriteArtSet
+RECORD-COMPONENT com.openggf.game.PoweredPlayableSheet normalAliases java.util.Set<com.openggf.game.CanonicalAnimation>
+RECORD-COMPONENT com.openggf.game.PoweredPlayableSheet normalPhaseAliases java.util.Map<java.lang.String,java.lang.String>
 RECORD-COMPONENT com.openggf.game.PresentationFrameSet banks java.util.Map<java.lang.String,java.util.Map<java.lang.Integer,com.openggf.game.PresentationFrameSet$Pose>>
 RECORD-COMPONENT com.openggf.game.PresentationFrameSet rgb int[]
 RECORD-COMPONENT com.openggf.game.PresentationFrameSet$Pose hotspotX int
@@ -18178,6 +18192,7 @@ RECORD-COMPONENT com.openggf.game.SuperFormProfile$Form dryCycle java.util.List<
 RECORD-COMPONENT com.openggf.game.SuperFormProfile$Form fade java.util.List<java.util.List<java.lang.Integer>>
 RECORD-COMPONENT com.openggf.game.SuperFormProfile$Form fadeTicks int
 RECORD-COMPONENT com.openggf.game.SuperFormProfile$Form physics com.openggf.game.PhysicsProfile
+RECORD-COMPONENT com.openggf.game.SuperFormProfile$Form poweredArt com.openggf.game.PoweredPlayableSheet
 RECORD-COMPONENT com.openggf.game.SuperFormProfile$Form stars boolean
 RECORD-COMPONENT com.openggf.game.SuperFormProfile$Form transformationAnimation com.openggf.game.CanonicalAnimation
 RECORD-COMPONENT com.openggf.game.SuperFormProfile$Form underwaterCycle java.util.List<java.util.List<java.lang.Integer>>
@@ -21772,6 +21787,7 @@ TYPE record public,final com.openggf.game.InitStep SUPER java.lang.Record
 TYPE record public,final com.openggf.game.JoypadPressSnapshot SUPER java.lang.Record
 TYPE record public,final com.openggf.game.PhysicsModifiers SUPER java.lang.Record
 TYPE record public,final com.openggf.game.PhysicsProfile SUPER java.lang.Record
+TYPE record public,final com.openggf.game.PoweredPlayableSheet SUPER java.lang.Record
 TYPE record public,final com.openggf.game.PresentationFrameSet SUPER java.lang.Record
 TYPE record public,final com.openggf.game.SidekickSpawnOffset SUPER java.lang.Record
 TYPE record public,final com.openggf.game.SpecialStageEntryRequest SUPER java.lang.Record
@@ -22586,6 +22602,7 @@ TYPE-ANNOTATION com.openggf.game.PlayableEntity @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.PlayerCharacter @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.PowerUpObject @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.PowerUpSpawner @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.PoweredPlayableSheet @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.PresentationFrameSet @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.PresentationFrameSet$Pose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.RespawnState @com.openggf.game.ModApi

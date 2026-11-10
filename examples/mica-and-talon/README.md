@@ -49,12 +49,12 @@ player sets, continue poses, data-select portrait and counters, ICZ snowboard
 rider, and all three games' ending sets. Missing slots retain native fallback art;
 vehicles, companions, choreography and timing remain host-owned.
 
-The [powered-pose research checkpoint](art/mica/powered/README.md) inventories
-all 70 S2/S3K powered script obligations. Its separate-sheet seam is a design
-proposal; the playable powered sheet and in-game comparison captures remain open.
+The [powered pose banks](art/mica/powered/README.md) resolve the 70 S2/S3K
+script obligations through new geometry, explicit normal aliases and justified
+reserved-script N/A entries. The coverage probe checks production binding.
 
 Gilded Super is available in all three hosts; S3K also supports Hyper. Her jade
-slots cycle to gold while the normal sheet and homing move remain her own.
+slots cycle to gold; S2/S3K use her powered banks and her homing move remains her own.
 Enable **Gilded form settings** in the host overlay to override the per-game form
 switches, S1 emerald requirement, ring requirement and S1 music at the next full
 load. S1's six-emerald/50-ring default is mod-defined and requires no donor ROM.
@@ -114,3 +114,9 @@ vocabulary. S3K uses its native flight IDs. Airborne down requests the target
 reticle; down+jump takes over flight with a targeted divebomb. Without down,
 jump retains native flight/flaps. Solar palettes are generated from his own
 presentation data. HUD glyph and missing presentation limits are listed above.
+
+Gilded S2/S3K uses optional powered GGFP banks: 34 native-pose generated base
+drawings, deterministic walk/run slopes, explicit normal-animation/phase aliases,
+and one combined tile/mapping namespace. Hyper shares Super geometry. See
+[powered art](art/mica/powered/README.md) for provenance and the native shared-script
+exceptions. Headless posed captures verify presentation rather than route completion.

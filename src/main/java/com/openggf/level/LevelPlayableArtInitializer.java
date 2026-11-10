@@ -120,6 +120,7 @@ final class LevelPlayableArtInitializer {
         }
     }
 
+    private final Map<AbstractPlayableSprite, com.openggf.level.objects.PoweredPlayableArtBinding.Result> poweredArt = new java.util.IdentityHashMap<>();
     private boolean runtimeRefresh;
 
     void refresh() {
@@ -683,6 +684,17 @@ final class LevelPlayableArtInitializer {
                         archetype.equals("tails") ? com.openggf.game.PlayerCharacter.TAILS_ALONE
                                 : com.openggf.game.PlayerCharacter.SONIC_ALONE), nativeArt);
             }
+            if (definition.superFormSupplier() != null) {
+                var host = levelManager.activeGameModule();
+                var forms = definition.superFormSupplier().load(playable.characterKey().persisted()).games().get(host.getGameId());
+                if (forms != null && forms.values().stream().anyMatch(form -> form.poweredArt() != null)) {
+                    var source = levelManager.game instanceof com.openggf.game.internal.PoweredAnimationProvider provider
+                            ? provider.loadPoweredAnimations() : null;
+                    var combined = com.openggf.level.objects.PoweredPlayableArtBinding.combine(art, forms, source, host.getDonorCapabilities());
+                    poweredArt.put(playable, combined);
+                    art = combined.normal();
+                } else poweredArt.remove(playable);
+            }
             return art;
         }
         var provider = artProviderFor(playable, fallback);
@@ -990,6 +1002,8 @@ final class LevelPlayableArtInitializer {
         if (runtimeRefresh && playable.getSuperStateController() instanceof
                 com.openggf.game.internal.RuntimeArtRefreshParticipant existing) {
             com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindNormalAnimationProfile(playable);
+            if (existing instanceof com.openggf.sprites.playable.ProfileSuperStateController profileController)
+                profileController.bindPoweredArt(poweredArt.get(playable));
             existing.rebindAfterArtRefresh();
             return;
         }
@@ -1011,6 +1025,8 @@ final class LevelPlayableArtInitializer {
             superCtrl = gameModule.createSuperStateController(playable);
         }
         playable.setSuperStateController(superCtrl);
+        if (superCtrl instanceof com.openggf.sprites.playable.ProfileSuperStateController profileController)
+            profileController.bindPoweredArt(poweredArt.get(playable));
         // A literal native scene may temporarily replace this profile before
         // the first rewind restore. The Super controller's normal resource
         // must come from ordinary art initialization, never that borrowed view.

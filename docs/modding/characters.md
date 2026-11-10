@@ -500,8 +500,17 @@ is rejected.
 Each tier supplies 1–256 fade rows and dry-cycle rows, an optional underwater
 cycle of the same length as the dry cycle, ticks per frame in 1–256, a physics profile, a canonical transformation
 animation and optional canonical animation overrides. Rows are sixteen packed
-Mega Drive colour words. Missing overrides preserve the normal sheet; Gilded is a
-palette transformation. Missing water rows use the live host-zone derivation.
+Mega Drive colour words. An optional `PoweredPlayableSheet` carries a canonical
+GGFP bank, explicit normal-animation aliases and optional normal-phase aliases.
+The old Form constructor keeps its normal-sheet behavior. Banks combine once
+at art initialization; missing complete powered families retain their whole bound
+normal animation. Host providers supply native powered timing and selectors.
+A host without those scripts uses authored canonical GGFP timings without a donor
+ROM. Existing `animations` overrides take precedence and address the combined bank.
+The profile controller restores views during transformation, Super/Hyper, revert,
+rewind and art refresh. MICA's S2/S3K bank and Hyper geometry sharing are documented
+in her [powered art](../../examples/mica-and-talon/art/mica/powered/README.md).
+Missing water rows use the live host-zone derivation.
 Hyper trails use the character's own renderer and rewind-captured position history;
 stars are opt-in. Neither Sonic's palette nor his alternate mappings are installed.
 

@@ -79,7 +79,12 @@ under the matching area heading; see the
   WALK/RUN hood contours are completed without changing sole support. S3K transformation
   art uses clustered gold scales and a clearer face, and the second dive shell
   has rounded scale rows. Gilded Super/Hyper forms cycle
-  jade to gold, retain her sheet, and expose host settings for their gates. S1's
+  jade to gold and expose host settings for their gates. Optional per-form GGFP
+  banks now combine normal/powered tiles once, retain exact host script timing
+  and movement selection, and reconcile transformation/active rewind and art
+  refresh. MICA supplies 34 generated powered base poses with deterministic
+  slopes; explicit normal animation/phase aliases avoid duplicate normal PNGs,
+  and Hyper shares Super geometry. S1's
   donor-free six-emerald form is explicitly mod-defined. MICA supplies HUD/name,
   act and special-stage results (including S2's Super announcement, with tally
   logic independent of ROM presentation availability), 1-up faces,

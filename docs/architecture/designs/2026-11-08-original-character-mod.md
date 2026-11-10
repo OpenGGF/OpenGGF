@@ -2448,13 +2448,33 @@ wing cadence; full carrying-route contact is not certified.
 Review and exact logs:
 `$HOME/scratch/agent-tmp/talon-families-20261109/review.html`.
 
-### Powered sheet design checkpoint (2026-11-10; not implemented)
+### Powered sheet implementation (2026-11-10)
 
-Gilded currently has authored palettes and canonical script overrides, but no
-separate playable art bank. The 34 S2 and 36 S3K powered audit rows therefore
-remain fallback. This checkpoint does not change that coverage or certify
-powered movement. Research inputs and the reproducible inventory live in
-`examples/mica-and-talon/art/mica/powered/`.
+Gilded now supplies S2/S3K powered GGFP banks through `PoweredPlayableSheet`
+on `SuperFormProfile.Form`; its old constructor still supplies no bank.
+`PoweredAnimationProvider` keeps native script and movement selection in each
+host. `PoweredPlayableArtBinding` relocates tiles and mapping/script namespaces
+once at initialization, retains whole-animation fallback, and shares the combined
+storage between normal, Super and Hyper views. Explicit normal phase aliases
+handle mixed shared scripts without duplicating normal drawings. The existing
+profile controller restores the right view during transformation, active form,
+revert and renderer refresh. Existing Form animation overrides retain precedence.
+
+The example has 34 generated base drawings plus deterministic movement slopes.
+S3K shared pointers require special treatment for secondary balance, bubble
+recovery and lying poses; those combine existing powered geometry with explicit
+normal-phase aliases. Blink is N/A for single-player powered selection: its
+interrupt is competition-owned and its C7 isolated reference additionally lacks
+retained tile-bank context. C7 is not recorded as a verified normal-pose alias. Transformation reuses the existing authored family.
+The coverage audit inspects the production combiner, script clocks and frame
+bounds. Reserved Dash2/Dash3 entries are N/A with their selector limitation.
+Review/captures are positioned presentation evidence, not route certification.
+Observed powered audit coverage is S2 6 authored / 26 alias / 2 N/A and S3K
+10 authored / 24 alias / 2 N/A, with zero fallback across all 70 rows. The N/A
+entries retain Dash2/Dash3 table obligations and the S3K competition-only Blink
+limitation. Normal and Super/Hyper art share one validated namespace; the
+existing transformation family supplies the transformation drawings.
+
 
 **Native evidence.** `SuperSonicAniData (s2.asm:38773-38819)` has 32 entries;
 six replace the normal script pointer (walk, run, push, stand, balance, duck).
@@ -2490,15 +2510,15 @@ requires previous-bank state. These counts must not be presented as the number
 of finished creator drawings. Compare per-frame mapping/DPLC identity and
 existing creator art before deciding which frames need new generations.
 
-**Chosen seam for implementation.** Add optional powered playable art to each
+**Implemented seam.** Optional powered playable art is attached to each
 `SuperFormProfile.Form`, loaded through bounded mod assets by the existing
 owner-bound profile supplier. Use a second ordinary GGFP sheet, with canonical
 animation/family phase keys, rather than adding an unrelated format or putting
 Super-specific conditions in MICA's sprite update. Keep the existing constructor
 as an overload that supplies no powered bank. A Form-level bank lets Hyper
 share Super geometry and allows another creator to use different tiers without
-adding global or character-name gates. This is a proposed API change; no public
-signature or descriptor has changed in this checkpoint.
+adding global or character-name gates. The descriptor, ModApiVersion documentation and normalized 0.7 signature pin
+change together; this remains the unpublished 0.7 candidate.
 
 Reuse the GGFP tile/mapping/DPLC validation and native-phase family binding.
 The host must supply its powered animation scripts/profile through a semantic

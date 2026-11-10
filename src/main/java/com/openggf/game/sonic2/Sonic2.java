@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDustArtProvider,
+public class Sonic2 extends Game implements PlayerSpriteArtProvider, com.openggf.game.internal.PoweredAnimationProvider, SpindashDustArtProvider,
         AnimatedPatternProvider, AnimatedPaletteProvider {
 
     private final Rom rom;
@@ -343,6 +343,14 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
             bgScrollResult[1] = 0;
             return bgScrollResult;
         }
+    }
+
+    @Override
+    public com.openggf.game.internal.PoweredAnimationSource loadPoweredAnimations() throws IOException {
+        loadPlayerSpriteArt("sonic");
+        var families = new java.util.HashMap<>(new Sonic2GameModule().getDonorCapabilities().getAnimationFamilies());
+        families.put(33, new com.openggf.game.AnimationFamilies.Binding(null, com.openggf.game.CanonicalAnimation.WAIT, java.util.List.of(6)));
+        return new com.openggf.game.internal.PoweredAnimationSource(playerArt.loadSuperSonicAnimationSet(), families, 8, 1, 3, 0x20, 0xB5);
     }
 
     @Override
