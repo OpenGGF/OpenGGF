@@ -232,10 +232,12 @@ under the matching area heading; see the
   restore discards uncaptured future observations. Sole spawn-keyed dynamic solids
   now expire contact bits without clearing surviving shared owners. Constructor-child
   rewind adoption uses captured parent families, preserving interleaved structural
-  links. Routine-spawned Clamer springs and Orbinaut satellites also resolve their
-  captured parent identities; legacy and unknown families retain their existing
-  proximity lookup. Independent children can recreate when a parent defers to
-  player refresh, and CNZ defeat candidates retain their ship family. Generic recreation installs
+  links. Routine-spawned Clamer springs, Orbinaut satellites and Shellcracker claws
+  receive resolved captured parents through their hook context; legacy and unknown
+  families retain their existing proximity lookup. Detached claws preserve their
+  independent falling state after parent retirement. Independent children can
+  recreate when a parent defers to player refresh, and CNZ defeat candidates retain
+  their ship family. Generic recreation installs
   construction services centrally; supported exact-spawn recipes rebuild once,
   avoiding discarded constructor graphs while preserving custom hooks and the
   fallback for declarations without that constructor. Destroyed

@@ -5,6 +5,7 @@ import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.CompactFieldCapturer;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.GrounderRockProjectile;
 import com.openggf.game.sonic2.objects.GrounderWallInstance;
@@ -33,6 +34,8 @@ import com.openggf.level.objects.StubObjectServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -45,8 +48,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS2BadnikChildGraphRewind {
 
@@ -124,6 +129,190 @@ class TestS2BadnikChildGraphRewind {
         assertFalse(thrown.getMessage().isBlank());
         assertEquals(true, thrown.getMessage().contains("no registered id for object reference"),
                 "non-null required object references must still require registered rewind identities");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shellcrackerClawsRestoreToCapturedBodyRatherThanCloserDecoy(boolean allowInPlaceReuse) throws Exception {
+        ObjectSpawn decoySpawn = new ObjectSpawn(
+                0x01AC, 0x0148, Sonic2ObjectIds.SHELLCRACKER, 0, 0, false, 31);
+        ObjectManager objectManager = Harness.create(List.of(SHELLCRACKER_SPAWN, decoySpawn)).objectManager();
+        // Ownership must survive both normal reuse permission and the fresh-rebuild reference path.
+        objectManager.setRewindInPlaceRestoreEnabledForTest(allowInPlaceReuse);
+        List<ShellcrackerBadnikInstance> parents = liveObjects(objectManager, ShellcrackerBadnikInstance.class);
+        assertEquals(2, parents.size());
+        ShellcrackerBadnikInstance parent = parents.stream()
+                .filter(body -> body.getSpawn().equals(SHELLCRACKER_SPAWN)).findFirst().orElseThrow();
+        ShellcrackerBadnikInstance decoy = parents.stream()
+                .filter(body -> body.getSpawn().equals(decoySpawn)).findFirst().orElseThrow();
+
+        // Use the same production factory as the existing graph fixture: spawnChild records ownership.
+        invokePrivate(parent, "spawnClawPieces");
+        List<ShellcrackerClawInstance> before = liveObjects(objectManager, ShellcrackerClawInstance.class);
+        assertEquals(8, before.size());
+        ShellcrackerClawInstance firstClaw = clawByIndex(before, 0);
+        assertEquals(0x01AC, firstClaw.getSpawn().x());
+        assertEquals(0x0148, firstClaw.getSpawn().y());
+        assertEquals(firstClaw.getSpawn().x(), decoy.getX(), "the decoy is exactly at claw zero");
+        assertEquals(firstClaw.getSpawn().y(), decoy.getY());
+        assertNotEquals(parent.getX(), decoy.getX());
+
+        RewindIdentityTable identities = objectManager.captureIdentityContext().requireIdentityTable();
+        ObjectRefId parentId = identities.idFor(parent);
+        ObjectRefId decoyId = identities.idFor(decoy);
+        assertNotNull(parentId);
+        assertNotNull(decoyId);
+        RewindSnapshottable<ObjectManagerSnapshot> adapter = objectManager.rewindSnapshottable();
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(adapter);
+        CompositeSnapshot snapshot = registry.capture();
+        List<ObjectManagerSnapshot.DynamicObjectEntry> captured = capturedShellcrackerClaws(
+                (ObjectManagerSnapshot) snapshot.get(adapter.key()));
+        assertEquals(8, captured.size());
+        Map<ObjectRefId, ShellcrackerClawInstance> originals = new LinkedHashMap<>();
+        for (ShellcrackerClawInstance claw : before) {
+            originals.put(identities.idFor(claw), claw);
+        }
+        assertEquals(8, originals.size(), "each real claw must have a distinct captured identity");
+        for (var entry : captured) {
+            assertKnownClawFamily(entry, parentId);
+            assertTrue(originals.containsKey(entry.objectId()), "capture must retain each spawned claw identity");
+            objectManager.removeDynamicObject(originals.get(entry.objectId()));
+        }
+
+        registry.restore(snapshot);
+
+        ShellcrackerBadnikInstance restoredParent = resolveCapturedObject(
+                objectManager, parentId, ShellcrackerBadnikInstance.class);
+        ShellcrackerBadnikInstance restoredDecoy = resolveCapturedObject(
+                objectManager, decoyId, ShellcrackerBadnikInstance.class);
+        if (!allowInPlaceReuse) {
+            assertNotSame(parent, restoredParent, "the reference path must rebuild the captured body");
+            assertNotSame(decoy, restoredDecoy, "the reference path must also rebuild the closer decoy");
+        }
+        assertEquals(2, liveObjects(objectManager, ShellcrackerBadnikInstance.class).size());
+        assertEquals(8, liveObjects(objectManager, ShellcrackerClawInstance.class).size());
+        for (var entry : captured) {
+            ShellcrackerClawInstance restored = resolveCapturedObject(
+                    objectManager, entry.objectId(), ShellcrackerClawInstance.class);
+            assertNotSame(originals.get(entry.objectId()), restored);
+            assertEquals(entry.slotIndex(), restored.getSlotIndex());
+            assertScalarFieldsEqual(originals.get(entry.objectId()), restored,
+                    "pieceIndex", "facingRight", "currentX", "currentY", "xVelocity", "yVelocity",
+                    "state", "timer", "retractTimer", "animFrame", "initRoutinePending");
+            assertSame(restoredParent, readObjectField(restored, "parent"),
+                    "a nearer same-class body must not replace the captured claw owner");
+        }
+    }
+
+    @Test
+    void fallingShellcrackerClawsRestoreIndependentlyAfterParentRetirement() throws Exception {
+        ObjectSpawn decoySpawn = new ObjectSpawn(
+                0x01AC, 0x0148, Sonic2ObjectIds.SHELLCRACKER, 0, 0, false, 31);
+        ObjectManager objectManager = Harness.create(List.of(SHELLCRACKER_SPAWN, decoySpawn)).objectManager();
+        List<ShellcrackerBadnikInstance> parents = liveObjects(objectManager, ShellcrackerBadnikInstance.class);
+        assertEquals(2, parents.size());
+        ShellcrackerBadnikInstance parent = parents.stream()
+                .filter(body -> body.getSpawn().equals(SHELLCRACKER_SPAWN)).findFirst().orElseThrow();
+        ShellcrackerBadnikInstance decoy = parents.stream()
+                .filter(body -> body.getSpawn().equals(decoySpawn)).findFirst().orElseThrow();
+        // This real wait routine needs no player and leaves the decoy in place during retirement.
+        setObjectField(decoy, "state", enumValue(decoy, "State", "ATTACK_EXTEND"));
+        invokePrivate(parent, "spawnClawPieces");
+        List<ShellcrackerClawInstance> before = liveObjects(objectManager, ShellcrackerClawInstance.class);
+        assertEquals(8, before.size());
+        for (ShellcrackerClawInstance claw : before) {
+            claw.update(0, null); // Consume the ordinary init-only execution before parent loss.
+        }
+        parent.setDestroyed(true);
+        objectManager.update(0, null, List.of(), 0, false);
+        assertFalse(objectManager.getActiveObjects().contains(parent), "the real body must leave the population");
+        assertSame(decoy, only(objectManager, ShellcrackerBadnikInstance.class));
+        assertEquals(8, liveObjects(objectManager, ShellcrackerClawInstance.class).size());
+        for (ShellcrackerClawInstance claw : before) {
+            assertEquals(enumValue(claw, "State", "FALLING"), readField(claw, "state"));
+        }
+        ShellcrackerClawInstance falling = clawByIndex(before, 0);
+        // Capture after the transition. This does not pin motion on the parent-loss row itself.
+        for (int tick = 1; tick <= 8; tick++) {
+            falling.update(tick, null);
+        }
+        assertFalse(falling.isDestroyed());
+        assertTrue(readIntField(falling, "yVelocity") >= 0x100, "the captured fall has observable motion");
+
+        RewindIdentityTable identities = objectManager.captureIdentityContext().requireIdentityTable();
+        assertNull(identities.idFor(parent), "retired body identity must be absent from capture");
+        ObjectRefId fallingId = identities.idFor(falling);
+        assertNotNull(fallingId);
+        RewindSnapshottable<ObjectManagerSnapshot> adapter = objectManager.rewindSnapshottable();
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(adapter);
+        CompositeSnapshot snapshot = registry.capture();
+        List<ObjectManagerSnapshot.DynamicObjectEntry> captured = capturedShellcrackerClaws(
+                (ObjectManagerSnapshot) snapshot.get(adapter.key()));
+        assertEquals(8, captured.size());
+        for (var entry : captured) {
+            assertKnownClawFamily(entry, null);
+        }
+        int fallingSlot = falling.getSlotIndex();
+        for (ShellcrackerClawInstance claw : before) {
+            objectManager.removeDynamicObject(claw);
+        }
+
+        registry.restore(snapshot);
+
+        assertEquals(1, liveObjects(objectManager, ShellcrackerBadnikInstance.class).size());
+        assertEquals(8, liveObjects(objectManager, ShellcrackerClawInstance.class).size(),
+                "independent falling pieces must not be dropped because their parent retired");
+        for (var entry : captured) {
+            ShellcrackerClawInstance restored = resolveCapturedObject(
+                    objectManager, entry.objectId(), ShellcrackerClawInstance.class);
+            assertEquals(entry.slotIndex(), restored.getSlotIndex());
+            assertNull(readObjectField(restored, "parent"), "a falling piece must not borrow the surviving decoy");
+        }
+        ShellcrackerClawInstance restored = resolveCapturedObject(
+                objectManager, fallingId, ShellcrackerClawInstance.class);
+        assertNotSame(falling, restored);
+        assertEquals(fallingSlot, restored.getSlotIndex());
+        assertScalarFieldsEqual(falling, restored,
+                "pieceIndex", "facingRight", "currentX", "currentY", "xVelocity", "yVelocity",
+                "state", "timer", "retractTimer", "animFrame", "initRoutinePending");
+        int capturedY = readIntField(restored, "currentY");
+        int capturedVelocity = readIntField(restored, "yVelocity");
+        int capturedTimer = readIntField(restored, "timer");
+        assertTrue(capturedTimer > 0);
+        restored.update(9, null);
+        assertEquals(capturedTimer - 1, readIntField(restored, "timer"));
+        assertEquals(capturedVelocity + 0x38, readIntField(restored, "yVelocity"));
+        assertTrue(readIntField(restored, "currentY") > capturedY, "the restored detached piece must keep falling");
+        assertFalse(restored.isDestroyed());
+        int updatesUntilExpiry = readIntField(restored, "timer") + 1;
+        for (int tick = 0; tick < updatesUntilExpiry; tick++) {
+            restored.update(10 + tick, null);
+        }
+        assertTrue(restored.isDestroyed(), "the detached piece must retain its finite fall lifetime");
+    }
+
+    private static List<ObjectManagerSnapshot.DynamicObjectEntry> capturedShellcrackerClaws(
+            ObjectManagerSnapshot snapshot) {
+        return snapshot.dynamicObjects().stream()
+                .filter(entry -> entry.className().equals(ShellcrackerClawInstance.class.getName()))
+                .toList();
+    }
+
+    private static void assertKnownClawFamily(ObjectManagerSnapshot.DynamicObjectEntry entry, ObjectRefId parentId) {
+        assertNotNull(entry.objectId());
+        assertNotNull(entry.constructionFamily(), "real spawnChild must record a construction family");
+        assertTrue(entry.constructionFamily().known());
+        assertEquals(parentId, entry.constructionFamily().parentId());
+    }
+
+    private static <T extends ObjectInstance> T resolveCapturedObject(
+            ObjectManager manager, ObjectRefId identity, Class<T> type) {
+        ObjectInstance restored = manager.captureIdentityContext().requireIdentityTable().resolve(identity);
+        assertNotNull(restored, "captured identity must resolve after manager restore: " + identity);
+        assertEquals(type, restored.getClass());
+        return type.cast(restored);
     }
 
     @Test

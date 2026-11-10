@@ -395,15 +395,25 @@ context. Use `SpawnRewindRecreatable` for an exact `ObjectSpawn` constructor;
 `SpawnConstructionContextRewindRecreatable` is the compatible old name, not a
 second recipe. Parent-linked hooks still supply their actual construction logic.
 
-For a routine-spawned child whose constructor requires its parent, inspect
-`ctx.dynamicEntry()` and its `constructionFamily()` when present, before using
-geometry. When the family is known, resolve its `parentId` through the restoring manager's
-`objectQuery().resolve(...)` and check the expected parent type. Return `null`
-when that known parent is absent, unavailable or the wrong type; the existing
-retry/drop path handles it. A nearby object is not a substitute. The Clamer spring
-in `ClamerObjectInstance` and the satellite in `Sonic1OrbinautBadnikInstance` show
-this path while retaining their nearest-parent lookup for legacy or explicitly
-unknown families. This rule concerns the captured owner, not a sibling relink.
+For a routine-spawned child, first check `ctx.hasKnownConstructionFamily()`.
+When true, `ctx.capturedParent(ExpectedParent.class)` returns the restore owner's
+already-resolved parent or authoritative absence. It does not depend on live-world
+membership. Do not replace a null result with a nearby object or filter a parent's
+destroyed flag before its captured fields restore. Only legacy or explicitly
+unknown families retain the concrete hook's compatibility lookup. This rule
+concerns the captured owner, not a sibling relink.
+
+The child owns the absence policy. A parent-required Clamer spring or Orbinaut
+satellite returns `null` when its captured parent is unavailable or the wrong
+type; existing retries/drop handle that result. A Shellcracker claw can instead
+construct with a null parent: phase 2 restores its independent FALLING state, and
+an active claw treats absence as ordinary parent loss. Never inspect compact
+reference fields in the recreate hook to decide its future state.
+
+Old engine context constructors retain lazy exact-ID lookup for compatibility;
+normal restores supply their answer directly. Their constructor/accessor signatures
+remain available, but the internal context records gain components. They are not
+the creator Mod API and do not change saved-state layout.
 
 Owned `spawnChild`, `spawnFreeChild`, `spawnChildAfterSlot` and direct child wrappers
 record the actual parent without running external child notifications during
@@ -486,6 +496,12 @@ Run the ordinary family witnesses and neighbors through the queue:
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestConstructorChildFamilyRewind,TestObjectManagerDynamicChainRewindRestore,TestTwoPhaseRestoreOrdering,TestObjectManagerRewindSnapshot,TestModOwnedDynamicObjectRewind,TestS3kClamerGraphRewind,TestS1BadnikChildGraphRewind' test -B
+```
+
+For the parent handoff and detached-claw boundary, also select:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestRewindRecreateContext,TestS2BadnikChildGraphRewind,TestShellcrackerClawInstance' test -B
 ```
 
 For retirement changes, also select the real boss and TurboSpiker neighbors:

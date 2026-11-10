@@ -5978,3 +5978,107 @@ Only this audit prose changes after `4d5` qualification. Publication remains
 task-branch-only to draft PR271; no destination branch write or merge is
 authorized. The original `2dd` Competition black-pixel failure is still
 unattributed and merge-blocking. Later passes do not explain it.
+
+### Authoritative parent handoff and Shellcracker witnesses — 2026-11-10
+
+After the preceding increment was published to draft PR271 at
+`118a26ca9966fe9b39b6c004cc3cd4a65abf1e81`, bounded source research and runtime
+witnesses established the next defect. A real Shellcracker body spawns eight
+claws through its existing factory and owned `spawnChild` helper. A second body
+at claw zero's position is nearer than the captured owner. The old recreate hook
+selects that decoy despite known construction-family metadata. Already-FALLING
+claws also borrow a surviving decoy after their actual parent retires.
+
+The first seven-case characterization was compile-valid with two failures and
+five passing controls, but only one failure proved the defect: the falling claw
+borrowed the decoy. The other stopped at an invalid fixture assumption that the
+parent must be rebuilt. It is not counted as a second ownership RED. The repaired
+test runs both normal reuse permission and a forced fresh reference path, requiring
+fresh parents only in the latter. That eight-case check reached exactly three
+intended ownership failures, with five controls and zero errors/skips. It proves
+the wrong owner under both permissions, not that the optimizer must reuse.
+
+A separate nullable-parent consumer check then established the additional risk:
+after its init-only execution, an active claw dereferences its missing parent.
+The nine-case RED reached four intended assertion failures and the same five
+controls, with zero errors/skips. Its exception is asserted with `assertDoesNotThrow`,
+so the recorded failure is an assertion carrying the actual NPE and
+`checkParentAlive` stack. No production code changed during these RED checks.
+
+The reconstruction owner already resolves the captured parent from its restore
+identity table before adoption or recreation. Re-querying live-world membership
+inside each hook adds another source of truth: directed Stageplay admission can
+refuse membership while the restore table still registers the parent. The repair
+forwards the existing result through `DynamicObjectRecreateContext` and
+`RewindRecreateContext`, then exposes `hasKnownConstructionFamily()` and the typed
+`capturedParent(Class)` accessor. An authoritative null remains null. Neither
+supplied result uses the manager query or filters a destroyed flag before phase-2
+field restoration. The duplicated known-family lookup is removed from Clamer and
+Orbinaut; their concrete unknown/legacy branches are byte-identical.
+
+The compatibility cost is explicit: both internal context records gain a nullable
+parent and a provenance bit. Impossible unprovided/non-null combinations are
+rejected; a supplied non-null parent also requires known, non-null family identity.
+Old 3/4/5-argument hook-context and 1/2-argument dynamic-context constructor
+descriptors and old accessors remain. Those callers retain lazy exact-ID lookup,
+including the existing manager/services fallback. Record component counts and
+generated equality/hash/toString/reflection shape change; this is not a claim of
+complete engine-host reflective compatibility. These contexts are outside the
+candidate Mod API. No descriptor or signature pin changes.
+
+A query-only facade was rejected because it would keep the membership visibility
+gap. A separate `genericRecreate` overload was rejected because it would move the
+existing registry catch and add an unnecessary context/entry association. The
+chosen path keeps that signature, catch, registry fallback and constructor-probe
+selection unchanged. No inventory allowance, policy, snapshot layout or codec
+changes. Fixed-point retries, adoption, captured identity/slot publication,
+competition player rebinding, all-fields-before-settling and deferred player
+effects retain their schedules.
+
+For Shellcracker, known family metadata supplies the exact body or authoritative
+absence; unknown/legacy metadata retains the old nearest-or-drop behavior. A known
+missing body no longer drops an independent falling claw. Phase 2 restores its
+captured state, motion and remaining timer. The active consumer adds only the null
+case to its existing parent-loss condition. Init-only execution and existing
+parent-loss-row motion, gravity application and timer order are unchanged. The
+separate pinned-source timing discrepancy remains uncorrected and explicitly
+outside this patch. The current Clamer probe still needs a live Clamer before its
+hook runs; this does not repair probe availability or certify Stageplay admission.
+
+Focused GREEN passed 275 cases in 22 fresh suites, with zero failures, errors or
+skips. All four previously failing cases are present and green, as are the five
+original controls and 17 new context cases. The latter include a real custom
+recreate hook reached through `genericRecreate`: a supplied parent is invisible to
+the live query, and supplied absence faces a misleading live result. Losing either
+the forwarded value or its provenance fails those checks. Other cases cover
+destroyed/type-mismatched/missing parents, unknown and legacy metadata, lazy old
+constructors and their descriptors, and invalid supplied-state combinations.
+No full Stageplay route or usability score is inferred from these unit controls.
+
+The selection also ran constructor families, dynamic-chain retries, two-phase and
+reference closure, object snapshots, deferred shields, creator-owned dynamics,
+competition owner rebinding, Clamer and S1/S2 graph neighbors, the four named S3K
+keep-green checks (both loading classes explicitly), and the architectural,
+rewind-architecture and broad-catch guards. The command used queued normal-memory
+Java25/Lua5.4, displays unset, surfaceless EGL, one alphabetical fork and `-Pguards`
+with all 22 explicit fully qualified class selectors. Exact argv and named-case
+XML are in `target/code-climb/shellcracker-parent-contract/green/accepted-green.json`
+and its terminal receipt. Tested dirty source on `118a26ca99` was
+`9e9a56a3009f26da2e203e72a9766bb4dfb93c0c68d008fdcd6d393fc80631a3`,
+including the new untracked test's bytes; all 13 sealed file hashes were verified.
+Only this audit prose is appended afterward.
+
+| Invocation | Queue seconds | Maven seconds | Wall seconds | User wait | Unseparated overhead/rounding |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Initial characterization: one defect, one fixture gap | 0 | 34.812 | 37.254193 | 0 | 2.442193 |
+| Corrected three-ownership RED | 0 | 32.539 | 33.405792 | 0 | 0.866792 |
+| Four-RED absence-consumer selection | 0 | 34.589 | 35.981312 | 0 | 1.392312 |
+| Combined 22-class GREEN | 84 | 107 | 191.624372 | 0 | 0.624372 |
+
+Original patches, complete XML/negative records, fixture correction, pinned-source
+research, the rejected designs and static preservation proofs remain under
+`target/code-climb/shellcracker-parent-contract/`. All owned validation units are
+terminal and retired. This is a local focused increment pending independent Opus
+scrutiny and combined baseline/domain qualification; it is not pushed or claimed
+as a broad pass. PR271 remains the sole delivery destination. The original
+Competition black-pixel merge blocker and the unmet six-trial target remain.

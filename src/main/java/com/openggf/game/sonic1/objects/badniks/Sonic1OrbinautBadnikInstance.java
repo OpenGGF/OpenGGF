@@ -350,25 +350,8 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance impleme
 
         private static Sonic1OrbinautBadnikInstance parentForRewind(
                 RewindRecreateContext ctx) {
-            var entry = ctx.dynamicEntry();
-            var family = entry == null ? null : entry.constructionFamily();
-            if (family != null && family.known()) {
-                // Never replace a captured owner with a geometrically closer family.
-                if (family.parentId() == null) {
-                    return null;
-                }
-                ObjectManager manager = ctx.objectManager();
-                if (manager == null && ctx.objectServices() != null) {
-                    manager = ctx.objectServices().objectManager();
-                }
-                if (manager == null) {
-                    return null;
-                }
-                var owner = manager.objectQuery().resolve(family.parentId()).orElse(null);
-                if (owner instanceof Sonic1OrbinautBadnikInstance orbinaut) {
-                    return orbinaut;
-                }
-                return null;
+            if (ctx.hasKnownConstructionFamily()) {
+                return ctx.capturedParent(Sonic1OrbinautBadnikInstance.class);
             }
             ObjectServices services = ctx.objectServices();
             ObjectManager objectManager = services != null ? services.objectManager() : null;

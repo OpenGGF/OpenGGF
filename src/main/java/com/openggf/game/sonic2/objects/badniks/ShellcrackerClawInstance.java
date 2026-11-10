@@ -129,6 +129,12 @@ public class ShellcrackerClawInstance extends AbstractObjectInstance
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         ObjectSpawn spawn = ctx.spawn();
+        if (ctx.hasKnownConstructionFamily()) {
+            // loc_38280 (s2.asm:75907-75911) has an independent falling lifetime.
+            // Phase 2 restores that state before gameplay, even without its parent.
+            ShellcrackerBadnikInstance parent = ctx.capturedParent(ShellcrackerBadnikInstance.class);
+            return new ShellcrackerClawInstance(spawn, parent, spawn.x(), spawn.y(), 0, false);
+        }
         ShellcrackerBadnikInstance parent = Sonic2BadnikChildRewindLinks.nearestShellcracker(ctx);
         return parent != null
                 ? new ShellcrackerClawInstance(spawn, parent, spawn.x(), spawn.y(), 0, false)
@@ -270,9 +276,11 @@ public class ShellcrackerClawInstance extends AbstractObjectInstance
      * Check if parent is still alive. ROM checks:
      * cmpi.b #ObjID_Shellcracker,id(a1) / bne.s loc_381D0
      * If parent is destroyed, transition to falling state.
+     * An absent reconstructed parent takes the same parent-loss branch:
+     * loc_381AC / loc_381D0 (s2.asm:75795-75815), shipped fixBugs=0.
      */
     private boolean checkParentAlive() {
-        if (parent.isDestroyed()) {
+        if (parent == null || parent.isDestroyed()) {
             state = State.FALLING;
             timer = FALL_TIMER;
             return false;
