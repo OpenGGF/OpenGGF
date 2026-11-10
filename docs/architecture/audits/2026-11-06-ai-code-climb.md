@@ -6371,3 +6371,67 @@ content changed after the reviewed population logic. A directed placed-root
 witness and the inherited manager-replacement adapter-order hypothesis remain
 unqualified; this is not scene/route certification. Exact mapping, XML, source
 proof and timing are under `target/code-climb/authored-readmission/`.
+
+### Captured-population complete qualification and native HCZ evidence
+
+The one complete category run tested clean `ef2f309376`, fingerprint
+`7442baefc9d8272e00bfc24002672acb90fe8ea9420a0e338a62cac01630ef37`,
+with Java 25, Lua 5.4, displays unset, surfaceless EGL, requested workers 2
+and the unchanged 40-minute execution cap. The durable unit terminated normally
+with exit 1. Run `20261110T094018Z-1f0f7971` selected 4,643/4,643 classes and
+completed 94/94 ordinary batches plus full guards. Its raw **VERDICT FAILED**
+is retained: 38,824 cases, 29 failures, zero errors and 49 allowed skips.
+Ordinary contributed 37,978 cases; all 846 guards in 103 suites passed.
+No new or revised category verdict is substituted for that result.
+
+Against actual retained `ec29ef9300`, all 29 negative identities/kinds/types
+match. Twenty-five complete negative dictionaries are literal matches. The
+remaining four were reviewed individually against unchanged source blobs:
+Three Islands changes only default FieldScreen/StoryScreen identity suffixes;
+the Sonic, Tails and wide MHZ assertions change only expected Set display order.
+Expected members and multiplicities, complete actual strings and trailing stacks
+match. All 49 full skip dictionaries match, with no unexplained/required skips,
+omission, capped causal text or normalization. Runtime inputs and configuration
+match. Selection deliberately replaces the retired two-case scene-parent class
+with its stronger five-case captured-population owner; the mapping above applies.
+This accounts for the three added cases and does not claim every old source class
+remained selected. No new or worsened bounded outcome blocks draft publication.
+
+Queue wait was 1,267 seconds across 95 admissions, as rounded in the log;
+execution plus preparation was 1,921.35 seconds and unit wall 3,204.715329 seconds.
+User wait was zero; the remaining 16.365329 seconds include orchestration and
+rounding. Full raw results, comparison and source-specific decisions remain in
+`target/code-climb/authored-readmission/qualification/`. Terminal export SHA-256:
+`e84484e4c0080f57b16e86cbd7662e69f13537f8cab505badfef6a0f621f831d`.
+This final audit addition changes no tested source. Standalone EHZ/HCZ evidence
+is retained by source equivalence: their absent scene direction already bypassed
+the old fresh-admission gate. No new domain execution or route claim is made.
+
+Separately, an external pinned TraceChaser/official BizHawk 2.11 investigation
+ran the original Sonic/Tails movie from power-on, with no state load, RAM/register
+write, input substitution or engine edit. A GUI-only config bootstrap crashed
+before producing configuration or ROM observations; its evidence is retained,
+and it was not retried. The stock headless GPGX route succeeded. The cold pass
+calibrates 2,417 completed frames against existing native fixture state. Raw
+individual-button masks remain distinct from the recorder's logical Jump mask;
+all 246 representation differences are retained and explained, not normalized.
+
+One subsequent byte-verified execute-observer pass records 26,179 events. All
+2,417 completed five-region snapshots match the cold pass exactly. Root also
+independently decoded 155,727 values at 11,979 actual P1/Tails BG floor/wall reads:
+all use the preceding completed camera/diff/wall/shake publication, before the
+same target's HCZ foreground/background updates. Every read differs from that
+target's eventual publication in at least one field. Shake setup is absent on
+targets 39,407 through 39,421 and resumes at 39,422, after 16 background dispatches
+counting the end target. This supports an explicit semantic publication contract,
+not VDP simulation or an immediate engine timing change. Timed-positive shake,
+death/restart, Knuckles and other object consumers remain unobserved.
+
+The external `code-climb-hcz-native-phase-20261110/phase-hooks/receipt.json`
+SHA-256 is `274a87172daa36efba81501c108336b95fcfcfe3b4ffcb164cfb99e391cf053e`;
+root verified all 33 artifact hashes, eight site/guard opcode sets and raw
+publication comparisons. Phase execution/queue/wall were
+21.097186/6.126859/28.859097 seconds, with preparation separately recorded.
+No native jobs remain. These observations certify neither trace parity nor a
+contributor score. The Original2dd Competition pixel blocker and six-trial goal
+remain open; PR271 stays draft and unmerged.
