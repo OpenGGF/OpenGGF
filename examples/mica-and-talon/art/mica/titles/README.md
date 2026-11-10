@@ -29,8 +29,8 @@ The sixth approaching-ball image aliases the fifth generated ball at native size
 
 The frame-D plane excludes the hand patch. Selector 4 restores its resting pose;
 selectors 0/1 replace it at the same native object origin. This prevents a wag
-from leaving a second hand in the plane. Patch dimensions retain the native
-48×56 box; the source-local hotspot follows the authored wrist.
+from leaving a second hand in the plane. Native finger mappings cover 48×56;
+MICA uses 56×60 to include the complete context. The source-local hotspot follows the authored wrist.
 
 ## Title polish (2026-11-10)
 
@@ -304,3 +304,45 @@ Review: `$HOME/scratch/agent-tmp/title-s3k-anatomy/review.html`, including the
 6× stock/mod strip, five-digit annotated copy and60Hz film. Across900 frames,
 967608 ownership checks and900812 visible pixel checks pass; every pixel
 outside the hand is byte-identical to integration2447194fa1.
+
+## Whole-lash S3K wink ownership
+
+Native `word_4FCA (General/Title/Map - S3 Sonic Anim.asm:17-19)` and
+`word_4FD8 (General/Title/Map - S3 Sonic Anim.asm:20-22)` each compose 32×48
+from 32×32 and 32×16 pieces at x−16, y−24/+8.
+`Obj_TitleSonicWink (sonic3k.asm:6261-6277)` places that complete eye/context
+patch at screen 104,48 before vertical scroll. MICA's lashes are larger: the old
+56×48 patch cut through them. The replacement 80×60 patch at 108,32 owns the
+whole eye and lash group, with an irregular opaque footprint and two pixels of
+unchanged plane context at its edge. The example's existing hotspot changes
+to 12,40; the native host clock, palette, plane and hand are unchanged.
+`byte_4BA6 (General/Title/Anim - S3 Sonic Wink.asm:3-4)` still selects half 2 for
+two presentations, closed 3 for eight, half 2 for six, then empty 4 for 104+48.
+
+Two fresh half-closed and two fresh closed GPT Image alternatives use the native
+8× patch and approved MICA eye. Selected left candidates move all three lashes
+with the lid, rather than retaining upper stubs from the plane.
+`s3k_wink_rebuild.py --generation <sheet>` reproduces the reduction and context
+band byte-exactly. Prompts, selection and checks are in
+`s3k-wink-provenance.json`; `s3k-wink-ownership.json` records the complete old
+ink footprint, alpha ownership and lid-root/three-tip landmarks.
+
+`s3k_wink_continuity.py` checks that all 233 old eye/lash ink pixels have an
+opaque surround, each new lash tip is 8-connected to its lid root, palettes
+match and any ink crossing the alpha boundary equals the plane on both sides.
+Negative controls sever a root, remove ownership and introduce a false ink seam.
+`s3k_wink_review.py --captures <scratch> --before <hand-capture> --stock <stock>`
+checks every rendered wink pixel and all pixels outside ownership, then emits
+all three distinct states at 6× and an annotated copy with frame/alpha borders.
+Across 900 presentations, 173312 visible patch pixels pass and outside ownership
+changes are zero. Another 660272 full-glove pixel checks, including every
+derived pose outside the old ownership footprint, preserve the hand exactly.
+State CSV is byte-identical; 836 complete PNGs, including all
+296 intro PNGs, are byte-identical to the hand commit. The prior SEGA check
+also passes 100763 stock pixel comparisons with no residual blue.
+
+Patch-context area is 2708 pixels versus native 1526, sqrt ratio 1.332. This grows
+ownership around the existing eye/lashes; it does not rescale the portrait.
+No audit rows move. Review and 60 Hz film:
+`$HOME/scratch/agent-tmp/title-s3k-wink/review.html`. The ink topology checks
+complement visual inspection; they do not classify arbitrary generated lashes.
