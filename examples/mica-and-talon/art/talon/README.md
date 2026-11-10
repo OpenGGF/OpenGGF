@@ -13,7 +13,9 @@ python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/talon
 python3 -m unittest discover -s tools/modding -p test_playable_art_assemble.py
 ```
 
-82 indexed drawings, one transparent plus 15 opaque Mega Drive ladder colours:
+The sheet has 167 indexed drawings and 47 animation keys: the 82 core drawings
+below plus 85 shared-family drawings (see the end of this file). All use one
+transparent plus 15 opaque Mega Drive ladder colours. Core set:
 WAIT 7; WALK 8×4 orientations; RUN 4×4; ROLL 3 plus blur; SPINDASH 3 plus blur;
 SPRING/HURT/DEATH/DUCK/LOOK_UP one each; SKID 2; TAILS_FLY 6;
 TAILS_FLY_TIRED 6. Canonical names follow `CanonicalAnimation`; `FLY_TIRED` is
