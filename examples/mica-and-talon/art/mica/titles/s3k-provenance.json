@@ -1,0 +1,58 @@
+{
+  "native_areas": [
+    104,
+    173,
+    239,
+    351,
+    825,
+    7210,
+    52124,
+    40910,
+    23873,
+    18713,
+    15335,
+    11444
+  ],
+  "authored_areas": [
+    112,
+    211,
+    319,
+    478,
+    940,
+    6526,
+    62615,
+    57573,
+    26286,
+    24377,
+    18675,
+    11696
+  ],
+  "sqrt_mean_area_ratio": 1.1067029632968106,
+  "method": "Built-in GPT Image native-pose transformation; separate 8x nearest native references, native box and hotspots, fixed character palette",
+  "selection": "Take A selected. Corrective native-pose generation supplies frames C/D and matched wink variants. Static hand is split into selector 4; generated finger selectors 0/1 replace it without duplicating a hand. Native object origins remain unchanged; authored hotspots follow anatomy.",
+  "portrait_correction": "New native-pose generation corrects facing/handedness on frames C/D. Eye patch follows MICA near-eye landmark with native wink object origin retained.",
+  "finger_native_areas": [
+    1951,
+    1966
+  ],
+  "finger_authored_areas": [
+    1969,
+    2076
+  ],
+  "finger_sqrt_mean_area_ratio": 1.0162076903623065,
+  "sources": {
+    "mica-s1-attempts.png": "6a7d90d8f928d44641b7bf38fc036fd528cd4461ca8cecaeb0c334b4c53257e3",
+    "mica-s2-attempts.png": "e721ef032fbc719c17043dfc7462852ca578993b429fc581a3d88850ecc1cdb5",
+    "mica-s3k-attempts.png": "43bae7d690f6bbc155be9f3fcb906f22cd22694a1ad819ad0366febd10507557",
+    "mica-portrait-attempts.png": "bcb5ae9a7836bac9ff0c80e60412c29e2606d627118bad234e3cc880caaf13f8"
+  },
+  "wink_native_areas": [
+    1378,
+    1402
+  ],
+  "wink_authored_areas": [
+    1536,
+    1536
+  ],
+  "wink_sqrt_mean_area_ratio": 1.0512069117081668
+}

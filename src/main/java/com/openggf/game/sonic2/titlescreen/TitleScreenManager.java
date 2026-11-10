@@ -1,5 +1,9 @@
 package com.openggf.game.sonic2.titlescreen;
 
+import com.openggf.game.presentation.TitleCharacterPresentation;
+import com.openggf.game.CharacterPresentation.Host;
+import com.openggf.game.CharacterPresentation.TitlePart;
+
 import com.openggf.control.InputHandler;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -52,6 +56,16 @@ import static com.openggf.control.InputHandlerInternalAccess.nativeMenuKeyPresse
  * </ul>
  */
 public class TitleScreenManager implements TitleScreenProvider {
+    private TitleCharacterPresentation titleLead;
+    private TitleCharacterPresentation titleSidekick;
+    private boolean titleCharactersResolved;
+    private void resolveTitleCharacters() {
+        if (titleCharactersResolved) return;
+        titleCharactersResolved = true;
+        titleLead = TitleCharacterPresentation.configured(Host.S2, false);
+        titleSidekick = TitleCharacterPresentation.configured(Host.S2, true);
+    }
+
     private static final Logger LOGGER = Logger.getLogger(TitleScreenManager.class.getName());
 
     private static TitleScreenManager instance;
@@ -338,6 +352,7 @@ public class TitleScreenManager implements TitleScreenProvider {
 
     @Override
     public void initialize() {
+        titleCharactersResolved = false; titleLead = null; titleSidekick = null;
         LOGGER.info("Initializing title screen");
 
         // Load data if not already loaded
@@ -1536,7 +1551,12 @@ public class TitleScreenManager implements TitleScreenProvider {
     private void drawSprite(AnimatedSprite sprite) {
         int screenX = sprite.x - 128 + xOffset(); // centre with the logo (0 at native)
         int screenY = sprite.y - 128;
-        spriteRenderer.drawFrameIndex(sprite.mappingFrame, screenX, screenY);
+        resolveTitleCharacters();
+        var owner = sprite == sonicSprite || sprite == sonicHandSprite ? titleLead
+                : sprite == tailsSprite || sprite == tailsHandSprite ? titleSidekick : null;
+        var part = sprite == sonicHandSprite || sprite == tailsHandSprite ? TitlePart.HAND : TitlePart.BODY;
+        if (owner == null || !owner.draw(part, sprite.mappingFrame, screenX, screenY))
+            spriteRenderer.drawFrameIndex(sprite.mappingFrame, screenX, screenY);
     }
 
     /**
@@ -1941,6 +1961,7 @@ public class TitleScreenManager implements TitleScreenProvider {
 
     @Override
     public void reset() {
+        titleCharactersResolved = false; titleLead = null; titleSidekick = null;
         GameServices.audio().stopSegaPcm();
         state = State.INACTIVE;
         flashingStarVisible = false;

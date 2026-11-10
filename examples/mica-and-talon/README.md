@@ -64,7 +64,10 @@ The S2 HUD spells TALON; S3K retains TAL because the native glyphs exceed its
 
 The build copies presentation, wave3 stage, continue, portrait, snowboard and
 ending PNGs into the jar alongside `art/mica.ggfp`. Presentation is currently a
-code-supplied contract; GGFP presentation sections are pending. S2 2P, title art and custom Tornado pilots remain open. Optional 32×32 reel
+code-supplied contract; GGFP presentation sections are pending. S2 2P and custom Tornado pilots remain open. Native title mascot banks now cover
+all three hosts: the configured default leads, and S2 resolves the configured
+sidekick independently. TALON solo owns the lead bank. Native logos, emblem,
+animation clocks and occlusion remain host-owned; see `art/*/titles/README.md`. Optional 32×32 reel
 portraits replace lead/sidekick symbols in S2 CNZ and S3K Slots, including
 TALON solo and the Gilded/Solar symbol. Native rewards, other symbols and
 scrolling remain host-owned. See each character’s `art/*/reels/README.md`.

@@ -52,6 +52,7 @@ def main():
     shutil.copytree(PROJECT / "art/mica/presentation", classes / "art/mica/presentation", dirs_exist_ok=True)
     for character in ("mica", "talon"):
         shutil.copytree(PROJECT / "art" / character / "reels", classes / "art" / character / "reels", dirs_exist_ok=True)
+        shutil.copytree(PROJECT / "art" / character / "titles", classes / "art" / character / "titles", dirs_exist_ok=True)
     stage_assets = classes / "art/mica/wave3"
     stage_assets.mkdir(parents=True, exist_ok=True)
     for frame in (PROJECT / "art/mica/wave3").glob("*.png"):

@@ -19,12 +19,13 @@ final class ReelPresentation {
 
     static CharacterDefinition decorate(CharacterDefinition d, ModAssetRoot assets) throws IOException {
         var reels = load(assets, "talon");
+        var titles = TitlePresentation.load(assets, "talon");
         return new CharacterDefinition(d.key(), d.displayName(), d.spriteFactory(), d.respawnStrategyFactory(),
                 d.behavesLike(), d.secondaryAbility(), d.supportsSuperForm(), d.artSupplier(), d.paletteSupplier(),
                 d.movementAbilities(), d.underwaterPaletteSupplier(), new CharacterDefinition.PresentationSupplier() {
                     public CharacterPresentation load(String code) throws IOException { return load(code, GameId.S3K); }
                     public CharacterPresentation load(String code, GameId host) throws IOException {
-                        return d.presentationSupplier().load(code, host).withReelFaces(reels);
+                        return d.presentationSupplier().load(code, host).withReelFaces(reels).withTitleMascots(titles);
                     }
                 }, d.superFormSupplier(), d.defaultSidekick());
     }

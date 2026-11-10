@@ -40,7 +40,8 @@ public enum PatternAtlasRange {
     PLAYER_PRESENTATION(0x198000, 0x10000, "ROM-derived player presentation fragments"),
     OBJECT_HEAD_PRESENTATION(0x1A8000, 0x20000, "ROM-derived enemy head draw fragments"),
     PRESENTATION_TRAILS(0x1C8000, 0x10000, "Frozen admitted player trail pixels"),
-    CHARACTER_STAGE_PRESENTATION(0x1D8000, 0x10000, "Character special-stage art");
+    CHARACTER_STAGE_PRESENTATION(0x1D8000, 0x10000, "Character special-stage art"),
+    CHARACTER_TITLE_PRESENTATION(0x1E8000, 0x10000, "Character title mascot art");
 
     private static final PatternAtlasRange[] LOOKUP_VALUES = values();
 
