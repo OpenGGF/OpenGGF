@@ -278,7 +278,7 @@ samples actual capture colours and compares stock/creator mapping IDs every tick
 S2's existing native sprite list already covers MICA and TALON correctly.
 
 
-## Native special-stage orientation (2026-11-10)
+## Native special-stage orientation checkpoint (superseded art)
 
 MICA and TALON now supply dedicated final-orientation drawings for Blue Sphere's
 mirrored selectors 6–8 and all 40 S2 half-pipe H/V/HV combinations per character.
@@ -301,3 +301,28 @@ Its acceptance gates use real capture pixels or the exact sampled capture
 palette, full-60-Hz lossless RGB lockstep movies at 3×, every-tick two-cycle strips,
 centroid plots and per-tick selector diffs. The positioned probes certify these
 presentation encounters, not complete special-stage routes.
+
+### Current special-stage consistency checkpoint (2026-11-10)
+
+`consistent-stage/` supersedes the independently generated `oriented-stage/`
+bank above. Each character/surface has one locked generated upright head/torso
+and a separate canonical curled ball. Generated limbs follow native Sonic's
+measured glove, shoe and contact phases; MICA's short tail and TALON's folded
+wing tips remain behind the legs. S2 angle templates and native ball glint/blur
+phases rederive from those same canonical components. The existing orientation
+API, native selectors, clocks, palette ownership, shadows and fades are unchanged.
+
+All 144 final drawings reproduce from committed components and recipes with
+`tools/modding/playable_art/locked_stage.py`; the companion review sampler reports
+head/ear IoU 1.000, zero identity pixel changes, and actual limb landmark errors.
+Native area ratios are S3K MICA 0.9954/TALON 0.9929, S2 MICA 1.0079/TALON 1.0215.
+Budgets remain 9/15 opaque colours for S3K/S2. These already-authored slots move
+zero audit rows; the 1310-obligation coverage matrix is unchanged.
+
+Review: `$HOME/scratch/agent-tmp/mt-bluesphere-consistency-20261110/review.html`.
+It contains the real six-times four-row cycles, turns and jumps, stock/mod60 fps
+films at 3×, all unlabelled native-style gates, colour samples and per-tick diffs.
+All 48 sampled slots, 25,725 foot pixels and 411,850 entry/exit/failure fade pixels
+match their expected runtime colours. Mapping/motion/fade differences are zero.
+The exit take declares debug completion; these are positioned presentation
+checks, not complete routes. See the design audit for measurements and limits.

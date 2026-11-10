@@ -55,8 +55,8 @@ def main():
              "--sheet", str(PROJECT / f"src/main/mod/mica_powered_{host}-sheet.yaml"), "--out", str(classes / f"art/mica-powered-{host}.ggfp")])
     shutil.copytree(PROJECT / "art/mica/presentation", classes / "art/mica/presentation", dirs_exist_ok=True)
     for character in ("mica", "talon"):
-        for frame in (PROJECT / "art" / character / "oriented-stage").glob("*.png"):
-            destination = classes / "art" / character / "oriented-stage" / frame.name
+        for frame in (PROJECT / "art" / character / "consistent-stage").glob("*.png"):
+            destination = classes / "art" / character / "consistent-stage" / frame.name
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(frame, destination)
         shutil.copytree(PROJECT / "art" / character / "competition-menu", classes / "art" / character / "competition-menu", dirs_exist_ok=True)

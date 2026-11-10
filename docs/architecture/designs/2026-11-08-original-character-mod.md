@@ -3227,7 +3227,7 @@ Limits: pair title presentation only; S1/S3K and inherited alternate-role art
 are unchanged, with no new gameplay-route certification.
 
 
-#### Native special-stage orientation (2026-11-10)
+#### Native special-stage orientation checkpoint (superseded art)
 
 MICA and TALON now supply dedicated final-orientation drawings for Blue Sphere's
 mirrored selectors 6–8 and all 40 S2 half-pipe H/V/HV combinations per character.
@@ -3250,3 +3250,110 @@ Its acceptance gates use real capture pixels or the exact sampled capture
 palette, full-60-Hz lossless RGB lockstep movies at 3×, every-tick two-cycle strips,
 centroid plots and per-tick selector diffs. The positioned probes certify these
 presentation encounters, not complete special-stage routes.
+
+#### Special-stage temporal identity correction (2026-11-10)
+
+Owner review rejected `176d974b06` as integrated in `f25459be47`: the independent
+fresh generations still changed head size, ears, texture and large shadow masses
+between phases. The real four-row evidence is
+`$HOME/scratch/agent-tmp/mt-polish-20261110/evidence/bs-cycle-6x.png`. The earlier
+orientation seam remains useful, but independently generating whole characters
+per phase is superseded by a locked-component composition, as the owner requested.
+
+The current `consistent-stage/` bank supplies 72 nonblank drawings per character:
+14 S3K (eleven selectors plus three final H phases) and 58 S2 (eighteen selectors
+plus forty H/V/HV phases). Thirty-two fresh built-in GPT Image candidates supply
+four canonical head/torso drawings, four curls, and generated limb/glove libraries.
+The selected head, ears, torso and characteristic features are reused bit for bit.
+MICA's short central tail and TALON's folded tips sit behind the legs; gloves,
+calves and boots follow independently measured native Sonic limb/contact phases.
+No engine, Mod API version, signature pin or animation clock changes are needed.
+
+`loc_907E` (sonic3k.asm:11504-11538) advances the byte phase using native velocity
+shifted by five and selects `byte_91E8` / `byte_91F6`
+(sonic3k.asm:11628-11633). Running is
+`2,6H,7H,8H,7H,6H,2,3,4,5,4,3`; turning uses the same table. Standing is selector 1.
+Jumping selects `9,11,10,11` and has no flipped selector. Native mappings 6–8 reuse
+3–5's art with horizontal piece flags; creator explicit H drawings retain the
+same fixed identity layer. Native head translation relative to selector 2 is
+(0,+8) for stand, (+1,0)/(−1,0) for 5/8, and (0,0) otherwise.
+
+The owner's jump clarification is binding:9–11 are balls, not upright bodies.
+Each character has a separate generated canonical curl. Native Sonic9/10 have
+identical alpha and no detail translation in the best local correlation; their
+white glints contain 2/8 pixels, moving upward from y 11.5 to 7.625 in the32 px box.
+Selector 11 has 640 versus 692 opaque pixels, a 12 px glint at y 5.5 and a smoother
+surface. Native Tails' ball glints are 4/16/24 pixels with essentially stationary
+centres. S2 ball 16/17 glints similarly change size/height within one envelope.
+The recipes resize the generated highlight component, apply measured vertical
+positions, and derive the native blur/envelope change from the same curl. They
+preserve upper-left lighting; no independent ball identities or rear heads enter
+those phases. All curl phases are distinct and rederive byte for byte.
+
+S2 shared the independent-generation drift, so the correction covers it too.
+`SSPlayer_Animate` (s2.asm:69746-69789) retains its native duration and upright H
+alternation; angle sectors continue to select native upright, diagonal and
+horizontal mappings/flags. Rotated identities derive from the same head/torso,
+with a fixed screen light field. Initial assembly rotated S2 geometry in the
+wrong direction; real diagonal capture gates exposed it, and it was corrected
+before the final captures. No such intermediate bank is an acceptance result.
+
+Per-frame head/ear source-layer IoU is 1.000 and RGB differences 0 for every upright
+selector/orientation after the native translation. S2 compares reuse within the
+corresponding deterministic angle template, which is separately rederived from
+its canonical. Ordinary arm/hand overlap is occlusion, not a new head drawing.
+Glove-white centroid maximum errors in native pixels: MICA S3K 0.959/S2 0.595;
+TALON S3K 1.000/S2 0.660. Independently measured shoe-contact boundary errors reach
+MICA 1.803/3.163 and TALON 2.237/2.237; these are not falsely reported as zero from
+the fitted boxes. Both actors retain the native foot-side/contact phase sequence.
+
+| Surface | Native mean opaque area | Creator mean | Square-root ratio |
+| --- | ---: | ---: | ---: |
+| S3K MICA | 878.91 | 870.82 | 0.9954 |
+| S3K TALON | 658.00 | 648.64 | 0.9929 |
+| S2 MICA | 932.06 | 946.89 | 1.0079 |
+| S2 TALON | 691.50 | 721.61 | 1.0215 |
+
+The S3K palette budget remains at most nine opaque colours; S2 at most fifteen.
+Native one-pixel dark hue contours, four principal material bands plus a compact
+glint, upper-left light and clustered rather than noisy shading guide reduction.
+The creator body retains the existing private logical player row and native
+ownership/fade path. Real capture samples match all 48 occupied palette slots,
+including jade00926D, coralFF4949 and whiteFFFFFF. All 25,725 tested foot pixels
+retain their expected colours above the shadow. Across 508 actor/fade observations,
+all 411,850 tested pixels match the live palette and displayed native fade, with
+zero RGB residual. Native Tails includes his earlier ROM-backed appendage in that
+comparison; fully white frames do not identify a unique appendage selector.
+
+Stock/mod main mapping, position, flip flags and stage/fade state differ on zero
+ticks: 507 published S3K actor ticks and 946 S2 ticks per pair. Every stock capture
+PNG is unchanged from baseline. The complete controller recipe is shared by each
+stock/mod pair; no assumed-velocity preview remains. The six-times four-row
+strips cover every tick across two full cycles, turning and jumping, with paired
+60 fps lossless RGB MP4s at 3×. Native entry, a declared debug-clear exit flash and
+ordinary red-sphere failure are shown frame by frame. Different starting colours
+have different luminance; the native fade progress and per-colour RGB rule match.
+
+On the same common head mask visible in every stride phase, captured light/dark
+centroid spans fall from 2.547/4.415px to 0/0 for S3K MICA,3.193/2.377 to 0/0 for
+S3K TALON,1.977/4.771 to 0/0 for S2 MICA and13.005/5.953 to 0/0 for S2 TALON.
+The mask explicitly excludes moving gloves sharing slate light-grey slots. Full
+unmasked four-row strips remain the visual authority; the mask does not conceal
+a changed canonical source.
+
+The external checkpoint is
+`$HOME/scratch/agent-tmp/mt-bluesphere-consistency-20261110/review.html`: all 144
+unlabelled native/new gates (84 real crops, 60 using the exact sampled capture
+palette), shared-origin guide/onion panels, per-frame consistency CSVs, centroid
+plots, films, colour samples and pixel/fade results. Source generations and
+native renders stay in scratch. `locked_stage.py` and `locked_stage_review.py`
+are the maintained assembly/measurement tools; Python checks reproduce angles,
+curls, palettes and placements rather than accepting metadata assertions alone.
+
+Coverage rows moved 0: this replaces already-authored art. The audit remains 1310
+obligations, with authored totals MICA S1/S2/S3K 66/143/174 and TALON 30/133/128;
+no fallback is added or closed. Final focused validation is 76 Java tests passed,
+no skips, 74 Python tests passed, and example validation 0 findings. These are
+positioned solo presentation encounters, not complete special-stage routes.
+S2 admission is declared at 240; the separate S3K exit take declares completion
+at 465. Work is committed locally only, without merging or pushing.

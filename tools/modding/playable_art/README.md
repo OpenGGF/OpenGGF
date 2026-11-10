@@ -664,3 +664,36 @@ state is active:selector:x:y for Sonic/Tails and their two independent hands,
 joined with `/`. Python3/Pillow and FFmpeg are required. This is presentation
 verification of the captured team, not gameplay-route or alternate-role
 certification. Provenance and limits live in each character's title README.
+
+## Locked special-stage identity and native limb phases
+
+`locked_stage.py` reproduces the original generated-part compositions under
+`art/{mica,talon}/consistent-stage/`; it does not regenerate character identities
+per frame. Each surface has one indexed head, torso and curl. Upright S3K phases
+translate those exact head/torso pixels by measured native offsets. S2 angles
+rotate the same geometry and detail, reprojecting its own broad material light
+field into screen coordinates. Native-observed ball envelopes and glint position/
+area changes derive from one generated curl and a generated highlight component.
+Native pixels are never composited into creator art. Raw generations/references
+remain external; prompts, attempts, selections, component PNGs and recipes ship.
+
+```bash
+python3 tools/modding/playable_art/locked_stage.py examples/mica-and-talon/art/mica/consistent-stage --check
+python3 tools/modding/playable_art/locked_stage_review.py examples/mica-and-talon/art/mica/consistent-stage --out /scratch/mica-consistency.csv
+```
+
+The sampler checks head/ear layer IoU and indexed RGB equality before ordinary
+limb occlusion, then independently measures generated glove-white centroids,
+component edges and shoe-contact boundaries against the native numeric
+landmarks. Fitted boxes alone would misleadingly report zero error. Tests also
+rederive every angle and curl phase from its canonical source. The production
+native mapping clock and draw path remain unchanged.
+
+For capture centroids, use the same head material mask visible in all compared
+stride phases. A moving glove can share the light-grey plumage index; counting
+it as head shading creates a false jump. Measure real RGB in that common mask,
+retain the unmasked four-row strips, and report the exclusion. Native Tails also
+has a separate earlier appendage sprite; body-only pixel comparison mistakes
+its legitimate occlusion for a draw-order defect. Compare their native SAT union.
+`SpecialStageCharacterProbe` explicitly enables the native scanline budget inside
+its capture-session configuration scope and restores the caller on close.

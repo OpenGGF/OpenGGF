@@ -515,6 +515,7 @@ studying how it was done. Keep the record light and put things where they
 already belong; do not create new document types.
 
 - [Playable art preprocessing](../../tools/modding/playable_art/README.md) — generated pose atlases to shared 15-colour indexed frames, explicit native hotspots/pixel patches, deterministic verification and disposable animation reviews (MICA W7, 2026-11-08).
+- [Locked special-stage assembly and measurements](../../tools/modding/playable_art/locked_stage.py) / [review sampler](../../tools/modding/playable_art/locked_stage_review.py) — reuse generated identity/curl components, reproduce native-observed glint phases, and measure actual component edges/contacts separately from fitted boxes (MICA/TALON temporal consistency, 2026-11-10).
 
 - **Scripts and probes.** A one-off diagnostic stays temporary. A probe,
   oracle, comparator, or sampler that answered a question likely to recur,

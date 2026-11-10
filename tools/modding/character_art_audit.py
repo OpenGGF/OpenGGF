@@ -109,7 +109,7 @@ def main():
     orientation_java = ROOT/'examples/mica-and-talon/src/main/java/mica/OrientedStageArt.java'
     orientation_bindings = orientation_java.read_text() if orientation_java.exists() else ''
     for c in ['mica', 'talon']:
-        manifest_path = ART/c/'oriented-stage/native-pose-generation.json'
+        manifest_path = ART/c/'consistent-stage/native-pose-generation.json'
         supplied = load(manifest_path)['frames'] if manifest_path.exists() else []
         obligations = [('s3k', i, 'h') for i in [6, 7, 8]]
         obligations += [('s2', i, orientation) for i in range(12) for orientation in ['h', 'v', 'hv']]
