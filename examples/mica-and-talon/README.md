@@ -75,7 +75,7 @@ code-supplied contract; GGFP presentation sections are pending. S2 2P and title 
 code-supplied contract; GGFP presentation sections are pending. S2 2P and custom Tornado pilots remain open. Native title mascot banks now cover
 all three hosts: the configured default leads, and S2 resolves the configured
 sidekick independently. TALON solo owns the lead bank. Native logos, emblem,
-animation clocks and occlusion remain host-owned. S2 stages MICA left with a
+animation clocks and occlusion remain host-owned. S2 exchanges native presentation slots to stage MICA left with a palm-facing
 thumbs-up and TALON right with connected wings and no separate glove; all S1
 poses follow the native geometry, and MICA's S3K bank uses baked3D shading with
 opaque native aperture coverage through the hand/wink patches. See `art/*/titles/README.md`. Optional 32×32 reel

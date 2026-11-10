@@ -1523,6 +1523,7 @@ CONSTRUCTOR com.openggf.game.CharacterPresentation$ReelFace public  <init>(com.o
 CONSTRUCTOR com.openggf.game.CharacterPresentation$Sign public  <init>(com.openggf.game.CharacterPresentation$SignFrame,com.openggf.game.CharacterPresentation$SignFrame,com.openggf.game.CharacterPresentation$SignFrame,com.openggf.game.CharacterPresentation$SignFrame,com.openggf.game.CharacterPresentation$SignFrame)
 CONSTRUCTOR com.openggf.game.CharacterPresentation$SignFrame public  <init>(com.openggf.game.CharacterPresentation$Image,com.openggf.game.CharacterPresentation$Backing)
 CONSTRUCTOR com.openggf.game.CharacterPresentation$TitleMascot public  <init>(java.util.Map<com.openggf.game.CharacterPresentation$TitlePart,com.openggf.game.StageSpriteSet>,java.util.Map<java.lang.Integer,com.openggf.game.CharacterPresentation$TitlePlaneMask>,int[])
+CONSTRUCTOR com.openggf.game.CharacterPresentation$TitleMascot public  <init>(java.util.Map<com.openggf.game.CharacterPresentation$TitlePart,com.openggf.game.StageSpriteSet>,java.util.Map<java.lang.Integer,com.openggf.game.CharacterPresentation$TitlePlaneMask>,int[],boolean)
 CONSTRUCTOR com.openggf.game.CharacterPresentation$TitlePlaneMask public  <init>(byte[])
 CONSTRUCTOR com.openggf.game.CharacterPresentation$TitlePlaneMask public  <init>(byte[],byte[])
 CONSTRUCTOR com.openggf.game.CheckpointState$RewindState public  <init>(int,int,int,int,int,int,boolean,boolean,int,int,boolean,int,int,boolean,byte,byte,boolean,long,boolean,int,int)
@@ -6102,6 +6103,7 @@ METHOD com.openggf.game.CharacterPresentation$SignFrame public,final  int hashCo
 METHOD com.openggf.game.CharacterPresentation$SignFrame public,final  java.lang.String toString()
 METHOD com.openggf.game.CharacterPresentation$Style public,static  com.openggf.game.CharacterPresentation$Style valueOf(java.lang.String)
 METHOD com.openggf.game.CharacterPresentation$Style public,static  com.openggf.game.CharacterPresentation$Style[] values()
+METHOD com.openggf.game.CharacterPresentation$TitleMascot public  boolean swapS2Slots()
 METHOD com.openggf.game.CharacterPresentation$TitleMascot public  int[] rgb()
 METHOD com.openggf.game.CharacterPresentation$TitleMascot public  java.util.Map<com.openggf.game.CharacterPresentation$TitlePart,com.openggf.game.StageSpriteSet> parts()
 METHOD com.openggf.game.CharacterPresentation$TitleMascot public  java.util.Map<java.lang.Integer,com.openggf.game.CharacterPresentation$TitlePlaneMask> planeMasks()
@@ -18116,6 +18118,7 @@ RECORD-COMPONENT com.openggf.game.CharacterPresentation$SignFrame face com.openg
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$TitleMascot parts java.util.Map<com.openggf.game.CharacterPresentation$TitlePart,com.openggf.game.StageSpriteSet>
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$TitleMascot planeMasks java.util.Map<java.lang.Integer,com.openggf.game.CharacterPresentation$TitlePlaneMask>
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$TitleMascot rgb int[]
+RECORD-COMPONENT com.openggf.game.CharacterPresentation$TitleMascot swapS2Slots boolean
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$TitlePlaneMask clearedPixels byte[]
 RECORD-COMPONENT com.openggf.game.CharacterPresentation$TitlePlaneMask pixels byte[]
 RECORD-COMPONENT com.openggf.game.CheckpointState$RewindState cameraLock boolean

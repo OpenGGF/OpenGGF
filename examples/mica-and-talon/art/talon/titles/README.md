@@ -71,3 +71,27 @@ visible ring/aperture pixels with zero box frames. The ordinary capture exposes
 12 plane selectors; plane 12 is also rendered through the engine in a separate
 13-plane component fixture and ring strip. This is a stated capture limit, not a claim of observing it
 in the ordinary animation. Raw attempts/native renders remain in scratch.
+
+## S1/S2 title correction round 2 (2026-11-10)
+
+MICA's eight S1 poses are fresh native-pose generations with a rounded scale
+dome, pangolin snout, eyelashes and coral ears. The generated glove overlaps
+the hood in the foreground. Native canvases and hotspots remain unchanged.
+
+S2 uses the additive, default-off `TitleMascot.swapS2Slots` option. When the
+configured lead requests it and both creator banks exist, the host exchanges
+presentation owners only: MICA inherits the left Tails-slot rise and native
+passes; TALON inherits the right Sonic-slot rise. Crop origins are native,
+without the previous lateral displacement. Single/missing banks keep native
+roles. TALON's new right-slot bust has folded connected wings and no separate
+glove; hand selectors9/19 are explicitly empty. MICA's left-slot BODY2–4 carry
+a palm-facing right-hand thumbs-up, curled fingers toward the viewer, thumb
+on viewer right and cuff below/right. HAND19 is empty to avoid a second glove.
+The independent native hand objects still run their native clocks.
+
+`round2-generation.json` records prompts, attempts, selections, source hashes
+and size checks. Raw generations and real stock/mod capture frames remain at
+`$HOME/scratch/agent-tmp/title-r2-s1s2/`; `review.html` contains 3× lockstep
+strips, 60fps paired films and a real-capture palm before/after zoom. S3K is
+unchanged by this lane. Alternate-role/solo art is inherited and not visually
+certified here. Coverage counts stay unchanged: this corrects authored banks.

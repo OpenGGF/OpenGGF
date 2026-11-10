@@ -29,20 +29,21 @@ final class TitlePresentation {
                         Map.entry(7,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s1-7.png"),0,0)))));
                 }
                 case S2 -> {
-                    // Authored crop origins stage MICA left / TALON right without changing native clocks.
+                    // Every crop uses its destination native slot origin. The S2 lead
+                    // requests an owner exchange, preserving native rise and banner masking.
                     parts.put(TitlePart.BODY,new StageSpriteSet(Map.ofEntries(
-                        Map.entry(0,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-0.png"),character.equals("talon") ? -114 : -24,character.equals("talon") ? -16 : -16)),
-                        Map.entry(1,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-1.png"),character.equals("talon") ? -90 : 0,character.equals("talon") ? -16 : -16)),
-                        Map.entry(2,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-2.png"),character.equals("talon") ? -98 : -8,character.equals("talon") ? -16 : -16)),
-                        Map.entry(3,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-3.png"),character.equals("talon") ? -90 : 0,character.equals("talon") ? -16 : -16)),
-                        Map.entry(4,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-4.png"),character.equals("talon") ? -90 : 0,character.equals("talon") ? -8 : -8)),
-                        Map.entry(5,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-5.png"),character.equals("mica") ? 65 : 0,character.equals("mica") ? -8 : -8)),
-                        Map.entry(6,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-6.png"),character.equals("mica") ? 65 : 0,character.equals("mica") ? -8 : -8)),
-                        Map.entry(7,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-7.png"),character.equals("mica") ? 49 : -16,character.equals("mica") ? -8 : -8)),
-                        Map.entry(18,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-18.png"),character.equals("mica") ? 41 : -24,character.equals("mica") ? -8 : -8)))));
+                        Map.entry(0,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-0.png"),-24,-16)),
+                        Map.entry(1,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-1.png"),0,-16)),
+                        Map.entry(2,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-2.png"),-8,-16)),
+                        Map.entry(3,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-3.png"),0,-16)),
+                        Map.entry(4,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-4.png"),0,-8)),
+                        Map.entry(5,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-5.png"),0,-8)),
+                        Map.entry(6,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-6.png"),0,-8)),
+                        Map.entry(7,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-7.png"),-16,-8)),
+                        Map.entry(18,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-18.png"),-24,-8)))));
                     parts.put(TitlePart.HAND,new StageSpriteSet(Map.ofEntries(
-                        Map.entry(9,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-9.png"),character.equals("mica") ? 112 : -8,character.equals("mica") ? 0 : 0)),
-                        Map.entry(19,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-19.png"),character.equals("talon") ? -68 : -8,character.equals("talon") ? 8 : 0)))));
+                        Map.entry(9,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-9.png"),-8,0)),
+                        Map.entry(19,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-19.png"),-8,0)))));
                 }
                 case S3K -> {
                     parts.put(TitlePart.FINGER,new StageSpriteSet(Map.ofEntries(
@@ -66,7 +67,7 @@ final class TitlePresentation {
             }
             int[] hostRgb = host == Host.S3K && character.equals("mica")
                     ? PresentationImages.backing(assets,root+"s3k-plane-13-left.png",0).rgb() : rgb;
-            result.put(host,new TitleMascot(parts,masks,hostRgb));
+            result.put(host,new TitleMascot(parts,masks,hostRgb,host == Host.S2 && character.equals("mica")));
         }
         return Map.copyOf(result);
     }
