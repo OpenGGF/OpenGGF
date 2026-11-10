@@ -2707,6 +2707,864 @@
       "angle_set": "flat",
       "duration_ticks": 1,
       "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object4-s3k-80",
+      "animation": "NATIVE_POSE",
+      "order": 100,
+      "file": "frames/object4-s3k-80.png",
+      "hotspot": [
+        16,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-81",
+      "animation": "NATIVE_POSE",
+      "order": 101,
+      "file": "frames/object4-s3k-81.png",
+      "hotspot": [
+        16,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-82",
+      "animation": "NATIVE_POSE",
+      "order": 102,
+      "file": "frames/object4-s3k-82.png",
+      "hotspot": [
+        14,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-83",
+      "animation": "NATIVE_POSE",
+      "order": 103,
+      "file": "frames/object4-s3k-83.png",
+      "hotspot": [
+        15,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-84",
+      "animation": "NATIVE_POSE",
+      "order": 104,
+      "file": "frames/object4-s3k-84.png",
+      "hotspot": [
+        13,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-85",
+      "animation": "NATIVE_POSE",
+      "order": 105,
+      "file": "frames/object4-s3k-85.png",
+      "hotspot": [
+        14,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-8c",
+      "animation": "NATIVE_POSE",
+      "order": 108,
+      "file": "frames/object4-s3k-8c.png",
+      "hotspot": [
+        16,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-8d",
+      "animation": "NATIVE_POSE",
+      "order": 109,
+      "file": "frames/object4-s3k-8d.png",
+      "hotspot": [
+        17,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-93",
+      "animation": "NATIVE_POSE",
+      "order": 110,
+      "file": "frames/object4-s3k-93.png",
+      "hotspot": [
+        17,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Re-reduced 6% larger for independent area check."
+    },
+    {
+      "id": "object4-s3k-b4",
+      "animation": "NATIVE_POSE",
+      "order": 111,
+      "file": "frames/object4-s3k-b4.png",
+      "hotspot": [
+        10,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-b5",
+      "animation": "NATIVE_POSE",
+      "order": 112,
+      "file": "frames/object4-s3k-b5.png",
+      "hotspot": [
+        10,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Uniform 50\u219248px height reduction for current indexed atlas cell."
+    },
+    {
+      "id": "object4-s3k-c0",
+      "animation": "NATIVE_POSE",
+      "order": 113,
+      "file": "frames/object4-s3k-c0.png",
+      "hotspot": [
+        17,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-c4",
+      "animation": "NATIVE_POSE",
+      "order": 114,
+      "file": "frames/object4-s3k-c4.png",
+      "hotspot": [
+        18,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-df",
+      "animation": "NATIVE_POSE",
+      "order": 115,
+      "file": "frames/object4-s3k-df.png",
+      "hotspot": [
+        15,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e0",
+      "animation": "NATIVE_POSE",
+      "order": 116,
+      "file": "frames/object4-s3k-e0.png",
+      "hotspot": [
+        12,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e1",
+      "animation": "NATIVE_POSE",
+      "order": 117,
+      "file": "frames/object4-s3k-e1.png",
+      "hotspot": [
+        11,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e2",
+      "animation": "NATIVE_POSE",
+      "order": 118,
+      "file": "frames/object4-s3k-e2.png",
+      "hotspot": [
+        16,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e3",
+      "animation": "NATIVE_POSE",
+      "order": 119,
+      "file": "frames/object4-s3k-e3.png",
+      "hotspot": [
+        20,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e4",
+      "animation": "NATIVE_POSE",
+      "order": 120,
+      "file": "frames/object4-s3k-e4.png",
+      "hotspot": [
+        14,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e6",
+      "animation": "NATIVE_POSE",
+      "order": 122,
+      "file": "frames/object4-s3k-e6.png",
+      "hotspot": [
+        15,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e7",
+      "animation": "NATIVE_POSE",
+      "order": 123,
+      "file": "frames/object4-s3k-e7.png",
+      "hotspot": [
+        12,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e8",
+      "animation": "NATIVE_POSE",
+      "order": 124,
+      "file": "frames/object4-s3k-e8.png",
+      "hotspot": [
+        11,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e9",
+      "animation": "NATIVE_POSE",
+      "order": 125,
+      "file": "frames/object4-s3k-e9.png",
+      "hotspot": [
+        9,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-ea",
+      "animation": "NATIVE_POSE",
+      "order": 126,
+      "file": "frames/object4-s3k-ea.png",
+      "hotspot": [
+        12,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-ef",
+      "animation": "NATIVE_POSE",
+      "order": 127,
+      "file": "frames/object4-s3k-ef.png",
+      "hotspot": [
+        16,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f0",
+      "animation": "NATIVE_POSE",
+      "order": 128,
+      "file": "frames/object4-s3k-f0.png",
+      "hotspot": [
+        15,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f1",
+      "animation": "NATIVE_POSE",
+      "order": 129,
+      "file": "frames/object4-s3k-f1.png",
+      "hotspot": [
+        12,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f2",
+      "animation": "NATIVE_POSE",
+      "order": 130,
+      "file": "frames/object4-s3k-f2.png",
+      "hotspot": [
+        10,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f3",
+      "animation": "NATIVE_POSE",
+      "order": 131,
+      "file": "frames/object4-s3k-f3.png",
+      "hotspot": [
+        11,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f4",
+      "animation": "NATIVE_POSE",
+      "order": 132,
+      "file": "frames/object4-s3k-f4.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f5",
+      "animation": "NATIVE_POSE",
+      "order": 133,
+      "file": "frames/object4-s3k-f5.png",
+      "hotspot": [
+        15,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f6",
+      "animation": "NATIVE_POSE",
+      "order": 134,
+      "file": "frames/object4-s3k-f6.png",
+      "hotspot": [
+        15,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f7",
+      "animation": "NATIVE_POSE",
+      "order": 135,
+      "file": "frames/object4-s3k-f7.png",
+      "hotspot": [
+        11,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f8",
+      "animation": "NATIVE_POSE",
+      "order": 136,
+      "file": "frames/object4-s3k-f8.png",
+      "hotspot": [
+        10,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f9",
+      "animation": "NATIVE_POSE",
+      "order": 137,
+      "file": "frames/object4-s3k-f9.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-fa",
+      "animation": "NATIVE_POSE",
+      "order": 138,
+      "file": "frames/object4-s3k-fa.png",
+      "hotspot": [
+        15,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-31",
+      "animation": "NATIVE_POSE",
+      "order": 139,
+      "file": "frames/object4-s3k-31.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-32",
+      "animation": "NATIVE_POSE",
+      "order": 140,
+      "file": "frames/object4-s3k-32.png",
+      "hotspot": [
+        13,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-33",
+      "animation": "NATIVE_POSE",
+      "order": 141,
+      "file": "frames/object4-s3k-33.png",
+      "hotspot": [
+        14,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-34",
+      "animation": "NATIVE_POSE",
+      "order": 142,
+      "file": "frames/object4-s3k-34.png",
+      "hotspot": [
+        15,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-35",
+      "animation": "NATIVE_POSE",
+      "order": 143,
+      "file": "frames/object4-s3k-35.png",
+      "hotspot": [
+        12,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-36",
+      "animation": "NATIVE_POSE",
+      "order": 144,
+      "file": "frames/object4-s3k-36.png",
+      "hotspot": [
+        14,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-37",
+      "animation": "NATIVE_POSE",
+      "order": 145,
+      "file": "frames/object4-s3k-37.png",
+      "hotspot": [
+        15,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-38",
+      "animation": "NATIVE_POSE",
+      "order": 146,
+      "file": "frames/object4-s3k-38.png",
+      "hotspot": [
+        12,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-39",
+      "animation": "NATIVE_POSE",
+      "order": 147,
+      "file": "frames/object4-s3k-39.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-3a",
+      "animation": "NATIVE_POSE",
+      "order": 148,
+      "file": "frames/object4-s3k-3a.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-3b",
+      "animation": "NATIVE_POSE",
+      "order": 149,
+      "file": "frames/object4-s3k-3b.png",
+      "hotspot": [
+        12,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-3c",
+      "animation": "NATIVE_POSE",
+      "order": 150,
+      "file": "frames/object4-s3k-3c.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-49",
+      "animation": "NATIVE_POSE",
+      "order": 151,
+      "file": "frames/object4-s3k-49.png",
+      "hotspot": [
+        19,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-4a",
+      "animation": "NATIVE_POSE",
+      "order": 152,
+      "file": "frames/object4-s3k-4a.png",
+      "hotspot": [
+        13,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-4b",
+      "animation": "NATIVE_POSE",
+      "order": 153,
+      "file": "frames/object4-s3k-4b.png",
+      "hotspot": [
+        13,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-4c",
+      "animation": "NATIVE_POSE",
+      "order": 154,
+      "file": "frames/object4-s3k-4c.png",
+      "hotspot": [
+        13,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-4d",
+      "animation": "NATIVE_POSE",
+      "order": 155,
+      "file": "frames/object4-s3k-4d.png",
+      "hotspot": [
+        11,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-4e",
+      "animation": "NATIVE_POSE",
+      "order": 156,
+      "file": "frames/object4-s3k-4e.png",
+      "hotspot": [
+        18,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-4f",
+      "animation": "NATIVE_POSE",
+      "order": 157,
+      "file": "frames/object4-s3k-4f.png",
+      "hotspot": [
+        18,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-50",
+      "animation": "NATIVE_POSE",
+      "order": 158,
+      "file": "frames/object4-s3k-50.png",
+      "hotspot": [
+        18,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-51",
+      "animation": "NATIVE_POSE",
+      "order": 159,
+      "file": "frames/object4-s3k-51.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-52",
+      "animation": "NATIVE_POSE",
+      "order": 160,
+      "file": "frames/object4-s3k-52.png",
+      "hotspot": [
+        13,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-53",
+      "animation": "NATIVE_POSE",
+      "order": 161,
+      "file": "frames/object4-s3k-53.png",
+      "hotspot": [
+        19,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-54",
+      "animation": "NATIVE_POSE",
+      "order": 162,
+      "file": "frames/object4-s3k-54.png",
+      "hotspot": [
+        15,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-43",
+      "animation": "NATIVE_POSE",
+      "order": 163,
+      "file": "frames/object4-s3k-43.png",
+      "hotspot": [
+        10,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-d2",
+      "animation": "NATIVE_POSE",
+      "order": 164,
+      "file": "frames/object4-s3k-d2.png",
+      "hotspot": [
+        10,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-d3",
+      "animation": "NATIVE_POSE",
+      "order": 165,
+      "file": "frames/object4-s3k-d3.png",
+      "hotspot": [
+        13,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-d4",
+      "animation": "NATIVE_POSE",
+      "order": 166,
+      "file": "frames/object4-s3k-d4.png",
+      "hotspot": [
+        16,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-d5",
+      "animation": "NATIVE_POSE",
+      "order": 167,
+      "file": "frames/object4-s3k-d5.png",
+      "hotspot": [
+        16,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-d6",
+      "animation": "NATIVE_POSE",
+      "order": 168,
+      "file": "frames/object4-s3k-d6.png",
+      "hotspot": [
+        16,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
     }
   ],
   "scripts": {
@@ -3671,6 +4529,75 @@
     "family-run/0": "run-00",
     "family-run/1": "run-01",
     "family-run/2": "run-02",
-    "family-run/3": "run-03"
+    "family-run/3": "run-03",
+    "chain/0": "object4-s3k-80",
+    "chain/1": "object4-s3k-81",
+    "chain/2": "object4-s3k-82",
+    "chain/3": "object4-s3k-83",
+    "chain/4": "object4-s3k-84",
+    "chain/5": "object4-s3k-85",
+    "carry/0": "spindash-00",
+    "carry/1": "spindash-01",
+    "carry/2": "object4-s3k-8c",
+    "carry/3": "object4-s3k-8d",
+    "hang/3": "object4-s3k-93",
+    "cutscene-hurt/0": "object4-s3k-b4",
+    "cutscene-hurt/1": "object4-s3k-b5",
+    "crane/release": "object4-s3k-c0",
+    "emerald/look": "object4-s3k-c4",
+    "wall-run/0": "object4-s3k-df",
+    "wall-run/1": "object4-s3k-e0",
+    "wall-run/2": "object4-s3k-e1",
+    "wall-run/3": "object4-s3k-e2",
+    "wall-run/4": "object4-s3k-e3",
+    "parachute/0": "object4-s3k-e4",
+    "parachute/1": "hang-00",
+    "parachute/2": "object4-s3k-e6",
+    "parachute/3": "object4-s3k-e7",
+    "parachute/4": "object4-s3k-e8",
+    "parachute/5": "object4-s3k-e9",
+    "parachute/6": "object4-s3k-ea",
+    "corkscrew/0": "object4-s3k-ef",
+    "corkscrew/1": "object4-s3k-f0",
+    "corkscrew/2": "object4-s3k-f1",
+    "corkscrew/3": "object4-s3k-f2",
+    "corkscrew/4": "object4-s3k-f3",
+    "corkscrew/5": "object4-s3k-f4",
+    "corkscrew/6": "object4-s3k-f5",
+    "corkscrew/7": "object4-s3k-f6",
+    "corkscrew/8": "object4-s3k-f7",
+    "corkscrew/9": "object4-s3k-f8",
+    "corkscrew/10": "object4-s3k-f9",
+    "corkscrew/11": "object4-s3k-fa",
+    "gravity-loop/0": "object4-s3k-31",
+    "gravity-loop/1": "object4-s3k-32",
+    "gravity-loop/2": "object4-s3k-33",
+    "gravity-loop/3": "object4-s3k-34",
+    "gravity-loop/4": "object4-s3k-35",
+    "gravity-loop/5": "object4-s3k-36",
+    "gravity-loop/6": "object4-s3k-37",
+    "gravity-loop/7": "object4-s3k-38",
+    "gravity-loop/8": "object4-s3k-39",
+    "gravity-loop/9": "object4-s3k-3a",
+    "gravity-loop/10": "object4-s3k-3b",
+    "gravity-loop/11": "object4-s3k-3c",
+    "cage-entry/0": "object4-s3k-49",
+    "cage-entry/1": "object4-s3k-4a",
+    "cage-entry/2": "object4-s3k-4b",
+    "cage-entry/3": "object4-s3k-4c",
+    "cage-entry/4": "object4-s3k-4d",
+    "cage-entry/5": "object4-s3k-4e",
+    "cage-entry/6": "object4-s3k-4f",
+    "cage-entry/7": "object4-s3k-50",
+    "cage-entry/8": "object4-s3k-51",
+    "cage-entry/9": "object4-s3k-52",
+    "cage-entry/10": "object4-s3k-53",
+    "cage-entry/11": "object4-s3k-54",
+    "family-leap1/2": "object4-s3k-43",
+    "family-super-transform/0": "object4-s3k-d2",
+    "family-super-transform/1": "object4-s3k-d3",
+    "family-super-transform/2": "object4-s3k-d4",
+    "family-super-transform/3": "object4-s3k-d5",
+    "family-super-transform/4": "object4-s3k-d6"
   }
 }

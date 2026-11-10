@@ -189,7 +189,7 @@
   },
   "10": {
     "animation": null,
-    "family": null,
+    "family": "BLANK",
     "phases": [
       0
     ],
@@ -198,10 +198,10 @@
   },
   "11": {
     "animation": null,
-    "family": null,
+    "family": "GET_UP",
     "phases": [
       0,
-      1,
+      0,
       2
     ],
     "offsetX": 0,
@@ -209,7 +209,7 @@
   },
   "12": {
     "animation": null,
-    "family": null,
+    "family": "BLANK",
     "phases": [
       0
     ],
@@ -390,32 +390,32 @@
   },
   "29": {
     "animation": null,
-    "family": null,
+    "family": "WAIT",
     "phases": [
       0,
-      1,
       2,
+      1,
+      9,
       3,
       4,
       5,
-      6,
-      7
+      6
     ],
     "offsetX": 0,
     "offsetY": 0
   },
   "30": {
     "animation": null,
-    "family": null,
+    "family": "WAIT",
     "phases": [
       0,
-      1,
       2,
+      1,
+      9,
       3,
       4,
       5,
-      6,
-      7
+      6
     ],
     "offsetX": 0,
     "offsetY": 0

@@ -46,7 +46,7 @@ class PlayableArtAssemblyTest(unittest.TestCase):
             self.assertEqual(before, {name:(committed/name).read_bytes() for name in before})
             assembler.assemble(art, out)
             self.assertEqual(before, {p.name:p.read_bytes() for p in out.iterdir()})
-            self.assertEqual(stats, dict(frames=208, maxTilesPerFrame=30, animations=52))
+            self.assertEqual(stats, dict(frames=274, maxTilesPerFrame=30, animations=52))
             self.assertEqual('hang-00', source[manifest['nativeFrames']['hang/0']]['id'])
             self.assertEqual('wait-03', source[manifest['nativeFrames']['wait/fidget']]['id'])
             self.assertEqual('roll-01', source[manifest['nativeFrames']['roll/1']]['id'])
@@ -149,7 +149,7 @@ class TalonAssemblyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             out = Path(directory)
             manifest, custom, stats = assembler.assemble(art, out)
-            self.assertEqual(169, stats['frames'])
+            self.assertEqual(171, stats['frames'])
             self.assertEqual(47, stats['animations'])
             self.assertTrue({'TAILS_FLY_ASCEND', 'TAILS_FLY_CARRY', 'TAILS_FLY_CARRY_ASCEND',
                              'TAILS_SWIM', 'TAILS_SWIM_ASCEND', 'TAILS_SWIM_CARRY',

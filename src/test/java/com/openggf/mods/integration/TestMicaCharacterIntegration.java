@@ -1447,7 +1447,7 @@ class TestMicaCharacterIntegration {
             var encoded = Files.readAllBytes(temp.resolve("classes/art/talon.ggfp"));
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(encoded);
             var materialized = com.openggf.level.objects.PlayableSheetMaterializer.read(encoded);
-            assertEquals(169, sheet.frames().size());
+            assertEquals(171, sheet.frames().size());
             assertEquals(47, sheet.animations().size());
             assertEquals(6, sheet.animations().get("TAILS_FLY").steps().size());
             assertEquals(6, sheet.animations().get("TAILS_FLY_TIRED").steps().size());
@@ -1729,7 +1729,7 @@ class TestMicaCharacterIntegration {
                     "art/mica/endings/s2/photo-[1-4]\\.png")), "Phase 1 packages no MICA photo overrides");
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(
                     packed.getInputStream(packed.getJarEntry("art/mica.ggfp")).readAllBytes());
-            assertEquals(208, sheet.frames().size());
+            assertEquals(274, sheet.frames().size());
             assertEquals(52, sheet.animations().size());
             assertEquals(List.of(27, 28, 29, 30), sheet.animations().get("HOMING_DIVE").steps()
                     .stream().map(com.openggf.level.objects.PlayableSheetReader.AnimationStep::frameIndex).toList());
