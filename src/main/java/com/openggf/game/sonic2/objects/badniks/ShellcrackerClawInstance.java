@@ -277,7 +277,7 @@ public class ShellcrackerClawInstance extends AbstractObjectInstance
      * cmpi.b #ObjID_Shellcracker,id(a1) / bne.s loc_381D0
      * If parent is destroyed, transition to falling state.
      * An absent reconstructed parent takes the same parent-loss branch:
-     * loc_381AC / loc_381D0 (s2.asm:75795-75815), shipped fixBugs=0.
+     * loc_381AC / loc_381D0 (s2.asm:75795-75815); this routine is unconditional.
      */
     private boolean checkParentAlive() {
         if (parent == null || parent.isDestroyed()) {

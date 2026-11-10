@@ -368,12 +368,11 @@ final class ObjectRewindLifecycle {
             else if (!allowMissingParent) return false;
         }
         AbstractObjectInstance adopted = adoptRewindReconstructionChild(entry, parent);
-        AbstractObjectInstance resolvedParent = parent;
         ObjectInstance inst = adopted != null
                 ? adopted
                 : ObjectConstructionContext.withRewindActiveRestore(
                         () -> callbacks.construct(entry.ownerModId(),
-                                () -> recreateDynamicObject(entry, resolvedParent)));
+                                () -> recreateDynamicObject(entry)));
         if (!(inst instanceof AbstractObjectInstance aoi)) {
             return false;
         }
@@ -447,10 +446,9 @@ final class ObjectRewindLifecycle {
     }
 
     private ObjectInstance recreateDynamicObject(
-            DynamicObjectEntry entry, AbstractObjectInstance parent) {
+            DynamicObjectEntry entry) {
         entry = NativeCompetitionPlayerBoundRestore.rebind(manager, services, entry);
-        DynamicObjectRecreateContext context =
-                DynamicObjectRecreateContext.withResolvedParent(manager, classResolver, parent);
+        DynamicObjectRecreateContext context = new DynamicObjectRecreateContext(manager, classResolver);
         // Generic reconstruction: only classes that explicitly implement
         // RewindRecreatable opt into dynamic restore. Unsupported dynamic classes
         // still drop on restore and remain visible in coverage diagnostics.

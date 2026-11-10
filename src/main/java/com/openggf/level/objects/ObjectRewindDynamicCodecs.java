@@ -168,11 +168,8 @@ public final class ObjectRewindDynamicCodecs {
             }
             AbstractObjectInstance probe = constructProbeForRewindRecreatable(cls, entry, ctx);
             if (probe instanceof RewindRecreatable rr) {
-                RewindRecreateContext rewindCtx = ctx.parentResolutionProvided()
-                        ? RewindRecreateContext.withResolvedParent(entry.spawn(), entry.state(),
-                                ctx.objectServices(), ctx.objectManager(), entry, ctx.resolvedParent())
-                        : new RewindRecreateContext(
-                                entry.spawn(), entry.state(), ctx.objectServices(), ctx.objectManager(), entry);
+                RewindRecreateContext rewindCtx = new RewindRecreateContext(
+                        entry.spawn(), entry.state(), ctx.objectServices(), ctx.objectManager(), entry);
                 return ObjectConstructionContext.construct(ctx.objectServices(), () -> rr.recreateForRewind(rewindCtx));
             }
             LOG.fine("genericRecreate: RewindRecreatable probe construction failed for " + className);

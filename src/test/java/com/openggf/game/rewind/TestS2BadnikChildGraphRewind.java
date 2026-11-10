@@ -180,28 +180,39 @@ class TestS2BadnikChildGraphRewind {
             objectManager.removeDynamicObject(originals.get(entry.objectId()));
         }
 
-        registry.restore(snapshot);
+        ShellcrackerBadnikInstance previousParent = parent;
+        ShellcrackerBadnikInstance previousDecoy = decoy;
+        // The first restore warms the per-class construction record. The second
+        // proves reuse, rather than merely enabling the optimization.
+        for (int restore = 0; restore < 2; restore++) {
+            registry.restore(snapshot);
 
-        ShellcrackerBadnikInstance restoredParent = resolveCapturedObject(
-                objectManager, parentId, ShellcrackerBadnikInstance.class);
-        ShellcrackerBadnikInstance restoredDecoy = resolveCapturedObject(
-                objectManager, decoyId, ShellcrackerBadnikInstance.class);
-        if (!allowInPlaceReuse) {
-            assertNotSame(parent, restoredParent, "the reference path must rebuild the captured body");
-            assertNotSame(decoy, restoredDecoy, "the reference path must also rebuild the closer decoy");
-        }
-        assertEquals(2, liveObjects(objectManager, ShellcrackerBadnikInstance.class).size());
-        assertEquals(8, liveObjects(objectManager, ShellcrackerClawInstance.class).size());
-        for (var entry : captured) {
-            ShellcrackerClawInstance restored = resolveCapturedObject(
-                    objectManager, entry.objectId(), ShellcrackerClawInstance.class);
-            assertNotSame(originals.get(entry.objectId()), restored);
-            assertEquals(entry.slotIndex(), restored.getSlotIndex());
-            assertScalarFieldsEqual(originals.get(entry.objectId()), restored,
-                    "pieceIndex", "facingRight", "currentX", "currentY", "xVelocity", "yVelocity",
-                    "state", "timer", "retractTimer", "animFrame", "initRoutinePending");
-            assertSame(restoredParent, readObjectField(restored, "parent"),
-                    "a nearer same-class body must not replace the captured claw owner");
+            ShellcrackerBadnikInstance restoredParent = resolveCapturedObject(
+                    objectManager, parentId, ShellcrackerBadnikInstance.class);
+            ShellcrackerBadnikInstance restoredDecoy = resolveCapturedObject(
+                    objectManager, decoyId, ShellcrackerBadnikInstance.class);
+            if (allowInPlaceReuse && restore > 0) {
+                assertSame(previousParent, restoredParent, "the warmed path must actually reuse the captured body");
+                assertSame(previousDecoy, restoredDecoy, "the warmed path must actually reuse the closer decoy");
+            } else if (!allowInPlaceReuse) {
+                assertNotSame(previousParent, restoredParent, "the reference path must rebuild the captured body");
+                assertNotSame(previousDecoy, restoredDecoy, "the reference path must also rebuild the closer decoy");
+            }
+            assertEquals(2, liveObjects(objectManager, ShellcrackerBadnikInstance.class).size());
+            assertEquals(8, liveObjects(objectManager, ShellcrackerClawInstance.class).size());
+            for (var entry : captured) {
+                ShellcrackerClawInstance restored = resolveCapturedObject(
+                        objectManager, entry.objectId(), ShellcrackerClawInstance.class);
+                assertNotSame(originals.get(entry.objectId()), restored);
+                assertEquals(entry.slotIndex(), restored.getSlotIndex());
+                assertScalarFieldsEqual(originals.get(entry.objectId()), restored,
+                        "pieceIndex", "facingRight", "currentX", "currentY", "xVelocity", "yVelocity",
+                        "state", "timer", "retractTimer", "animFrame", "initRoutinePending");
+                assertSame(restoredParent, readObjectField(restored, "parent"),
+                        "a nearer same-class body must not replace the captured claw owner");
+            }
+            previousParent = restoredParent;
+            previousDecoy = restoredDecoy;
         }
     }
 

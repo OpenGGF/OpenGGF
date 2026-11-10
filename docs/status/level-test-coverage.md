@@ -8,14 +8,17 @@ controls; the Clamer parents remain stationary.
 These injected-service graph checks establish neither a native route trigger nor
 act, viewport, donor/team or whole-route rewind coverage; those obligations remain
 inherited. The Shellcracker graph checks add real owned spawning with a closer
-decoy, normal reuse permission and forced fresh rebuilding, plus an independently
+decoy, explicitly verified warm reuse and forced fresh rebuilding, plus an independently
 falling family after public parent retirement. The active null-parent unit checks
 ordinary parent loss without claiming the native transition row's motion/timer.
 Existing motion/gravity/timer order is untouched; the separately identified native
 timing discrepancy remains uncorrected and no MTZ act or viewport breadth is certified.
-These three hooks use the context's authoritative captured parent; other proximity
-relinks remain unassessed. Saved-state format is unchanged. A context unit checks
-handoff without live-query visibility, not a full Stageplay admission route. The
+These three hooks share an exact captured-ID lookup in the admitted population;
+other proximity relinks remain unassessed. Saved-state and context record layouts
+are unchanged. A real scene-policy restore witness rejects active claws linked to
+an unadmitted parent; its cleared-policy lane permits dropped or independent
+null-parent claws and does not certify family retention. The separately reproduced
+inherited refusal to readmit an authored placed parent remains unresolved. The
 Clamer constructor probe still requires a live Clamer before its hook can run.
 
 S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures

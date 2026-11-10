@@ -233,7 +233,7 @@ under the matching area heading; see the
   now expire contact bits without clearing surviving shared owners. Constructor-child
   rewind adoption uses captured parent families, preserving interleaved structural
   links. Routine-spawned Clamer springs, Orbinaut satellites and Shellcracker claws
-  receive resolved captured parents through their hook context; legacy and unknown
+  share exact captured-parent lookup in the admitted population; legacy and unknown
   families retain their existing proximity lookup. Detached claws preserve their
   independent falling state after parent retirement. Independent children can
   recreate when a parent defers to player refresh, and CNZ defeat candidates retain

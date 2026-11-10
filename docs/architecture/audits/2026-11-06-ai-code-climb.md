@@ -6082,3 +6082,79 @@ terminal and retired. This is a local focused increment pending independent Opus
 scrutiny and combined baseline/domain qualification; it is not pushed or claimed
 as a broad pass. PR271 remains the sole delivery destination. The original
 Competition black-pixel merge blocker and the unmet six-trial target remain.
+
+
+## Captured-parent admission correction — 2026-11-10
+
+The independent review of local `630c65ce9a` identified a plausible scene-admission
+regression. A real Stageplay policy/objects/direction restore reproduced it:
+with `clearObjects=true`, eight active Shellcracker claws retained an alive placed
+parent that admission had refused. The parent-only readmission probe failed
+independently. Source and fixture used public authored casting and actual
+`spawnClawPieces` → `spawnChild`, not edited family metadata or mocked admission.
+
+The initial three-class run completed 29 cases with exactly those two assertion
+failures, no errors/skips, and 27 passing controls. Queue/Maven/wall were
+8/104/113.649549 seconds (user wait 0; residual 1.649549). The new full-lifecycle
+forwarding case passed. Both normal and disabled-reuse cases passed an explicit
+second-restore identity assertion; the review's claim that neither could reuse
+missed the within-pass class-cache insertion.
+
+Changing only the lifecycle context construction to its former lazy constructor
+made the child-safety case pass, while the parent-only failure remained. The
+intermediate forwarding test then failed, as intended. The first bounded control
+omitted the S2 prefix, so it was not used as the exact matched comparison. A second
+control kept all 29 case identities and the original three-class selection:
+29 cases, those latter two failures, no errors/skips. Queue/Maven/wall were
+126/33.485/160.813879 seconds (user wait 0; residual 1.328879). Only the single
+context call differed in source; full literal negatives and hashes are retained
+in `target/code-climb/shellcracker-parent-contract/matched-handoff-causal-proof.json`.
+The extra bounded control cost is retained, not hidden.
+
+The unpublished supplied-parent/provenance protocol is rejected. Registration in
+the restore table is not admission authority. The repair retains one shared exact-ID
+lookup in the admitted population, using the original context record shapes.
+`DynamicObjectRecreateContext`, `ObjectRewindDynamicCodecs` and
+`ObjectRewindLifecycle` are byte-identical to published `118a26ca99`. The Clamer
+and Orbinaut lookups still reject a missing/wrong-type owner; the Shellcracker
+hook may construct an independent null-parent claw. Native parent-loss execution
+and gravity order remain unchanged. The misleading fixBugs conditional wording
+was removed from the unconditional ObjA0 citation.
+
+The parent-only probe source and failed XML are preserved under `review-witness/`.
+That diagnostic was never published coverage. Its unresolved authored-placement
+readmission defect is recorded in the coverage backlog; the permanent child-safety
+witness permits dropped or null-parent pieces in that lane and certifies no family
+retention. No baseline/skip/guard allowance is added. Fresh repaired-source checks,
+independent scrutiny and combined qualification remain pending at this entry.
+
+The completed original-D assessment at `630c65ce9a` scored 69.375/100, vector
+[3.5,2.5,3,3,2,2.5,2.5,2.75]. It disclosed preloaded memory/main AGENTS and narrow
+pitfalls/testing reads; no tests, target, history or PR were read. This is a
+source-specific static assessment, below the goal, not a grade for this repair.
+
+A separate forensic handoff verified 16 retained artifact hashes and 27 source
+revision hashes for the original 2dd competition pixel failure. Its full negative
+export remains, but the original raw run/XML/fork history and frame were not
+retained. Later passing controls cannot reconstruct those facts. No new causal
+evidence was found; that merge blocker remains unresolved. Receipt and exact
+retention limits are in `competition-forensics-consumption.json` beside the above
+causal proof. No random repeat or speculative renderer patch was added.
+
+
+Repaired-source focused validation completed: 303 cases across 24 fresh suites,
+zero failures/errors/skips. It included the exact-ID helper and real lifecycle
+witness, both rebuilt/reused Shellcracker controls, the two permanent scene safety
+cases, all existing Stageplay direction cases, graph/reference/deferred/creator
+neighbors, both loading classes and the four required S3K checks. The selected
+architecture/broad-catch guards passed; this was not the full guards lane.
+Queue/Maven/wall were 9/119/129.416915 seconds, user wait 0 and residual 1.416915.
+Actual source was `630c65ce9a` plus sealed dirty fingerprint
+`6c63157f9e8b439906f7e3c20747e6f9f3c16617c37ab7fc1da4813bb06b9ebb`.
+All program/test/document bytes matched the seal at terminal; only this prose
+receipt follows the run. Command, fresh XML, exact selectors, source hashes and
+limits are under `review-repair-green/`. The durable unit is terminal and no worker
+remains. Independent scrutiny of this changed design and the single combined
+smoke/guards plus relevant domain qualification are still required before push.
+The 4,643-class broad selection is prepared only; none of its prior 4,642 classes
+is removed or reordered. No broad run or new rubric score is claimed here.
