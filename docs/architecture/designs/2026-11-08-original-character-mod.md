@@ -3194,3 +3194,28 @@ differences at3×, paired60fps films and a palm before/after zoom. Review lives
 in `$HOME/scratch/agent-tmp/title-r2-s1s2/review.html`. Limits: configured pair
 and S1 MICA only; no gameplay routes or inherited alternate-role art certified.
 S3K assets are untouched.
+
+### S2 title own-role follow-up (2026-11-10)
+
+The owner superseded round2's exchanged staging after in-game review. The
+example now explicitly selects `swapS2Slots=false`, retaining the additive
+option and compatibility constructor in the candidate API. No engine/API
+surface change accompanies this follow-up. MICA uses native Sonic BODY5/6/7/18
+and independent HAND9 at the native origins and timings. TALON uses native
+Tails BODY0–4; his own connected wings replace the stripped reference tails,
+and HAND19 remains empty. MICA's raised glove is a palm-facing left-hand
+thumbs-up, thumb viewer left, with curled finger pads viewer right and a cuff
+leading down-left. BODY18 excludes the glove, so the native hand top pass
+keeps it in front of her hood and preserves every native hand position.
+
+Fresh native-pose generations and selections are recorded in each character's
+`titles/s2-roles-generation.json`. MICA body/hand area ratio is1.014; TALON
+body ratio is1.013. Existing authored title rows remain authored: no coverage
+counts change. The real900-tick stock/mod capture records identical native
+sprite states,35 distinct portrait-difference frames, and three visible hand
+positions. The review includes all35 frames at3×, the paired60fps film, palm
+phase zooms, shared head/torso guides and native-aligned onion skins. Native
+opaque foreground branding matches across8,123,400 compared pixels over the
+whole rise and flash. Evidence: `$HOME/scratch/agent-tmp/title-s2-roles/review.html`.
+Limits: pair title presentation only; S1/S3K and inherited alternate-role art
+are unchanged, with no new gameplay-route certification.
