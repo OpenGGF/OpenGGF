@@ -1,5 +1,15 @@
 # Level test coverage backlog
 
+HCZ retained screen publication (2026-11-10): the
+[HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md) records one event/capture
+owner, fresh versus seamless initialization, previous-publication consumption,
+signed redraw/shake continuation and the geyser's first-dispatch flag. Real P1/Tails
+reads and complete registered-world held/refresh suffix replays have focused
+witnesses. These positioned 320px Sonic/Tails checks do not establish cold-route,
+run-chain, native pixel/audio, other viewport/donor/team or unobserved native
+branch coverage. The retained native window discriminates X timing, not Y timing.
+
+
 Parent-linked rewind maintenance (2026-11-10): the Clamer and S1 badnik graph
 witnesses named in the [rewind guide](../guide/contributing/rewind-system.md#ordinary-dynamic-objects-and-constructor-children)
 check routine-spawned children against two nearby same-class parents, including

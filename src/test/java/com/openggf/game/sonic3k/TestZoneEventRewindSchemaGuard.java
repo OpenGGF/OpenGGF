@@ -63,7 +63,8 @@ public class TestZoneEventRewindSchemaGuard {
             "act2PrimaryArtHandle",
             "act2SecondaryArtHandle");
     private static final Set<String> HCZ_ALLOWED_TRANSIENT_FIELDS = Set.of(
-            "wallObject",
+            // Captured by HCZ's composed payload, verified below; not omitted state.
+            "screenShake",
             // Derived from transitionKosOrdinal after the timing ledger restore.
             "transitionKosQueue",
             "transitionKosHandle",
@@ -141,18 +142,24 @@ public class TestZoneEventRewindSchemaGuard {
             "eventsFg5",
             "bossFlag",
             "transitionRequested",
-            "wallMoving",
-            "wallStopped",
             "wallChaseBgOverlayActive",
             "cutsceneActive",
             "fgRoutine",
             "bgRoutine",
             "act2BgRoutine",
             "wallOffsetFixed",
-            "wallOffsetPixels",
-            "shakeTimer",
-            "pendingScreenShakeOffset",
-            "act2BgUpdatedPrePhysics",
+            "appliedScreenShakeOffset",
+            "foregroundCopyX",
+            "foregroundCopyY",
+            "backgroundCopyX",
+            "backgroundCopyY",
+            "collisionCameraDiffX",
+            "collisionCameraDiffY",
+            "collisionActive",
+            "publicationValid",
+            "backgroundInitialized",
+            "wallPlane",
+            "redrawRowCountdown",
             "carrierMovementPending",
             "carrierUpdatedBeforeDynamicObjects",
             "carrierP1Active",
@@ -447,7 +454,7 @@ public class TestZoneEventRewindSchemaGuard {
     }
 
     @Test
-    public void hczTransientFieldInventoryIsExplicit() {
+    public void hczTransientFieldInventoryIsExplicit() throws Exception {
         Set<String> transientFields = Arrays.stream(Sonic3kHCZEvents.class.getDeclaredFields())
                 .filter(field -> !Modifier.isStatic(field.getModifiers()))
                 .filter(field -> Modifier.isTransient(field.getModifiers())
@@ -455,7 +462,22 @@ public class TestZoneEventRewindSchemaGuard {
                 .map(field -> field.getName())
                 .collect(Collectors.toSet());
         assertEquals(HCZ_ALLOWED_TRANSIENT_FIELDS, transientFields,
-                "HCZ transient field inventory changed; classify new fields as captured or structural");
+                "HCZ field inventory changed; classify fields as scalar, explicitly composed, or structural");
+        var events = new Sonic3kHCZEvents(() -> 0);
+        var field = Sonic3kHCZEvents.class.getDeclaredField("screenShake");
+        field.setAccessible(true);
+        var shake = (com.openggf.game.sonic3k.runtime.S3kScreenShake) field.get(events);
+        shake.writeFlag(14);
+        shake.setup(1, false);
+        shake.setup(2, false);
+        byte[] complete = events.captureHczState();
+        assertEquals(12 + ZoneEventSchemaSidecar.capture(events).length + 12, complete.length,
+                "the composed owner must capture all three words outside the scalar schema");
+        var tail = java.nio.ByteBuffer.wrap(complete);
+        tail.position(complete.length - 12);
+        assertEquals(12, tail.getInt(), "captured flag");
+        assertEquals(4, tail.getInt(), "captured next offset");
+        assertEquals(-4, tail.getInt(), "captured independent last offset");
     }
 
     @Test

@@ -254,7 +254,10 @@ under the matching area heading; see the
   Production badnik and contact witnesses, shared coarse-X arithmetic with
   explicit native/wider bounds, and
   a typed rewind HUD frame make contribution paths easier to follow. HCZ owns
-  its next screen-shake value without using the renderer as scratch state.
+  its completed screen/collision publication and all three shake words in one
+  validated rewind payload; objects consume the preceding publication and
+  rendering only projects it. The seamless reload retains HCZ1 deformation,
+  and the geyser begins shaking on its native first dispatch.
   Standalone trace replays print their exact test/report/triage route; triage reads
   compressed fixture auxiliaries, preserves pre-trace evidence and distinguishes
   incomplete or unknown completion from a completed comparison. Standalone replay

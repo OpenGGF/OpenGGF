@@ -62,7 +62,11 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
             LOGGER.fine(() -> "HCZ waterline scroll data unavailable; using fallback HCZ handler: "
                     + e.getMessage());
         }
-        hczHandler = new SwScrlHcz(hczWaterlineData);
+        hczHandler = new SwScrlHcz(hczWaterlineData, () ->
+                com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentHcz(
+                        GameServices.zoneRuntimeRegistry())
+                        .map(com.openggf.game.sonic3k.runtime.HczZoneRuntimeState::screenPublication)
+                        .orElse(null));
         iczHandler = new SwScrlIcz();
         byte[] lbzWaterlineData = null;
         try {

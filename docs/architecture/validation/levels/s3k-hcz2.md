@@ -1,5 +1,43 @@
 # S3K Hydrocity Act 2 coverage matrix
 
+## Retained HCZ screen publication — 2026-11-10
+
+`Sonic3kHCZEvents` owns HCZ2 progression, completed foreground/background words,
+collision differences and all three shared shake words. The event manager passes
+registered P1 and the already-incremented level frame counter once after object
+execution and camera movement. P1, Tails and the wall object consume the preceding
+completed publication. The wall latches its pose in its own slot; scroll, rebuild
+and viewport projection read the publication without advancing it.
+
+Fresh `HCZ2_BackgroundInit` belongs to level assembly before initial placements;
+the seamless handoff first publishes the completing HCZ1 deformation, then reaches
+ordinary background state 0. Fresh initialization uses native LF=0 and does not
+run shake setup or enable collision. The primary geyser queues art and writes ST
+in its first dispatch, followed by the signed $5F wait. The end pulse is
+consumed once, retains a positive shake flag and holds the background for sixteen
+software-row dispatches including the end dispatch, then refreshes eight row pairs.
+These are software continuation counts from the owning ROM branches.
+
+`HczZoneRuntimeState` is a noncapturing adapter. HCZ's versioned internal payload
+captures the scalar publication and three shake words together; malformed framed
+HCZ payloads are rejected before manager base/event mutation. The format is a
+same-build snapshot contract and rejects the prior scalar-only HCZ payload.
+
+Use `TestS3kHczScreenEventConsumerPublication` for actual P1/Tails reads and the
+before-first ordinary-frame restore, `TestS3kHczMovingWallShakeRewind` for moving and
+stationary full-world suffix replay, and the focused event, scroll, composed-state
+and native-routine tests for branch semantics. The consumer witness also captures
+actual held/refresh worlds and compares two ordinary suffix replays, including
+every registry key and every horizontal scroll word. Exact source-specific
+execution and domain dispositions are recorded in the cleanup audit.
+
+The retained native observation discriminates changing X reads in its window;
+Y timing remains unproven by value changes. Cold route, run-chain, native pixels,
+other viewports/donors/teams and the unobserved native dead/timed branches retain
+their separate obligations. Earlier qualifications below keep their dated sources.
+
+## Earlier dated qualifications
+
 Contributor cleanup (2026-11-07): `Sonic3kHCZEvents` retains the next shake
 locally and publishes the preceding value once; post-physics end signalling
 cannot repeat wall movement or the timer decrement. `TestSonic3kHCZEvents`
@@ -16,7 +54,7 @@ The route, viewport, donor, team and audiovisual gaps below remain inherited;
 this cleanup does not certify the act.
 
 Screen-shake maintenance (2026-11-03):
-`TestSonic3kHCZEvents.wallShakePublishesPreviousSetupAndRestoresPendingPhase`
+`TestSonic3kHCZEvents.wallShakePublishesPreviousSetupAndRestoresThePreparedOffset`
 checks the HCZ2 screen-event/setup ordering and restored pending phase; the existing
 `TestS3kHczMovingWallShakeRewind` remains the whole-world forward-replay witness.
 The Sonic+Tails zone-slice trace separately grades the resulting CPU visibility

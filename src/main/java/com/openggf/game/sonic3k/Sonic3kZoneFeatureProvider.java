@@ -1042,16 +1042,10 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
             }
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ && player != null && !player.getDead()) {
-            int act = levelManager != null ? levelManager.getFeatureActId() : 0;
             HCZWaterSkimHandler.beginFrame();
             if (GameServices.module().getLevelEventProvider()
                     instanceof Sonic3kLevelEventManager mgr) {
                 mgr.ensureZoneRuntimeStateInstalled();
-                var events = mgr.getHczEvents();
-                if (events != null) {
-                    int frameCounter = levelManager != null ? levelManager.getFrameCounter() : 0;
-                    events.updatePrePhysics(act, frameCounter);
-                }
             }
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_MGZ && player != null && !player.getDead()) {

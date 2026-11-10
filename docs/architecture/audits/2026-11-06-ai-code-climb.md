@@ -6484,3 +6484,150 @@ and root-cross-checked, not silently asserted by a matching-value exit status.
 This is saved-evidence validation, not another native run or an engine fix.
 Commands, source equivalence, compile and analysis receipts remain under
 `target/code-climb/hcz-publication/` in the isolated HCZ publication worktree.
+
+
+## HCZ completed publication and final wrap-up qualification — 2026-11-10
+
+This increment replaces HCZ's pre-physics advance/fallback/pending-shake protocol
+with one post-object/post-camera producer. `Sonic3kHCZEvents` owns the completed
+foreground/background words, collision differences, full wall accumulator,
+software redraw continuation and all three shared shake words. P1, Tails and the
+wall slot read the preceding publication; the wall captures its own latched pose.
+`HczZoneRuntimeState` is a noncapturing adapter and `SwScrlHcz` only projects output.
+
+Fresh background initialization runs before initial player processing/placements,
+uses the native cleared LF=0, does not call shake setup and does not enable
+collision. Its geometry gate is separate from seamless ordinary background state
+0, whose failed wall allocation still advances to state 4 without retry. The
+completing HCZ1 reload dispatch publishes HCZ1 deformation from the shifted copied
+camera before the first HCZ2 background dispatch. The end pulse is consumed once;
+a positive shake flag survives sixteen held row dispatches including the end
+dispatch, followed by eight refresh pairs. The geyser's LoadArt falls through to
+StartRumble in one dispatch, then the signed $5F wait consumes 96 dispatches.
+Registered P1 and native raw routine precedence govern movement/setup; the LF-1,
+LF&$3F and V-int&7 clocks remain distinct.
+
+The same-build HCZ payload is magic/version 1/scalar length/scalars/three shake
+words. It rejects prior scalar-only HCZ payloads, noncanonical scalar encodings,
+invalid stages/countdowns and out-of-word copies before manager base mutation.
+Other handlers retain their prior malformed-extra behavior. Scroll/adapter rebuild
+consumes no setup, redraw row or wall admission. This is not cross-build snapshot
+compatibility.
+
+Private held-view projection now translates from the completed publication's
+unshaken camera origin, rather than a newer director-camera metadata value.
+Native literal foreground zero remains explicit. The Typing Hedgehog witness
+retains original-view terrain/body and state/reversibility checks, then repeats
+its pixel oracle in a deliberately displaced view. Removing projection must fail
+that displaced view; an unchanged stationary native view may legitimately already
+have aligned terrain. No camera/gameplay tick, palette change or relaxed pixel
+threshold is used to hide the control failure.
+
+The final access-guard repair moves the identical nullable sprite lookup behind
+`Sonic3kZoneEvents.spriteManagerOrNull`, retaining the original hasRuntime
+conditional and null behavior. Exact reconstruction reproduces both old files
+byte-for-byte after removing only that helper/substituting its call. The existing
+shared composition bridge already owns this access; no guard allowance changed.
+
+### Review, causal controls and rejected evidence
+
+The independent Opus source review of frozen fingerprint `5e72c10f…` approved two
+one-for-one manager rollback-catch rekeys and retirement of two deleted resolver
+rows, preserving each original reason and unresolved-debt classification. It found
+the seamless zero-scroll frame and late geyser ST; both were reproduced by causal
+RED cases before correction. The later private-view/access repairs were validated
+by their causal/guard and complete qualification evidence, not a new Opus review.
+
+The actual consumer RED uses a full native 320px Sonic/Tails component load:
+112 P1 and 112 Tails prior-publication assertions plus one wall-slot assertion
+failed against the prior runtime. The earlier shared-level/unchanging-X setup was
+invalid evidence and is retained as such. Current witnesses cover actual sensor
+reads, no-observer full-world controls, before-first restore, first-player fresh
+initialization inside/outside the arena, the real seamless reload, and two whole
+registered-world suffix replays from actual held and refresh middle points,
+including every horizontal scroll word. Malformed payload tests include canonical
+boolean and word-range controls. Native routine, threshold, fraction, audio-clock,
+allocation-failure/no-retry and explicit-zero/projection-origin checks are bounded
+component evidence. A separate first-initial-placement-slot runtime witness is
+not added; the first-player boundary checks alone do not certify that ordering.
+
+The C80/700 rewind inlet died before reaching the transition and is not a route
+witness. The declared C9F/82C edge inlet can reach held state 8 on its first ordinary
+frame; its initial publication is observed read-only, never restored as a world.
+Saved/replayed middle points are actual completed worlds. A normal deformation's
+BG-X anchor is the documented MIN_VALUE sentinel, not the held wall's explicit
+copied BG-X; the witness now checks the phase contract and all actual scroll words.
+
+All compilation failures, invalid setup attempts, the interrupted 75/94 smoke run
+and the complete run with the one new direct-runtime-access guard failure remain
+raw failed/incomplete records. None is relabeled green or combined into a new
+category verdict. The original2dd Competition black-pixel failure is still
+unexplained: original frame/fork evidence is unavailable, and later passing pixel
+controls do not attribute it. It remains a MERGE BLOCKER.
+
+### Final source-specific qualification
+
+Tested source was HEAD `29980ec2e80f1a7fc012ec9c26bc179dc740c5d3` plus sealed working
+tree `c90e00150cddd8f62c3c8a4a673cb143a417d7ebf34b7d3eac31ea4c153ce621`.
+The 28-file manifest, complete command arrays, fresh XML identities, source/config
+hashes and root independent consumption are retained under
+`target/code-climb/hcz-frame/boundary-final-qualification/`. Only this final audit
+and documentation clarifications are appended after qualification. Three citation
+comments also name the actual pinned branch labels, with exact inverse/source-hash
+and unchanged-line-count proof; no executable tokens changed. All other tested
+code/test/inventory bytes are checked again before delivery.
+
+- Focused selection: 402/402 cases in 20 exact classes, no failures/errors/skips;
+  this retains the earlier 390 identities and all twelve runtime-boundary guard cases.
+- Matched ALL-scope EHZ: 5852/5852 compared, gate reached, no gameplay/bootstrap
+  errors or warnings. HCZ1: 3519/3574 compared, gate reached, no errors/warnings.
+  HCZ2: 14149/14208 compared, gate reached, the same 26 retained errors (2 physics,
+  24 animation), no counted warnings/bootstrap errors. Full reports, owner hashes,
+  contexts and JUnit negatives match actual1f84 controls byte-for-byte. Each HCZ
+  report lacks eight advertised auxiliary schemas; logs also retain their separate
+  FAST/no-manifest and SMPS warnings. Shared logical prefixes are not report identity.
+- Complete smoke: all 4646 source classes, all ten categories, 94/94 ordinary
+  batches and 1/1 full guard batch. Ordinary: 38070 cases, 29 retained failures,
+  zero errors, 49 allowed skips. Full guards: 846/846 in 103 suites, no skips.
+- Compared to actual ef2 baseline run `20261110T094018Z-1f0f7971`: all 4643 baseline
+  source classes retained plus three new test classes; no missing selection.
+  Every negative kind/type/cause/detail and all 49 complete skip dictionaries,
+  including projection metadata, were reviewed. Twenty-five negative dictionaries
+  are literal; four exact pairs differ only in the Three Islands object-identity
+  display or MHZ expected-Set display order, with unchanged source/blob proof and
+  literal trailing stacks. No blanket normalization, omission or causal truncation.
+  Validation tools/POM/skip policy/config/ROM inputs are unchanged. Seven positive
+  method renames are explicitly mapped in the retained selection evidence.
+
+Actual broad command (Java 25/Lua 5.4; displays and Java/Maven override variables
+unset):
+
+```bash
+python3 tools/testing/run_categories.py --base c06efe67da766c1de1a68dfb327b85e400940fb8 --workers 2 --headless-gl surfaceless-egl --max-minutes 40 --keep-diagnostics --run
+```
+
+The raw final line is retained exactly:
+
+```text
+VERDICT FAILED: head=29980ec2e80f source=c90e00150cdd change-based 4646/4646 candidate classes; ordinary 94/94 batches; guards 1/1 batches; tests=38916 failures=29 errors=0 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+| Final job | Queue s | Execution/preparation s | Wall s | User wait s | Other/unknown s |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Focused | 91 | 110 (rounded Maven total) | 203.122 | 0 | 2.122 |
+| EHZ | 60 | 39.157 | 100.081 | 0 | 0.924 |
+| HCZ pair | 0 | 42.339 | 43.279 | 0 | 0.940 |
+| Complete smoke/guards | 122 across 95 admissions | 1914.33 | 2055.682 | 0 | 19.352 |
+
+Category execution includes 35.64s preparation, 1700.20s ordinary and 178.49s
+guards. Queue values are printed/rounded; other wall time is not CPU attribution.
+Investigation/observation and earlier failed attempts are not separately timed by
+this table. Exact earlier receipts remain retained.
+
+This is bounded no-new/worse qualification with retained failures, not a full-suite,
+route, native-pixel/audio or six-trial score certification. The retained native
+observation discriminates changing X reads; constant Y does not prove Y timing.
+Cold route/run-chain, other viewports/donors/teams and unobserved native branches
+keep their separate obligations. Automatic sweeps are paused at the user's request;
+only this already-authorized draft PR271 delivery is being closed out. No merge,
+destination push, new assessment or further sweep is authorized by this record.

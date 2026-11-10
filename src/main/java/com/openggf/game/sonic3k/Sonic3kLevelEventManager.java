@@ -423,6 +423,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // FBZ1_ScreenInit and FBZ2_ScreenInit allocate
         // Obj_FBZOutdoorBGMotion before the first Load_Sprites pass.
         return zone == Sonic3kZoneIds.ZONE_FBZ
+                || (zone == Sonic3kZoneIds.ZONE_HCZ && act == 1)
                 || (zone == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && act == 0);
     }
 
@@ -685,7 +686,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             cnzEvents.update(currentAct, frameCounter);
         }
         if (hczEvents != null && currentZone == Sonic3kZoneIds.ZONE_HCZ) {
-            hczEvents.update(currentAct, frameCounter);
+            // Native LevelLoop increments this clock before Process_Sprites.
+            // ScreenEvents now publishes once after those object/camera slots.
+            hczEvents.updateScreenEvents(currentAct, GameServices.level().getFrameCounter(),
+                    mainPlayer instanceof com.openggf.sprites.playable.AbstractPlayableSprite playable
+                            ? playable : null);
         }
         if (fbzEvents != null && currentZone == Sonic3kZoneIds.ZONE_FBZ) {
             fbzEvents.update(currentAct, frameCounter);
@@ -769,8 +774,16 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     /** ScreenInit authority belonging to the fresh Level assembly, not ordinary positioned updates. */
     void prepareFreshScreenObjects() {
         prepareInitialScreenObjects();
+        initializeFreshHczBackground();
         if (iczEvents != null && currentZone == Sonic3kZoneIds.ZONE_ICZ) {
             iczEvents.applyScreenInitAtLoad(currentAct);
+        }
+    }
+
+    /** Idempotent fresh-Level owner; seamless event resets never call this. */
+    void initializeFreshHczBackground() {
+        if (hczEvents != null && currentZone == Sonic3kZoneIds.ZONE_HCZ && currentAct == 1) {
+            hczEvents.initializeAct2BackgroundAtLoad(GameServices.sprites().getMainPlayable());
         }
     }
 
@@ -1588,9 +1601,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     public void reconcileAfterRewindRestore() {
         if (aizEvents != null) {
             aizEvents.reconcileSequenceAfterRewindRestore();
-        }
-        if (hczEvents != null && GameServices.hasRuntime()) {
-            hczEvents.reconcileWallAfterRewindRestore();
         }
         // ZoneRuntimeRegistry restores FBZ's authoritative handler fields.
         // Reconcile only the adapter binding here; never restore a second sidecar.
@@ -2619,7 +2629,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   4 bytes   fixed-air countdown owning zone
         //   4 bytes   fixed-air countdown owning act
         byte[] aizBytes = aizEvents != null ? ZoneEventSchemaSidecar.capture(aizEvents) : null;
-        byte[] hczBytes = hczEvents != null ? ZoneEventSchemaSidecar.capture(hczEvents) : null;
+        byte[] hczBytes = hczEvents != null ? hczEvents.captureHczState() : null;
         byte[] cnzBytes = cnzEvents != null ? ZoneEventSchemaSidecar.capture(cnzEvents) : null;
         byte[] mgzBytes = mgzEvents != null ? ZoneEventSchemaSidecar.capture(mgzEvents) : null;
         byte[] mhzBytes = mhzEvents != null ? ZoneEventSchemaSidecar.capture(mhzEvents) : null;
@@ -2880,6 +2890,16 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
+    @Override
+    public void restore(com.openggf.game.rewind.snapshot.LevelEventSnapshot snapshot) {
+        byte[] extra = snapshot.extra();
+        if (hczEvents != null && extra != null && extra.length >= 5 && !hasValidExtraFraming(extra)) {
+            LOG.warning("Skipping malformed S3K level-event snapshot before base-state restoration");
+            return;
+        }
+        super.restore(snapshot);
+    }
+
     private boolean hasValidExtraFraming(byte[] extra) {
         if (extra.length < 5) {
             return false;
@@ -2893,8 +2913,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 () -> expectedSidecarBytes(aizEvents, Sonic3kLevelEventManager::newAizFramingProbe))) {
             return false;
         }
-        if (!skipLengthPrefixedSidecar(buf,
-                () -> expectedSidecarBytes(hczEvents, Sonic3kLevelEventManager::newHczFramingProbe))) {
+        if (!skipHczSidecar(buf)) {
             return false;
         }
         if (!skipLengthPrefixedSidecar(buf,
@@ -2951,10 +2970,21 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         return new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
     }
 
-    private static Object newHczFramingProbe() {
-        Sonic3kHCZEvents probe = new Sonic3kHCZEvents(() -> 0);
-        probe.init(0);
-        return probe;
+    private static boolean skipHczSidecar(java.nio.ByteBuffer buf) {
+        if (buf.remaining() < 1 || buf.get() == 0) {
+            return true;
+        }
+        if (buf.remaining() < Integer.BYTES) {
+            return false;
+        }
+        int length = buf.getInt();
+        if (length < 0 || length > buf.remaining()) {
+            return false;
+        }
+        byte[] payload = new byte[length];
+        buf.get(payload);
+        // Validate the whole composed payload before any manager scalar changes.
+        return Sonic3kHCZEvents.hasValidHczState(payload);
     }
 
     private static Object newCnzFramingProbe() {
@@ -3016,13 +3046,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     private void restoreHczSidecar(byte[] bytes) {
-        byte[] before = ZoneEventSchemaSidecar.capture(hczEvents);
+        byte[] before = hczEvents.captureHczState();
         try {
-            ZoneEventSchemaSidecar.restore(hczEvents, bytes);
+            hczEvents.restoreHczState(bytes);
             hczEvents.discardHardwareWorkFacadesAfterRewind();
         } catch (RuntimeException e) {
             try {
-                ZoneEventSchemaSidecar.restore(hczEvents, before);
+                hczEvents.restoreHczState(before);
                 hczEvents.discardHardwareWorkFacadesAfterRewind();
             } catch (RuntimeException rollbackFailure) {
                 e.addSuppressed(rollbackFailure);

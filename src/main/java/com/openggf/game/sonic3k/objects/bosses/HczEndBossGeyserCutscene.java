@@ -13,7 +13,7 @@ import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance;
-import com.openggf.game.sonic3k.scroll.SwScrlHcz;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -21,7 +21,6 @@ import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.level.scroll.ZoneScrollHandler;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import java.util.List;
@@ -34,7 +33,8 @@ import java.util.logging.Logger;
  * Runs three sequential phases:
  *
  * <ol>
- *   <li><b>SHAKE (95 frames)</b> -- screen shakes, sfx_Rumble2 plays every 8 frames.</li>
+ *   <li><b>SHAKE (96 wait dispatches)</b> -- the signed $5F wait underflows;
+ *       sfx_Rumble2 uses the native V-int clock every 8 counts.</li>
  *   <li><b>GEYSER_RISE</b> -- a geyser object rises from Camera_Y + 0x130 at 6 px/frame.
  *       When the geyser top reaches player_Y - 0x60 the player is grabbed (HURT anim set)
  *       and the phase transitions to CARRY.</li>
@@ -49,9 +49,9 @@ import java.util.logging.Logger;
  * (ROM: loc_6BCB2). These use Map_HCZWaterWallDebris with 8 cycling frames,
  * fly outward with gravity, and stop at the water level.
  *
- * <p>Screen shake is applied via {@link SwScrlHcz#setScreenShakeOffset} on the
- * existing HCZ scroll handler, exactly as the wall-stop shake in
- * {@code Sonic3kHCZEvents}.
+ * <p>The primary owner writes the shared HCZ screen-shake flag at StartRumble
+ * and Init (sonic3k.asm:141621-141626,141658-141669). The background event
+ * alone advances the shake table; the delayed P2 owner never writes the flag.
  */
 public class HczEndBossGeyserCutscene extends AbstractObjectInstance
         implements SpawnCoordinateRewindRecreatable {
@@ -83,9 +83,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     // Timing constants (ROM: loc_6B7BC)
     // =========================================================================
     /** Duration of the initial screen-shake phase (frames). ROM: $5F. */
-    private static final int SHAKE_DURATION    = 0x5F;  // 95 frames
-    /** How often to replay sfx_Rumble2 during the shake phase (frames). */
-    private static final int RUMBLE_INTERVAL   = 8;
+    private static final int SHAKE_DURATION    = 0x5F;  // Obj_Wait: 96 signed pre-decrements
     /** Duration of the carry phase before zone transition (frames). ROM: $5F. */
     private static final int CARRY_DURATION    = 0x5F;  // 95 frames
 
@@ -153,20 +151,10 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     private static final int NEXT_ACT  = 0;                        // Act 1 (0-based)
 
     // =========================================================================
-    // ROM screen-shake table (ScreenShakeArray, sonic3k.asm ~104226)
-    // Same table used by Sonic3kHCZEvents for timed shakes.
-    // =========================================================================
-    private static final byte[] SCREEN_SHAKE_TABLE = {
-            1, -1, 1, -1, 2, -2, 2, -2, 3, -3, 3, -3, 4, -4, 4, -4,
-            5, -5, 5, -5
-    };
-
-    // =========================================================================
     // Instance state
     // =========================================================================
     private int phase       = PHASE_SHAKE;
     private int timer;
-    private int rumbleTimer;
 
     /** ROM y_pos for the geyser object, updated each frame in RISE/CARRY. */
     private int geyserY;
@@ -180,7 +168,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     /** True once debris children have been spawned. */
     private boolean debrisSpawned;
     private boolean targetsNativeP2;
-    /** Native loc_6B7BC/loc_6B7D2 dispatches before the shake routine starts. */
+    /** LoadArt falls through to StartRumble in one dispatch (sonic3k.asm:141615-141626). */
     private int initialRoutineDispatchesRemaining;
     private S3kKosModuleQueue artQueue;
     private HardwareWorkHandle artHandle;
@@ -214,10 +202,9 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
         this.geyserX    = spawnX;
         this.geyserY    = spawnY;
         this.targetsNativeP2 = targetsNativeP2;
-        this.initialRoutineDispatchesRemaining = targetsNativeP2 ? 0 : 2;
+        this.initialRoutineDispatchesRemaining = targetsNativeP2 ? 0 : 1;
         this.phase = setupDelay > 0 ? PHASE_SETUP_DELAY : PHASE_SHAKE;
         this.timer = setupDelay > 0 ? setupDelay : SHAKE_DURATION;
-        this.rumbleTimer = 0;
         this.playerGrabbed = false;
         this.debrisSpawned = false;
         LOG.fine("HCZ Geyser Cutscene: spawned at X=" + spawnX + " Y=" + spawnY);
@@ -244,12 +231,17 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
         serviceQueuedArt();
         if (initialRoutineDispatchesRemaining > 0) {
             initialRoutineDispatchesRemaining--;
+            if (initialRoutineDispatchesRemaining == 0 && !targetsNativeP2) {
+                // Modeled StartRumble dispatch; the wait itself never rewrites
+                // the flag (sonic3k.asm:141621-141637).
+                startContinuousScreenShake();
+            }
             return;
         }
         AbstractPlayableSprite player = resolveTargetPlayer(playerEntity);
 
         switch (phase) {
-            case PHASE_SHAKE       -> updateShake(player);
+            case PHASE_SHAKE       -> updateShake(player, vIntRunCount);
             case PHASE_SETUP_DELAY -> updateSetupDelay(player);
             case PHASE_GEYSER_RISE -> updateGeyserRise(player);
             case PHASE_CARRY       -> updateCarry(player);
@@ -318,25 +310,19 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     // =========================================================================
 
     /**
-     * Ticks the screen shake and Rumble2 SFX for 95 frames, then advances
-     * to GEYSER_RISE.
+     * Ticks the object wait and native V-int Rumble2 cadence, then advances
+     * to GEYSER_RISE. ScreenEvents owns the shared shake setup.
      *
-     * <p>ROM behavior: Screen_shake_flag set each frame; sfx_Rumble2 replayed every
-     * 8 frames; timer counts down from $5F to 0.
+     * <p>HCZEndBossGeyser_RumbleWait reads V_int_run_count & 7 before Obj_Wait
+     * (sonic3k.asm:141629-141637); it does not write the shake flag or offset.
      */
-    private void updateShake(AbstractPlayableSprite player) {
-        // Apply screen shake via the HCZ scroll handler
-        applyScreenShake(timer);
-
-        // Replay sfx_Rumble2 every 8 frames (ROM: btst #3,d0 / bne.s skip_sfx)
-        rumbleTimer--;
-        if (rumbleTimer <= 0) {
+    private void updateShake(AbstractPlayableSprite player, int vIntRunCount) {
+        if ((services().resolveVIntRunCount(vIntRunCount) & 7) == 0) {
             services().playSfx(Sonic3kSfx.RUMBLE_2.id);
-            rumbleTimer = RUMBLE_INTERVAL;
         }
 
         timer--;
-        if (timer <= 0) {
+        if (timer < 0) {
             if (!targetsNativeP2 && services().playerQuery().nativeP2OrNull() != null) {
                 // loc_6B804 allocates a second owner with subtype=-1 and a
                 // four-count Obj_Wait before loc_6B832 targets Player_2.
@@ -344,7 +330,6 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
                         geyserX, geyserY, true, 4));
             }
             // Shake complete -- set up the geyser column (ROM: loc_6B832)
-            clearScreenShake();
             setupGeyserColumn(player);
             LOG.fine("HCZ Geyser Cutscene: shake done, geyser rising from Y=" + geyserY);
         }
@@ -361,15 +346,16 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
      * and spawns 8 debris children (loc_6BCB2).
      */
     private void setupGeyserColumn(AbstractPlayableSprite player) {
-        // ROM: st (Screen_shake_flag).w -- keep shake active during rise
-        // ROM: st (Palette_cycle_counters+$00).w -- activate palette cycling
-        HCZWaterRushObjectInstance.HCZWaterRushPaletteCycleGate.setActive(true);
-
-        // ROM: sfx_Geyser
-        try {
-            services().playSfx(Sonic3kSfx.GEYSER.id);
-        } catch (Exception e) {
-            LOG.fine(() -> "HCZ Geyser Cutscene: Failed to play SFX: " + e.getMessage());
+        // The subtype branch skips all three primary-only writes for P2
+        // (HCZEndBossGeyser_Init, sonic3k.asm:141658-141673).
+        if (!targetsNativeP2) {
+            HCZWaterRushObjectInstance.HCZWaterRushPaletteCycleGate.setActive(true);
+            startContinuousScreenShake();
+            try {
+                services().playSfx(Sonic3kSfx.GEYSER.id);
+            } catch (Exception e) {
+                LOG.fine(() -> "HCZ Geyser Cutscene: Failed to play SFX: " + e.getMessage());
+            }
         }
 
         // ROM: move.w x_pos(a1),d0 / move.w d0,x_pos(a0)
@@ -530,44 +516,12 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     // Screen shake helpers
     // =========================================================================
 
-    /**
-     * Apply a shake offset via the HCZ scroll handler.
-     * Uses the ROM's timed shake table indexed by the remaining timer value.
-     * When the timer is outside the table range a small alternating offset is used.
-     *
-     * @param remaining frames remaining in shake phase
-     */
-    private void applyScreenShake(int remaining) {
-        SwScrlHcz handler = resolveHczScrollHandler();
-        if (handler == null) {
-            return;
-        }
-        // Map remaining timer (SHAKE_DURATION..1) into the table
-        // Use modulo of the table length for a repeating pattern
-        int idx = remaining % SCREEN_SHAKE_TABLE.length;
-        handler.setScreenShakeOffset(SCREEN_SHAKE_TABLE[idx]);
-    }
-
-    /** Clears screen shake on the HCZ scroll handler. */
-    private void clearScreenShake() {
-        SwScrlHcz handler = resolveHczScrollHandler();
-        if (handler != null) {
-            handler.setScreenShakeOffset(0);
-        }
-    }
-
-    /**
-     * Resolves the {@link SwScrlHcz} scroll handler from the parallax manager,
-     * or returns null if unavailable (headless / unit-test context).
-     */
-    private SwScrlHcz resolveHczScrollHandler() {
-        try {
-            var parallax = services().parallaxManager();
-            if (parallax == null) return null;
-            ZoneScrollHandler handler = parallax.getHandler(Sonic3kZoneIds.ZONE_HCZ);
-            return (handler instanceof SwScrlHcz hcz) ? hcz : null;
-        } catch (Exception e) {
-            return null;
+    /** Native ST changes the flag; ScreenEvents prepares the next offset. */
+    private void startContinuousScreenShake() {
+        var registry = services().zoneRuntimeRegistry();
+        if (registry != null) {
+            S3kRuntimeStates.currentHcz(registry)
+                    .ifPresent(state -> state.startContinuousScreenShake());
         }
     }
 

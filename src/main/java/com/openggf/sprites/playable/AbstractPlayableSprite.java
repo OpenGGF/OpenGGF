@@ -2721,6 +2721,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return objectRoutineOverride;
         }
 
+        /** Stored unsigned primary-routine threshold, separate from virtual dispatch queries. */
+        final boolean nativePrimaryRoutineAtLeast6ForRead() {
+                if (objectRoutineOverride != null) {
+                        return (objectRoutineOverride & 0xFF) >= 6;
+                }
+                return dead || (drowningDeath && drownPreDeathTimer > 0
+                        && gameRules != null && gameRules.drowningBubble() != null
+                        && gameRules.drowningBubble().drownInstallsDedicatedPlayerRoutine());
+        }
+
         /**
          * See {@link #objectRoutineOverride}. Pass {@code null} to restore the default
          * hurt/dead-derived routine heuristic.
