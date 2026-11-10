@@ -16,10 +16,16 @@ timing discrepancy remains uncorrected and no MTZ act or viewport breadth is cer
 These three hooks share an exact captured-ID lookup in the admitted population;
 other proximity relinks remain unassessed. Saved-state and context record layouts
 are unchanged. A real scene-policy restore witness rejects active claws linked to
-an unadmitted parent; its cleared-policy lane permits dropped or independent
-null-parent claws and does not certify family retention. The separately reproduced
-inherited refusal to readmit an authored placed parent remains unresolved. The
-Clamer constructor probe still requires a live Clamer before its hook can run.
+an unadmitted parent. Its cleared-policy lane retains eight null-parent claws,
+checks their transition to independent fall and bounded expiry, and certifies no
+complete parent-family retention or scene parity. The separately reproduced
+inherited refusal to readmit an authored placed parent remains unresolved.
+Constructor-child adoption still uses the restore-table parent: a refused parent
+may retain adopted children through that inherited path; this is a source-identified
+hypothesis, not an executed or repaired case. A Shellcracker body unloaded off-screen
+without destruction may also leave extending claws whose behavior changes after
+rewind; the destroyed-parent witness does not establish that inherited case.
+The Clamer constructor probe still requires a live Clamer before its hook can run.
 
 S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
 exercise P1 breaking for all eight outcomes and hold the award for six seconds.

@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -41,29 +42,44 @@ class TestRewindParentAdmission {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void activeRestoredClawsNeverKeepAnUnadmittedParent(boolean clearObjects) throws Exception {
-        var fixture = new Fixture(clearObjects, true);
+        var fixture = new Fixture(clearObjects);
 
         ShellcrackerBadnikInstance rebuilt = fixture.restoreFresh();
 
         List<ShellcrackerClawInstance> claws = fixture.claws();
+        assertEquals(8, claws.size(), "captured claws retain their independent lifetime");
         if (!clearObjects) {
-            assertEquals(8, claws.size(), "the ordinary admission control restores the complete family");
             assertSame(rebuilt, fixture.objects.objectQuery().resolve(fixture.parentId).orElse(null));
         }
         for (ShellcrackerClawInstance claw : claws) {
             assertTrue(fixture.direction.allowsObject(claw),
                     "a surviving authored claw remains eligible for a native routine");
             Object parent = parentOf(claw);
-            if (parent != null) {
+            if (clearObjects) {
+                assertNull(parent, "a refused body must not remain the claw's parent");
+            } else {
+                assertSame(rebuilt, parent, "ordinary scene admission must retain the exact rebuilt owner");
                 assertTrue(fixture.objects.getActiveObjects().contains(parent),
                         "active claw retains an inactive parent: clearObjects=" + clearObjects
                                 + ", activeClaws=" + claws.size()
                                 + ", parentDestroyed=" + ((ObjectInstance) parent).isDestroyed());
             }
         }
-        // The cleared lane deliberately permits a dropped child or a null-parent
-        // independent falling child. This safety test does not certify retention;
-        // it distinguishes those outcomes from an active child with a stale owner.
+        if (clearObjects) {
+            var state = ShellcrackerClawInstance.class.getDeclaredField("state");
+            state.setAccessible(true);
+            for (ShellcrackerClawInstance claw : claws) {
+                assertFalse(claw.isDestroyed());
+                claw.update(0, null); // Consume the captured init-only execution.
+                claw.update(1, null); // Ordinary parent loss enters independent fall.
+                assertEquals("FALLING", state.get(claw).toString());
+                // Bounded liveness, without pinning transition-row motion or gravity order.
+                for (int vIntRunCount = 2; vIntRunCount < 82 && !claw.isDestroyed(); vIntRunCount++) {
+                    claw.update(vIntRunCount, null);
+                }
+                assertTrue(claw.isDestroyed(), "a null-parent piece must expire through its falling lifetime");
+            }
+        }
     }
 
     private static Object parentOf(ShellcrackerClawInstance claw) throws ReflectiveOperationException {
@@ -82,7 +98,7 @@ class TestRewindParentAdmission {
         final RewindRegistry rewind = new RewindRegistry();
         final CompositeSnapshot captured;
 
-        Fixture(boolean clearObjects, boolean spawnClaws) throws ReflectiveOperationException {
+        Fixture(boolean clearObjects) throws ReflectiveOperationException {
             var graphics = new GraphicsManager();
             graphics.setHeadlessMode(true);
             var services = mock(ObjectServices.class);
@@ -123,19 +139,17 @@ class TestRewindParentAdmission {
             assertEquals(!clearObjects, direction.allowsPlacement(BODY_SPAWN));
             assertTrue(direction.allowsObject(original));
             parentId = objects.objectQuery().identityOf(original).orElseThrow();
-            if (spawnClaws) {
-                var spawn = ShellcrackerBadnikInstance.class.getDeclaredMethod("spawnClawPieces");
-                spawn.setAccessible(true);
-                // This is the production factory and its real spawnChild path,
-                // inside the public authored-admission scope, not fabricated family data.
-                direction.withAuthoredAdmission(ACTOR_ID, () -> {
-                    assertDoesNotThrow(() -> { spawn.invoke(original); });
-                    return null;
-                });
-                assertEquals(8, claws().size());
-                for (var claw : claws()) {
-                    assertSame(original, parentOf(claw));
-                }
+            var spawn = ShellcrackerBadnikInstance.class.getDeclaredMethod("spawnClawPieces");
+            spawn.setAccessible(true);
+            // This is the production factory and its real spawnChild path,
+            // inside the public authored-admission scope, not fabricated family data.
+            direction.withAuthoredAdmission(ACTOR_ID, () -> {
+                assertDoesNotThrow(() -> { spawn.invoke(original); });
+                return null;
+            });
+            assertEquals(8, claws().size());
+            for (var claw : claws()) {
+                assertSame(original, parentOf(claw));
             }
 
             // Match gameplay composition: world policy restores before objects,
@@ -151,7 +165,7 @@ class TestRewindParentAdmission {
             var savedDirection = (StageplayObjectDirection.Snapshot) captured.get(directionAdapter.key());
             assertEquals(ACTOR_ID, savedDirection.authored().get(parentId));
             var savedObjects = (ObjectManagerSnapshot) captured.get(objectAdapter.key());
-            assertEquals(spawnClaws ? 8 : 0, savedObjects.dynamicObjects().size());
+            assertEquals(8, savedObjects.dynamicObjects().size());
             for (var child : savedObjects.dynamicObjects()) {
                 assertEquals(ShellcrackerClawInstance.class.getName(), child.className());
                 assertNotNull(child.constructionFamily());

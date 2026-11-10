@@ -172,9 +172,9 @@ class TestRewindRecreateContext {
     @Test
     void realLifecycleKeepsTheRoutineChildWithItsCapturedParentAmongSamePositionPeers() {
         ObjectManager manager = createHarness();
-        Parent sourceParent = manager.createDynamicObject(() -> new Parent(SPAWN));
         Parent sourceDecoy = manager.createDynamicObject(() -> new Parent(
                 new ObjectSpawn(SPAWN.x(), SPAWN.y(), 1, 1, 0, false, 1)));
+        Parent sourceParent = manager.createDynamicObject(() -> new Parent(SPAWN));
         HookProbe sourceChild = sourceParent.spawnHookChild();
         var identities = manager.captureIdentityContext().requireIdentityTable();
         ObjectRefId parentId = identities.idFor(sourceParent);
@@ -199,6 +199,9 @@ class TestRewindRecreateContext {
         assertNotSame(restoredParent, restoredDecoy);
         assertEquals(restoredParent.getX(), restoredDecoy.getX());
         assertEquals(restoredParent.getY(), restoredDecoy.getY());
+        var queryOrder = List.copyOf(manager.getActiveObjects());
+        assertTrue(queryOrder.indexOf(restoredDecoy) < queryOrder.indexOf(restoredParent),
+                "first-match or nearest selection would choose the same-position decoy");
         assertSame(restoredParent, restoredChild.parent);
         assertTrue(restoredChild.knownFamily);
         assertEquals(capturedChild.slotIndex(), restoredChild.getSlotIndex());

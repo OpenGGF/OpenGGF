@@ -5981,6 +5981,9 @@ unattributed and merge-blocking. Later passes do not explain it.
 
 ### Authoritative parent handoff and Shellcracker witnesses — 2026-11-10
 
+> Historical intermediate design: the supplied-parent protocol described here
+> was rejected in “Captured-parent admission correction — 2026-11-10” below.
+
 After the preceding increment was published to draft PR271 at
 `118a26ca9966fe9b39b6c004cc3cd4a65abf1e81`, bounded source research and runtime
 witnesses established the next defect. A real Shellcracker body spawns eight
@@ -6158,3 +6161,51 @@ remains. Independent scrutiny of this changed design and the single combined
 smoke/guards plus relevant domain qualification are still required before push.
 The 4,643-class broad selection is prepared only; none of its prior 4,642 classes
 is removed or reordered. No broad run or new rubric score is claimed here.
+
+
+### Admitted-parent review closure and domain evidence — 2026-11-10
+
+Fresh independent Opus scrutiny of clean `1f84b28463` found no static blocker.
+It verified the unchanged lifecycle/codec/context blobs and exact old lookup
+semantics for Clamer and Orbinaut. It ran no build, test or JVM. Five Low findings
+and one audit nit were addressed without changing production code: the same-position
+decoy now precedes the owner and its live-query order is asserted; the ordinary
+scene lane requires the exact rebuilt owner; the cleared lane requires eight
+null-parent pieces, FALLING after init/parent-loss execution and bounded expiry.
+The unused parent-only fixture switch was removed. The previous forwarding section
+now points to its rejection below. The coverage backlog records inherited,
+unexecuted constructor-adoption/refused-parent and off-screen-body retirement gaps.
+Those paths are not claimed fixed.
+
+The two modified test classes completed 11 cases with no failures/errors/skips.
+Queue/Maven/wall were 68/35.609/104.189765 seconds; user wait 0, residual 0.580765.
+Actual source was `1f84b28463` plus sealed fingerprint
+`fae21febf2811637d3449a7103f124d8acc1396c7eae687a757dd16223101293`.
+This checks the stronger witnesses; the previous 303-case check remains evidence
+for its actual source. No further reviewer was started for these small findings.
+
+While the frozen main source was independently reviewed, one sequential
+observational domain unit ran the existing EHZ1 and HCZ pair. It tested actual
+clean `1f84b28463`: EHZ1 passed 5,852/5,852 rows; HCZ1 passed with 3,519 retained
+comparisons/3,574 planned rows; HCZ2 retained its assertion failure with 14,149
+comparisons/14,208 planned rows and 26 gameplay mismatches. All three declared ALL
+gates reached completion, with no counted warnings, bootstrap negatives or skips.
+The raw supervisor exit remains 1. HCZ2's full JUnit negative and context are literal
+baseline matches. Every pre-existing payload field and raw byte matches actual
+`c327c5487e`; only the already-published `recorded_fields` diagnostic is detached
+by one exact byte span. There is no old census counterpart to claim equal. HCZ1's
+entire current-format report also matches actual `4d5e592165` byte for byte.
+Eight advertised aux schemas remain missing for each HCZ leaf; raw log warnings
+are retained and are not called warning-free.
+
+Total domain queue/Maven/wall were 263/83.939/348.681177 seconds; user wait 0,
+residual 1.742177. Exact commands, per-command timing, owner-derived report paths,
+fresh XML, literal negatives and context comparison are retained under
+`target/code-climb/shellcracker-parent-contract/admission-domain/`. The changed
+tests/docs do not alter main, trace driver/fixture, tool, POM or configuration
+inputs; the domain evidence remains labelled as actual `1f84`, not relabelled as
+a later head. Its execution before smoke was observational and waived no category
+or publication gate. All owned units are terminal. One complete 4,643-class
+candidate smoke/guards run and full negative/skip/input comparison remain required
+before task-branch-only draft PR271 publication. Original pixel attribution and
+the wider six-trial goal remain unresolved.
