@@ -388,6 +388,28 @@ addresses and palettes are isolated between the two owners. The blank S3K mappin
 0 can be omitted while mappings 1–11 remain present.
 MICA and TALON package their PNG sets through `PresentationImages` and `ModAssetRoot`.
 
+S2 half-pipe and S3K Blue Sphere banks may add dedicated final-orientation
+drawings with `set.withMirroredFrames(Map.of(nativeId, drawing))`, or
+`set.withOrientationFrames(horizontalFlip, verticalFlip, drawings)` for S2's
+vertical and combined orientations. Keys passed to these methods remain native
+IDs 0–255 and must have a base frame. The returned immutable set contains bounded
+compiler slots for the variants; do not feed those slots to gameplay selectors.
+Draw the complete final pose, including its hotspot, with a consistent screen
+light and anatomical feature placement. The engine selects the variant only
+when its native flags match, and suppresses those render flips. Missing variants
+retain the existing draw rules. Native art, mapping order, animation clocks,
+sprite-list ownership, priority and palette/fades stay unchanged. Blue Sphere
+gets the orientation from its ROM mapping pieces; existing independent creator
+selectors remain independent when no variant is supplied. Slot-machine,
+Competition and title consumers do not select these optional variants.
+
+This is an additive seam in the unpublished 0.7 candidate. The original
+one-component `StageSpriteSet` record and constructor are preserved; its
+release descriptor is validated unchanged at candidate `0.7.0`, as required
+by the ordinary-regeneration policy; the `ModApiVersion` note and normalized
+mutable signature pin were updated together. MICA/TALON's `oriented-stage/native-pose-generation.json` files retain
+the selected original pixels and fresh-generation provenance.
+
 `Art.screenFrames` optionally supplies immutable indexed poses with hotspots and
 sixteen RGB colours. Continue consumers use `continue/player`, `continue/icon`
 and the S1 `continue/floor` / S3K `continue/team-idle` banks, keyed by native

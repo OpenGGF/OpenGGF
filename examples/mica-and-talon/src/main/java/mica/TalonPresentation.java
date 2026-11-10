@@ -21,7 +21,7 @@ final class TalonPresentation {
                     pose(assets,prefix+"-spin1"),null,pose(assets,prefix+"-spin3")),TalonScreenFrames.load(assets,host)));
         }
         return new CharacterPresentation("TALON","TALO",art,Map.of(new Font(Host.S1,Style.HUD),
-                Map.of('T',image(assets,"s1-name-T"),'A',image(assets,"s1-name-A"),'L',image(assets,"s1-name-L"))), stages(assets),
+                Map.of('T',image(assets,"s1-name-T"),'A',image(assets,"s1-name-A"),'L',image(assets,"s1-name-L"))), OrientedStageArt.load(assets,"talon",stages(assets)),
                 TalonEndings.load(assets));
     }
     // FixBugs=0 slot goal clears character_id: Sonic roll also selects Tails duck/balance

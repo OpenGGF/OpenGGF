@@ -103,6 +103,27 @@ def main():
             g=d.get('game','s3k')
             for f in d.get('frames',[]):surface(g,f.get('frame_set',rel.split('/')[0]),f,base,d)
     # Reel symbol obligations are independent of bonus-stage player poses.
+    # Orientation obligations are separate from native mapping-ID coverage. Legacy
+    # S3K creator selectors were already independent; their baked mirrored lighting
+    # is not evidence that a final-orientation drawing is explicitly bound.
+    orientation_java = ROOT/'examples/mica-and-talon/src/main/java/mica/OrientedStageArt.java'
+    orientation_bindings = orientation_java.read_text() if orientation_java.exists() else ''
+    for c in ['mica', 'talon']:
+        manifest_path = ART/c/'oriented-stage/native-pose-generation.json'
+        supplied = load(manifest_path)['frames'] if manifest_path.exists() else []
+        obligations = [('s3k', i, 'h') for i in [6, 7, 8]]
+        obligations += [('s2', i, orientation) for i in range(12) for orientation in ['h', 'v', 'hv']]
+        obligations += [('s2', i, 'h') for i in range(12, 16)]
+        for game, selector, orientation in obligations:
+            frame = next((f for f in supplied if f['game']==game and f['id']==selector and f['orientation']==orientation), None)
+            surface_name = 'S2_HALF_PIPE' if game=='s2' else 'S3K_BLUE_SPHERE'
+            binding = f'new Drawing("{c}", StageSpriteSet.Surface.{surface_name}, {selector}, "{orientation}",'
+            authored = frame is not None and (manifest_path.parent/frame['file']).is_file() and binding in orientation_bindings
+            add(c, game, 'special-stage final orientation', f'{selector:02X}/{orientation}',
+                'authored' if authored else 'fallback', frame['path'] if authored else 'ordinary selector/native flip',
+                str(manifest_path.relative_to(ROOT)) if authored else '', rank='normal early-zone special stage',
+                evidence=citation('docs/s2disasm/s2.asm', 'SSPlayer_Animate:') if game=='s2' else citation('docs/skdisasm/sonic3k.asm', 'byte_91E8:'),
+                notes='Additional orientation obligation; does not add native frame IDs. Native animation clocks/selectors unchanged.')
     for c in ['mica', 'talon']:
         for g in ['S2', 'S3K']:
             path = ART/c/'reels/normal.png'

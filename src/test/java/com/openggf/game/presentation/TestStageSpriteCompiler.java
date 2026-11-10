@@ -47,6 +47,26 @@ class TestStageSpriteCompiler {
         for (int i = 0; i < 33; i++) frames.put(i, frame);
         assertThrows(IllegalArgumentException.class, () -> StageSpriteCompiler.compile(new StageSpriteSet(frames), null));
     }
+    @Test void explicitOrientationsAreAdditiveAndNeverChangeNativeIds() {
+        var a = new StageSpriteSet.Frame(new CharacterPresentation.Image(1, 1, new byte[]{2}), 0, 0);
+        var b = new StageSpriteSet.Frame(new CharacterPresentation.Image(1, 1, new byte[]{5}), 0, 0);
+        var base = new StageSpriteSet(Map.of(6, a));
+        var oriented = base.withMirroredFrames(Map.of(6, b));
+        assertEquals(java.util.List.of("frames"), java.util.Arrays.stream(StageSpriteSet.class.getRecordComponents())
+                .map(java.lang.reflect.RecordComponent::getName).toList());
+        assertSame(a, base.frames().get(6));
+        assertEquals(6, StageSpriteCompiler.orientedFrameIndex(base, 6, true, false));
+        int selected = StageSpriteCompiler.orientedFrameIndex(oriented, 6, true, false);
+        assertNotEquals(6, selected);
+        assertEquals(6, StageSpriteCompiler.orientedFrameIndex(oriented, 6, false, false));
+        var art = StageSpriteCompiler.compile(oriented, null);
+        int tile = art.dplcFrames().get(selected).requests().getFirst().startTile();
+        assertEquals(5, art.artTiles()[tile].getPixel(0, 0));
+        assertFalse(art.mappingFrames().get(selected).pieces().getFirst().hFlip());
+        assertThrows(IllegalArgumentException.class, () -> base.withMirroredFrames(Map.of(7, b)));
+        assertThrows(IllegalArgumentException.class, () -> base.withOrientationFrames(false, false, Map.of(6, b)));
+    }
+
     @Test void slotsRejectInvalidNativeIdsAndUnboundedHotspots() {
         var frame=new StageSpriteSet.Frame(new CharacterPresentation.Image(1,1,new byte[1]),0,0);
         assertThrows(IllegalArgumentException.class,()->new StageSpriteSet(Map.of(256,frame)));
