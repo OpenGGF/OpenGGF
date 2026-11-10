@@ -56,6 +56,15 @@ class TestCharacterArtCoverageAudit {
         result.put("packedIndices",packedIndices);
         result.put("sourceAnimations",sheet.animations()); result.put("nativeAliases",sheet.nativeFrames());
         result.put("nativePoses",host.getNativeFramePoses());
+        if (character.equals("talon")) for (var entry : host.getNativeFramePoses().entrySet()) {
+            int raw = entry.getKey();
+            Integer target = sheet.nativeFrames().get(entry.getValue().key());
+            assertNotNull(target, "Unprovided native Tails pose " + game + "/" + raw);
+            if (raw == 0) continue; // Hide sentinel is always empty.
+            assertSame(source.mappingFrames().get(target), bound.mappingFrames().get(raw),
+                    "Native Tails mapping alias " + game + "/" + raw);
+            assertSame(source.dplcFrames().get(target), bound.dplcFrames().get(raw));
+        }
         result.put("mappingCount",nativeArt.mappingFrames().size());
         result.put("nativeScripts",nativeArt.animationSet().getAllScripts());
         if(character.equals("mica") && module instanceof Sonic2GameModule) {

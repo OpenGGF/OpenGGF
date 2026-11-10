@@ -13,7 +13,7 @@ python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/talon
 python3 -m unittest discover -s tools/modding -p test_playable_art_assemble.py
 ```
 
-The sheet has 171 indexed drawings and 47 animation keys: the 82 core drawings
+The sheet has 282 indexed drawings and 47 animation keys: the 82 core drawings
 below plus 87 shared-family drawings and two rare object poses (see the end of this file). All use one
 transparent plus 15 opaque Mega Drive ladder colours. Core set:
 WAIT 7; WALK 8×4 orientations; RUN 4×4; ROLL 3 plus blur; SPINDASH 3 plus blur;
@@ -369,3 +369,45 @@ Review: `review.html` in the scratch directory, with native comparisons,
 per-tick motion previews, common origins and the independent area-ratio table.
 Motion previews preserve native phase order; Blue Sphere speed is illustrative
 because its production timer depends on velocity. They are not route certification.
+
+
+## Object poses (2026-11-10)
+
+The normal sheet adds 111 object views while retaining 47 canonical keys.
+See [inventory](object-poses/inventory.md), [per-ID vocabulary](object-poses/native-inventory.csv),
+[provenance](object-poses/provenance.json) and [size check](object-poses/size-check.json).
+Native Tails body mappings use the real S2/S3K SonicAndTails palette, enlarged
+8×; built-in GPT Image supplied two alternatives per base pose. The gravity
+loop's first attempt lost back-facing orientation; the second is selected.
+Five overhead-grip poses required a further two-alternative redraw, then
+uniform re-reduction (1.15× hang / 1.12× bar-end) after the independent size check
+flagged the first reductions. Hands remain registered to the native grip plane.
+No contours were painted, and native reference pixels remain external.
+
+Sixteen exact quarter-turn/mirror correspondences use the indexed rotation tool;
+other native turns are perspective changes with distinct silhouettes, retained
+as generated views. Approved idle, legacy hanging and curling drawings are
+explicit aliases. Integrated wings replace fox tails and rotors. Raw flight-body
+aliases use separate semantic keys so they cannot collapse the six-step wingbeat
+through the canonical family's one-body native script.
+
+Review and paired production EGL captures:
+`$HOME/scratch/agent-tmp/talon-object-poses-20261110/review.html`.
+Positioned native object encounters demonstrate binding, not complete routes.
+
+The final audit replaces two blanket fallback rows with **68 S2** and **229 S3K**
+direct aliases; only the six separately owned title rows remain fallback.
+Validation: 123 selected Java tests passed, then 9 raw-alias/audit tests passed
+after the final descriptor fallback correction, all with zero skips. Python
+modding discovery passes 56 tests. The first Python run flagged the old 171-frame
+count; its legitimate 282-frame assertion is updated. No API signatures changed.
+Native Tails retains the same art object; sparse creator aliases use descriptor
+fallbacks, unknown byte 255 uses WAIT, and byte zero remains hidden.
+
+Final per-set area ratios range **0.956–1.088**; S2 tumble independently measures
+**0.958** against S2 Tails. The review includes the full size table and native
+comparison frames at 3×. Corkscrew, DEZ gravity hub, FBZ chain grip and S2 spiral
+videos contain all 180 ticks at 60 Hz, encoded losslessly in RGB; a decoded
+frame from every video matches its RGB source byte for byte. Native foreground
+occlusion is retained. The corkscrew review adjusts only the rendered camera Y,
+then restores it before the next simulation step; objects select every pose.

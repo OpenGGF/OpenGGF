@@ -216,11 +216,59 @@
     "fallback": "RUN"
   },
   "94": {
-    "key": "family-tails-fly/0",
+    "key": "flight/body-0",
     "fallback": "TAILS_FLY"
   },
   "95": {
-    "key": "family-tails-fly/1",
+    "key": "flight/body-1",
     "fallback": "TAILS_FLY"
+  },
+  "117": {
+    "key": "gravity-loop/0",
+    "fallback": "ROLL"
+  },
+  "118": {
+    "key": "gravity-loop/1",
+    "fallback": "ROLL"
+  },
+  "119": {
+    "key": "gravity-loop/2",
+    "fallback": "ROLL"
+  },
+  "120": {
+    "key": "gravity-loop/3",
+    "fallback": "ROLL"
+  },
+  "121": {
+    "key": "gravity-loop/4",
+    "fallback": "ROLL"
+  },
+  "122": {
+    "key": "gravity-loop/5",
+    "fallback": "ROLL"
+  },
+  "123": {
+    "key": "gravity-loop/6",
+    "fallback": "ROLL"
+  },
+  "124": {
+    "key": "gravity-loop/7",
+    "fallback": "ROLL"
+  },
+  "125": {
+    "key": "gravity-loop/8",
+    "fallback": "ROLL"
+  },
+  "126": {
+    "key": "gravity-loop/9",
+    "fallback": "ROLL"
+  },
+  "127": {
+    "key": "gravity-loop/10",
+    "fallback": "ROLL"
+  },
+  "128": {
+    "key": "gravity-loop/11",
+    "fallback": "ROLL"
   }
 }

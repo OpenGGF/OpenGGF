@@ -1656,6 +1656,23 @@ or blockers remain; the lead owns subsequent integration. No merge or push.
 
 ## Coverage audit (2026-11-09)
 
+**TALON object-pose closure, 2026-11-10:** 282 frames / 47 keys. The existing
+archetype-selected Tails vocabulary and shared NFRM binder now include the S2
+$75–$80 tumble bank and S3K object-driven views. 111 added drawings comprise
+95 native-pose generated reductions and 16 indexed rotations/mirrors; matching
+approved poses remain aliases. Raw flight-body aliases use independent keys so
+the canonical family binder preserves the authored six-phase wing cycles.
+The audit's obsolete blanket blocker is replaced by production-checked per-ID
+rows: S2 **68** and S3K **229** direct aliases. TALON fallback totals move S2
+**2 → 1**, S3K **2 → 1**; the six remaining cross-character/host fallbacks are
+title mascots, owned separately. Unknown bytes use creator WAIT; native zero is empty; native Tails retains
+its original art. No public API signature changed. The complete inventory,
+generation provenance and independent size measurements are in
+`art/talon/object-poses/`; review and staged paired headless captures are in
+`$HOME/scratch/agent-tmp/talon-object-poses-20261110/review.html`.
+These are object/art binding checks, not route certification.
+
+
 **Object-pose closure, 2026-11-10:** the maintained sheets now contain MICA
 274 frames / 52 keys and TALON 171 / 47. All 63 outstanding MICA S3K direct-pose
 rows and all 16 requested rare animation rows bind authored art or explicit

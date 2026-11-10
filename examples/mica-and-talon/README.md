@@ -58,7 +58,7 @@ slots cycle to gold; S2/S3K use her powered banks and her homing move remains he
 Enable **Gilded form settings** in the host overlay to override the per-game form
 switches, S1 emerald requirement, ring requirement and S1 music at the next full
 load. S1's six-emerald/50-ring default is mod-defined and requires no donor ROM.
-S2 and S3K retain their native default emerald gates. TALON uses his own 171-frame, 47-animation sheet and palette. His native flight
+S2 and S3K retain their native default emerald gates. TALON uses his own 282-frame, 47-animation sheet and palette. His native flight
 flaps normally; airborne down previews a target and down+jump dives onto it.
 Solar uses white-gold plumage with flame wingtips, Instagib dives and twice the
 native flap lift, with no Flickies or Hyper tier. Regenerate Solar Java tables
@@ -203,3 +203,17 @@ records show the current configured creator character. See the inventory in
 
 presentation data. Presentation ownership and remaining standalone Blue Sphere hosting limits are
 listed in `art/talon/README.md`.
+
+
+### TALON object-pose closure (2026-11-10)
+
+Tails-archetype hosts select their own normal-player raw vocabulary. TALON now
+binds every declared S2/S3K pose through NFRM, including the twelve S2 tumble
+bytes used by spiral/flip-angle controllers. His 282 drawings include 111 added
+object views: 95 generated reductions and 16 indexed native-equivalent
+rotations/mirrors. Matching idle, hang and curl poses reuse approved drawings.
+The [inventory and provenance](art/talon/object-poses/inventory.md) distinguish
+raw setters from animation requests, and record native labels and size checks.
+Unknown bytes use creator WAIT, zero stays invisible, native Tails bypasses
+binding, and the six-phase integrated wing scripts retain their own timing.
+The audit now reports per-ID Tails rows instead of its stale namespace blocker.
