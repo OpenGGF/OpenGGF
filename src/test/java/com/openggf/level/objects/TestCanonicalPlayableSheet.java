@@ -51,6 +51,44 @@ class TestCanonicalPlayableSheet {
         }
     }
 
+    @Test @RequiresRom(SonicGame.SONIC_2)
+    void tailsObjectAliasesS2() throws Exception { verifyTailsObjectAliases(new Sonic2GameModule()); }
+
+    @Test @RequiresRom(SonicGame.SONIC_3K)
+    void tailsObjectAliasesS3k() throws Exception { verifyTailsObjectAliases(new Sonic3kGameModule()); }
+
+    private void verifyTailsObjectAliases(GameModule module) throws Exception {
+        TestEnvironment.activeGameplayMode();
+        var host = module.getDonorCapabilities().forPlayableCharacter(PlayerCharacter.TAILS_ALONE);
+        var nativeArt = host.getPlayerArtProvider(RomByteReader.fromRom(TestEnvironment.currentRom()))
+                .loadPlayerSpriteArt("tails");
+        assertSame(nativeArt, PlayableSheetAnimationBinding.bind(nativeArt, host, nativeArt),
+                "native Tails keeps its original mappings, scripts and profile");
+        var source = sheet();
+        var alias = host.getNativeFramePoses().get(1);
+        var authored = new SpriteArtSet(source.artTiles(), source.mappingFrames(), source.dplcFrames(),
+                source.paletteIndex(), source.basePatternIndex(), source.frameDelay(), source.bankSize(),
+                new PlayableSheetAnimationBinding.CanonicalProfile(Map.of(), Map.of(alias.key(), 3)),
+                source.animationSet());
+        var bound = PlayableSheetAnimationBinding.bind(authored, host, nativeArt);
+        assertSame(source.mappingFrames().get(3), bound.mappingFrames().get(1));
+        assertSame(source.dplcFrames().get(3), bound.dplcFrames().get(1));
+        int idle = source.animationSet().getScript(CanonicalAnimation.WAIT.ordinal()).frames().getFirst();
+        assertFalse(host.getNativeFramePoses().containsKey(255));
+        assertSame(source.mappingFrames().get(idle), bound.mappingFrames().get(255),
+                "unknown native byte safely uses creator WAIT, never an accidental packed frame");
+        assertSame(source.dplcFrames().get(idle), bound.dplcFrames().get(255));
+        var missingRoll = host.getNativeFramePoses().entrySet().stream()
+                .filter(entry -> entry.getValue().fallback() == CanonicalAnimation.ROLL)
+                .findFirst().orElseThrow();
+        int roll = source.animationSet().getScript(CanonicalAnimation.ROLL.ordinal()).frames().getFirst();
+        assertSame(source.mappingFrames().get(roll), bound.mappingFrames().get(missingRoll.getKey()),
+                "known unaliased pose uses its descriptor's canonical fallback");
+        assertTrue(bound.mappingFrames().getFirst().pieces().isEmpty(), "native zero is invisible");
+        assertTrue(bound.animationSet().getScript(host.resolveNativeId(CanonicalAnimation.WAIT))
+                .frames().stream().allMatch(frame -> frame >= 256), "authored scripts are relocated");
+    }
+
     private void verify(GameModule module) throws Exception {
         TestEnvironment.activeGameplayMode();
         var host = module.getDonorCapabilities();

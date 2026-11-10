@@ -149,7 +149,7 @@ class TalonAssemblyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             out = Path(directory)
             manifest, custom, stats = assembler.assemble(art, out)
-            self.assertEqual(171, stats['frames'])
+            self.assertEqual(282, stats['frames'])
             self.assertEqual(47, stats['animations'])
             self.assertTrue({'TAILS_FLY_ASCEND', 'TAILS_FLY_CARRY', 'TAILS_FLY_CARRY_ASCEND',
                              'TAILS_SWIM', 'TAILS_SWIM_ASCEND', 'TAILS_SWIM_CARRY',

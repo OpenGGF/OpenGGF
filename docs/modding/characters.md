@@ -677,10 +677,12 @@ Playable YAML optionally supplies `nativeFrames`, a map from semantic pose keys
 (for example `hang/0`) to authored mapping indices. The GGFP v2 `NFRM` section
 retains these aliases. Each host declares its native bytes through
 `DonorCapabilities.getNativeFramePoses()`; shared binding consumes semantic keys
-and canonical fallbacks rather than game-name branches. The current stock host
-vocabularies describe the normal Sonic archetype; character-specific Tails and
-Knuckles raw mapping vocabularies are not yet supplied. Missing poses use the
-host descriptor's canonical fallback; stock art bypasses binding.
+and canonical fallbacks rather than game-name branches. The stock host vocabularies describe normal Sonic and S2/S3K Tails archetypes,
+selected through `forPlayableCharacter`; Knuckles remains separate work. Missing
+pose aliases use the descriptor's canonical fallback. Unknown native byte slots
+use the creator's first WAIT pose, never an accidental packed frame; stock art
+bypasses binding. S2 tumble bytes $75–$80 and S3K object tables can therefore
+use creator art without changing object clocks or gameplay state.
 
 When aliases are supplied, bound canonical scripts move above the 256 native
 byte slots, including slope sets and DPLCs. Index zero stays invisible for native

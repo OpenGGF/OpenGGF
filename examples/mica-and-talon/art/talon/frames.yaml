@@ -2267,6 +2267,1449 @@
       "angle_set": "flat",
       "duration_ticks": 1,
       "notes": "Rare native-pose redraw, two attempts, no separate fox tails; rare-poses/provenance.json."
+    },
+    {
+      "id": "object5-31",
+      "animation": "NATIVE_POSE",
+      "order": 349,
+      "file": "frames/object5-31.png",
+      "hotspot": [
+        13,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-32",
+      "animation": "NATIVE_POSE",
+      "order": 350,
+      "file": "frames/object5-32.png",
+      "hotspot": [
+        14,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-33",
+      "animation": "NATIVE_POSE",
+      "order": 351,
+      "file": "frames/object5-33.png",
+      "hotspot": [
+        12,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-34",
+      "animation": "NATIVE_POSE",
+      "order": 352,
+      "file": "frames/object5-34.png",
+      "hotspot": [
+        13,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-35",
+      "animation": "NATIVE_POSE",
+      "order": 353,
+      "file": "frames/object5-35.png",
+      "hotspot": [
+        13,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-36",
+      "animation": "NATIVE_POSE",
+      "order": 354,
+      "file": "frames/object5-36.png",
+      "hotspot": [
+        13,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-37",
+      "animation": "NATIVE_POSE",
+      "order": 355,
+      "file": "frames/object5-37.png",
+      "hotspot": [
+        11,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-38",
+      "animation": "NATIVE_POSE",
+      "order": 356,
+      "file": "frames/object5-38.png",
+      "hotspot": [
+        12,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-39",
+      "animation": "NATIVE_POSE",
+      "order": 357,
+      "file": "frames/object5-39.png",
+      "hotspot": [
+        12,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-3a",
+      "animation": "NATIVE_POSE",
+      "order": 358,
+      "file": "frames/object5-3a.png",
+      "hotspot": [
+        12,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-3b",
+      "animation": "NATIVE_POSE",
+      "order": 359,
+      "file": "frames/object5-3b.png",
+      "hotspot": [
+        13,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-3c",
+      "animation": "NATIVE_POSE",
+      "order": 360,
+      "file": "frames/object5-3c.png",
+      "hotspot": [
+        12,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-3d",
+      "animation": "NATIVE_POSE",
+      "order": 361,
+      "file": "frames/object5-3d.png",
+      "hotspot": [
+        12,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-3e",
+      "animation": "NATIVE_POSE",
+      "order": 362,
+      "file": "frames/object5-3e.png",
+      "hotspot": [
+        14,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-3f",
+      "animation": "NATIVE_POSE",
+      "order": 363,
+      "file": "frames/object5-3f.png",
+      "hotspot": [
+        12,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-40",
+      "animation": "NATIVE_POSE",
+      "order": 364,
+      "file": "frames/object5-40.png",
+      "hotspot": [
+        13,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-41",
+      "animation": "NATIVE_POSE",
+      "order": 365,
+      "file": "frames/object5-41.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-42",
+      "animation": "NATIVE_POSE",
+      "order": 366,
+      "file": "frames/object5-42.png",
+      "hotspot": [
+        16,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-43",
+      "animation": "NATIVE_POSE",
+      "order": 367,
+      "file": "frames/object5-43.png",
+      "hotspot": [
+        12,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-44",
+      "animation": "NATIVE_POSE",
+      "order": 368,
+      "file": "frames/object5-44.png",
+      "hotspot": [
+        13,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-45",
+      "animation": "NATIVE_POSE",
+      "order": 369,
+      "file": "frames/object5-45.png",
+      "hotspot": [
+        14,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-46",
+      "animation": "NATIVE_POSE",
+      "order": 370,
+      "file": "frames/object5-46.png",
+      "hotspot": [
+        12,
+        10
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-47",
+      "animation": "NATIVE_POSE",
+      "order": 371,
+      "file": "frames/object5-47.png",
+      "hotspot": [
+        10,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-48",
+      "animation": "NATIVE_POSE",
+      "order": 372,
+      "file": "frames/object5-48.png",
+      "hotspot": [
+        11,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-49",
+      "animation": "NATIVE_POSE",
+      "order": 373,
+      "file": "frames/object5-49.png",
+      "hotspot": [
+        17,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-4a",
+      "animation": "NATIVE_POSE",
+      "order": 374,
+      "file": "frames/object5-4a.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-4b",
+      "animation": "NATIVE_POSE",
+      "order": 375,
+      "file": "frames/object5-4b.png",
+      "hotspot": [
+        14,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-4c",
+      "animation": "NATIVE_POSE",
+      "order": 376,
+      "file": "frames/object5-4c.png",
+      "hotspot": [
+        11,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-4d",
+      "animation": "NATIVE_POSE",
+      "order": 377,
+      "file": "frames/object5-4d.png",
+      "hotspot": [
+        12,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-4e",
+      "animation": "NATIVE_POSE",
+      "order": 378,
+      "file": "frames/object5-4e.png",
+      "hotspot": [
+        16,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-4f",
+      "animation": "NATIVE_POSE",
+      "order": 379,
+      "file": "frames/object5-4f.png",
+      "hotspot": [
+        16,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-50",
+      "animation": "NATIVE_POSE",
+      "order": 380,
+      "file": "frames/object5-50.png",
+      "hotspot": [
+        13,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-51",
+      "animation": "NATIVE_POSE",
+      "order": 381,
+      "file": "frames/object5-51.png",
+      "hotspot": [
+        14,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-52",
+      "animation": "NATIVE_POSE",
+      "order": 382,
+      "file": "frames/object5-52.png",
+      "hotspot": [
+        14,
+        10
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-53",
+      "animation": "NATIVE_POSE",
+      "order": 383,
+      "file": "frames/object5-53.png",
+      "hotspot": [
+        16,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-54",
+      "animation": "NATIVE_POSE",
+      "order": 384,
+      "file": "frames/object5-54.png",
+      "hotspot": [
+        18,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-58",
+      "animation": "NATIVE_POSE",
+      "order": 388,
+      "file": "frames/object5-58.png",
+      "hotspot": [
+        9,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-59",
+      "animation": "NATIVE_POSE",
+      "order": 389,
+      "file": "frames/object5-59.png",
+      "hotspot": [
+        10,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-5a",
+      "animation": "NATIVE_POSE",
+      "order": 390,
+      "file": "frames/object5-5a.png",
+      "hotspot": [
+        9,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-5b",
+      "animation": "NATIVE_POSE",
+      "order": 391,
+      "file": "frames/object5-5b.png",
+      "hotspot": [
+        9,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-5c",
+      "animation": "NATIVE_POSE",
+      "order": 392,
+      "file": "frames/object5-5c.png",
+      "hotspot": [
+        13,
+        10
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-5d",
+      "animation": "NATIVE_POSE",
+      "order": 393,
+      "file": "frames/object5-5d.png",
+      "hotspot": [
+        1,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-5e",
+      "animation": "NATIVE_POSE",
+      "order": 394,
+      "file": "frames/object5-5e.png",
+      "hotspot": [
+        16,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-5f",
+      "animation": "NATIVE_POSE",
+      "order": 395,
+      "file": "frames/object5-5f.png",
+      "hotspot": [
+        22,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-60",
+      "animation": "NATIVE_POSE",
+      "order": 396,
+      "file": "frames/object5-60.png",
+      "hotspot": [
+        11,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-61",
+      "animation": "NATIVE_POSE",
+      "order": 397,
+      "file": "frames/object5-61.png",
+      "hotspot": [
+        24,
+        10
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-62",
+      "animation": "NATIVE_POSE",
+      "order": 398,
+      "file": "frames/object5-62.png",
+      "hotspot": [
+        18,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-69",
+      "animation": "NATIVE_POSE",
+      "order": 405,
+      "file": "frames/object5-69.png",
+      "hotspot": [
+        16,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-6a",
+      "animation": "NATIVE_POSE",
+      "order": 406,
+      "file": "frames/object5-6a.png",
+      "hotspot": [
+        17,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-6b",
+      "animation": "NATIVE_POSE",
+      "order": 407,
+      "file": "frames/object5-6b.png",
+      "hotspot": [
+        13,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-6c",
+      "animation": "NATIVE_POSE",
+      "order": 408,
+      "file": "frames/object5-6c.png",
+      "hotspot": [
+        17,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-6d",
+      "animation": "NATIVE_POSE",
+      "order": 409,
+      "file": "frames/object5-6d.png",
+      "hotspot": [
+        17,
+        9
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-6e",
+      "animation": "NATIVE_POSE",
+      "order": 410,
+      "file": "frames/object5-6e.png",
+      "hotspot": [
+        12,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-6f",
+      "animation": "NATIVE_POSE",
+      "order": 411,
+      "file": "frames/object5-6f.png",
+      "hotspot": [
+        10,
+        9
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-70",
+      "animation": "NATIVE_POSE",
+      "order": 412,
+      "file": "frames/object5-70.png",
+      "hotspot": [
+        14,
+        9
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-71",
+      "animation": "NATIVE_POSE",
+      "order": 413,
+      "file": "frames/object5-71.png",
+      "hotspot": [
+        14,
+        9
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-72",
+      "animation": "NATIVE_POSE",
+      "order": 414,
+      "file": "frames/object5-72.png",
+      "hotspot": [
+        15,
+        10
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-73",
+      "animation": "NATIVE_POSE",
+      "order": 415,
+      "file": "frames/object5-73.png",
+      "hotspot": [
+        15,
+        10
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-74",
+      "animation": "NATIVE_POSE",
+      "order": 416,
+      "file": "frames/object5-74.png",
+      "hotspot": [
+        12,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-75",
+      "animation": "NATIVE_POSE",
+      "order": 417,
+      "file": "frames/object5-75.png",
+      "hotspot": [
+        11,
+        9
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-76",
+      "animation": "NATIVE_POSE",
+      "order": 418,
+      "file": "frames/object5-76.png",
+      "hotspot": [
+        13,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-77",
+      "animation": "NATIVE_POSE",
+      "order": 419,
+      "file": "frames/object5-77.png",
+      "hotspot": [
+        14,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-78",
+      "animation": "NATIVE_POSE",
+      "order": 420,
+      "file": "frames/object5-78.png",
+      "hotspot": [
+        14,
+        25
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-79",
+      "animation": "NATIVE_POSE",
+      "order": 421,
+      "file": "frames/object5-79.png",
+      "hotspot": [
+        26,
+        27
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-7e",
+      "animation": "NATIVE_POSE",
+      "order": 426,
+      "file": "frames/object5-7e.png",
+      "hotspot": [
+        7,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-80",
+      "animation": "NATIVE_POSE",
+      "order": 428,
+      "file": "frames/object5-80.png",
+      "hotspot": [
+        17,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-81",
+      "animation": "NATIVE_POSE",
+      "order": 429,
+      "file": "frames/object5-81.png",
+      "hotspot": [
+        25,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-83",
+      "animation": "NATIVE_POSE",
+      "order": 431,
+      "file": "frames/object5-83.png",
+      "hotspot": [
+        19,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-84",
+      "animation": "NATIVE_POSE",
+      "order": 432,
+      "file": "frames/object5-84.png",
+      "hotspot": [
+        22,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-85",
+      "animation": "NATIVE_POSE",
+      "order": 433,
+      "file": "frames/object5-85.png",
+      "hotspot": [
+        19,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-90",
+      "animation": "NATIVE_POSE",
+      "order": 444,
+      "file": "frames/object5-90.png",
+      "hotspot": [
+        11,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-92",
+      "animation": "NATIVE_POSE",
+      "order": 446,
+      "file": "frames/object5-92.png",
+      "hotspot": [
+        9,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-93",
+      "animation": "NATIVE_POSE",
+      "order": 447,
+      "file": "frames/object5-93.png",
+      "hotspot": [
+        8,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-94",
+      "animation": "NATIVE_POSE",
+      "order": 448,
+      "file": "frames/object5-94.png",
+      "hotspot": [
+        16,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-95",
+      "animation": "NATIVE_POSE",
+      "order": 449,
+      "file": "frames/object5-95.png",
+      "hotspot": [
+        13,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-ca",
+      "animation": "NATIVE_POSE",
+      "order": 502,
+      "file": "frames/object5-ca.png",
+      "hotspot": [
+        20,
+        6
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-df",
+      "animation": "NATIVE_POSE",
+      "order": 523,
+      "file": "frames/object5-df.png",
+      "hotspot": [
+        14,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-e0",
+      "animation": "NATIVE_POSE",
+      "order": 524,
+      "file": "frames/object5-e0.png",
+      "hotspot": [
+        10,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-e1",
+      "animation": "NATIVE_POSE",
+      "order": 525,
+      "file": "frames/object5-e1.png",
+      "hotspot": [
+        10,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-e2",
+      "animation": "NATIVE_POSE",
+      "order": 526,
+      "file": "frames/object5-e2.png",
+      "hotspot": [
+        10,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-e3",
+      "animation": "NATIVE_POSE",
+      "order": 527,
+      "file": "frames/object5-e3.png",
+      "hotspot": [
+        14,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-e4",
+      "animation": "NATIVE_POSE",
+      "order": 528,
+      "file": "frames/object5-e4.png",
+      "hotspot": [
+        13,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-e5",
+      "animation": "NATIVE_POSE",
+      "order": 529,
+      "file": "frames/object5-e5.png",
+      "hotspot": [
+        12,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-e6",
+      "animation": "NATIVE_POSE",
+      "order": 530,
+      "file": "frames/object5-e6.png",
+      "hotspot": [
+        9,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-e7",
+      "animation": "NATIVE_POSE",
+      "order": 531,
+      "file": "frames/object5-e7.png",
+      "hotspot": [
+        10,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-e8",
+      "animation": "NATIVE_POSE",
+      "order": 532,
+      "file": "frames/object5-e8.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-e9",
+      "animation": "NATIVE_POSE",
+      "order": 533,
+      "file": "frames/object5-e9.png",
+      "hotspot": [
+        9,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-ea",
+      "animation": "NATIVE_POSE",
+      "order": 534,
+      "file": "frames/object5-ea.png",
+      "hotspot": [
+        8,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-ef",
+      "animation": "NATIVE_POSE",
+      "order": 539,
+      "file": "frames/object5-ef.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-f0",
+      "animation": "NATIVE_POSE",
+      "order": 540,
+      "file": "frames/object5-f0.png",
+      "hotspot": [
+        13,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-f1",
+      "animation": "NATIVE_POSE",
+      "order": 541,
+      "file": "frames/object5-f1.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-f2",
+      "animation": "NATIVE_POSE",
+      "order": 542,
+      "file": "frames/object5-f2.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-f6",
+      "animation": "NATIVE_POSE",
+      "order": 546,
+      "file": "frames/object5-f6.png",
+      "hotspot": [
+        12,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-f7",
+      "animation": "NATIVE_POSE",
+      "order": 547,
+      "file": "frames/object5-f7.png",
+      "hotspot": [
+        11,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-f8",
+      "animation": "NATIVE_POSE",
+      "order": 548,
+      "file": "frames/object5-f8.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "object-poses/provenance.json"
+    },
+    {
+      "id": "object5-63",
+      "animation": "NATIVE_POSE",
+      "order": 399,
+      "file": "frames/object5-63.png",
+      "hotspot": [
+        12,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+    },
+    {
+      "id": "object5-64",
+      "animation": "NATIVE_POSE",
+      "order": 400,
+      "file": "frames/object5-64.png",
+      "hotspot": [
+        10,
+        1
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+    },
+    {
+      "id": "object5-65",
+      "animation": "NATIVE_POSE",
+      "order": 401,
+      "file": "frames/object5-65.png",
+      "hotspot": [
+        12,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+    },
+    {
+      "id": "object5-66",
+      "animation": "NATIVE_POSE",
+      "order": 402,
+      "file": "frames/object5-66.png",
+      "hotspot": [
+        12,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+    },
+    {
+      "id": "object5-67",
+      "animation": "NATIVE_POSE",
+      "order": 403,
+      "file": "frames/object5-67.png",
+      "hotspot": [
+        12,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+    },
+    {
+      "id": "object5-68",
+      "animation": "NATIVE_POSE",
+      "order": 404,
+      "file": "frames/object5-68.png",
+      "hotspot": [
+        11,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+    },
+    {
+      "id": "object5-7a",
+      "animation": "NATIVE_POSE",
+      "order": 422,
+      "file": "frames/object5-7a.png",
+      "hotspot": [
+        25,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+    },
+    {
+      "id": "object5-7b",
+      "animation": "NATIVE_POSE",
+      "order": 423,
+      "file": "frames/object5-7b.png",
+      "hotspot": [
+        27,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+    },
+    {
+      "id": "object5-7c",
+      "animation": "NATIVE_POSE",
+      "order": 424,
+      "file": "frames/object5-7c.png",
+      "hotspot": [
+        17,
+        10
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+    },
+    {
+      "id": "object5-7d",
+      "animation": "NATIVE_POSE",
+      "order": 425,
+      "file": "frames/object5-7d.png",
+      "hotspot": [
+        12,
+        9
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+    },
+    {
+      "id": "object5-7f",
+      "animation": "NATIVE_POSE",
+      "order": 427,
+      "file": "frames/object5-7f.png",
+      "hotspot": [
+        9,
+        26
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+    },
+    {
+      "id": "object5-f3",
+      "animation": "NATIVE_POSE",
+      "order": 543,
+      "file": "frames/object5-f3.png",
+      "hotspot": [
+        11,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+    },
+    {
+      "id": "object5-f4",
+      "animation": "NATIVE_POSE",
+      "order": 544,
+      "file": "frames/object5-f4.png",
+      "hotspot": [
+        13,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+    },
+    {
+      "id": "object5-f5",
+      "animation": "NATIVE_POSE",
+      "order": 545,
+      "file": "frames/object5-f5.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+    },
+    {
+      "id": "object5-f9",
+      "animation": "NATIVE_POSE",
+      "order": 549,
+      "file": "frames/object5-f9.png",
+      "hotspot": [
+        12,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+    },
+    {
+      "id": "object5-fa",
+      "animation": "NATIVE_POSE",
+      "order": 550,
+      "file": "frames/object5-fa.png",
+      "hotspot": [
+        13,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
     }
   ],
   "scripts": {
@@ -3182,6 +4625,173 @@
     "family-wait/9": "look_up-00",
     "family-get-up/2": "family-blank-00",
     "family-hang/2": "object4-s3k-82",
-    "family-roll/5": "object4-s3k-8d"
+    "family-roll/5": "object4-s3k-8d",
+    "object-walk/0": "walk-02",
+    "object-walk/1": "walk-03",
+    "object-walk/2": "walk-04",
+    "object-walk/3": "walk-05",
+    "object-walk/4": "walk-06",
+    "object-walk/5": "walk-07",
+    "object-walk/6": "walk-00",
+    "object-walk/7": "walk-01",
+    "object-walk-up45/0": "walk-up45-02",
+    "object-walk-up45/1": "walk-up45-03",
+    "object-walk-up45/2": "walk-up45-04",
+    "object-walk-up45/3": "walk-up45-05",
+    "object-walk-up45/4": "walk-up45-06",
+    "object-walk-up45/5": "walk-up45-07",
+    "object-walk-up45/6": "walk-up45-00",
+    "object-walk-up45/7": "walk-up45-01",
+    "object-walk-steep/0": "walk-steep-02",
+    "object-walk-steep/1": "walk-steep-03",
+    "object-walk-steep/2": "walk-steep-04",
+    "object-walk-steep/3": "walk-steep-05",
+    "object-walk-steep/4": "walk-steep-06",
+    "object-walk-steep/5": "walk-steep-07",
+    "object-walk-steep/6": "walk-steep-00",
+    "object-walk-steep/7": "walk-steep-01",
+    "object-walk-inverted/0": "walk-inverted-02",
+    "object-walk-inverted/1": "walk-inverted-03",
+    "object-walk-inverted/2": "walk-inverted-04",
+    "object-walk-inverted/3": "walk-inverted-05",
+    "object-walk-inverted/4": "walk-inverted-06",
+    "object-walk-inverted/5": "walk-inverted-07",
+    "object-walk-inverted/6": "walk-inverted-00",
+    "object-walk-inverted/7": "walk-inverted-01",
+    "object-run/0": "run-00",
+    "object-run/1": "run-01",
+    "object-run/2": "run-02",
+    "object-run/3": "run-03",
+    "object-run-up45/0": "run-up45-00",
+    "object-run-up45/1": "run-up45-01",
+    "object-run-up45/2": "run-up45-02",
+    "object-run-up45/3": "run-up45-03",
+    "object-run-steep/0": "run-steep-00",
+    "object-run-steep/1": "run-steep-01",
+    "object-run-steep/2": "run-steep-02",
+    "object-run-steep/3": "run-steep-03",
+    "object-run-inverted/0": "run-inverted-00",
+    "object-run-inverted/1": "run-inverted-01",
+    "object-run-inverted/2": "run-inverted-02",
+    "object-run-inverted/3": "run-inverted-03",
+    "flight/body-0": "fly-00",
+    "flight/body-1": "fly-01",
+    "flight/tired-body-0": "fly_tired-00",
+    "gravity-loop/0": "object5-31",
+    "gravity-loop/1": "object5-32",
+    "gravity-loop/2": "object5-33",
+    "gravity-loop/3": "object5-34",
+    "gravity-loop/4": "object5-35",
+    "gravity-loop/5": "object5-36",
+    "gravity-loop/6": "object5-37",
+    "gravity-loop/7": "object5-38",
+    "gravity-loop/8": "object5-39",
+    "gravity-loop/9": "object5-3a",
+    "gravity-loop/10": "object5-3b",
+    "gravity-loop/11": "object5-3c",
+    "gravity-transition/0": "object5-3d",
+    "gravity-transition/1": "object5-3e",
+    "gravity-transition/2": "object5-3f",
+    "gravity-transition/3": "object5-40",
+    "gravity-transition/4": "object5-41",
+    "gravity-transition/5": "object5-42",
+    "gravity-transition/6": "object5-43",
+    "gravity-transition/7": "object5-44",
+    "gravity-transition/8": "object5-45",
+    "gravity-transition/9": "object5-46",
+    "gravity-transition/10": "object5-47",
+    "gravity-transition/11": "object5-48",
+    "cage-entry/0": "object5-49",
+    "cage-entry/1": "object5-4a",
+    "cage-entry/2": "object5-4b",
+    "cage-entry/3": "object5-4c",
+    "cage-entry/4": "object5-4d",
+    "cage-entry/5": "object5-4e",
+    "cage-entry/6": "object5-4f",
+    "cage-entry/7": "object5-50",
+    "cage-entry/8": "object5-51",
+    "cage-entry/9": "object5-52",
+    "cage-entry/10": "object5-53",
+    "cage-entry/11": "object5-54",
+    "twist/0": "wait-00",
+    "twist/1": "wait-01",
+    "twist/2": "wait-00",
+    "twist/3": "object5-58",
+    "twist/4": "object5-59",
+    "twist/5": "object5-5a",
+    "twist/6": "object5-5b",
+    "pole/0": "object5-5c",
+    "pole/1": "object5-5d",
+    "pole/2": "object5-5e",
+    "pole/3": "object5-5f",
+    "pole/4": "object5-60",
+    "pole/5": "object5-61",
+    "pole/6": "object5-62",
+    "tumble/0": "object5-69",
+    "tumble/1": "object5-6a",
+    "tumble/2": "object5-6b",
+    "tumble/3": "object5-6c",
+    "tumble/4": "object5-6d",
+    "tumble/5": "object5-6e",
+    "tumble/6": "object5-6f",
+    "tumble/7": "object5-70",
+    "tumble/8": "object5-71",
+    "tumble/9": "object5-72",
+    "tumble/10": "object5-73",
+    "tumble/11": "object5-74",
+    "tumble/12": "object5-75",
+    "tumble/13": "object5-76",
+    "tumble/14": "object5-77",
+    "swing/0": "object5-78",
+    "swing/1": "object5-79",
+    "swing/6": "object5-7e",
+    "chain/0": "object5-80",
+    "chain/1": "object5-81",
+    "chain/2": "object4-s3k-82",
+    "chain/3": "object5-83",
+    "chain/4": "object5-84",
+    "chain/5": "object5-85",
+    "carry/curl": "object4-s3k-8d",
+    "hang/0": "object5-90",
+    "hang/2": "object5-92",
+    "hang/3": "object5-93",
+    "bar-end/0": "object5-94",
+    "bar-end/1": "object5-95",
+    "crane/fall": "object5-ca",
+    "wall-run/0": "object5-df",
+    "wall-run/1": "object5-e0",
+    "wall-run/2": "object5-e1",
+    "wall-run/3": "object5-e2",
+    "wall-run/4": "object5-e3",
+    "parachute/0": "object5-e4",
+    "parachute/1": "object5-e5",
+    "parachute/2": "object5-e6",
+    "parachute/3": "object5-e7",
+    "parachute/4": "object5-e8",
+    "parachute/5": "object5-e9",
+    "parachute/6": "object5-ea",
+    "corkscrew/0": "object5-ef",
+    "corkscrew/1": "object5-f0",
+    "corkscrew/2": "object5-f1",
+    "corkscrew/3": "object5-f2",
+    "corkscrew/7": "object5-f6",
+    "corkscrew/8": "object5-f7",
+    "corkscrew/9": "object5-f8",
+    "bar/0": "object5-63",
+    "bar/1": "object5-64",
+    "bar/2": "object5-65",
+    "bar/3": "object5-66",
+    "bar/4": "object5-67",
+    "bar/5": "object5-68",
+    "swing/2": "object5-7a",
+    "swing/3": "object5-7b",
+    "swing/4": "object5-7c",
+    "swing/5": "object5-7d",
+    "swing/7": "object5-7f",
+    "corkscrew/4": "object5-f3",
+    "corkscrew/5": "object5-f4",
+    "corkscrew/6": "object5-f5",
+    "corkscrew/10": "object5-f9",
+    "corkscrew/11": "object5-fa"
   }
 }

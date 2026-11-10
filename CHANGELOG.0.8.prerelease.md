@@ -37,6 +37,10 @@ under the matching area heading; see the
 
 - **MICA, an original character framework example:** TALON now joins as her
   default sidekick and is selectable solo.
+  TALON's S2/S3K native mapping namespaces now bind all declared poses through
+  archetype-owned NFRM aliases, including S2 object tumble, S3K gravity loops,
+  corkscrews, swing/grip/chain/carry and later object turns. The audit exposes
+  per-ID results; native Tails remains unchanged and unknown bytes use WAIT.
   TALON ending assets now cover solo S2/Tails poses, sidekick search photos,
   goggles-down ending/SCZ/WFZ cockpit crops, a shared S3K reunion pilot and solo S3K reunion poses. Native-cell, locally paletted reel
   portraits now cover S2 CNZ and S3K Slots lead/sidekick symbols, TALON solo
@@ -49,7 +53,7 @@ under the matching area heading; see the
   and private palettes; configured creator team members occupy their native
   archetype wheel slots while the miniature simulation stays native. His Tails archetype uses native S3K
   flight and explicitly declared S1/S2 flight; Solar doubles flap acceleration
-  without Flickies. His own 171-frame sheet and palette replace the placeholder;
+  without Flickies. His own 282-frame sheet and palette replace the placeholder;
   generated Solar tables use white-gold plumage and flame wingtips. Shared family
   art adds ledge, hanging, tumble, air pickup, recoil, recovery and flight/swim
   variants; TALON's private flight scripts select the native pose branch and
