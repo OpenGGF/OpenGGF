@@ -6,7 +6,7 @@ TALON is also selectable solo. The [character reference](concept/README.md) has
 both approved model sheets, the in-game palettes, the on-model rules and the
 candidate selection.
 
-The playable sheet contains 274 original indexed poses and 52 canonical animations,
+The playable sheet contains 274 original indexed poses and 53 canonical animations,
 including four slope cycles for WALK and RUN, the breathing idle loop, and
 HOMING_DIVE. Homing is MICA’s air move; powered Gilded forms use Instagib. Python 3 with Pillow is required to rebuild the sheet.
 
@@ -86,7 +86,7 @@ for the concept-to-capture workflow and source map.
 ## Acceptance
 
 `TestMicaCharacterIntegration` compiles and packages these exact sources, then
-checks the packed 274-frame/52-animation sheet and full palette, the roster,
+checks the packed 274-frame/53-animation sheet and full palette, the roster,
 first-level load, identity, native Sonic physics equality, homing kills, powered
 Instagib, dive pose selection, strike rewind replay, save retention and disabled
 owner fallback for each host, plus real LZ, CPZ2 and HCZ water palette inputs.
@@ -217,3 +217,39 @@ raw setters from animation requests, and record native labels and size checks.
 Unknown bytes use creator WAIT, zero stays invisible, native Tails bypasses
 binding, and the six-phase integrated wing scripts retain their own timing.
 The audit now reports per-ID Tails rows instead of its stale namespace blocker.
+
+## Paired carry artwork (2026-11-10)
+
+MICA's three hanging poses and TALON's six normal/ascent carrier phases were
+redrawn together against the real-palette S3K pair at 8×, using fresh built-in
+GPT Image candidates and approved model/WAIT references. Both white gloves meet
+his shoe soles while his integrated wings flap; her legs remain clear below.
+The native centre separation stays 28 pixels. No creator movement offset or
+engine/API change is involved. S1/S2 have no native carry; their mod-defined
+flight capability borrows S3K's model. Positioned GHZ/EHZ probes did not latch,
+so only the AIZ recording is carry encounter evidence.
+
+The carried script now follows `AniRaw_Tails_Carry`'s sixteen entries at twelve
+ticks each, including its repeated phases, rather than the ordinary four-step
+animation-table fallback. MICA omits the three family-phase aliases for this
+one script so the existing binder retains the explicit authored raw order;
+her direct `hang/0`–`hang/2` aliases remain. A separate canonical
+`GLIDE_SLIDE` alias preserves the four-step Sonic-table $23 entry;
+this brings MICA to 53 keys without adding drawings. Other hanging encounters retain
+those same drawings. Native Sonic/Tails art and clocks are unchanged.
+
+Fresh style candidates use selective material-shadow contours, compact
+upper-left highlights and stepped clusters, with 12 MICA / 10 TALON opaque
+colours. The reducer preserves these contours via explicit `outline_mode:
+material`; historical recipes retain their ink default. All 36 normal/ascent
+carrier/hanging combinations have touching grip windows. The independent
+sqrt(mean opaque-area ratio) is MICA **0.984**, TALON **1.115**; his integrated
+wings explain the extra area. These are existing authored slots: audit rows
+move **0**, with no fallback-count change. Measurements, prompts, rejected
+attempts and selected hashes are in `art/*/carry-generation.json`,
+`carry-prompts.json` and MICA's `carry-contact-check.json`.
+
+External review: `$HOME/scratch/agent-tmp/mt-carry-20261110/review.html`, including
+unlabelled native/pair gates, onion skins, WAIT anatomy guides and before/after
+60 fps lossless RGB AIZ carry clips. These verify a positioned encounter and
+art binding, not complete routes or identical species anatomy.

@@ -2751,8 +2751,8 @@
       }
     },
     "hang-00": {
-      "prompt": "Create original MICA pangolin pixel art replacing each of the THREE native Sonic hanging poses shown in the first reference. Use the second reference for MICA's identity: jade overlapping scale hood, cream muzzle and belly, white gloves, coral lace-up boots, long scaled tail. EXACT pose geometry from each corresponding native reference: both gloved hands straight overhead gripping nothing, looking right, three progressively raised leg positions. No blue Sonic features, quills, bar or scenery. Output exactly 3 equal 256x384 transparent cells in one horizontal strip 768x384, each complete centered full-body original MICA sprite with generous transparent margins. Crisp pixel clusters, dark one-pixel-style contour, flat Genesis palette shading. Three independent sprites, no labels or text. Keep heads and tails complete and unclipped. Native references are pose guides only, not pixels to copy.",
-      "raw_sha256": "dd77eeb1c712001c2c8df36e8de8ea882e0f8d5ba5d079b2a4852fceeabdc7b2",
+      "prompt": "Fresh original pixel-sprite generation from references, never edit another generated picture. Strict 3 columns x 2 rows, SIX isolated carrying pairs, generous equal transparent gutters, no text. First reference is real-palette S3K native Sonic hanging under Tails at engine centre offset (0,28), enlarged 8x nearest. Match this game's original SPRITE RENDERING closely, not modern outlined vector mascots. Native Sonic uses 12 opaque colours, Tails 10. One-pixel SELECTIVE MATERIAL-SHADOW contours: deep jade on MICA, deep slate on TALON, warm brown on skin; charcoal only eyes and occluded seams, NOT a continuous black sticker outline. Three-tone main body ramp (shadow/base/small upper-left highlight), two-tone face/belly and red shoes, white gloves use three cool gray-to-white tones. Light from upper-left, lower-right shadow, highlights compact stepped 2-to-4-pixel clusters, no gradients, no airbrush, no noise, no checkerboard dithering (native carry frames have none). Keep at most12 visible opaque colours MICA,10 TALON. Readable at 32x40 body size. Reference2 MICA identity,3 TALON identity,4/5 approved WAIT establish head and torso scale. MICA jade pangolin round overlapping scale plates NOT quills, cream muzzle and belly, white gloves, coral boots and long tapered scaled tail. TALON slate peregrine falcon courier, cream barred chest, amber goggles, satchel, white gloves, red-white shoes. NO fox parts, rotor, mast, propeller. Carry contact: TALON wing-hands beat freely, two shoes at fixed positions grip MICA two raised gloves. MICA hands stay on native grip plane; her HEAD and TORSO hang to the RIGHT of the raised hands' midpoint, as Sonic does. Her legs extend below/right naturally, not tucked back left. TALON chest leans forward in flight as native Tails, head approximately one native head above MICA gloves. SIX wing phases: up, diagonal up, horizontal, down, diagonal down, horizontal recovery. MICA first two pairs knees slightly raised forward, middle two legs down, last two both boots forward, matching native three hanging leg phases. Draw paired grip together with horizontal shoe sole / glove top contact line, so each sprite can be separated horizontally there without redrawing. Keep same head/torso proportions and body/feet position across all six cells. Truly transparent background, no glow, no scenery, no pedestal, no shadows outside bodies, no labels. High precision coarse pixel clusters like original S3K ROM art. Draw ONLY MICA and TALON, never Sonic or Tails identities. Native reference is pose only. Make the right-hand glove grip as visible as the left-hand glove. Two separate MICA arms extend up with white gloved hands meeting TWO TALON shoes, neither glove hidden in head. This is another independent candidate sheet.",
+      "raw_sha256": "bafda2745dee47460a31d7ec597300eed066a0b1f5e54fc8bba2a77e149fdb93",
       "reference": {
         "game": "S3K",
         "mapping": 144,
@@ -2768,16 +2768,16 @@
       },
       "geometry_reference": {
         "size": [
-          21,
+          28,
           40
         ],
         "hotspot": [
-          10,
+          17,
           20
         ]
       },
       "native_size": [
-        21,
+        28,
         40
       ],
       "previous_size": [
@@ -2789,30 +2789,18 @@
         25
       ],
       "hotspot": [
-        10,
+        17,
         20
       ],
-      "source": "built-in GPT Image native-pose redraw 2026-11-08",
-      "cleanup": "equal-cell crop; connected alpha; Lanczos to native envelope; shared palette; inside silhouette ink",
+      "source": "built-in GPT Image fresh joint carry style pass 2026-11-10",
+      "cleanup": "Nearest-neighbour at manually locked head/torso scale, MICA 6:1 / TALON 6.5:1; shoe/glove plane from source pair, translated to native centre offset. Palette-only reduction: MICA12 opaque slots, TALON10; no global outline repaint.",
       "material_box_change": true,
-      "consistency": {
-        "method": "re-reduced",
-        "source": "$HOME/scratch/agent-tmp/mica-poses-20261108/hang-generated.png",
-        "sha256": "dd77eeb1c712001c2c8df36e8de8ea882e0f8d5ba5d079b2a4852fceeabdc7b2",
-        "sourcePixelsPerGamePixel": 14.751543209876543,
-        "anchor": [
-          10,
-          20
-        ],
-        "size": [
-          21,
-          40
-        ]
-      }
+      "carry_provenance": "carry-generation.json",
+      "outline_mode": "material"
     },
     "hang-01": {
-      "prompt": "Create original MICA pangolin pixel art replacing each of the THREE native Sonic hanging poses shown in the first reference. Use the second reference for MICA's identity: jade overlapping scale hood, cream muzzle and belly, white gloves, coral lace-up boots, long scaled tail. EXACT pose geometry from each corresponding native reference: both gloved hands straight overhead gripping nothing, looking right, three progressively raised leg positions. No blue Sonic features, quills, bar or scenery. Output exactly 3 equal 256x384 transparent cells in one horizontal strip 768x384, each complete centered full-body original MICA sprite with generous transparent margins. Crisp pixel clusters, dark one-pixel-style contour, flat Genesis palette shading. Three independent sprites, no labels or text. Keep heads and tails complete and unclipped. Native references are pose guides only, not pixels to copy.",
-      "raw_sha256": "dd77eeb1c712001c2c8df36e8de8ea882e0f8d5ba5d079b2a4852fceeabdc7b2",
+      "prompt": "Fresh original pixel-sprite generation from references, never edit another generated picture. Strict 3 columns x 2 rows, SIX isolated carrying pairs, generous equal transparent gutters, no text. First reference is real-palette S3K native Sonic hanging under Tails at engine centre offset (0,28), enlarged 8x nearest. Match this game's original SPRITE RENDERING closely, not modern outlined vector mascots. Native Sonic uses 12 opaque colours, Tails 10. One-pixel SELECTIVE MATERIAL-SHADOW contours: deep jade on MICA, deep slate on TALON, warm brown on skin; charcoal only eyes and occluded seams, NOT a continuous black sticker outline. Three-tone main body ramp (shadow/base/small upper-left highlight), two-tone face/belly and red shoes, white gloves use three cool gray-to-white tones. Light from upper-left, lower-right shadow, highlights compact stepped 2-to-4-pixel clusters, no gradients, no airbrush, no noise, no checkerboard dithering (native carry frames have none). Keep at most12 visible opaque colours MICA,10 TALON. Readable at 32x40 body size. Reference2 MICA identity,3 TALON identity,4/5 approved WAIT establish head and torso scale. MICA jade pangolin round overlapping scale plates NOT quills, cream muzzle and belly, white gloves, coral boots and long tapered scaled tail. TALON slate peregrine falcon courier, cream barred chest, amber goggles, satchel, white gloves, red-white shoes. NO fox parts, rotor, mast, propeller. Carry contact: TALON wing-hands beat freely, two shoes at fixed positions grip MICA two raised gloves. MICA hands stay on native grip plane; her HEAD and TORSO hang to the RIGHT of the raised hands' midpoint, as Sonic does. Her legs extend below/right naturally, not tucked back left. TALON chest leans forward in flight as native Tails, head approximately one native head above MICA gloves. SIX wing phases: up, diagonal up, horizontal, down, diagonal down, horizontal recovery. MICA first two pairs knees slightly raised forward, middle two legs down, last two both boots forward, matching native three hanging leg phases. Draw paired grip together with horizontal shoe sole / glove top contact line, so each sprite can be separated horizontally there without redrawing. Keep same head/torso proportions and body/feet position across all six cells. Truly transparent background, no glow, no scenery, no pedestal, no shadows outside bodies, no labels. High precision coarse pixel clusters like original S3K ROM art. Draw ONLY MICA and TALON, never Sonic or Tails identities. Native reference is pose only. Make the right-hand glove grip as visible as the left-hand glove. Two separate MICA arms extend up with white gloved hands meeting TWO TALON shoes, neither glove hidden in head. This is another independent candidate sheet.",
+      "raw_sha256": "bafda2745dee47460a31d7ec597300eed066a0b1f5e54fc8bba2a77e149fdb93",
       "reference": {
         "game": "S3K",
         "mapping": 145,
@@ -2828,17 +2816,17 @@
       },
       "geometry_reference": {
         "size": [
-          23,
-          36
+          27,
+          34
         ],
         "hotspot": [
-          11,
-          21
+          17,
+          20
         ]
       },
       "native_size": [
-        23,
-        36
+        27,
+        34
       ],
       "previous_size": [
         32,
@@ -2849,30 +2837,18 @@
         25
       ],
       "hotspot": [
-        11,
-        21
+        17,
+        20
       ],
-      "source": "built-in GPT Image native-pose redraw 2026-11-08",
-      "cleanup": "equal-cell crop; connected alpha; Lanczos to native envelope; shared palette; inside silhouette ink",
+      "source": "built-in GPT Image fresh joint carry style pass 2026-11-10",
+      "cleanup": "Nearest-neighbour at manually locked head/torso scale, MICA 6:1 / TALON 6.5:1; shoe/glove plane from source pair, translated to native centre offset. Palette-only reduction: MICA12 opaque slots, TALON10; no global outline repaint.",
       "material_box_change": true,
-      "consistency": {
-        "method": "re-reduced",
-        "source": "$HOME/scratch/agent-tmp/mica-poses-20261108/hang-generated.png",
-        "sha256": "dd77eeb1c712001c2c8df36e8de8ea882e0f8d5ba5d079b2a4852fceeabdc7b2",
-        "sourcePixelsPerGamePixel": 16.168482207697895,
-        "anchor": [
-          11,
-          21
-        ],
-        "size": [
-          23,
-          36
-        ]
-      }
+      "carry_provenance": "carry-generation.json",
+      "outline_mode": "material"
     },
     "hang-02": {
-      "prompt": "Create original MICA pangolin pixel art replacing each of the THREE native Sonic hanging poses shown in the first reference. Use the second reference for MICA's identity: jade overlapping scale hood, cream muzzle and belly, white gloves, coral lace-up boots, long scaled tail. EXACT pose geometry from each corresponding native reference: both gloved hands straight overhead gripping nothing, looking right, three progressively raised leg positions. No blue Sonic features, quills, bar or scenery. Output exactly 3 equal 256x384 transparent cells in one horizontal strip 768x384, each complete centered full-body original MICA sprite with generous transparent margins. Crisp pixel clusters, dark one-pixel-style contour, flat Genesis palette shading. Three independent sprites, no labels or text. Keep heads and tails complete and unclipped. Native references are pose guides only, not pixels to copy.",
-      "raw_sha256": "dd77eeb1c712001c2c8df36e8de8ea882e0f8d5ba5d079b2a4852fceeabdc7b2",
+      "prompt": "Fresh original pixel-sprite generation from references, never edit another generated picture. Strict 3 columns x 2 rows, SIX isolated carrying pairs, generous equal transparent gutters, no text. First reference is real-palette S3K native Sonic hanging under Tails at engine centre offset (0,28), enlarged 8x nearest. Match this game's original SPRITE RENDERING closely, not modern outlined vector mascots. Native Sonic uses 12 opaque colours, Tails 10. One-pixel SELECTIVE MATERIAL-SHADOW contours: deep jade on MICA, deep slate on TALON, warm brown on skin; charcoal only eyes and occluded seams, NOT a continuous black sticker outline. Three-tone main body ramp (shadow/base/small upper-left highlight), two-tone face/belly and red shoes, white gloves use three cool gray-to-white tones. Light from upper-left, lower-right shadow, highlights compact stepped 2-to-4-pixel clusters, no gradients, no airbrush, no noise, no checkerboard dithering (native carry frames have none). Keep at most12 visible opaque colours MICA,10 TALON. Readable at 32x40 body size. Reference2 MICA identity,3 TALON identity,4/5 approved WAIT establish head and torso scale. MICA jade pangolin round overlapping scale plates NOT quills, cream muzzle and belly, white gloves, coral boots and long tapered scaled tail. TALON slate peregrine falcon courier, cream barred chest, amber goggles, satchel, white gloves, red-white shoes. NO fox parts, rotor, mast, propeller. Carry contact: TALON wing-hands beat freely, two shoes at fixed positions grip MICA two raised gloves. MICA hands stay on native grip plane; her HEAD and TORSO hang to the RIGHT of the raised hands' midpoint, as Sonic does. Her legs extend below/right naturally, not tucked back left. TALON chest leans forward in flight as native Tails, head approximately one native head above MICA gloves. SIX wing phases: up, diagonal up, horizontal, down, diagonal down, horizontal recovery. MICA first two pairs knees slightly raised forward, middle two legs down, last two both boots forward, matching native three hanging leg phases. Draw paired grip together with horizontal shoe sole / glove top contact line, so each sprite can be separated horizontally there without redrawing. Keep same head/torso proportions and body/feet position across all six cells. Truly transparent background, no glow, no scenery, no pedestal, no shadows outside bodies, no labels. High precision coarse pixel clusters like original S3K ROM art. Draw ONLY MICA and TALON, never Sonic or Tails identities. Native reference is pose only. Make the right-hand glove grip as visible as the left-hand glove. Two separate MICA arms extend up with white gloved hands meeting TWO TALON shoes, neither glove hidden in head. This is another independent candidate sheet.",
+      "raw_sha256": "bafda2745dee47460a31d7ec597300eed066a0b1f5e54fc8bba2a77e149fdb93",
       "reference": {
         "game": "S3K",
         "mapping": 146,
@@ -2888,17 +2864,17 @@
       },
       "geometry_reference": {
         "size": [
-          25,
-          30
+          32,
+          35
         ],
         "hotspot": [
-          11,
-          19
+          18,
+          20
         ]
       },
       "native_size": [
-        25,
-        30
+        32,
+        35
       ],
       "previous_size": [
         29,
@@ -2909,26 +2885,14 @@
         25
       ],
       "hotspot": [
-        11,
-        19
+        18,
+        20
       ],
-      "source": "built-in GPT Image native-pose redraw 2026-11-08",
-      "cleanup": "equal-cell crop; connected alpha; Lanczos to native envelope; shared palette; inside silhouette ink",
+      "source": "built-in GPT Image fresh joint carry style pass 2026-11-10",
+      "cleanup": "Nearest-neighbour at manually locked head/torso scale, MICA 6:1 / TALON 6.5:1; shoe/glove plane from source pair, translated to native centre offset. Palette-only reduction: MICA12 opaque slots, TALON10; no global outline repaint.",
       "material_box_change": true,
-      "consistency": {
-        "method": "re-reduced",
-        "source": "$HOME/scratch/agent-tmp/mica-poses-20261108/hang-generated.png",
-        "sha256": "dd77eeb1c712001c2c8df36e8de8ea882e0f8d5ba5d079b2a4852fceeabdc7b2",
-        "sourcePixelsPerGamePixel": 17.158825492158826,
-        "anchor": [
-          11,
-          19
-        ],
-        "size": [
-          25,
-          30
-        ]
-      }
+      "carry_provenance": "carry-generation.json",
+      "outline_mode": "material"
     },
     "homing_dive-00": {
       "reference": {

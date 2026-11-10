@@ -1656,6 +1656,28 @@ or blockers remain; the lead owns subsequent integration. No merge or push.
 
 ## Coverage audit (2026-11-09)
 
+**Paired carry polish, 2026-11-10:** three MICA hanging and twelve TALON
+normal/ascent carrier slots now use jointly generated grip geometry, with
+selective material contours and the native 12/10 opaque-colour budgets. The
+centre offset stays +28; MICA explicitly authors the raw 16-entry, 192-tick
+carry sequence, avoiding ordinary four-step family rebinding. An explicit $23 canonical
+alias preserves the separate ordinary table entry (53 keys, 274 drawings). No engine/API
+change. All 36 paired combinations touch in both grip windows; independent
+area ratios are 0.984 / 1.115 (integrated wings). The 1,224-row audit has no
+newly authored rows: these slots were already authored, and fallback totals
+remain zero. Provenance and residual boot-centroid differences are under
+`examples/mica-and-talon/art/*/carry-*`; scratch review and 60 fps AIZ clips:
+`$HOME/scratch/agent-tmp/mt-carry-20261110/review.html`. S1/S2 have no native
+carry; supplemental positioned mod probes did not latch and are not carry
+certification.
+
+Native ownership: `loc_14474` (sonic3k.asm:27323-27329) applies +$1C
+and reverses it under reverse gravity; `loc_144BA` (sonic3k.asm:27342-27356)
+and `AniRaw_Tails_Carry` (sonic3k.asm:27374-27376) own pose order and delay.
+Carrier `AniTails22` / `AniTails23` select $A2 / $A1, each a held body
+with delay $1F (General/Sprites/Tails/Anim - Tails.asm:82-83); TALON retains
+his authored six-phase, two-tick integrated wingbeat.
+
 **TALON object-pose closure, 2026-11-10:** 282 frames / 47 keys. The existing
 archetype-selected Tails vocabulary and shared NFRM binder now include the S2
 $75–$80 tumble bank and S3K object-driven views. 111 added drawings comprise

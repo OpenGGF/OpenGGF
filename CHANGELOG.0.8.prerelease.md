@@ -40,7 +40,9 @@ under the matching area heading; see the
 ## Modding and tools
 
 - **MICA, an original character framework example:** TALON now joins as her
-  default sidekick and is selectable solo.
+  default sidekick and is selectable solo. Joint native-pose carry redraws now
+  keep MICA’s raised gloves against TALON’s shoes throughout his wingbeat,
+  with native-style material contours and the complete S3K hanging sequence.
   TALON's S2/S3K native mapping namespaces now bind all declared poses through
   archetype-owned NFRM aliases, including S2 object tumble, S3K gravity loops,
   corkscrews, swing/grip/chain/carry and later object turns. The audit exposes

@@ -30,14 +30,21 @@ def verify(root):
         data=tuple(im.get_flattened_data() if hasattr(im,'get_flattened_data') else im.getdata())
         assert max(data)<16 and (any(data) or f['id']=='variant-blank'), f['id']
         assert set(im.convert('RGBA').getchannel('A').get_flattened_data() if hasattr(im,'get_flattened_data') else im.convert('RGBA').getchannel('A').getdata()) <= {0,255}
-        # Outline must be ink at every exposed native silhouette edge.
-        for y in range(im.height):
-            for x in range(im.width):
-                if im.getpixel((x,y)) and any(not (0<=a<im.width and 0<=b<im.height) or im.getpixel((a,b))==0 for a,b in ((x-1,y),(x+1,y),(x,y-1),(x,y+1))):
-                    assert im.getpixel((x,y))==1,(f['id'],x,y)
         provenance = core.get(f['id'], {})
         if 'alias' in provenance:
             provenance = core[provenance['alias']]
+        # Historical sheets use uniform ink. Native-style reductions may use
+        # selective material-shadow contours instead (recorded in provenance).
+        boundary = []
+        for y in range(im.height):
+            for x in range(im.width):
+                if im.getpixel((x,y)) and any(not (0<=a<im.width and 0<=b<im.height) or im.getpixel((a,b))==0 for a,b in ((x-1,y),(x+1,y),(x,y-1),(x,y+1))):
+                    boundary.append(im.getpixel((x,y)))
+                    if provenance.get('outline_mode') != 'material':
+                        assert im.getpixel((x,y))==1,(f['id'],x,y)
+        if provenance.get('outline_mode') == 'material':
+            assert len(set(boundary))>1, (f['id'],'uniform sticker contour')
+            assert boundary.count(1)<len(boundary)/2, (f['id'],'dominant ink contour')
         if 'source_asset' in provenance:
             import hashlib
             assert hashlib.sha256((root/provenance['source_asset']).read_bytes()).hexdigest()==provenance['source_sha256'], f['id']

@@ -1245,12 +1245,12 @@
       "order": 0,
       "file": "frames/hang-00.png",
       "hotspot": [
-        10,
+        17,
         20
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": "Consistency: re-reduced; original source uniform 14.751543:1; anatomical scale, never silhouette fit."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 3, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
     },
     {
       "id": "hang-01",
@@ -1258,12 +1258,12 @@
       "order": 1,
       "file": "frames/hang-01.png",
       "hotspot": [
-        11,
-        21
+        17,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": "Consistency: re-reduced; original source uniform 16.168482:1; anatomical scale, never silhouette fit."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 0, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
     },
     {
       "id": "hang-02",
@@ -1271,12 +1271,12 @@
       "order": 2,
       "file": "frames/hang-02.png",
       "hotspot": [
-        11,
-        19
+        18,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": "Consistency: re-reduced; original source uniform 17.158825:1; anatomical scale, never silhouette fit."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 5, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
     },
     {
       "id": "stop-00",
@@ -4286,18 +4286,42 @@
     },
     "TAILS_CARRIED": {
       "frames": [
-        "hang-00",
         "hang-01",
+        "hang-01",
+        "hang-00",
+        "hang-00",
+        "hang-00",
+        "hang-00",
+        "hang-00",
+        "hang-00",
         "hang-02",
+        "hang-02",
+        "hang-02",
+        "hang-02",
+        "hang-02",
+        "hang-02",
+        "hang-01",
         "hang-01"
       ],
-      "end": "loop",
       "durations": [
         12,
         12,
         12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
         12
-      ]
+      ],
+      "end": "loop"
     },
     "BLANK": {
       "frames": [
@@ -4362,6 +4386,21 @@
       ],
       "end": "loop-back",
       "loopBackSteps": 1
+    },
+    "GLIDE_SLIDE": {
+      "frames": [
+        "hang-00",
+        "hang-01",
+        "hang-02",
+        "hang-01"
+      ],
+      "durations": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "end": "loop"
     }
   },
   "nativeFrames": {
@@ -4489,9 +4528,6 @@
     "family-wait/4": "wait-04",
     "family-wait/5": "wait-05",
     "family-wait/6": "wait-06",
-    "family-tails-carried/0": "hang-00",
-    "family-tails-carried/1": "hang-01",
-    "family-tails-carried/2": "hang-02",
     "family-death/0": "death-00",
     "family-drown/0": "drown-00",
     "family-spring/0": "spring-00",

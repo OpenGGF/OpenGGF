@@ -26,7 +26,7 @@ OPTIONAL |= {name: (8, 'loop') for name in (
     'ROLL2', 'WARP1', 'WARP2', 'WARP3', 'WARP4', 'FLOAT', 'FLOAT2', 'FLOAT3',
     'FLOAT4', 'LEAP1', 'LEAP2', 'SURF', 'BURNT', 'SHRINK', 'WATER_SLIDE',
     'NULL_ANIM', 'BLANK', 'BLINK', 'GET_UP', 'BALANCE2', 'BALANCE3', 'BALANCE4',
-    'HANG2', 'BUBBLE', 'HURT2', 'SLIDE', 'VICTORY', 'HURT_FALL', 'TAILS_CARRIED')}
+    'HANG2', 'BUBBLE', 'HURT2', 'SLIDE', 'VICTORY', 'HURT_FALL', 'TAILS_CARRIED', 'GLIDE_SLIDE')}
 
 SPEED = {'WALK', 'RUN', 'ROLL', 'ROLL2', 'PUSH'}
 SLOPES = ('flat', 'up45', 'steep', 'inverted')

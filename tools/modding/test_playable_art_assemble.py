@@ -46,7 +46,7 @@ class PlayableArtAssemblyTest(unittest.TestCase):
             self.assertEqual(before, {name:(committed/name).read_bytes() for name in before})
             assembler.assemble(art, out)
             self.assertEqual(before, {p.name:p.read_bytes() for p in out.iterdir()})
-            self.assertEqual(stats, dict(frames=274, maxTilesPerFrame=30, animations=52))
+            self.assertEqual(stats, dict(frames=274, maxTilesPerFrame=30, animations=53))
             self.assertEqual('hang-00', source[manifest['nativeFrames']['hang/0']]['id'])
             self.assertEqual('wait-03', source[manifest['nativeFrames']['wait/fidget']]['id'])
             self.assertEqual('roll-01', source[manifest['nativeFrames']['roll/1']]['id'])
@@ -108,8 +108,9 @@ class PlayableArtAssemblyTest(unittest.TestCase):
         blank = next(f for f in handoff['frames'] if f['id']=='variant-blank')
         with Image.open(art/blank['file']) as im:
             self.assertIsNone(im.getbbox())
-        # The carried cycle preserves its return through the middle pose.
-        self.assertEqual(['hang-00', 'hang-01', 'hang-02', 'hang-01'],
+        # The carry owner uses its raw script, not the ordinary table fallback:
+        # AniRaw_Tails_Carry (sonic3k.asm:27374-27376).
+        self.assertEqual(['hang-01']*2+['hang-00']*6+['hang-02']*6+['hang-01']*2,
                          native['scripts']['S3K/TAILS_CARRIED']['ids'])
 
 
@@ -170,7 +171,27 @@ class TalonAssemblyTests(unittest.TestCase):
                 self.assertEqual(6, len(set(manifest['animations'][key]['frames'])))
             provenance = json.loads((art/'family-generation.json').read_text())['frames']
             for frame in source['frames']:
-                if frame['animation'] in ('TAILS_FLY_CARRY', 'TAILS_FLY_CARRY_ASCEND', 'TAILS_SWIM_CARRY'):
+                if frame['animation'] in ('TAILS_FLY_CARRY', 'TAILS_FLY_CARRY_ASCEND'):
+                    # The falcon grips with shoes, rather than Tails' lowered
+                    # gloves. Check the pair at the ROM's +28 centre offset;
+                    # a carrier-only bottom bound cannot establish contact.
+                    mica = art.parent/'mica'
+                    carried = json.loads((mica/'frames.yaml').read_text())['frames']
+                    with Image.open(art/frame['file']) as image:
+                        hx, hy = frame['hotspot']
+                        carrier_pixels = {(x-hx, y-hy) for y in range(image.height)
+                                          for x in range(image.width) if image.getpixel((x,y))}
+                    for grip in (f for f in carried if f['id'] in ('hang-00','hang-01','hang-02')):
+                        with Image.open(mica/grip['file']) as image:
+                            hx, hy = grip['hotspot']
+                            carried_pixels = {(x-hx, y-hy+28) for y in range(image.height)
+                                              for x in range(image.width) if image.getpixel((x,y))}
+                        for low, high in ((-15,-3),(-2,12)):
+                            shoe = {(x,y) for x,y in carrier_pixels if low<=x<=high and 3<=y<=14}
+                            glove = {(x,y) for x,y in carried_pixels if low<=x<=high and 0<=y<=14}
+                            self.assertTrue(any(abs(x-u)+abs(y-v)<=1 for x,y in shoe for u,v in glove),
+                                            (frame['id'],grip['id'],low,'detached grip'))
+                elif frame['animation'] == 'TAILS_SWIM_CARRY':
                     native = provenance[frame['id']]['reference']
                     with Image.open(art/frame['file']) as image:
                         self.assertEqual(native['size'][1]-native['hotspot'][1],

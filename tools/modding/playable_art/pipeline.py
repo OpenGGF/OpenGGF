@@ -141,7 +141,11 @@ def build(recipe_path, review=None):
             if not (0 <= x < 80 and 0 <= y < 80 and 0 <= index < 16):
                 raise ValueError('Invalid native pixel patch')
             canvas.putpixel((x,y),index)
-        canvas = outline(canvas)
+        outline_mode = frame.get('outline_mode', 'ink')
+        if outline_mode not in ('ink', 'material'):
+            raise ValueError('Unknown outline_mode: ' + str(outline_mode))
+        if outline_mode == 'ink':
+            canvas = outline(canvas)
         canvas.info['transparency'] = 0
         images[frame['id']] = canvas
         # Tight crop with explicit hotspot; no 80x80 padding shipped.

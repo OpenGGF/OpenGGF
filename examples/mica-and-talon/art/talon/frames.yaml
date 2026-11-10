@@ -1858,12 +1858,12 @@
       "order": 0,
       "file": "frames/family-tails-fly-carry-00.png",
       "hotspot": [
-        19,
-        22
+        18,
+        29
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_CARRY: attempt row 2, phase 0; uniform anatomical/goggle scale 5.7000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 0, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
     },
     {
       "id": "family-tails-fly-carry-01",
@@ -1871,12 +1871,12 @@
       "order": 1,
       "file": "frames/family-tails-fly-carry-01.png",
       "hotspot": [
-        26,
-        20
+        23,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_CARRY: attempt row 3, phase 1; uniform anatomical/goggle scale 5.3000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 1, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
     },
     {
       "id": "family-tails-fly-carry-02",
@@ -1884,12 +1884,12 @@
       "order": 2,
       "file": "frames/family-tails-fly-carry-02.png",
       "hotspot": [
-        26,
-        19
+        28,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_CARRY: attempt row 1, phase 2; uniform anatomical/goggle scale 5.4000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 2, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
     },
     {
       "id": "family-tails-fly-carry-03",
@@ -1897,12 +1897,12 @@
       "order": 3,
       "file": "frames/family-tails-fly-carry-03.png",
       "hotspot": [
-        20,
-        17
+        19,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_CARRY: attempt row 2, phase 3; uniform anatomical/goggle scale 5.6000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 3, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
     },
     {
       "id": "family-tails-fly-carry-04",
@@ -1910,12 +1910,12 @@
       "order": 4,
       "file": "frames/family-tails-fly-carry-04.png",
       "hotspot": [
-        19,
+        23,
         22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_CARRY: attempt row 3, phase 4; uniform anatomical/goggle scale 5.7000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 4, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
     },
     {
       "id": "family-tails-fly-carry-05",
@@ -1923,12 +1923,12 @@
       "order": 5,
       "file": "frames/family-tails-fly-carry-05.png",
       "hotspot": [
-        21,
-        18
+        31,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_CARRY: attempt row 1, phase 5; uniform anatomical/goggle scale 5.6000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 5, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
     },
     {
       "id": "family-tails-fly-carry-ascend-00",
@@ -1936,12 +1936,12 @@
       "order": 0,
       "file": "frames/family-tails-fly-carry-ascend-00.png",
       "hotspot": [
-        16,
-        19
+        18,
+        29
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_CARRY_ASCEND: attempt row 1, phase 0; uniform anatomical/goggle scale 5.5000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 0, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
     },
     {
       "id": "family-tails-fly-carry-ascend-01",
@@ -1949,12 +1949,12 @@
       "order": 1,
       "file": "frames/family-tails-fly-carry-ascend-01.png",
       "hotspot": [
-        20,
-        21
+        23,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_CARRY_ASCEND: attempt row 2, phase 1; uniform anatomical/goggle scale 6.0000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 1, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
     },
     {
       "id": "family-tails-fly-carry-ascend-02",
@@ -1962,12 +1962,12 @@
       "order": 2,
       "file": "frames/family-tails-fly-carry-ascend-02.png",
       "hotspot": [
-        25,
-        18
+        28,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_CARRY_ASCEND: attempt row 3, phase 2; uniform anatomical/goggle scale 5.5000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 2, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
     },
     {
       "id": "family-tails-fly-carry-ascend-03",
@@ -1975,12 +1975,12 @@
       "order": 3,
       "file": "frames/family-tails-fly-carry-ascend-03.png",
       "hotspot": [
-        25,
-        18
+        19,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_CARRY_ASCEND: attempt row 2, phase 3; uniform anatomical/goggle scale 5.5000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 3, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
     },
     {
       "id": "family-tails-fly-carry-ascend-04",
@@ -1988,12 +1988,12 @@
       "order": 4,
       "file": "frames/family-tails-fly-carry-ascend-04.png",
       "hotspot": [
-        22,
-        17
+        23,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_CARRY_ASCEND: attempt row 1, phase 4; uniform anatomical/goggle scale 5.5000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 4, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
     },
     {
       "id": "family-tails-fly-carry-ascend-05",
@@ -2001,12 +2001,12 @@
       "order": 5,
       "file": "frames/family-tails-fly-carry-ascend-05.png",
       "hotspot": [
-        16,
-        17
+        31,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_CARRY_ASCEND: attempt row 3, phase 5; uniform anatomical/goggle scale 5.6000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+12."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 5, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
     },
     {
       "id": "family-tails-swim-00",
