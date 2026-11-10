@@ -577,3 +577,16 @@ python3 tools/modding/playable_art/title_masks.py --mascot /scratch/frame-c.png 
 Native renders and raw generations remain outside Git. Authored title banks,
 local palettes, selector/hotspot bindings and provenance live under each
 character's `titles/` directory in the maintained example.
+
+
+## Native material contours
+
+Recipe frames may set `"outline_mode": "material"` to preserve selective
+material-shadow contours in generated indexed rows. The default `"ink"`
+continues to apply the historical inside silhouette outline. Record the
+measured surface style and `outline_mode` in the frame's native-pose provenance;
+`verify.py` checks material edges are varied and not dominated by charcoal,
+alongside the unchanged palette, binary alpha, geometry and rebuild checks.
+Do not use the option to bypass visual comparison: native real-palette 8×
+references, fresh generations, locked anatomy scale and an unlabelled per-frame
+side-by-side remain required. MICA/TALON carry provenance is a worked example.

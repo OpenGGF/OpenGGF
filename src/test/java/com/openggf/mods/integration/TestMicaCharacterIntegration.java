@@ -913,11 +913,14 @@ class TestMicaCharacterIntegration {
             var carry = talon.getTailsCarryController();
             assertTrue(carry.tryEncounterCarry());
             var seen = new java.util.HashSet<Integer>();
-            for (int i = 0; i < 60; i++) {
+            // AniRaw_Tails_Carry: sixteen entries, twelve ticks apiece.
+            assertEquals(16, frames.size());
+            for (int i = 0; i < 192; i++) {
                 carry.updateAfterTailsCollision(0);
                 assertTrue(carry.isCarrying(mica));
                 assertSame(renderer, mica.getSpriteRenderer());
                 assertTrue(frames.contains(mica.getMappingFrame()), "own carried family frame");
+                assertEquals(frames.get(i / 12), mica.getMappingFrame(), "native carry phase timing");
                 seen.add(mica.getMappingFrame());
             }
             assertEquals(new java.util.HashSet<>(frames), seen);
@@ -2221,7 +2224,7 @@ class TestMicaCharacterIntegration {
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(
                     packed.getInputStream(packed.getJarEntry("art/mica.ggfp")).readAllBytes());
             assertEquals(274, sheet.frames().size());
-            assertEquals(52, sheet.animations().size());
+            assertEquals(53, sheet.animations().size());
             assertEquals(List.of(27, 28, 29, 30), sheet.animations().get("HOMING_DIVE").steps()
                     .stream().map(com.openggf.level.objects.PlayableSheetReader.AnimationStep::frameIndex).toList());
             assertEquals(List.of(8, 8, 8, 8), sheet.animations().get("WALK").slopes()
