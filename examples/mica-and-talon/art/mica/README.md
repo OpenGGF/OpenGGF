@@ -99,28 +99,38 @@ palette, full-60-Hz lossless RGB lockstep movies at 3×, every-tick two-cycle st
 centroid plots and per-tick selector diffs. The positioned probes certify these
 presentation encounters, not complete special-stage routes.
 
-## Current locked special-stage bank (2026-11-10)
+## Current locked special-stage body-motion bank (2026-11-10)
 
-Owner review of `176d974b06` rejected temporal head/ear and shading drift. The
-current runtime bank is `consistent-stage/`, superseding `oriented-stage/`.
-A fresh canonical dome/ears/scale rows/torso is reused exactly for every upright
-phase. One separate canonical scale-ball supplies jumps, with native-measured
-glint sizes/heights and blur envelopes. Generated calves, white fists and coral
-boots track Sonic's native phases; the short tail stays behind the legs. S2
-rotates the same identity geometry while keeping its broad light field fixed.
+`consistent-stage/` supersedes `oriented-stage/`. The owner rejected independent
+phase identities in `176d974b06`, then the static body in `7190f49ae4` / integration
+`9318420b42`. This correction retains the same canonical generated dome, ears, scales, torso and short tail root.
+Every upright pose now rotates about the hips, with native-measured sway and bob,
+using Scale2x/nearest RotSprite-style reduction. Broad material lighting is
+reprojected in screen coordinates; the original specular stays upper-left.
+Generated limbs attach at the rotated shoulders/hips. Rear shoes and appendages
+use ordinary body occlusion while camera-facing shoes retain native contacts.
+Canonical source hashes and all native jump/curl drawings are unchanged.
 
-The per-frame head/ear layer IoU is 1.000, with zero RGB differences. Maximum glove
-centroid errors are 0.959 px S3K/0.595 px S2; shoe-contact boundary errors reach
-1.803/3.163 px. Independent size ratios are 0.9954 S3K and1.0079 S2. The source
-components,32-candidate shared generation provenance, native numeric landmarks
-and deterministic placement/glint recipes live in `consistent-stage/native-pose-generation.json`.
-No native pixels or raw generations ship. Rebuild/check with
+Head/ear and torso IoU against the posed canonical is 1.000, with zero indexed
+colour differences. Maximum full-layer lean error is 1.011/1.661° S3K/S2;
+every layer and visible-composite angle is within ±2° of Sonic, with matching
+sign. Shoe-contact boundary error is 1.803/2.500 px S3K/S2, below 3 px;
+all attachment gaps are at most 1 px. Independent size ratios: 0.9988 S3K / 1.0101 S2.
+No extra shear or squash is fitted. S2's native body also leans, so its upright,
+diagonal, horizontal and H/V/HV phases receive the same correction.
+
+Sources, immutable canonical hashes, numeric native PCA references, hip/shoulder
+landmarks and deterministic recipes are in `consistent-stage/native-pose-generation.json`.
+No native pixels or raw generations ship. Rebuild/check:
 `python3 tools/modding/playable_art/locked_stage.py examples/mica-and-talon/art/mica/consistent-stage --check`.
+Measure: `python3 tools/modding/playable_art/locked_stage_review.py examples/mica-and-talon/art/mica/consistent-stage --out /scratch/mica-motion.csv`.
 
-The shared real-capture review is
-`$HOME/scratch/agent-tmp/mt-bluesphere-consistency-20261110/review.html`.
-It includes all 144 native/new style gates, four-row 6× strips,60 fps paired films,
-head-material centroid plots, exact runtime colour samples, shadow/fade pixels
-and zero per-tick main mapping/motion differences. The existing draw/API path is
-unchanged; these replace authored rows, so coverage moves 0. Limits and the
-rejected independent-generation approach are recorded in the design audit.
+Review: `$HOME/scratch/agent-tmp/mt-bluesphere-tilt-20261110/review.html`.
+All 144 unlabelled native/new gates use real capture crops or their exactly
+sampled palette. Native-motion tables/plots, four-row 6× cycles/turns/jumps,
+stock/mod 60 fps MP4s at 3× and frame-by-frame fades accompany the colour,
+foot/shadow and selector diffs. Native Tails' separate appendage remains visible
+in comparison rows; TALON has folded tips. All palette/foot/fade checks pass,
+with zero mapping/motion/fade timeline differences. No API or engine changes;
+these authored replacements move 0 audit rows. See the design audit for exact
+pixel counts, tests and positioned-encounter limits.

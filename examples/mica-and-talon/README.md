@@ -302,27 +302,31 @@ palette, full-60-Hz lossless RGB lockstep movies at 3×, every-tick two-cycle st
 centroid plots and per-tick selector diffs. The positioned probes certify these
 presentation encounters, not complete special-stage routes.
 
-### Current special-stage consistency checkpoint (2026-11-10)
+### Current special-stage body-motion checkpoint (2026-11-10)
 
-`consistent-stage/` supersedes the independently generated `oriented-stage/`
-bank above. Each character/surface has one locked generated upright head/torso
-and a separate canonical curled ball. Generated limbs follow native Sonic's
-measured glove, shoe and contact phases; MICA's short tail and TALON's folded
-wing tips remain behind the legs. S2 angle templates and native ball glint/blur
-phases rederive from those same canonical components. The existing orientation
-API, native selectors, clocks, palette ownership, shadows and fades are unchanged.
+`consistent-stage/` retains each character's canonical generated head/torso and
+separate curl, while correcting the static-body result in `7190f49ae4` (integration
+`9318420b42`). Native Sonic's measured body axis, sway and bob drive deterministic
+RotSprite-style hip-pivot transforms on every upright selector, including S2's
+pipe sectors and all H/V/HV drawings. Broad shading and the original specular
+stay upper-left in screen space. Arms/calves attach at posed shoulders/hips;
+shoes retain native contacts. Curled jump drawings and canonical sources are
+unchanged. The existing Mod API, native selectors, clocks and draw path are reused.
 
-All 144 final drawings reproduce from committed components and recipes with
-`tools/modding/playable_art/locked_stage.py`; the companion review sampler reports
-head/ear IoU 1.000, zero identity pixel changes, and actual limb landmark errors.
-Native area ratios are S3K MICA 0.9954/TALON 0.9929, S2 MICA 1.0079/TALON 1.0215.
-Budgets remain 9/15 opaque colours for S3K/S2. These already-authored slots move
-zero audit rows; the 1310-obligation coverage matrix is unchanged.
+Every upright head/ear and torso layer has IoU 1.000 against its posed canonical,
+with zero indexed colour differences. Layer/visible body angles match Sonic
+within 1.661°/1.597°, with matching signs on every phase. Shoe contact error is
+at most 2.5 px; joint gap at most 1 px. Independent area ratios are S3K MICA
+0.9988/TALON 1.0007, S2 MICA 1.0101/TALON 1.0258. All 144 drawings reproduce from
+committed sources and recipes. Budgets stay 9/15 opaque colours for S3K/S2.
+These already-authored slots move zero audit rows: 1310 obligations, 674 authored,
+zero fallback, unchanged from the base.
 
-Review: `$HOME/scratch/agent-tmp/mt-bluesphere-consistency-20261110/review.html`.
-It contains the real six-times four-row cycles, turns and jumps, stock/mod60 fps
-films at 3×, all unlabelled native-style gates, colour samples and per-tick diffs.
-All 48 sampled slots, 25,725 foot pixels and 411,850 entry/exit/failure fade pixels
-match their expected runtime colours. Mapping/motion/fade differences are zero.
-The exit take declares debug completion; these are positioned presentation
-checks, not complete routes. See the design audit for measurements and limits.
+Review: `$HOME/scratch/agent-tmp/mt-bluesphere-tilt-20261110/review.html`.
+It contains native motion tables, all unlabelled style gates, real four-row 6×
+cycle/turn/jump/fade strips and stock/mod 60 fps MP4s at 3×. All 48 sampled palette
+slots, 47,702 foot pixels, 414,327 S3K fade pixels and 6,021,120 S2 additive-fade
+pixels match the native rendering rule. Mapping/motion/fade timeline differences
+are zero. S2 stage admission and the exit-clear triggers are declared probe
+setup; these are positioned solo presentation checks, not complete routes.
+See the design audit for per-frame measurements, tests and limits.
