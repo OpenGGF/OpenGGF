@@ -622,3 +622,28 @@ Acceptance media must use the actual captured ticks at 60 fps, with nearest
 scaling and lossless RGB if palette equality matters (`libx264rgb -crf 0`). Gate
 colours by sampling unobscured actor pixels in real captures. A source PNG review
 cannot detect later shadows, priority or fade errors.
+
+## S2 native-role title capture review
+
+`examples/mica-and-talon/art/mica/titles/s2_capture_review.py` builds the
+lockstep S2 title checkpoint from real capture frames and read-only sprite
+state rows. Inputs are paired900-tick captures, native-box area measurements,
+and an external native logo alpha mask. It compares every recorded native
+sprite state, inventories every distinct portrait difference, checks opaque
+foreground branding over the whole rise, and writes3× strips, shared guides,
+onion skins, all palm motion phases and a60fps paired film. No comparison
+value is fed to production. Keep all input/output pixels outside Git.
+
+```bash
+python3 examples/mica-and-talon/art/mica/titles/s2_capture_review.py \
+  --captures /scratch/s2-title-roles \
+  --native-logo-mask /scratch/native-title-logo-alpha.png
+```
+
+The capture directory contains `paired/s2-stock` and `paired/s2-mod`, each with
+`frames/00000.png` through `00899.png` and `title-state.csv` (frame,state), plus
+`areas.json` (per-frame character, native_area and authored_area). Native sprite
+state is active:selector:x:y for Sonic/Tails and their two independent hands,
+joined with `/`. Python3/Pillow and FFmpeg are required. This is presentation
+verification of the captured team, not gameplay-route or alternate-role
+certification. Provenance and limits live in each character's title README.

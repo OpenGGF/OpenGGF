@@ -29,8 +29,8 @@ final class TitlePresentation {
                         Map.entry(7,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s1-7.png"),0,0)))));
                 }
                 case S2 -> {
-                    // Every crop uses its destination native slot origin. The S2 lead
-                    // requests an owner exchange, preserving native rise and banner masking.
+                    // Keep each creator in its own native role, with native origins and rise paths.
+                    // The optional API slot exchange remains available but is disabled here.
                     parts.put(TitlePart.BODY,new StageSpriteSet(Map.ofEntries(
                         Map.entry(0,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-0.png"),-24,-16)),
                         Map.entry(1,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-1.png"),0,-16)),
@@ -67,7 +67,7 @@ final class TitlePresentation {
             }
             int[] hostRgb = host == Host.S3K && character.equals("mica")
                     ? PresentationImages.backing(assets,root+"s3k-plane-13-left.png",0).rgb() : rgb;
-            result.put(host,new TitleMascot(parts,masks,hostRgb,host == Host.S2 && character.equals("mica")));
+            result.put(host,new TitleMascot(parts,masks,hostRgb,false));
         }
         return Map.copyOf(result);
     }

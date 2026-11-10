@@ -1,0 +1,75 @@
+{
+  "origin": "Owner S2 role restoration, based on integration5278d637cd, 2026-11-10",
+  "method": "Fresh built-in GPT Image transformations of native title renders enlarged8x nearest, model sheets and approved WAIT frames. Independent alternatives, no chained edits. Binary alpha threshold128, largest connected component removes detached noise; native canvas and hotspot; fixed15colour palette quantization.",
+  "prompts": {
+    "talon": "Five columns x2rows sprite atlas. Top row5poses and bottom row5independent alternatives. Transform native Tails S2 title poses0,1,2,3,4 from reference1 (tails removed) into TALON slate peregrine falcon from model sheet2 and approved sprite3. Head/torso native landmarks and poses only, no fox identity: swept slate feather crest, amber aviator goggles above eyes, yellow hooked beak, dark falcon moustache stripe, brown eyes, cream barred chest and courier strap. NO GLOVES, no hands, no fist, no rotor, no fox tails or detached appendages. His OWN body-connected WINGS replace Tails tail motion, visible on screenLEFT of bust: col0wings folded and head bowed; col1head lifts eyesclosed and leftwing folded outward; col2eyes opening wing half open; col3head toward viewer wings tucked beside torso; col4smiling with leftwing halfopen feather tips. Native Tails main pose faces SCREEN RIGHT, since he peeks in from LEFT behind Sonic: keep reference facing, do not make all poses left-facing. Keep native compact head+torso scale across5poses; wings occupy former tail footprint, never scale down head to fit spread wing bounds. Cel pixelart matching native1992Sega title darkonepixel outlines,2shade steps per material, upper-left light,15colors. Bust only native bottomedge, no legs, no text, no logos, no sparkle marks. Transparent, no shadow. Same5poses perrow independent attempts."
+  },
+  "native_refs": "S2 title Tails BODY0..4 at real title palette, rotor/fox tails removed from reference only,8x nearest. Full native tail footprint remains the size denominator; TALON wings occupy it.",
+  "selections": "Top row poses0..4; lower independent alternatives rejected for silhouette/head proportions.",
+  "frames": [
+    {
+      "character": "talon",
+      "selector": 0,
+      "native_area": 2226,
+      "authored_area": 2501,
+      "native_canvas": [
+        56,
+        64
+      ],
+      "source_sha256": "c1a20d71c8d847023be1546e6605690f87f235294c14ae7312ed5cd3157ba387",
+      "selection": "upper row, lower alternative rejected for head/body proportion drift"
+    },
+    {
+      "character": "talon",
+      "selector": 1,
+      "native_area": 2482,
+      "authored_area": 2482,
+      "native_canvas": [
+        96,
+        64
+      ],
+      "source_sha256": "c1a20d71c8d847023be1546e6605690f87f235294c14ae7312ed5cd3157ba387",
+      "selection": "upper row, lower alternative rejected for head/body proportion drift"
+    },
+    {
+      "character": "talon",
+      "selector": 2,
+      "native_area": 2468,
+      "authored_area": 2859,
+      "native_canvas": [
+        88,
+        64
+      ],
+      "source_sha256": "c1a20d71c8d847023be1546e6605690f87f235294c14ae7312ed5cd3157ba387",
+      "selection": "upper row, lower alternative rejected for head/body proportion drift"
+    },
+    {
+      "character": "talon",
+      "selector": 3,
+      "native_area": 2759,
+      "authored_area": 2200,
+      "native_canvas": [
+        96,
+        64
+      ],
+      "source_sha256": "c1a20d71c8d847023be1546e6605690f87f235294c14ae7312ed5cd3157ba387",
+      "selection": "upper row, lower alternative rejected for head/body proportion drift"
+    },
+    {
+      "character": "talon",
+      "selector": 4,
+      "native_area": 2930,
+      "authored_area": 3171,
+      "native_canvas": [
+        96,
+        72
+      ],
+      "source_sha256": "c1a20d71c8d847023be1546e6605690f87f235294c14ae7312ed5cd3157ba387",
+      "selection": "upper row, lower alternative rejected for head/body proportion drift"
+    }
+  ],
+  "sqrt_mean_opaque_area_ratio": 1.0134348208089077,
+  "scratch": "$HOME/scratch/agent-tmp/title-s2-roles/",
+  "presentation": "swapS2Slots=false; native own roles, origins, rise and HAND clocks. Option retained in API; no engine/API changes.",
+  "limits": "Pair title visual acceptance; alternate-role banks inherited. S1/S3K unchanged."
+}

@@ -78,7 +78,8 @@ MICA's eight S1 poses are fresh native-pose generations with a rounded scale
 dome, pangolin snout, eyelashes and coral ears. The generated glove overlaps
 the hood in the foreground. Native canvases and hotspots remain unchanged.
 
-S2 uses the additive, default-off `TitleMascot.swapS2Slots` option. When the
+Historical round2 staging (superseded below) uses the additive, default-off
+`TitleMascot.swapS2Slots` option. When the
 configured lead requests it and both creator banks exist, the host exchanges
 presentation owners only: MICA inherits the left Tails-slot rise and native
 passes; TALON inherits the right Sonic-slot rise. Crop origins are native,
@@ -95,3 +96,36 @@ and size checks. Raw generations and real stock/mod capture frames remain at
 strips, 60fps paired films and a real-capture palm before/after zoom. S3K is
 unchanged by this lane. Alternate-role/solo art is inherited and not visually
 certified here. Coverage counts stay unchanged: this corrects authored banks.
+
+## S2 own native roles (owner follow-up, 2026-11-10)
+
+This supersedes round2's exchanged staging. The example explicitly passes
+`swapS2Slots=false`: MICA uses the centre-right, front Sonic slot; TALON uses
+the left Tails slot. The additive API option and its default-off constructor
+remain available; no API or engine changes are needed here. Every crop retains
+its native origin, with no lateral displacement.
+
+Fresh built-in GPT Image generations supply MICA BODY5/6/7/18 and HAND9, and
+TALON BODY0–4. MICA BODY6 shows the approaching palm, BODY7 the bent glove,
+and BODY18 excludes the hand. Separate HAND9 supplies her left palm-facing
+thumbs-up: thumb on viewer left, curled finger pads on viewer right, cuff
+below, short forearm down-left. Native Sonic hand positions and timing are
+unchanged, and the native top pass puts the glove in front of the head.
+TALON's connected wings carry his own motion; HAND19 remains transparent.
+His native Tails reference had the fox/rotor tails removed before generation.
+
+`s2-roles-generation.json` records full prompts, attempts, selections, hashes
+and size checks. Independent area ratios are MICA body/hand1.014 and TALON
+bodies1.013 (absent independent hand excluded). Real900-tick stock/mod output
+has35 distinct portrait-difference frames and three Sonic hand phases; all
+recorded native sprite selectors, positions and active flags match. All35
+frames are inspected in3× lockstep strips; paired60fps film, palm phase zooms,
+native-aligned onion skins and shared guides are in
+`$HOME/scratch/agent-tmp/title-s2-roles/review.html`. Native foreground branding
+compares equal over8,123,400 masked pixels on all900 ticks. This is a title
+presentation check, not gameplay parity. S1/S3K and inherited alternate-role
+art are unchanged. Coverage rows stay authored, with no fallback delta.
+
+The reusable review recipe is MICA's `s2_capture_review.py`. It accepts the
+paired capture directory and an external native logo alpha mask; neither
+the input native pixels nor its regenerable strips/movies belong in Git.
