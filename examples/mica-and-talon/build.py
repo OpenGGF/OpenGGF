@@ -55,6 +55,7 @@ def main():
              "--sheet", str(PROJECT / f"src/main/mod/mica_powered_{host}-sheet.yaml"), "--out", str(classes / f"art/mica-powered-{host}.ggfp")])
     shutil.copytree(PROJECT / "art/mica/presentation", classes / "art/mica/presentation", dirs_exist_ok=True)
     for character in ("mica", "talon"):
+        shutil.copytree(PROJECT / "art" / character / "competition-menu", classes / "art" / character / "competition-menu", dirs_exist_ok=True)
         shutil.copytree(PROJECT / "art" / character / "reels", classes / "art" / character / "reels", dirs_exist_ok=True)
         shutil.copytree(PROJECT / f"art/{character}/competition", classes / f"art/{character}/competition", dirs_exist_ok=True)
     shutil.copytree(PROJECT / "art/talon/endings", classes / "art/talon/endings", dirs_exist_ok=True)

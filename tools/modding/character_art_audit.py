@@ -214,6 +214,20 @@ def main():
     for f in [5,6]:
         add('talon','S3K','continue team sprite',f'{f:02X}','fallback','stock Tails',
             evidence=citation('docs/skdisasm/sonic3k.asm','loc_5C74A'),notes='Team idle bank; later run uses normal Tails WAIT/WALK scripts')
+    # Competition menu identity is separate from the racing miniature selectors.
+    for character in ['mica','talon']:
+        for surface,kind,label in [('wheel portrait','player','Obj_CompetitionPlayerSprite'),
+                ('arena select portrait','player','ObjDat_CompetitionMatchRace'),
+                ('results portrait','player','Obj_Competition_B9A6'),
+                ('records portrait','record','Obj_Competition_BEF8')]:
+            image=ART/character/'competition-menu'/f'{kind}.png'
+            add(character,'S3K','competition '+surface,kind,'authored' if image.is_file() else 'fallback',
+                str(image.relative_to(ROOT)),str(image.with_name(kind+'-provenance.json').relative_to(ROOT)),
+                rank='competition/2P only',evidence=citation('docs/skdisasm/sonic3k.asm',label))
+        add(character,'S3K','competition character names','all menus/results','N/A',
+            notes='Native menus identify characters by full-body sprites and record icons; no character-name text. Arena names and 1P/2P labels remain native.')
+        add(character,'S3K','competition mode menu','portrait/name','N/A',
+            notes='Mode menu has mode labels, item switch and pointers; no character image or name.')
     # Complete textual inventories of relevant split native mapping/animation banks.
     candidates=[]
     for root in ['docs/s1disasm','docs/s2disasm','docs/skdisasm']:

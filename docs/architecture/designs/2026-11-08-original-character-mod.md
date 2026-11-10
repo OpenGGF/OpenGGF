@@ -2801,3 +2801,53 @@ fallback / N/A: S1 0/1/2/2, S2 45/1/27/52, S3K 42/1/69/78. The extra S3K pilot
 obligation was discovered in the actual team capture. See the ending art README
 for independent size measurements and scope. Main presentation wiring remains
 with the parallel lane; no definition or TalonPresentation file was edited.
+
+### Competition menu identity audit (2026-11-10)
+
+The menu lane extends the candidate with optional independently paletted
+`CompetitionPortrait` images for `S3K_PLAYER` and `S3K_RECORD`, retaining native
+hotspots, SAT/plane priority, scrolling, blink and display conversion. Four new
+identity obligations per character (wheel, arena selector, results panel, records)
+move from inventoried fallback to authored. Two inventory rows per character are
+N/A: mode menu identity and character-name lettering. The native menus have no
+character-name strings; no generated font was necessary. Full native labels and
+surface inventory are in `docs/modding/characters.md`.
+
+Native-pose GPT Image selection and independently measured sizes live under
+`art/{mica,talon}/competition-menu/`. MICA area ratios: player 1.045, records
+1.090; TALON: player 0.979, records 1.002. Review and paired headless captures:
+`$HOME/scratch/agent-tmp/mt-competition-wheel-20261110/review.html`.
+
+Verification at this lane's final tree: 52 Python tests pass; 161 distinct
+selected Java tests pass with zero skips across the broad focused run and its
+correction. The first Java run had eight new TALON errors because menu portraits
+were read from a closed mod asset root inside the presentation callback. The
+fix eagerly decodes them during registration, matching reel lifetime ownership.
+The correction reran all 42 `TestMicaCharacterIntegration` tests plus
+`TestNativeMenuRaster`, `TestS3kCompetitionPortraits`,
+`TestS3kCompetitionMenuScene` and `TestS3kCompetitionMenuPixels`: 70 pass,
+zero failures/errors/skips. It also covers native-line-specific portrait fades.
+The other 91 tests passed in the earlier focused run, including API signature,
+coverage audit, S2 native menu presentation, miniature art and all four required
+S3K load/bootstrap classes. No full-suite or all-arena certification is claimed.
+
+Commands use the Maven queue, `-Dmse=off`,
+`-Dopenggf.headless.gl=surfaceless-egl`, unset `DISPLAY`/`WAYLAND_DISPLAY`,
+and `LUA_BIN=/usr/bin/lua5.4`. Audit output is selected with
+`-Dart.audit.output=$HOME/scratch/agent-tmp/mt-competition-wheel-20261110/audit`;
+paired capture output uses `-Dcompetition.menu.capture.output=.../capture`.
+All ROMs were found. CPU reference exports agree byte-for-byte with native
+engine exports for both characters at both sizes. Every captured native and
+authored menu is compared pixel-for-pixel against the EGL framebuffer.
+The mutable candidate remains 0.7.0. The version commentary and 24 additive
+normalized signature lines are updated. The enforced candidate-pin policy rejects
+release-descriptor edits for ordinary surface regeneration, so the descriptor
+remains unchanged; no publication or promotion is performed.
+
+Actual branch-base S3K authored/alias/fallback/N/A totals are MICA
+153/59/103/5 → 157/59/103/7 and TALON 84/1/26/78 → 88/1/26/80.
+The base audit did not yet inventory these menus. Including their newly
+inventoried obligations before authoring gives MICA 153/59/107/7 →
+157/59/103/7 and TALON 84/1/30/80 → 88/1/26/80: eight fallback obligations
+resolved, with four explicit N/A inventory rows. Existing gameplay coverage
+and inherited route gaps are unchanged.

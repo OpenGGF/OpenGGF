@@ -122,8 +122,9 @@ presentation data. HUD glyph and missing presentation limits are listed above.
 Select MICA as lead and TALON in the sidekick row before entering Competition.
 The existing Sonic and Tails wheel slots then use their configured creator
 character's miniature banks. With a native team, the slots retain native art.
-This is a presentation substitution over native Competition mechanics: names,
-wheel portraits, records, abilities and race rules remain native archetype-owned.
+This is a presentation substitution over native Competition mechanics: abilities and race rules remain native archetype-owned. Menu wheel/results
+portraits and record icons use independent generated character art; native
+Competition menus have no character-name strings to replace.
 The first configured character for an archetype wins; this does not add wheel
 positions or admit arbitrary creator movement into the miniature simulation.
 
@@ -185,3 +186,10 @@ The S3K reunion plane also has a separate sidekick pilot (native selector 12).
 `S3K_TORNADO_PILOT` aliases the generated S2 side-view cockpit with hotspot
 (12,8). Native alpha geometry is identical; native palettes differ. This keeps
 TALON visible in MICA's team reunion without adding a reunion portrait actor.
+
+The optional `competitionPortraits` contract supplies both menu identity sizes.
+The wheel, arena selector and results panels share the player portrait; Time
+Attack top-three records use a smaller independent pose. Saved native archetype
+records show the current configured creator character. See the inventory in
+[characters](../../docs/modding/characters.md#s3k-competition-menu-identity) and
+`art/<character>/competition-menu/README.md` for art and size evidence.

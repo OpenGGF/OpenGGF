@@ -8,14 +8,34 @@ import java.util.Objects;
 public record CharacterPresentation(String displayName, String hudName,
         Map<Host, Art> art, Map<Font, Map<Character, Image>> supplementaryGlyphs,
         Map<StageSpriteSet.Surface, StageSpriteSet> stages,
-        Map<EndingSpriteSet.Surface, EndingSpriteSet> endings, Map<Host, ReelFace> reelFaces) {
+        Map<EndingSpriteSet.Surface, EndingSpriteSet> endings, Map<Host, ReelFace> reelFaces, Map<CompetitionSurface, CompetitionPortrait> competitionPortraits) {
+    public CharacterPresentation(String displayName, String hudName, Map<Host, Art> art,
+            Map<Font, Map<Character, Image>> supplementaryGlyphs, Map<StageSpriteSet.Surface, StageSpriteSet> stages,
+            Map<EndingSpriteSet.Surface, EndingSpriteSet> endings, Map<Host, ReelFace> reelFaces) {
+        this(displayName, hudName, art, supplementaryGlyphs, stages, endings, reelFaces, Map.of());
+    }
+    public CharacterPresentation withCompetitionPortraits(Map<CompetitionSurface, CompetitionPortrait> portraits) {
+        return new CharacterPresentation(displayName, hudName, art, supplementaryGlyphs, stages, endings, reelFaces, portraits);
+    }
+    @ModApi public enum CompetitionSurface { S3K_PLAYER, S3K_RECORD }
+    /** Native origin relative to image top-left; an independent sixteen-colour palette. */
+    @ModApi public record CompetitionPortrait(PresentationFrameSet.Pose pose, int[] rgb) {
+        public CompetitionPortrait {
+            Objects.requireNonNull(pose, "pose");
+            if (pose.image().width() > 64 || pose.image().height() > 64)
+                throw new IllegalArgumentException("Competition portraits must fit 64 by 64 pixels");
+            if (rgb.length != 16) throw new IllegalArgumentException("Sixteen portrait colours required");
+            rgb = rgb.clone();
+        }
+        @Override public int[] rgb() { return rgb.clone(); }
+    }
     public CharacterPresentation(String displayName, String hudName, Map<Host, Art> art,
             Map<Font, Map<Character, Image>> supplementaryGlyphs, Map<StageSpriteSet.Surface, StageSpriteSet> stages,
             Map<EndingSpriteSet.Surface, EndingSpriteSet> endings) {
         this(displayName, hudName, art, supplementaryGlyphs, stages, endings, Map.of());
     }
     public CharacterPresentation withReelFaces(Map<Host, ReelFace> faces) {
-        return new CharacterPresentation(displayName, hudName, art, supplementaryGlyphs, stages, endings, faces);
+        return new CharacterPresentation(displayName, hudName, art, supplementaryGlyphs, stages, endings, faces, competitionPortraits);
     }
     public CharacterPresentation(String displayName, String hudName, Map<Host, Art> art,
             Map<Font, Map<Character, Image>> supplementaryGlyphs, Map<StageSpriteSet.Surface, StageSpriteSet> stages) {
@@ -103,6 +123,7 @@ public record CharacterPresentation(String displayName, String hudName,
         stages = Map.copyOf(stages);
         endings = Map.copyOf(endings);
         reelFaces = Map.copyOf(reelFaces);
+        competitionPortraits = Map.copyOf(competitionPortraits);
         var copy = new java.util.LinkedHashMap<Font, Map<Character, Image>>();
         supplementaryGlyphs.forEach((font, glyphs) -> copy.put(Objects.requireNonNull(font), Map.copyOf(glyphs)));
         supplementaryGlyphs = Map.copyOf(copy);

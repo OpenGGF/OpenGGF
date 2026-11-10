@@ -145,7 +145,18 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
         var slots=S3kCompetitionCharacterArt.slots(rootModule.getPlayableCharacterRegistry(),selected);
         art = new S3kCompetitionArtProvider(assets,S3kCompetitionCharacterArt.load(slots));
         spritePages = new S3kCompetitionSpritePages(art);
-        menus = new S3kCompetitionMenuScene(rom, assets); animator = S3kMiniatureAnimation.fromRom(rom,resources);
+        var menuPresentations = new java.util.HashMap<Integer, com.openggf.game.CharacterPresentation>();
+        for (var entry : slots.entrySet()) {
+            var d = entry.getValue();
+            if (d.presentationSupplier() == null) continue;
+            try {
+                var p = d.presentationSupplier().load(d.key().persisted(), com.openggf.game.GameId.S3K);
+                if (p != null) menuPresentations.put(entry.getKey().ordinal(), p);
+            } catch (IOException | RuntimeException failure) {
+                java.util.logging.Logger.getLogger(getClass().getName()).warning("Competition portrait retained native fallback: " + failure.getMessage());
+            }
+        }
+        menus = new S3kCompetitionMenuScene(rom, assets, menuPresentations); animator = S3kMiniatureAnimation.fromRom(rom,resources);
         cameras = new Camera[]{new Camera(engine.configuration()), new Camera(engine.configuration())};
         screen = new S3kCompetitionScreen(this);
     }

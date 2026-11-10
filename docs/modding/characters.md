@@ -770,7 +770,7 @@ private presentation rows without replacing arena palettes.
 Competition uses the configured lead and sidekick team to substitute registered
 creator characters into the existing Sonic/Tails/Knuckles wheel slots. The first
 configured character for each archetype wins. With a native team, the wheel
-launches native art. Wheel portraits/names, records and the miniature simulation
+launches native art. The miniature simulation and record identities
 remain native archetype-owned: campaign sprite factories, physics and abilities
 are not invoked. The maintained MICA/TALON example shows all body selectors,
 explicit transparent tail frames and independent per-frame hotspots.
@@ -779,3 +779,38 @@ explicit transparent tail frames and independent per-frame hotspots.
 ending route. It replaces native plane selector 12 at hotspot (12,8). The 24×16
 crop shares the S2 side-view cockpit geometry, so creators may reuse that image.
 Tails-alone's Sonic pilot stays native. Missing slots retain native art.
+
+### S3K Competition menu identity
+
+`CharacterPresentation.competitionPortraits` optionally supplies `S3K_PLAYER`
+(the shared wheel/results full-body sprite) and `S3K_RECORD` (the small record
+icon). Each `CompetitionPortrait` has a `PresentationFrameSet.Pose` containing
+indexed pixels and its native origin/hotspot, plus an independent sixteen-colour
+RGB palette. Omitted surfaces retain native art. Existing constructors remain
+available, and `withReelFaces` preserves Competition portraits. Like miniatures,
+the configured creator team supplies the existing archetype slots; no wheel
+positions, abilities, race rules or record identities change. Saved records store
+native archetypes, so their icons reflect the currently configured substitution.
+
+The renderer keeps SAT ordering, wheel depth, plane occlusion, scrolling, native
+shadow intensity, palette fade and display conversion. Portraits occupy detached
+presentation patterns and never overwrite ROM patterns or the four menu palettes.
+
+Native surface inventory (locked-on ROM):
+
+| Surface | Native owner | Character identity |
+| --- | --- | --- |
+| Mode/items menu | Competition_Menu (sonic3k.asm:13480-13631) | N/A: mode labels, item switch and pointers only |
+| Grand Prix character wheel | Obj_CompetitionPlayerSprite (sonic3k.asm:14643-14667); ObjDat_B6C8 (sonic3k.asm:14683-14716) | `S3K_PLAYER`, all three wheel positions for each admitted participant |
+| Match Race/Time Attack arena selector | ObjDat_CompetitionMatchRace (sonic3k.asm:14292-14328); ObjDat_CompetitionTimeAttack (sonic3k.asm:14330-14353) | Same `S3K_PLAYER` wheel sprites, including horizontal scroll |
+| Grand Prix results | Obj_Competition_B9A6 (sonic3k.asm:14888-14903); ObjDat_BB4A (sonic3k.asm:15069-15095) | `S3K_PLAYER` at each participant result panel |
+| Time Attack results/records player panel | ObjDat_BF58 (sonic3k.asm:15350-15367) | Same `S3K_PLAYER` sprite |
+| Time Attack top-three records | Obj_Competition_BEF8 (sonic3k.asm:15315-15350) | `S3K_RECORD`; keeps native blink admission and fixed icon positions |
+| Race, lap/time/item HUD | Existing miniature body/tail surfaces | Miniatures already supplied; numeric HUD/player labels contain no character name or face |
+| Character-name lettering, all Competition menus/results | Native object/copy tables above | N/A: these screens identify characters with sprites, not character-name strings. Arena names, mode labels, rank and 1P/2P labels are host text. No supplementary glyphs are needed or generated. |
+
+The ROM's `Map_CompetitionPlayerSprite_` table has three full-body frames, not
+headshots. Native Time Attack records reuse `Map_Results` frames $29..$2B.
+MICA/TALON supply original transformed poses at both sizes. This inventory covers
+the native Competition flow; campaign and special-stage results use their own
+existing presentation contracts.

@@ -41,7 +41,10 @@ under the matching area heading; see the
   goggles-down ending/SCZ/WFZ cockpit crops, a shared S3K reunion pilot and solo S3K reunion poses. Native-cell, locally paletted reel
   portraits now cover S2 CNZ and S3K Slots lead/sidekick symbols, TALON solo
   and Gilded/Solar symbols through optional candidate character presentation;
-  slot rewards and other symbols remain native. Title mascot art remains open. S3K Competition renders MICA/TALON with
+  slot rewards and other symbols remain native. Title mascot art remains open. S3K Competition wheel, arena selection, results panels and record icons now
+  use original MICA/TALON portraits with independent palettes and native origins;
+  absent portraits retain native art. Native Competition has no character-name
+  strings. S3K Competition renders MICA/TALON with
   independent native-ID miniature banks and hotspots, per-frame native fallback
   and private palettes; configured creator team members occupy their native
   archetype wheel slots while the miniature simulation stays native. His Tails archetype uses native S3K
