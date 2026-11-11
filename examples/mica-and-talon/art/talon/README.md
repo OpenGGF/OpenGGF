@@ -52,7 +52,10 @@ thrown open as the crest ignites) are fresh owner-concept generations, recorded 
 [`powered-concepts-generation.json`](../../production/talon/powered-concepts-generation.json).
 Slot 2 stays dark bronze for the chest bars, moustache and feather breaks; 3–5 are
 white-gold plumage, 6 the cycling orange tip, and fixed amber 14/15 and red 10
-finish the flames. Free flight is the earlier drawing in the new palette.
+finish the flames. Every Solar frame is body-locked to TALON's 11 px skull, so the
+crest extends above his normal body: he stands 43 px (Knuckles is 40), with his sole
+on normal TALON's ground line and unchanged hotspots and collision. Free flight is the
+earlier drawing in the new palette.
 
 `production/talon/feedback_art.py` reproduces every selected/converted image from
 original indexed rows; raw generations and decoded native references stay outside
