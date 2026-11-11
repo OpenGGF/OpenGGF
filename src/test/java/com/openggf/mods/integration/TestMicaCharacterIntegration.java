@@ -239,6 +239,21 @@ class TestMicaCharacterIntegration {
                     if (!superPose && !normal && visible && (int) privateField(actor, "mappingFrame") == 0xBA) {
                         normal = true;
                         com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve("normal.png"));
+                        var manager = GameServices.level().getObjectManager();
+                        var rewind = com.openggf.game.session.SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                        var snapshot = rewind.capture();
+                        manager.setRewindInPlaceRestoreEnabledForTest(false);
+                        rewind.restore(snapshot);
+                        var restored = manager.activeObjectsOfType(com.openggf.game.sonic3k.objects.AizPlaneIntroInstance.class)
+                                .iterator().next();
+                        assertNotSame(actor, restored);
+                        // A redraw may precede the next update after a seek.
+                        session.renderFrame();
+                        var restoredRenderer = (PlayerSpriteRenderer) privateField(restored, "sonicRenderer");
+                        assertEquals(source.dplcFrames().get(sheet.nativeFrames().get("ride/stand")),
+                                restoredRenderer.dplcFrame(0xBA));
+                        assertNotNull(privateField(restored, "creatorIntroArt"));
+
                     }
                     if (superPose && !powered && visible) {
                         powered = true;

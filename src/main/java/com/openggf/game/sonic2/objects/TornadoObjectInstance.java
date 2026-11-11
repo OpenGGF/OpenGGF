@@ -278,7 +278,9 @@ public class TornadoObjectInstance extends AbstractObjectInstance
 
     // ObjB2_Animate_Pilot state (s2.asm:79653-79671):
     // objoff_37 = 9-frame countdown, objoff_36 = pilot-frame table cursor.
-    private final com.openggf.game.presentation.TornadoPilotPresentation customPilot =
+    // Derived art/renderer memo only: native pilot frame and position are captured by this object.
+    // Recreated Tornados rebuild the overlay from the restored active team on first draw.
+    private transient final com.openggf.game.presentation.TornadoPilotPresentation customPilot =
             new com.openggf.game.presentation.TornadoPilotPresentation();
     private int pilotTimer;
     private int pilotTableCursor;
