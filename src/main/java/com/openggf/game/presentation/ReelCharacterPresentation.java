@@ -7,11 +7,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.LinkedHashMap;
-import java.util.logging.Logger;
+import java.io.UncheckedIOException;
 
 /** Presentation-only reel portraits. No changes to symbol selection, clocks or rewards. */
 public final class ReelCharacterPresentation {
-    private static final Logger LOG = Logger.getLogger(ReelCharacterPresentation.class.getName());
     private ReelCharacterPresentation() { }
 
     public record Portrait(CharacterPresentation.Image image, int[] rgb) {
@@ -57,8 +56,8 @@ public final class ReelCharacterPresentation {
             if (face == null) return;
             var image = powered ? face.poweredFace() : face.face();
             if (image != null) result.put(symbol, new Portrait(image, powered ? face.poweredRgb() : face.rgb()));
-        } catch (IOException | RuntimeException failure) {
-            LOG.warning("Reel portrait retained native fallback: " + failure.getMessage());
+        } catch (IOException failure) {
+            throw new UncheckedIOException("Cannot load reel portrait", failure);
         }
     }
 

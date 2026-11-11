@@ -293,6 +293,13 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
         return new AizPlaneIntroInstance(ctx.spawn());
     }
 
+    @Override
+    protected void afterGenericRewindStateRestored(com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        // Rewind can redraw a freshly recreated actor before another update.
+        // Rebuild creator inputs here so that redraw cannot latch native Sonic art.
+        prepareCreatorIntroRenderers();
+    }
+
     // -----------------------------------------------------------------------
     // ObjectInstance interface
     // -----------------------------------------------------------------------
@@ -314,6 +321,8 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        prepareCreatorIntroRenderers();
+        ensureIntroSonicRenderersLoaded();
         rebindIntroSpriteArtAfterRestore();
         claimIntroSpriteArtIfReady();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
@@ -475,50 +484,60 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
             var rom = services().rom();
             Sonic3kPlayerArt art = new Sonic3kPlayerArt(RomByteReader.fromRom(rom));
             var nativeArt = art.loadSonic();
-            var module = services().gameModule();
-            CharacterDefinition definition = null;
-            if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite player
-                    && !player.characterKey().isBuiltin() && module != null
-                    && module.getPlayableCharacterRegistry() != null) {
-                definition = module.getPlayableCharacterRegistry().find(player.characterKey()).orElse(null);
-            }
-            if (definition != null && definition.artSupplier() != null) {
-                var source = definition.artSupplier().load(definition.key().persisted());
-                creatorUsesNativeAliases = PlayableSheetAnimationBinding.hasNativeFrameAliases(source)
-                        || !PlayableSheetAnimationBinding.requiresBinding(source);
-                creatorIntroArt = PlayableSheetAnimationBinding.requiresBinding(source)
-                        ? PlayableSheetAnimationBinding.bind(source, module.getDonorCapabilities(),
-                                nativeArt) : source;
-                sonicRenderer = new PlayerSpriteRenderer(creatorIntroArt, services().graphicsManager());
-                StageCharacterPresentation.bindPalette(sonicRenderer, definition);
-                superSonicRenderer = sonicRenderer;
-                if (sonicRenderer.getRenderContext() != null) {
-                    creatorBasePalette = sonicRenderer.getRenderContext().getPalette(sonicRenderer.paletteLine()).deepCopy();
-                }
-                if (definition.superFormSupplier() != null) {
-                    var forms = definition.superFormSupplier().load(definition.key().persisted());
-                    if (forms != null) creatorSuperForm = forms.games().getOrDefault(GameId.S3K, Map.of())
-                            .get(SuperFormProfile.Tier.SUPER);
-                }
-                if (creatorSuperForm != null) {
-                    creatorSuperCycle = creatorSuperForm.dryCycle().stream().map(row -> {
-                        byte[] words = new byte[32];
-                        for (int i = 0; i < 16; i++) {
-                            words[i * 2] = (byte) (row.get(i) >>> 8);
-                            words[i * 2 + 1] = (byte) (int) row.get(i);
-                        }
-                        var palette = new Palette();
-                        palette.fromSegaFormat(words);
-                        return palette;
-                    }).toList();
-                }
-            } else {
-                sonicRenderer = new PlayerSpriteRenderer(nativeArt);
-                superSonicRenderer = new PlayerSpriteRenderer(art.loadSuperSonicArtSet());
-            }
+            sonicRenderer = new PlayerSpriteRenderer(nativeArt);
+            superSonicRenderer = new PlayerSpriteRenderer(art.loadSuperSonicArtSet());
             renderersLoaded = true;
         } catch (IOException e) {
             throw new UncheckedIOException("Could not load AIZ intro Sonic renderers", e);
+        }
+    }
+
+    /** Creator art, aliases and palette inputs are prepared by the update owner, including after recreation. */
+    private void prepareCreatorIntroRenderers() {
+        if (renderersLoaded) return;
+        try {
+            var module = services().gameModule();
+            if (module == null || module.getPlayableCharacterRegistry() == null) return;
+            CharacterDefinition definition = null;
+            if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite player
+                    && !player.characterKey().isBuiltin()) {
+                definition = module.getPlayableCharacterRegistry().find(player.characterKey()).orElse(null);
+            }
+            if (definition == null || definition.artSupplier() == null) return;
+            var art = new Sonic3kPlayerArt(RomByteReader.fromRom(services().rom()));
+            var nativeArt = art.loadSonic();
+            var source = definition.artSupplier().load(definition.key().persisted());
+            creatorUsesNativeAliases = PlayableSheetAnimationBinding.hasNativeFrameAliases(source)
+                    || !PlayableSheetAnimationBinding.requiresBinding(source);
+            creatorIntroArt = PlayableSheetAnimationBinding.requiresBinding(source)
+                    ? PlayableSheetAnimationBinding.bind(source, module.getDonorCapabilities(),
+                            nativeArt) : source;
+            sonicRenderer = new PlayerSpriteRenderer(creatorIntroArt, services().graphicsManager());
+            StageCharacterPresentation.bindPalette(sonicRenderer, definition);
+            superSonicRenderer = sonicRenderer;
+            if (sonicRenderer.getRenderContext() != null) {
+                creatorBasePalette = sonicRenderer.getRenderContext().getPalette(sonicRenderer.paletteLine()).deepCopy();
+            }
+            if (definition.superFormSupplier() != null) {
+                var forms = definition.superFormSupplier().load(definition.key().persisted());
+                if (forms != null) creatorSuperForm = forms.games().getOrDefault(GameId.S3K, Map.of())
+                        .get(SuperFormProfile.Tier.SUPER);
+            }
+            if (creatorSuperForm != null) {
+                creatorSuperCycle = creatorSuperForm.dryCycle().stream().map(row -> {
+                    byte[] words = new byte[32];
+                    for (int i = 0; i < 16; i++) {
+                        words[i * 2] = (byte) (row.get(i) >>> 8);
+                        words[i * 2 + 1] = (byte) (int) row.get(i);
+                    }
+                    var palette = new Palette();
+                    palette.fromSegaFormat(words);
+                    return palette;
+                }).toList();
+            }
+            renderersLoaded = true;
+        } catch (IOException failure) {
+            throw new UncheckedIOException("Could not load AIZ creator intro renderers", failure);
         }
     }
 
