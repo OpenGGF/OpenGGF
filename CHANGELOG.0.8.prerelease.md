@@ -194,7 +194,9 @@ under the matching area heading; see the
   stable native lean/contact phases. Both forms shimmer yellow/gold to white,
   with cycling silhouette contours and readable scale/feather shading; original
   rolling geometry now uses the same powered material treatment. S1 creator
-  forms play animated transformations. Joint native-pose carry redraws now
+  forms play animated transformations. Normal RUN uses MICA’s own coral ankle
+  boots, jade laces and tan soles, with a readable darker far shoe and preserved
+  native gait/contact support. Joint native-pose carry redraws now
   keep MICA’s raised gloves against TALON’s shoes throughout his wingbeat,
   with native-style material contours and the complete S3K hanging sequence.
   S3K title wag sprites now own the complete glove and backing context,

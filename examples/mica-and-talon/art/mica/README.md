@@ -48,3 +48,14 @@ presentation probe: build the example, compile it against `target/classes` and
 WAYLAND_DISPLAY unset, surfaceless EGL and an owned save root. The probe declares
 emeralds/rings, an airborne transformation start, camera registration and held
 pose speed 0x900; it is art/palette evidence, not route certification.
+
+## Interim normal RUN boots, 2026-11-11
+
+The four normal flat RUN poses use actual `wait-00` boot pixels with the native
+foot-wheel orientation: coral/jade/tan materials, dark outline and darker far shoe.
+The head/body/gloves stay registered to their prior pixels; the flat ground
+support stays centre +20. All twelve slopes derive from the corrected flats.
+`production/mica/normal-run-boots.json` records the source crop, rotations, masks
+and selected rows; `production/mica/normal_run_boots.py --check` verifies them.
+The independent area ratio is **0.982** against the four native S2 RUN references.
+Powered redesign work remains external and deferred.

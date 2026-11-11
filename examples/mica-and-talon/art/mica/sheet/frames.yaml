@@ -288,7 +288,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Round3 generated native pose; chosen B2; native aspect padded, no repainting."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained."
     },
     {
       "id": "run-01",
@@ -301,7 +301,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Round3 generated native pose; chosen 3; native aspect padded, no repainting."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained."
     },
     {
       "id": "run-02",
@@ -314,7 +314,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Round3 generated native pose; chosen B2; native aspect padded, no repainting."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained."
     },
     {
       "id": "run-03",
@@ -327,7 +327,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Round3 generated native pose; chosen 1; native aspect padded, no repainting."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained."
     },
     {
       "id": "spring-00",
@@ -782,7 +782,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-00; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-00."
     },
     {
       "id": "run-up45-01",
@@ -790,12 +790,12 @@
       "order": 5,
       "file": "frames/run-up45-01.png",
       "hotspot": [
-        10,
+        9,
         17
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-01; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-01."
     },
     {
       "id": "run-up45-02",
@@ -808,7 +808,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-02; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-02."
     },
     {
       "id": "run-up45-03",
@@ -821,7 +821,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-03; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-03."
     },
     {
       "id": "run-steep-00",
@@ -830,11 +830,11 @@
       "file": "frames/run-steep-00.png",
       "hotspot": [
         15,
-        16
+        17
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-00; +90 degrees CCW, native support, integer contact alignment."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-00."
     },
     {
       "id": "run-steep-01",
@@ -847,7 +847,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-01; +90 degrees CCW, native support, integer contact alignment."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-01."
     },
     {
       "id": "run-steep-02",
@@ -860,7 +860,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-02; +90 degrees CCW, native support, integer contact alignment."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-02."
     },
     {
       "id": "run-steep-03",
@@ -869,11 +869,11 @@
       "file": "frames/run-steep-03.png",
       "hotspot": [
         14,
-        16
+        17
       ],
       "angle_set": "steep",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-03; +90 degrees CCW, native support, integer contact alignment."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-03."
     },
     {
       "id": "run-inverted-00",
@@ -882,11 +882,11 @@
       "file": "frames/run-inverted-00.png",
       "hotspot": [
         18,
-        18
+        20
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-00; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-00."
     },
     {
       "id": "run-inverted-01",
@@ -894,12 +894,12 @@
       "order": 13,
       "file": "frames/run-inverted-01.png",
       "hotspot": [
-        17,
-        17
+        16,
+        20
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-01; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-01."
     },
     {
       "id": "run-inverted-02",
@@ -908,11 +908,11 @@
       "file": "frames/run-inverted-02.png",
       "hotspot": [
         18,
-        20
+        23
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-02; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-02."
     },
     {
       "id": "run-inverted-03",
@@ -925,7 +925,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-03; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-03."
     },
     {
       "id": "roll-blur",

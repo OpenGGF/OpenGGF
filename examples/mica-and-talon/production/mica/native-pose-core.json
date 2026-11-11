@@ -524,7 +524,7 @@
       ],
       "geometry_reference": {
         "size": [
-          31,
+          32,
           35
         ],
         "hotspot": [
@@ -539,7 +539,8 @@
       "prompt": "Retain owner-approved B2 RUN base.",
       "round3_attempt": "B2",
       "raw_sha256": "7499d321acc9cd1cf63c778f5b52bb0e81ff82d19825a8c1b353aff76097146d",
-      "cleanup": "Native-aspect transparent pad, uniform reduction, fixed palette, inside ink. No painted edits."
+      "cleanup": "Native-aspect transparent pad, uniform reduction, fixed palette, inside ink. No painted edits.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained."
     },
     "run-01": {
       "reference": {
@@ -575,7 +576,8 @@
       "prompt": "Use case: precise-object-edit. ONE original MICA pangolin RUN sprite pose. Input1 exact native Sonic running $2E enlarged8x real palette, Input2 existing MICA base RUN phase1 enlarged8x, Input3 concept identity. Redraw native pose as MICA keeping Input2 HEAD/BODY/GLOVES/TAIL exactly positioned and sized. CHANGE LEG WHEEL: far dark burgundy boot with coral upper highlight sweeps UP IN FRONT OF MUZZLE, at same height as nose, a visible curved red shoe across lower face pointing right at nose tip; bright near boot sweeps behind left at torso height. Native reference has RED upper arc across torso and muzzle, reproduce this high forward contact phase, NOT a hanging lower foot. Lower arc joins dark shoe sweeping up right. Four phase cycle needs feet passing ABOVE front muzzle, keep steady body pose. Single side view right-facing pixel sprite on transparent background, clean chunky 16-bit pixel clusters same scale as original, jade hood cream face white gloves coral boots. Do not generate a cycle. No text.",
       "round3_attempt": 3,
       "raw_sha256": "32476b5f1abc2b8138ed8e8ff472948a6f812ce6c8db67bc8c22725bd463c230",
-      "cleanup": "Native-aspect transparent pad, uniform reduction, fixed palette, inside ink. No painted edits."
+      "cleanup": "Native-aspect transparent pad, uniform reduction, fixed palette, inside ink. No painted edits.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained."
     },
     "run-02": {
       "reference": {
@@ -611,7 +613,8 @@
       "prompt": "Retain owner-approved B2 RUN base.",
       "round3_attempt": "B2",
       "raw_sha256": "7df56a75b5095d6b62a2e2fedc5cb7626250d5153aa1b988afde02819b579b1a",
-      "cleanup": "Native-aspect transparent pad, uniform reduction, fixed palette, inside ink. No painted edits."
+      "cleanup": "Native-aspect transparent pad, uniform reduction, fixed palette, inside ink. No painted edits.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained."
     },
     "run-03": {
       "reference": {
@@ -632,7 +635,7 @@
       ],
       "geometry_reference": {
         "size": [
-          31,
+          32,
           34
         ],
         "hotspot": [
@@ -647,7 +650,8 @@
       "prompt": "Use case: style-transfer. ORIGINAL MICA pangolin RUN cycle, exactly FOUR equal horizontal cells transparent, no text. Image1 exact four native Sonic run poses at 8x real palette, Image2 MICA identity, Image3 approved MICA run cycle for steady head/body and art style. Redraw native run frames one by one as MICA, preserving EXACT foot loop phase per cell. Crucial: native frames 1 and 3 have the flying foot arc ABOVE and IN FRONT of muzzle, so red boot/smear must reach in front of nose at nose height; do NOT confine all feet below head. Frame0 bright near boot left/back, dark far boot forward; frame1 bright near arc upper-left and dark far lower-right AND upper red blur in front of muzzle; frame2 bright near boot lower-right forward far behind; frame3 bright near arc upper-right in front of muzzle, dark far lower-left. Body/face remain steady rightward lean, jade scale hood, cream muzzle and eyes LOOKING RIGHT ahead, white gloves held in runner position, bright coral near boot with jade laces/tan sole and darker burgundy far boot always behind. Crisp bold 16-bit pixel clusters, few large scales, identical pixel resolution on shoes/face. Complete circular motion of boots four phases native mapping $2D/$2E/$2F/$30. No horizontal stretching, no camera turn, no alternate direction.",
       "round3_attempt": 1,
       "raw_sha256": "4d42fa16ff2cdbc194c16d11505e223393486e0a5a0fef9f18fdf63de3075886",
-      "cleanup": "Native-aspect transparent pad, uniform reduction, fixed palette, inside ink. No painted edits."
+      "cleanup": "Native-aspect transparent pad, uniform reduction, fixed palette, inside ink. No painted edits.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained."
     },
     "spring-00": {
       "reference": {
@@ -4309,7 +4313,7 @@
       },
       "geometry_reference": {
         "size": [
-          30,
+          32,
           38
         ],
         "hotspot": [
@@ -4335,7 +4339,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.091883092036785,
-      "owner_fix": "Deterministic Scale2x slope from run-00; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-00.",
       "derived_from": "run-00",
       "rotation_degrees": 45
     },
@@ -4355,11 +4359,11 @@
       },
       "geometry_reference": {
         "size": [
-          27,
+          30,
           36
         ],
         "hotspot": [
-          10,
+          9,
           17
         ]
       },
@@ -4376,12 +4380,12 @@
         18
       ],
       "hotspot": [
-        10,
+        9,
         17
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.091883092036785,
-      "owner_fix": "Deterministic Scale2x slope from run-01; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-01.",
       "derived_from": "run-01",
       "rotation_degrees": 45
     },
@@ -4401,8 +4405,8 @@
       },
       "geometry_reference": {
         "size": [
-          31,
-          34
+          34,
+          37
         ],
         "hotspot": [
           11,
@@ -4427,7 +4431,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.091883092036785,
-      "owner_fix": "Deterministic Scale2x slope from run-02; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-02.",
       "derived_from": "run-02",
       "rotation_degrees": 45
     },
@@ -4473,7 +4477,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.091883092036785,
-      "owner_fix": "Deterministic Scale2x slope from run-03; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-03.",
       "derived_from": "run-03",
       "rotation_degrees": 45
     },
@@ -4494,11 +4498,11 @@
       "geometry_reference": {
         "size": [
           35,
-          31
+          32
         ],
         "hotspot": [
           15,
-          16
+          17
         ]
       },
       "native_size": [
@@ -4515,11 +4519,11 @@
       ],
       "hotspot": [
         15,
-        16
+        17
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.0,
-      "owner_fix": "Deterministic Scale2x slope from run-00; +90 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-00.",
       "derived_from": "run-00",
       "rotation_degrees": 90
     },
@@ -4565,7 +4569,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.0,
-      "owner_fix": "Deterministic Scale2x slope from run-01; +90 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-01.",
       "derived_from": "run-01",
       "rotation_degrees": 90
     },
@@ -4611,7 +4615,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.0,
-      "owner_fix": "Deterministic Scale2x slope from run-02; +90 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-02.",
       "derived_from": "run-02",
       "rotation_degrees": 90
     },
@@ -4632,11 +4636,11 @@
       "geometry_reference": {
         "size": [
           34,
-          31
+          32
         ],
         "hotspot": [
           14,
-          16
+          17
         ]
       },
       "native_size": [
@@ -4653,11 +4657,11 @@
       ],
       "hotspot": [
         14,
-        16
+        17
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.0,
-      "owner_fix": "Deterministic Scale2x slope from run-03; +90 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-03.",
       "derived_from": "run-03",
       "rotation_degrees": 90
     },
@@ -4678,11 +4682,11 @@
       "geometry_reference": {
         "size": [
           38,
-          30
+          32
         ],
         "hotspot": [
           18,
-          18
+          20
         ]
       },
       "native_size": [
@@ -4699,11 +4703,11 @@
       ],
       "hotspot": [
         18,
-        18
+        20
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79898987322333,
-      "owner_fix": "Deterministic Scale2x slope from run-00; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-00.",
       "derived_from": "run-00",
       "rotation_degrees": 135
     },
@@ -4724,11 +4728,11 @@
       "geometry_reference": {
         "size": [
           36,
-          27
+          30
         ],
         "hotspot": [
-          17,
-          17
+          16,
+          20
         ]
       },
       "native_size": [
@@ -4744,12 +4748,12 @@
         19
       ],
       "hotspot": [
-        17,
-        17
+        16,
+        20
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79898987322333,
-      "owner_fix": "Deterministic Scale2x slope from run-01; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-01.",
       "derived_from": "run-01",
       "rotation_degrees": 135
     },
@@ -4769,12 +4773,12 @@
       },
       "geometry_reference": {
         "size": [
-          34,
-          31
+          37,
+          34
         ],
         "hotspot": [
           18,
-          20
+          23
         ]
       },
       "native_size": [
@@ -4791,11 +4795,11 @@
       ],
       "hotspot": [
         18,
-        20
+        23
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79898987322333,
-      "owner_fix": "Deterministic Scale2x slope from run-02; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-02.",
       "derived_from": "run-02",
       "rotation_degrees": 135
     },
@@ -4841,7 +4845,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79898987322333,
-      "owner_fix": "Deterministic Scale2x slope from run-03; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Owner interim: actual approved MICA wait-00 ankle boots, coral/jade/tan materials and dark far shoe; native four-phase cadence and ground support retained. Deterministic slope rotation from run-03.",
       "derived_from": "run-03",
       "rotation_degrees": 135
     },
