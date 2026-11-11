@@ -3069,10 +3069,6 @@ public class AudioManager implements MusicRestoreSink {
         private AudioVoiceRegistry shadowRegistry;
         private AudioPresentationProducer shadowProducer;
         private SmpsDriverSession shadowSmpsSession;
-        private AudioPresentationMixer shadowMixer;
-        /* Percentages last pushed to the mixer and chip; -1 forces the next push. */
-        private int appliedMusicVolume = -1;
-        private int appliedSfxVolume = -1;
         private AudioRequestService shadowRequestService;
         private int shadowFrameRate;
         private AudioPresentationParityProbe shadowParity;
@@ -3357,9 +3353,6 @@ public class AudioManager implements MusicRestoreSink {
                     sink, smpsSession, shadowRequestService,
                     shadowResolver, commandTimeline, shadowParity);
             shadowSmpsSession = smpsSession;
-            shadowMixer = mixer;
-            appliedMusicVolume = -1;
-            appliedSfxVolume = -1;
             shadowFrameRate = frameRate;
             captureLeases.rebindLiveCaptureAudioHandle(sampleRate);
         }
@@ -3384,23 +3377,13 @@ public class AudioManager implements MusicRestoreSink {
          * gameplay, rewind and traces, never depends on them.
          */
         private void applyMixVolumes() {
-            if (shadowMixer == null) {
+            if (shadowProducer == null) {
                 return;
             }
             SonicConfigurationService config = configuredServicesOrNull();
             int music = config == null ? 100 : config.getInt(SonicConfiguration.AUDIO_MUSIC_VOLUME);
             int sfx = config == null ? 100 : config.getInt(SonicConfiguration.AUDIO_SFX_VOLUME);
-            if (music == appliedMusicVolume && sfx == appliedSfxVolume) {
-                return;
-            }
-            appliedMusicVolume = music;
-            appliedSfxVolume = sfx;
-            int musicGain = volumeGain(music);
-            int sfxGain = volumeGain(sfx);
-            shadowMixer.setGains(musicGain, sfxGain);
-            if (shadowSmpsSession != null) {
-                shadowSmpsSession.setMixGains(musicGain, sfxGain);
-            }
+            shadowProducer.setMixGains(volumeGain(music), volumeGain(sfx));
         }
 
         private void closeShadowPresentation() {
@@ -3424,7 +3407,6 @@ public class AudioManager implements MusicRestoreSink {
             shadowResolver = null;
             shadowRegistry = null;
             shadowSmpsSession = null;
-            shadowMixer = null;
             shadowRequestService = null;
             shadowCommands = null;
             shadowFactory = null;
