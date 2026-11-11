@@ -5,6 +5,11 @@ pinned C Nuked reference and pinned C++ ymfm on one ROM-free synthetic six-FM
 workload. It is a correctness/provenance harness with local timing diagnostics,
 not an audio-fidelity gate or a backend-selection benchmark.
 
+The Java side advances each frame through `NukedOpn2.clocks`, the multi-cycle
+entry point the engine's `Ym2612Chip` uses. To time the per-cycle
+`NukedOpn2.clock` port instead, run `JavaNukedBenchmark` directly with a fourth
+argument `--single-clocks`; both entries must print the same checksum.
+
 The entry point verifies every compiled upstream input, builds only below the
 invoking worktree's `target/`, checks matching Java and C Nuked 64-bit FNV-1a
 hashes over the ordered, signed, interleaved stereo samples, compares snapshot
