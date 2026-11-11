@@ -1,6 +1,8 @@
 # MICA strike trails and Gilded particles.
 #
-# trail <set> <ember-hot> <ember-mid> <ember-cool> <echo-tint|none> <density%>   (0xRRGGBB)
+# trail <set> <ember-hot> <ember-mid> <ember-cool> <echo-tint|none> <density%> [echo-phase-slot]   (0xRRGGBB)
+#   echo-phase-slot: palette index whose live colour tints each after-image when it is spawned.
+# strike-palette <set> <16 Mega Drive colour words>: shown while a strike of that form is in flight.
 # front <set> <rgb> <radius> <size> <alpha> <arc>        heat front, outer haze first
 # particle <name> <frame-ticks>, then per frame: frame <hotspot-x> <hotspot-y> and its pixel rows.
 #   Pixels are hex indices on MICA's own live palette line ('.' is transparent), so Gilded
@@ -24,9 +26,12 @@ front super FFB624 19 4 190 7
 front super FFDB6D 16 3 230 6
 front super FFFFE8 14 3 240 4
 
-# Hyper Prism Gilt (Instagib): white-hot, gold and jade embers inside a rose-gold haze. Echoes keep her
-# live palette (none), so after-images flash through the same gold/white/jade/rose phases she does.
-trail hyper FFFFFF FFDB49 49DBB6 none 200
+# Hyper Prism Gilt (Instagib): white-hot, gold and jade embers inside a rose-gold haze. Each after-image
+# keeps the plate colour (slot 4) of her running cycle when it spawned, beneath the jade strike palette,
+# so the echoes band gold, white, jade and rose.
+# The strike itself holds her jade phase (the design's forced jade beat), matching the jade fringe.
+trail hyper FFFFFF FFDB49 49DBB6 none 200 4
+strike-palette hyper 000 222 440 660 680 8A2 AC6 8CE 6AC 68A 44E 22A EEE CCC 88E 024
 front hyper DB6D92 27 2 150 9
 front hyper 24B692 23 4 170 8
 front hyper FFDB49 19 4 230 7

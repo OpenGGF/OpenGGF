@@ -195,7 +195,10 @@ under the matching area heading; see the
   transformation scripts. Powered forms follow the owner-picked concepts: Open
   Cone Gilded MICA (lifted gold plates; Hyper flashes Prism Gilt gold, white-hot,
   jade and rose-gold) and Corona Crest Solar TALON (flame crest, goggles down,
-  flame-tipped wings), with new wait, run, roll and transformation art; new
+  flame-tipped wings), with new wait, run, roll and transformation art. Powered
+  forms can hold a strike palette while a strike flies and tint each strike echo
+  with its spawn-time cycle phase (`PoweredEffects.strikePalette`,
+  `StrikeTrailStyle.echoPhaseSlot`); new
   profile-facing flight art matches his carry identity. S1 creator
   forms play animated transformations. Joint native-pose carry redraws now
   keep MICA’s raised gloves against TALON’s shoes throughout his wingbeat,

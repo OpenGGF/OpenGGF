@@ -590,14 +590,21 @@ tier in S3K. Neither Sonic's palette nor his alternate mappings are installed.
 `StrikeTrailStyle` gives a homing or divebomb strike its colours: three ember colours
 (hottest first), one to eight heat-front layers from the outer haze to the nose
 (`FrontLayer(rgb, radius, size, alpha, arc)`), an after-image tint (`-1` keeps the
-character's own colours) and an ember density (25–400 % of stock). Colours are
+character's own colours) and an ember density (25–400 % of stock). An optional fifth
+component, `echoPhaseSlot` (1–15, or `-1`), tints each after-image with that palette slot's
+colour as the after-image spawns, so a cycling form leaves a banded trail; an authored
+form reports its running cycle row even beneath a strike palette. Colours are
 `0xRRGGBB`. Override `AbstractPlayableSprite.strikeTrailStyle()` for the normal form;
 a powered form's `PoweredEffects.trail()` replaces it while that form is active.
 Supplying neither keeps the stock look exactly: blue for ordinary homing, and native
 art hue-rotated to flame for Instagib.
 
-`SuperFormProfile.Form` takes an optional `PoweredEffects(trail, particles, emitters)`
-as its last component (older constructors pass null). A `Particle` is one to eight
+`SuperFormProfile.Form` takes an optional `PoweredEffects(trail, particles, emitters,
+strikePalette)` as its last component (older constructors pass null). `strikePalette` is
+empty or sixteen Mega Drive colour words shown on the character's line while a homing or
+divebomb strike of that form flies; the form's cycle keeps its own clock underneath and
+its live row returns the tick the strike ends. It is derived from the strike state each
+tick, so rewind needs nothing extra. The three-argument constructor keeps the cycle. A `Particle` is one to eight
 `StageSpriteSet.Frame`s of at most 32×32 pixels and a frame time; pixels index the
 character's own live palette line, so they follow the form's palette cycle. A cycle at
 least as long as the particle's life plays once; a shorter one loops from a random

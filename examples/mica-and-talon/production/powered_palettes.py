@@ -47,7 +47,10 @@ GOLD = [
 ]
 # Gold breathes from saturated to bright and back; the amber underside never turns pale.
 GOLD_CYCLE = [0, 1, 2, 3, 4, 3, 2, 1, 0]
-WHITE_HOT = [0x4AC, 0x8CE, 0xAEE, 0xCEE, 0xEEE]
+WHITE_HOT = [0x0AE, 0x6CE, 0xAEE, 0xCEE, 0xEEE]
+GOLD_TO_WHITE = [0x08E, 0x2CE, 0x6EE, 0xAEE, 0xEEE]
+GOLD_TO_JADE = [0x460, 0x6A2, 0x6C4, 0xAE6, 0xCEA]
+GOLD_TO_ROSE = [0x26A, 0x48C, 0x6AE, 0x8CE, 0xCEE]
 JADE = [0x440, 0x660, 0x680, 0x8A2, 0xAC6]
 ROSE = [0x248, 0x46C, 0x68E, 0x8AE, 0xCCE]
 
@@ -61,6 +64,7 @@ SOLAR = [
     [0x046, 0x8EE, 0xCEE, 0xEEE, 0x0AE],
 ]
 SOLAR_CYCLE = [0, 1, 2, 3, 2, 1, 0, 1, 0]
+FADE_STEPS = [0.5, 0.8, 1, 1, 1, 1]
 
 
 def fixed(words, sheet):
@@ -69,19 +73,18 @@ def fixed(words, sheet):
 
 
 def prism(base):
-    gold = row(base, range(2, 7), GOLD[0])
-
     def at(words):
         return row(base, range(2, 7), words)
 
-    def mid(words):
-        return blend(gold, at(words), 0.5)
-
     # Gold, white-hot, gold, jade, gold, rose-gold. Every phase holds at least one 7-tick row;
     # white-hot and jade are always separated by gold (photosensitivity rule in design.md).
-    return [gold, at(GOLD[1]), at(GOLD[2]), mid(WHITE_HOT), at(WHITE_HOT), at(WHITE_HOT), mid(WHITE_HOT),
-            gold, at(GOLD[1]), mid(JADE), at(JADE), mid(JADE),
-            gold, at(GOLD[1]), mid(ROSE), at(ROSE), at(ROSE), mid(ROSE)]
+    # Transition rows are authored, not RGB blends: a blend of gold and white-hot or jade passes
+    # through brown/olive, which read as dirt on the plates. White-hot keeps the deep plate gap
+    # (slot 2) in the gold family so the dark rims stay without brown mid-tones.
+    return [at(w) for w in (
+        GOLD[0], GOLD[1], GOLD[2], GOLD_TO_WHITE, WHITE_HOT, WHITE_HOT, GOLD_TO_WHITE,
+        GOLD[0], GOLD[1], GOLD_TO_JADE, JADE, GOLD_TO_JADE,
+        GOLD[0], GOLD[1], GOLD_TO_ROSE, ROSE, ROSE, GOLD_TO_ROSE)]
 
 
 def build(path, fmt, sheet, fixed_words, slots, levels, order, note, hyper=False):
@@ -93,7 +96,12 @@ def build(path, fmt, sheet, fixed_words, slots, levels, order, note, hyper=False
     for i in data["changed_indices"]:
         target[i] = first[i]
     data.update(format=fmt, note=note)
-    data["fade_frames"] = [blend(normal, first, step / 5) for step in range(6)]
+    # Native fades step through six rows while the transformation plays: PalCycle_SuperSonic
+    # (s2.asm:3119-3145) and SuperHyper_PalCycle_FadeIn (sonic3k.asm:4664-4673). Creator forms
+    # front-load them instead (half, then most, then the powered row), and the transformation script
+    # holds its fixed-white flash beat across the change, so no still frame of the transformation
+    # shows an olive or grey in-between and the plates are already gold when they snap open.
+    data["fade_frames"] = [blend(normal, first, step) for step in FADE_STEPS]
     for host in ("s2", "s3k"):
         data["cycles"][host]["frames"] = [row(base, slots, levels[i]) for i in order]
     if hyper:

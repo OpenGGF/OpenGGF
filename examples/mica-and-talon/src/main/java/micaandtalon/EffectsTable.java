@@ -20,12 +20,13 @@ import java.util.Map;
  * documents the row syntax.
  */
 final class EffectsTable {
-    private record Trail(List<Integer> embers, int echoTint, int density) {}
+    private record Trail(List<Integer> embers, int echoTint, int density, int echoPhaseSlot) {}
 
     private final Map<String, Trail> trails = new LinkedHashMap<>();
     private final Map<String, List<StrikeTrailStyle.FrontLayer>> fronts = new LinkedHashMap<>();
     private final Map<String, PoweredEffects.Particle> particles = new LinkedHashMap<>();
     private final Map<String, List<String[]>> emitters = new LinkedHashMap<>();
+    private final Map<String, List<Integer>> strikePalettes = new LinkedHashMap<>();
 
     static EffectsTable read(ModAssetRoot assets, String table) throws IOException {
         var result = new EffectsTable();
@@ -59,10 +60,17 @@ final class EffectsTable {
                 }
                 switch (row[0]) {
                     case "trail" -> {
-                        expect(row, 7);
+                        if (row.length != 7 && row.length != 8) throw new IllegalArgumentException("Expected 7 or 8 columns");
                         result.trails.put(row[1], new Trail(
                                 List.of(rgb(row[2]), rgb(row[3]), rgb(row[4])),
-                                row[5].equals("none") ? -1 : rgb(row[5]), Integer.parseInt(row[6])));
+                                row[5].equals("none") ? -1 : rgb(row[5]), Integer.parseInt(row[6]),
+                                row.length == 8 ? Integer.parseInt(row[7]) : -1));
+                    }
+                    case "strike-palette" -> {
+                        expect(row, 18);
+                        var words = new ArrayList<Integer>();
+                        for (int i = 2; i < 18; i++) words.add(Integer.parseInt(row[i], 16));
+                        result.strikePalettes.put(row[1], List.copyOf(words));
                     }
                     case "front" -> {
                         expect(row, 7);
@@ -101,7 +109,7 @@ final class EffectsTable {
     StrikeTrailStyle trail(String set) {
         var trail = trails.get(set);
         return trail == null ? null : new StrikeTrailStyle(trail.embers(),
-                fronts.getOrDefault(set, List.of()), trail.echoTint(), trail.density());
+                fronts.getOrDefault(set, List.of()), trail.echoTint(), trail.density(), trail.echoPhaseSlot());
     }
 
     /** The set's trail and emitters; particles are those its emitters name. */
@@ -125,7 +133,8 @@ final class EffectsTable {
                 throw new IOException("Invalid emitter: " + String.join(" ", row), error);
             }
         }
-        return new PoweredEffects(trail(set), names.stream().map(particles::get).toList(), rules);
+        return new PoweredEffects(trail(set), names.stream().map(particles::get).toList(), rules,
+                strikePalettes.getOrDefault(set, List.of()));
     }
 
     private static CharacterPresentation.Image image(List<String> rows) {

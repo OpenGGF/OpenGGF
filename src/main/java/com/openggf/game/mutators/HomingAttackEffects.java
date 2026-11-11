@@ -64,6 +64,26 @@ public final class HomingAttackEffects {
         }
         return style != null ? style : fire ? STOCK_FIRE : STOCK_BLUE;
     }
+    /**
+     * Draw thread: the colour of the style's echo phase slot as each after-image spawns, as
+     * 0xRRGGBB, or -1 for none. An authored form reports its running cycle row, so a strike palette
+     * shown on the body does not flatten the echoes' phases; otherwise the live palette line is read.
+     */
+    static int phaseTint(PlayableEntity leader, StrikeTrailStyle style) {
+        if (style == null || style.echoPhaseSlot() < 0
+                || !(leader instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite)) return -1;
+        if (sprite.getSuperStateController() instanceof com.openggf.sprites.playable.ProfileSuperStateController form) {
+            int colour = form.cyclePhaseColour(style.echoPhaseSlot());
+            if (colour >= 0) return colour;
+        }
+        var renderer = sprite.getSpriteRenderer();
+        var context = renderer == null ? null : renderer.getRenderContext();
+        var palette = context == null ? null : context.getPalette(renderer.paletteLine());
+        if (palette == null) return -1;
+        var colour = palette.getColor(style.echoPhaseSlot());
+        return (colour.r & 255) << 16 | (colour.g & 255) << 8 | (colour.b & 255);
+    }
+
     private record PictureTile(SpritePresentation.Tile tile, SpritePresentation.PatternVersion version) { }
 
     /** A presentation ember in world pixels. */
@@ -90,7 +110,7 @@ public final class HomingAttackEffects {
 
     /** Draw thread: the frame about to be displayed, and an afterimage while the trail burns. */
     void observe(SpritePresentation.Frame frame, int cameraX, int cameraY, boolean flameActive, boolean fire,
-                 StrikeTrailStyle style, int leaderX, int leaderY) {
+                 StrikeTrailStyle style, int phaseTint, int leaderX, int leaderY) {
         lastFrame = frame;
         lastCameraX = cameraX;
         lastCameraY = cameraY;
@@ -113,7 +133,9 @@ public final class HomingAttackEffects {
         }
         // Stock Instagib rotates native blue art to flame; creator echoes blend toward their tint.
         float hue = style == STOCK_FIRE ? FLAME_HUE : 0f;
-        int tint = style.echoTint() < 0 ? 0 : (fire ? FIRE_TINT_WEIGHT : GLOW_TINT_WEIGHT) << 24 | style.echoTint();
+        // A spawn-phase tint is sampled now and kept by this pose, so a cycling form leaves a banded trail.
+        int colour = phaseTint >= 0 ? phaseTint : style.echoTint();
+        int tint = colour < 0 ? 0 : (fire ? FIRE_TINT_WEIGHT : GLOW_TINT_WEIGHT) << 24 | colour;
         if (!tiles.isEmpty()) flame.addLast(new Pose(tiles, versions, cameraX, cameraY, fire, hue, tint));
         while (flame.size() > FLAME_POSES) flame.removeFirst();
     }

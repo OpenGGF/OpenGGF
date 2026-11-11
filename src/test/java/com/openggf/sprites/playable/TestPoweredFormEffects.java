@@ -78,5 +78,17 @@ class TestPoweredFormEffects {
         assertThrows(IllegalArgumentException.class,
                 () -> new StrikeTrailStyle(List.of(1, 2, 3), front, 0x1000000, 100));
         assertDoesNotThrow(() -> new StrikeTrailStyle(List.of(1, 2, 3), front, -1, 100));
+        assertEquals(-1, new StrikeTrailStyle(List.of(1, 2, 3), front, -1, 100).echoPhaseSlot());
+        assertThrows(IllegalArgumentException.class, () -> new StrikeTrailStyle(List.of(1, 2, 3), front, -1, 100, 0));
+        assertThrows(IllegalArgumentException.class, () -> new StrikeTrailStyle(List.of(1, 2, 3), front, -1, 100, 16));
+        assertEquals(4, new StrikeTrailStyle(List.of(1, 2, 3), front, -1, 100, 4).echoPhaseSlot());
+        assertTrue(new PoweredEffects(null, List.of(), List.of()).strikePalette().isEmpty());
+        assertThrows(IllegalArgumentException.class,
+                () -> new PoweredEffects(null, List.of(), List.of(), List.of(0x000, 0xEEE)));
+        var row = new java.util.ArrayList<>(java.util.Collections.nCopies(16, 0x0CE));
+        assertEquals(16, new PoweredEffects(null, List.of(), List.of(), row).strikePalette().size());
+        row.set(3, 0x0CF);
+        assertThrows(IllegalArgumentException.class, () -> new PoweredEffects(null, List.of(), List.of(), row),
+                "odd Mega Drive colour nibbles are rejected");
     }
 }

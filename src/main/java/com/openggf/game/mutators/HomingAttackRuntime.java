@@ -544,8 +544,9 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
      */
     public void observeFrame(com.openggf.graphics.SpritePresentation.Frame frame, int cameraX, int cameraY) {
         var leader = roster == null ? null : roster.getMainPlayable();
+        var style = HomingAttackEffects.style(leader, instagibVisuals());
         effects.observe(frame, cameraX, cameraY, flameActive() && leader != null, instagibVisuals(),
-                HomingAttackEffects.style(leader, instagibVisuals()),
+                style, HomingAttackEffects.phaseTint(leader, style),
                 leader == null ? 0 : leader.getCentreX(), leader == null ? 0 : leader.getCentreY());
     }
 

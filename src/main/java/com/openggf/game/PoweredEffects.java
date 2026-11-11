@@ -13,9 +13,18 @@ import java.util.Objects;
  * @param trail     strike trail colours for this form, or null to keep the character's normal trail
  * @param particles particle sprites, indexed by {@link Emitter#particles()} (at most 16)
  * @param emitters  emission rules (at most 16)
+ * @param strikePalette sixteen Mega Drive colour words shown on the character's palette line while a
+ *                  homing or divebomb strike of this form is in flight, or empty to keep the form's
+ *                  cycle. The cycle keeps its own clock underneath and resumes at its live phase.
  */
 @ModApi
-public record PoweredEffects(StrikeTrailStyle trail, List<Particle> particles, List<Emitter> emitters) {
+public record PoweredEffects(StrikeTrailStyle trail, List<Particle> particles, List<Emitter> emitters,
+                             List<Integer> strikePalette) {
+    /** Compatibility constructor: strikes keep the form's palette cycle. */
+    public PoweredEffects(StrikeTrailStyle trail, List<Particle> particles, List<Emitter> emitters) {
+        this(trail, particles, emitters, List.of());
+    }
+
     /** Live particles shared by all of a character's emitters. */
     public static final int MAX_LIVE_PARTICLES = 48;
 
@@ -103,6 +112,10 @@ public record PoweredEffects(StrikeTrailStyle trail, List<Particle> particles, L
     public PoweredEffects {
         particles = List.copyOf(particles);
         emitters = List.copyOf(emitters);
+        strikePalette = List.copyOf(strikePalette);
+        if (!strikePalette.isEmpty() && (strikePalette.size() != 16
+                || strikePalette.stream().anyMatch(word -> (word & ~0xEEE) != 0)))
+            throw new IllegalArgumentException("A strike palette is sixteen Mega Drive colour words");
         if (particles.size() > 16 || emitters.size() > 16)
             throw new IllegalArgumentException("Powered effects allow 16 particles and 16 emitters");
         for (var emitter : emitters)

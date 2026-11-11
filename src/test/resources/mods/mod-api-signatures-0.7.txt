@@ -1587,6 +1587,7 @@ CONSTRUCTOR com.openggf.game.PhysicsModifiers public  <init>(float,float,float,f
 CONSTRUCTOR com.openggf.game.PhysicsProfile public  <init>(short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,boolean,short)
 CONSTRUCTOR com.openggf.game.PlayableCharacterRegistry$Resolution public  <init>(com.openggf.game.CharacterKey,com.openggf.game.CharacterKey,java.util.Optional<com.openggf.game.CharacterDefinition>,com.openggf.game.PlayableCharacterRegistry$FallbackReason)
 CONSTRUCTOR com.openggf.game.PoweredEffects public  <init>(com.openggf.game.StrikeTrailStyle,java.util.List<com.openggf.game.PoweredEffects$Particle>,java.util.List<com.openggf.game.PoweredEffects$Emitter>)
+CONSTRUCTOR com.openggf.game.PoweredEffects public  <init>(com.openggf.game.StrikeTrailStyle,java.util.List<com.openggf.game.PoweredEffects$Particle>,java.util.List<com.openggf.game.PoweredEffects$Emitter>,java.util.List<java.lang.Integer>)
 CONSTRUCTOR com.openggf.game.PoweredEffects$Emitter public  <init>(com.openggf.game.PoweredEffects$Trigger,java.util.List<java.lang.Integer>,int,int,com.openggf.game.PoweredEffects$Spread,int,int,int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.game.PoweredEffects$Particle public  <init>(java.util.List<com.openggf.game.StageSpriteSet$Frame>,int)
 CONSTRUCTOR com.openggf.game.PoweredPlayableSheet public  <init>(com.openggf.sprites.art.SpriteArtSet,java.util.Set<com.openggf.game.CanonicalAnimation>)
@@ -1602,6 +1603,7 @@ CONSTRUCTOR com.openggf.game.StageSpriteSet$Frame public  <init>(com.openggf.gam
 CONSTRUCTOR com.openggf.game.StandaloneGameSpec$Act public  <init>(int,com.openggf.level.Level,int,int,com.openggf.game.MusicReference)
 CONSTRUCTOR com.openggf.game.StaticFixup public  <init>(java.lang.String,java.lang.String,java.lang.Runnable)
 CONSTRUCTOR com.openggf.game.StrikeTrailStyle public  <init>(java.util.List<java.lang.Integer>,java.util.List<com.openggf.game.StrikeTrailStyle$FrontLayer>,int,int)
+CONSTRUCTOR com.openggf.game.StrikeTrailStyle public  <init>(java.util.List<java.lang.Integer>,java.util.List<com.openggf.game.StrikeTrailStyle$FrontLayer>,int,int,int)
 CONSTRUCTOR com.openggf.game.StrikeTrailStyle$FrontLayer public  <init>(int,int,int,int,int)
 CONSTRUCTOR com.openggf.game.SuperFormProfile public  <init>(java.util.Map<com.openggf.game.GameId,java.util.Map<com.openggf.game.SuperFormProfile$Tier,com.openggf.game.SuperFormProfile$Form>>)
 CONSTRUCTOR com.openggf.game.SuperFormProfile$Form public  <init>(java.util.List<java.util.List<java.lang.Integer>>,java.util.List<java.util.List<java.lang.Integer>>,java.util.List<java.util.List<java.lang.Integer>>,int,int,com.openggf.game.PhysicsProfile,com.openggf.game.CanonicalAnimation,java.util.Map<com.openggf.game.CanonicalAnimation,com.openggf.sprites.animation.SpriteAnimationScript>,boolean,boolean)
@@ -7147,6 +7149,7 @@ METHOD com.openggf.game.PowerUpSpawner public,abstract  void spawnSplash(com.ope
 METHOD com.openggf.game.PoweredEffects public  com.openggf.game.StrikeTrailStyle trail()
 METHOD com.openggf.game.PoweredEffects public  java.util.List<com.openggf.game.PoweredEffects$Emitter> emitters()
 METHOD com.openggf.game.PoweredEffects public  java.util.List<com.openggf.game.PoweredEffects$Particle> particles()
+METHOD com.openggf.game.PoweredEffects public  java.util.List<java.lang.Integer> strikePalette()
 METHOD com.openggf.game.PoweredEffects public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.PoweredEffects public,final  int hashCode()
 METHOD com.openggf.game.PoweredEffects public,final  java.lang.String toString()
@@ -7400,6 +7403,7 @@ METHOD com.openggf.game.StaticFixup public,final  boolean equals(java.lang.Objec
 METHOD com.openggf.game.StaticFixup public,final  int hashCode()
 METHOD com.openggf.game.StaticFixup public,final  java.lang.String toString()
 METHOD com.openggf.game.StrikeTrailStyle public  int density()
+METHOD com.openggf.game.StrikeTrailStyle public  int echoPhaseSlot()
 METHOD com.openggf.game.StrikeTrailStyle public  int echoTint()
 METHOD com.openggf.game.StrikeTrailStyle public  java.util.List<com.openggf.game.StrikeTrailStyle$FrontLayer> front()
 METHOD com.openggf.game.StrikeTrailStyle public  java.util.List<java.lang.Integer> embers()
@@ -18684,6 +18688,7 @@ RECORD-COMPONENT com.openggf.game.PlayableCharacterRegistry$Resolution requested
 RECORD-COMPONENT com.openggf.game.PlayableCharacterRegistry$Resolution resolvedKey com.openggf.game.CharacterKey
 RECORD-COMPONENT com.openggf.game.PoweredEffects emitters java.util.List<com.openggf.game.PoweredEffects$Emitter>
 RECORD-COMPONENT com.openggf.game.PoweredEffects particles java.util.List<com.openggf.game.PoweredEffects$Particle>
+RECORD-COMPONENT com.openggf.game.PoweredEffects strikePalette java.util.List<java.lang.Integer>
 RECORD-COMPONENT com.openggf.game.PoweredEffects trail com.openggf.game.StrikeTrailStyle
 RECORD-COMPONENT com.openggf.game.PoweredEffects$Emitter count int
 RECORD-COMPONENT com.openggf.game.PoweredEffects$Emitter gravity int
@@ -18729,6 +18734,7 @@ RECORD-COMPONENT com.openggf.game.StaticFixup action java.lang.Runnable
 RECORD-COMPONENT com.openggf.game.StaticFixup name java.lang.String
 RECORD-COMPONENT com.openggf.game.StaticFixup reason java.lang.String
 RECORD-COMPONENT com.openggf.game.StrikeTrailStyle density int
+RECORD-COMPONENT com.openggf.game.StrikeTrailStyle echoPhaseSlot int
 RECORD-COMPONENT com.openggf.game.StrikeTrailStyle echoTint int
 RECORD-COMPONENT com.openggf.game.StrikeTrailStyle embers java.util.List<java.lang.Integer>
 RECORD-COMPONENT com.openggf.game.StrikeTrailStyle front java.util.List<com.openggf.game.StrikeTrailStyle$FrontLayer>

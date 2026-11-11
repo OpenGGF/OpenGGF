@@ -197,6 +197,9 @@ public final class ModApiVersion {
      * are reopened by controlled title requests and relaunch sessions with a team;
      * controllers supply the native step's pad; scenes and controllers read typed text
      * while claiming the keyboard from host shortcuts.
+     * Powered forms can hold a strike palette while a strike flies (PoweredEffects.strikePalette),
+     * and strike trails can tint each after-image with its spawn-time cycle phase
+     * (StrikeTrailStyle.echoPhaseSlot); both add compatibility constructors within candidate 0.7.0.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

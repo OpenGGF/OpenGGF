@@ -222,7 +222,7 @@ public final class PoweredFormEffects {
                 : Math.abs(player.getGSpeed());
     }
 
-    private static boolean striking(AbstractPlayableSprite player) {
+    static boolean striking(AbstractPlayableSprite player) {
         var homing = PlayableSpriteInternalAccess.homingAttack(player);
         return homing != null && homing.isStriking(player);
     }

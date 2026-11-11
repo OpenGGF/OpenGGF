@@ -14,9 +14,20 @@ import java.util.Objects;
  * @param front    heat-front layers drawn from the outer haze to the nose (1..8)
  * @param echoTint after-image tint as 0xRRGGBB, or -1 to keep the character's own colours
  * @param density  ember count as a percentage of the stock rate (25..400)
+ * @param echoPhaseSlot index (1..15) on the character's palette line whose colour, sampled when each
+ *                 after-image is spawned, tints that after-image; -1 for none. Echoes then keep the
+ *                 palette-cycle phase they were spawned in, so a cycling form leaves a banded trail.
+ *                 An authored powered form reports its running cycle row, beneath any
+ *                 {@link PoweredEffects#strikePalette()}. It takes precedence over {@code echoTint}.
  */
 @ModApi
-public record StrikeTrailStyle(List<Integer> embers, List<FrontLayer> front, int echoTint, int density) {
+public record StrikeTrailStyle(List<Integer> embers, List<FrontLayer> front, int echoTint, int density,
+                               int echoPhaseSlot) {
+    /** Compatibility constructor: no spawn-phase echo tint. */
+    public StrikeTrailStyle(List<Integer> embers, List<FrontLayer> front, int echoTint, int density) {
+        this(embers, front, echoTint, density, -1);
+    }
+
     /**
      * One ring of the heat front.
      *
@@ -45,5 +56,7 @@ public record StrikeTrailStyle(List<Integer> embers, List<FrontLayer> front, int
         if (echoTint != -1 && (echoTint & ~0xFFFFFF) != 0)
             throw new IllegalArgumentException("Echo tint is 0xRRGGBB or -1");
         if (density < 25 || density > 400) throw new IllegalArgumentException("Ember density is 25..400 percent");
+        if (echoPhaseSlot != -1 && (echoPhaseSlot < 1 || echoPhaseSlot > 15))
+            throw new IllegalArgumentException("Echo phase slot is 1..15 or -1");
     }
 }

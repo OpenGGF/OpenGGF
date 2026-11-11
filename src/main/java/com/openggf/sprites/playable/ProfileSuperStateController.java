@@ -39,6 +39,7 @@ public final class ProfileSuperStateController extends SuperStateController impl
     private final ProfileSuperSettings options;
     private SuperFormProfile.Tier tier = SuperFormProfile.Tier.SUPER;
     private int phase, frame, timer;
+    private boolean strikeShown;
     private int displayFrame = -1;
     private boolean doomsday;
     private boolean endingScene, endingReunion;
@@ -77,6 +78,7 @@ public final class ProfileSuperStateController extends SuperStateController impl
     @Override public void reset() {
         super.reset();
         phase = 0; frame = 0; timer = 0; displayFrame = -1; doomsday = false; endingScene = endingReunion = false;
+        strikeShown = false;
         // The superclass constructor resets before this class's fields exist.
         if (particles != null) particles.clear();
         if (normalPalette != null) {
@@ -200,14 +202,39 @@ public final class ProfileSuperStateController extends SuperStateController impl
         player.setShieldVisible(false);
     }
     @Override protected void updateSuperPalette() {
-        if (phase != -1 || --timer >= 0) return;
+        if (phase != -1) return;
+        // A form's strike palette overrides the display while a strike flies; the cycle clock keeps
+        // running underneath, and the live row returns the tick the strike ends. Derived from the
+        // strike state every tick, so it needs no rewind state of its own.
+        var effects = poweredEffects();
+        boolean strike = effects != null && !effects.strikePalette().isEmpty() && PoweredFormEffects.striking(player);
+        if (strike != strikeShown) {
+            strikeShown = strike;
+            if (strike) apply(effects.strikePalette(), form().underwaterCycle().isEmpty() ? null : effects.strikePalette());
+            else if (displayFrame >= 256) applyCycleRow(displayFrame - 256);
+        }
+        if (--timer >= 0) return;
         timer = form().cycleTicks() - 1;
         displayFrame = 256 + frame;
-        apply(form().dryCycle().get(frame), form().underwaterCycle().isEmpty()
-                ? null : form().underwaterCycle().get(frame));
+        if (!strikeShown) applyCycleRow(frame);
         frame = (frame + 1) % form().dryCycle().size();
     }
+    /**
+     * The colour of {@code slot} in the form's palette-cycle row that is live, even underneath a
+     * strike palette, as 0xRRGGBB; -1 when no cycle row is showing.
+     */
+    public int cyclePhaseColour(int slot) {
+        if (phase != -1 || displayFrame < 256 || slot < 0 || slot > 15) return -1;
+        var colour = new Palette.Color();
+        colour.fromSegaFormat(form().dryCycle().get(displayFrame - 256).get(slot));
+        return (colour.r & 255) << 16 | (colour.g & 255) << 8 | (colour.b & 255);
+    }
+    private void applyCycleRow(int index) {
+        apply(form().dryCycle().get(index), form().underwaterCycle().isEmpty()
+                ? null : form().underwaterCycle().get(index));
+    }
     @Override protected void onRevertStarted() {
+        strikeShown = false;
         phase = 2; frame = form().fade().size() - 1; timer = 3;
         restoreNormalArt(); player.setShieldVisible(true); player.setInvincibleFrames(1);
     }
@@ -222,7 +249,7 @@ public final class ProfileSuperStateController extends SuperStateController impl
         return createRewindState(phase, frame, timer, displayFrame, tier.ordinal() | (doomsday ? 2 : 0) | (endingScene ? 4 : 0) | (endingReunion ? 8 : 0));
     }
     @Override public void restoreRewindState(RewindState state) {
-        particles.clear();
+        particles.clear(); strikeShown = false;
         restoreCoreRewindState(state); phase = state.paletteState(); frame = state.paletteFrame();
         timer = state.paletteTimer(); tier = SuperFormProfile.Tier.values()[state.presentationTier() & 1];
         doomsday = (state.presentationTier() & 2) != 0;

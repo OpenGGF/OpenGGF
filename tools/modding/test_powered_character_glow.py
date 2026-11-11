@@ -1,4 +1,5 @@
 """Keep the owner-picked powered palettes (Open Cone, Prism Gilt, Corona Crest) and silhouettes free of fixed black ink."""
+import colorsys
 import json
 from pathlib import Path
 import unittest
@@ -28,9 +29,11 @@ class PoweredCharacterGlowTest(unittest.TestCase):
     def test_prism_gilt_holds_each_phase_and_never_flashes_white_against_jade(self):
         phases=[]
         for line,words in self.rows('mica',('hyper',)):
-            body=words[2:7]
-            phase='jade' if body[4]>>8>=0xA and body[4]&15<=6 else 'white' if body[4]==0xEEE and body[0]>>8>=4 else \
-                'rose' if body[0]&15<=8 and (body[0]>>8)>=2 else 'gold'
+            # Classify by the mid plate colour (slot 4): jade is green-led, white-hot is pale and
+            # unsaturated, rose is a red-orange hue; everything else is the gold family.
+            word=words[4]; r,g,b=((word&15)*255//14,((word>>4)&15)*255//14,((word>>8)&15)*255//14)
+            h,s,v=colorsys.rgb_to_hsv(r/255,g/255,b/255)
+            phase='jade' if 0.25<h<0.6 else 'white' if s<0.32 and v>0.9 else 'rose' if (h<0.07 or h>0.9) and s>0.3 else 'gold'
             phases.append(phase)
         self.assertTrue({'gold','white','jade','rose'}<=set(phases),phases)
         for a,b in zip(phases,phases[1:]+phases[:1]):
