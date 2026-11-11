@@ -13,13 +13,15 @@ public final class CharacterIconPalette {
 
     public static boolean hasHudIcon() throws IOException {
         var presentation = StageCharacterPresentation.active();
+        // Stock characters have no creator presentation; only a creator leader needs its host.
+        if (presentation == null) return false;
         var host = switch (GameServices.module().getGameId()) {
             case S1 -> CharacterPresentation.Host.S1;
             case S2 -> CharacterPresentation.Host.S2;
             case S3K -> CharacterPresentation.Host.S3K;
             case STANDALONE -> null;
         };
-        var art = presentation == null || host == null ? null : presentation.art().get(host);
+        var art = host == null ? null : presentation.art().get(host);
         return art != null && art.hudLifeIcon() != null;
     }
 
