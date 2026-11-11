@@ -188,7 +188,8 @@ under the matching area heading; see the
 
 - **MICA, an original character framework example:** TALON’s S3K lives label now
   spells his full name using native glyph pixels with tighter blank padding; S1,
-  S2 and MICA retain their existing words and portraits. TALON now joins as her
+  S2 and MICA retain their existing words and portraits. Creator S3K lives names
+  preserve the native × beside the counter, as S1/S2 already do. TALON now joins as her
   default sidekick and is selectable solo. Joint native-pose carry redraws now
   keep MICA’s raised gloves against TALON’s shoes throughout his wingbeat,
   with native-style material contours and the complete S3K hanging sequence.

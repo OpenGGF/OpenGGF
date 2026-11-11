@@ -357,8 +357,10 @@ MICA packages its HUD, monitor, sign and supplementary S1 HUD glyph assets this 
 
 S1, S2 and S3K consume the HUD life icon/name, act-results name, special-stage
 results name (S2 including the Super announcement; S3K Blue Sphere) and 1-up
-monitor face slots. HUD names use each host's small font inside its native 32×16 cell; the short
-name is preferred when supplied. S3K removes wholly transparent glyph-edge
+monitor face slots. HUD names use each host's small font in the upper 32×8 row of its native
+32×16 word/counter cell; the lower row retains the ROM cross and counter space.
+Creator glyphs cannot extend into that lower row. The short name is preferred
+when supplied. S3K removes wholly transparent glyph-edge
 columns only when the ordinary word exceeds 32 pixels; it never scales, removes
 ink or replaces native glyphs. If the packed word still exceeds the cell, S3K
 rejects it. This allows full names such as TALON without new font art. Results

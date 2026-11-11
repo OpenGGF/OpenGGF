@@ -34,7 +34,12 @@ class TestSonic1CharacterPresentation {
     @Test void hudUsesMicaIconAndSmallNativeICWithOnlySupplementaryMA() throws Exception {
         Rom rom = rom();
         var nativeTiles = lives(rom);
+        byte[] cross = CharacterNameComposer.extract(nativeTiles, 4, 4, 2, 0, 8, 8, 8).pixels();
+        int crossInk = 0;
+        for (byte pixel : cross) if (pixel != 0) crossInk++;
+        assertTrue(crossInk > 0, "Stock lives display has a native cross");
         var result = Sonic1CharacterPresentation.hud(rom, nativeTiles, mica());
+        assertArrayEquals(cross, CharacterNameComposer.extract(result, 4, 4, 2, 0, 8, 8, 8).pixels());
         var name = Sonic1CharacterPresentation.name(rom, mica(), Style.HUD);
         assertEquals(Set.of('I','C'), name.nativeGlyphs());
         assertEquals(Set.of('M','A'), name.supplementaryGlyphs());

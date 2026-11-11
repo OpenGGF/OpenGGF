@@ -2996,6 +2996,19 @@ limitation rather than substituting reconstructed stock artwork. No route,
 full-suite or new special-stage visual certification is claimed. No Mod API
 surface changed; the existing descriptor/version/signature pins remain paired.
 
+**Counter-cross follow-up (owner review, 2026-11-11):** the earlier S3K adapter
+replaced all eight tiles in the 32×16 word/counter cell, clearing the lower row
+while writing an 8-pixel-high name. That erased the native × for every named
+creator character. S1/S2 already replaced only upper tiles. S3K now replaces
+only tiles 4/6/8/10 and retains native lower tiles 5/7/9/11, including the cross.
+The independent 16×16 portrait occupies tiles 0–3 and was not responsible.
+HUD glyphs taller than 8 pixels are rejected before they can cover the counter.
+ROM-backed assertions compare nonblank cross pixels and the complete lower row
+against Sonic/Tails/Knuckles banks for both MICA/TALON words, with and without
+portraits, and check the tall-glyph rejection. S1/S2 assertions likewise verify
+the nonblank ROM cross is preserved. No art or API surface changes are needed.
+
+
 
 Existing `StageSpriteSet` ownership is sufficient; internal routing now selects
 the native Tails actor independently from the Sonic leader. Separate pattern
