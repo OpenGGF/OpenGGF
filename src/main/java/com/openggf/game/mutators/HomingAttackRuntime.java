@@ -112,10 +112,10 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
                 && free(sprite);
     }
 
-    /** True while a launch is homing or its trail is still fading; Instagib burns, Homing glows blue. */
+    /** True while a launch is homing or its trail is still fading; Instagib burns, Homing glows. */
     public boolean flameActive() { return launchMode != Mode.OFF && flameTicks > 0; }
 
-    /** Instagib's fire palette; ordinary homing uses the subdued blue one. */
+    /** Instagib's burning visuals; ordinary homing uses the subdued glow. */
     boolean instagibVisuals() { return launchMode == Mode.INSTAGIB; }
 
     /** Native {@code getInvulnerable()} hook: true while the sprite's world grants an Instagib strike. */
@@ -446,6 +446,8 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
         if (!leader(player) || phase == Phase.IDLE || !(player instanceof AbstractPlayableSprite sprite)) return;
         phase = Phase.IDLE;
         spent = false;
+        // Presentation only: an authored powered form may answer a landed strike with particles.
+        com.openggf.sprites.playable.PoweredFormEffects.strikeLanded(sprite);
         if (boss) {
             // Bounce off: keep the native reflected direction but bound its size and lift.
             double vx = sprite.getXSpeed(), vy = sprite.getYSpeed(), length = Math.hypot(vx, vy);
@@ -543,6 +545,7 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
     public void observeFrame(com.openggf.graphics.SpritePresentation.Frame frame, int cameraX, int cameraY) {
         var leader = roster == null ? null : roster.getMainPlayable();
         effects.observe(frame, cameraX, cameraY, flameActive() && leader != null, instagibVisuals(),
+                HomingAttackEffects.style(leader, instagibVisuals()),
                 leader == null ? 0 : leader.getCentreX(), leader == null ? 0 : leader.getCentreY());
     }
 

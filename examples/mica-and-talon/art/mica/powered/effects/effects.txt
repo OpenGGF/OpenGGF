@@ -1,0 +1,104 @@
+# MICA strike trails and Gilded particles.
+#
+# trail <set> <ember-hot> <ember-mid> <ember-cool> <echo-tint|none> <density%>   (0xRRGGBB)
+# front <set> <rgb> <radius> <size> <alpha> <arc>        heat front, outer haze first
+# particle <name> <frame-ticks>, then per frame: frame <hotspot-x> <hotspot-y> and its pixel rows.
+#   Pixels are hex indices on MICA's own live palette line ('.' is transparent), so Gilded
+#   glints follow her gold cycle: 2 amber, 3 orange, 4 gold, 5 yellow, 6 cream, 7 pale gold, c white.
+# emitter <set> <TRIGGER> <particle[,particle]> <count> <interval> <RING|SCATTER>
+#   <offset-x> <offset-y> <radius> <speed-x> <speed-y> <jitter> <gravity> <life>
+#   offsets in pixels, +x in front of her; speeds, jitter and gravity in 1/256 px per tick.
+
+# Normal MICA: pale mint core, jade body, deep green haze (her sheet colours 6DDBB6/24B692/006D6D).
+trail normal B6FFDB 24B692 006D49 6DDBB6 100
+front normal 004930 23 5 120 8
+front normal 00926D 19 4 190 7
+front normal 6DDBB6 16 3 230 6
+front normal E8FFF4 14 3 240 4
+
+# Gilded (Super): white-gold core, gold, warm amber haze.
+trail super FFFFDB FFDB49 DB9224 FFD040 100
+front super B66D00 23 5 120 8
+front super FFB624 19 4 190 7
+front super FFDB6D 16 3 230 6
+front super FFFFE8 14 3 240 4
+
+# Hyper (Instagib): white-hot core and gold, a thin jade fringe outside, denser embers.
+trail hyper FFFFFF FFDB49 FF9224 FFE070 180
+front hyper 24B692 27 2 150 9
+front hyper DB9224 23 5 170 8
+front hyper FFDB49 19 4 230 7
+front hyper FFF6B6 16 4 255 6
+front hyper FFFFFF 14 3 255 4
+
+# Four-point glint: small, medium, large, medium -- a twinkle. Gold arms, cream core.
+particle glint 3
+frame 2 2
+..4..
+..5..
+45654
+..5..
+..4..
+frame 3 3
+...3...
+...4...
+...5...
+3456543
+...5...
+...4...
+...3...
+frame 4 4
+....3....
+....4....
+.2..5..2.
+....6....
+3456c6543
+....6....
+.2..5..2.
+....4....
+....3....
+frame 3 3
+...3...
+...4...
+...5...
+3456543
+...5...
+...4...
+...3...
+
+# Tiny twinkle: a plus that winks to a point.
+particle twinkle 4
+frame 1 1
+.5.
+5c5
+.5.
+frame 0 0
+6
+
+# Strike flash: a white burst cooling to gold.
+particle flash 4
+frame 2 2
+..c..
+.c7c.
+c7c7c
+.c7c.
+..c..
+frame 1 1
+.7.
+7c7
+.7.
+frame 0 0
+5
+
+# Gilded: glints shed while running fast or rolling, streaming during strikes, a ring as the gold arrives.
+emitter super TRANSFORM glint 16 1 RING 0 0 6 0x380 0 0x20 0 30
+emitter super FAST glint,twinkle 1 4 SCATTER -6 0 10 -0x80 0 0x50 0 24
+emitter super ROLLING glint,twinkle 1 4 SCATTER -4 0 9 -0x80 0 0x50 0 22
+emitter super STRIKING glint,twinkle 2 1 SCATTER -6 0 8 -0x100 0 0x60 0 18
+
+# Hyper: denser glints and a flash ring on every Instagib strike.
+emitter hyper TRANSFORM glint,twinkle 24 1 RING 0 0 6 0x400 0 0x20 0 32
+emitter hyper FAST glint,twinkle 1 3 SCATTER -6 0 12 -0x80 0 0x60 0 24
+emitter hyper ROLLING glint,twinkle 1 2 SCATTER -4 0 10 -0x80 0 0x60 0 22
+emitter hyper STRIKING glint,twinkle 2 1 SCATTER -6 0 9 -0x140 0 0x80 0 16
+emitter hyper STRIKE_HIT flash 12 1 RING 0 0 4 0x500 0 0 0 12

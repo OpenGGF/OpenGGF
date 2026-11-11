@@ -226,7 +226,7 @@ under the matching area heading; see the
   art adds ledge, hanging, tumble, air pickup, recoil, recovery and flight/swim
   variants; TALON's private flight scripts select the native pose branch and
   preserve relocated mapping indices. Airborne
-  down previews targets; down+jump divebombs (Instagib in Solar), while ordinary
+  down previews targets; down+jump divebombs, while ordinary
   jump retains flight/flaps. TALON owns HUD/1-up portraits, signs, continue and save portraits,
   half-pipe and Blue Sphere body sprites independently as solo lead or follower. MICA’s
   Blue Sphere rear-view bank follows native special-stage shading, colour budgets
@@ -258,7 +258,10 @@ under the matching area heading; see the
   Its paired `micaandtalon` package keeps the same mod/character IDs. The demo plays in all three stock games with Sonic's
   single-player physics, native S2/S3K spindash (disabled in S1), character-owned
   homing (including an untargeted forward
-  dash), a four-frame HOMING_DIVE pose, and powered Instagib strikes. Its
+  dash), a four-frame HOMING_DIVE pose, and Hyper-only Instagib strikes. Creator
+  strike colours (`StrikeTrailStyle`) and per-form particles (`PoweredEffects`) give
+  MICA a jade trail, Gilded gold glints and trail, Hyper echoes and strike flashes,
+  and Solar TALON sun-ember motes and a heat trail, instead of hue-rotated blue. Its
   rerunnable original sheet has 274 frames, 52 canonical animations, slope cycles,
   a shared palette and a breathing/fidget idle. Canonical sheets preserve native
   partial-loop WAIT tails and finite hold/next endings. Shared module animation

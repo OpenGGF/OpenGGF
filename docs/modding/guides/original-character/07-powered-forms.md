@@ -49,11 +49,13 @@ new SuperFormProfile.Form(
         CanonicalAnimation.SUPER_TRANSFORM,      // the transformation animation
         Map.of(),                                // animation overrides
         false, false,                            // no after-images, no stars
-        s3kBank);                                // optional powered drawings
+        s3kBank,                                 // optional powered drawings
+        gilded);                                 // optional strike colours and particles
 ```
 
-MICA's Hyper tier reuses the same form, so Hyper MICA keeps her gold look and her
-homing attack.
+MICA's Hyper form shares these colours and drawings but sets `afterImages` to `true`
+for the native Hyper echo trail, and takes the denser `hyper` effects. Her strike is
+Instagib only in Hyper; Super Gilded homes as she does normally.
 
 ### 3. Write the colour rows
 
@@ -118,7 +120,40 @@ python3 tools/testing/maven_queue.py exec:java "-Dexec.mainClass=com.openggf.too
 for the animation below was `30 -; 1 A; 20 -; 1 A; 40 -; repeat 8 { 1 R+A; 16 R }; 120 R`:
 jump, transform in the air, then strike.
 
-![Gilded MICA, animated: a gold spinning shell striking Angel Island badniks one after another with Instagib, leaving a golden trail.](images/gilded-instagib.png)
+![Gilded MICA, animated: a gold spinning shell striking Angel Island badniks one after another, leaving a golden trail.](images/gilded-instagib.png)
+
+### 6. Give the form its own sparkle
+
+`PoweredEffects` gives a form its strike colours and small particle sprites with the
+rules that shed them. MICA keeps all of it in one text table,
+`art/mica/powered/effects/effects.txt`, read by `EffectsTable` in the example:
+
+```text
+# trail <set> <ember-hot> <ember-mid> <ember-cool> <echo-tint|none> <density%>
+trail super FFFFDB FFDB49 DB9224 FFD040 100
+front super B66D00 23 5 120 8          # heat front, outer haze first ... to the nose
+
+particle glint 3                       # four-point glint: small, medium, large, medium
+frame 2 2
+..5..
+..7..
+57c75
+..7..
+..5..
+# ... three more frames
+
+# emitter <set> <TRIGGER> <particles> <count> <interval> <RING|SCATTER>
+#         <offset-x> <offset-y> <radius> <speed-x> <speed-y> <jitter> <gravity> <life>
+emitter super TRANSFORM glint 16 1 RING 0 0 6 0x380 0 0x20 0 30
+emitter super FAST glint,twinkle 1 5 SCATTER -6 0 10 -0x80 0 0x50 0 24
+```
+
+Pixels are hex indices on MICA's own palette line, so in Gilded form they take the gold
+cycle's colours and shimmer with it. Her normal jade trail comes from the `normal` set
+through `strikeTrailStyle()`. TALON's table gives Solar sun-ember motes in flight, a spray
+on each flap, a flare ring as the form arrives and a heat trail behind the divebomb. The
+[strike colours and powered effects](../../characters.md#strike-colours-and-powered-effects)
+reference lists every trigger and limit.
 
 <details>
 <summary>What the controller owns</summary>
@@ -126,8 +161,8 @@ jump, transform in the air, then strike.
 The super-state controller owns the palette cursor, phase, tier, ring drain and the
 switch between normal and powered drawings. It restores them on rewind and when art is
 reloaded. Abilities can ask `isSuperSonic()` (true from the transformation on) and
-`getSuperStateController().isHyperFormActive()`; MICA's strike becomes Instagib when
-`isSuperSonic()` is true. The reference's
+`poweredTier()` (`SUPER`, `HYPER` or null); MICA's strike becomes Instagib only when
+`poweredTier()` is `HYPER`. The reference's
 [ability and super-form rules](../../characters.md#ability-and-super-form-rules) list
 every field's limits.
 
