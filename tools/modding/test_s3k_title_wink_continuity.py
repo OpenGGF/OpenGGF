@@ -3,6 +3,10 @@ Inputs: maintained example indexed assets, no ROM. Origin: split lashes report,
 2026-11-10. Semantic ink paths supplement real-capture visual review.
 """
 import sys,unittest
+try:
+    import PIL  # noqa: F401  # Pillow is the art pipeline's only third-party dependency
+except ModuleNotFoundError:
+    raise unittest.SkipTest('Pillow is not installed; the playable-art pipeline tests need it')
 from pathlib import Path
 ART=Path(__file__).resolve().parents[2]/'examples/mica-and-talon/art/mica/titles'
 sys.path.insert(0,str(ART/'../../../production/mica/titles'))

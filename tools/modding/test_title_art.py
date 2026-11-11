@@ -1,6 +1,10 @@
 """Authored title banks must package every selector, palette and plane mask."""
 import json
 import unittest
+try:
+    import PIL  # noqa: F401  # Pillow is the art pipeline's only third-party dependency
+except ModuleNotFoundError:
+    raise unittest.SkipTest('Pillow is not installed; the playable-art pipeline tests need it')
 from pathlib import Path
 from PIL import Image
 

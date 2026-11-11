@@ -4,6 +4,10 @@ import hashlib
 import math
 from pathlib import Path
 import unittest
+try:
+    import PIL  # noqa: F401  # Pillow is the art pipeline's only third-party dependency
+except ModuleNotFoundError:
+    raise unittest.SkipTest('Pillow is not installed; the playable-art pipeline tests need it')
 from playable_art.locked_stage import rebuild, derive_curl, read_indexed
 from playable_art.locked_stage_review import measure
 from playable_art.stage_body_motion import render_body, posed_point, rotate_point, principal_axis

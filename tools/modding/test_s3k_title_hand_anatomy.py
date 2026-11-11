@@ -3,6 +3,10 @@ Inputs: maintained generated glove and native-angle recipe. Origin: owner report
 2026-11-10. This verifies derivation/landmark topology, not image recognition.
 """
 import importlib.util,json,sys,unittest
+try:
+    import PIL  # noqa: F401  # Pillow is the art pipeline's only third-party dependency
+except ModuleNotFoundError:
+    raise unittest.SkipTest('Pillow is not installed; the playable-art pipeline tests need it')
 from pathlib import Path
 from PIL import Image
 ART=Path(__file__).resolve().parents[2]/'examples/mica-and-talon/art/mica/titles'

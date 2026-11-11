@@ -3,6 +3,10 @@ Inputs: maintained example indexed title assets. Origin: doubled-thumb report,
 2026-11-10. Positive and intentionally broken contexts need no ROM or renderer.
 """
 import importlib.util,json,unittest
+try:
+    import PIL  # noqa: F401  # Pillow is the art pipeline's only third-party dependency
+except ModuleNotFoundError:
+    raise unittest.SkipTest('Pillow is not installed; the playable-art pipeline tests need it')
 from pathlib import Path
 from PIL import Image
 ROOT=Path(__file__).resolve().parents[2]
