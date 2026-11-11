@@ -219,6 +219,10 @@ under the matching area heading; see the
 
 ## Maintenance and release preparation
 
+- **Accurate FM performance:** fold the Nuked sine and exponential lookup arithmetic
+  into derived tables while preserving cycle-level output. A paired six-voice
+  core benchmark measured 3.9% less rendering time; this is not a gameplay FPS claim.
+
 - **Engine quality and contributions:** the README and contributor entry point now
   acknowledge maintainability weaknesses and invite focused improvements to object
   lifetime, collision contact, rewind reconstruction, trace diagnosis and navigation.

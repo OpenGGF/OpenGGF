@@ -39,11 +39,11 @@ import static com.openggf.audio.synth.nuked.NukedOpn2Tables.EG_NUM_DECAY;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.EG_NUM_RELEASE;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.EG_NUM_SUSTAIN;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.EG_STEPHI_FLAT;
-import static com.openggf.audio.synth.nuked.NukedOpn2Tables.EXPROM;
+import static com.openggf.audio.synth.nuked.NukedOpn2Tables.EXP_MANTISSA;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.FM_ALGORITHM_BITS;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.FN_NOTE;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.LFO_CYCLES;
-import static com.openggf.audio.synth.nuked.NukedOpn2Tables.LOGSINROM;
+import static com.openggf.audio.synth.nuked.NukedOpn2Tables.LOG_SIN_HALF;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.OP_OFFSET;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.PG_DETUNE_SIGNED;
 import static com.openggf.audio.synth.nuked.NukedOpn2Tables.PG_LFO_SH1_FLAT;
@@ -846,22 +846,16 @@ public final class NukedOpn2 {
         int slot = wrap24(chip.cycles + 19);
         /* Calculate phase */
         int phase = (chip.fmMod[slot] + (chip.pgPhase[slot] >> 10)) & 0x3ff;
-        int quarter;
         int level;
         int output;
-        if ((phase & 0x100) != 0) {
-            quarter = (phase ^ 0xff) & 0xff;
-        } else {
-            quarter = phase & 0xff;
-        }
-        level = LOGSINROM[quarter];
+        level = LOG_SIN_HALF[phase & 0x1ff];
         /* Apply envelope */
         level += chip.egOut[slot] << 2;
         /* Transform */
         if (level > 0x1fff) {
             level = 0x1fff;
         }
-        output = ((EXPROM[(level & 0xff) ^ 0xff] | 0x400) << 2) >> (level >> 8);
+        output = EXP_MANTISSA[level & 0xff] >> (level >> 8);
         if ((phase & 0x200) != 0) {
             output = ((~output) ^ (chip.modeTest21[4] << 13)) + 1;
         } else {

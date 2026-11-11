@@ -170,3 +170,65 @@ Main and worktree verification logs/XML were archived under
 `verification-development/`; the testcase comparison script is retained in
 the sibling `evidence/` directory. Release wording and this final record are
 documentation-only follow-ups to the verified merge.
+
+
+## Folded operator tables — 2026-11-11 follow-up
+
+Baseline: `c06efe67da766c1de1a68dfb327b85e400940fb8` (develop).
+The accurate core now derives a 512-entry reflected log-sine table and a
+256-entry complemented, scaled exponential-mantissa table from its own pinned
+ROM tables. `fmGenerate` retains envelope clamping, test-bit handling, signed
+output and every chip clock. The tables add 3 KiB of integer payload per JVM;
+no mutable chip or snapshot state is added. These are the table-folding ideas
+used by fast FM, applied to Nuked's own arithmetic and entries.
+
+### Measurement
+
+AMD Ryzen 9 9950X, Linux, OpenJDK 25.0.5.0.3, CPU affinity 6.
+`JavaNukedBenchmark` with 262144 native stereo frames, 8 warmups and 9 timed
+iterations per fresh JVM. Four paired forks alternate baseline/candidate order.
+Each fork's median is summarized below; the aggregate is their median.
+These are core-only six-voice active-LFO measurements on a shared desktop,
+not gameplay FPS, end-to-end audio rendering or a reserved benchmark host.
+No Maven job in this task ran during these timings; other desktop activity
+and work on other cores were not excluded.
+
+| Arm | Fork medians (ns/native stereo frame) | Aggregate |
+| --- | --- | ---: |
+| Baseline | 864.58, 871.60, 857.65, 845.65 | 861.12 |
+| Folded tables | 835.03, 829.43, 824.52, 825.94 | 827.69 |
+
+Time reduction: 3.88%; core throughput increase: 4.04%.
+All eight validation renders retain checksum `1646411168050564101`, zero
+snapshot errors and a positive key-off negative control. The checksum checks
+a separate validation render, not each timed iteration's discarded return.
+
+The initial four-arm sweep (same dimensions) measured median-of-fork-medians
+880.16 ns baseline, 849.76 sine-only, 867.87 exponent-only and 842.49 combined.
+The final confirmation above measures the shared `NukedOpn2Tables` layout.
+Benchmark compilation uses `javac -d <arm>` on Nuked's three source classes
+and `tools/audio/fm-core-benchmark/JavaNukedBenchmark.java`; the baseline sources
+are extracted from the baseline SHA. Invoke each with:
+
+```bash
+taskset -c 6 java -cp <arm> com.openggf.tools.audio.benchmark.JavaNukedBenchmark 262144 8 9
+```
+
+### Verification scope
+
+Focused command on the final source layout:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestNukedOpn2BitExactScripts,TestNukedOpn2PhaseMatrix,TestNukedOpn2PortSmoke,TestNukedOpn2StateEquality,TestYm2612ChipNukedParity,TestYm2612ChipSnapshot' '-Dsurefire.excludedGroups=audio-reference' test
+```
+
+The selection explicitly enables the slow public synthetic scripts while
+excluding external captured-audio fixtures. It covers cycle-ordered pin
+output, status/IRQ/state hashes, phase matrices, state equality, facade parity
+and snapshots. This is bounded fixture evidence, not exhaustive equivalence
+of all chip states. No tolerance, expectation or fixture changes are needed.
+
+Final-layout result: 661 tests, zero failures, errors or skips; BUILD SUCCESS.
+The queue waited 59 seconds; Maven execution took 1 minute 58 seconds,
+including recompilation. External captured-audio fixtures were excluded by
+selection, not reported as passing. No category/full-suite verdict is claimed.
