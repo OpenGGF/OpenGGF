@@ -90,9 +90,13 @@ def assemble(root, output):
             spec['speedDriven'] = True
             if name in ('WALK', 'RUN'):
                 cycles = [[i for f, i in entries if f['angle_set'] == slope] for slope in SLOPES]
-                if not cycles[0] or len({len(c) for c in cycles}) != 1 or len(cycles[0]) % 2:
+                if cycles[0] and not any(cycles[1:]):
+                    # Flat-only first sheets: the converter repeats the flat cycle on every slope.
+                    spec.update(frames=cycles[0])
+                elif not cycles[0] or len({len(c) for c in cycles}) != 1 or len(cycles[0]) % 2:
                     raise ValueError('Four equal even slope cycles required')
-                spec.update(frames=cycles[0], slopes=cycles)
+                else:
+                    spec.update(frames=cycles[0], slopes=cycles)
         else:
             ticks, end = fixed[name]
             if name == 'SPRING' and len(indices) == 1:

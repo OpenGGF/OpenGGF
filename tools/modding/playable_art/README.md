@@ -217,6 +217,9 @@ play immediately for 186 ticks, followed by a glance and boot tap. The optional
 and a canonical `loop`/`hold`/`next` end action; assembly resolves IDs after packing.
 These are authored pose adaptations, not an assertion of stock frame identity.
 WALK/RUN slopes are ordered flat/up45/steep/inverted, native selectors 0/2/4/6.
+A handoff with only `flat` WALK/RUN frames assembles without `slopes`, and the
+converter repeats the flat cycle on every slope. The tutorial's part 2 checkpoint
+uses this, with `requiredAnimations` listing only WAIT, WALK, RUN and ROLL.
 
 `mica-custom-frames.json` records HOMING_DIVE mapping indices for the ability
 lane. All four frames are in the image and GGFP; no canonical enum member is

@@ -83,6 +83,22 @@ class PlayableArtAssemblyTest(unittest.TestCase):
             self.assertEqual('WALK',manifest['animations']['SPRING']['next'])
             self.assertEqual([48],manifest['animations']['SPRING']['durations'])
 
+    def test_flat_only_tutorial_sheet_omits_slopes(self):
+        art = ROOT/'examples/mica-and-talon/tutorial/part-2-first-playable/art/sheet'
+        with tempfile.TemporaryDirectory() as directory:
+            manifest, _, stats = assembler.assemble(art, Path(directory))
+        self.assertEqual(dict(frames=26, maxTilesPerFrame=25, animations=4), stats)
+        for name, length in [('WALK', 8), ('RUN', 4)]:
+            self.assertEqual(length, len(manifest['animations'][name]['frames']))
+            self.assertNotIn('slopes', manifest['animations'][name])
+        handoff = json.loads((art/'frames.yaml').read_text())
+        palette = json.loads((art/'palette.yaml').read_text())
+        handoff['frames'].append(dict(handoff['frames'][-1], id='walk-up45', animation='WALK', angle_set='up45'))
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(assembler.json, 'loads', side_effect=[handoff, palette]):
+                with self.assertRaisesRegex(ValueError, 'slope cycles'):
+                    assembler.assemble(art, Path(directory))
+
     def test_variant_scripts_reuse_exact_symbolic_order_and_blank(self):
         art = ROOT/'examples/mica-and-talon/art/mica/sheet'
         handoff = json.loads((art/'frames.yaml').read_text())

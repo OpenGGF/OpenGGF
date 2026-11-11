@@ -212,8 +212,8 @@ Package indexed presentation PNGs beside the GGFP, read them with
 `PresentationImages.read(context.modAssets(), relativePath)`, and pass the resulting
 presentation from the definition's supplier. `ModAssetRoot.readBounded` loads the
 GGFP under the asset limits; `PlayableSheetMaterializer.read` validates it.
-See [MicaMod.java](../../examples/mica-and-talon/src/main/java/mica/MicaMod.java),
-[MicaPresentation.java](../../examples/mica-and-talon/src/main/java/mica/MicaPresentation.java)
+See [MicaMod.java](../../examples/mica-and-talon/src/main/java/micaandtalon/MicaMod.java),
+[MicaPresentation.java](../../examples/mica-and-talon/src/main/java/micaandtalon/MicaPresentation.java)
 and [build.py](../../examples/mica-and-talon/build.py) for loading and jar layout.
 
 ### Canonical vocabulary
@@ -562,7 +562,7 @@ A host without those scripts uses authored canonical GGFP timings without a dono
 ROM. Existing `animations` overrides take precedence and address the combined bank.
 The profile controller restores views during transformation, Super/Hyper, revert,
 rewind and art refresh. MICA's S2/S3K bank and Hyper geometry sharing are documented
-in her [powered art](../../examples/mica-and-talon/production/mica/powered/README.md).
+in her [powered-art provenance](../../examples/mica-and-talon/production/mica/powered/provenance.json).
 Missing water rows use the live host-zone derivation.
 Hyper trails use the character's own renderer and rewind-captured position history;
 stars are opt-in. Neither Sonic's palette nor his alternate mappings are installed.
@@ -689,9 +689,9 @@ S2 competitive 2P presentation, title/branding art, slot-reel prize symbols and
 custom Tornado pilots are outside the delivered character presentation surfaces.
 The slot-machine *player* set is delivered; its reel symbols are separate art.
 GGFP presentation sections are pending: keep using bounded sidecar PNG assets.
-MICA is a framework demonstration, with TALON planned for phase 2. Focused
-acceptance and surface captures do not establish complete title-to-ending routes.
-For a build-along, see [an original character across three games](guides/original-character.md).
+MICA and TALON are a framework demonstration. Focused acceptance and surface
+captures do not establish complete title-to-ending routes. For a build-along, see
+[MICA and TALON: an original character in nine parts](guides/original-character/README.md).
 
 ### Object-owned native mapping poses
 
