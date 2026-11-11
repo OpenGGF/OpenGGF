@@ -381,6 +381,9 @@ public class Sonic2EndingCutsceneManager {
         default boolean hasObjectFrame(int frame) { return false; }
         default boolean drawObject(int frame, int x, int y) { return false; }
         default boolean drawPilot(int frame, int x, int y) { return false; }
+        default void prepareFinalPlane(int[] map, Pattern[] art) { }
+        default int finalPlanePattern(int cell, int nativePattern) { return nativePattern; }
+        default void drawFinalPilot(int x, int y) { }
         default boolean drawPhoto(int index, int x, int y) { return false; }
         default void paletteStep(boolean toWhite) { }
         default void update() { }
@@ -444,6 +447,7 @@ public class Sonic2EndingCutsceneManager {
                 endingPlaneMapAddr,
                 Sonic2Constants.ART_TILE_ENDING_FINAL_TORNADO,
                 "EndingPlaneBackdrop");
+        if (presentation != null) presentation.prepareFinalPlane(endingPlaneMap, endingArt.getFinalTornadoPatterns());
 
         // Parse ROM sprite mappings for accurate cutscene rendering
         try {
@@ -1572,6 +1576,7 @@ public class Sonic2EndingCutsceneManager {
         int originY = ENDING_PLANE_PLANE_Y - vscrollOffset;
         int maxWords = ENDING_PLANE_WIDTH_TILES * ENDING_PLANE_HEIGHT_TILES;
         int words = Math.min(maxWords, endingPlaneMap.length);
+        if (presentation != null) presentation.drawFinalPilot(screenXForWidth(originX, viewportWidth), originY);
 
         for (int i = 0; i < words; i++) {
             int word = endingPlaneMap[i];
@@ -1587,6 +1592,7 @@ public class Sonic2EndingCutsceneManager {
             }
 
             int patternId = Sonic2EndingArt.PATTERN_BASE_VRAM + reusableDesc.getPatternIndex();
+            if (presentation != null) patternId = presentation.finalPlanePattern(i, patternId);
             gm.renderPatternWithId(patternId, reusableDesc, drawX, drawY);
         }
     }

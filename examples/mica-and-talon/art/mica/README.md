@@ -35,3 +35,10 @@ companion presentation selects them; MICA's solo companion bank selects existing
 TALON pilot art. Fresh GPT Image candidates and native references stay in the
 feedback-round scratch directory; reduction and area checks are recorded in
 `production/mica/endings/pilot/provenance.json` (scale ratios 0.988–1.017).
+
+`endings/final-pilot/` contains the front-view cockpit overlay and binary native
+clear mask (184×120, selector 0, hotspot 0,0). It follows the independently
+scrolling ending-plane backdrop. The native-pose reference, two candidate rows,
+selected reduction, palette and size check are recorded under
+`production/mica/endings/final-pilot/provenance.json`. Vehicle pixels come from
+the ROM, not the authored overlay.

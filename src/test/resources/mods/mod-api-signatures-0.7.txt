@@ -1562,6 +1562,7 @@ CONSTRUCTOR com.openggf.game.DelegatingZoneRegistry public  <init>(com.openggf.g
 CONSTRUCTOR com.openggf.game.DemoLamppostState public  <init>(int,int,int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.game.DonorCapabilities$NativeFramePose public  <init>(java.lang.String,com.openggf.game.CanonicalAnimation)
 CONSTRUCTOR com.openggf.game.EndingSpriteSet public  <init>(com.openggf.game.StageSpriteSet,int[])
+CONSTRUCTOR com.openggf.game.EndingSpriteSet public  <init>(com.openggf.game.StageSpriteSet,int[],java.util.Map<java.lang.Integer,com.openggf.game.CharacterPresentation$Image>)
 CONSTRUCTOR com.openggf.game.Game public  <init>()
 CONSTRUCTOR com.openggf.game.GameRng public  <init>(com.openggf.game.GameRng$Flavour)
 CONSTRUCTOR com.openggf.game.GameRng public  <init>(com.openggf.game.GameRng$Flavour,long)
@@ -3001,8 +3002,10 @@ FIELD com.openggf.game.EndingPhase public,static,final com.openggf.game.EndingPh
 FIELD com.openggf.game.EndingPhase public,static,final com.openggf.game.EndingPhase POST_CREDITS
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S1_ENDING
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S2_ENDING
+FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S2_FINAL_TORNADO_PILOT
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S2_FLOAT
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S2_PHOTOS
+FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S2_SOLO_FINAL_TORNADO_PILOT
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S2_SOLO_TORNADO_PILOT
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S2_SUPER
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S2_TORNADO_PILOT
@@ -6465,6 +6468,7 @@ METHOD com.openggf.game.EndingProvider public,abstract  void initialize()
 METHOD com.openggf.game.EndingProvider public,abstract  void update()
 METHOD com.openggf.game.EndingSpriteSet public  com.openggf.game.StageSpriteSet sprites()
 METHOD com.openggf.game.EndingSpriteSet public  int[] rgb()
+METHOD com.openggf.game.EndingSpriteSet public  java.util.Map<java.lang.Integer,com.openggf.game.CharacterPresentation$Image> nativeClearMasks()
 METHOD com.openggf.game.EndingSpriteSet public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.EndingSpriteSet public,final  int hashCode()
 METHOD com.openggf.game.EndingSpriteSet public,final  java.lang.String toString()
@@ -18523,6 +18527,7 @@ RECORD-COMPONENT com.openggf.game.DemoLamppostState waterHeight int
 RECORD-COMPONENT com.openggf.game.DemoLamppostState waterRoutine int
 RECORD-COMPONENT com.openggf.game.DonorCapabilities$NativeFramePose fallback com.openggf.game.CanonicalAnimation
 RECORD-COMPONENT com.openggf.game.DonorCapabilities$NativeFramePose key java.lang.String
+RECORD-COMPONENT com.openggf.game.EndingSpriteSet nativeClearMasks java.util.Map<java.lang.Integer,com.openggf.game.CharacterPresentation$Image>
 RECORD-COMPONENT com.openggf.game.EndingSpriteSet rgb int[]
 RECORD-COMPONENT com.openggf.game.EndingSpriteSet sprites com.openggf.game.StageSpriteSet
 RECORD-COMPONENT com.openggf.game.GameplayLaunchTeam main com.openggf.game.CharacterKey

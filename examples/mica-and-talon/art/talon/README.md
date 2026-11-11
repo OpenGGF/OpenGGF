@@ -33,3 +33,10 @@ S2 title BODY0–4 use the camera-facing face selections in
 [`s2-gaze-generation.json`](../../production/talon/titles/s2-gaze-generation.json).
 The approved goggles, crest, connected wings and outfit remain outside the face
 windows; native hotspots, indexed palette and MICA overlap pixels are retained.
+
+`endings/final-pilot/` contains the front-view cockpit overlay and binary native
+clear mask (184×120, selector 0, hotspot 0,0). It follows the independently
+scrolling ending-plane backdrop. The native-pose reference, two candidate rows,
+selected reduction, palette and size check are recorded under
+`production/talon/endings/final-pilot/provenance.json`. Vehicle pixels come from
+the ROM, not the authored overlay.

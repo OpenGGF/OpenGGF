@@ -20,6 +20,10 @@ final class TalonEndings {
                 companion.get(EndingSpriteSet.Surface.S2_TORNADO_PILOT));
         result.put(EndingSpriteSet.Surface.S3K_SOLO_TORNADO_PILOT,
                 companion.get(EndingSpriteSet.Surface.S3K_TORNADO_PILOT));
+        result.putAll(FrameTable.read(assets, "art/talon/endings/final-pilot/frames.txt").endings());
+        result.put(EndingSpriteSet.Surface.S2_SOLO_FINAL_TORNADO_PILOT,
+                FrameTable.read(assets, "art/mica/endings/final-pilot/frames.txt").endings()
+                        .get(EndingSpriteSet.Surface.S2_FINAL_TORNADO_PILOT));
         return Map.copyOf(result);
     }
 }

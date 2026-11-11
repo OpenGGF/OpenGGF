@@ -25,6 +25,7 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
     private final SpriteArtSet characterArt;
     private Palette[] nativePalettes;
     private final SuperFormProfile.Form powered;
+    private final Map<Integer, Integer> finalPlanePatterns = new HashMap<>();
     private int ticks;
     private int white = 7;
     private boolean toWhite;
@@ -46,6 +47,9 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
         if (photos != null) sets.put(EndingSpriteSet.Surface.S2_PHOTOS, photos);
         var pilot = EndingCharacterPresentation.pilot(EndingSpriteSet.Surface.S2_TORNADO_PILOT);
         if (pilot != null) sets.put(EndingSpriteSet.Surface.S2_TORNADO_PILOT, pilot);
+        sets.remove(EndingSpriteSet.Surface.S2_FINAL_TORNADO_PILOT);
+        var finalPilot = EndingCharacterPresentation.pilot(EndingSpriteSet.Surface.S2_FINAL_TORNADO_PILOT);
+        if (finalPilot != null) sets.put(EndingSpriteSet.Surface.S2_FINAL_TORNADO_PILOT, finalPilot);
         if (!sets.containsKey(EndingSpriteSet.Surface.S2_TORNADO_PILOT) && !sets.containsKey(EndingSpriteSet.Surface.S2_ENDING) && !sets.containsKey(EndingSpriteSet.Surface.S2_PHOTOS)) return null;
         return new ModEndingPresentation(rom, definition, sets);
     }
@@ -67,8 +71,10 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
         StageCharacterPresentation.bindPalette(playable, definition);
         for (var entry:sets.entrySet()) if(java.util.EnumSet.of(EndingSpriteSet.Surface.S2_ENDING,
                 EndingSpriteSet.Surface.S2_SUPER, EndingSpriteSet.Surface.S2_FLOAT,
-                EndingSpriteSet.Surface.S2_PHOTOS, EndingSpriteSet.Surface.S2_TORNADO_PILOT).contains(entry.getKey()))
-            renderers.put(entry.getKey(),EndingCharacterPresentation.renderer(entry.getValue()));
+                EndingSpriteSet.Surface.S2_PHOTOS, EndingSpriteSet.Surface.S2_FINAL_TORNADO_PILOT, EndingSpriteSet.Surface.S2_TORNADO_PILOT).contains(entry.getKey()))
+            renderers.put(entry.getKey(),EndingCharacterPresentation.renderer(entry.getValue(),
+                    com.openggf.graphics.PatternAtlasRange.CHARACTER_STAGE_PRESENTATION.base()
+                            + entry.getKey().ordinal()*0x1000));
         var profile=definition==null || definition.superFormSupplier()==null?null:definition.superFormSupplier().load(definition.key().persisted());
         powered=profile==null?null:profile.games().getOrDefault(GameId.S2,Map.of()).get(SuperFormProfile.Tier.SUPER);
         updatePalettes();
@@ -106,6 +112,39 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
     @Override public boolean drawPilot(int frame,int x,int y) {
         return draw(EndingSpriteSet.Surface.S2_TORNADO_PILOT,frame,x,y);
     }
+    @Override public void prepareFinalPlane(int[] map, com.openggf.level.Pattern[] art) {
+        var set = sets.get(EndingSpriteSet.Surface.S2_FINAL_TORNADO_PILOT);
+        if (set == null || !set.sprites().frames().containsKey(0)) return;
+        var frame = set.sprites().frames().get(0);
+        var mask = set.nativeClearMasks().get(0);
+        if (mask == null) throw new IllegalArgumentException("Final plane pilot requires a native clear mask");
+        byte[] pixels = mask.pixels();
+        // ObjCC_Init (s2.asm:13545-13572) selects the Enigma map backed by
+        // ArtNem_EndingFinalTornado (s2.asm:90925). Private per-cell tiles preserve
+        // shared native vehicle tiles; only explicitly owned pilot pixels are removed.
+        for (int cell = 0; cell < map.length; cell++) {
+            int word = map[cell], tile = (word & 2047) - Sonic2Constants.ART_TILE_ENDING_FINAL_TORNADO;
+            if (tile < 0 || tile >= art.length) continue;
+            var pattern = new com.openggf.level.Pattern(); boolean changed = false;
+            for (int y=0;y<8;y++) for (int x=0;x<8;x++) {
+                int mx=cell%23*8+x+frame.hotspotX(), my=cell/23*8+y+frame.hotspotY();
+                boolean clear=mx>=0 && my>=0 && mx<mask.width() && my<mask.height()
+                        && pixels[my*mask.width()+mx]!=0;
+                int px=(word&2048)!=0?7-x:x, py=(word&4096)!=0?7-y:y;
+                pattern.setPixel(px,py,clear?0:art[tile].getPixel(px,py)); changed|=clear;
+            }
+            if (changed) {
+                int id=com.openggf.graphics.PatternAtlasRange.CHARACTER_STAGE_PRESENTATION.base()+0xF000+cell;
+                GameServices.graphics().cachePatternTexture(pattern,id); finalPlanePatterns.put(cell,id);
+            }
+        }
+    }
+    @Override public int finalPlanePattern(int cell,int nativePattern) {
+        return finalPlanePatterns.getOrDefault(cell,nativePattern);
+    }
+    @Override public void drawFinalPilot(int x,int y) {
+        draw(EndingSpriteSet.Surface.S2_FINAL_TORNADO_PILOT,0,x,y);
+    }
     @Override public boolean drawPhoto(int index,int x,int y) {
         var set=sets.get(EndingSpriteSet.Surface.S2_PHOTOS);
         if(index == 0 || set==null || !set.sprites().frames().containsKey(index)) return false;
@@ -128,7 +167,8 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
             var palette=new Palette(); int[] rgb=sets.get(entry.getKey()).rgb();
             boolean gilded=endingRoutine()==Sonic2EndingArt.EndingRoutine.SUPER_SONIC
                     && entry.getKey()!=EndingSpriteSet.Surface.S2_PHOTOS
-                    && entry.getKey()!=EndingSpriteSet.Surface.S2_TORNADO_PILOT;
+                    && entry.getKey()!=EndingSpriteSet.Surface.S2_TORNADO_PILOT
+                    && entry.getKey()!=EndingSpriteSet.Surface.S2_FINAL_TORNADO_PILOT;
             for(int i=0;i<16;i++) {
                 var color=new Palette.Color((byte)(rgb[i]>>16),(byte)(rgb[i]>>8),(byte)rgb[i]);
                 if(gilded && powered!=null) color.fromSegaFormat(powered.dryCycle().get((ticks/powered.cycleTicks())%powered.dryCycle().size()).get(i));

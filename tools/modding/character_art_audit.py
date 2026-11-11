@@ -176,6 +176,12 @@ def main():
         path=ART/'talon/endings'/f'{group}-{frame:02x}.png'
         return path.is_file()
     for f in [1,2,3]:add('talon' ,'S2','ending search photos',f,'authored' if talon_ending('photos',f) else 'fallback','TalonEndings S2_PHOTOS',evidence=citation('docs/s2disasm/s2.asm','ArtNem_EndingPics'),notes='Sidekick-owned search photographs; TalonEndings awaits presentation-lane wiring.')
+    for character in ['mica', 'talon']:
+        add(character,'S2','Final Tornado cockpit','0',
+            'authored' if (ART/character/'endings/final-pilot/front.png').is_file() else 'fallback',
+            'S2_FINAL_TORNADO_PILOT with native clear mask',
+            evidence=citation('docs/s2disasm/s2.asm','ObjCC_Init'),
+            notes='Separate Enigma final backdrop pilot; paired or explicit solo companion ownership')
     for selector in range(45, 49):
         authored = (ART/'mica/endings/pilot'/f'{selector:02x}.png').is_file()
         add('mica','S2','Tornado pilot mapping',f'{selector:02X}',

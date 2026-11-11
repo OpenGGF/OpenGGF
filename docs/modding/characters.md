@@ -900,3 +900,16 @@ The host composes that patch during the native empty/wait selector and uses the
 native finger selectors 0/1 during a wag; it does not add another clock.
 This is presentation only: it supplies no title script, music, gameplay or timing.
 See the maintained example's `TitlePresentation.java` and `art/*/titles/` banks.
+
+### S2 final-plane cockpit
+
+The final front-view Tornado is an Enigma backdrop, separate from the animated
+side-view cockpit. A companion supplies `S2_FINAL_TORNADO_PILOT`; a solo main may
+supply `S2_SOLO_FINAL_TORNADO_PILOT`. Selector 0 is positioned relative to the
+184×120 backdrop's top-left and scrolls with it. Supply a matching binary image
+in `EndingSpriteSet.nativeClearMasks`: 1 removes an owned native pilot pixel,
+0 preserves the native plane. Masks must match their authored frame dimensions.
+The existing two-argument constructor keeps an empty mask map. The host creates
+private native tile copies at initialization, draws the creator behind retained
+vehicle pixels and applies ending fades to the creator's independent palette.
+Neither the mask nor the overlay changes the ROM backdrop or shared art.

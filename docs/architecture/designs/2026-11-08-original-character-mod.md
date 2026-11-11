@@ -3578,3 +3578,16 @@ S2 ending and SCZ/WFZ preserve native Sonic pilot selectors 45–48. Binding the
 Tails-role ending also requires the Tails donor animation families. S3K ending
 pilot selection shares the solo companion policy; its tiny title fly-by is still
 native embedded vehicle art, outside this delivered override.
+
+#### Final-plane pilot correction (2026-11-11)
+
+The earlier feedback pass checked the side-view cockpit but stopped before the
+final pose. `ObjCC_Init` (s2.asm:13545-13572) selects
+`MapEng_EndingTailsPlane` / `MapEng_EndingSonicPlane` (s2.asm:90912-90914),
+backed by `ArtNem_EndingFinalTornado` (s2.asm:90925). That Enigma backdrop
+embedded the stock pilot independently of the side-view DPLC path. New optional
+final-plane cockpit banks and per-frame binary native clear masks replace only
+the character. Per-cell ROM pattern copies preserve the vehicle; creator art
+is drawn behind retained wing/strut pixels. A real frame-4098 capture additionally
+caught shared-atlas corruption: each S2 ending surface now owns a separate
+pattern range, keeping queued pilot and rider pixels independent.

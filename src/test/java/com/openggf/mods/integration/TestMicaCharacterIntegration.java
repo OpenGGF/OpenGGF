@@ -624,16 +624,20 @@ class TestMicaCharacterIntegration {
             var renderers=(Map<EndingSpriteSet.Surface,PlayerSpriteRenderer>)privateField(adapter,"renderers");
             @SuppressWarnings("unchecked")
             var sets=(Map<EndingSpriteSet.Surface,EndingSpriteSet>)privateField(adapter,"sets");
+            var residentBases = new HashSet<Integer>();
             for(var entry:renderers.entrySet()) {
                 var actual=(com.openggf.sprites.art.SpriteArtSet)privateField(entry.getValue(),"artSet");
                 var expected=com.openggf.game.presentation.StageSpriteCompiler.compile(sets.get(entry.getKey()).sprites(),null);
+                assertTrue(residentBases.add(actual.basePatternIndex()),
+                        "Queued ending surfaces must not overwrite each other's resident patterns");
                 assertEquals(expected.mappingFrames(),actual.mappingFrames());
                 for(int t=0;t<expected.artTiles().length;t++) for(int y=0;y<8;y++) for(int x=0;x<8;x++)
                     assertEquals(expected.artTiles()[t].getPixel(x,y),actual.artTiles()[t].getPixel(x,y));
                 assertTrue(entry.getValue().getRenderContext().getEffectivePaletteLine(0)>3);
                 var palette=entry.getValue().getRenderContext().getPalette(0);
                 if(!powered || entry.getKey()==EndingSpriteSet.Surface.S2_PHOTOS
-                        || entry.getKey()==EndingSpriteSet.Surface.S2_TORNADO_PILOT) {
+                        || entry.getKey()==EndingSpriteSet.Surface.S2_TORNADO_PILOT
+                        || entry.getKey()==EndingSpriteSet.Surface.S2_FINAL_TORNADO_PILOT) {
                     for(int i=0;i<16;i++) {
                         var c=palette.getColor(i);
                         assertEquals(sets.get(entry.getKey()).rgb()[i],((c.r&255)<<16)|((c.g&255)<<8)|(c.b&255));

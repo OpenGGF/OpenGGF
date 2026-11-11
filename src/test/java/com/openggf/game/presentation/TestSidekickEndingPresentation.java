@@ -43,4 +43,17 @@ class TestSidekickEndingPresentation {
         assertNull(EndingCharacterPresentation.pilot(registry,"tails",List.of(),EndingSpriteSet.Surface.S2_TORNADO_PILOT));
         assertNull(EndingCharacterPresentation.pilot(registry,"missing:lead",List.of(),EndingSpriteSet.Surface.S2_TORNADO_PILOT));
     }
+    @Test void clearMasksAreBoundedBinaryAndDetached() {
+        var image=new CharacterPresentation.Image(2,2,new byte[4]);
+        var frames=new StageSpriteSet(Map.of(0,new StageSpriteSet.Frame(image,0,0)));
+        assertTrue(new EndingSpriteSet(frames,new int[16]).nativeClearMasks().isEmpty());
+        var source=new HashMap<Integer,CharacterPresentation.Image>();
+        source.put(0,new CharacterPresentation.Image(2,2,new byte[]{1,0,0,1}));
+        var set=new EndingSpriteSet(frames,new int[16],source);source.clear();
+        assertEquals(1,set.nativeClearMasks().size());
+        assertThrows(UnsupportedOperationException.class,()->set.nativeClearMasks().clear());
+        assertThrows(IllegalArgumentException.class,()->new EndingSpriteSet(frames,new int[16],Map.of(1,image)));
+        assertThrows(IllegalArgumentException.class,()->new EndingSpriteSet(frames,new int[16],Map.of(0,new CharacterPresentation.Image(1,1,new byte[1]))));
+        assertThrows(IllegalArgumentException.class,()->new EndingSpriteSet(frames,new int[16],Map.of(0,new CharacterPresentation.Image(2,2,new byte[]{2,0,0,0}))));
+    }
 }
