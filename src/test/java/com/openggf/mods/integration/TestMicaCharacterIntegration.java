@@ -624,12 +624,14 @@ class TestMicaCharacterIntegration {
             var renderers=(Map<EndingSpriteSet.Surface,PlayerSpriteRenderer>)privateField(adapter,"renderers");
             @SuppressWarnings("unchecked")
             var sets=(Map<EndingSpriteSet.Surface,EndingSpriteSet>)privateField(adapter,"sets");
-            var residentBases = new HashSet<Integer>();
+            var residentRanges = new ArrayList<int[]>();
             for(var entry:renderers.entrySet()) {
                 var actual=(com.openggf.sprites.art.SpriteArtSet)privateField(entry.getValue(),"artSet");
                 var expected=com.openggf.game.presentation.StageSpriteCompiler.compile(sets.get(entry.getKey()).sprites(),null);
-                assertTrue(residentBases.add(actual.basePatternIndex()),
-                        "Queued ending surfaces must not overwrite each other's resident patterns");
+                int start = actual.basePatternIndex(), end = start + actual.bankSize();
+                assertTrue(residentRanges.stream().allMatch(range -> end <= range[0] || start >= range[1]),
+                        "Queued ending surfaces must have disjoint complete pattern banks");
+                residentRanges.add(new int[]{start,end});
                 assertEquals(expected.mappingFrames(),actual.mappingFrames());
                 for(int t=0;t<expected.artTiles().length;t++) for(int y=0;y<8;y++) for(int x=0;x<8;x++)
                     assertEquals(expected.artTiles()[t].getPixel(x,y),actual.artTiles()[t].getPixel(x,y));
@@ -651,6 +653,11 @@ class TestMicaCharacterIntegration {
                     assertTrue(cycle.contains(words),"Gilded cycle owns the flight palette");
                 }
             }
+            @SuppressWarnings("unchecked")
+            var planeTiles=(Map<Integer,Integer>)privateField(adapter,"finalPlanePatterns");
+            for (int tile : planeTiles.values()) assertTrue(residentRanges.stream()
+                    .noneMatch(range -> tile >= range[0] && tile < range[1]),
+                    "Prepared native Enigma tiles must not alias creator sprite residency");
             var nativeArt=new com.openggf.game.sonic2.credits.Sonic2EndingArt();
             nativeArt.loadPalettes(GameServices.rom().getRom(),powered?
                     com.openggf.game.sonic2.credits.Sonic2EndingArt.EndingRoutine.SUPER_SONIC:

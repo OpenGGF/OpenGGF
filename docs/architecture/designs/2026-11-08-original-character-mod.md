@@ -3591,3 +3591,23 @@ the character. Per-cell ROM pattern copies preserve the vehicle; creator art
 is drawn behind retained wing/strut pixels. A real frame-4098 capture additionally
 caught shared-atlas corruption: each S2 ending surface now owns a separate
 pattern range, keeping queued pilot and rider pixels independent.
+
+#### Capture identity and creator-pixel regression check (2026-11-11)
+
+The follow-up review found real scrambled TALON pixels in intermediate
+`after-*` captures made before ending-surface residency was separated. Those
+rejected files remained beside the clean `final-*` captures, obscuring which
+artifact was being reviewed. A fresh build of `f7c7bce16e` reproduced all 4,500
+PNG files per team byte-for-byte from `final-*`; it did not reproduce the corrupt
+intermediate images. Frame 4090 has one lead on the wing in stock and clean
+creator captures; the intermediate extra TALON is corruption, not a native actor.
+
+A stock-colour scan cannot detect misplaced creator pixels. The new
+`compare_frame_regions.py` compares a clean baseline and candidate against stock,
+requiring every frame and independently declared changed-region geometry. The
+corrupt intermediate fails on 335 of frames 3900–4437; fresh captures of both
+teams have no changed pixels outside the cockpit envelope. The envelope comes
+from authored pilot/clear-mask geometry plus read-only production scroll state,
+not from candidate pixel bounds. Atlas assertions now check complete sprite-bank
+intervals and exclusion of prepared Enigma tiles, rather than distinct bases
+alone. Current review evidence labels source identity and rejected intermediates.
