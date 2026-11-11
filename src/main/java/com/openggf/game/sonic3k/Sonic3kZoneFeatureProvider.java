@@ -201,6 +201,28 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
                     .orElse(false);
     }
 
+    /**
+     * The final DEZ arena draws its own widescreen margins: the planet extension
+     * ({@link com.openggf.game.sonic3k.render.DezPlanetBackground}), the floor ring and the
+     * robot's authored body. Its native camera bounds lock to the 320px window for most of
+     * the fight, so the shared bounds mask would otherwise grey out that extension.
+     */
+    @Override public boolean ownsWidescreenMargins() {
+        return GameServices.hasRuntime() && getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA
+                && GameServices.level().getFeatureActId() == 0
+                && GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState;
+    }
+
+    /**
+     * Width of the raster being drawn. Gameplay uses its camera width, but trace capture keeps
+     * the native 320px camera and widens only the raster to the camera's right.
+     */
+    private static int presentationWidth() {
+        return Math.max(GameServices.camera().getWidth(),
+                GameServices.configuration().getInt(com.openggf.configuration.SonicConfiguration.SCREEN_WIDTH_PIXELS));
+    }
+
     @Override public java.util.OptionalInt presentationNativeHorizontalOrigin() {
         if (!GameServices.hasRuntime()) return java.util.OptionalInt.empty();
         var state = GameServices.zoneRuntimeState();
@@ -452,7 +474,11 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
             // cutoff is measured in that FBO, not in the original name table.
             int tileHeight = com.openggf.level.LevelConstants.CHUNK_HEIGHT;
             int originY = Math.floorDiv(state.screenY(), tileHeight) * tileHeight;
-            return dezPlanetBackground.columns(manager, GameServices.camera().getWidth(), 0xE0 - originY);
+            // The native window starts at the camera's own inset: centred in a wide
+            // camera, at the left of a native camera drawn into a wider raster.
+            return dezPlanetBackground.columns(manager, presentationWidth(),
+                    com.openggf.camera.NativeViewportFraming.inset(GameServices.camera().getWidth()),
+                    0xE0 - originY);
         }
         return manager.getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ && manager.getFeatureActId() == 1
                 ? dezPlanetBackground.columns(manager, GameServices.camera().getWidth()) : null;
@@ -559,7 +585,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
         int firstX = state.displayedWindowBase() & ~0x1FF;
         if (sourceX < firstX || sourceX >= firstX + 512) return 0;
         int nativeLeft = state.retainedPlaneX() != 0 ? state.retainedPlaneX() : state.planeX();
-        if (GameServices.camera().getWidth() > 320
+        if (presentationWidth() > 320
                 && (sourceX + 8 <= nativeLeft || sourceX >= nativeLeft + 320)) {
             // DrawBGAsYouMove only refreshes the ROM's 320px view plus its
             // leading column. Newly exposed widescreen margins otherwise show
@@ -1314,6 +1340,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
             registry.register(new com.openggf.game.sonic3k.render.SszAct2BackgroundPriorityEffect(false));
             registry.register(new com.openggf.game.sonic3k.render.SszAct2BackgroundPriorityEffect(true));
         }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && actIndex == 0)
+            registry.register(new com.openggf.game.sonic3k.render.DezFinalBackgroundPriorityEffect());
         if (zoneIndex == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && actIndex == 0) {
             registry.register(new com.openggf.game.sonic3k.render.LrzBossBackgroundPriorityEffect(false));
             registry.register(new com.openggf.game.sonic3k.render.LrzBossBackgroundPriorityEffect(true));

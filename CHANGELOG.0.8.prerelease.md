@@ -6,6 +6,14 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Final Death Egg boss floor and wide views:** in the giant robot fight that
+  ends Sonic 3 & Knuckles, the robot's lower body covered the girder floor. The
+  original draws the floor in front of the robot, as it does Sonic and Tails.
+  The floor is now in front at every width. Wide views also lost the planet
+  beside the robot: live play greyed out both margins, and wide trace captures
+  ended the planet with a black band on the right. The planet and floor now
+  reach the screen edges. This shipped in 0.7.
+
 - **Sonic 1's Sonic on Sonic 3&K tumble objects:** Sonic 1 has no tumble frames,
   so a donated Sonic 1 Sonic riding a Flying Battery wire cage or another tumble
   object vanished. He now keeps his own walk and run frames there, and a donor's
