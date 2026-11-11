@@ -3710,3 +3710,34 @@ from authored pilot/clear-mask geometry plus read-only production scroll state,
 not from candidate pixel bounds. Atlas assertions now check complete sprite-bank
 intervals and exclusion of prepared Enigma tiles, rather than distinct bases
 alone. Current review evidence labels source identity and rejected intermediates.
+
+#### Adversarial callback and orientation corrections (2026-11-11)
+
+Two independent adversaries reproduced three root causes on `1e0faac12350`;
+the coordinator reran their probes before implementing corrections. The callback
+inventory omitted underwater-palette and super-form suppliers, allowing raw or
+already-bound callbacks to be republished under another owner. Both suppliers
+now participate in the existing identity-based provenance checks. The new
+strike-style virtual callback bypassed the captured construction boundary;
+engine reads now dispatch through that boundary, matching movement-hook fault
+attribution and quarantine.
+
+Blue Sphere selected a base drawing when an optional orientation override was
+absent but discarded the native flip flags. The native-scene draw bridge now
+accepts frame flips and uses the shared piece renderer, including mirrored
+piece offsets and tile order. Explicit final-orientation drawings still suppress
+those flips. Regression coverage compares actual native and creator pixels for
+horizontal mirroring at both configured widths and retains the explicit-variant control.
+Synthetic V/HV native controls were rejected: the existing native player path
+only renders H flips, so those controls did not establish vertical parity.
+No timing, selectors, palette ownership or API signatures are changed.
+
+Validation on the corrected tree based on `1e0faac12350` used the queued Maven
+wrapper with `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl`. The final selection
+`TestOwnedCharacterRegistry,TestCharacterSupplierProvenance,TestS3kSpecialStageSpritePixels,TestStageSpriteCompiler,TestModApiSignatureSurface,TestDrawPathFieldWriteGuard,TestBroadCatchSwallowingGuard`
+passed 63 tests with zero failures/errors/skips. The earlier run additionally
+passed all 52 `TestMicaCharacterIntegration` cases and the required
+`TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+selection; its only failures were the rejected synthetic vertical controls.
+All ROM properties were found. These are bounded component and positioned
+integration checks, not full-route certification or a full-suite run.

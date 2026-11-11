@@ -258,6 +258,9 @@ under the matching area heading; see the
   highlights and asymmetric features from jumping sides. The additive candidate
   API selects explicit mirrored phases in Blue Sphere and H/V/HV phases in the
   S2 half-pipe while preserving native selectors, clocks and draw ownership.
+  Missing Blue Sphere orientation drawings retain native flips. Character strike-style
+  callbacks use owner fault containment, and underwater-palette and super-form
+  suppliers retain their publishing owner's callback provenance.
   Both special-stage banks now reuse locked generated head/torso layers across
   upright phases, posed with native-measured hip-pivot lean, sway and bob,
   screen-space lighting, reattached limbs and separately locked curl/glint phases.

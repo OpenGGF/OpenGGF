@@ -48,6 +48,7 @@ class TestOwnedCharacterRegistry {
         @Override protected boolean onAbilityActivate(boolean up,boolean down,boolean left,boolean right) {
             failHook("ability"); return false;
         }
+        @Override public StrikeTrailStyle strikeTrailStyle() { failHook("strikeStyle"); return null; }
         @Override protected void onLanded() { failHook("landing"); }
         @Override protected void onLevelReset() { failHook("reset"); }
         private void failHook(String hook) { if (hook.equals(failingHook)) throw new IllegalStateException(hook); }
@@ -115,7 +116,7 @@ class TestOwnedCharacterRegistry {
                 ()->definition.spriteFactory().create(key.persisted(),0,0)),"factory");
     }
 
-    @ParameterizedTest @ValueSource(strings={"ability","landing","reset"})
+    @ParameterizedTest @ValueSource(strings={"ability","landing","reset","strikeStyle"})
     void returnedSpritesKeepOwnerThroughActualRuntimeHooks(String hook) {
         var fixture=fixture();
         var definition=mapped(definition(CharacterKey.SONIC,(code,x,y)->new ProbeSprite(CharacterKey.SONIC)),fixture);
@@ -126,6 +127,14 @@ class TestOwnedCharacterRegistry {
                 case "ability" -> CharacterRuntimeHooks.activateAbility(sprite);
                 case "landing" -> { sprite.setAir(true);sprite.setAir(false); }
                 case "reset" -> sprite.resetState();
+                case "strikeStyle" -> {
+                    var roster=mock(SpriteManager.class);
+                    when(roster.getMainPlayable()).thenReturn(sprite);
+                    var runtime=new com.openggf.game.mutators.HomingAttackRuntime(
+                            ()->com.openggf.game.mutators.HomingAttackRuntime.Policy.STOCK);
+                    runtime.bindRoster(roster);
+                    runtime.observeFrame(com.openggf.graphics.SpritePresentation.Frame.empty(),0,0);
+                }
             }
         });
         assertOwner(fixture,failure,hook);

@@ -128,6 +128,52 @@ class TestS3kSpecialStageSpritePixels {
     }
 
     @Test
+    void missingCreatorOrientationRetainsNativeHorizontalFlip() throws Exception {
+        int orientation = 1;
+        withGraphics((graphics, width) -> {
+            var renderer = renderer(graphics, width, mapping(0), 0, 0, 40);
+            var manager = manager();
+            var nativeMap = character();
+            nativeMap[60] = (byte) (orientation << 3);
+            renderer.setPlayerPatternBase(REAR);
+            renderer.setSonicMappingData(nativeMap, nativeMap);
+            byte[] scalars = new byte[512];
+            word(scalars, 0xE0 * 2, -11585); word(scalars, 0x20 * 2, 11585);
+            renderer.setPlayerProjectionScalars(scalars);
+            var tile = solid(2);
+            byte[] pixels = new byte[64];
+            for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+                byte colour = (byte) (x < 4 ? (y < 4 ? 1 : 2) : (y < 4 ? 3 : 1));
+                tile.setPixel(x, y, colour);
+                pixels[y * 8 + x] = colour;
+            }
+            graphics.cachePatternTexture(tile, REAR);
+            draw(graphics, renderer, manager, width);
+            int[] colours = {GREEN, RED, BLUE};
+            for (int y : new int[]{1, 6}) for (int x : new int[]{1, 6}) {
+                int sx = (orientation & 1) != 0 ? 7 - x : x;
+                int sy = (orientation & 2) != 0 ? 7 - y : y;
+                assertPixel(width / 2 + x, 40 + y, colours[pixels[sy * 8 + sx] - 1], "native control");
+            }
+            // Hotspots are in unflipped drawing coordinates; mirroring transforms their offsets too.
+            var frame = new com.openggf.game.StageSpriteSet.Frame(
+                    new com.openggf.game.CharacterPresentation.Image(8, 8, pixels),
+                    (orientation & 1) != 0 ? 8 : 0, (orientation & 2) != 0 ? -114 : 122);
+            var source = new com.openggf.game.StageSpriteSet(java.util.Map.of(0, frame));
+            set(renderer, "characterStageRenderer", new com.openggf.sprites.render.PlayerSpriteRenderer(
+                    com.openggf.game.presentation.StageSpriteCompiler.compile(source, null), graphics));
+            set(renderer, "characterStageSet", source);
+            draw(graphics, renderer, manager, width);
+            for (int y : new int[]{1, 6}) for (int x : new int[]{1, 6}) {
+                int sx = (orientation & 1) != 0 ? 7 - x : x;
+                int sy = (orientation & 2) != 0 ? 7 - y : y;
+                assertPixel(width / 2 + x, 40 + y, colours[pixels[sy * 8 + sx] - 1], "creator fallback");
+            }
+            assertEquals(0, manager.getPlayer().getMappingFrame());
+        });
+    }
+
+    @Test
     void explicitCreatorMirroredPhaseUsesUnflippedPixelsWhileNativeStillMirrors() throws Exception {
         withGraphics((graphics, width) -> {
             var renderer = renderer(graphics, width, mapping(0), 0, 0, 40);

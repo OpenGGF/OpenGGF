@@ -1331,7 +1331,11 @@ public class Sonic3kSpecialStageRenderer {
         int orientation = nativeFrameOrientation(nativeMapping, frame);
         int drawing = com.openggf.game.presentation.StageSpriteCompiler.orientedFrameIndex(
                 source, frame, (orientation & 1) != 0, (orientation & 2) != 0);
+        // Final-orientation drawings own their pose; base drawings retain native mirroring.
+        boolean explicitOrientation = drawing != frame;
         com.openggf.sprites.render.NativeStageSpriteDraw.draw(renderer, drawing, x, y,
+                !explicitOrientation && (orientation & 1) != 0,
+                !explicitOrientation && (orientation & 2) != 0,
                 (pattern, hFlip, vFlip, palette, drawX, drawY) -> {
                     reusableDesc.set(0);
                     reusableDesc.setHFlip(hFlip);

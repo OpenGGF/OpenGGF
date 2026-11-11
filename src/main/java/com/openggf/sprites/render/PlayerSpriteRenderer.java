@@ -119,12 +119,17 @@ public class PlayerSpriteRenderer {
     /** Engine-owned scenes supply their own sprite ownership/order sink. */
     void drawNativeTiles(int frameIndex, int originX, int originY,
                          SpritePieceRenderer.TileConsumer consumer) {
+        drawNativeTiles(frameIndex, originX, originY, false, false, consumer);
+    }
+
+    void drawNativeTiles(int frameIndex, int originX, int originY, boolean hFlip, boolean vFlip,
+                         SpritePieceRenderer.TileConsumer consumer) {
         var frame = prepareFrame(frameIndex);
         if (frame == null) return;
         for (var piece : frame.pieces()) {
             SpritePieceRenderer.renderPiece(piece, originX, originY,
                     patternBank.getBasePatternIndex(), resolveRenderPaletteIndex(artSet.paletteIndex()),
-                    false, false, consumer);
+                    hFlip, vFlip, consumer);
         }
     }
 

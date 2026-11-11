@@ -1823,6 +1823,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         () -> { onMovementTick(); return null; });
         }
 
+        final com.openggf.game.StrikeTrailStyle dispatchStrikeTrailStyle() {
+                return com.openggf.game.CharacterConstructionScope.invoke(characterCallbackInvoker,
+                        this::strikeTrailStyle);
+        }
+
         final boolean hasConstructionCallbackInvoker(com.openggf.game.CharacterConstructionScope.CallbackInvoker invoker) {
                 return characterCallbackInvoker == invoker;
         }

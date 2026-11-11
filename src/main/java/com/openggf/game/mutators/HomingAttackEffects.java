@@ -60,7 +60,7 @@ public final class HomingAttackEffects {
         if (leader instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
             if (sprite.getSuperStateController() instanceof com.openggf.sprites.playable.ProfileSuperStateController form)
                 style = form.activeStrikeTrail();
-            if (style == null) style = sprite.strikeTrailStyle();
+            if (style == null) style = com.openggf.sprites.playable.CharacterRuntimeHooks.strikeTrailStyle(sprite);
         }
         return style != null ? style : fire ? STOCK_FIRE : STOCK_BLUE;
     }
