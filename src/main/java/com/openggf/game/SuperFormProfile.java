@@ -18,12 +18,25 @@ public record SuperFormProfile(Map<GameId, Map<Tier, Form>> games) {
         });
     }
     @ModApi public enum Tier { SUPER, HYPER }
-    /** Missing animation overrides preserve the canonical normal sheet, including transformation. */
+    /**
+     * Missing animation overrides preserve the canonical normal sheet, including transformation.
+     * {@code afterImages} draws the native S3K Hyper echo trail; {@code stars} adds the native
+     * S3K Hyper stars. {@code effects} supplies optional creator strike colours and particles.
+     */
     @ModApi public record Form(List<List<Integer>> fade, List<List<Integer>> dryCycle,
             List<List<Integer>> underwaterCycle, int cycleTicks, int fadeTicks,
             PhysicsProfile physics, CanonicalAnimation transformationAnimation,
             Map<CanonicalAnimation, com.openggf.sprites.animation.SpriteAnimationScript> animations,
-            boolean afterImages, boolean stars, PoweredPlayableSheet poweredArt) {
+            boolean afterImages, boolean stars, PoweredPlayableSheet poweredArt, PoweredEffects effects) {
+        /** Compatibility constructor: no creator trail colours or particle effects. */
+        public Form(List<List<Integer>> fade, List<List<Integer>> dryCycle,
+                List<List<Integer>> underwaterCycle, int cycleTicks, int fadeTicks,
+                PhysicsProfile physics, CanonicalAnimation transformationAnimation,
+                Map<CanonicalAnimation, com.openggf.sprites.animation.SpriteAnimationScript> animations,
+                boolean afterImages, boolean stars, PoweredPlayableSheet poweredArt) {
+            this(fade, dryCycle, underwaterCycle, cycleTicks, fadeTicks, physics,
+                    transformationAnimation, animations, afterImages, stars, poweredArt, null);
+        }
         /** Compatibility constructor: retain the normal bank and existing animation overrides. */
         public Form(List<List<Integer>> fade, List<List<Integer>> dryCycle,
                 List<List<Integer>> underwaterCycle, int cycleTicks, int fadeTicks,
@@ -31,7 +44,7 @@ public record SuperFormProfile(Map<GameId, Map<Tier, Form>> games) {
                 Map<CanonicalAnimation, com.openggf.sprites.animation.SpriteAnimationScript> animations,
                 boolean afterImages, boolean stars) {
             this(fade, dryCycle, underwaterCycle, cycleTicks, fadeTicks, physics,
-                    transformationAnimation, animations, afterImages, stars, null);
+                    transformationAnimation, animations, afterImages, stars, null, null);
         }
         public Form {
             fade = rows(fade); dryCycle = rows(dryCycle); underwaterCycle = rows(underwaterCycle);

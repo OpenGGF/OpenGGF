@@ -12,6 +12,8 @@ import java.util.Set;
 
 /** SuperFormProfile for TALON, including Solar palette cycles and native flight physics. */
 final class TalonSolar {
+    static final String EFFECTS = "art/talon/powered/effects/effects.txt";
+
     private TalonSolar() {}
 
     static SuperFormProfile profile(ModAssetRoot assets) throws IOException {
@@ -19,6 +21,7 @@ final class TalonSolar {
         var fade = colors.get("fade");
         var s2Bank = bank(assets, "s2");
         var s3kBank = bank(assets, "s3k");
+        var solar = EffectsTable.read(assets, EFFECTS).effects("super");
         var s2 =
                 new SuperFormProfile.Form(
                         fade,
@@ -31,7 +34,8 @@ final class TalonSolar {
                         Map.of(),
                         false,
                         false,
-                        s2Bank);
+                        s2Bank,
+                        solar);
         var s3k =
                 new SuperFormProfile.Form(
                         fade,
@@ -44,15 +48,16 @@ final class TalonSolar {
                         Map.of(),
                         false,
                         false,
-                        s3kBank);
-        // Solar has no Hyper tier, stars, after-images or Super Flickies.
+                        s3kBank,
+                        solar);
+        // Solar retains its authored motes, flare and heat trail, with no Hyper or Flickies.
         return new SuperFormProfile(
                 Map.of(
                         GameId.S1,
                         Map.of(SuperFormProfile.Tier.SUPER,
                                 new SuperFormProfile.Form(fade, colors.get("s2"), List.of(), 8, 4,
                                         PhysicsProfile.SONIC_3K_SUPER_TAILS, CanonicalAnimation.SUPER_TRANSFORM,
-                                        Map.of(), false, false, s2Bank)),
+                                        Map.of(), false, false, s2Bank, solar)),
                         GameId.S2,
                         Map.of(SuperFormProfile.Tier.SUPER, s2),
                         GameId.S3K,

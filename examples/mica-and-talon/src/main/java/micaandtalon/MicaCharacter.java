@@ -11,6 +11,8 @@ import java.util.Set;
  * and Gilded form.
  */
 public final class MicaCharacter extends AbstractPlayableSprite {
+    private StrikeTrailStyle trail;
+
     public MicaCharacter(String code, int x, int y) {
         super(code, (short) x, (short) y, physicsSpec());
     }
@@ -19,12 +21,17 @@ public final class MicaCharacter extends AbstractPlayableSprite {
             String owner,
             PlayableSheetMaterializer.MaterializedArt materialized,
             CharacterPresentation presentation,
-            SuperFormProfile gilded) {
+            SuperFormProfile gilded,
+            StrikeTrailStyle trail) {
         CharacterKey key = CharacterKey.mod(owner, "mica");
         return new CharacterDefinition(
                 key,
                 "MICA",
-                MicaCharacter::new,
+                (code, x, y) -> {
+                    var mica = new MicaCharacter(code, x, y);
+                    mica.trail = trail;
+                    return mica;
+                },
                 null,
                 PlayerCharacter.SONIC_AND_TAILS,
                 SecondaryAbility.NONE,
@@ -57,8 +64,18 @@ public final class MicaCharacter extends AbstractPlayableSprite {
         if (getSuperStateController() != null && getSuperStateController().activateFromAirAbility())
             return true;
         // Homing is MICA's own move: an empty target set still gives the forward dash.
+        // Only Hyper Gilded strikes are Instagib; Super Gilded homes like her normal form.
         return HomingAttack.start(
-                this, isSuperSonic() ? HomingAttack.Mode.INSTAGIB : HomingAttack.Mode.HOMING);
+                this,
+                poweredTier() == SuperFormProfile.Tier.HYPER
+                        ? HomingAttack.Mode.INSTAGIB
+                        : HomingAttack.Mode.HOMING);
+    }
+
+    /** Jade normal trail; Gilded forms supply their own gold through the effects table. */
+    @Override
+    public StrikeTrailStyle strikeTrailStyle() {
+        return trail;
     }
 
     @Override

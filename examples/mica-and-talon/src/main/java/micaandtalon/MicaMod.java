@@ -29,7 +29,8 @@ public final class MicaMod implements GgfMod {
                             context.ownerModId(),
                             materialized,
                             MicaPresentation.load(context.modAssets()),
-                            MicaGilded.profile(context.modAssets())));
+                            MicaGilded.profile(context.modAssets()),
+                            EffectsTable.read(context.modAssets(), MicaGilded.EFFECTS).trail("normal")));
             TalonMod.register(context);
         } catch (IOException failure) {
             throw new IllegalStateException("Unable to load sample playable art", failure);

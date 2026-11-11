@@ -1739,6 +1739,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return superSonic;
         }
 
+        /**
+         * The powered tier this character is in, including its transformation, or null in normal
+         * form. Native and authored forms answer alike, so abilities can differ between tiers.
+         */
+        public final com.openggf.game.SuperFormProfile.Tier poweredTier() {
+                var controller = getSuperStateController();
+                if (controller == null || !controller.isSuper()) return null;
+                return controller.isHyperFormActive() ? com.openggf.game.SuperFormProfile.Tier.HYPER
+                        : com.openggf.game.SuperFormProfile.Tier.SUPER;
+        }
+
         public final Camera currentCamera() { return PlayableSpriteRuntimeServices.camera(this); }
         public final LevelManager currentLevelManager() { return PlayableSpriteRuntimeServices.level(this); }
         public final LevelManager currentLevelManagerIfAvailable() { return PlayableSpriteRuntimeServices.levelOrNull(this); }
@@ -1859,6 +1870,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         protected final void drawStandardArt() {
                 PlayableSpriteArtPresentation.drawStandardArt(this);
+        }
+
+        /**
+         * Normal-form homing and divebomb strike colours. A powered form's own
+         * {@link com.openggf.game.PoweredEffects#trail()} takes precedence while it is active;
+         * null keeps the stock look.
+         */
+        public com.openggf.game.StrikeTrailStyle strikeTrailStyle() {
+                return null;
         }
 
         public int getMappingFrame() {

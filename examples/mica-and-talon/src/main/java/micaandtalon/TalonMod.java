@@ -21,7 +21,8 @@ final class TalonMod {
                         context.ownerModId(),
                         materialized,
                         TalonPresentation.load(context.modAssets()),
-                        TalonSolar.profile(context.modAssets()));
+                        TalonSolar.profile(context.modAssets()),
+                        EffectsTable.read(context.modAssets(), TalonSolar.EFFECTS).trail("normal"));
         var competition = CompetitionPresentation.talon(context.modAssets());
         context.registerCharacter(
                 "talon",

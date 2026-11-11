@@ -43,6 +43,8 @@ public final class ProfileSuperStateController extends SuperStateController impl
     private boolean doomsday;
     private boolean endingScene, endingReunion;
     private SpriteAnimationSet endingAnimations;
+    // Presentation-only particles: not captured, cleared on restore and reset.
+    private final PoweredFormEffects particles = new PoweredFormEffects();
 
     public boolean isEndingSceneActive() { return endingScene; }
     public void bindEndingAnimations(SpriteAnimationSet animations) {
@@ -75,6 +77,8 @@ public final class ProfileSuperStateController extends SuperStateController impl
     @Override public void reset() {
         super.reset();
         phase = 0; frame = 0; timer = 0; displayFrame = -1; doomsday = false; endingScene = endingReunion = false;
+        // The superclass constructor resets before this class's fields exist.
+        if (particles != null) particles.clear();
         if (normalPalette != null) {
             applyPalette(normalPalette, null);
             restoreNormalArt();
@@ -97,6 +101,21 @@ public final class ProfileSuperStateController extends SuperStateController impl
     public void clearDoomsdayPalette() { phase = 0; }
 
     private SuperFormProfile.Form form() { return profile.games().get(host).get(tier); }
+    /** The current tier's creator effects; null when the host has no authored form or none were supplied. */
+    public PoweredEffects poweredEffects() {
+        var forms = profile.games().get(host);
+        var form = forms == null ? null : forms.get(tier);
+        return form == null ? null : form.effects();
+    }
+    /** Creator strike colours while the authored form is active. */
+    public StrikeTrailStyle activeStrikeTrail() {
+        var effects = isSuper() ? poweredEffects() : null;
+        return effects == null ? null : effects.trail();
+    }
+    /** A homing or divebomb strike landed while powered. */
+    void strikeLanded() {
+        if (getState() == SuperState.SUPER) particles.fire(player, poweredEffects(), PoweredEffects.Trigger.STRIKE_HIT);
+    }
     private int paletteLine() { return player.getSpriteRenderer().paletteLine(); }
     @Override protected int getRingDrainInterval() { return 60; }
     @Override protected int getInitialRingDrainCounter() { return rules.initialDrainCounter(); }
@@ -175,6 +194,8 @@ public final class ProfileSuperStateController extends SuperStateController impl
     }
     @Override protected void onSuperActivated() {
         if (poweredViews.containsKey(tier)) installAnimations();
+        // The burst marks the form's arrival, so its particles draw in the powered palette.
+        particles.fire(player, poweredEffects(), PoweredEffects.Trigger.TRANSFORM);
         if (rules.explicitAirTrigger()) { timer = form().cycleTicks() - 1; if (!doomsday) playMusic(); }
         player.setShieldVisible(false);
     }
@@ -201,6 +222,7 @@ public final class ProfileSuperStateController extends SuperStateController impl
         return createRewindState(phase, frame, timer, displayFrame, tier.ordinal() | (doomsday ? 2 : 0) | (endingScene ? 4 : 0) | (endingReunion ? 8 : 0));
     }
     @Override public void restoreRewindState(RewindState state) {
+        particles.clear();
         restoreCoreRewindState(state); phase = state.paletteState(); frame = state.paletteFrame();
         timer = state.paletteTimer(); tier = SuperFormProfile.Tier.values()[state.presentationTier() & 1];
         doomsday = (state.presentationTier() & 2) != 0;
@@ -218,12 +240,14 @@ public final class ProfileSuperStateController extends SuperStateController impl
     }
     @Override public void renderPoweredTrail() {
         if (isHyperFormActive() && form().afterImages() && effects != null) effects.renderTrail(player);
+        particles.draw(player, poweredEffects(), GameServices.graphics());
     }
     @Override public void update() {
         if (endingScene) return; // AnPal owns scene palette/control release, before object dispatch.
         if (player.getDead() && isSuper()) { debugDeactivate(); return; }
         super.update();
         if (isHyperFormActive() && form().stars() && effects != null) effects.updateStars(player);
+        particles.tick(player, poweredEffects(), getState() == SuperState.SUPER);
     }
 
     @Override public void advanceEndingPaletteAtAnPal() {

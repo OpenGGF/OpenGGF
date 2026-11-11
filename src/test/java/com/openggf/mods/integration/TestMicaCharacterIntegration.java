@@ -1220,7 +1220,40 @@ class TestMicaCharacterIntegration {
         fixture.stepIdleFrames(6);
         fixture.stepFrame(false, false, false, false, true);
         assertTrue(player.isSuperSonic(), "MICA's hook must preserve the S3K transformation press");
+        assertStrikeMode(fixture, SuperFormProfile.Tier.SUPER, com.openggf.game.mutators.HomingAttackRuntime.Mode.HOMING);
         registry.restore(before);
+        fixture.stepIdleFrames(60);
+        player.currentLevelState().resumeTimer();
+        for (int i = 0; i < 7; i++) player.currentGameState().markSuperEmeraldCollected(i);
+        player.addRings(50 - player.getRingCount());
+        fixture.stepFrame(false, false, false, false, true);
+        fixture.stepIdleFrames(6);
+        fixture.stepFrame(false, false, false, false, true);
+        assertStrikeMode(fixture, SuperFormProfile.Tier.HYPER, com.openggf.game.mutators.HomingAttackRuntime.Mode.INSTAGIB);
+        registry.restore(before);
+    }
+
+    /** After the transformation completes, MICA's next air press launches in the tier's mode. */
+    private void assertStrikeMode(com.openggf.tests.HeadlessTestFixture fixture, SuperFormProfile.Tier tier,
+                                  com.openggf.game.mutators.HomingAttackRuntime.Mode mode) {
+        var player = fixture.sprite();
+        for (int i = 0; i < 120 && player.getSuperStateController().getState()
+                != com.openggf.sprites.playable.SuperState.SUPER; i++) fixture.stepIdleFrames(1);
+        assertEquals(tier, player.poweredTier());
+        var form = (com.openggf.sprites.playable.ProfileSuperStateController) player.getSuperStateController();
+        assertNotNull(form.activeStrikeTrail(), "Gilded tiers supply their own strike colours");
+        assertEquals(tier == SuperFormProfile.Tier.HYPER, form.poweredEffects().emitters().stream()
+                .anyMatch(emitter -> emitter.trigger() == com.openggf.game.PoweredEffects.Trigger.STRIKE_HIT));
+        for (int i = 0; i < 180 && player.getAir(); i++) fixture.stepIdleFrames(1);
+        fixture.stepFrame(false, false, false, false, true);
+        fixture.stepIdleFrames(6);
+        fixture.stepFrame(false, false, false, false, true);
+        var runtime = com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                com.openggf.game.session.SessionManager.getCurrentWorldSession(),
+                com.openggf.game.mutators.HomingAttackRuntime.class);
+        // An untargeted dash settles within its frame; its trail clock proves the launch.
+        assertTrue(runtime.capture().flameTicks() > 0, "an air press after the transformation strikes");
+        assertEquals(mode, runtime.capture().launchMode());
     }
 
     /** Execute MICA's actual air hook against native touch/defeat, then replay the strike. */
@@ -1258,8 +1291,9 @@ class TestMicaCharacterIntegration {
                 com.openggf.game.session.SessionManager.getCurrentWorldSession(),
                 com.openggf.game.mutators.HomingAttackRuntime.class);
         assertEquals(com.openggf.game.mutators.HomingAttackRuntime.Phase.HOMING, runtime.phase());
-        assertEquals(powered ? com.openggf.game.mutators.HomingAttackRuntime.Mode.INSTAGIB
-                : com.openggf.game.mutators.HomingAttackRuntime.Mode.HOMING, runtime.capture().launchMode());
+        // Super Gilded homes like her normal form; Instagib belongs to Hyper alone.
+        assertEquals(com.openggf.game.mutators.HomingAttackRuntime.Mode.HOMING, runtime.capture().launchMode());
+        assertEquals(powered ? SuperFormProfile.Tier.SUPER : null, player.poweredTier());
         // The Buzzer sits ahead and above, so the strike flies forward-up
         // (HOMING_DIVE_FORWARD_UP, sheet frames 114-117 after the 256 native frames).
         assertTrue(List.of(370, 371, 372, 373).contains(player.getMappingFrame()),
@@ -1638,8 +1672,8 @@ class TestMicaCharacterIntegration {
             world.stepFrame(false, true, false, false, true);
             assertFalse(talon.getTailsFlightController().isActive());
             assertEquals(com.openggf.game.mutators.HomingAttackRuntime.Phase.HOMING, runtime.phase());
-            assertEquals(solar ? com.openggf.game.mutators.HomingAttackRuntime.Mode.INSTAGIB
-                    : com.openggf.game.mutators.HomingAttackRuntime.Mode.HOMING, runtime.capture().launchMode());
+            // Solar divebombs are ordinary strikes; only Hyper MICA is Instagib.
+            assertEquals(com.openggf.game.mutators.HomingAttackRuntime.Mode.HOMING, runtime.capture().launchMode());
             var registry = com.openggf.game.session.SessionManager.getCurrentGameplayMode().getRewindRegistry();
             var before = registry.capture();
             var expected = new ArrayList<String>();

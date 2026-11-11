@@ -84,7 +84,15 @@ public final class PresentationGraphicsAccess {
 
     public static void render(GraphicsManager graphics, int id, int palette, boolean hFlip, boolean vFlip,
                               boolean priority, int rowStart, int rowEnd, float[] quad, float hue, float opacity) {
+        render(graphics, id, palette, hFlip, vFlip, priority, rowStart, rowEnd, quad, hue, opacity, 0);
+    }
+
+    /** {@code tint} is 0xAARRGGBB: alpha blends the shaded picture toward the RGB colour. */
+    public static void render(GraphicsManager graphics, int id, int palette, boolean hFlip, boolean vFlip,
+                              boolean priority, int rowStart, int rowEnd, float[] quad, float hue, float opacity,
+                              int tint) {
         engineCaller();
-        graphics.renderPresentationPattern(id, palette, hFlip, vFlip, priority, rowStart, rowEnd, quad, hue, opacity);
+        graphics.renderPresentationPattern(id, palette, hFlip, vFlip, priority, rowStart, rowEnd, quad, hue, opacity,
+                tint);
     }
 }

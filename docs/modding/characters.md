@@ -494,8 +494,8 @@ input-locking native interrupt.
 Characters can own the world-session homing capability independently of Mutator Lab.
 Import `com.openggf.sprites.playable.HomingAttack` and return
 `HomingAttack.start(this, HomingAttack.Mode.HOMING)` from `onAbilityActivate`.
-Choose `Mode.INSTAGIB` per call for a Super/Hyper strike; no menu setting or native
-character identity is required. A target uses native contact/defeat rules, refreshes
+Choose `Mode.INSTAGIB` per call for a powered strike (MICA reserves it for Hyper); no
+menu setting or native character identity is required. A target uses native contact/defeat rules, refreshes
 the air action for chaining, and retains the existing effects and camera lag.
 Without a target, `start` dashes forward. Use `startIfTarget(this, mode)` to
 return false without dashing when a native air move should get the press instead.
@@ -570,8 +570,49 @@ The profile controller restores views during transformation, Super/Hyper, revert
 rewind and art refresh. MICA's S2/S3K bank and Hyper geometry sharing are documented
 in her [powered-art provenance](../../examples/mica-and-talon/production/mica/powered/provenance.json).
 Missing water rows use the live host-zone derivation.
-Hyper trails use the character's own renderer and rewind-captured position history;
-stars are opt-in. Neither Sonic's palette nor his alternate mappings are installed.
+Hyper trails (`afterImages`) use the character's own renderer and rewind-captured
+position history; native S3K stars (`stars`) are opt-in. Both draw only for the Hyper
+tier in S3K. Neither Sonic's palette nor his alternate mappings are installed.
+
+#### Strike colours and powered effects
+
+`StrikeTrailStyle` gives a homing or divebomb strike its colours: three ember colours
+(hottest first), one to eight heat-front layers from the outer haze to the nose
+(`FrontLayer(rgb, radius, size, alpha, arc)`), an after-image tint (`-1` keeps the
+character's own colours) and an ember density (25–400 % of stock). Colours are
+`0xRRGGBB`. Override `AbstractPlayableSprite.strikeTrailStyle()` for the normal form;
+a powered form's `PoweredEffects.trail()` replaces it while that form is active.
+Supplying neither keeps the stock look exactly: blue for ordinary homing, and native
+art hue-rotated to flame for Instagib.
+
+`SuperFormProfile.Form` takes an optional `PoweredEffects(trail, particles, emitters)`
+as its last component (older constructors pass null). A `Particle` is one to eight
+`StageSpriteSet.Frame`s of at most 32×32 pixels and a frame time; pixels index the
+character's own live palette line, so they follow the form's palette cycle. A cycle at
+least as long as the particle's life plays once; a shorter one loops from a random
+phase, as a twinkle. An `Emitter` names its particles and a trigger:
+
+| Trigger | Fires |
+| --- | --- |
+| `TRANSFORM` | once, as the transformation completes and the form becomes active |
+| `FAST` | every `interval` ticks at 6 px/frame or more, not rolling or striking |
+| `ROLLING` | every `interval` ticks rolling or in the jump ball at 2 px/frame or more, not striking |
+| `STRIKING` | every `interval` ticks while a homing or divebomb strike flies |
+| `FLYING` | every `interval` ticks in flight |
+| `FLAP` | once per flight flap |
+| `STRIKE_HIT` | once each time a strike lands |
+
+`RING` places `count` particles around a circle of `radius` moving outward at
+`speedX`; `SCATTER` places them in a box of half-size `radius` moving at
+(`speedX`, `speedY`). Offsets and horizontal speeds are facing-relative (+x in front);
+speeds, `jitter` and `gravity` are in 1/256 px per tick. At most 16 particles, 16
+emitters and 48 live particles per character. The engine draws particles as native
+sprite pieces with the character's priority, behind its body, in S1, S2 and S3K.
+They are presentation only: never read by gameplay, not captured by rewind (a restore
+clears them) and gone on reload.
+
+`AbstractPlayableSprite.poweredTier()` answers `SUPER`, `HYPER` or null (normal form),
+for native and authored forms alike.
 
 S2 defaults to seven emeralds and 50 rings, its jump-apex trigger and native drain.
 S3K uses the explicit air-ability trigger, seven Chaos Emeralds before conversion
@@ -588,9 +629,9 @@ policies cannot address a character's authored form. The host accepts a policy
 only for a matching owner and local character; inactive overrides retain profile
 defaults. No creator callback receives world mutation authority.
 
-An ability can read `isSuperSonic()` (including the transformation) and
-`getSuperStateController().isHyperFormActive()`. MICA selects
-`INSTAGIB` when `isSuperSonic()` is true. The controller captures palette cursor,
+An ability can read `isSuperSonic()` (including the transformation) and `poweredTier()`.
+MICA selects `INSTAGIB` only when `poweredTier()` is `HYPER`; Super Gilded and Solar
+TALON strike with ordinary homing. The controller captures palette cursor,
 phase, display frame, tier and ring drain for whole-player rewind.
 
 ## Failure, rewind, and acceptance checklist
@@ -745,7 +786,8 @@ The MICA patch supplies that support in S1.
 
 The TALON example uses its own sheet, palette and Solar tables. Holding down
 while airborne requests the homing reticle; down+jump starts a divebomb
-(Instagib while Solar), and jump alone flaps normally.
+(an ordinary strike in every form, with Solar's own heat trail), and jump alone flaps
+normally.
 
 ### Shared animation families
 

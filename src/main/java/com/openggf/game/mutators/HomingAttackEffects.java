@@ -1,6 +1,7 @@
 package com.openggf.game.mutators;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.StrikeTrailStyle;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PresentationGraphicsAccess;
@@ -21,7 +22,7 @@ import java.util.SplittableRandom;
  * has no captured pictures, so its shards fall back to plain sparks.
  */
 public final class HomingAttackEffects {
-    /** Blue native player art rotated towards orange flame. */
+    /** Stock Instagib: blue native player art rotated towards orange flame. */
     static final float FLAME_HUE = 3.0f;
     static final int FLAME_POSES = 5;
     static final int FLAME_RADIUS = 28;
@@ -31,24 +32,47 @@ public final class HomingAttackEffects {
     static final int LOGICAL_HEIGHT = 224;
 
     private record Pose(List<SpritePresentation.Tile> tiles, Map<Integer, SpritePresentation.PatternVersion> versions,
-                        int cameraX, int cameraY, boolean fire) { }
-    /** Ember ramps, hottest first: Instagib fire, and the quieter blue of ordinary homing. */
-    private static final int[] FIRE_EMBERS = {0xFFF080, 0xFF8020, 0xD02000};
-    private static final int[] BLUE_EMBERS = {0xE0F8FF, 0x60B8FF, 0x2050E0};
-    // {colour, radius, square size, alpha, arc half-width}: outer haze to the white-hot nose.
-    private static final int[][] FIRE_FRONT = {{0xC01800, 26, 6, 130, 9}, {0xFF5010, 22, 5, 210, 8},
-            {0xFFA020, 19, 4, 240, 7}, {0xFFE870, 16, 4, 255, 6}, {0xFFFFF4, 14, 3, 255, 4}};
-    private static final int[][] BLUE_FRONT = {{0x1830C0, 23, 5, 120, 8}, {0x3878F0, 19, 4, 190, 7},
-            {0x90D0FF, 16, 3, 230, 6}, {0xF0FCFF, 14, 3, 240, 4}};
+                        int cameraX, int cameraY, boolean fire, float hue, int tint) { }
+    /**
+     * Stock looks for characters that supply no {@link StrikeTrailStyle}: Instagib fire, and the
+     * quieter blue of ordinary homing. Front layers run from the outer haze to the white-hot nose.
+     */
+    static final StrikeTrailStyle STOCK_FIRE = new StrikeTrailStyle(List.of(0xFFF080, 0xFF8020, 0xD02000),
+            List.of(new StrikeTrailStyle.FrontLayer(0xC01800, 26, 6, 130, 9),
+                    new StrikeTrailStyle.FrontLayer(0xFF5010, 22, 5, 210, 8),
+                    new StrikeTrailStyle.FrontLayer(0xFFA020, 19, 4, 240, 7),
+                    new StrikeTrailStyle.FrontLayer(0xFFE870, 16, 4, 255, 6),
+                    new StrikeTrailStyle.FrontLayer(0xFFFFF4, 14, 3, 255, 4)), -1, 100);
+    static final StrikeTrailStyle STOCK_BLUE = new StrikeTrailStyle(List.of(0xE0F8FF, 0x60B8FF, 0x2050E0),
+            List.of(new StrikeTrailStyle.FrontLayer(0x1830C0, 23, 5, 120, 8),
+                    new StrikeTrailStyle.FrontLayer(0x3878F0, 19, 4, 190, 7),
+                    new StrikeTrailStyle.FrontLayer(0x90D0FF, 16, 3, 230, 6),
+                    new StrikeTrailStyle.FrontLayer(0xF0FCFF, 14, 3, 240, 4)), -1, 100);
+    /** Blend weight of a creator echo tint: Instagib echoes burn fully, ordinary ones glow. */
+    static final int FIRE_TINT_WEIGHT = 0xC0, GLOW_TINT_WEIGHT = 0xA0;
+
+    /**
+     * The leader's strike colours: the active authored form's, then the character's own, then
+     * stock. Read live every tick and draw, so nothing here needs rewind state.
+     */
+    static StrikeTrailStyle style(PlayableEntity leader, boolean fire) {
+        StrikeTrailStyle style = null;
+        if (leader instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+            if (sprite.getSuperStateController() instanceof com.openggf.sprites.playable.ProfileSuperStateController form)
+                style = form.activeStrikeTrail();
+            if (style == null) style = sprite.strikeTrailStyle();
+        }
+        return style != null ? style : fire ? STOCK_FIRE : STOCK_BLUE;
+    }
     private record PictureTile(SpritePresentation.Tile tile, SpritePresentation.PatternVersion version) { }
 
     /** A presentation ember in world pixels. */
     private static final class Ember {
         float x, y, vx, vy;
         int age, life, size;
-        final boolean fire;
-        Ember(float x, float y, float vx, float vy, int life, int size, boolean fire) {
-            this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.life = life; this.size = size; this.fire = fire;
+        final List<Integer> ramp;
+        Ember(float x, float y, float vx, float vy, int life, int size, List<Integer> ramp) {
+            this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.life = life; this.size = size; this.ramp = ramp;
         }
     }
 
@@ -66,7 +90,7 @@ public final class HomingAttackEffects {
 
     /** Draw thread: the frame about to be displayed, and an afterimage while the trail burns. */
     void observe(SpritePresentation.Frame frame, int cameraX, int cameraY, boolean flameActive, boolean fire,
-                 int leaderX, int leaderY) {
+                 StrikeTrailStyle style, int leaderX, int leaderY) {
         lastFrame = frame;
         lastCameraX = cameraX;
         lastCameraY = cameraY;
@@ -87,7 +111,10 @@ public final class HomingAttackEffects {
             tiles.add(tile);
             versions.put(tile.patternId(), version);
         }
-        if (!tiles.isEmpty()) flame.addLast(new Pose(tiles, versions, cameraX, cameraY, fire));
+        // Stock Instagib rotates native blue art to flame; creator echoes blend toward their tint.
+        float hue = style == STOCK_FIRE ? FLAME_HUE : 0f;
+        int tint = style.echoTint() < 0 ? 0 : (fire ? FIRE_TINT_WEIGHT : GLOW_TINT_WEIGHT) << 24 | style.echoTint();
+        if (!tiles.isEmpty()) flame.addLast(new Pose(tiles, versions, cameraX, cameraY, fire, hue, tint));
         while (flame.size() > FLAME_POSES) flame.removeFirst();
     }
 
@@ -120,8 +147,10 @@ public final class HomingAttackEffects {
         float heat = runtime.heat();
         if (heat <= 0 || leader == null) return;
         boolean fire = runtime.instagibVisuals();
+        var style = style(leader, fire);
         float[] dir = direction(leader);
         int count = fire ? 4 + Math.round(heat * 6) : 1 + Math.round(heat * 3);
+        count = Math.max(1, count * style.density() / 100);
         for (int i = 0; i < count && embers.size() < 240; i++) {
             float spread = (float) (noise.nextDouble() - 0.5) * 2.2f;
             float angle = (float) Math.atan2(dir[1], dir[0]) + spread;
@@ -131,7 +160,7 @@ public final class HomingAttackEffects {
             float back = 1.5f + (float) noise.nextDouble() * 2.5f;
             embers.add(new Ember(x, y, -dir[0] * back + (float) (noise.nextDouble() - 0.5),
                     -dir[1] * back + (float) (noise.nextDouble() - 0.5), 12 + noise.nextInt(12),
-                    fire ? 2 + noise.nextInt(2) : 1 + noise.nextInt(2), fire));
+                    fire ? 2 + noise.nextInt(2) : 1 + noise.nextInt(2), style.embers()));
         }
     }
 
@@ -158,15 +187,14 @@ public final class HomingAttackEffects {
         // Embers stream behind the live sprites, so they wrap the leader instead of speckling him.
         for (var ember : embers) {
             float life = ember.age / (float) ember.life;
-            int[] ramp = ember.fire ? FIRE_EMBERS : BLUE_EMBERS;
-            int colour = ramp[life < 0.35f ? 0 : life < 0.7f ? 1 : 2];
+            int colour = ember.ramp.get(life < 0.35f ? 0 : life < 0.7f ? 1 : 2);
             int alpha = Math.round(255 * (1 - life));
             rect(graphics, Math.round(ember.x) - cameraX, Math.round(ember.y) - cameraY, ember.size, ember.size,
                     alpha << 24 | colour);
         }
         int poseIndex = 0;
         for (var pose : flame) {
-            // Instagib's afterimages burn orange; ordinary homing leaves fainter native-blue echoes.
+            // Instagib's afterimages burn; ordinary homing leaves fainter echoes.
             float opacity = (pose.fire() ? 1f : 0.6f) * (0.3f + 0.5f * poseIndex++ / Math.max(1, flame.size() - 1));
             var ids = new java.util.HashMap<Integer, Integer>();
             for (var tile : pose.tiles()) {
@@ -178,7 +206,7 @@ public final class HomingAttackEffects {
                     PresentationGraphicsAccess.restoreFrozenPattern(graphics, pose.versions().get(tile.patternId()), id);
                 }
                 render(graphics, id, tile, quad(tile, tile.x() + pose.cameraX(), tile.y() + pose.cameraY(), 0),
-                        pose.fire() ? FLAME_HUE : 0f, opacity);
+                        pose.hue(), opacity, pose.tint());
             }
         }
         var sparks = new ArrayList<HomingAttackRuntime.Shard>();
@@ -197,7 +225,7 @@ public final class HomingAttackEffects {
             float opacity = left >= 12 ? 1f : left / 12f;
             float spin = ((shard.index() % 5) - 2 + 0.5f) * 0.18f;
             render(graphics, id, piece.tile(), quad(piece.tile(), shard.x() / 256f - piece.tile().width() / 2,
-                    shard.y() / 256f - piece.tile().height() / 2, spin * shard.age()), 0, opacity);
+                    shard.y() / 256f - piece.tile().height() / 2, spin * shard.age()), 0, opacity, 0);
         }
         for (var shard : sparks) {
             int alpha = Math.max(0, 255 - shard.age() * 5);
@@ -210,29 +238,28 @@ public final class HomingAttackEffects {
                    boolean reticle, boolean locked, int reticleX, int reticleY) {
         if (graphics == null) return;
         graphics.flushPatternBatch();
-        if (heat > 0 && leader != null) drawHeatFront(graphics, cameraX, cameraY, heat, fire, leader);
+        if (heat > 0 && leader != null) drawHeatFront(graphics, cameraX, cameraY, heat, style(leader, fire), leader);
         if (reticle) drawReticle(graphics, reticleX - cameraX, reticleY - cameraY, locked);
     }
 
     /** A bow shock of compressed, glowing air: white-hot at the nose, orange and red outwards. */
-    private void drawHeatFront(GraphicsManager graphics, int cameraX, int cameraY, float heat, boolean fire,
+    private void drawHeatFront(GraphicsManager graphics, int cameraX, int cameraY, float heat, StrikeTrailStyle style,
                                PlayableEntity leader) {
         float[] dir = direction(leader);
         float heading = (float) Math.atan2(dir[1], dir[0]);
         int cx = leader.getCentreX() - cameraX, cy = leader.getCentreY() - cameraY;
-        int[][] layers = fire ? FIRE_FRONT : BLUE_FRONT;
-        for (int[] layer : layers) {
-            int arc = layer[4];
+        for (var layer : style.front()) {
+            int arc = layer.arc();
             for (int k = -arc; k <= arc; k++) {
-                float flicker = 0.7f + 0.3f * (float) Math.sin(clock * 0.9 + k * 1.7 + layer[1]);
+                float flicker = 0.7f + 0.3f * (float) Math.sin(clock * 0.9 + k * 1.7 + layer.radius());
                 float edge = 1 - Math.abs(k) / (float) (arc + 1);
                 float angle = heading + k * 0.19f;
-                float radius = layer[1] + 3 * heat + (flicker - 0.85f) * 3 - Math.abs(k) * 0.45f;
-                int size = layer[2] + (k == 0 ? 1 : 0);
+                float radius = layer.radius() + 3 * heat + (flicker - 0.85f) * 3 - Math.abs(k) * 0.45f;
+                int size = layer.size() + (k == 0 ? 1 : 0);
                 int x = Math.round(cx + (float) Math.cos(angle) * radius) - size / 2;
                 int y = Math.round(cy + (float) Math.sin(angle) * radius) - size / 2;
-                int alpha = Math.round(layer[3] * heat * (0.35f + 0.65f * edge) * flicker);
-                if (alpha > 0) rect(graphics, x, y, size, size, Math.min(255, alpha) << 24 | layer[0]);
+                int alpha = Math.round(layer.alpha() * heat * (0.35f + 0.65f * edge) * flicker);
+                if (alpha > 0) rect(graphics, x, y, size, size, Math.min(255, alpha) << 24 | layer.rgb());
             }
         }
         // Licks of flame peeling back along both flanks.
@@ -242,8 +269,7 @@ public final class HomingAttackEffects {
                 float radius = 15 + i * 1.5f + (float) Math.sin(clock * 1.3 + i) * 1.5f;
                 int x = Math.round(cx + (float) Math.cos(angle) * radius) - 1;
                 int y = Math.round(cy + (float) Math.sin(angle) * radius) - 1;
-                int[] ramp = fire ? FIRE_EMBERS : BLUE_EMBERS;
-                int colour = ramp[i < 2 ? 0 : i < 4 ? 1 : 2];
+                int colour = style.embers().get(i < 2 ? 0 : i < 4 ? 1 : 2);
                 int alpha = Math.round(230 * heat * (1 - i / 7f));
                 if (alpha > 0) rect(graphics, x, y, 3, 3, alpha << 24 | colour);
             }
@@ -294,9 +320,9 @@ public final class HomingAttackEffects {
     }
 
     private static void render(GraphicsManager graphics, int id, SpritePresentation.Tile tile, float[] quad,
-                               float hue, float opacity) {
+                               float hue, float opacity, int tint) {
         PresentationGraphicsAccess.render(graphics, id, tile.palette(), tile.hFlip(), tile.vFlip(), tile.priority(),
-                tile.rowStart(), tile.rowEnd(), quad, hue, opacity);
+                tile.rowStart(), tile.rowEnd(), quad, hue, opacity, tint);
     }
 
     /**
