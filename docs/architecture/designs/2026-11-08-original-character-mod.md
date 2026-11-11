@@ -1,4 +1,16 @@
 # Original playable character mod (2026-11-08)
+## Example source layout (2026-11-11)
+
+The behavior-preserving cleanup uses `src/main/java/micaandtalon/`, runtime
+`art/<character>/<surface>/`, and a separate `production/<character>/` tree.
+`sheet/` owns playable handoffs and indexed frames; `special-stage/` owns current
+posed stage art, `stage-poses/` the base stage/native object banks, and
+`hud-and-screens/` the base presentation identity. Generated converter inputs
+and custom-frame inventories live in `target/mica-and-talon/generated/`.
+The example README contains the current class/surface map and recovery History.
+Earlier sections are dated design evidence, not current build instructions.
+
+
 
 An example and tutorial mod that adds two brand-new, original playable characters to
 Sonic 1, Sonic 2 and Sonic 3 & Knuckles: MICA, a pangolin who stands in for Sonic, and
@@ -868,7 +880,7 @@ not a new canonical enum member. No final GGFP or runtime certification yet.
 
 W7 motion feedback handoff (2026-11-08, `feature/ai-mica-art-motion`):
 RUN replaces all sixteen frames with a four-phase coral boot blur, forward lean,
-swept arms/crest and streaming tail. `art/mica/motion.py` is the editable original
+swept arms/crest and streaming tail. `production/mica/motion.py` is the editable original
 contour source; slope contours are rasterized in their 0/45/90/135-degree bases
 about the shared engine hotspot, without bitmap rotation. Flat support remains
 centre+18. Palette indices are unchanged. The flat RUN/SPRING checkpoint was
@@ -900,7 +912,7 @@ slightly leaning torso. Four hip-attached coral wheel phases exchange bent arms
 and bob the short diagonal tail. SPRING faces right with the same WALK head in
 both phases, an open grin, staggered overhead gloves, hanging tail and long boots.
 SPRING metadata now agrees with assembly's native 24+24 ticks and WALK exit.
-WAIT's approved six frames/script are unchanged. `art/mica/motion.py` remains the
+WAIT's approved six frames/script are unchanged. `production/mica/motion.py` remains the
 editable pixel source; no generated/native Sonic pixels enter new runtime art.
 Reviews at 1×/4× beside decoded S1 RUN/SPRING and timing GIFs are disposable in
 `/tmp/mica-art-motion2-20261108/`. RUN previews use fastest native one-tick timing
@@ -921,7 +933,7 @@ slope contact and orientation remain unverified. No changes outside RUN/SPRING
 frames were made, and the approved WAIT script is byte-for-byte unchanged.
 
 W7 art-lane round 2 handoff (2026-11-08, `feature/ai-mica-art2`):
-`art/mica/presentation/presentation.yaml` now describes 18 native-size indexed
+`production/mica/presentation/presentation.yaml` now describes 18 native-size indexed
 images: three 16×16 HUD faces, three 16×16 monitor faces, S1 supplementary M/A
 HUD glyphs (8×8 / 6×8), three 48×32 sign faces, six 32×32 angled spin faces,
 and the optional 48×32 S2 alternate face. Native mapping/art labels, piece layouts
@@ -963,7 +975,7 @@ is restrained, and runtime foot contact remains unverified. The 16px far eye is 
 narrow; the small crest has fewer scale separations than the playable head.
 
 W7 art-lane round 4 handoff (2026-11-08, `feature/ai-mica-art4`):
-`art/mica/wave3/wave3.yaml` and its hand-authored `build.py` now supply the
+`production/mica/wave3/wave3.yaml` and its hand-authored `build.py` now supply the
 18 S2 half-pipe frames, with native per-frame piece layouts and DPLC budgets.
 Owning references: `Obj09_MapUnc_34212`, `Obj09_MapRUnc_345FA`, `off_341E4`,
 `SSHurt_Animation` and `dword_33AA2` in `docs/s2disasm/s2.asm`.
@@ -1191,7 +1203,7 @@ unchanged; compatibility reduction fits the generated art to the existing frame
 boxes. WAIT reuses the approved first head/hood cluster across the cycle, with
 a closed-eye blink, to remove independent-generation head-size wobble. The
 native fidget bodies remain distinct. Flat cycles only; slope artwork is untouched.
-`art/mica/native-pose-core.json` records exact source prompts, raw hashes and
+`production/mica/native-pose-core.json` records exact source prompts, raw hashes and
 native mapping references; `recipe.json` retains final original MICA pixel rows.
 Disposable references, raw generation, per-frame four-column 1x/4x sheets and
 paired animation GIFs live in `/tmp/mica-np-core-20261108/`. Speed-driven GIFs
@@ -1239,7 +1251,7 @@ Native box changes require in-engine capture review, particularly HANG: old
 23x44 / 32x44 / 29x44 become 48x25 / 47x26 / 48x25, native hotspots [24,18].
 Both SPRING boxes change 25x48 -> 24x45, hotspot [13,24] -> [12,22]. PUSH changes
 42x37 / 41x37 -> native boxes; all old/new sizes and anchors are recorded per
-frame in `art/mica/native-pose-core.json`, with material-change flags. Disposable
+frame in `production/mica/native-pose-core.json`, with material-change flags. Disposable
 `/tmp/mica-np-core-20261108/geometry-changes.json` also lists per-frame tile counts
 and expands STOP aliases. Native centres supersede every earlier MICA anchor.
 
@@ -1336,7 +1348,7 @@ and their DPLCs by 256. Objects still publish their native bytes. Native zero is
 empty (hide/cutscene); stock art and sheets without aliases retain their layout.
 MICA binds `hang/0`, `hang/1`, `hang/2` to its three original native-pose redraws
 of S3K $90/$91/$92. Exact prompts, hashes and native anchor metadata are in
-`art/mica/native-pose-core.json`; only original MICA indexed rows enter Git.
+`production/mica/native-pose-core.json`; only original MICA indexed rows enter Git.
 Native references and raw generation remain in disk-backed scratch.
 
 Source inventory below concerns **playable** mappings, not similarly named
@@ -1446,7 +1458,7 @@ regeneration verification passed. The final broad smoke run remains separate.
 Native-asset reuse audit: accepted ending art already covers normal-Sonic
 $BA/$CA/$CB, and the slot bank covers $96–$9A. These eight images are now
 packed as nonanimated normal-sheet frames, using semantic aliases instead of
-canonical fallbacks. A reproducible `art/mica/reuse_native_art.py` imports only
+canonical fallbacks. A reproducible `production/mica/reuse_native_art.py` imports only
 original creator pixels and records hashes; no rescale or visible pixel changes
 were needed. Core coverage is now 106 frames / 18 canonical animations / max
 36 tiles per frame. Exact native art wins over fallbacks in an integration test.
@@ -1579,7 +1591,7 @@ env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py \
   "-Dmica.stage.captureRoot=$MICA_POSES_CAPTURE_ROOT/stages" \
   "-Dmica.captureDir=$MICA_POSES_CAPTURE_ROOT/screens" test
 python3 -m unittest discover -s tools/modding -p 'test_*.py'
-python3 tools/modding/playable_art/verify.py examples/mica-and-talon/art/mica
+python3 tools/modding/playable_art/verify.py examples/mica-and-talon/art/mica/sheet
 ```
 
 The initial AIZ actor PNGs have a black scene background. They verify MICA's
@@ -1678,7 +1690,7 @@ Carrier `AniTails22` / `AniTails23` select $A2 / $A1, each a held body
 with delay $1F (General/Sprites/Tails/Anim - Tails.asm:82-83); TALON retains
 his authored six-phase, two-tick integrated wingbeat.
 
-**Initial S3K roll-in pass4a69cb17 (rejected), 2026-11-10:** six existing authored plane selectors2–7 gain fresh native-pose jade motion-smear art. Native Kosinski/Enigma title planes own the effect; there is no separate after-image sprite or DPLC. The host retains its sequence and timing; no API, palette or later portrait/animation assets change. Selector7’s binary mask additionally removes1107 native blue trail pixels omitted by the old row80 crop, with original SEGA glyphs preserved. In lockstep captures, all633 presentations from267 onward remain byte-identical to integration5278d637cd, as do pre-roll-in presentations0–233. Six title rows remain authored; zero fallback rows move. Per-selector bounds/areas, exact ownership references and scratch review are in `art/mica/titles/s3k-rollin-provenance.json`.
+**Initial S3K roll-in pass4a69cb17 (rejected), 2026-11-10:** six existing authored plane selectors2–7 gain fresh native-pose jade motion-smear art. Native Kosinski/Enigma title planes own the effect; there is no separate after-image sprite or DPLC. The host retains its sequence and timing; no API, palette or later portrait/animation assets change. Selector7’s binary mask additionally removes1107 native blue trail pixels omitted by the old row80 crop, with original SEGA glyphs preserved. In lockstep captures, all633 presentations from267 onward remain byte-identical to integration5278d637cd, as do pre-roll-in presentations0–233. Six title rows remain authored; zero fallback rows move. Per-selector bounds/areas, exact ownership references and scratch review are in `production/mica/titles/s3k-rollin-provenance.json`.
 
 **S3K heavy-blur retry, 2026-11-10:** the lead’s267/279/289 captures are engine selectors8/9/10, omitted by the initial small-ball pass. Both fresh native8× GPT Image and deterministic image-space shutter candidates now cover2–10; per-plane1×/3× selection keeps GPT2–7 and deterministic radial/turn exposures8–10. Visible native landmark/copy estimates and sampled dither falloff are distinguished from unrecoverable original3D shutter parameters. Settling11/12 and ring13 remain unchanged:607 frames293–899 match integration byte-for-byte, including604 ring frames. SEGA100,763-pixel and residual-blue checks pass. No coverage obligations, API, timing or palette change. Recipes, measured kernels and limitations are in MICA’s title art directory.
 
@@ -1954,7 +1966,7 @@ provided by the MICA patch, leaving the stock S1 roster unchanged.
 
 **Playable wiring (2026-11-09):** TALON now loads his independently baked
 `art/talon.ggfp` (82 frames, 13 canonical animations) and palette through bounded
-mod assets. `TalonSolar` is generated from `art/talon/presentation/solar.yaml`;
+mod assets. `TalonSolar` is generated from `production/talon/presentation/solar.yaml`;
 `solar_java.py --check` and its Python sync test guard the palette tables.
 The profile keeps Tails' Super physics, double flap lift and no Flickies/Hyper.
 The mod aliases ascent/carry wing variants to its own flight cycle. S1/S2, which

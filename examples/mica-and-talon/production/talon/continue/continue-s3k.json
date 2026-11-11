@@ -1,0 +1,128 @@
+[
+  {
+    "id": 0,
+    "file": "../../../art/talon/continue/s3k-00.png",
+    "dimensions": [
+      31,
+      34
+    ],
+    "hotspot": [
+      16,
+      14
+    ],
+    "native_source_label": "team-idle/5",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s3k.json"
+  },
+  {
+    "id": 1,
+    "file": "../../../art/talon/continue/s3k-01.png",
+    "dimensions": [
+      30,
+      33
+    ],
+    "hotspot": [
+      15,
+      13
+    ],
+    "native_source_label": "team-idle/6",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s3k.json"
+  },
+  {
+    "id": 2,
+    "file": "../../../art/talon/continue/s3k-02.png",
+    "dimensions": [
+      24,
+      24
+    ],
+    "hotspot": [
+      12,
+      12
+    ],
+    "native_source_label": "icon/2",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s3k.json"
+  },
+  {
+    "id": 3,
+    "file": "../../../art/talon/continue/s3k-03.png",
+    "dimensions": [
+      24,
+      24
+    ],
+    "hotspot": [
+      12,
+      12
+    ],
+    "native_source_label": "icon/3",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s3k.json"
+  },
+  {
+    "id": 4,
+    "file": "../../../art/talon/continue/s3k-04.png",
+    "dimensions": [
+      21,
+      31
+    ],
+    "hotspot": [
+      9,
+      15
+    ],
+    "native_source_label": "player/173",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s3k.json"
+  },
+  {
+    "id": 5,
+    "file": "../../../art/talon/continue/s3k-05.png",
+    "dimensions": [
+      29,
+      32
+    ],
+    "hotspot": [
+      18,
+      16
+    ],
+    "native_source_label": "player/33",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s3k.json"
+  },
+  {
+    "id": 6,
+    "file": "../../../art/talon/continue/s3k-06.png",
+    "dimensions": [
+      32,
+      32
+    ],
+    "hotspot": [
+      20,
+      16
+    ],
+    "native_source_label": "player/34",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s3k.json"
+  },
+  {
+    "id": 7,
+    "file": "../../../art/talon/continue/s3k-07.png",
+    "dimensions": [
+      29,
+      31
+    ],
+    "hotspot": [
+      18,
+      16
+    ],
+    "native_source_label": "player/35",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s3k.json"
+  },
+  {
+    "id": 8,
+    "file": "../../../art/talon/continue/s3k-08.png",
+    "dimensions": [
+      28,
+      32
+    ],
+    "hotspot": [
+      18,
+      16
+    ],
+    "native_source_label": "player/36",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/continue-s3k.json"
+  }
+]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build/package the MICA mod against this checkout (Java 25 + Maven).
+"""Build/package the MICA and TALON example against this checkout (Java 25 + Maven).
 
 Origin: MICA skeleton project, 2026-10-07. No ROM data is included in the jar.
 """
@@ -12,6 +12,27 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[2]
 PROJECT = Path(__file__).resolve().parent
 OUTPUT = ROOT / "target" / "mica-and-talon"
+
+
+# The complete jar inventory: playable sheets and presentation surfaces.
+INVENTORY = {
+    "sheets": (
+        ("art/mica/sheet", "mica", "art/mica.ggfp"),
+        ("art/talon/sheet", "talon", "art/talon.ggfp"),
+        *((f"art/mica/powered/{host}", f"mica_powered_{host}", f"art/mica-powered-{host}.ggfp")
+          for host in ("s2", "s3k")),
+    ),
+    "surfaces": tuple(
+        (f"art/{character}/{surface}", f"art/{character}/{surface}", ("**/*.png", "**/*.mask", "**/*.clear"))
+        for character, surfaces in (
+            ("mica", ("hud-and-screens", "special-stage", "competition-menu", "reels", "competition",
+                      "titles", "stage-poses", "continue", "portrait", "snowboard", "endings")),
+            ("talon", ("hud-and-screens", "special-stage", "competition-menu", "reels", "competition",
+                       "titles", "stage-poses", "continue", "portrait", "endings")),
+        )
+        for surface in surfaces
+    ),
+}
 
 
 def main():
@@ -41,57 +62,21 @@ def main():
     (classes / "art").mkdir(exist_ok=True)
     cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath,
            "com.openggf.tools.modsdk.GgfModCli"]
-    run([sys.executable, "tools/modding/playable_art/assemble.py",
-         str(PROJECT / "art/mica"), str(PROJECT / "src/main/mod")])
-    run([*cli, "convert", "art", "--playable", "--image", str(PROJECT / "src/main/mod/mica.png"),
-         "--sheet", str(PROJECT / "src/main/mod/mica-sheet.yaml"), "--out", str(classes / "art/mica.ggfp")])
-    run([sys.executable, "tools/modding/playable_art/assemble.py",
-         str(PROJECT / "art/talon"), str(PROJECT / "src/main/mod")])
-    run([*cli, "convert", "art", "--playable", "--image", str(PROJECT / "src/main/mod/talon.png"),
-         "--sheet", str(PROJECT / "src/main/mod/talon-sheet.yaml"), "--out", str(classes / "art/talon.ggfp")])
-    for host in ("s2", "s3k"):
-        run([sys.executable, "tools/modding/playable_art/assemble.py", str(PROJECT / "art/mica/powered" / host), str(PROJECT / "src/main/mod")])
-        run([*cli, "convert", "art", "--playable", "--image", str(PROJECT / f"src/main/mod/mica_powered_{host}.png"),
-             "--sheet", str(PROJECT / f"src/main/mod/mica_powered_{host}-sheet.yaml"), "--out", str(classes / f"art/mica-powered-{host}.ggfp")])
-    shutil.copytree(PROJECT / "art/mica/presentation", classes / "art/mica/presentation", dirs_exist_ok=True)
-    for character in ("mica", "talon"):
-        for frame in (PROJECT / "art" / character / "consistent-stage").glob("*.png"):
-            destination = classes / "art" / character / "consistent-stage" / frame.name
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(frame, destination)
-        shutil.copytree(PROJECT / "art" / character / "competition-menu", classes / "art" / character / "competition-menu", dirs_exist_ok=True)
-        shutil.copytree(PROJECT / "art" / character / "reels", classes / "art" / character / "reels", dirs_exist_ok=True)
-        shutil.copytree(PROJECT / f"art/{character}/competition", classes / f"art/{character}/competition", dirs_exist_ok=True)
-        shutil.copytree(PROJECT / "art" / character / "titles", classes / "art" / character / "titles", dirs_exist_ok=True)
-    shutil.copytree(PROJECT / "art/talon/endings", classes / "art/talon/endings", dirs_exist_ok=True)
-    stage_assets = classes / "art/mica/wave3"
-    stage_assets.mkdir(parents=True, exist_ok=True)
-    for frame in (PROJECT / "art/mica/wave3").glob("*.png"):
-        if not frame.stem.endswith("-fixed"):
-            shutil.copy2(frame, stage_assets / frame.name)
-    for surface in ("continue", "portrait", "snowboard"):
-        shutil.copytree(PROJECT / "art/mica" / surface, classes / "art/mica" / surface, dirs_exist_ok=True)
-    ending_assets = classes / "art/mica/endings/s1"
-    ending_assets.mkdir(parents=True, exist_ok=True)
-    for frame in (PROJECT / "art/mica/endings/s1").glob("*.png"):
-        shutil.copy2(frame, ending_assets / frame.name)
-    ending_assets = classes / "art/mica/endings/s2"
-    ending_assets.mkdir(parents=True, exist_ok=True)
-    for frame in (PROJECT / "art/mica/endings/s2").glob("*.png"):
-        shutil.copy2(frame, ending_assets / frame.name)
-    ending_assets = classes / "art/mica/endings/s3k"
-    ending_assets.mkdir(parents=True, exist_ok=True)
-    for frame in (PROJECT / "art/mica/endings/s3k").glob("*.png"):
-        shutil.copy2(frame, ending_assets / frame.name)
-    for surface in ("presentation", "continue", "portrait", "wave3"):
-        for frame in (PROJECT / "art/talon" / surface).glob("*.png"):
-            destination = classes / "art/talon" / surface / frame.name
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(frame, destination)
+    generated = OUTPUT / "generated"
+    for source, name, destination in INVENTORY["sheets"]:
+        run([sys.executable, "tools/modding/playable_art/assemble.py",
+             str(PROJECT / source), str(generated)])
+        run([*cli, "convert", "art", "--playable", "--image", str(generated / (name + ".png")),
+             "--sheet", str(generated / (name + "-sheet.yaml")),
+             "--out", str(classes / destination)])
+    for source, destination, patterns in INVENTORY["surfaces"]:
+        for pattern in patterns:
+            for asset in sorted((PROJECT / source).glob(pattern)):
+                target = classes / destination / asset.relative_to(PROJECT / source)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(asset, target)
     jar = OUTPUT / "mica-and-talon.jar"
     jar.unlink(missing_ok=True)
-    cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath,
-           "com.openggf.tools.modsdk.GgfModCli"]
     run([*cli, "package", "--input", str(classes), "--out", str(jar)])
     print(f"Built {jar}", flush=True)
     if args.run:

@@ -8,6 +8,7 @@ not runtime assets. Counts are resolution obligations, not unique drawings or ro
 import argparse, collections, csv, html, json, pathlib, re
 ROOT = pathlib.Path.cwd()
 ART = ROOT / 'examples/mica-and-talon/art'
+PRODUCTION = ROOT / 'examples/mica-and-talon/production'
 
 def load(p): return json.loads(pathlib.Path(p).read_text())
 def citation(path, label):
@@ -26,10 +27,10 @@ def main():
     def add(c,g,s,f,status,target='',provenance='',rank='rare/cutscene',evidence='',notes=''):
         rows.append(dict(character=c.upper(),game=g.upper().replace('S3K_LOCKED_ON','S3K'),surface=s,native_frame_or_animation=str(f),status=status,target=str(target),provenance=provenance,visibility=rank,evidence=evidence,notes=notes))
     for c in ['mica','talon']:
-        manifest=load(ART/c/'frames.yaml');sheet=load(ROOT/f'examples/mica-and-talon/src/main/mod/{c}-sheet.yaml')
+        manifest=load(ART/c/'sheet/frames.yaml');sheet=load(ROOT/f'target/mica-and-talon/generated/{c}-sheet.yaml')
         # Provenance is attached to actual source IDs, never inferred from a directory name.
         prov=collections.defaultdict(list)
-        files=list((ART/c).rglob('native-pose*.json')) if c=='mica' else [ART/c/'provenance.json']
+        files=list((PRODUCTION/c).rglob('native-pose*.json')) if c=='mica' else [PRODUCTION/c/'provenance.json']
         for p in files:
             d=load(p); fs=d.get('frames',[])
             if isinstance(fs,dict): fs=[dict(v,id=k) for k,v in fs.items()]
@@ -83,7 +84,7 @@ def main():
                 add(c,g,'Super/Hyper animation',f'{int(sid):02X}',row.get('status','fallback'),row.get('reason','normal creator canonical sheet / owned palette'),rank='rare/powered play',evidence=f'{p.name}: poweredCoverage.{sid}',notes='native powered frames='+str(s['frames'])+'; bound frames='+str(row.get('frames',[]))+'; Hyper shares powered geometry.')
         # Source drawings are listed separately, excluding them from obligation totals.
         for i,f in enumerate(manifest['frames']):
-            inventory.append(dict(character=c.upper(),game='shared',bank='authored source',frame=i,script_ids=f.get('animation',''),evidence='; '.join(prov.get(f['id'],['older/other method; frames.yaml notes'])),actual_raw_targets=f['id'],image=str((ART/c/f['file']).relative_to(ROOT))))
+            inventory.append(dict(character=c.upper(),game='shared',bank='authored source',frame=i,script_ids=f.get('animation',''),evidence='; '.join(prov.get(f['id'],['older/other method; frames.yaml notes'])),actual_raw_targets=f['id'],image=str((ART/c/'sheet'/f['file']).relative_to(ROOT))))
     # Presentation manifests describe supplied original frames; native Tails banks retain their own selectors.
     def surface(g,s,f,base,meta):
         image=base/f.get('file',''); label=f.get('native_source_label',meta.get('native_source_label',''))
@@ -92,7 +93,7 @@ def main():
         sentinel=(not f.get('pieces',[1])) or f.get('native_dimensions')==[0,0]
         add(meta.get('character','mica'),g,s,f.get('id',f.get('index',f.get('surface','image'))),'N/A' if sentinel else 'authored',str(image.relative_to(ROOT)),ps,'rare/cutscene',ev,'empty native sentinel' if sentinel else '')
     for rel in ['continue/continue.yaml','portrait/portrait.yaml','snowboard/snowboard.yaml','endings/s1/s1.yaml','endings/s2/s2.yaml','endings/s3k/s3k.yaml','wave3/wave3.yaml','presentation/presentation.yaml']:
-        p=ART/'mica'/rel;d=load(p);base=p.parent
+        p=PRODUCTION/'mica'/rel;d=load(p);base=p.parent
         if 'games'in d:
             for game in d['games']:
                 for f in game['frames']:surface(game['game'],'continue/'+f['bank'],f,base,game)
@@ -106,10 +107,10 @@ def main():
     # Orientation obligations are separate from native mapping-ID coverage. Legacy
     # S3K creator selectors were already independent; their baked mirrored lighting
     # is not evidence that a final-orientation drawing is explicitly bound.
-    orientation_java = ROOT/'examples/mica-and-talon/src/main/java/mica/OrientedStageArt.java'
+    orientation_java = ROOT/'examples/mica-and-talon/src/main/java/micaandtalon/OrientedStageArt.java'
     orientation_bindings = orientation_java.read_text() if orientation_java.exists() else ''
     for c in ['mica', 'talon']:
-        manifest_path = ART/c/'consistent-stage/native-pose-generation.json'
+        manifest_path = PRODUCTION/c/'consistent-stage/native-pose-generation.json'
         supplied = load(manifest_path)['frames'] if manifest_path.exists() else []
         obligations = [('s3k', i, 'h') for i in [6, 7, 8]]
         obligations += [('s2', i, orientation) for i in range(12) for orientation in ['h', 'v', 'hv']]
@@ -133,9 +134,9 @@ def main():
                 notes='Selected character in native Sonic/Tails symbol; TALON solo owns lead and Tails symbols; rewards unchanged.')
         for g in ['S1', 'S2', 'S3K']:
             title_root = ART/c/'titles'
-            manifest = title_root/'manifest.json'
+            manifest = PRODUCTION/c/'titles/manifest.json'
             bank = load(manifest).get('hosts', {}).get(g) if manifest.is_file() else None
-            complete = bank is not None and bool(bank.get('files')) and all((title_root/f).is_file() for f in bank['files'])
+            complete = bank is not None and bool(bank.get('files')) and all((manifest.parent/f).is_file() for f in bank['files'])
             image = title_root/('s1-6.png' if g=='S1' else 's2-18.png' if g=='S2' else 's3k-plane-13-left.png')
             add(c,g,'title mascot','native composition','authored' if complete else 'fallback',
                 str(image.relative_to(ROOT)),str((title_root/(g.lower()+'-provenance.json')).relative_to(ROOT)),
@@ -147,7 +148,7 @@ def main():
     powered=ART/'talon/reels/powered.png'
     add('talon','S3K','slot reel portrait','Super Sonic symbol 7','authored' if powered.is_file() else 'fallback', str(powered.relative_to(ROOT)), str((powered.parent/'powered-provenance.json').relative_to(ROOT)), notes='Solar palette alias of generated TALON portrait when leading solo; no hedgehog spikes.')
     for rel in ['continue/continue.yaml', 'portrait/portrait.yaml', 'presentation/presentation.yaml']:
-        p=ART/'talon'/rel
+        p=PRODUCTION/'talon'/rel
         if not p.exists(): continue
         d=load(p);base=p.parent
         if 'games' in d:
@@ -157,9 +158,9 @@ def main():
             for entry in d['surfaces']: surface(entry['game'],entry['surface'],entry,base,dict(entry,character='talon'))
         else:
             for f in d.get('frames',[]): surface(d.get('game','s3k'),'portrait',f,base,dict(d,character='talon'))
-    talon_contract=(ROOT/'examples/mica-and-talon/src/main/java/mica/TalonPresentation.java').exists()
-    talon_halfpipe={f['id']:f for f in load(ART/'talon/wave3/halfpipe.json')} if talon_contract else {}
-    talon_blue={f['id']:f for f in load(ART/'talon/wave3/bluesphere.json')} if talon_contract else {}
+    talon_contract=(ROOT/'examples/mica-and-talon/src/main/java/micaandtalon/TalonPresentation.java').exists()
+    talon_halfpipe={f['id']:f for f in load(PRODUCTION/'talon/wave3/halfpipe.json')} if talon_contract else {}
+    talon_blue={f['id']:f for f in load(PRODUCTION/'talon/wave3/bluesphere.json')} if talon_contract else {}
     for g in ['S1','S2','S3K']:
         for c in ['mica','talon']:
             add(c,g,'HUD/results names','composed text','authored' if c=='mica' or talon_contract else 'fallback','ROM glyph composition + supplements',rank='normal early-zone play',evidence='MicaPresentation.java; CharacterPresentation consumers',notes='text composition is not an animation frame')
@@ -219,7 +220,7 @@ def main():
             notes='Independent mapping bank; not normal player IDs')
     # Competition manifests contain native miniature selectors, never full-size aliases.
     for character in ['mica','talon']:
-        manifest_path=ART/character/'competition/competition.json'
+        manifest_path=PRODUCTION/character/'competition/competition.json'
         if not manifest_path.exists(): continue
         manifest=load(manifest_path)
         by_id={f['id']:f for f in manifest['frames']}

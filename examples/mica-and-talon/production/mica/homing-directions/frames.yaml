@@ -1,0 +1,271 @@
+{
+  "format": "openggf-playable-art-handoff-1",
+  "palette": "../../../art/mica/sheet/palette.yaml",
+  "facing": "right",
+  "tick_rate": 60,
+  "frames": [
+    {
+      "id": "homing_dive_forward-00",
+      "animation": "HOMING_DIVE_FORWARD",
+      "order": 0,
+      "file": "frames/homing_dive_forward-00.png",
+      "hotspot": [
+        16,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_forward-01",
+      "animation": "HOMING_DIVE_FORWARD",
+      "order": 1,
+      "file": "frames/homing_dive_forward-01.png",
+      "hotspot": [
+        17,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_forward-02",
+      "animation": "HOMING_DIVE_FORWARD",
+      "order": 2,
+      "file": "frames/homing_dive_forward-02.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_forward-03",
+      "animation": "HOMING_DIVE_FORWARD",
+      "order": 3,
+      "file": "frames/homing_dive_forward-03.png",
+      "hotspot": [
+        15,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_forward_up-00",
+      "animation": "HOMING_DIVE_FORWARD_UP",
+      "order": 0,
+      "file": "frames/homing_dive_forward_up-00.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 90 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_forward_up-01",
+      "animation": "HOMING_DIVE_FORWARD_UP",
+      "order": 1,
+      "file": "frames/homing_dive_forward_up-01.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 90 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_forward_up-02",
+      "animation": "HOMING_DIVE_FORWARD_UP",
+      "order": 2,
+      "file": "frames/homing_dive_forward_up-02.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 90 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_forward_up-03",
+      "animation": "HOMING_DIVE_FORWARD_UP",
+      "order": 3,
+      "file": "frames/homing_dive_forward_up-03.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 90 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_up-00",
+      "animation": "HOMING_DIVE_UP",
+      "order": 0,
+      "file": "frames/homing_dive_up-00.png",
+      "hotspot": [
+        14,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_up-01",
+      "animation": "HOMING_DIVE_UP",
+      "order": 1,
+      "file": "frames/homing_dive_up-01.png",
+      "hotspot": [
+        13,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_up-02",
+      "animation": "HOMING_DIVE_UP",
+      "order": 2,
+      "file": "frames/homing_dive_up-02.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_up-03",
+      "animation": "HOMING_DIVE_UP",
+      "order": 3,
+      "file": "frames/homing_dive_up-03.png",
+      "hotspot": [
+        11,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_forward_down-00",
+      "animation": "HOMING_DIVE_FORWARD_DOWN",
+      "order": 0,
+      "file": "frames/homing_dive_forward_down-00.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 0 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_forward_down-01",
+      "animation": "HOMING_DIVE_FORWARD_DOWN",
+      "order": 1,
+      "file": "frames/homing_dive_forward_down-01.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 0 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_forward_down-02",
+      "animation": "HOMING_DIVE_FORWARD_DOWN",
+      "order": 2,
+      "file": "frames/homing_dive_forward_down-02.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 0 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_forward_down-03",
+      "animation": "HOMING_DIVE_FORWARD_DOWN",
+      "order": 3,
+      "file": "frames/homing_dive_forward_down-03.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 0 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_down-00",
+      "animation": "HOMING_DIVE_DOWN",
+      "order": 0,
+      "file": "frames/homing_dive_down-00.png",
+      "hotspot": [
+        12,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_down-01",
+      "animation": "HOMING_DIVE_DOWN",
+      "order": 1,
+      "file": "frames/homing_dive_down-01.png",
+      "hotspot": [
+        10,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_down-02",
+      "animation": "HOMING_DIVE_DOWN",
+      "order": 2,
+      "file": "frames/homing_dive_down-02.png",
+      "hotspot": [
+        11,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_down-03",
+      "animation": "HOMING_DIVE_DOWN",
+      "order": 3,
+      "file": "frames/homing_dive_down-03.png",
+      "hotspot": [
+        10,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    }
+  ],
+  "aliases": {
+    "HOMING_DIVE": "HOMING_DIVE_FORWARD_DOWN"
+  }
+}

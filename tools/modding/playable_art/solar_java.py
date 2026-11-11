@@ -3,7 +3,7 @@
 Purpose: solar.yaml is the single source of TALON's
 Solar palette cycles; the example mod's Java profile carries the same tables as
 Mega Drive colour words. This keeps the two in step.
-Inputs: examples/mica-and-talon/art/talon/presentation/solar.yaml (JSON subset).
+Inputs: examples/mica-and-talon/production/talon/presentation/solar.yaml (JSON subset).
 Origin: TALON character mod, 2026-11-09; binds the approved Solar presentation data.
 
 Usage: python3 -I tools/modding/playable_art/solar_java.py [--check]
@@ -14,8 +14,8 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
-YAML = ROOT / "examples/mica-and-talon/art/talon/presentation/solar.yaml"
-JAVA = ROOT / "examples/mica-and-talon/src/main/java/mica/TalonSolar.java"
+YAML = ROOT / "examples/mica-and-talon/production/talon/presentation/solar.yaml"
+JAVA = ROOT / "examples/mica-and-talon/src/main/java/micaandtalon/TalonSolar.java"
 STEPS = [0, 36, 73, 109, 146, 182, 219, 255]
 
 

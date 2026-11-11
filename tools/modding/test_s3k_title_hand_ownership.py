@@ -7,11 +7,11 @@ from pathlib import Path
 from PIL import Image
 ROOT=Path(__file__).resolve().parents[2]
 ART=ROOT/'examples/mica-and-talon/art/mica/titles'
-spec=importlib.util.spec_from_file_location('s3k_hand_ownership',ART/'s3k_hand_ownership.py');ownership=importlib.util.module_from_spec(spec);spec.loader.exec_module(ownership)
+spec=importlib.util.spec_from_file_location('s3k_hand_ownership',ART/'../../../production/mica/titles/s3k_hand_ownership.py');ownership=importlib.util.module_from_spec(spec);spec.loader.exec_module(ownership)
 
 class S3kTitleHandOwnershipTest(unittest.TestCase):
     def setUp(self):
-        self.contract=json.loads((ART/'s3k-hand-ownership.json').read_text());self.plane=Image.new('P',(320,224));self.plane.paste(Image.open(ART/'s3k-plane-13-left.png'),(0,0));self.plane.paste(Image.open(ART/'s3k-plane-13-right.png'),(160,0));self.frames={i:Image.open(ART/f's3k-sprite-{i}.png') for i in (0,1,4)}
+        self.contract=json.loads((ART/'../../../production/mica/titles/s3k-hand-ownership.json').read_text());self.plane=Image.new('P',(320,224));self.plane.paste(Image.open(ART/'s3k-plane-13-left.png'),(0,0));self.plane.paste(Image.open(ART/'s3k-plane-13-right.png'),(160,0));self.frames={i:Image.open(ART/f's3k-sprite-{i}.png') for i in (0,1,4)}
     def test_all_wag_selectors_replace_the_complete_old_hand(self):
         self.assertGreater(self.contract['ownership_pixels'],1000)
         self.assertEqual([],ownership.source_errors(self.plane,self.frames,self.contract))

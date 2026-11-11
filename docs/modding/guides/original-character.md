@@ -29,7 +29,7 @@ characters. A useful pose request specifies facing, silhouette, planted feet,
 transparent or flat keyed background, separate atlas cells, and no text or scenery.
 Keep the accepted source images and prompts together. MICA's actual prompt and
 accepted/rejected-cell record is
-[`art/mica/generated/prompts.json`](../../../examples/mica-and-talon/art/mica/generated/prompts.json).
+[`production/mica/generated/prompts.json`](../../../examples/mica-and-talon/production/mica/generated/prompts.json).
 Her weak first walk and muzzle-leading dive were rejected before reduction.
 
 Inspect WAIT, WALK and ROLL at 1× before expanding the set. Generated detail often
@@ -38,14 +38,14 @@ vanishes at this size; plan a pixel cleanup pass for eyes, hands and foot contac
 ## 2. Reduce against one palette and one hotspot convention
 
 Read the [playable-art pipeline notes](../../../tools/modding/playable_art/README.md),
-then examine `examples/mica-and-talon/art/mica/recipe.json` and `palette.yaml`.
+then examine `examples/mica-and-talon/production/mica/recipe.json` and `palette.yaml`.
 The recipe selects atlas cells, dimensions, anchors, native pixel rows and explicit
 patches. The palette has transparent index 0 and fifteen fixed opaque colours on
 the Mega Drive colour ladder. Never quantize each pose independently.
 
 ```sh
-python3 tools/modding/playable_art/pipeline.py examples/mica-and-talon/art/mica/recipe.json --review /tmp/mica-art-review
-python3 tools/modding/playable_art/verify.py examples/mica-and-talon/art/mica
+python3 tools/modding/playable_art/pipeline.py examples/mica-and-talon/production/mica/recipe.json --review /tmp/mica-art-review
+python3 tools/modding/playable_art/verify.py examples/mica-and-talon/art/mica/sheet
 ```
 
 The reducer removes background/noise, scales, thresholds alpha, assigns fixed
@@ -57,7 +57,7 @@ Hotspots are engine centres, with `top_left = centre - hotspot`. MICA's standing
 support ends at centre+18; centre+19 is the exclusive bottom edge. Balls are
 centred. Keep slope phases aligned with their flat counterparts. The current
 redrawn slope contours and motion sources supersede the early rigid rotations;
-`art/mica/motion.py` records the RUN, SPRING and WAIT refinements. Do not rerun
+`production/mica/motion.py` records the RUN, SPRING and WAIT refinements. Do not rerun
 historical generation rounds indiscriminately: some rebuild older manifests.
 
 ## 3. Assemble one canonical sheet
@@ -67,11 +67,11 @@ Assembly pads crops to tiles and splits pieces at 32 pixels. It produces the
 indexed atlas, converter manifest and custom-frame index map:
 
 ```sh
-python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/mica examples/mica-and-talon/src/main/mod
+python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/mica/sheet target/mica-and-talon/generated
 python3 -m unittest discover -s tools/modding -p test_playable_art_assemble.py
 ```
 
-Inspect `src/main/mod/mica.png`, `mica-sheet.yaml` and `mica-custom-frames.json`
+Inspect `target/mica-and-talon/generated/mica.png`, `mica-sheet.yaml` and `mica-custom-frames.json`
 under the example. MICA currently has 98 frames and 18 canonical animations.
 `WAIT` is mandatory; `idle` is not an alias. WALK/RUN have four slope cycles in
 selector order 0/2/4/6. WALK, RUN, ROLL, ROLL2 and PUSH use speed timing when
@@ -84,7 +84,7 @@ Bake with matching engine/SDK jars from the [CLI setup](../ggfmod.md).
 The repository wrapper takes both jar paths before the command:
 
 ```sh
-sh docs/modding/ggfmod /absolute/path/engine.jar /absolute/path/sdk.jar convert art --playable --image examples/mica-and-talon/src/main/mod/mica.png --sheet examples/mica-and-talon/src/main/mod/mica-sheet.yaml --out target/mica.ggfp
+sh docs/modding/ggfmod /absolute/path/engine.jar /absolute/path/sdk.jar convert art --playable --image target/mica-and-talon/generated/mica.png --sheet target/mica-and-talon/generated/mica-sheet.yaml --out target/mica.ggfp
 ```
 
 The `.ggfp` v2 file includes mappings, palette, animations and DPLC runs. The
@@ -186,7 +186,7 @@ Normal and powered art share one initialized bank; the profile controller switch
 script/profile views before transformation and reconciles them on rewind and
 renderer refresh. Existing `Form.animations` overrides still take precedence and
 address the combined mapping namespace. Hyper may share the same powered value.
-See MICA's [powered handoffs](../../../examples/mica-and-talon/art/mica/powered/README.md)
+See MICA's [powered handoffs](../../../examples/mica-and-talon/production/mica/powered/README.md)
 for native reference comparisons, slope generation and explicit aliases.
 
 ## 7. Package, play and collect evidence

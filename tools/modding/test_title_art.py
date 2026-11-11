@@ -10,7 +10,7 @@ class TitleArtTest(unittest.TestCase):
     def test_both_characters_have_complete_native_title_banks(self):
         for character in ('mica', 'talon'):
             root = ROOT / character / 'titles'
-            manifest = json.loads((root / 'manifest.json').read_text())['hosts']
+            manifest = json.loads((root / f'../../../production/{character}/titles/manifest.json').read_text())['hosts']
             expected = {
                 'S1': {f's1-{i}.png' for i in range(8)},
                 'S2': {f's2-{i}.png' for i in (0,1,2,3,4,5,6,7,9,18,19)},
@@ -19,11 +19,11 @@ class TitleArtTest(unittest.TestCase):
                        | {f's3k-plane-{i}.mask' for i in range(1,14)}
                        | {'s3k-plane-13.clear'},
             }
-            colors = json.loads((ROOT / character / 'palette.yaml').read_text())['colors']
+            colors = json.loads((ROOT / character / 'sheet/palette.yaml').read_text())['colors']
             for host, files in expected.items():
                 host_colors = colors if "palette" not in manifest[host] else json.loads(
-                    (root / manifest[host]["palette"]).read_text())["colors"]
-                self.assertEqual(files, set(manifest[host]['files']))
+                    (root / f"../../../production/{character}/titles" / manifest[host]["palette"]).read_text())["colors"]
+                self.assertEqual(files, {Path(f).name for f in manifest[host]['files']})
                 for name in files:
                     with self.subTest(character=character, host=host, name=name):
                         path = root / name

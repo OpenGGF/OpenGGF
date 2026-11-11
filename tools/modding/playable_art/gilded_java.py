@@ -3,7 +3,7 @@
 Purpose: gilded.yaml (written by presentation.py) is the single source of MICA's
 Gilded palette cycles; the example mod's Java profile carries the same tables as
 Mega Drive colour words. This keeps the two in step.
-Inputs: examples/mica-and-talon/art/mica/presentation/gilded.yaml (JSON subset).
+Inputs: examples/mica-and-talon/production/mica/presentation/gilded.yaml (JSON subset).
 Origin: MICA character mod, 2026-11-08; added after the brighter Gilded ramp landed
 in the YAML but not in the Java tables.
 
@@ -15,8 +15,8 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
-YAML = ROOT / "examples/mica-and-talon/art/mica/presentation/gilded.yaml"
-JAVA = ROOT / "examples/mica-and-talon/src/main/java/mica/MicaGilded.java"
+YAML = ROOT / "examples/mica-and-talon/production/mica/presentation/gilded.yaml"
+JAVA = ROOT / "examples/mica-and-talon/src/main/java/micaandtalon/MicaGilded.java"
 STEPS = [0, 36, 73, 109, 146, 182, 219, 255]
 
 

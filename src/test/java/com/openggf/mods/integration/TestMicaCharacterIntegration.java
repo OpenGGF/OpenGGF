@@ -2135,98 +2135,23 @@ class TestMicaCharacterIntegration {
         Files.createDirectories(classes.resolve("META-INF"));
         Files.copy(project.resolve("src/main/resources/META-INF/openggf-mod.yaml"),
                 classes.resolve("META-INF/openggf-mod.yaml"));
-        assertEquals(0,com.openggf.tools.modsdk.GgfModCli.run(new String[]{"convert","art","--playable",
-                "--image",project.resolve("src/main/mod/mica.png").toString(),
-                "--sheet",project.resolve("src/main/mod/mica-sheet.yaml").toString(),
-                "--out",classes.resolve("art/mica.ggfp").toString()},System.out));
-        assertEquals(0,com.openggf.tools.modsdk.GgfModCli.run(new String[]{"convert","art","--playable",
-                "--image",project.resolve("src/main/mod/talon.png").toString(),
-                "--sheet",project.resolve("src/main/mod/talon-sheet.yaml").toString(),
-                "--out",classes.resolve("art/talon.ggfp").toString()},System.out));
-        for (String host : List.of("s2", "s3k")) {
-            assertEquals(0,com.openggf.tools.modsdk.GgfModCli.run(new String[]{"convert","art","--playable",
-                    "--image",project.resolve("src/main/mod/mica_powered_"+host+".png").toString(),
-                    "--sheet",project.resolve("src/main/mod/mica_powered_"+host+"-sheet.yaml").toString(),
-                    "--out",classes.resolve("art/mica-powered-"+host+".ggfp").toString()},System.out));
+        // Exercise the same generated sheets and surface tree as the example build.
+        Path generated = com.openggf.tests.ExampleCharacterArt.assemble(temp.resolve("generated"));
+        for (String name : List.of("mica", "talon", "mica_powered_s2", "mica_powered_s3k")) {
+            String packed = name.replace("_powered_", "-powered-");
+            assertEquals(0, com.openggf.tools.modsdk.GgfModCli.run(new String[]{"convert", "art", "--playable",
+                    "--image", generated.resolve(name + ".png").toString(),
+                    "--sheet", generated.resolve(name + "-sheet.yaml").toString(),
+                    "--out", classes.resolve("art/" + packed + ".ggfp").toString()}, System.out));
         }
-        for (String surface : List.of("continue", "portrait", "snowboard")) {
-            Path source = project.resolve("art/mica/" + surface);
-            Path destination = classes.resolve("art/mica/" + surface);
-            Files.createDirectories(destination);
-            try (var files = Files.list(source)) {
-                for (var file : files.toList()) Files.copy(file, destination.resolve(file.getFileName()));
-            }
-        }
-        for(String character:List.of("mica","talon")) {
-            Path source=project.resolve("art/"+character+"/competition");
-            Path destination=classes.resolve("art/"+character+"/competition");
-            Files.createDirectories(destination);
-            try(var files=Files.list(source)) {
-                for(var file:files.filter(f->f.toString().endsWith(".png")).toList()) Files.copy(file,destination.resolve(file.getFileName()));
-            }
-        }
-        Path presentation = project.resolve("art/mica/presentation");
-        Files.createDirectories(classes.resolve("art/mica/presentation"));
-        try(var files=Files.list(presentation)) {
-            for(var file:files.toList()) Files.copy(file,classes.resolve("art/mica/presentation").resolve(file.getFileName()));
-        }
-        for (String character : List.of("mica", "talon")) {
-            Path menu = project.resolve("art/" + character + "/competition-menu");
-            Files.createDirectories(classes.resolve("art/" + character + "/competition-menu"));
-            try (var files = Files.list(menu)) {
-                for (var file : files.filter(Files::isRegularFile).toList()) Files.copy(file,
-                        classes.resolve("art/" + character + "/competition-menu").resolve(file.getFileName()));
-            }
-            Path reels = project.resolve("art/" + character + "/reels");
-            Files.createDirectories(classes.resolve("art/" + character + "/reels"));
-            try (var files = Files.list(reels)) {
-                for (var file : files.toList()) Files.copy(file,
-                        classes.resolve("art/" + character + "/reels").resolve(file.getFileName()));
-            }
-        }
-        for (String character : List.of("mica", "talon")) {
-            Path source = project.resolve("art/" + character + "/titles");
-            Path destination = classes.resolve("art/" + character + "/titles");
-            Files.createDirectories(destination);
-            try (var files = Files.list(source)) {
-                for (var file : files.toList()) Files.copy(file, destination.resolve(file.getFileName()));
-            }
-        }
-        Path stages = project.resolve("art/mica/wave3");
-        for (String character : List.of("mica", "talon")) {
-            Path source = project.resolve("art/" + character + "/consistent-stage");
-            Path destination = classes.resolve("art/" + character + "/consistent-stage");
-            Files.createDirectories(destination);
-            try (var files = Files.list(source)) {
-                for (var file : files.filter(p -> p.toString().endsWith(".png")).toList())
-                    Files.copy(file, destination.resolve(file.getFileName()));
-            }
-        }
-        Files.createDirectories(classes.resolve("art/mica/wave3"));
-        try(var files=Files.list(stages)) {
-            for(var file:files.filter(p -> p.toString().endsWith(".png") && !p.toString().endsWith("-fixed.png")).toList())
-                Files.copy(file,classes.resolve("art/mica/wave3").resolve(file.getFileName()));
-        }
-        try(var files=Files.walk(project.resolve("art/talon/endings"))) {
-            for(var file:files.filter(Files::isRegularFile).filter(p->p.toString().endsWith(".png")).toList()) {
-                Path destination=classes.resolve("art/talon/endings").resolve(file.getFileName());
-                Files.createDirectories(destination.getParent()); Files.copy(file,destination);
-            }
-        }
-        Path endings = project.resolve("art/mica/endings");
-        try(var files=Files.walk(endings)) {
-            for(var file:files.filter(p -> p.toString().endsWith(".png")).toList()) {
-                Path destination=classes.resolve("art/mica/endings").resolve(endings.relativize(file));
-                Files.createDirectories(destination.getParent()); Files.copy(file,destination);
-            }
-        }
-        for (String surface : List.of("presentation", "continue", "portrait", "wave3")) {
-            Path source = project.resolve("art/talon/" + surface);
-            try (var files = Files.list(source)) {
-                for (var file : files.filter(p -> p.toString().endsWith(".png")).toList()) {
-                    Path destination = classes.resolve("art/talon/" + surface).resolve(file.getFileName());
-                    Files.createDirectories(destination.getParent()); Files.copy(file, destination);
-                }
+        try (var files = Files.walk(project.resolve("art"))) {
+            for (var file : files.filter(Files::isRegularFile).filter(p ->
+                    !p.toString().replace('\\', '/').contains("/sheet/")
+                    && !p.toString().replace('\\', '/').contains("/powered/")).filter(p ->
+                    p.toString().endsWith(".png") || p.toString().endsWith(".mask") || p.toString().endsWith(".clear")).toList()) {
+                Path destination = classes.resolve(project.relativize(file));
+                Files.createDirectories(destination.getParent());
+                Files.copy(file, destination);
             }
         }
         Path jar = temp.resolve("mica-and-talon.jar");

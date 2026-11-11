@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class LockedStageTests(unittest.TestCase):
     def bank(self, character):
-        folder = ROOT / f"examples/mica-and-talon/art/{character}/consistent-stage"
+        folder = ROOT / f"examples/mica-and-talon/production/{character}/consistent-stage"
         return folder, json.loads((folder / "native-pose-generation.json").read_text())
 
     def test_all_shipped_frames_reassemble_and_obey_native_colour_budgets(self):
