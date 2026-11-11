@@ -47,7 +47,7 @@ def export_references(audit, destination):
     spec = importlib.util.spec_from_file_location('family_native_pose', ROOT / 'tools/modding/playable_art/native_pose.py')
     native = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(native)
-    tables = native.load(ROOT / 'examples/mica-and-talon/art/mica/wave3/round5.py', 'family_native_tables')
+    tables = native.load(ROOT / 'examples/mica-and-talon/production/mica/wave3/round5.py', 'family_native_tables')
     tables.mapping = functools.lru_cache()(tables.mapping)
     tables.dplc = functools.lru_cache()(tables.dplc)
     destination.mkdir(parents=True, exist_ok=True)
@@ -221,7 +221,7 @@ def main():
     for row in rows:
         page += '<tr>'+''.join('<td>'+html.escape(str(v)) for v in row.values())
     page += '</table></div></details>'
-    manifest = load(ROOT / 'examples/mica-and-talon/art/mica/frames.yaml')
+    manifest = load(ROOT / 'examples/mica-and-talon/art/mica/sheet/frames.yaml')
     frames = {frame['id']: frame for frame in manifest['frames']}
     reviews = {}
     if args.references:

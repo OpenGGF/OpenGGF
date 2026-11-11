@@ -22,7 +22,7 @@ class NativePoseTests(unittest.TestCase):
         with self.assertRaises(ValueError): native.palette(native.ROOT/'docs/s1disasm/palette/Sonic.bin', 99)
 
     def test_photo_export_uses_scene_time_line_zero(self):
-        refs=native.load(native.ROOT/'examples/mica-and-talon/art/mica/endings/s1/reference.py','ending_refs')
+        refs=native.load(native.ROOT/'examples/mica-and-talon/production/mica/endings/s1/reference.py','ending_refs')
         colors={tuple(c) for c in native.surface_palette('s2-photos')[0]}
         for image in refs.photos():
             opaque={p[:3] for p in image.get_flattened_data() if p[3]}
@@ -30,7 +30,7 @@ class NativePoseTests(unittest.TestCase):
             self.assertTrue(all(r==g==b for r,g,b in opaque))
 
     def test_mapped_reference_keeps_piece_palette_bits(self):
-        renderer=native.load(native.ROOT/'examples/mica-and-talon/art/mica/wave3/build.py','mapped_ref')
+        renderer=native.load(native.ROOT/'examples/mica-and-talon/production/mica/wave3/build.py','mapped_ref')
         banks=[[[0,0,0]]*16, [[255,255,255]]*16]
         image=renderer.native([[0,0,1,1,0,0,0,1,0]],bytes([0x11])*32,banks)
         self.assertEqual(image.getpixel((48,48)),(255,255,255,255))
@@ -38,7 +38,7 @@ class NativePoseTests(unittest.TestCase):
         self.assertEqual(image.getpixel((48,48)),(0,0,0,255))
 
     def test_transformation_reference_uses_requested_native_cycle_phase(self):
-        ending=native.load(native.ROOT/'examples/mica-and-talon/art/mica/endings/s3k/build.py','s3k_ref')
+        ending=native.load(native.ROOT/'examples/mica-and-talon/production/mica/endings/s3k/build.py','s3k_ref')
         frames=json.loads((ending.HERE/'s3k.yaml').read_text())['frames']
         frame=next(f for f in frames if f['id']=='transform-d2')
         self.assertNotEqual(ending.reference(frame,0).convert('RGBA').tobytes(),ending.reference(frame,6).convert('RGBA').tobytes())

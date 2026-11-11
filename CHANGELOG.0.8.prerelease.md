@@ -248,7 +248,9 @@ under the matching area heading; see the
   `onMovementTick()` character hook supports per-tick preview requests. Directional
   strike sheet poses follow current velocity with phase-preserving turns, normal
   facing mirrors and generic/native fallbacks. The maintained
-  `examples/mica-and-talon` demo plays in all three stock games with Sonic's
+  `examples/mica-and-talon` demo groups runtime art by surface, separates production
+  records, documents its class map, and builds generated sheets only under `target/`.
+  Its paired `micaandtalon` package keeps the same mod/character IDs. The demo plays in all three stock games with Sonic's
   single-player physics, native S2/S3K spindash (disabled in S1), character-owned
   homing (including an untargeted forward
   dash), a four-frame HOMING_DIVE pose, and powered Instagib strikes. Its

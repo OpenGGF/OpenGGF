@@ -4,7 +4,7 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-PATH = ROOT / 'examples/mica-and-talon/art/mica/powered/inventory.py'
+PATH = ROOT / 'examples/mica-and-talon/production/mica/powered/inventory.py'
 spec = importlib.util.spec_from_file_location('powered_inventory', PATH)
 inventory = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(inventory)

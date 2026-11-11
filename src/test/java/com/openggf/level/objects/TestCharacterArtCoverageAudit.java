@@ -34,7 +34,7 @@ class TestCharacterArtCoverageAudit {
 
     private void audit(String game, GameModule module, String character, String nativeCharacter) throws Exception {
         TestEnvironment.activeGameplayMode();
-        Path project=Path.of("examples/mica-and-talon/src/main/mod"), encoded=temporary.resolve(character+".ggfp");
+        Path project=com.openggf.tests.ExampleCharacterArt.assemble(temporary.resolve("generated")), encoded=temporary.resolve(character+".ggfp");
         assertEquals(0,GgfModCli.run(new String[]{"convert","art","--playable","--image",project.resolve(character+".png").toString(),
                 "--sheet",project.resolve(character+"-sheet.yaml").toString(),"--out",encoded.toString()},System.out));
         var bytes=Files.readAllBytes(encoded);

@@ -15,12 +15,12 @@ parser.add_argument('--output',type=Path,required=True,help='owned disposable di
 O=parser.parse_args().output.expanduser().resolve()
 if O.is_relative_to(R): parser.error("native reference output must be outside the repository")
 O.mkdir(parents=True,exist_ok=True)
-s=importlib.util.spec_from_file_location('b',R/'examples/mica-and-talon/art/mica/wave3/build.py');b=importlib.util.module_from_spec(s);s.loader.exec_module(b)
+s=importlib.util.spec_from_file_location('b',R/'examples/mica-and-talon/production/mica/wave3/build.py');b=importlib.util.module_from_spec(s);s.loader.exec_module(b)
 pal=b.pal(R/'docs/skdisasm/General/Sprites/Sonic/Palettes/SonicAndTails.bin')
 raw=b.nem(R/'docs/skdisasm/General/Sprites/HUD Icon/Tails Life Icon.nem')
 im=b.native([[0,0,2,2,0,0,0]],raw,pal).crop((48,48,64,64));im.save(O/'tails-hud.png');im.resize((128,128),Image.Resampling.NEAREST).save(O/'tails-hud-8x.png')
 import re
-s=importlib.util.spec_from_file_location('r',R/'examples/mica-and-talon/art/mica/wave3/round5.py');r=importlib.util.module_from_spec(s);s.loader.exec_module(r)
+s=importlib.util.spec_from_file_location('r',R/'examples/mica-and-talon/production/mica/wave3/round5.py');r=importlib.util.module_from_spec(s);s.loader.exec_module(r)
 def save_group(name,frames):
  records=[];sheet=Image.new('RGBA',(64*4,64*((len(frames)+3)//4)))
  for j,(label,im,hot) in enumerate(frames):
@@ -40,8 +40,8 @@ save_group('bluesphere',frames)
 # S2 alternate is native Tails; head-only crop excludes backing for pose transformation.
 raw=b.nem(R/'docs/s2disasm/art/nemesis/Signpost.nem');ps=[[0,0,1,4,0x3a,0,0],[8,0,4,4,0x3e,0,0],[40,0,1,4,0x3a,1,0]]
 im=b.native(ps,raw,b.pal(R/'docs/s2disasm/art/palettes/SonicAndTails.bin')).crop((48,48,96,80));im.resize((384,256),Image.Resampling.NEAREST).save(O/'sign-native-8x.png')
-s=importlib.util.spec_from_file_location('c',R/'examples/mica-and-talon/art/mica/continue/build.py');c=importlib.util.module_from_spec(s);s.loader.exec_module(c)
-s=importlib.util.spec_from_file_location('p',R/'examples/mica-and-talon/art/mica/portrait/build.py');p=importlib.util.module_from_spec(s);s.loader.exec_module(p)
+s=importlib.util.spec_from_file_location('c',R/'examples/mica-and-talon/production/mica/continue/build.py');c=importlib.util.module_from_spec(s);s.loader.exec_module(c)
+s=importlib.util.spec_from_file_location('p',R/'examples/mica-and-talon/production/mica/portrait/build.py');p=importlib.util.module_from_spec(s);s.loader.exec_module(p)
 frames=[]
 for bank,i,(label,ps),data,loads,pl in c.sources('s1')[0]:
  colors=c.sources('s1')[1];im=b.native(ps,data,colors).convert('RGBA');box=(48+min(q[0] for q in ps),48+min(q[1] for q in ps),48+max(q[0]+q[2]*8 for q in ps),48+max(q[1]+q[3]*8 for q in ps));frames.append((f'{bank}/{i}',im.crop(box),(48-box[0],48-box[1])))

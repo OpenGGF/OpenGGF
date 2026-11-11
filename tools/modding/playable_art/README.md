@@ -4,8 +4,8 @@ Python 3 + Pillow (checked with Pillow 13.0.0); no Java build or ROM required.
 Run from repository root:
 
 ```bash
-python3 tools/modding/playable_art/pipeline.py examples/mica-and-talon/art/mica/recipe.json --review /tmp/mica-art-review-20261108
-python3 tools/modding/playable_art/verify.py examples/mica-and-talon/art/mica
+python3 tools/modding/playable_art/pipeline.py examples/mica-and-talon/production/mica/recipe.json --review /tmp/mica-art-review-20261108
+python3 tools/modding/playable_art/verify.py examples/mica-and-talon/art/mica/sheet
 ```
 
 `recipe.json` selects equal-grid atlas cells and native dimensions. Sources may
@@ -165,7 +165,7 @@ head/crest may need another art pass beside the more detailed flat cycles.
 ## MICA native surfaces round 5
 
 ```bash
-python3 -I examples/mica-and-talon/art/mica/wave3/round5.py --review /tmp/mica-art5-review-20261108
+python3 -I examples/mica-and-talon/production/mica/wave3/round5.py --review /tmp/mica-art5-review-20261108
 ```
 
 This item-1 checkpoint supplies five original 32×32 slot-stage curl frames,
@@ -192,7 +192,7 @@ Curl scale travel is restrained, and the small eye/mitten clusters simplify at
 ## Assemble and bake the core sheet
 
 ```sh
-python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/mica examples/mica-and-talon/src/main/mod
+python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/mica/sheet target/mica-and-talon/generated
 python3 examples/mica-and-talon/build.py
 python3 -m unittest discover -s tools/modding -p test_playable_art_assemble.py
 ```
@@ -227,11 +227,11 @@ not converter schema. Re-read it after source manifest reordering.
 ## MICA motion feedback pass
 
 ```sh
-python3 examples/mica-and-talon/art/mica/motion.py run
-python3 examples/mica-and-talon/art/mica/motion.py spring
-python3 examples/mica-and-talon/art/mica/motion.py wait
-python3 tools/modding/playable_art/pipeline.py examples/mica-and-talon/art/mica/recipe.json
-python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/mica examples/mica-and-talon/src/main/mod
+python3 examples/mica-and-talon/production/mica/motion.py run
+python3 examples/mica-and-talon/production/mica/motion.py spring
+python3 examples/mica-and-talon/production/mica/motion.py wait
+python3 tools/modding/playable_art/pipeline.py examples/mica-and-talon/production/mica/recipe.json
+python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/mica/sheet target/mica-and-talon/generated
 ```
 
 The native contour source replaces all 16 RUN poses, both SPRING poses and six
@@ -261,7 +261,7 @@ python3 -I tools/modding/playable_art/native_pose.py --output /tmp/mica-native-p
 # Save raw MICA PNGs to /tmp/mica-native-pose-20261108/raw/<id>.png and
 # exact prompts as an id->prompt JSON object at /tmp/mica-native-pose-20261108/prompts.json.
 python3 -I tools/modding/playable_art/native_pose_pilot.py --review /tmp/mica-native-pose-20261108
-python3 -I tools/modding/playable_art/pipeline.py examples/mica-and-talon/art/mica/native-pose-pilot/recipe.json
+python3 -I tools/modding/playable_art/pipeline.py examples/mica-and-talon/production/mica/native-pose-pilot/recipe.json
 python3 -I tools/modding/playable_art/test_native_pose.py
 ```
 
@@ -311,8 +311,8 @@ GPT Image outputs under `raw/` and exact prompts in `prompts.json`. Then run:
 
 ```sh
 python3 tools/modding/playable_art/native_pose_core.py --review /tmp/mica-np-core-20261108 wait walk run spring roll spindash push duck look_up skid balance hurt death drown get_air hang homing_dive
-python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/mica examples/mica-and-talon/src/main/mod
-python3 tools/modding/playable_art/verify.py examples/mica-and-talon/art/mica
+python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/mica/sheet target/mica-and-talon/generated
+python3 tools/modding/playable_art/verify.py examples/mica-and-talon/art/mica/sheet
 ```
 
 Pilot adoption also needs its raw review directory (`--pilot-review` defaults to
@@ -401,9 +401,9 @@ art uses the host descriptor's documented canonical fallback.
 ## Reuse existing normal-mapping art
 
 ```sh
-python3 examples/mica-and-talon/art/mica/reuse_native_art.py
-python3 tools/modding/playable_art/pipeline.py examples/mica-and-talon/art/mica/recipe.json
-python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/mica examples/mica-and-talon/src/main/mod
+python3 examples/mica-and-talon/production/mica/reuse_native_art.py
+python3 tools/modding/playable_art/pipeline.py examples/mica-and-talon/production/mica/recipe.json
+python3 tools/modding/playable_art/assemble.py examples/mica-and-talon/art/mica/sheet target/mica-and-talon/generated
 ```
 
 This preserves the original MICA pixels/hotspots of ending mappings $BA/$CA/$CB
@@ -497,14 +497,14 @@ in the inventory with that limitation stated.
 
 ## TALON shared-family review
 
-`examples/mica-and-talon/art/talon/family_review.py` is the maintained full-rate
+`examples/mica-and-talon/production/talon/family_review.py` is the maintained full-rate
 review for TALON's shared families and flight/swim variants. It consumes the
 coverage audit JSON and pinned disassemblies, writes decoded comparison pixels
 only outside the repository, emits exact-palette full-tick GIFs and a common
 engine-centre lineup, and displays recorded anatomical/reduction landmarks.
 
 ```sh
-python3 examples/mica-and-talon/art/talon/family_review.py "$HOME/scratch/agent-tmp/talon-families-20261109"
+python3 examples/mica-and-talon/production/talon/family_review.py "$HOME/scratch/agent-tmp/talon-families-20261109"
 ```
 
 The scratch input contains `baseline/` or `after/` audit JSON and `host-native/`
@@ -529,9 +529,9 @@ against wingspan or sprite bounds.
 
 ## Powered pose inventory research
 
-`examples/mica-and-talon/art/mica/powered/inventory.py` expands the native S2/S3K
+`examples/mica-and-talon/production/mica/powered/inventory.py` expands the native S2/S3K
 powered scripts, movement slope selection and S2 alternate walk frames before
-counting references. Its [checkpoint notes](../../../examples/mica-and-talon/art/mica/powered/README.md)
+counting references. Its [checkpoint notes](../../../examples/mica-and-talon/production/mica/powered/README.md)
 distinguish native frame indices, shared scripts and actual accepted creator art.
 The optional native-pixel export writes only to scratch. `--compare-poses` verifies
 shared-script silhouettes at their hotspots; `powered/pose-identity.json` records
@@ -646,7 +646,7 @@ fresh attempts, native head/torso scale, an unlabelled visual gate and real
 
 ## S2 native-role title capture review
 
-`examples/mica-and-talon/art/mica/titles/s2_capture_review.py` builds the
+`examples/mica-and-talon/production/mica/titles/s2_capture_review.py` builds the
 lockstep S2 title checkpoint from real capture frames and read-only sprite
 state rows. Inputs are paired900-tick captures, native-box area measurements,
 and an external native logo alpha mask. It compares every recorded native
@@ -656,7 +656,7 @@ onion skins, all palm motion phases and a60fps paired film. No comparison
 value is fed to production. Keep all input/output pixels outside Git.
 
 ```bash
-python3 examples/mica-and-talon/art/mica/titles/s2_capture_review.py \
+python3 examples/mica-and-talon/production/mica/titles/s2_capture_review.py \
   --captures /scratch/s2-title-roles \
   --native-logo-mask /scratch/native-title-logo-alpha.png
 ```
@@ -672,7 +672,7 @@ certification. Provenance and limits live in each character's title README.
 ## Locked special-stage identity, body motion and native limb phases
 
 `locked_stage.py` reproduces the generated-part compositions under
-`art/{mica,talon}/consistent-stage/`. Each surface has one canonical head, torso
+`production/{mica,talon}/consistent-stage/`. Each surface has one canonical head, torso
 and curl. The body-motion correction retains those source hashes: it does not
 regenerate identities or repaint native pixels. `stage_body_motion.py` performs
 two Scale2x passes, hip-pivot rotation and nearest reduction, propagating anatomical
@@ -683,8 +683,8 @@ Native ball envelopes/glint phases still derive from their separate locked curl.
 
 ```bash
 python3 tools/modding/playable_art/measure_stage_body.py --references /scratch/native --inventory /scratch/inventory.json --out /scratch/native-motion.json
-python3 tools/modding/playable_art/locked_stage.py examples/mica-and-talon/art/mica/consistent-stage --check
-python3 tools/modding/playable_art/locked_stage_review.py examples/mica-and-talon/art/mica/consistent-stage --out /scratch/mica-motion.csv
+python3 tools/modding/playable_art/locked_stage.py examples/mica-and-talon/production/mica/consistent-stage --check
+python3 tools/modding/playable_art/locked_stage_review.py examples/mica-and-talon/production/mica/consistent-stage --out /scratch/mica-motion.csv
 ```
 
 The native measurement consumes external indexed ROM-derived reference PNGs and

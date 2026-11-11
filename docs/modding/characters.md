@@ -562,7 +562,7 @@ A host without those scripts uses authored canonical GGFP timings without a dono
 ROM. Existing `animations` overrides take precedence and address the combined bank.
 The profile controller restores views during transformation, Super/Hyper, revert,
 rewind and art refresh. MICA's S2/S3K bank and Hyper geometry sharing are documented
-in her [powered art](../../examples/mica-and-talon/art/mica/powered/README.md).
+in her [powered art](../../examples/mica-and-talon/production/mica/powered/README.md).
 Missing water rows use the live host-zone derivation.
 Hyper trails use the character's own renderer and rewind-captured position history;
 stars are opt-in. Neither Sonic's palette nor his alternate mappings are installed.

@@ -15,7 +15,7 @@ spec.loader.exec_module(assembler)
 
 class PlayableArtAssemblyTest(unittest.TestCase):
     def test_authored_finite_scripts_and_invalid_rewind(self):
-        art = ROOT/'examples/mica-and-talon/art/mica'
+        art = ROOT/'examples/mica-and-talon/art/mica/sheet'
         handoff = json.loads((art/'frames.yaml').read_text())
         palette = json.loads((art/'palette.yaml').read_text())
         for name in ('BLINK', 'GET_UP'):
@@ -36,14 +36,12 @@ class PlayableArtAssemblyTest(unittest.TestCase):
                     assembler.assemble(art, Path(directory))
 
     def test_roundtrip_pixels_hotspots_slopes_and_custom_hook(self):
-        art = ROOT/'examples/mica-and-talon/art/mica'
+        art = ROOT/'examples/mica-and-talon/art/mica/sheet'
         source = json.loads((art/'frames.yaml').read_text())['frames']
         with tempfile.TemporaryDirectory() as directory:
             out = Path(directory)
             manifest, custom, stats = assembler.assemble(art, out)
             before = {p.name:p.read_bytes() for p in out.iterdir()}
-            committed = ROOT/'examples/mica-and-talon/src/main/mod'
-            self.assertEqual(before, {name:(committed/name).read_bytes() for name in before})
             assembler.assemble(art, out)
             self.assertEqual(before, {p.name:p.read_bytes() for p in out.iterdir()})
             self.assertEqual(stats, dict(frames=274, maxTilesPerFrame=30, animations=53))
@@ -71,7 +69,7 @@ class PlayableArtAssemblyTest(unittest.TestCase):
             idle = manifest['animations']['WAIT']
             self.assertEqual('loop-back', idle['end'])
             self.assertEqual(6, idle['loopBackSteps'])
-            native = json.loads((art/'round3/native-scripts.json').read_text())
+            native = json.loads((art/'../../../production/mica/round3/native-scripts.json').read_text())
             self.assertEqual(native['WAIT']['mappingSequence'],
                              [source[i]['order']+1 for i in idle['frames']])
             self.assertEqual([6]*len(idle['frames']), idle['durations'])
@@ -86,9 +84,9 @@ class PlayableArtAssemblyTest(unittest.TestCase):
             self.assertEqual([48],manifest['animations']['SPRING']['durations'])
 
     def test_variant_scripts_reuse_exact_symbolic_order_and_blank(self):
-        art = ROOT/'examples/mica-and-talon/art/mica'
+        art = ROOT/'examples/mica-and-talon/art/mica/sheet'
         handoff = json.loads((art/'frames.yaml').read_text())
-        native = json.loads((art/'batch2/native-scripts.json').read_text())
+        native = json.loads((art/'../../../production/mica/batch2/native-scripts.json').read_text())
         with tempfile.TemporaryDirectory() as directory:
             manifest, _, _ = assembler.assemble(art, Path(directory))
         ids = [f['id'] for f in handoff['frames']]
@@ -121,9 +119,9 @@ if __name__ == '__main__':
 class SlopeContactTests(unittest.TestCase):
     def test_native_contact_and_hotspot_in_all_rotated_phases(self):
         import math
-        art = ROOT / 'examples/mica-and-talon/art/mica'
+        art = ROOT / 'examples/mica-and-talon/art/mica/sheet'
         manifest = json.loads((art / 'frames.yaml').read_text())
-        provenance = json.loads((art / 'native-pose-core.json').read_text())['frames']
+        provenance = json.loads((art / '../../../production/mica/native-pose-core.json').read_text())['frames']
         slopes = [f for f in manifest['frames'] if f['angle_set'] != 'flat']
         self.assertEqual(len(slopes), 36)
         for f in slopes:
@@ -144,7 +142,7 @@ class SlopeContactTests(unittest.TestCase):
 
 class TalonAssemblyTests(unittest.TestCase):
     def test_original_talon_sheet_timing_and_palette(self):
-        art = ROOT/'examples/mica-and-talon/art/talon'
+        art = ROOT/'examples/mica-and-talon/art/talon/sheet'
         source = json.loads((art/'frames.yaml').read_text())
         colors = json.loads((art/'palette.yaml').read_text())['colors']
         with tempfile.TemporaryDirectory() as directory:
@@ -161,21 +159,21 @@ class TalonAssemblyTests(unittest.TestCase):
             self.assertEqual('loop-back', manifest['animations']['WAIT']['end'])
             self.assertEqual(28, manifest['animations']['WAIT']['loopBackSteps'])
             self.assertFalse((out/'mica.png').exists())
-            committed = ROOT/'examples/mica-and-talon/src/main/mod'
-            for file in out.iterdir():
-                self.assertEqual(file.read_bytes(), (committed/file.name).read_bytes())
+            before = {file.name: file.read_bytes() for file in out.iterdir()}
+            assembler.assemble(art, out)
+            self.assertEqual(before, {file.name: file.read_bytes() for file in out.iterdir()})
             self.assertEqual([2]*6,manifest['animations']['TAILS_FLY']['durations'])
             self.assertEqual(6,len(set(manifest['animations']['TAILS_FLY']['frames'])))
             for key in ('TAILS_FLY_ASCEND', 'TAILS_FLY_CARRY', 'TAILS_FLY_CARRY_ASCEND'):
                 self.assertEqual([2]*6, manifest['animations'][key]['durations'])
                 self.assertEqual(6, len(set(manifest['animations'][key]['frames'])))
-            provenance = json.loads((art/'family-generation.json').read_text())['frames']
+            provenance = json.loads((art/'../../../production/talon/family-generation.json').read_text())['frames']
             for frame in source['frames']:
                 if frame['animation'] in ('TAILS_FLY_CARRY', 'TAILS_FLY_CARRY_ASCEND'):
                     # The falcon grips with shoes, rather than Tails' lowered
                     # gloves. Check the pair at the ROM's +28 centre offset;
                     # a carrier-only bottom bound cannot establish contact.
-                    mica = art.parent/'mica'
+                    mica = art.parents[1]/'mica/sheet'
                     carried = json.loads((mica/'frames.yaml').read_text())['frames']
                     with Image.open(art/frame['file']) as image:
                         hx, hy = frame['hotspot']

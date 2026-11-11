@@ -36,7 +36,7 @@ class TestAnimationFamilies {
         var nativeArt = caps.getPlayerArtProvider(RomByteReader.fromRom(TestEnvironment.currentRom())).loadPlayerSpriteArt(tails ? "tails" : "sonic");
         assertEquals(nativeArt.animationSet().getAllScripts().keySet(), caps.getAnimationFamilies().keySet(),
                 "Every native Sonic script must have a family or explicit N/A");
-        Path project = Path.of("examples/mica-and-talon/src/main/mod"), encoded = temporary.resolve("mica.ggfp");
+        Path project = com.openggf.tests.ExampleCharacterArt.assemble(temporary.resolve("generated")), encoded = temporary.resolve("mica.ggfp");
         assertEquals(0, GgfModCli.run(new String[]{"convert", "art", "--playable", "--image",
                 project.resolve(tails ? "talon.png" : "mica.png").toString(), "--sheet", project.resolve(tails ? "talon-sheet.yaml" : "mica-sheet.yaml").toString(),
                 "--out", encoded.toString()}, System.out));

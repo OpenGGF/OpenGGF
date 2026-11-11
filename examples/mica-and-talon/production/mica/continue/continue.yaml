@@ -1,0 +1,3428 @@
+{
+  "format": "openggf-continue-art-handoff-1",
+  "tick_rate": 60,
+  "palette": "../../../art/mica/sheet/palette.yaml",
+  "games": [
+    {
+      "game": "s1",
+      "palette": "../../../art/mica/sheet/palette.yaml",
+      "palette_line": 0,
+      "piece_schema": [
+        "x",
+        "y",
+        "width_tiles",
+        "height_tiles",
+        "tile",
+        "flip_x",
+        "flip_y",
+        "palette_line",
+        "priority"
+      ],
+      "sequences": [
+        {
+          "name": "fall",
+          "frames": [
+            "player-3c",
+            "player-3d",
+            "player-53",
+            "player-3e",
+            "player-54"
+          ],
+          "ticks": 4
+        },
+        {
+          "name": "waiting",
+          "frames": [
+            "floor-01",
+            "floor-01",
+            "floor-01",
+            "floor-01",
+            "floor-02",
+            "floor-02",
+            "floor-02",
+            "floor-03",
+            "floor-03"
+          ],
+          "ticks": 5
+        },
+        {
+          "name": "rise",
+          "frames": [
+            "player-3c"
+          ],
+          "ticks": 4,
+          "end": "switch to walk"
+        },
+        {
+          "name": "walk",
+          "frames": [
+            "player-08",
+            "player-09",
+            "player-0a",
+            "player-0b",
+            "player-06",
+            "player-07"
+          ],
+          "ticks": 4,
+          "preview_inertia": 1280
+        },
+        {
+          "name": "run",
+          "frames": [
+            "player-1e",
+            "player-1f",
+            "player-20",
+            "player-21"
+          ],
+          "ticks": 3,
+          "preview_inertia": 1536
+        },
+        {
+          "name": "icons",
+          "frames": [
+            "icon-06",
+            "icon-07"
+          ],
+          "ticks": 16
+        }
+      ],
+      "native_source_label": "ContSonic / CSon_ShowFall / CSon_Animate / CSon_RunRight / Ani_CSon / CSI_ShowMiniSonic",
+      "source": "docs/s1disasm/_incObj/80, 81 Continue Screen Elements and Sonic.asm",
+      "animation_source": [
+        "docs/s1disasm/_anim/Continue Screen Sonic.asm",
+        "docs/s1disasm/_anim/Sonic.asm"
+      ],
+      "timing": {
+        "wait_timer_byte": 4,
+        "fall_timer_byte": 3,
+        "fall_dy": 4,
+        "land_y": 416,
+        "rise_dy": -8,
+        "acceleration": 32,
+        "movement": "At inertia $800: x += 16; otherwise inertia += $20",
+        "walk_run": "1 + (max(0,$800-abs(inertia)) >> 8); walk below $600, run from $600",
+        "countdown": "659 initial ticks, timer/60; no countdown-specific character frames"
+      },
+      "palette_binding": "MICA line 0 also serves native CONTINUE text/countdown and mini icons. Preserve MICA colours; engine must allocate/rebind text/digits separately. Floor oval/stars line 1 remain native.",
+      "review_notes": "Sheets compare native mapping canvases at common hotspots, 1x and 4x. GIF concatenates each sequence once, not a full screen recording; walk/run preview uses the stated fixed inertia, with native timer+1 duration. GIF times quantize to 10ms. Native fall movement/countdown/departure waits remain engine-owned. Weakest: run cycle is restrained, small scales/laces merge at 1x, and shared-palette background validation remains engine lane.",
+      "scope": "Sonic-role normal continue art, including all normal walk/run departure mappings and mini icons. No Talon/Tails, Knuckles/EggRobo replacement. Retained-super FixBugs=0 invalid-script/mismatched-DPLC artifacts are native bugs, not additional authored poses.",
+      "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+      "dplc_source": "docs/s1disasm/_maps/Sonic - Dynamic Gfx Script.asm",
+      "frames": [
+        {
+          "key": "floor-01",
+          "id": 1,
+          "bank": "floor",
+          "file": "../../../art/mica/continue/s1-floor-01.png",
+          "dimensions": [
+            40,
+            32
+          ],
+          "hotspot": [
+            20,
+            12
+          ],
+          "native_source_label": ".cont_Sonic1",
+          "pieces": [
+            [
+              -4,
+              4,
+              2,
+              2,
+              21,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -12,
+              3,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              -12,
+              2,
+              3,
+              15,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Continue Screen.asm"
+        },
+        {
+          "key": "floor-02",
+          "id": 2,
+          "bank": "floor",
+          "file": "../../../art/mica/continue/s1-floor-02.png",
+          "dimensions": [
+            40,
+            32
+          ],
+          "hotspot": [
+            20,
+            12
+          ],
+          "native_source_label": ".cont_Sonic2",
+          "pieces": [
+            [
+              -4,
+              4,
+              2,
+              2,
+              25,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -12,
+              3,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              -12,
+              2,
+              3,
+              15,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Continue Screen.asm"
+        },
+        {
+          "key": "floor-03",
+          "id": 3,
+          "bank": "floor",
+          "file": "../../../art/mica/continue/s1-floor-03.png",
+          "dimensions": [
+            40,
+            32
+          ],
+          "hotspot": [
+            20,
+            12
+          ],
+          "native_source_label": ".cont_Sonic3",
+          "pieces": [
+            [
+              -4,
+              4,
+              2,
+              2,
+              29,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -12,
+              3,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              -12,
+              2,
+              3,
+              15,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Continue Screen.asm"
+        },
+        {
+          "key": "icon-06",
+          "id": 6,
+          "bank": "icon",
+          "file": "../../../art/mica/continue/s1-icon-06.png",
+          "dimensions": [
+            16,
+            24
+          ],
+          "hotspot": [
+            0,
+            0
+          ],
+          "native_source_label": ".cont_Mini1",
+          "pieces": [
+            [
+              0,
+              0,
+              2,
+              3,
+              18,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Continue Screen.asm"
+        },
+        {
+          "key": "icon-07",
+          "id": 7,
+          "bank": "icon",
+          "file": "../../../art/mica/continue/s1-icon-07.png",
+          "dimensions": [
+            16,
+            24
+          ],
+          "hotspot": [
+            0,
+            0
+          ],
+          "native_source_label": ".cont_Mini2",
+          "pieces": [
+            [
+              0,
+              0,
+              2,
+              3,
+              24,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Continue Screen.asm"
+        },
+        {
+          "key": "player-3c",
+          "id": 60,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s1-player-3c.png",
+          "dimensions": [
+            48,
+            24
+          ],
+          "hotspot": [
+            20,
+            12
+          ],
+          "native_source_label": "MS_Float1",
+          "pieces": [
+            [
+              -4,
+              -12,
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -4,
+              2,
+              2,
+              8,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -4,
+              4,
+              3,
+              1,
+              12,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Float1",
+          "dplc_entries": [
+            [
+              8,
+              901
+            ],
+            [
+              4,
+              909
+            ],
+            [
+              3,
+              913
+            ]
+          ],
+          "tile_budget": 15
+        },
+        {
+          "key": "player-3d",
+          "id": 61,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s1-player-3d.png",
+          "dimensions": [
+            48,
+            24
+          ],
+          "hotspot": [
+            24,
+            12
+          ],
+          "native_source_label": "MS_Float2",
+          "pieces": [
+            [
+              -24,
+              -12,
+              3,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              -12,
+              3,
+              3,
+              0,
+              1,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Float2",
+          "dplc_entries": [
+            [
+              9,
+              916
+            ]
+          ],
+          "tile_budget": 9
+        },
+        {
+          "key": "player-53",
+          "id": 83,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s1-player-53.png",
+          "dimensions": [
+            48,
+            24
+          ],
+          "hotspot": [
+            28,
+            12
+          ],
+          "native_source_label": "MS_Float5",
+          "pieces": [
+            [
+              -28,
+              -12,
+              4,
+              2,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              -4,
+              2,
+              2,
+              8,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              4,
+              3,
+              1,
+              12,
+              1,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Float1",
+          "dplc_entries": [
+            [
+              8,
+              901
+            ],
+            [
+              4,
+              909
+            ],
+            [
+              3,
+              913
+            ]
+          ],
+          "tile_budget": 15
+        },
+        {
+          "key": "player-3e",
+          "id": 62,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s1-player-3e.png",
+          "dimensions": [
+            40,
+            24
+          ],
+          "hotspot": [
+            28,
+            12
+          ],
+          "native_source_label": "MS_Float3",
+          "pieces": [
+            [
+              -28,
+              -12,
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              -4,
+              1,
+              1,
+              8,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              4,
+              4,
+              1,
+              9,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Float3",
+          "dplc_entries": [
+            [
+              8,
+              925
+            ],
+            [
+              1,
+              933
+            ],
+            [
+              4,
+              934
+            ]
+          ],
+          "tile_budget": 13
+        },
+        {
+          "key": "player-54",
+          "id": 84,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s1-player-54.png",
+          "dimensions": [
+            40,
+            24
+          ],
+          "hotspot": [
+            12,
+            12
+          ],
+          "native_source_label": "MS_Float6",
+          "pieces": [
+            [
+              -4,
+              -12,
+              4,
+              2,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              -12,
+              -4,
+              1,
+              1,
+              8,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              -12,
+              4,
+              4,
+              1,
+              9,
+              1,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Float3",
+          "dplc_entries": [
+            [
+              8,
+              925
+            ],
+            [
+              1,
+              933
+            ],
+            [
+              4,
+              934
+            ]
+          ],
+          "tile_budget": 13
+        },
+        {
+          "key": "player-06",
+          "id": 6,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s1-player-06.png",
+          "dimensions": [
+            40,
+            40
+          ],
+          "hotspot": [
+            20,
+            21
+          ],
+          "native_source_label": "MS_Walk11",
+          "pieces": [
+            [
+              -20,
+              -21,
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -5,
+              3,
+              2,
+              8,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              -5,
+              2,
+              3,
+              14,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              11,
+              2,
+              1,
+              20,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Walk11",
+          "dplc_entries": [
+            [
+              8,
+              50
+            ],
+            [
+              6,
+              58
+            ],
+            [
+              6,
+              64
+            ],
+            [
+              2,
+              70
+            ]
+          ],
+          "tile_budget": 22
+        },
+        {
+          "key": "player-07",
+          "id": 7,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s1-player-07.png",
+          "dimensions": [
+            40,
+            40
+          ],
+          "hotspot": [
+            19,
+            20
+          ],
+          "native_source_label": "MS_Walk12",
+          "pieces": [
+            [
+              -19,
+              -20,
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -11,
+              -4,
+              4,
+              3,
+              8,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Walk12",
+          "dplc_entries": [
+            [
+              8,
+              50
+            ],
+            [
+              12,
+              72
+            ]
+          ],
+          "tile_budget": 20
+        },
+        {
+          "key": "player-08",
+          "id": 8,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s1-player-08.png",
+          "dimensions": [
+            24,
+            40
+          ],
+          "hotspot": [
+            13,
+            19
+          ],
+          "native_source_label": "MS_Walk13",
+          "pieces": [
+            [
+              -13,
+              -19,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -13,
+              -3,
+              3,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Walk13",
+          "dplc_entries": [
+            [
+              6,
+              84
+            ],
+            [
+              9,
+              90
+            ]
+          ],
+          "tile_budget": 15
+        },
+        {
+          "key": "player-09",
+          "id": 9,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s1-player-09.png",
+          "dimensions": [
+            40,
+            40
+          ],
+          "hotspot": [
+            20,
+            21
+          ],
+          "native_source_label": "MS_Walk14",
+          "pieces": [
+            [
+              -12,
+              -21,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -5,
+              3,
+              2,
+              6,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              -5,
+              2,
+              3,
+              12,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              11,
+              2,
+              1,
+              18,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Walk14",
+          "dplc_entries": [
+            [
+              6,
+              84
+            ],
+            [
+              6,
+              99
+            ],
+            [
+              6,
+              105
+            ],
+            [
+              2,
+              111
+            ]
+          ],
+          "tile_budget": 20
+        },
+        {
+          "key": "player-0a",
+          "id": 10,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s1-player-0a.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            21,
+            20
+          ],
+          "native_source_label": "MS_Walk15",
+          "pieces": [
+            [
+              -13,
+              -20,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -21,
+              -4,
+              4,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Walk15",
+          "dplc_entries": [
+            [
+              6,
+              84
+            ],
+            [
+              12,
+              113
+            ]
+          ],
+          "tile_budget": 18
+        },
+        {
+          "key": "player-0b",
+          "id": 11,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s1-player-0b.png",
+          "dimensions": [
+            40,
+            40
+          ],
+          "hotspot": [
+            20,
+            19
+          ],
+          "native_source_label": "MS_Walk16",
+          "pieces": [
+            [
+              -20,
+              -19,
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -12,
+              -3,
+              4,
+              1,
+              8,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -12,
+              5,
+              3,
+              2,
+              12,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Walk16",
+          "dplc_entries": [
+            [
+              8,
+              50
+            ],
+            [
+              4,
+              125
+            ],
+            [
+              6,
+              129
+            ]
+          ],
+          "tile_budget": 18
+        },
+        {
+          "key": "player-1e",
+          "id": 30,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s1-player-1e.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            20,
+            18
+          ],
+          "native_source_label": "MS_Run11",
+          "pieces": [
+            [
+              -12,
+              -18,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -2,
+              4,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Run11",
+          "dplc_entries": [
+            [
+              6,
+              426
+            ],
+            [
+              12,
+              432
+            ]
+          ],
+          "tile_budget": 18
+        },
+        {
+          "key": "player-1f",
+          "id": 31,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s1-player-1f.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            20,
+            18
+          ],
+          "native_source_label": "MS_Run12",
+          "pieces": [
+            [
+              -12,
+              -18,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -2,
+              4,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Run12",
+          "dplc_entries": [
+            [
+              6,
+              84
+            ],
+            [
+              12,
+              444
+            ]
+          ],
+          "tile_budget": 18
+        },
+        {
+          "key": "player-20",
+          "id": 32,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s1-player-20.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            20,
+            18
+          ],
+          "native_source_label": "MS_Run13",
+          "pieces": [
+            [
+              -12,
+              -18,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -2,
+              4,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Run13",
+          "dplc_entries": [
+            [
+              6,
+              426
+            ],
+            [
+              12,
+              456
+            ]
+          ],
+          "tile_budget": 18
+        },
+        {
+          "key": "player-21",
+          "id": 33,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s1-player-21.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            20,
+            18
+          ],
+          "native_source_label": "MS_Run14",
+          "pieces": [
+            [
+              -12,
+              -18,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              -2,
+              4,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s1disasm/_maps/Sonic.asm",
+          "dplc_label": "SonPLC_Run14",
+          "dplc_entries": [
+            [
+              6,
+              84
+            ],
+            [
+              12,
+              468
+            ]
+          ],
+          "tile_budget": 18
+        }
+      ],
+      "native_art_labels": {
+        "floor": "Nem_ContSonic / ArtTile_Continue_Sonic",
+        "icon": "Nem_MiniSonic / ArtTile_Mini_Sonic",
+        "player": "Art_Sonic / Map_Sonic"
+      }
+    },
+    {
+      "game": "s2",
+      "palette": "../../../art/mica/sheet/palette.yaml",
+      "palette_line": 0,
+      "piece_schema": [
+        "x",
+        "y",
+        "width_tiles",
+        "height_tiles",
+        "tile",
+        "flip_x",
+        "flip_y",
+        "palette_line",
+        "priority"
+      ],
+      "sequences": [
+        {
+          "name": "waiting",
+          "frames": [
+            "player-08",
+            "player-09"
+          ],
+          "ticks": 10
+        },
+        {
+          "name": "rise",
+          "frames": [
+            "player-07"
+          ],
+          "ticks": 4,
+          "end": "switch to walk"
+        },
+        {
+          "name": "walk",
+          "frames": [
+            "player-0f",
+            "player-10",
+            "player-11",
+            "player-12",
+            "player-13",
+            "player-14",
+            "player-0d",
+            "player-0e"
+          ],
+          "ticks": 4,
+          "preview_inertia": 1280
+        },
+        {
+          "name": "run",
+          "frames": [
+            "player-2d",
+            "player-2e",
+            "player-2f",
+            "player-30"
+          ],
+          "ticks": 3,
+          "preview_inertia": 1536
+        },
+        {
+          "name": "icons",
+          "frames": [
+            "icon-04",
+            "icon-05"
+          ],
+          "ticks": 16
+        }
+      ],
+      "native_source_label": "ObjDB / SonAni_Lying / SonAni_LieDown / SonAni_Walk / SonAni_Run / ObjDA",
+      "source": "docs/s2disasm/s2.asm",
+      "timing": {
+        "wait_timer_byte": 9,
+        "rise_timer_byte": 3,
+        "acceleration": 32,
+        "movement": "At inertia $800: x += 16; otherwise inertia += $20",
+        "walk_run": "1 + (max(0,$800-abs(inertia)) >> 8); walk below $600, run from $600",
+        "countdown": "658 at provider initialization, timer/60; no countdown-specific character frames"
+      },
+      "palette_binding": "MICA line 0 is shared with Tails, CONTINUE letters/digits and mini icons. Engine lane must split/rebind other actors and text; do not recolour MICA. This manifest replaces Sonic only; Talon/Tails choreography belongs to its art lane.",
+      "review_notes": "Sheets compare native mapping canvases at common hotspots, 1x and 4x. GIF concatenates each sequence once, not a full screen recording; walk/run preview uses the stated fixed inertia, with native timer+1 duration. GIF times quantize to 10ms. Native fall movement/countdown/departure waits remain engine-owned. Weakest: run cycle is restrained, small scales/laces merge at 1x, and shared-palette background validation remains engine lane.",
+      "scope": "Sonic-role normal continue art, including all normal walk/run departure mappings and mini icons. No Talon/Tails, Knuckles/EggRobo replacement. Retained-super FixBugs=0 invalid-script/mismatched-DPLC artifacts are native bugs, not additional authored poses.",
+      "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+      "dplc_source": "docs/s2disasm/mappings/spriteDPLC/Sonic.asm",
+      "frames": [
+        {
+          "key": "icon-04",
+          "id": 4,
+          "bank": "icon",
+          "file": "../../../art/mica/continue/s2-icon-04.png",
+          "dimensions": [
+            16,
+            24
+          ],
+          "hotspot": [
+            0,
+            0
+          ],
+          "native_source_label": "Map_objDA_007A",
+          "pieces": [
+            [
+              0,
+              0,
+              2,
+              3,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/objDA.asm"
+        },
+        {
+          "key": "icon-05",
+          "id": 5,
+          "bank": "icon",
+          "file": "../../../art/mica/continue/s2-icon-05.png",
+          "dimensions": [
+            16,
+            24
+          ],
+          "hotspot": [
+            0,
+            0
+          ],
+          "native_source_label": "Map_objDA_0084",
+          "pieces": [
+            [
+              0,
+              0,
+              2,
+              3,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/objDA.asm"
+        },
+        {
+          "key": "player-08",
+          "id": 8,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s2-player-08.png",
+          "dimensions": [
+            40,
+            32
+          ],
+          "hotspot": [
+            24,
+            12
+          ],
+          "native_source_label": "Map_Sonic_027C",
+          "pieces": [
+            [
+              -24,
+              -12,
+              3,
+              4,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              4,
+              2,
+              2,
+              12,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+          "dplc_label": ".frame8",
+          "dplc_entries": [
+            [
+              12,
+              86
+            ],
+            [
+              4,
+              98
+            ]
+          ],
+          "tile_budget": 16
+        },
+        {
+          "key": "player-09",
+          "id": 9,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s2-player-09.png",
+          "dimensions": [
+            40,
+            32
+          ],
+          "hotspot": [
+            24,
+            12
+          ],
+          "native_source_label": "Map_Sonic_028E",
+          "pieces": [
+            [
+              -24,
+              -12,
+              3,
+              4,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              4,
+              2,
+              2,
+              12,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+          "dplc_label": ".frame9",
+          "dplc_entries": [
+            [
+              12,
+              86
+            ],
+            [
+              4,
+              102
+            ]
+          ],
+          "tile_budget": 16
+        },
+        {
+          "key": "player-07",
+          "id": 7,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s2-player-07.png",
+          "dimensions": [
+            32,
+            32
+          ],
+          "hotspot": [
+            16,
+            12
+          ],
+          "native_source_label": "Map_Sonic_026A",
+          "pieces": [
+            [
+              -16,
+              -12,
+              3,
+              4,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              8,
+              4,
+              1,
+              2,
+              12,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+          "dplc_label": ".frame7",
+          "dplc_entries": [
+            [
+              12,
+              72
+            ],
+            [
+              2,
+              84
+            ]
+          ],
+          "tile_budget": 14
+        },
+        {
+          "key": "player-0d",
+          "id": 13,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s2-player-0d.png",
+          "dimensions": [
+            40,
+            48
+          ],
+          "hotspot": [
+            20,
+            21
+          ],
+          "native_source_label": "Map_Sonic_02F6",
+          "pieces": [
+            [
+              -18,
+              -21,
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              3,
+              1,
+              2,
+              8,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -12,
+              -5,
+              4,
+              4,
+              10,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+          "dplc_label": ".frame13",
+          "dplc_entries": [
+            [
+              8,
+              152
+            ],
+            [
+              2,
+              160
+            ],
+            [
+              16,
+              162
+            ]
+          ],
+          "tile_budget": 26
+        },
+        {
+          "key": "player-0e",
+          "id": 14,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s2-player-0e.png",
+          "dimensions": [
+            40,
+            48
+          ],
+          "hotspot": [
+            20,
+            20
+          ],
+          "native_source_label": "Map_Sonic_0310",
+          "pieces": [
+            [
+              -18,
+              -20,
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              4,
+              1,
+              2,
+              8,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -12,
+              -4,
+              3,
+              4,
+              10,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              12,
+              4,
+              1,
+              2,
+              22,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+          "dplc_label": ".frame14",
+          "dplc_entries": [
+            [
+              8,
+              152
+            ],
+            [
+              2,
+              178
+            ],
+            [
+              12,
+              180
+            ],
+            [
+              2,
+              192
+            ]
+          ],
+          "tile_budget": 24
+        },
+        {
+          "key": "player-0f",
+          "id": 15,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s2-player-0f.png",
+          "dimensions": [
+            32,
+            48
+          ],
+          "hotspot": [
+            19,
+            19
+          ],
+          "native_source_label": "Map_Sonic_0332",
+          "pieces": [
+            [
+              -19,
+              -19,
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -12,
+              -3,
+              3,
+              2,
+              8,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -9,
+              13,
+              2,
+              2,
+              14,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+          "dplc_label": ".frame15",
+          "dplc_entries": [
+            [
+              8,
+              194
+            ],
+            [
+              6,
+              202
+            ],
+            [
+              4,
+              208
+            ]
+          ],
+          "tile_budget": 18
+        },
+        {
+          "key": "player-10",
+          "id": 16,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s2-player-10.png",
+          "dimensions": [
+            32,
+            48
+          ],
+          "hotspot": [
+            18,
+            20
+          ],
+          "native_source_label": "Map_Sonic_034C",
+          "pieces": [
+            [
+              -12,
+              -20,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -18,
+              -4,
+              4,
+              4,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+          "dplc_label": ".frame16",
+          "dplc_entries": [
+            [
+              6,
+              212
+            ],
+            [
+              16,
+              218
+            ]
+          ],
+          "tile_budget": 22
+        },
+        {
+          "key": "player-11",
+          "id": 17,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s2-player-11.png",
+          "dimensions": [
+            40,
+            48
+          ],
+          "hotspot": [
+            18,
+            21
+          ],
+          "native_source_label": "Map_Sonic_035E",
+          "pieces": [
+            [
+              -12,
+              -21,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -18,
+              -5,
+              4,
+              4,
+              6,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              14,
+              -5,
+              1,
+              2,
+              22,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+          "dplc_label": ".frame17",
+          "dplc_entries": [
+            [
+              6,
+              212
+            ],
+            [
+              16,
+              234
+            ],
+            [
+              2,
+              250
+            ]
+          ],
+          "tile_budget": 24
+        },
+        {
+          "key": "player-12",
+          "id": 18,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s2-player-12.png",
+          "dimensions": [
+            40,
+            48
+          ],
+          "hotspot": [
+            20,
+            20
+          ],
+          "native_source_label": "Map_Sonic_0378",
+          "pieces": [
+            [
+              -12,
+              -20,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -20,
+              4,
+              1,
+              2,
+              6,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -12,
+              -4,
+              3,
+              4,
+              8,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              12,
+              4,
+              1,
+              2,
+              20,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+          "dplc_label": ".frame18",
+          "dplc_entries": [
+            [
+              6,
+              212
+            ],
+            [
+              2,
+              252
+            ],
+            [
+              12,
+              254
+            ],
+            [
+              2,
+              266
+            ]
+          ],
+          "tile_budget": 22
+        },
+        {
+          "key": "player-13",
+          "id": 19,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s2-player-13.png",
+          "dimensions": [
+            32,
+            48
+          ],
+          "hotspot": [
+            19,
+            19
+          ],
+          "native_source_label": "Map_Sonic_039A",
+          "pieces": [
+            [
+              -19,
+              -19,
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -12,
+              -3,
+              3,
+              2,
+              8,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -9,
+              13,
+              2,
+              2,
+              14,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+          "dplc_label": ".frame19",
+          "dplc_entries": [
+            [
+              8,
+              194
+            ],
+            [
+              6,
+              268
+            ],
+            [
+              4,
+              274
+            ]
+          ],
+          "tile_budget": 18
+        },
+        {
+          "key": "player-14",
+          "id": 20,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s2-player-14.png",
+          "dimensions": [
+            32,
+            48
+          ],
+          "hotspot": [
+            18,
+            20
+          ],
+          "native_source_label": "Map_Sonic_03B4",
+          "pieces": [
+            [
+              -18,
+              -20,
+              4,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -13,
+              -4,
+              3,
+              4,
+              8,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+          "dplc_label": ".frame20",
+          "dplc_entries": [
+            [
+              8,
+              152
+            ],
+            [
+              12,
+              278
+            ]
+          ],
+          "tile_budget": 20
+        },
+        {
+          "key": "player-2d",
+          "id": 45,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s2-player-2d.png",
+          "dimensions": [
+            32,
+            48
+          ],
+          "hotspot": [
+            16,
+            18
+          ],
+          "native_source_label": "Map_Sonic_06D6",
+          "pieces": [
+            [
+              -8,
+              -18,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -16,
+              -2,
+              4,
+              4,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+          "dplc_label": ".frame45",
+          "dplc_entries": [
+            [
+              6,
+              694
+            ],
+            [
+              16,
+              700
+            ]
+          ],
+          "tile_budget": 22
+        },
+        {
+          "key": "player-2e",
+          "id": 46,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s2-player-2e.png",
+          "dimensions": [
+            32,
+            48
+          ],
+          "hotspot": [
+            16,
+            18
+          ],
+          "native_source_label": "Map_Sonic_06E8",
+          "pieces": [
+            [
+              -8,
+              -18,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -16,
+              -2,
+              4,
+              4,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+          "dplc_label": ".frame46",
+          "dplc_entries": [
+            [
+              6,
+              716
+            ],
+            [
+              16,
+              722
+            ]
+          ],
+          "tile_budget": 22
+        },
+        {
+          "key": "player-2f",
+          "id": 47,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s2-player-2f.png",
+          "dimensions": [
+            32,
+            48
+          ],
+          "hotspot": [
+            16,
+            18
+          ],
+          "native_source_label": "Map_Sonic_06FA",
+          "pieces": [
+            [
+              -8,
+              -18,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -16,
+              -2,
+              4,
+              4,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+          "dplc_label": ".frame47",
+          "dplc_entries": [
+            [
+              6,
+              694
+            ],
+            [
+              16,
+              738
+            ]
+          ],
+          "tile_budget": 22
+        },
+        {
+          "key": "player-30",
+          "id": 48,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s2-player-30.png",
+          "dimensions": [
+            32,
+            48
+          ],
+          "hotspot": [
+            16,
+            18
+          ],
+          "native_source_label": "Map_Sonic_070C",
+          "pieces": [
+            [
+              -8,
+              -18,
+              3,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              -16,
+              -2,
+              4,
+              4,
+              6,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/s2disasm/mappings/sprite/Sonic.asm",
+          "dplc_label": ".frame48",
+          "dplc_entries": [
+            [
+              6,
+              716
+            ],
+            [
+              16,
+              754
+            ]
+          ],
+          "tile_budget": 22
+        }
+      ],
+      "native_art_labels": {
+        "icon": "ArtNem_MiniSonic",
+        "player": "ArtUnc_Sonic / Map_Sonic"
+      }
+    },
+    {
+      "game": "s3k",
+      "palette": "../../../art/mica/sheet/palette.yaml",
+      "palette_line": 0,
+      "piece_schema": [
+        "x",
+        "y",
+        "width_tiles",
+        "height_tiles",
+        "tile",
+        "flip_x",
+        "flip_y",
+        "palette_line",
+        "priority"
+      ],
+      "sequences": [
+        {
+          "name": "team-wait",
+          "frames": [
+            "team-idle-00",
+            "team-idle-01"
+          ],
+          "ticks": 16,
+          "clock": "V_int_run_count bit 4"
+        },
+        {
+          "name": "team-rise",
+          "frames": [
+            "player-5a",
+            "player-59",
+            "player-55",
+            "player-56",
+            "player-57"
+          ],
+          "ticks": 7,
+          "flips": [
+            false,
+            true,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "name": "solo-wait",
+          "frames": [
+            "player-bd",
+            "player-be"
+          ],
+          "ticks": 12,
+          "initial_index": 1
+        },
+        {
+          "name": "solo-rise",
+          "frames": [
+            "player-ba"
+          ],
+          "ticks": 8
+        },
+        {
+          "name": "run",
+          "frames": [
+            "player-21",
+            "player-22",
+            "player-23",
+            "player-24"
+          ],
+          "ticks": 3
+        },
+        {
+          "name": "icons",
+          "frames": [
+            "icon-00",
+            "icon-01"
+          ],
+          "ticks": 16,
+          "clock": "V_int_run_count bit 4"
+        }
+      ],
+      "native_source_label": "Obj_Continue_SonicWTails / Obj_Continue_SonicAlone / RawAni_5C622 / byte_5CBC5 / byte_5CBB4",
+      "source": "docs/skdisasm/sonic3k.asm",
+      "timing": {
+        "team_rise": "accepted ages 1..35, five seven-tick entries; first $5A flip byte ignored; age36 still $57; run from age37; movement from age53 at 6px/tick",
+        "solo_rise": "solo idle continues until age38; $BA age39..46; $21 age47; raw run from age48, 3 ticks, increment-before-fetch",
+        "solo_idle": "12 ticks, increment-before-fetch selects $BE first",
+        "countdown": "9 initial, 59 timer; decrement until negative; no countdown-specific actor art"
+      },
+      "palette_binding": "Continue palette line 0 also serves Tails, Sonic icons and EggRobo. Retain MICA palette; engine lane must reserve/rebind their colours. Punctuation line 2 and Knuckles line 3 remain native.",
+      "review_notes": "Sheets compare native mapping canvases at common hotspots, 1x and 4x. GIF concatenates each sequence once, not a full screen recording; walk/run preview uses the stated fixed inertia, with native timer+1 duration. GIF times quantize to 10ms. Native fall movement/countdown/departure waits remain engine-owned. Weakest: run cycle is restrained, small scales/laces merge at 1x, and shared-palette background validation remains engine lane.",
+      "scope": "Sonic-role normal continue art, including all normal walk/run departure mappings and mini icons. No Talon/Tails, Knuckles/EggRobo replacement. Retained-super FixBugs=0 invalid-script/mismatched-DPLC artifacts are native bugs, not additional authored poses.",
+      "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+      "dplc_source": "docs/skdisasm/General/Sprites/Sonic/DPLC - Sonic.asm",
+      "frames": [
+        {
+          "key": "team-idle-00",
+          "id": 0,
+          "bank": "team-idle",
+          "file": "../../../art/mica/continue/s3k-team-idle-00.png",
+          "dimensions": [
+            24,
+            40
+          ],
+          "hotspot": [
+            12,
+            20
+          ],
+          "native_source_label": "word_5CC5A",
+          "pieces": [
+            [
+              -12,
+              -20,
+              3,
+              3,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -12,
+              4,
+              2,
+              2,
+              9,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              4,
+              4,
+              1,
+              2,
+              13,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Continue/Map - Player Sprites.asm"
+        },
+        {
+          "key": "team-idle-01",
+          "id": 1,
+          "bank": "team-idle",
+          "file": "../../../art/mica/continue/s3k-team-idle-01.png",
+          "dimensions": [
+            24,
+            40
+          ],
+          "hotspot": [
+            12,
+            20
+          ],
+          "native_source_label": "word_5CC6E",
+          "pieces": [
+            [
+              -12,
+              -20,
+              3,
+              3,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -12,
+              4,
+              2,
+              2,
+              15,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              4,
+              4,
+              1,
+              2,
+              13,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Continue/Map - Player Sprites.asm"
+        },
+        {
+          "key": "icon-00",
+          "id": 0,
+          "bank": "icon",
+          "file": "../../../art/mica/continue/s3k-icon-00.png",
+          "dimensions": [
+            24,
+            24
+          ],
+          "hotspot": [
+            12,
+            12
+          ],
+          "native_source_label": "word_5CD12",
+          "pieces": [
+            [
+              -12,
+              -12,
+              2,
+              2,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -12,
+              4,
+              3,
+              1,
+              4,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Continue/Map - Player Icons.asm"
+        },
+        {
+          "key": "icon-01",
+          "id": 1,
+          "bank": "icon",
+          "file": "../../../art/mica/continue/s3k-icon-01.png",
+          "dimensions": [
+            24,
+            24
+          ],
+          "hotspot": [
+            12,
+            12
+          ],
+          "native_source_label": "word_5CD20",
+          "pieces": [
+            [
+              -12,
+              -12,
+              2,
+              2,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -12,
+              4,
+              3,
+              1,
+              7,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Continue/Map - Player Icons.asm"
+        },
+        {
+          "key": "player-5a",
+          "id": 90,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s3k-player-5a.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            18,
+            20
+          ],
+          "native_source_label": "word_1470F6",
+          "pieces": [
+            [
+              -10,
+              -20,
+              3,
+              3,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -18,
+              4,
+              4,
+              1,
+              9,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -10,
+              12,
+              3,
+              1,
+              13,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_148834",
+          "dplc_entries": [
+            [
+              9,
+              2131
+            ],
+            [
+              4,
+              2140
+            ],
+            [
+              3,
+              2144
+            ]
+          ],
+          "tile_budget": 16
+        },
+        {
+          "key": "player-59",
+          "id": 89,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s3k-player-59.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            17,
+            20
+          ],
+          "native_source_label": "word_1470DC",
+          "pieces": [
+            [
+              -9,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -17,
+              -12,
+              4,
+              1,
+              3,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -9,
+              -4,
+              3,
+              1,
+              7,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -17,
+              4,
+              4,
+              2,
+              10,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_14882A",
+          "dplc_entries": [
+            [
+              3,
+              2113
+            ],
+            [
+              4,
+              2116
+            ],
+            [
+              3,
+              2120
+            ],
+            [
+              8,
+              2123
+            ]
+          ],
+          "tile_budget": 18
+        },
+        {
+          "key": "player-55",
+          "id": 85,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s3k-player-55.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "word_147092",
+          "pieces": [
+            [
+              -16,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -12,
+              4,
+              2,
+              3,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              4,
+              3,
+              1,
+              11,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -8,
+              12,
+              3,
+              1,
+              14,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_14880C",
+          "dplc_entries": [
+            [
+              3,
+              2048
+            ],
+            [
+              8,
+              2051
+            ],
+            [
+              3,
+              2059
+            ],
+            [
+              3,
+              2062
+            ]
+          ],
+          "tile_budget": 17
+        },
+        {
+          "key": "player-56",
+          "id": 86,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s3k-player-56.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            17,
+            20
+          ],
+          "native_source_label": "word_1470AC",
+          "pieces": [
+            [
+              -17,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -17,
+              -12,
+              4,
+              2,
+              3,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -9,
+              4,
+              3,
+              2,
+              11,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_148816",
+          "dplc_entries": [
+            [
+              3,
+              2065
+            ],
+            [
+              8,
+              2068
+            ],
+            [
+              6,
+              2076
+            ]
+          ],
+          "tile_budget": 17
+        },
+        {
+          "key": "player-57",
+          "id": 87,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s3k-player-57.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "word_1470C0",
+          "pieces": [
+            [
+              -16,
+              -20,
+              3,
+              4,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              12,
+              4,
+              1,
+              12,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_14881E",
+          "dplc_entries": [
+            [
+              12,
+              2082
+            ],
+            [
+              4,
+              2094
+            ]
+          ],
+          "tile_budget": 16
+        },
+        {
+          "key": "player-bd",
+          "id": 189,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s3k-player-bd.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            18,
+            20
+          ],
+          "native_source_label": "word_147870",
+          "pieces": [
+            [
+              -18,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -18,
+              -12,
+              4,
+              2,
+              3,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -18,
+              4,
+              3,
+              1,
+              11,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -10,
+              12,
+              3,
+              1,
+              14,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_148B36",
+          "dplc_entries": [
+            [
+              3,
+              3463
+            ],
+            [
+              8,
+              3632
+            ],
+            [
+              3,
+              3626
+            ],
+            [
+              3,
+              3629
+            ]
+          ],
+          "tile_budget": 17
+        },
+        {
+          "key": "player-be",
+          "id": 190,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s3k-player-be.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            18,
+            20
+          ],
+          "native_source_label": "word_14788A",
+          "pieces": [
+            [
+              -18,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -18,
+              -12,
+              4,
+              2,
+              3,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -18,
+              4,
+              3,
+              1,
+              11,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -10,
+              12,
+              3,
+              1,
+              14,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_148B40",
+          "dplc_entries": [
+            [
+              3,
+              3463
+            ],
+            [
+              8,
+              3632
+            ],
+            [
+              3,
+              3626
+            ],
+            [
+              3,
+              3640
+            ]
+          ],
+          "tile_budget": 17
+        },
+        {
+          "key": "player-ba",
+          "id": 186,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s3k-player-ba.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "word_147828",
+          "pieces": [
+            [
+              -8,
+              -4,
+              3,
+              3,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -20,
+              3,
+              1,
+              9,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -12,
+              4,
+              1,
+              12,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -4,
+              1,
+              1,
+              16,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_148B1A",
+          "dplc_entries": [
+            [
+              9,
+              3585
+            ],
+            [
+              3,
+              2065
+            ],
+            [
+              4,
+              3594
+            ],
+            [
+              1,
+              2069
+            ]
+          ],
+          "tile_budget": 17
+        },
+        {
+          "key": "player-21",
+          "id": 33,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s3k-player-21.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "word_146CDC",
+          "pieces": [
+            [
+              -8,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -12,
+              4,
+              4,
+              3,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_14868A",
+          "dplc_entries": [
+            [
+              3,
+              1057
+            ],
+            [
+              16,
+              1060
+            ]
+          ],
+          "tile_budget": 19
+        },
+        {
+          "key": "player-22",
+          "id": 34,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s3k-player-22.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "word_146CEA",
+          "pieces": [
+            [
+              -8,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -12,
+              4,
+              4,
+              3,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_148690",
+          "dplc_entries": [
+            [
+              3,
+              1076
+            ],
+            [
+              16,
+              1079
+            ]
+          ],
+          "tile_budget": 19
+        },
+        {
+          "key": "player-23",
+          "id": 35,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s3k-player-23.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "word_146CF8",
+          "pieces": [
+            [
+              -8,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -12,
+              4,
+              4,
+              3,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_148696",
+          "dplc_entries": [
+            [
+              3,
+              1057
+            ],
+            [
+              16,
+              1095
+            ]
+          ],
+          "tile_budget": 19
+        },
+        {
+          "key": "player-24",
+          "id": 36,
+          "bank": "player",
+          "file": "../../../art/mica/continue/s3k-player-24.png",
+          "dimensions": [
+            32,
+            40
+          ],
+          "hotspot": [
+            16,
+            20
+          ],
+          "native_source_label": "word_146D06",
+          "pieces": [
+            [
+              -8,
+              -20,
+              3,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              -16,
+              -12,
+              4,
+              4,
+              3,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "palette_line": 0,
+          "mapping_source": "docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm",
+          "dplc_label": "word_14869C",
+          "dplc_entries": [
+            [
+              3,
+              1076
+            ],
+            [
+              16,
+              1111
+            ]
+          ],
+          "tile_budget": 19
+        }
+      ],
+      "native_art_labels": {
+        "team-idle": "ArtNem_ContinueSprites / Map_ContinueSprites",
+        "icon": "ArtNem_ContinueIcons / Map_ContinueIcons",
+        "player": "ArtUnc_Sonic / Map_Sonic"
+      }
+    }
+  ]
+}

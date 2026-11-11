@@ -37,8 +37,8 @@ class DeterministicSlopeTests(unittest.TestCase):
         self.assertEqual(out.getpixel((3,2)),5)
 
     def test_every_shipped_slope_rederives_from_flat_pixels(self):
-        root=HERE.parents[1]/'examples/mica-and-talon/art/mica'
-        m=json.loads((root/'frames.yaml').read_text());meta=json.loads((root/'native-pose-core.json').read_text())['frames']
+        root=HERE.parents[1]/'examples/mica-and-talon/art/mica/sheet'
+        m=json.loads((root/'frames.yaml').read_text());meta=json.loads((root/'../../../production/mica/native-pose-core.json').read_text())['frames']
         by_id={f['id']:f for f in m['frames']}
         for f in m['frames']:
             if f['angle_set']=='flat':continue
