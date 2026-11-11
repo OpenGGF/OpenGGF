@@ -1,6 +1,6 @@
 {
-  "method": "Fresh built-in GPT Image attempts (lead-run Sol lane) from real-palette native 8x pose references, the owner-approved powered concept, the model sheet and approved normal sprites; fixed anatomical scale per image; mode filter of a third of a native pixel, then centre (nearest) sampling at the grid phase with the most uniform samples; palette-role indexing; ink bounding plates/plumage and the outer silhouette joins contour slot 2; single-pixel material despeckle. Slopes derived with derive_slopes.derive at the replaced frames' support distance. No native pixels shipped.",
-  "selection": "MICA: wait v1, run v2 (boots), roll v1, transformation v1. TALON: wait v2, run v2 (darker chest bars), roll v2, transformation v1 (pale wrapped first beat).",
+  "method": "Fresh built-in GPT Image attempts (lead-run Sol lane) from real-palette native 8x pose references, the owner-approved powered concept, the model sheet and approved normal sprites; fixed anatomical scale per image; mode filter of a third of a native pixel, then centre (nearest) sampling at the grid phase with the most uniform samples; palette-role indexing; ink bounding plates/plumage and the outer silhouette joins contour slot 2; single-pixel material despeckle. Slopes derived with derive_slopes.derive at the replaced frames' support distance. The transformation flash beat is re-indexed onto fixed white/cream/tan roles (native $6F/$D4 flash silhouettes ignore the palette fade); detached specks of 3 px or fewer are dropped. MICA run boots are repainted to her sheet boot (boot_repaint). No native pixels shipped.",
+  "selection": "MICA: regen wait v2, regen run v1 (boots repainted), pilot roll v1, regen transformation v2. TALON: wait v2, run v2 (darker chest bars), roll v2, transformation v1 (pale wrapped first beat).",
   "plan": [
     {
       "id": "mica-pilot-wait",
@@ -77,1433 +77,66 @@
         "transform-3",
         "transform-4"
       ]
+    },
+    {
+      "id": "mica-regen-wait",
+      "prompt": "Use case: identity-preserve. Production 1990s Sega Genesis / Mega Drive sprite art, exactly like the native sprites in image 1: hard square pixels, no anti-aliasing, no gradients, no glow, cel shading with two or three flat shade steps per material, light from the upper left, a dark one-pixel outline, at most 15 colours. Each sprite is drawn LARGE (about 8x) on a plain flat mid-grey background, one sprite per equal grid cell, no text, no labels, no numbers, no ground shadows, no rings, no effects or sparkles outside the body. She is MICA, an original jade pangolin (image 3 is her approved model sheet; image 4 is her approved in-game sprites at 8x and LOCKS her head size, torso size, eye shape and pixel style). Keep from the model sheet: soft round sand-cream face and pointed snout, large brown eyes with lashes, small pink ears, ridged cream belly, white gloves, and HER OWN CORAL-RED BOOTS with tan treaded soles and teal laces (never sneakers, never Sonic's shoes). Her armour is overlapping PANGOLIN SCALE PLATES, each broad and rounded, WIDER THAN IT IS LONG. Never quills, spikes, spines, hair or fur. No resemblance to Sonic or any Sega character. POWERED FORM 'GILDED MICA', direction OPEN CONE, as in image 2 (the owner-approved concept), BUT WITH SHORTER, BROADER PLATES than image 2 shows: every scale plate on her back, head crest and tail has LIFTED on its hinge like a pine cone opening, so her outline is a bold stepped sawtooth of five or six large rounded plate tips pointing up and back, the tail fans into a wide serrated leaf, and the head-crest plates rise into a tiered swept-back cowl. IMPORTANT CHANGE FROM IMAGE 2: the topmost crown plate has NO curly flick and NO curled hook at its tip; every crown plate rises as a STRAIGHT, broad, POINTED plate. Plates are polished GOLD: pale-gold upper edge, gold and yellow faces, deep amber underside showing in the gap under each lifted plate. Face, belly, gloves and boots keep their model-sheet colours. Set, confident brow. PLATE SHAPE IS THE WHOLE POINT OF THIS SHEET: every lifted plate is a SHORT, BROAD, SHIELD- or PETAL-SHAPED pangolin scale, like the bracts of an open pine cone or artichoke: each plate is at least as wide as it is long, has a ROUNDED or blunt-pointed tip, a pale-gold RIM along its upper edge and a dark amber gap underneath. Plates overlap in staggered rows like roof tiles, so the outline is a SCALLOPED, BUMPY dome edged with short teeth, never long thin spikes. FORBIDDEN: long swept-back spikes, hair, quills, a Super Sonic silhouette, any spike longer than it is wide. Image 1 shows MICA's own previous Gilded sprites at 8x in the native standing poses (top row S2 x3, bottom row S3K x2): keep EXACTLY their stance, head, face, gloves, boots, body size and pixel scale, and only lift her plates. Draw FIVE sprites in the same 3-column, 2-row grid (bottom-right empty). Within each row the plates alternate between full lift and settled one pixel lower.",
+      "reference_images": [
+        "$LANE_SCRATCH/powered/refs/regen-mica-wait.png",
+        "$LANE_SCRATCH/powered/refs/mica-open-cone-concept.png",
+        "examples/mica-and-talon/concept/mica.png",
+        "$LANE_SCRATCH/powered/refs/mica-approved-8x.png"
+      ],
+      "variants": 2,
+      "size": "1536x1024",
+      "cells": [
+        "s2-wait-0",
+        "s2-wait-1",
+        "s2-wait-2",
+        "s3k-wait-0",
+        "s3k-wait-1",
+        null
+      ]
+    },
+    {
+      "id": "mica-regen-run",
+      "prompt": "Use case: identity-preserve. Production 1990s Sega Genesis / Mega Drive sprite art, exactly like the native sprites in image 1: hard square pixels, no anti-aliasing, no gradients, no glow, cel shading with two or three flat shade steps per material, light from the upper left, a dark one-pixel outline, at most 15 colours. Each sprite is drawn LARGE (about 8x) on a plain flat mid-grey background, one sprite per equal grid cell, no text, no labels, no numbers, no ground shadows, no rings, no effects or sparkles outside the body. She is MICA, an original jade pangolin (image 3 is her approved model sheet; image 4 is her approved in-game sprites at 8x and LOCKS her head size, torso size, eye shape and pixel style). Keep from the model sheet: soft round sand-cream face and pointed snout, large brown eyes with lashes, small pink ears, ridged cream belly, white gloves, and HER OWN CORAL-RED BOOTS with tan treaded soles and teal laces (never sneakers, never Sonic's shoes). Her armour is overlapping PANGOLIN SCALE PLATES, each broad and rounded, WIDER THAN IT IS LONG. Never quills, spikes, spines, hair or fur. No resemblance to Sonic or any Sega character. POWERED FORM 'GILDED MICA', direction OPEN CONE, as in image 2 (the owner-approved concept), BUT WITH SHORTER, BROADER PLATES than image 2 shows: every scale plate on her back, head crest and tail has LIFTED on its hinge like a pine cone opening, so her outline is a bold stepped sawtooth of five or six large rounded plate tips pointing up and back, the tail fans into a wide serrated leaf, and the head-crest plates rise into a tiered swept-back cowl. IMPORTANT CHANGE FROM IMAGE 2: the topmost crown plate has NO curly flick and NO curled hook at its tip; every crown plate rises as a STRAIGHT, broad, POINTED plate. Plates are polished GOLD: pale-gold upper edge, gold and yellow faces, deep amber underside showing in the gap under each lifted plate. Face, belly, gloves and boots keep their model-sheet colours. Set, confident brow. PLATE SHAPE IS THE WHOLE POINT OF THIS SHEET: every lifted plate is a SHORT, BROAD, SHIELD- or PETAL-SHAPED pangolin scale, like the bracts of an open pine cone or artichoke: each plate is at least as wide as it is long, has a ROUNDED or blunt-pointed tip, a pale-gold RIM along its upper edge and a dark amber gap underneath. Plates overlap in staggered rows like roof tiles, so the outline is a SCALLOPED, BUMPY dome edged with short teeth, never long thin spikes. FORBIDDEN: long swept-back spikes, hair, quills, a Super Sonic silhouette, any spike longer than it is wide. Image 1 shows MICA's own previous Gilded run sprites at 8x (top row S2, bottom row S3K): keep EXACTLY their pose, lean, leg phase, both coral boots (the far boot must stay readable), head, face and size, and only lift her plates: raked back, tips trailing, the fanned tail held flat. Draw FOUR sprites in the same 2x2 grid.",
+      "reference_images": [
+        "$LANE_SCRATCH/powered/refs/regen-mica-run.png",
+        "$LANE_SCRATCH/powered/refs/mica-open-cone-concept.png",
+        "examples/mica-and-talon/concept/mica.png",
+        "$LANE_SCRATCH/powered/refs/mica-approved-8x.png"
+      ],
+      "variants": 2,
+      "size": "1536x1024",
+      "cells": [
+        "s2-run-0",
+        "s2-run-1",
+        "s3k-run-0",
+        "s3k-run-1"
+      ]
+    },
+    {
+      "id": "mica-regen-transform",
+      "prompt": "Use case: identity-preserve. Production 1990s Sega Genesis / Mega Drive sprite art, exactly like the native sprites in image 1: hard square pixels, no anti-aliasing, no gradients, no glow, cel shading with two or three flat shade steps per material, light from the upper left, a dark one-pixel outline, at most 15 colours. Each sprite is drawn LARGE (about 8x) on a plain flat mid-grey background, one sprite per equal grid cell, no text, no labels, no numbers, no ground shadows, no rings, no effects or sparkles outside the body. She is MICA, an original jade pangolin (image 3 is her approved model sheet; image 4 is her approved in-game sprites at 8x and LOCKS her head size, torso size, eye shape and pixel style). Keep from the model sheet: soft round sand-cream face and pointed snout, large brown eyes with lashes, small pink ears, ridged cream belly, white gloves, and HER OWN CORAL-RED BOOTS with tan treaded soles and teal laces (never sneakers, never Sonic's shoes). Her armour is overlapping PANGOLIN SCALE PLATES, each broad and rounded, WIDER THAN IT IS LONG. Never quills, spikes, spines, hair or fur. No resemblance to Sonic or any Sega character. POWERED FORM 'GILDED MICA', direction OPEN CONE, as in image 2 (the owner-approved concept), BUT WITH SHORTER, BROADER PLATES than image 2 shows: every scale plate on her back, head crest and tail has LIFTED on its hinge like a pine cone opening, so her outline is a bold stepped sawtooth of five or six large rounded plate tips pointing up and back, the tail fans into a wide serrated leaf, and the head-crest plates rise into a tiered swept-back cowl. IMPORTANT CHANGE FROM IMAGE 2: the topmost crown plate has NO curly flick and NO curled hook at its tip; every crown plate rises as a STRAIGHT, broad, POINTED plate. Plates are polished GOLD: pale-gold upper edge, gold and yellow faces, deep amber underside showing in the gap under each lifted plate. Face, belly, gloves and boots keep their model-sheet colours. Set, confident brow. PLATE SHAPE IS THE WHOLE POINT OF THIS SHEET: every lifted plate is a SHORT, BROAD, SHIELD- or PETAL-SHAPED pangolin scale, like the bracts of an open pine cone or artichoke: each plate is at least as wide as it is long, has a ROUNDED or blunt-pointed tip, a pale-gold RIM along its upper edge and a dark amber gap underneath. Plates overlap in staggered rows like roof tiles, so the outline is a SCALLOPED, BUMPY dome edged with short teeth, never long thin spikes. FORBIDDEN: long swept-back spikes, hair, quills, a Super Sonic silhouette, any spike longer than it is wide. Image 1 shows MICA's own previous five transformation sprites at 8x: keep their five beats, poses and sizes. Draw FIVE sprites in one row: (1) curled tight, every plate CLOSED; (2) still curled, pale-gold light in the seams; (3) she snaps open with every plate at full lift, drawn as an almost-white pale-gold flash silhouette whose outline is a SCALLOPED ring of short rounded plates, not spikes; (4) upright, fists clenched, plates at full lift; (5) the same with the plates settled one pixel lower.",
+      "reference_images": [
+        "$LANE_SCRATCH/powered/refs/regen-mica-transform.png",
+        "$LANE_SCRATCH/powered/refs/mica-open-cone-concept.png",
+        "examples/mica-and-talon/concept/mica.png",
+        "$LANE_SCRATCH/powered/refs/mica-approved-8x.png"
+      ],
+      "variants": 2,
+      "size": "1536x1024",
+      "cells": [
+        "transform-0",
+        "transform-1",
+        "transform-2",
+        "transform-3",
+        "transform-4"
+      ]
     }
   ],
   "frames": [
-    {
-      "group": "mica-pilot-wait",
-      "id": "s2-wait-0",
-      "host": "s2",
-      "variant": "v1",
-      "cell": 0,
-      "raw_sha256": "0dfa5b71c214f34f795ce0a0f1bca1abeaad95c59e47df58cb89c57524f4dfa6",
-      "source_box": [
-        76,
-        20,
-        388,
-        504
-      ],
-      "grid_offset": [
-        8,
-        0
-      ],
-      "source_pixels_per_native_pixel": 11.3,
-      "landmark": "eye top to sole 350px = approved wait-00 31px",
-      "registration": "ground",
-      "file": "mica/powered/frames/s2-wait-0.png",
-      "hotspot": [
-        17,
-        23
-      ],
-      "size": [
-        28,
-        43
-      ],
-      "authored_area": 713,
-      "selected_pixels": {
-        "rows": [
-          "0000000022000000000000000000",
-          "0000000002772200000000000000",
-          "0000000000247722000000000000",
-          "0000000000044477720000000000",
-          "0000000000024444772200000000",
-          "0000007722222444444420000000",
-          "0000002477772344444442000000",
-          "00000002444422f1344444000000",
-          "000000004444427771f444200000",
-          "0000000024444f7eb73444422000",
-          "0000000021f4417ef34f14442000",
-          "00000222222f1271447779442200",
-          "0000027732222224437117244200",
-          "00000024443222f4441dd1734200",
-          "0000000244444434421ccd17f200",
-          "0000000024444244441cccff2000",
-          "0000000002222222277cccf72000",
-          "0000222272222242277777777720",
-          "0000277774222f44417777777200",
-          "000002444444f444321177722000",
-          "000000344444f11f34299f200000",
-          "0000002224444f1344f72f700000",
-          "00222272222212444f1777700000",
-          "0002444422222144123992220000",
-          "0000444444441cc1f43777720000",
-          "0000244444441ccc143777700000",
-          "0000222222211991127777200000",
-          "027772222221ccccc127771d2000",
-          "004444222221ccccc172211d2000",
-          "002444444221dcccc17771dd2000",
-          "00022444222216dc141121200000",
-          "2277222222222ff1482242000000",
-          "2774422144322f44422242000000",
-          "024343f44442021f1111ba000000",
-          "0000024322000aaaaabbaa000000",
-          "0000000000000aa111111b200000",
-          "0000000000002ab1b1bbb1120000",
-          "0000000000002ab1b11b1bbaa200",
-          "0000000000002aab111baaaaaaa0",
-          "000000000002ba11aaaabbaaaaa0",
-          "0000000000029aaaafff27878772",
-          "0000000000029778877822222222",
-          "0000000000000222222200000000"
-        ],
-        "anchor": [
-          17,
-          23
-        ]
-      },
-      "palette": [
-        [
-          0,
-          0,
-          0
-        ],
-        [
-          36,
-          36,
-          36
-        ],
-        [
-          182,
-          73,
-          0
-        ],
-        [
-          255,
-          146,
-          0
-        ],
-        [
-          255,
-          219,
-          0
-        ],
-        [
-          255,
-          255,
-          73
-        ],
-        [
-          255,
-          255,
-          219
-        ],
-        [
-          255,
-          219,
-          146
-        ],
-        [
-          219,
-          182,
-          109
-        ],
-        [
-          182,
-          146,
-          109
-        ],
-        [
-          255,
-          73,
-          73
-        ],
-        [
-          182,
-          36,
-          36
-        ],
-        [
-          255,
-          255,
-          255
-        ],
-        [
-          219,
-          219,
-          219
-        ],
-        [
-          255,
-          146,
-          146
-        ],
-        [
-          73,
-          36,
-          0
-        ]
-      ]
-    },
-    {
-      "group": "mica-pilot-wait",
-      "id": "s2-wait-1",
-      "host": "s2",
-      "variant": "v1",
-      "cell": 1,
-      "raw_sha256": "0dfa5b71c214f34f795ce0a0f1bca1abeaad95c59e47df58cb89c57524f4dfa6",
-      "source_box": [
-        588,
-        40,
-        900,
-        504
-      ],
-      "grid_offset": [
-        4,
-        4
-      ],
-      "source_pixels_per_native_pixel": 11.3,
-      "landmark": "eye top to sole 350px = approved wait-00 31px",
-      "registration": "ground",
-      "file": "mica/powered/frames/s2-wait-1.png",
-      "hotspot": [
-        16,
-        21
-      ],
-      "size": [
-        27,
-        41
-      ],
-      "authored_area": 681,
-      "selected_pixels": {
-        "rows": [
-          "000000002220000000000000000",
-          "000000000247720000000000000",
-          "000000000027772200000000000",
-          "000000000004447772200000000",
-          "00000222000f444447720000000",
-          "0000002777772f1244444200000",
-          "0000002444442177344ff200000",
-          "000000044444f7ea7f444440000",
-          "00000002444417ee7ff44442000",
-          "00000000214447e14777f442000",
-          "000000021f131f1427117f44200",
-          "000027773222224444dc1174200",
-          "000002444422224421cccf71200",
-          "000000234444344447cccf61200",
-          "000000022444431f777cc2cf200",
-          "000000002222222277777777720",
-          "0000222272222444f7777777200",
-          "0000244444227441f2111200000",
-          "000002444444322444199200000",
-          "00000024444442444f777720000",
-          "0000022222222244ff777720000",
-          "0077773222222444f4772272000",
-          "002444442221cc1134277772000",
-          "000244444441ccc134f77720000",
-          "2221224444f209112f777720000",
-          "27772222212ccccc127771d2000",
-          "03444222222cccc1177711d2000",
-          "024444222221c1c1177119d2000",
-          "002344441f2111d142222220000",
-          "227321112222f13442242000000",
-          "274422f24432114420242000000",
-          "00222144422021111211a200000",
-          "0000274220002aaaa1baa200000",
-          "0000000000002a111111bb00000",
-          "000000000002b1b11111b122000",
-          "000000000002aab1bbbaf1aa200",
-          "000000000002aabaaa1baaaaaa2",
-          "00000000000baaaaaaa1baaaaf2",
-          "0000000000081aaafff17777882",
-          "000000000008171818712222222",
-          "000000000000222222220000000"
-        ],
-        "anchor": [
-          16,
-          21
-        ]
-      },
-      "palette": [
-        [
-          0,
-          0,
-          0
-        ],
-        [
-          36,
-          36,
-          36
-        ],
-        [
-          182,
-          73,
-          0
-        ],
-        [
-          255,
-          146,
-          0
-        ],
-        [
-          255,
-          219,
-          0
-        ],
-        [
-          255,
-          255,
-          73
-        ],
-        [
-          255,
-          255,
-          219
-        ],
-        [
-          255,
-          219,
-          146
-        ],
-        [
-          219,
-          182,
-          109
-        ],
-        [
-          182,
-          146,
-          109
-        ],
-        [
-          255,
-          73,
-          73
-        ],
-        [
-          182,
-          36,
-          36
-        ],
-        [
-          255,
-          255,
-          255
-        ],
-        [
-          219,
-          219,
-          219
-        ],
-        [
-          255,
-          146,
-          146
-        ],
-        [
-          73,
-          36,
-          0
-        ]
-      ]
-    },
-    {
-      "group": "mica-pilot-wait",
-      "id": "s2-wait-2",
-      "host": "s2",
-      "variant": "v1",
-      "cell": 2,
-      "raw_sha256": "0dfa5b71c214f34f795ce0a0f1bca1abeaad95c59e47df58cb89c57524f4dfa6",
-      "source_box": [
-        1100,
-        20,
-        1412,
-        504
-      ],
-      "grid_offset": [
-        7,
-        0
-      ],
-      "source_pixels_per_native_pixel": 11.3,
-      "landmark": "eye top to sole 350px = approved wait-00 31px",
-      "registration": "ground",
-      "file": "mica/powered/frames/s2-wait-2.png",
-      "hotspot": [
-        16,
-        23
-      ],
-      "size": [
-        27,
-        43
-      ],
-      "authored_area": 708,
-      "selected_pixels": {
-        "rows": [
-          "000000002000000000000000000",
-          "000000002772200000000000000",
-          "000000000247722000000000000",
-          "000000000044477720000000000",
-          "0000000000f4444772200000000",
-          "00000777221f444444420000000",
-          "000002477772f44444442000000",
-          "0000002444422f1444443000000",
-          "00000004444427771f444200000",
-          "00000002444417ea72444422000",
-          "00000002f144f7ef34ff4442000",
-          "00002221222f171447777442200",
-          "000027772222224437117f44200",
-          "0000024442222f4441dc1724200",
-          "000000244444434421ccd17f200",
-          "000000024444244441ccc172000",
-          "000000002222111277cccf7f000",
-          "0002222722222f2277777777720",
-          "000077774222f44417777777200",
-          "00002444444f744421177722000",
-          "00000244444f12244499f200000",
-          "00000222444441444f722700000",
-          "022227222221f344ff777700000",
-          "002344422222144124922220000",
-          "000444444441cc1f43777770000",
-          "000244444441ccc133777700000",
-          "00022222221199112f777120000",
-          "27772222221ccccc127771d2000",
-          "04444222221ccccc172211d2000",
-          "02444444221dcccd17771dd2000",
-          "002244442221c16172121200000",
-          "227222222222f12450f42000000",
-          "774422f44322f14420242000000",
-          "24343f4444202111121aa000000",
-          "0000243220002aaaa1baa000000",
-          "0000000000002a111111b200000",
-          "000000000002b11b1bbb1120000",
-          "000000000002a11b11b1bbaa200",
-          "000000000002aab1111aaaaaaa0",
-          "00000000002baa1aaaabbaaaaa0",
-          "000000000029faaafff27778872",
-          "000000000028771817822222222",
-          "000000000000222222200000000"
-        ],
-        "anchor": [
-          16,
-          23
-        ]
-      },
-      "palette": [
-        [
-          0,
-          0,
-          0
-        ],
-        [
-          36,
-          36,
-          36
-        ],
-        [
-          182,
-          73,
-          0
-        ],
-        [
-          255,
-          146,
-          0
-        ],
-        [
-          255,
-          219,
-          0
-        ],
-        [
-          255,
-          255,
-          73
-        ],
-        [
-          255,
-          255,
-          219
-        ],
-        [
-          255,
-          219,
-          146
-        ],
-        [
-          219,
-          182,
-          109
-        ],
-        [
-          182,
-          146,
-          109
-        ],
-        [
-          255,
-          73,
-          73
-        ],
-        [
-          182,
-          36,
-          36
-        ],
-        [
-          255,
-          255,
-          255
-        ],
-        [
-          219,
-          219,
-          219
-        ],
-        [
-          255,
-          146,
-          146
-        ],
-        [
-          73,
-          36,
-          0
-        ]
-      ]
-    },
-    {
-      "group": "mica-pilot-wait",
-      "id": "s3k-wait-0",
-      "host": "s3k",
-      "variant": "v1",
-      "cell": 3,
-      "raw_sha256": "0dfa5b71c214f34f795ce0a0f1bca1abeaad95c59e47df58cb89c57524f4dfa6",
-      "source_box": [
-        48,
-        532,
-        400,
-        1000
-      ],
-      "grid_offset": [
-        0,
-        8
-      ],
-      "source_pixels_per_native_pixel": 11.3,
-      "landmark": "eye top to sole 350px = approved wait-00 31px",
-      "registration": "ground",
-      "file": "mica/powered/frames/s3k-wait-0.png",
-      "hotspot": [
-        18,
-        22
-      ],
-      "size": [
-        31,
-        42
-      ],
-      "authored_area": 821,
-      "selected_pixels": {
-        "rows": [
-          "0000000000022000000000000000000",
-          "0000000000067220000000000000000",
-          "0000000000002477220000000000000",
-          "0000000000002444772000000000000",
-          "0000000000000244444772000000000",
-          "00000002222221f4444444200000000",
-          "000000002777772f444444420000000",
-          "00000000244444422ff444442000000",
-          "0000000002444444f771ff442200000",
-          "00000000002444447ea7f4444420000",
-          "00000000002214447ee714444442000",
-          "0000002227722f127ef4777f4442000",
-          "0000000444422222214271177444200",
-          "0000000244444222244411d17244200",
-          "000000002444444434421cc91781200",
-          "0000000002221f1114444cccf972000",
-          "000022222722222f2f17716cfc7f000",
-          "00002777744222144447777c8771220",
-          "0000024444422144442f77777777720",
-          "000000244444f121f11117771772000",
-          "000000022444421214442f111120000",
-          "002222722211134ff41127771112220",
-          "00277744222f643116cc177771cc6d2",
-          "000244444227441d2cccc12271cdcc2",
-          "000024444432221c0cccc17771dccc2",
-          "222272244442221ccccc077212c1d20",
-          "07774222211234311c1127772022200",
-          "0444442222f4444f211779912000000",
-          "00244442214444f444f2771f4200000",
-          "00224444f1221f44441221244200000",
-          "022222222222114441f002341200000",
-          "067432222221a111f2000baaaa20000",
-          "00244442222aaaaaa2000aaaaa20000",
-          "00000222000aa11aa20002ffbbb2000",
-          "00000000002bb11b20002aa11b12000",
-          "00000000021b111b2002baa1abb1220",
-          "0000000002a111112002baaaa1aaaa2",
-          "000000000aaaaaaaa002ffaaaaaaaaa",
-          "000000002aaaaaaaa2028878f111fff",
-          "0000000027fffffff20227287877887",
-          "0000000021778878120000022222222",
-          "0000000002222222220000000000000"
-        ],
-        "anchor": [
-          18,
-          22
-        ]
-      },
-      "palette": [
-        [
-          0,
-          0,
-          0
-        ],
-        [
-          36,
-          36,
-          36
-        ],
-        [
-          182,
-          73,
-          0
-        ],
-        [
-          255,
-          146,
-          0
-        ],
-        [
-          255,
-          219,
-          0
-        ],
-        [
-          255,
-          255,
-          73
-        ],
-        [
-          255,
-          255,
-          219
-        ],
-        [
-          255,
-          219,
-          146
-        ],
-        [
-          219,
-          182,
-          109
-        ],
-        [
-          182,
-          146,
-          109
-        ],
-        [
-          255,
-          73,
-          73
-        ],
-        [
-          182,
-          36,
-          36
-        ],
-        [
-          255,
-          255,
-          255
-        ],
-        [
-          219,
-          219,
-          219
-        ],
-        [
-          255,
-          146,
-          146
-        ],
-        [
-          73,
-          36,
-          0
-        ]
-      ]
-    },
-    {
-      "group": "mica-pilot-wait",
-      "id": "s3k-wait-1",
-      "host": "s3k",
-      "variant": "v1",
-      "cell": 4,
-      "raw_sha256": "0dfa5b71c214f34f795ce0a0f1bca1abeaad95c59e47df58cb89c57524f4dfa6",
-      "source_box": [
-        560,
-        552,
-        912,
-        1000
-      ],
-      "grid_offset": [
-        0,
-        6
-      ],
-      "source_pixels_per_native_pixel": 11.3,
-      "landmark": "eye top to sole 350px = approved wait-00 31px",
-      "registration": "ground",
-      "file": "mica/powered/frames/s3k-wait-1.png",
-      "hotspot": [
-        19,
-        19
-      ],
-      "size": [
-        31,
-        39
-      ],
-      "authored_area": 783,
-      "selected_pixels": {
-        "rows": [
-          "0000000000027220000000000000000",
-          "0000000000002772200000000000000",
-          "0000000000002444777220000000000",
-          "0000000000000234477772000000000",
-          "0000000222000024444447720000000",
-          "0000000023777722fff444442000000",
-          "0000000004444442f771f1f12200000",
-          "00000000023444437e9714444420000",
-          "00000000002444447ee7ff444442000",
-          "00000000027224437ef4777f4442000",
-          "0000002777422222244121177f44200",
-          "0000000244442222244441c17744220",
-          "0000000024444422444421ccf173200",
-          "000000002f344444224481ccfd12000",
-          "00000000222221f1442777cc2c72000",
-          "0000277777222214444777777777720",
-          "0000024444422f44442277777777200",
-          "000000244444f112274421777729000",
-          "0000000224444222141127f11202200",
-          "0022227222221f3f31cc1777712cc22",
-          "0027777222227441dcc0c17721c19d2",
-          "000244444227441c1cccc17771dccc2",
-          "000044444421111c9cc691772211d12",
-          "2202f1244442f221c1cc1777202cc20",
-          "277772222222444f11d127772020000",
-          "0444442222744414444777124200000",
-          "0244444226444284441792244200000",
-          "00024444f121214441f200444200000",
-          "022422212221a111f1200b11aa20000",
-          "027444222221aaaaa2000aaaaa20000",
-          "00022443222aaaaaa2000aaa11b2000",
-          "000002220002b111a2002bbbbb12000",
-          "00000000002b11b120002aa1bb1b000",
-          "0000000002aabbbb2002baaaabaaaa2",
-          "000000000aa1aaaa2002baaaaaaaaaa",
-          "000000000aaaaaaaa20287ffaaaaaf2",
-          "000000002faaaaaaf20217887777777",
-          "0000000028887778720222227272772",
-          "0000000022222822220000000000000"
-        ],
-        "anchor": [
-          19,
-          19
-        ]
-      },
-      "palette": [
-        [
-          0,
-          0,
-          0
-        ],
-        [
-          36,
-          36,
-          36
-        ],
-        [
-          182,
-          73,
-          0
-        ],
-        [
-          255,
-          146,
-          0
-        ],
-        [
-          255,
-          219,
-          0
-        ],
-        [
-          255,
-          255,
-          73
-        ],
-        [
-          255,
-          255,
-          219
-        ],
-        [
-          255,
-          219,
-          146
-        ],
-        [
-          219,
-          182,
-          109
-        ],
-        [
-          182,
-          146,
-          109
-        ],
-        [
-          255,
-          73,
-          73
-        ],
-        [
-          182,
-          36,
-          36
-        ],
-        [
-          255,
-          255,
-          255
-        ],
-        [
-          219,
-          219,
-          219
-        ],
-        [
-          255,
-          146,
-          146
-        ],
-        [
-          73,
-          36,
-          0
-        ]
-      ]
-    },
-    {
-      "group": "mica-pilot-run",
-      "id": "run-0",
-      "host": "s2",
-      "variant": "v2",
-      "cell": 0,
-      "raw_sha256": "3166a1e20c31fdd96b7f4d539469168fd9acc438ffe38fe9bde65366abe21b21",
-      "source_box": [
-        60,
-        132,
-        576,
-        568
-      ],
-      "grid_offset": [
-        0,
-        0
-      ],
-      "source_pixels_per_native_pixel": 14.0,
-      "landmark": "skull/eye: ~200px head = approved run-00 14px hood",
-      "registration": "centre",
-      "file": "mica/powered/frames/s2-run-0.png",
-      "hotspot": [
-        26,
-        17
-      ],
-      "size": [
-        37,
-        31
-      ],
-      "authored_area": 657,
-      "selected_pixels": {
-        "rows": [
-          "0000000000000002222222000000000000000",
-          "0000000000000000224477772200000000000",
-          "0000000000000000004444777722000000000",
-          "0000000000002222002444444777220000000",
-          "00000000000004477771f4444444777200000",
-          "000000000000024477772f444444447720000",
-          "0000000000000024444422f177f4444440000",
-          "000000000000000244444227a77141ff42000",
-          "0000000000077721f4444447ee1f1444f2000",
-          "00000000000247772f44444f724411444f000",
-          "000000000000244442ffffff4447777344200",
-          "00000000000004444422222f44411177f4400",
-          "00000000222221f4444222244421cc1774402",
-          "000000000244442ff4444f444421cccf11420",
-          "00000222224444422ffff2f44441cccf17f02",
-          "0000004447744444222f222f44771ccf17120",
-          "0022222444421f4444f4444227777ccff7200",
-          "0027777244422221f1f1144f487777ccf7722",
-          "00214442144444f4421cc1f44f17777777720",
-          "222714442f1f144441cc1c111771877fe2200",
-          "22444f14422444441ccccc197712022200000",
-          "00222222111ff1221cc0c9777fcc200000000",
-          "002222118aaa14442202179721cc200000000",
-          "0000221faaaa4444212124420220000000000",
-          "0000028aa1a1122021bb31200000000000000",
-          "0000288aab1b200029bbbff00000000000000",
-          "000088aaab22000299b112000000000000000",
-          "00028faa12000002991b20000000000000000",
-          "00028faaa2000002bbb200000000000000000",
-          "00028faa00000002bf2000000000000000000",
-          "0000222000000002b90000000000000000000"
-        ],
-        "anchor": [
-          26,
-          17
-        ]
-      },
-      "palette": [
-        [
-          0,
-          0,
-          0
-        ],
-        [
-          36,
-          36,
-          36
-        ],
-        [
-          182,
-          73,
-          0
-        ],
-        [
-          255,
-          146,
-          0
-        ],
-        [
-          255,
-          219,
-          0
-        ],
-        [
-          255,
-          255,
-          73
-        ],
-        [
-          255,
-          255,
-          219
-        ],
-        [
-          255,
-          219,
-          146
-        ],
-        [
-          219,
-          182,
-          109
-        ],
-        [
-          182,
-          146,
-          109
-        ],
-        [
-          255,
-          73,
-          73
-        ],
-        [
-          182,
-          36,
-          36
-        ],
-        [
-          255,
-          255,
-          255
-        ],
-        [
-          219,
-          219,
-          219
-        ],
-        [
-          255,
-          146,
-          146
-        ],
-        [
-          73,
-          36,
-          0
-        ]
-      ]
-    },
-    {
-      "group": "mica-pilot-run",
-      "id": "run-1",
-      "host": "s2",
-      "variant": "v2",
-      "cell": 1,
-      "raw_sha256": "3166a1e20c31fdd96b7f4d539469168fd9acc438ffe38fe9bde65366abe21b21",
-      "source_box": [
-        676,
-        132,
-        1196,
-        576
-      ],
-      "grid_offset": [
-        5,
-        0
-      ],
-      "source_pixels_per_native_pixel": 14.0,
-      "landmark": "skull/eye: ~200px head = approved run-00 14px hood",
-      "registration": "centre",
-      "file": "mica/powered/frames/s2-run-1.png",
-      "hotspot": [
-        26,
-        18
-      ],
-      "size": [
-        37,
-        32
-      ],
-      "authored_area": 651,
-      "selected_pixels": {
-        "rows": [
-          "0000000000000002222220000000000000000",
-          "0000000000000000244777722000000000000",
-          "0000000000000000024447777220000000000",
-          "000000000002222000f444447772200000000",
-          "0000000000027772221f44444777772000000",
-          "00000000000024477772f4444444477200000",
-          "000000000000024444422f421f44444420000",
-          "0000000000000024444442177714414420000",
-          "000000000022221144444227ee24f444f2000",
-          "0000000000027772f4444441e444144442000",
-          "00000000000244442fffffff444777f444000",
-          "00000000000044444222222f4441117144200",
-          "00000000222221444422222444211117f4200",
-          "00000000277772f444444ff44241ccc17f122",
-          "0000000211444422f444f2444471cccf11120",
-          "0000027772244442222f22224471cccf1c120",
-          "00000024442244442224444221771ccff7200",
-          "00277774442222241f144444f17776ccf7722",
-          "0004444f44442222222111144417777777782",
-          "222244441ff11f4441c1cc144178777f17220",
-          "27772444422f44441cccccc177111288f0000",
-          "024441ff1444f11f1ccccc17911d202200000",
-          "00222222f11111421c0c177771cc200000000",
-          "0002222218faa14441d111221cc2000000000",
-          "000000218faaa144211912002220000000000",
-          "00000028fabbaa2119b090000000000000000",
-          "00000088aa11b202fb9200000000000000000",
-          "0000028faab20002fff000000000000000000",
-          "000002faaa200002220000000000000000000",
-          "0000028822000000000000000000000000000",
-          "0000028200000000000000000000000000000",
-          "0000002000000000000000000000000000000"
-        ],
-        "anchor": [
-          26,
-          18
-        ]
-      },
-      "palette": [
-        [
-          0,
-          0,
-          0
-        ],
-        [
-          36,
-          36,
-          36
-        ],
-        [
-          182,
-          73,
-          0
-        ],
-        [
-          255,
-          146,
-          0
-        ],
-        [
-          255,
-          219,
-          0
-        ],
-        [
-          255,
-          255,
-          73
-        ],
-        [
-          255,
-          255,
-          219
-        ],
-        [
-          255,
-          219,
-          146
-        ],
-        [
-          219,
-          182,
-          109
-        ],
-        [
-          182,
-          146,
-          109
-        ],
-        [
-          255,
-          73,
-          73
-        ],
-        [
-          182,
-          36,
-          36
-        ],
-        [
-          255,
-          255,
-          255
-        ],
-        [
-          219,
-          219,
-          219
-        ],
-        [
-          255,
-          146,
-          146
-        ],
-        [
-          73,
-          36,
-          0
-        ]
-      ]
-    },
-    {
-      "group": "mica-pilot-run",
-      "id": "run-0",
-      "host": "s3k",
-      "variant": "v2",
-      "cell": 2,
-      "raw_sha256": "3166a1e20c31fdd96b7f4d539469168fd9acc438ffe38fe9bde65366abe21b21",
-      "source_box": [
-        48,
-        736,
-        596,
-        1192
-      ],
-      "grid_offset": [
-        4,
-        2
-      ],
-      "source_pixels_per_native_pixel": 14.0,
-      "landmark": "skull/eye: ~200px head = approved run-00 14px hood",
-      "registration": "centre",
-      "file": "mica/powered/frames/s3k-run-0.png",
-      "hotspot": [
-        27,
-        14
-      ],
-      "size": [
-        39,
-        32
-      ],
-      "authored_area": 696,
-      "selected_pixels": {
-        "rows": [
-          "000000000000002222222000000000000000000",
-          "000000000000000244777777772200000000000",
-          "000000000000000024444447777772000000000",
-          "000000000000000000244444444777220000000",
-          "00000000000000000000f444444444772000000",
-          "000000000000777772221ff4442244444720000",
-          "00000000000024477777722ff17714444420000",
-          "00000000000002444444442227ae7144f142000",
-          "00000000000000024444444427ee1ff14442000",
-          "0000000000222221f4444444417444771444000",
-          "000000000004447722f44444ff1424117744200",
-          "0000000000024444422fffffff4442111774120",
-          "0000000222212444444222222444241cc17f120",
-          "00000002777772f444444444f444421ccf1f120",
-          "0000222114444422fffffff22444471ccf1c200",
-          "00002777724444422222f4222f1f177ccf17200",
-          "0000024444244444222f44444f22777dccf7722",
-          "0222212444422f1fffff4444444417777777772",
-          "00447774444422f44411111f444411777fa2200",
-          "0024444221fff14441ccccc1444277297770000",
-          "00224444421225441cccc112111722002200000",
-          "27772fffff4442221c0cc127977720000000000",
-          "0444442221f114442fdd1222772200000000000",
-          "0024422211aa444f2111b111220000000000000",
-          "000222218aaa14200291bbb2000000000000000",
-          "00000028faaaa2002f11b220000000000000000",
-          "00000288a1b1f000f9fbf000000000000000000",
-          "0000218aa1bb2000bbb20000000000000000000",
-          "0000288aab200000bbf00000000000000000000",
-          "000088faaa00000022000000000000000000000",
-          "000088faa200000000000000000000000000000",
-          "000028fa2000000000000000000000000000000"
-        ],
-        "anchor": [
-          27,
-          14
-        ]
-      },
-      "palette": [
-        [
-          0,
-          0,
-          0
-        ],
-        [
-          36,
-          36,
-          36
-        ],
-        [
-          182,
-          73,
-          0
-        ],
-        [
-          255,
-          146,
-          0
-        ],
-        [
-          255,
-          219,
-          0
-        ],
-        [
-          255,
-          255,
-          73
-        ],
-        [
-          255,
-          255,
-          219
-        ],
-        [
-          255,
-          219,
-          146
-        ],
-        [
-          219,
-          182,
-          109
-        ],
-        [
-          182,
-          146,
-          109
-        ],
-        [
-          255,
-          73,
-          73
-        ],
-        [
-          182,
-          36,
-          36
-        ],
-        [
-          255,
-          255,
-          255
-        ],
-        [
-          219,
-          219,
-          219
-        ],
-        [
-          255,
-          146,
-          146
-        ],
-        [
-          73,
-          36,
-          0
-        ]
-      ]
-    },
-    {
-      "group": "mica-pilot-run",
-      "id": "run-1",
-      "host": "s3k",
-      "variant": "v2",
-      "cell": 3,
-      "raw_sha256": "3166a1e20c31fdd96b7f4d539469168fd9acc438ffe38fe9bde65366abe21b21",
-      "source_box": [
-        664,
-        736,
-        1212,
-        1184
-      ],
-      "grid_offset": [
-        2,
-        0
-      ],
-      "source_pixels_per_native_pixel": 14.0,
-      "landmark": "skull/eye: ~200px head = approved run-00 14px hood",
-      "registration": "centre",
-      "file": "mica/powered/frames/s3k-run-1.png",
-      "hotspot": [
-        27,
-        14
-      ],
-      "size": [
-        39,
-        32
-      ],
-      "authored_area": 696,
-      "selected_pixels": {
-        "rows": [
-          "000000000000002222222000000000000000000",
-          "000000000000002247777722272000000000000",
-          "000000000000000024444777777722000000000",
-          "0000000000000000002f4444444777220000000",
-          "00000000000022222002f444444447772200000",
-          "000000000000277772211f44444244444720000",
-          "000000000000024477777222ff7724444440000",
-          "00000000000000244444442227e77441ff40000",
-          "00000000000000024444442227ee1f144442000",
-          "0000000000277777f444444441744477f442000",
-          "000000000002447722f44444ff4444117144200",
-          "0000000000004444422fffff2f44421c1174200",
-          "0000000000002444442222222442421cc171120",
-          "000000027777724444422222f444221ccf17120",
-          "000000000447722ff4444f22f444471ccf11120",
-          "00002222224444222ffff4222ff41771cf11200",
-          "0000027774244444222f44422222777dccf7722",
-          "02222144442f2ffffff144444f44f7777777772",
-          "027777f4444222f4442f111f144411777ff7220",
-          "002444421ff1f44444ccc1cc121171227782000",
-          "2212444422f2244441ccccc1377722002220000",
-          "27772ffff744222f21c0cc17777720000000000",
-          "044442222444422444ddc112772200000000000",
-          "022444222221aaf442111b11120000000000000",
-          "000222222218aaa4202111bb200000000000000",
-          "00002222028faaa200299b12000000000000000",
-          "0000000228fab12000f9bb20000000000000000",
-          "0000000f8faa1b20002bbb00000000000000000",
-          "000000088fa1b200002bf200000000000000000",
-          "000000088aaa200000220000000000000000000",
-          "0000000f8a20000000000000000000000000000",
-          "000000022200000000000000000000000000000"
-        ],
-        "anchor": [
-          27,
-          14
-        ]
-      },
-      "palette": [
-        [
-          0,
-          0,
-          0
-        ],
-        [
-          36,
-          36,
-          36
-        ],
-        [
-          182,
-          73,
-          0
-        ],
-        [
-          255,
-          146,
-          0
-        ],
-        [
-          255,
-          219,
-          0
-        ],
-        [
-          255,
-          255,
-          73
-        ],
-        [
-          255,
-          255,
-          219
-        ],
-        [
-          255,
-          219,
-          146
-        ],
-        [
-          219,
-          182,
-          109
-        ],
-        [
-          182,
-          146,
-          109
-        ],
-        [
-          255,
-          73,
-          73
-        ],
-        [
-          182,
-          36,
-          36
-        ],
-        [
-          255,
-          255,
-          255
-        ],
-        [
-          219,
-          219,
-          219
-        ],
-        [
-          255,
-          146,
-          146
-        ],
-        [
-          73,
-          36,
-          0
-        ]
-      ]
-    },
     {
       "group": "mica-pilot-roll",
       "id": "gold-roll-00",
@@ -3005,68 +1638,2532 @@
       ]
     },
     {
-      "group": "mica-pilot-transform",
-      "id": "transform-0",
+      "group": "mica-regen-wait",
+      "id": "s2-wait-0",
+      "host": "s2",
+      "variant": "v2",
+      "cell": 0,
+      "raw_sha256": "57da324ad3354bf99046991aea44b7784489747c6852d4abd2ee265af46214fd",
+      "source_box": [
+        96,
+        36,
+        364,
+        448
+      ],
+      "grid_offset": [
+        2,
+        2
+      ],
+      "source_pixels_per_native_pixel": 9.8,
+      "landmark": "eye top to sole 304px = approved wait-00 31px",
+      "registration": "ground",
+      "file": "mica/powered/frames/s2-wait-0.png",
+      "hotspot": [
+        16,
+        22
+      ],
+      "size": [
+        27,
+        42
+      ],
+      "authored_area": 753,
+      "selected_pixels": {
+        "rows": [
+          "000000000002222000000000000",
+          "000000000021676220000000000",
+          "000000002276444766200000000",
+          "000002676644444447720000000",
+          "000002674444444444520000000",
+          "000002444444442244442200000",
+          "0000002244444f1124447720000",
+          "0000002114447ee7f2f44472000",
+          "000092762fff7eee7ff44472000",
+          "0027664422221eee47772245220",
+          "0027444444222ff4f3775f44120",
+          "00024444444442f441117771200",
+          "0000244444444f4411cd1171220",
+          "000002444444f44441cc2112000",
+          "000027622222244441cc2122000",
+          "0022764422222ff127cc2222000",
+          "0026744444444421777cc777420",
+          "000544444444432187777777720",
+          "00002444442312f411777772200",
+          "00000221112222441f311220000",
+          "000000022222154412772000000",
+          "0000022f4422f44312222000000",
+          "0000276f4444214542777200000",
+          "00267444f444ff44f2777200000",
+          "002744442f1f514422373200000",
+          "00213444422f491197777200000",
+          "22662ff444251dcc02777200000",
+          "26743221ff344000cc331200000",
+          "06444442254449cccc072c20000",
+          "00244444254441cccc240c20000",
+          "00911111ff1112cccc14d200000",
+          "00222222222120211f142000000",
+          "0244444442220022f4f42000000",
+          "02544422220022aaaa11a200000",
+          "02444200000021aaaaaaa200000",
+          "00212000000021f126115320000",
+          "002200000002aaa11111a152220",
+          "000000000002baaaaaaa1aabaa2",
+          "0000000000021aaaaaaa11abaa2",
+          "000000000002777777777177472",
+          "000000000002727227273127272",
+          "000000000002222222222222222"
+        ],
+        "anchor": [
+          16,
+          22
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-regen-wait",
+      "id": "s2-wait-1",
+      "host": "s2",
+      "variant": "v2",
+      "cell": 1,
+      "raw_sha256": "57da324ad3354bf99046991aea44b7784489747c6852d4abd2ee265af46214fd",
+      "source_box": [
+        612,
+        48,
+        876,
+        448
+      ],
+      "grid_offset": [
+        0,
+        0
+      ],
+      "source_pixels_per_native_pixel": 9.8,
+      "landmark": "eye top to sole 304px = approved wait-00 31px",
+      "registration": "ground",
+      "file": "mica/powered/frames/s2-wait-1.png",
+      "hotspot": [
+        16,
+        21
+      ],
+      "size": [
+        27,
+        41
+      ],
+      "authored_area": 744,
+      "selected_pixels": {
+        "rows": [
+          "000000000002220000000000000",
+          "000000000227676222000000000",
+          "000000002764444667200000000",
+          "000000276644444456620000000",
+          "000000267444444444552000000",
+          "000000244444fff244441200000",
+          "0000021f444f7ee71ff44422000",
+          "000021641111eeeefff44472000",
+          "0022164442227ee247772246200",
+          "0027544444221ff417775f44200",
+          "0024444444444244411177f2000",
+          "0002444444443f4f11cd1171200",
+          "0000211f1111f44441cc2172000",
+          "000026722222f44441cc2222000",
+          "0022674422222f1f77cc2272000",
+          "00264444444442f4777cc777f20",
+          "002544444444f22f77777777720",
+          "0002444444122254f1777772200",
+          "000022211122274412311200000",
+          "0000000222226444f2772000000",
+          "0000022f4422f442f2222000000",
+          "000026644444f14147777200000",
+          "00227442f444f44147777200000",
+          "00264444211f144127772200000",
+          "000244444221911d07777200000",
+          "0273f11111f59ccc09777200000",
+          "277442222f549009cc331200000",
+          "26444444f5449ccccc972c00000",
+          "02444444f5441cccc1140c00000",
+          "02f44444ff111cccc1149200000",
+          "267422222221211114f42000000",
+          "2644444442220224f4f42000000",
+          "2444432222002aaaa11fa200000",
+          "0244420000002aaaa1aaa200000",
+          "02422000000021f523114320000",
+          "022000000002aa151111a152220",
+          "000000000002aaa1aaaa1baaaa2",
+          "000000000002aaaaaaaa11aaaa2",
+          "000000000002777777773177772",
+          "000000000002277277272127272",
+          "000000000002222222222222222"
+        ],
+        "anchor": [
+          16,
+          21
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-regen-wait",
+      "id": "s2-wait-2",
+      "host": "s2",
+      "variant": "v2",
+      "cell": 2,
+      "raw_sha256": "57da324ad3354bf99046991aea44b7784489747c6852d4abd2ee265af46214fd",
+      "source_box": [
+        1120,
+        36,
+        1388,
+        448
+      ],
+      "grid_offset": [
+        1,
+        2
+      ],
+      "source_pixels_per_native_pixel": 9.8,
+      "landmark": "eye top to sole 304px = approved wait-00 31px",
+      "registration": "ground",
+      "file": "mica/powered/frames/s2-wait-2.png",
+      "hotspot": [
+        15,
+        22
+      ],
+      "size": [
+        27,
+        42
+      ],
+      "authored_area": 766,
+      "selected_pixels": {
+        "rows": [
+          "000000000002222200000000000",
+          "000000000021667720000000000",
+          "000000002276444667200000000",
+          "000002777644444444620000000",
+          "000002764444444444620000000",
+          "000002444444442224442200000",
+          "000000244444411124447600000",
+          "0000002114447ee952f44472000",
+          "000002762fff7eee7ff44442000",
+          "0027764422221eee4777ff46220",
+          "0027444444222f14f4775f44120",
+          "00024444444444f441117771200",
+          "0000244444444f4411cd1171220",
+          "000002144444f44441cc2112000",
+          "000021622222244441cc2172000",
+          "002266442222221127ccc272000",
+          "00267444444444217776c777420",
+          "00024444444444ff87777777720",
+          "000924444421f2f411777772200",
+          "0000021111222f441f311220000",
+          "000002112222154412772000000",
+          "0000277f4422f44412292000000",
+          "002264424444211532777200000",
+          "00274444f4442f4312777200000",
+          "000244442fff524417339200000",
+          "0277f444422f4021d7777200000",
+          "276421144425fdccc2777200000",
+          "26444422227449000c931200000",
+          "05444444254449cccc072c20000",
+          "02144444f54441cccc230c20000",
+          "0211f1112ff112cccc14d200000",
+          "27674222222f20211ff42000000",
+          "274444444222002214f42000000",
+          "24444422220022aaaa1fa200000",
+          "02444200000021aaaaaaa200000",
+          "024420000000211126114320000",
+          "022200000002aaa11111a152220",
+          "000000000002baaaaaaa1aabaa2",
+          "0000000000021aaaaaaa11abaa2",
+          "000000000002577777777177472",
+          "000000000002727727272127272",
+          "000000000002222222222222222"
+        ],
+        "anchor": [
+          15,
+          22
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-regen-wait",
+      "id": "s3k-wait-0",
+      "host": "s3k",
+      "variant": "v2",
+      "cell": 3,
+      "raw_sha256": "57da324ad3354bf99046991aea44b7784489747c6852d4abd2ee265af46214fd",
+      "source_box": [
+        84,
+        540,
+        372,
+        960
+      ],
+      "grid_offset": [
+        4,
+        7
+      ],
+      "source_pixels_per_native_pixel": 9.8,
+      "landmark": "eye top to sole 304px = approved wait-00 31px",
+      "registration": "ground",
+      "file": "mica/powered/frames/s3k-wait-0.png",
+      "hotspot": [
+        16,
+        23
+      ],
+      "size": [
+        29,
+        43
+      ],
+      "authored_area": 882,
+      "selected_pixels": {
+        "rows": [
+          "00000000000002220000000000000",
+          "00000000022221677220000000000",
+          "00000022217774444772000000000",
+          "00000077764444444467200000000",
+          "00000074444444444444620000000",
+          "00000044444444422444422000000",
+          "000000244444441222444f2000000",
+          "0000002114442277722ff46220000",
+          "002227672f1f17ee972f444720000",
+          "002766442222f7eee277f44762000",
+          "00264444422217ef415772f441200",
+          "00024444444442f44411177f41200",
+          "0000244444442144111dd177f1200",
+          "00000211111ff444441cc11772000",
+          "000002222222f444441cc21f72000",
+          "002226222222f443f72cc21252000",
+          "0026744444444211777cc22772000",
+          "0024444444444f217777777777200",
+          "0009f444444122f61177777777000",
+          "000002111ff222644117777722000",
+          "00002662222215444ff3112200000",
+          "0002766422222ff11257720000000",
+          "0002744444444f29d122272220000",
+          "00002444444441cc09f7771dc2000",
+          "00000244444441d0ccc17720cc200",
+          "00022111111fff0cccc19320cc200",
+          "022676222221640cccc1771dcc200",
+          "0267444222f6442cccc1771dd2000",
+          "00f444444f64441d9117711220000",
+          "0024444442f444411778142000000",
+          "002f4242412f11124111442000000",
+          "22762222222221145124120000000",
+          "76444222222211441f44200000000",
+          "4544444444211f441f44120000000",
+          "22144444422fa1f11f1faa2000000",
+          "002f11112002aaaa1aaaa11200000",
+          "00f4442200021a1111aa151200000",
+          "02644200002fa15141aa315522200",
+          "02422000021aa1511a1a1a151aa20",
+          "0220000002aaaaaaaaa1faaabaaa2",
+          "0000000002faaaaaaaa11baabaab2",
+          "00000000025277277274127277272",
+          "00000000022222222222222222222"
+        ],
+        "anchor": [
+          16,
+          23
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-regen-wait",
+      "id": "s3k-wait-1",
+      "host": "s3k",
+      "variant": "v2",
+      "cell": 4,
+      "raw_sha256": "57da324ad3354bf99046991aea44b7784489747c6852d4abd2ee265af46214fd",
+      "source_box": [
+        604,
+        556,
+        884,
+        960
+      ],
+      "grid_offset": [
+        7,
+        0
+      ],
+      "source_pixels_per_native_pixel": 9.8,
+      "landmark": "eye top to sole 304px = approved wait-00 31px",
+      "registration": "ground",
+      "file": "mica/powered/frames/s3k-wait-1.png",
+      "hotspot": [
+        17,
+        21
+      ],
+      "size": [
+        29,
+        41
+      ],
+      "authored_area": 828,
+      "selected_pixels": {
+        "rows": [
+          "00000000000027720000000000000",
+          "00000000222276772220000000000",
+          "00000022466744447776200000000",
+          "00000026664444444446620000000",
+          "00000026444444222444412000000",
+          "0000000244444f771244267200000",
+          "00000221f444f7eea12f444620000",
+          "00002776211117eef277f44562000",
+          "000216444222f7e44377721441200",
+          "00026444444222f44111177f41200",
+          "0002444444444244111d1177f2000",
+          "000222444444f444441cc11712000",
+          "0000021ff11f4444441cc21112000",
+          "000226622222f441f71cc21612000",
+          "0027654422244f11777cc22712000",
+          "0026444444444ff17777666777200",
+          "000244444444f2f41177777771200",
+          "0002211111f222444117777522000",
+          "000002222222f54441f3112200000",
+          "0000216422222f111247720000000",
+          "000026444444419dd122272220000",
+          "00000244444441c002f7771dc2000",
+          "000002144444420cccc17720cc200",
+          "000221111111f1ccccc13320cc200",
+          "002776662222f4ccccc1771dcc200",
+          "02774444422f441ccc17771dc2000",
+          "0024444444f444dc9117711220000",
+          "021f444444ff44411778142000000",
+          "0277f1111f22f1244111442000000",
+          "27644222252222247112420000000",
+          "26444422544421441f44200000000",
+          "244444421444ff441f44120000000",
+          "024422222221a1f11f11aa2000000",
+          "022220000002aaaa1aaaa11200000",
+          "022000000002ba1111aa151200000",
+          "00000000002ff11141ff315522200",
+          "00000000021aa111111a1a15faa20",
+          "0000000002aaaaaaaaa1baaaaaaa2",
+          "0000000002faaaaaaaa11baaaaab2",
+          "00000000027777777777127777772",
+          "00000000022222222222222222222"
+        ],
+        "anchor": [
+          17,
+          21
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-regen-run",
+      "id": "run-0",
       "host": "s2",
       "variant": "v1",
       "cell": 0,
-      "raw_sha256": "529e10d132f19dfe8869f729e046e734f1c3d6205b27cb6e1a8783ac5e81c119",
+      "raw_sha256": "dfe7c80caecedb0519da49373c1af008f7b9a0a3c73b0c8a770b6c23a6b8a42c",
       "source_box": [
-        44,
-        240,
-        340,
-        560
+        20,
+        136,
+        592,
+        596
       ],
       "grid_offset": [
-        3,
-        3
+        0,
+        0
       ],
-      "source_pixels_per_native_pixel": 11.3,
-      "landmark": "eye top to sole 350px = approved wait-00 31px",
+      "source_pixels_per_native_pixel": 13.5,
+      "landmark": "eye white 55px = approved run 4px; cross-checked against the posed-from drawing",
+      "registration": "centre",
+      "file": "mica/powered/frames/s2-run-0.png",
+      "hotspot": [
+        31,
+        18
+      ],
+      "size": [
+        42,
+        34
+      ],
+      "authored_area": 699,
+      "selected_pixels": {
+        "rows": [
+          "000000000000000000000000000ff2f20000000000",
+          "000000000000000000000000027777777f20000000",
+          "00000000000000000000000002f444447772200000",
+          "000000000000000000000002211444444444720000",
+          "000000000000000000000227777f44444444420000",
+          "0000000000000000000002744442214fff44442000",
+          "000000000000000000000024444422f7e7f444f200",
+          "00000000000000000000221144444225ea71444400",
+          "00000000000000000022777ff44444f5f555ff4440",
+          "00000000000000000027444422ffff244411f77440",
+          "000000000000000000024444422222444111d17f42",
+          "000000000000000002214444442224444111cd1742",
+          "0000000000000027777421444444f4444451ccf172",
+          "0000000000000024444442f111f2222f1551cc1520",
+          "000000000002221444444222f2222222f7777cf772",
+          "000000000227775f44444442144444417777777777",
+          "00000000074444111111c14f444444f2f777711772",
+          "000000000244411dccc1cc15fffff444ff277b5220",
+          "0000227777f441cccccdcc1775f44444f542552000",
+          "0000274444221f1ccccdd124f444444f7550000000",
+          "00221144444221c111111444444ff5747700000000",
+          "00f7774444442211222221f4411153771200000000",
+          "02744422f4444f444441143219b415522000000000",
+          "021444422fffff44441144402fbbb1200000000000",
+          "274444444f222f211184440219bbb2000000000000",
+          "2444444422222002faaaab02fbbb20000000000000",
+          "2200000000000028aaaab2029b2000000000000000",
+          "000000000000002faaaab002fb2000000000000000",
+          "000000000000228aaab20000000000000000000000",
+          "00000000000027ffaab00000000000000000000000",
+          "000000000000248aab200000000000000000000000",
+          "00000000000024fab2000000000000000000000000",
+          "00000000000028ab20000000000000000000000000",
+          "000000000000022000000000000000000000000000"
+        ],
+        "anchor": [
+          31,
+          18
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ],
+      "boot_repaint": {
+        "reason": "Generation drew a Sonic sneaker; repainted at pixel level to her model-sheet boot (coral upper, tan treaded sole, plate-slot lace accent, darker far boot with ink separation). Edits are [x, y, from, to].",
+        "edits": [
+          [
+            18,
+            24,
+            13,
+            8
+          ],
+          [
+            19,
+            24,
+            11,
+            10
+          ],
+          [
+            16,
+            25,
+            12,
+            15
+          ],
+          [
+            17,
+            25,
+            12,
+            10
+          ],
+          [
+            18,
+            25,
+            12,
+            10
+          ],
+          [
+            19,
+            25,
+            11,
+            10
+          ],
+          [
+            15,
+            26,
+            11,
+            8
+          ],
+          [
+            16,
+            26,
+            11,
+            10
+          ],
+          [
+            17,
+            26,
+            12,
+            10
+          ],
+          [
+            18,
+            26,
+            12,
+            10
+          ],
+          [
+            19,
+            26,
+            12,
+            10
+          ],
+          [
+            15,
+            27,
+            11,
+            15
+          ],
+          [
+            17,
+            27,
+            12,
+            10
+          ],
+          [
+            18,
+            27,
+            12,
+            10
+          ],
+          [
+            19,
+            27,
+            13,
+            10
+          ],
+          [
+            20,
+            27,
+            13,
+            11
+          ],
+          [
+            14,
+            28,
+            11,
+            8
+          ],
+          [
+            15,
+            28,
+            11,
+            10
+          ],
+          [
+            16,
+            28,
+            11,
+            10
+          ],
+          [
+            15,
+            29,
+            10,
+            15
+          ],
+          [
+            14,
+            30,
+            11,
+            8
+          ],
+          [
+            14,
+            31,
+            11,
+            15
+          ],
+          [
+            13,
+            32,
+            7,
+            8
+          ],
+          [
+            14,
+            32,
+            11,
+            10
+          ],
+          [
+            20,
+            24,
+            11,
+            4
+          ],
+          [
+            19,
+            24,
+            10,
+            4
+          ],
+          [
+            25,
+            22,
+            13,
+            9
+          ],
+          [
+            26,
+            22,
+            13,
+            11
+          ],
+          [
+            25,
+            23,
+            11,
+            15
+          ],
+          [
+            26,
+            23,
+            13,
+            11
+          ],
+          [
+            28,
+            23,
+            10,
+            11
+          ],
+          [
+            25,
+            24,
+            11,
+            9
+          ],
+          [
+            26,
+            24,
+            13,
+            11
+          ],
+          [
+            24,
+            25,
+            7,
+            15
+          ],
+          [
+            27,
+            25,
+            13,
+            11
+          ],
+          [
+            24,
+            26,
+            7,
+            9
+          ],
+          [
+            25,
+            26,
+            10,
+            11
+          ],
+          [
+            24,
+            27,
+            7,
+            15
+          ],
+          [
+            27,
+            22,
+            11,
+            4
+          ],
+          [
+            27,
+            21,
+            4,
+            1
+          ],
+          [
+            24,
+            24,
+            5,
+            1
+          ],
+          [
+            26,
+            21,
+            15,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "group": "mica-regen-run",
+      "id": "run-1",
+      "host": "s2",
+      "variant": "v1",
+      "cell": 1,
+      "raw_sha256": "dfe7c80caecedb0519da49373c1af008f7b9a0a3c73b0c8a770b6c23a6b8a42c",
+      "source_box": [
+        648,
+        136,
+        1220,
+        596
+      ],
+      "grid_offset": [
+        8,
+        0
+      ],
+      "source_pixels_per_native_pixel": 13.5,
+      "landmark": "eye white 55px = approved run 4px; cross-checked against the posed-from drawing",
+      "registration": "centre",
+      "file": "mica/powered/frames/s2-run-1.png",
+      "hotspot": [
+        31,
+        19
+      ],
+      "size": [
+        43,
+        34
+      ],
+      "authored_area": 693,
+      "selected_pixels": {
+        "rows": [
+          "000000000000000000000000000f22f200000000000",
+          "0000000000000000000000000077777777200000000",
+          "0000000000000000000000000024444477722000000",
+          "0000000000000000000000022214444444447200000",
+          "000000000000000000000021777f444444444400000",
+          "00000000000000000000007744422f44f14444f0000",
+          "000000000000000000000024444422ffea5ff4f2000",
+          "00000000000000000000021144444425ee7f4444000",
+          "000000000000000000227777f44444ff9f55ff44420",
+          "000000000000000000277444222fff2444111774420",
+          "000000000000000000024444442222444f11d177420",
+          "00000000000000000221144444422f444111cc17112",
+          "0000000000000027777721444444ff444451ccf1720",
+          "0000000000000027444442f111f2222f4f57ccfc520",
+          "0000000000022211444444222222222227777cf7719",
+          "000000000227777ff4444442144444441777777777f",
+          "000000000774441c11111c424444441ff7777f17720",
+          "000000000244411dccc1cc1511f1f4444f277b12200",
+          "0000022777f441cccccc9c1775f4444445412520000",
+          "0000277444422f1ccccdd1224f44444f73520000000",
+          "00021144444222cc112114444444f57777200000000",
+          "002777f44444421122222ff44411553772000000000",
+          "02744442ff444ff4444114421194157120000000000",
+          "0214444422f1ff444414442021fbb12200000000000",
+          "074f4444422222211144420029bbbb0000000000000",
+          "24444444222220028441200021fbb20000000000000",
+          "220000000000002faaab200029b2000000000000000",
+          "000000000000028aaaab20002220000000000000000",
+          "00000000000002faaab200000000000000000000000",
+          "000000000000028aab2000000000000000000000000",
+          "0000000000002faab20000000000000000000000000",
+          "00000000000028aab20000000000000000000000000",
+          "0000000000002fb2000000000000000000000000000",
+          "0000000000000220000000000000000000000000000"
+        ],
+        "anchor": [
+          31,
+          19
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ],
+      "boot_repaint": {
+        "reason": "Generation drew a Sonic sneaker; repainted at pixel level to her model-sheet boot (coral upper, tan treaded sole, plate-slot lace accent, darker far boot with ink separation). Edits are [x, y, from, to].",
+        "edits": [
+          [
+            16,
+            25,
+            13,
+            8
+          ],
+          [
+            18,
+            25,
+            10,
+            11
+          ],
+          [
+            15,
+            26,
+            13,
+            15
+          ],
+          [
+            16,
+            26,
+            12,
+            10
+          ],
+          [
+            17,
+            26,
+            11,
+            10
+          ],
+          [
+            19,
+            26,
+            10,
+            11
+          ],
+          [
+            14,
+            27,
+            11,
+            8
+          ],
+          [
+            16,
+            27,
+            12,
+            10
+          ],
+          [
+            17,
+            27,
+            12,
+            10
+          ],
+          [
+            18,
+            27,
+            11,
+            10
+          ],
+          [
+            14,
+            28,
+            11,
+            15
+          ],
+          [
+            16,
+            28,
+            11,
+            10
+          ],
+          [
+            17,
+            28,
+            12,
+            10
+          ],
+          [
+            18,
+            28,
+            12,
+            11
+          ],
+          [
+            14,
+            29,
+            11,
+            8
+          ],
+          [
+            13,
+            30,
+            11,
+            15
+          ],
+          [
+            16,
+            30,
+            10,
+            11
+          ],
+          [
+            13,
+            31,
+            11,
+            8
+          ],
+          [
+            14,
+            31,
+            11,
+            10
+          ],
+          [
+            13,
+            32,
+            11,
+            15
+          ],
+          [
+            14,
+            32,
+            10,
+            11
+          ],
+          [
+            18,
+            25,
+            11,
+            4
+          ],
+          [
+            17,
+            25,
+            10,
+            4
+          ],
+          [
+            26,
+            22,
+            11,
+            9
+          ],
+          [
+            26,
+            23,
+            11,
+            15
+          ],
+          [
+            28,
+            23,
+            13,
+            11
+          ],
+          [
+            25,
+            24,
+            7,
+            9
+          ],
+          [
+            26,
+            24,
+            10,
+            11
+          ],
+          [
+            27,
+            24,
+            10,
+            11
+          ],
+          [
+            26,
+            25,
+            10,
+            15
+          ],
+          [
+            27,
+            25,
+            10,
+            11
+          ],
+          [
+            28,
+            25,
+            10,
+            11
+          ],
+          [
+            25,
+            26,
+            7,
+            9
+          ],
+          [
+            26,
+            26,
+            10,
+            11
+          ],
+          [
+            27,
+            22,
+            11,
+            4
+          ],
+          [
+            25,
+            25,
+            4,
+            1
+          ],
+          [
+            25,
+            23,
+            5,
+            1
+          ],
+          [
+            27,
+            26,
+            15,
+            1
+          ],
+          [
+            25,
+            22,
+            5,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "group": "mica-regen-run",
+      "id": "run-0",
+      "host": "s3k",
+      "variant": "v1",
+      "cell": 2,
+      "raw_sha256": "dfe7c80caecedb0519da49373c1af008f7b9a0a3c73b0c8a770b6c23a6b8a42c",
+      "source_box": [
+        20,
+        756,
+        592,
+        1220
+      ],
+      "grid_offset": [
+        0,
+        0
+      ],
+      "source_pixels_per_native_pixel": 13.5,
+      "landmark": "eye white 55px = approved run 4px; cross-checked against the posed-from drawing",
+      "registration": "centre",
+      "file": "mica/powered/frames/s3k-run-0.png",
+      "hotspot": [
+        31,
+        15
+      ],
+      "size": [
+        42,
+        34
+      ],
+      "authored_area": 698,
+      "selected_pixels": {
+        "rows": [
+          "000000000000000000000000000222220000000000",
+          "000000000000000000000000002777777f00000000",
+          "0000000000000000000000000026444477f2000000",
+          "000000000000000000000000000444444477200000",
+          "000000000000000000000227777f44444444420000",
+          "00000000000000000000027774442444ff44442000",
+          "000000000000000000000214444422f777f4ff2000",
+          "00000000000000000000002444442227ea71777200",
+          "000000000000000000007771444444f5ef77444420",
+          "0000000000000000002777442ff1ff2f4477775442",
+          "000000000000000000024444422222444421177442",
+          "000000000000000002214444442224444411d17742",
+          "000000000000002777771444444424444451cc17f2",
+          "000000000000002744442244444f2f444451cc1172",
+          "0000000000000024444442222222222ff777ccf520",
+          "000000000002771144444422122222447777777772",
+          "000000000277444111441141444444417777711772",
+          "00000000074444cccc11cc1f444441f22f777b7220",
+          "0000002221444cccccc1cc1552f22444444f552000",
+          "0000227777f44f1dcccdd12fff444444f552220000",
+          "000027444421f1ccccdd1124444444f37720000000",
+          "00021f4444222211121114444411f4771200000000",
+          "027777f4444422f4222221f4119415522000000000",
+          "02744422f4444f44441144402fbb12200000000000",
+          "02f4444422222f441184142219bb20000000000000",
+          "24444444222220211faa42021fbb20000000000000",
+          "2222222202222028aaaaab0219b200000000000000",
+          "000000000000002faaabf202fb2000000000000000",
+          "000000000000028aaaab2000220000000000000000",
+          "0000000000002faaaab20000000000000000000000",
+          "000000000000248aab200000000000000000000000",
+          "0000000000002faab2000000000000000000000000",
+          "000000000000248b20000000000000000000000000",
+          "0000000000002fb200000000000000000000000000"
+        ],
+        "anchor": [
+          31,
+          15
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ],
+      "boot_repaint": {
+        "reason": "Generation drew a Sonic sneaker; repainted at pixel level to her model-sheet boot (coral upper, tan treaded sole, plate-slot lace accent, darker far boot with ink separation). Edits are [x, y, from, to].",
+        "edits": [
+          [
+            18,
+            24,
+            13,
+            8
+          ],
+          [
+            17,
+            25,
+            13,
+            15
+          ],
+          [
+            18,
+            25,
+            12,
+            10
+          ],
+          [
+            19,
+            25,
+            11,
+            10
+          ],
+          [
+            15,
+            26,
+            10,
+            8
+          ],
+          [
+            16,
+            26,
+            12,
+            10
+          ],
+          [
+            17,
+            26,
+            12,
+            10
+          ],
+          [
+            18,
+            26,
+            12,
+            10
+          ],
+          [
+            19,
+            26,
+            12,
+            10
+          ],
+          [
+            21,
+            26,
+            10,
+            11
+          ],
+          [
+            15,
+            27,
+            11,
+            15
+          ],
+          [
+            17,
+            27,
+            12,
+            10
+          ],
+          [
+            18,
+            27,
+            12,
+            10
+          ],
+          [
+            19,
+            27,
+            12,
+            11
+          ],
+          [
+            14,
+            28,
+            11,
+            8
+          ],
+          [
+            15,
+            28,
+            11,
+            10
+          ],
+          [
+            18,
+            28,
+            13,
+            10
+          ],
+          [
+            19,
+            28,
+            13,
+            11
+          ],
+          [
+            13,
+            29,
+            7,
+            15
+          ],
+          [
+            14,
+            29,
+            11,
+            10
+          ],
+          [
+            16,
+            29,
+            11,
+            10
+          ],
+          [
+            18,
+            29,
+            10,
+            11
+          ],
+          [
+            14,
+            30,
+            11,
+            8
+          ],
+          [
+            17,
+            30,
+            10,
+            11
+          ],
+          [
+            13,
+            31,
+            7,
+            15
+          ],
+          [
+            14,
+            31,
+            11,
+            10
+          ],
+          [
+            16,
+            31,
+            10,
+            11
+          ],
+          [
+            14,
+            32,
+            11,
+            8
+          ],
+          [
+            15,
+            32,
+            10,
+            11
+          ],
+          [
+            13,
+            33,
+            7,
+            15
+          ],
+          [
+            19,
+            24,
+            11,
+            4
+          ],
+          [
+            20,
+            25,
+            11,
+            4
+          ],
+          [
+            26,
+            22,
+            13,
+            9
+          ],
+          [
+            25,
+            23,
+            13,
+            15
+          ],
+          [
+            26,
+            23,
+            13,
+            11
+          ],
+          [
+            25,
+            24,
+            11,
+            9
+          ],
+          [
+            26,
+            24,
+            13,
+            11
+          ],
+          [
+            27,
+            24,
+            13,
+            11
+          ],
+          [
+            25,
+            25,
+            11,
+            15
+          ],
+          [
+            26,
+            25,
+            13,
+            11
+          ],
+          [
+            27,
+            25,
+            13,
+            11
+          ],
+          [
+            25,
+            26,
+            11,
+            9
+          ],
+          [
+            24,
+            27,
+            7,
+            15
+          ],
+          [
+            25,
+            27,
+            10,
+            11
+          ],
+          [
+            27,
+            22,
+            11,
+            4
+          ],
+          [
+            24,
+            26,
+            4,
+            1
+          ],
+          [
+            24,
+            25,
+            4,
+            1
+          ],
+          [
+            24,
+            24,
+            5,
+            1
+          ],
+          [
+            26,
+            21,
+            4,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "group": "mica-regen-run",
+      "id": "run-1",
+      "host": "s3k",
+      "variant": "v1",
+      "cell": 3,
+      "raw_sha256": "dfe7c80caecedb0519da49373c1af008f7b9a0a3c73b0c8a770b6c23a6b8a42c",
+      "source_box": [
+        648,
+        756,
+        1220,
+        1224
+      ],
+      "grid_offset": [
+        8,
+        11
+      ],
+      "source_pixels_per_native_pixel": 13.5,
+      "landmark": "eye white 55px = approved run 4px; cross-checked against the posed-from drawing",
+      "registration": "centre",
+      "file": "mica/powered/frames/s3k-run-1.png",
+      "hotspot": [
+        31,
+        15
+      ],
+      "size": [
+        43,
+        35
+      ],
+      "authored_area": 690,
+      "selected_pixels": {
+        "rows": [
+          "0000000000000000000000000000222200000000000",
+          "0000000000000000000000000022777722000000000",
+          "0000000000000000000000000027444477720000000",
+          "0000000000000000000000000002444444772000000",
+          "0000000000000000000000027777444444444200000",
+          "0000000000000000000000777744f444f1444420000",
+          "00000000000000000000007444442f3f5714ff20000",
+          "00000000000000000000002444444227ea7f7772000",
+          "00000000000000000000221144444425eef77447200",
+          "0000000000000000002277442444442ff4177744420",
+          "0000000000000000002144444222224444511774412",
+          "000000000000000000024444442222444411d177420",
+          "00000000000000227777f444444421444411cc17112",
+          "000000000000002774442244444f22144451ccf1720",
+          "0000000000000024444442f11122222fff77ccfc700",
+          "000000000002221144444422ff22222427777c77722",
+          "000000000277744411441142f444444117777777770",
+          "000000000774441ccc11cc1f444444122f777b12200",
+          "00000000024441cccccccc155522224444477b50000",
+          "00002277772441ccccccdc1555f4444445512200000",
+          "000027744421121ccc1dd122444444ff77220000000",
+          "00021f444442221c112114444444ff7772000000000",
+          "002777ff444422f222222ff41111555770000000000",
+          "02774442f4444f44441114421194155200000000000",
+          "02f4444422f222441114412021fbb20000000000000",
+          "274f4444422222211114420029bbbb0000000000000",
+          "2422222200222002184120002fbb200000000000000",
+          "2200000000000002faaa40002222000000000000000",
+          "0000000000000028aaab20000000000000000000000",
+          "00000000000002faaab200000000000000000000000",
+          "000000000000028aaab000000000000000000000000",
+          "0000000000000faabf2000000000000000000000000",
+          "000000000000048ab20000000000000000000000000",
+          "0000000000000fab200000000000000000000000000",
+          "0000000000000222000000000000000000000000000"
+        ],
+        "anchor": [
+          31,
+          15
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ],
+      "boot_repaint": {
+        "reason": "Generation drew a Sonic sneaker; repainted at pixel level to her model-sheet boot (coral upper, tan treaded sole, plate-slot lace accent, darker far boot with ink separation). Edits are [x, y, from, to].",
+        "edits": [
+          [
+            17,
+            26,
+            12,
+            8
+          ],
+          [
+            18,
+            26,
+            10,
+            11
+          ],
+          [
+            16,
+            27,
+            12,
+            15
+          ],
+          [
+            17,
+            27,
+            12,
+            10
+          ],
+          [
+            18,
+            27,
+            11,
+            10
+          ],
+          [
+            20,
+            27,
+            10,
+            11
+          ],
+          [
+            15,
+            28,
+            10,
+            8
+          ],
+          [
+            16,
+            28,
+            12,
+            10
+          ],
+          [
+            17,
+            28,
+            12,
+            10
+          ],
+          [
+            18,
+            28,
+            12,
+            10
+          ],
+          [
+            19,
+            28,
+            12,
+            11
+          ],
+          [
+            14,
+            29,
+            10,
+            15
+          ],
+          [
+            17,
+            29,
+            11,
+            10
+          ],
+          [
+            18,
+            29,
+            13,
+            11
+          ],
+          [
+            14,
+            30,
+            11,
+            8
+          ],
+          [
+            17,
+            30,
+            11,
+            10
+          ],
+          [
+            13,
+            31,
+            7,
+            15
+          ],
+          [
+            14,
+            31,
+            11,
+            10
+          ],
+          [
+            16,
+            31,
+            10,
+            11
+          ],
+          [
+            14,
+            32,
+            11,
+            8
+          ],
+          [
+            16,
+            32,
+            10,
+            11
+          ],
+          [
+            13,
+            33,
+            7,
+            15
+          ],
+          [
+            14,
+            33,
+            11,
+            10
+          ],
+          [
+            18,
+            26,
+            11,
+            4
+          ],
+          [
+            20,
+            27,
+            11,
+            4
+          ],
+          [
+            26,
+            23,
+            11,
+            9
+          ],
+          [
+            26,
+            24,
+            11,
+            15
+          ],
+          [
+            27,
+            24,
+            10,
+            11
+          ],
+          [
+            28,
+            24,
+            13,
+            11
+          ],
+          [
+            25,
+            25,
+            7,
+            9
+          ],
+          [
+            26,
+            25,
+            10,
+            11
+          ],
+          [
+            27,
+            25,
+            10,
+            11
+          ],
+          [
+            28,
+            25,
+            10,
+            11
+          ],
+          [
+            25,
+            26,
+            7,
+            15
+          ],
+          [
+            26,
+            26,
+            10,
+            11
+          ],
+          [
+            27,
+            23,
+            11,
+            4
+          ],
+          [
+            25,
+            24,
+            4,
+            1
+          ],
+          [
+            25,
+            23,
+            5,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "group": "mica-regen-transform",
+      "id": "transform-0",
+      "host": "s2",
+      "variant": "v2",
+      "cell": 0,
+      "raw_sha256": "4c5457ef263ff02a74c8d504722b00a42fb16dbc966964241c12ca360c21a558",
+      "source_box": [
+        68,
+        260,
+        376,
+        584
+      ],
+      "grid_offset": [
+        0,
+        0
+      ],
+      "source_pixels_per_native_pixel": 11.2,
+      "landmark": "eye top to sole 346px = approved wait-00 31px",
       "registration": "centre",
       "file": "mica/powered/frames/transform-0.png",
       "hotspot": [
-        13,
+        14,
         14
       ],
       "size": [
-        26,
-        28
+        28,
+        29
       ],
-      "authored_area": 587,
+      "authored_area": 621,
       "selected_pixels": {
         "rows": [
-          "00000000000022222200000000",
-          "00000002222777444422200000",
-          "00000027757774444444422000",
-          "00002377447444444444442000",
-          "00027744442444444441243200",
-          "002774444442344444f7712400",
-          "0027444444252fff3f7ee72320",
-          "0022444f444444444f7ee71242",
-          "0022222f444444424f7a17f222",
-          "0244444f444444441111117f32",
-          "2444444f444444422311dd1742",
-          "24444444f2444422221cccf120",
-          "2444444222ffff12421ccc1d20",
-          "2244422432222212f79ccc1d20",
-          "0ffff244432222227777ccf200",
-          "2222f444444444127777777722",
-          "232224444444439c1177777712",
-          "244442244442f1cccc187771f2",
-          "224444fffff21dccccc1211aa2",
-          "02442f2222222dcccdc202aa12",
-          "02ff2f33222441ddcc112aab20",
-          "0022222444444f11d1aaabf200",
-          "00243422444421111aaabbf200",
-          "00024443ffff221bbbbbbf2000",
-          "00002233f222221bb2bb120000",
-          "000002ff2222221bbf22900000",
-          "00000002f22221fff200000000",
-          "00000000022222220000000000"
+          "0000000000022222220000000000",
+          "0000000022214444442200000000",
+          "0000000255525444444422000000",
+          "0000022544441544444211200000",
+          "0000025544444124444215420000",
+          "0000025544444411111114442000",
+          "0002522544442122111221441200",
+          "0025542111112221774111144200",
+          "0215444412222217eb7444144220",
+          "0254444122224417ee7323512420",
+          "0254441544444417e91777441512",
+          "0213311444444441814117744122",
+          "0022221444444441444191724122",
+          "0222222144444111441fcd172412",
+          "0244444211111214444fcc111220",
+          "2444444412222221447fcc177200",
+          "24444441222222421377ccf77120",
+          "2444445144444442218777777720",
+          "2244421244444441141777777720",
+          "02111222144441ccc1431111b120",
+          "0022222221111dcccc1331baa200",
+          "0022222444111cccccc21aaaf200",
+          "0002444442121dccdd11aaaf2000",
+          "000214444122211dd11aaa422000",
+          "00002444122222111aaaa4b20000",
+          "0000022122222211aaa312200000",
+          "000000021222212123f322000000",
+          "0000000022111222112200000000",
+          "0000000000222222220000000000"
         ],
         "anchor": [
-          13,
+          14,
           14
         ]
       },
@@ -3154,69 +4251,70 @@
       ]
     },
     {
-      "group": "mica-pilot-transform",
+      "group": "mica-regen-transform",
       "id": "transform-1",
       "host": "s2",
-      "variant": "v1",
+      "variant": "v2",
       "cell": 1,
-      "raw_sha256": "529e10d132f19dfe8869f729e046e734f1c3d6205b27cb6e1a8783ac5e81c119",
+      "raw_sha256": "4c5457ef263ff02a74c8d504722b00a42fb16dbc966964241c12ca360c21a558",
       "source_box": [
-        420,
-        240,
-        720,
-        560
+        464,
+        260,
+        772,
+        584
       ],
       "grid_offset": [
-        8,
-        3
+        0,
+        0
       ],
-      "source_pixels_per_native_pixel": 11.3,
-      "landmark": "eye top to sole 350px = approved wait-00 31px",
+      "source_pixels_per_native_pixel": 11.2,
+      "landmark": "eye top to sole 346px = approved wait-00 31px",
       "registration": "centre",
       "file": "mica/powered/frames/transform-1.png",
       "hotspot": [
         12,
-        12
+        13
       ],
       "size": [
-        27,
-        28
+        28,
+        29
       ],
-      "authored_area": 600,
+      "authored_area": 619,
       "selected_pixels": {
         "rows": [
-          "000000000000222222000000000",
-          "000000022227777444322200000",
-          "000000277767744444444220000",
-          "000002777374444444444422000",
-          "000027744447444444462244200",
-          "002273444443666644617724200",
-          "00217444446642666627ee73300",
-          "00226666f3444444441eea72320",
-          "0022222f244444444329f872220",
-          "024444464444444472211177332",
-          "044444446444444417311d11832",
-          "244444462266667f4221ccdf130",
-          "26444462222222f13431ccf1d20",
-          "02666224422222212278ccf1600",
-          "022222444444444227777cffd00",
-          "222224444444446127777777722",
-          "2442264444444618c1f77777712",
-          "0444443266662f2cccc177771b2",
-          "02444562222221dccccc1111aa2",
-          "02376f32222222dccccc19aaa12",
-          "021ff2642222441dddc111aab20",
-          "00222226444444611d11aaab200",
-          "002234466444466111aaabbf200",
-          "0000234336666221bbabbbb2000",
-          "0000033376222221b66bbf20000",
-          "000002666222222166f22200000",
-          "000000002f222263f2200000000",
-          "000000000022222220000000000"
+          "0000000000002222220000000000",
+          "0000000022224444442200000000",
+          "0000000255527444444422000000",
+          "0000022554442744444311200000",
+          "0000065544444266666315420000",
+          "0000275544444426666615442000",
+          "0002577655446722111221441200",
+          "0025542266662221774111144200",
+          "0215444322222217ea7444114420",
+          "0254444622222417ee7422411420",
+          "0254447444444417eb1777241512",
+          "0216666444444441511117724132",
+          "0022225444444461241191124122",
+          "02222226777467914411cc172412",
+          "02544442666662244441cc111320",
+          "25544444122222214479ccf77200",
+          "24444457222222421377ccf77120",
+          "2444447544444444217777777720",
+          "2666662244444471141777777720",
+          "0211122265544fdccd511111b120",
+          "00222222296620cccc1421faa200",
+          "00222224447216ccccc11aaaf200",
+          "0002444447521dcccd11aaab2000",
+          "000214446122211c02aaaa332000",
+          "00002777222244112aaaa3b20000",
+          "0000022222344411aaa322200000",
+          "0000000217777121333122000000",
+          "0000000022111222112200000000",
+          "0000000000222222220000000000"
         ],
         "anchor": [
           12,
-          12
+          13
         ]
       },
       "palette": [
@@ -3303,88 +4401,84 @@
       ]
     },
     {
-      "group": "mica-pilot-transform",
+      "group": "mica-regen-transform",
       "id": "transform-2",
       "host": "s2",
-      "variant": "v1",
+      "variant": "v2",
       "cell": 2,
-      "raw_sha256": "529e10d132f19dfe8869f729e046e734f1c3d6205b27cb6e1a8783ac5e81c119",
+      "raw_sha256": "4c5457ef263ff02a74c8d504722b00a42fb16dbc966964241c12ca360c21a558",
       "source_box": [
-        780,
-        72,
-        1200,
-        604
+        816,
+        116,
+        1216,
+        596
       ],
       "grid_offset": [
-        4,
-        4
+        0,
+        9
       ],
-      "source_pixels_per_native_pixel": 11.3,
-      "landmark": "eye top to sole 350px = approved wait-00 31px",
+      "source_pixels_per_native_pixel": 11.2,
+      "landmark": "eye top to sole 346px = approved wait-00 31px",
       "registration": "ground",
       "file": "mica/powered/frames/transform-2.png",
       "hotspot": [
         19,
-        25
+        21
       ],
       "size": [
-        37,
-        47
+        36,
+        43
       ],
-      "authored_area": 1011,
+      "authored_area": 978,
       "selected_pixels": {
         "rows": [
-          "0000000000005550000000000000000000000",
-          "0000000000000666550000000000000000000",
-          "0000000000000966666550000000000000000",
-          "0000000000000066666665500000000000000",
-          "0000000000000056666666650000000000000",
-          "0000000000000056666666665000000000000",
-          "0000005555555555666666666650000000000",
-          "0000000566666666666666666650000000000",
-          "0000000056666666666666666650000000000",
-          "0000000005666666666666666666000000000",
-          "0000000000566666665566666666500000000",
-          "0000000000055666566666666666650000000",
-          "0055566666665666566667666666650000000",
-          "0056666666666666566662262666660000000",
-          "0000666666666666666622262266665000000",
-          "000056666666666666666266662666f000000",
-          "00000566666666666666626662226f0000000",
-          "0000005666666666666666666626ff0000000",
-          "00000000556666666666666666666f0000000",
-          "0000000566666666666666666666665000000",
-          "0000666666666666666666622222666500000",
-          "5666666666666666666666622222666000000",
-          "0666666666666666666666622226665000000",
-          "0056666666666666666666662266650000000",
-          "0004666666655664466646666664000466540",
-          "0000856666666666446446666640000366665",
-          "0000005666666666664666666664554466665",
-          "0000000566666666666666666666666666665",
-          "0065556666666666664466666666666666660",
-          "0066666666666666666664666669466666640",
-          "0056666666666644666646666650000555000",
-          "0000666666666666666656666650000000000",
-          "0000055666666666666566666665000000000",
-          "0005566666666666666666507666000000000",
-          "5556666666666666666666000666640000000",
-          "5666666666666666666650000066650000000",
-          "0066666666666644666600000046666500000",
-          "0055666666566494666650000566666500000",
-          "0000555550000966666780000566666000000",
-          "0000000000000566665000000055666550000",
-          "0000000000005666665000000056666664000",
-          "0000000000566666665000000056666666600",
-          "0000000000566666650000000056666666650",
-          "0000000005666666650000000056666666650",
-          "0000000005666666650000000000556666650",
-          "0000000005666666500000000000005555500",
-          "0000000000555555000000000000000000000"
+          "000000000000000000cccc00000000000000",
+          "000000000000000000cccccc000000000000",
+          "000000000000000000cccccccc0000000000",
+          "000000000000000000ccddddcccc00000000",
+          "000000000000ccccccccdddddccc00000000",
+          "00000000000cccccdd8cddddddccc0000000",
+          "00000000000cccdddd777cdddddcc0000000",
+          "00000000000cccddd77ccccc777dc0000000",
+          "000000000000cccdd7cc7ccccccccc000000",
+          "000000000000cccc7ccdd7cccccccc000000",
+          "000000000cccc88877cd77cccccccccc0000",
+          "0000000cccccddccd87cccc7cccccccc0000",
+          "0000000ccccdddddd77cccc77d7cccccc000",
+          "00000000cccdddddd7ccccc7ccc7cccc0000",
+          "00000000ccccddddccccccc7ccc87c700000",
+          "000000000ccccdcc7ccccc77ccc77c700000",
+          "00000000cc7777cc78cccdccccc77c700000",
+          "0000000cccc88888cd887cccccccccccc000",
+          "00000cccccddccdcccd88cccccccccccc000",
+          "00000ccccdddddccccc887cccccccccc0000",
+          "000000cccdddddcccc777cc7cccc77000000",
+          "0000000cccddddc7777cc7cc777700000000",
+          "0000000077cccc787cc7ccccccc700000000",
+          "0000000cc88888cc8dccc7cccccc00cccc00",
+          "00000ccccd88888877cc787ccccc77cc8cc0",
+          "0000cccccdddddd7ccc8cc7ccccc7dcccccc",
+          "0000cccccccccdc7cccccdc7cccc7d7dcccc",
+          "00007ccccccccc787ccccc87cccccdcd7c70",
+          "000000ccccccc88887dccdccccccccdccc00",
+          "0ccccc7777778cdd887777ccccccc0007000",
+          "0cccccd8888cccccc87ccccccd7800000000",
+          "0ccccccccddcccccc7cccc7cc7dcc0000000",
+          "00cccccccccccccc7ccccc7788ddc0000000",
+          "0000cccccccc787d7ddc700078dd70000000",
+          "00cc87ccccc887cccc770007ccccccc00000",
+          "0cccc777777887cdccccc00cccccc7c00000",
+          "cccccddd788777ccccdcc000777ccc000000",
+          "0ccccddddccc7cccccc7000cccdccccc0000",
+          "00cccccdccc07ccccccc0007ccddccccc000",
+          "00000cccc007cccccccc700ccc7dccccc700",
+          "00000000000cccccccccc00ccccccccccc00",
+          "00000000000ccccc7cccc00ccccccccccc00",
+          "00000000000cccccccccc00000cccccccc00"
         ],
         "anchor": [
           19,
-          25
+          21
         ]
       },
       "palette": [
@@ -3471,88 +4565,84 @@
       ]
     },
     {
-      "group": "mica-pilot-transform",
+      "group": "mica-regen-transform",
       "id": "transform-3",
       "host": "s2",
-      "variant": "v1",
+      "variant": "v2",
       "cell": 3,
-      "raw_sha256": "529e10d132f19dfe8869f729e046e734f1c3d6205b27cb6e1a8783ac5e81c119",
+      "raw_sha256": "4c5457ef263ff02a74c8d504722b00a42fb16dbc966964241c12ca360c21a558",
       "source_box": [
-        1244,
-        72,
-        1676,
-        604
+        1256,
+        116,
+        1664,
+        596
       ],
       "grid_offset": [
         0,
-        2
+        9
       ],
-      "source_pixels_per_native_pixel": 11.3,
-      "landmark": "eye top to sole 350px = approved wait-00 31px",
+      "source_pixels_per_native_pixel": 11.2,
+      "landmark": "eye top to sole 346px = approved wait-00 31px",
       "registration": "ground",
       "file": "mica/powered/frames/transform-3.png",
       "hotspot": [
-        22,
-        25
+        20,
+        21
       ],
       "size": [
-        38,
-        47
+        37,
+        43
       ],
-      "authored_area": 1095,
+      "authored_area": 1035,
       "selected_pixels": {
         "rows": [
-          "00000000000000257200000000000000000000",
-          "00000000000000027772200000000000000000",
-          "00000000000000002377722000000000000000",
-          "00000000000000000444777200000000000000",
-          "00000000000000000f44447777200000000000",
-          "00000000000000000244444477720000000000",
-          "00000000222227777124444444772000000000",
-          "00000000027777777774444444434200000000",
-          "0000000000244444444f144444444200000000",
-          "000000000002344444432f1344444420000000",
-          "000000000000234444441111f4444420000000",
-          "00000000000212244442777111222222000000",
-          "00000000222777223337eea734444473000000",
-          "00000277777777222f37eee7f7144445000000",
-          "000000244444444222227e1377774444502000",
-          "00000002444444442222242211177444402000",
-          "00000000344444444442444211c11244120000",
-          "0000000002444444444234421ccc1113c22000",
-          "00000000002f4444432344471cc11f72000000",
-          "000000002272222ff14444377cc11f7df00000",
-          "002222227777222222233f3777ccf177200000",
-          "00277777775442222222217777777777772000",
-          "00003444444444443222217777711117720000",
-          "00002444444444444443f197777aa177200000",
-          "000002244444444444412221977aa172000000",
-          "0000002144444444421f122211977720000000",
-          "00000002f2222222221cc11442211f20002220",
-          "022222277222222221cc11c441777120c2ccc0",
-          "002477744422222221cdccc1f1777722c11cc2",
-          "000244444442222221cccc022177771c1cccc2",
-          "000244444444444441dccc923777771dcccc20",
-          "0000222444444444f111d114277771121dd220",
-          "0002122234444221f22ff14447777120222000",
-          "22277722222222222222144418771470000000",
-          "027444422222222343225444f2212442000000",
-          "02244444422222334321344f20022442000000",
-          "000224444444442211a1144000002311200000",
-          "00002f34442222222aaaa11200021aaaa20000",
-          "0000002fff1222221baaaaa20002aaaaa20000",
-          "0000000000222200b1bb1f200002aab11b0000",
-          "00000000000000021bbbba200002bbbbbb2000",
-          "000000000000002abbabaa20002baaabbaa200",
-          "000000000000002aaaaabb20002baaabaaaa20",
-          "000000000000021aaaaa1120002888faaaaa20",
-          "00000000000002888788882000281977877720",
-          "00000000000002187818112000022181818120",
-          "00000000000000222222220000000222222200"
+          "0000000000000000022222000000000000000",
+          "0000000000000000027777220000000000000",
+          "0000000000000000025447777700000000000",
+          "0000000000000000024444447772000000000",
+          "0000000000000222211444444577200000000",
+          "000000000022277777f444444447720000000",
+          "0000000000277774442f44444444720000000",
+          "0000000000277444444111422f1f420000000",
+          "0000000000244444441777713444412000000",
+          "00000000000244444417eb774244445220000",
+          "00000000000212344217eaf4777f444120000",
+          "00000000027772222227ef427777744120000",
+          "0000000227774422222154451121774112000",
+          "0000000777444444421544411ccd177120000",
+          "000000077444444444f444451cccf17200000",
+          "000000022444444444f444471cccff8120000",
+          "0000000002f4444443f2113779ccff7712200",
+          "000000002742fffff22221777777777777200",
+          "0000000217422222224222777777117772000",
+          "0000022774444222544442177771ff1720000",
+          "0000027744444444444ff211977faaf200000",
+          "0000002444444444241541441177bb2000000",
+          "000000022444444ff11155444711120000000",
+          "00000002f2f11f22216c11442777142022200",
+          "00000002142222221cc1cd227777f412cc120",
+          "0000022774422221cccccc14777771c1c0cc2",
+          "0000027744444441cccccdc1777771c1cccc2",
+          "00000024444444421dcccc17772271c11c020",
+          "00022211144444ff2116d141777772c1cc020",
+          "00077772ffffff2222211442f777202222000",
+          "00044444222224442215444773f1f20000000",
+          "00024444442222444f7444177714420000000",
+          "000224444444442f214444222224420000000",
+          "22277714444442f1111442000224412000000",
+          "277744411111122aaaa112000211aaa200000",
+          "244444422222222a11aaa2000aaaaab200000",
+          "0244444442222212254fa20002ff144200000",
+          "0024444444422115411420000aaa432122000",
+          "00024444442221aaaa5a20002aaaa4a1aa200",
+          "0000002222202aaaaaaaa200287ffaaaaaa20",
+          "0000000000002887778772002877778877820",
+          "00000000000027f77f7f5200222227278f720",
+          "0000000000002222222222000000222222220"
         ],
         "anchor": [
-          22,
-          25
+          20,
+          21
         ]
       },
       "palette": [
@@ -3639,86 +4729,81 @@
       ]
     },
     {
-      "group": "mica-pilot-transform",
+      "group": "mica-regen-transform",
       "id": "transform-4",
       "host": "s2",
-      "variant": "v1",
+      "variant": "v2",
       "cell": 4,
-      "raw_sha256": "529e10d132f19dfe8869f729e046e734f1c3d6205b27cb6e1a8783ac5e81c119",
+      "raw_sha256": "4c5457ef263ff02a74c8d504722b00a42fb16dbc966964241c12ca360c21a558",
       "source_box": [
-        1728,
-        100,
-        2160,
-        604
+        1720,
+        144,
+        2108,
+        596
       ],
       "grid_offset": [
-        3,
-        10
+        9,
+        4
       ],
-      "source_pixels_per_native_pixel": 11.3,
-      "landmark": "eye top to sole 350px = approved wait-00 31px",
+      "source_pixels_per_native_pixel": 11.2,
+      "landmark": "eye top to sole 346px = approved wait-00 31px",
       "registration": "ground",
       "file": "mica/powered/frames/transform-4.png",
       "hotspot": [
-        22,
-        24
+        20,
+        19
       ],
       "size": [
-        38,
-        45
+        35,
+        40
       ],
-      "authored_area": 1051,
+      "authored_area": 951,
       "selected_pixels": {
         "rows": [
-          "00000000000000222000000000000000000000",
-          "00000000000000027777220000000000000000",
-          "00000000000000002447712000000000000000",
-          "00000000000000000244477722000000000000",
-          "00000000000000000244444777220000000000",
-          "00000000022222272124444444712000000000",
-          "0000000002777777777f344444437200000000",
-          "00000000000233474447223444343400000000",
-          "00000000000023344444322333344320000000",
-          "0000000000000234444ff77222222322000000",
-          "0000000000022122344f7ee724444423200000",
-          "000000000021777222217ee211244445200000",
-          "0000002777774434222f8e1377774444500000",
-          "00000002443444433222174211117444402000",
-          "0000000024444444443473481ddd1744120000",
-          "0000000002444444444244321cccf114c22000",
-          "0000000000233444442744471cccff11200000",
-          "0000000022722221115344377cccff66f00000",
-          "0022222277772222ff12223777777777200000",
-          "00027777774443222222227777777777772000",
-          "000024444444444332222277777bb117720000",
-          "000002444444444444432217777aa177200000",
-          "000000244444444444412222277ee172000000",
-          "000000002344443431f1122442177720000000",
-          "0000000222222222221dc1144219922002cd20",
-          "027777777222222222cc11c441777120d1ccc0",
-          "002447744422222221cccdc1f1777712ddccc2",
-          "000244444444222221dccc112177771cccccc2",
-          "00002444444444444fddcd124777771cdccc20",
-          "000002244444431112111124477777122dd220",
-          "090221221fff11ff2222f14447777120022000",
-          "27777772222112222222244411712352000000",
-          "037444442222233332222444f2222442000000",
-          "00244444444433144211444200002344200000",
-          "0002244444442f2211a113400000f411200000",
-          "00002f34442112222aaaaaa20002aaaaa20000",
-          "00000022f2f222229111aaa20002aaa1120000",
-          "0000000000222200bbbbb1200002fab1b20000",
-          "0000000000000002abbbba200002bbbb9b2000",
-          "000000000000002abbbbaa20002baaabbaa200",
-          "000000000000002aaaabbb20002baaa1aaaa20",
-          "000000000000021aaaaa1120002888baaaaa20",
-          "000000000000027887788820002f8888887820",
-          "00000000000002177818182000022181181820",
-          "00000000000000222222220000000222222200"
+          "00000000000000000027772220000000000",
+          "00000000000000000027777712000000000",
+          "00000000000002222214447777200000000",
+          "00000000000227777744444447720000000",
+          "00000000000777744444444444772000000",
+          "00000000000774444411142211f72000000",
+          "00000000000244444177771444447200000",
+          "0000000000021344417ea75444444722000",
+          "00000000022742fff17aaf4777f44412000",
+          "0000000027777222221ef42777774412000",
+          "00000002777444222214447112177411200",
+          "0000000277444444425444711dd17712000",
+          "0000000244444444414444111ccff720000",
+          "000000021444444444f241771ccff212000",
+          "000000002ff44444ff22f7777ccff777720",
+          "000000007722ffff2222177777777777720",
+          "00000002774222222442217777711177200",
+          "000002277444422444422f18771bff22000",
+          "0000027444444444441ff441277aa200000",
+          "000000244444444ff774744f21112000000",
+          "0000000244444ff2f111544177112002200",
+          "0000000021fff2221dc114577771522cc20",
+          "000000027222221cccccc14777711c1c9c2",
+          "000000274444441ccccc115777711ccccc2",
+          "00022211444444111ccccd7722211d1ccc2",
+          "0002777711444421c1ccc177777f2d1cc20",
+          "0002444444f11f221111157777720222200",
+          "00024444444224222214447777112000000",
+          "00002444444444442154411f1f442000000",
+          "2227714444444232254441f222442000000",
+          "277744f14444ff111144f20022441200000",
+          "24444441111122aaaaaf2000a11aaa20000",
+          "02444444222222b11aaa2000aaaa1a20000",
+          "0024444444422123541a200022f42220000",
+          "000224444422114411520000aaa43f12200",
+          "0000021222111aaaa5a20002aaaa4a1aa20",
+          "000000222221aaaaaaaa200288ffaaaaaa2",
+          "00000000000287777887200288778887872",
+          "0000000000027f88f7f5200222227f78f82",
+          "00000000000222222222200000022222222"
         ],
         "anchor": [
-          22,
-          24
+          20,
+          19
         ]
       },
       "palette": [
@@ -3810,61 +4895,66 @@
       "host": "s2",
       "derived_from": "run-0",
       "rotation": 45,
-      "support_kept": 14.8492424049175,
+      "support_kept": 14.849242404917499,
       "file": "mica/powered/frames/s2-run-up45-0.png",
       "hotspot": [
-        17,
-        13
+        18,
+        15
       ],
       "size": [
-        28,
-        38
+        26,
+        43
       ],
-      "authored_area": 652,
+      "authored_area": 695,
       "selected_pixels": {
         "rows": [
-          "0000000000000022200000000000",
-          "0000000000022277422200000000",
-          "0000000022277444ffff22002000",
-          "0000000277744441f44444202200",
-          "00002227744444444473f4420200",
-          "0002177444447711177777172202",
-          "002244444447771477117f177122",
-          "022244444f17ae4471ccccff7772",
-          "2220241f22277744411ccccff772",
-          "000002772244ff444211ccccc712",
-          "000027744444ff44444177c77f20",
-          "00227744444ff244444777777720",
-          "0244444444ff2244444777772200",
-          "0022244ffff222fff42771720200",
-          "000002122222242222f4f7712200",
-          "0000027444444ff244f4177cc200",
-          "000027444444fff444f1177c2000",
-          "000022244fff22f11cc117722000",
-          "00000002122224f1c1cc77200000",
-          "0000002244444f11cc2c99200000",
-          "0000022444441f41c20274200000",
-          "0000224444f22441c20221120000",
-          "00002224422244441202bbf20000",
-          "00000227422444422221bb120000",
-          "00002244444f14144211b1120000",
-          "00022444441f4f14202191b20000",
-          "000002221222fa14200299b20000",
-          "000027744421aaa120029bb20000",
-          "00027744441aaaa120002bb20000",
-          "000271141218a1ab200002200000",
-          "00002714221fa1b2000000000000",
-          "000022422218aab2000000000000",
-          "000022222218aaa1200000000000",
-          "0000200200288aa2000000000000",
-          "0000000000028aa2000000000000",
-          "0000000000028fa2000000000000",
-          "00000000000288f2000000000000",
-          "0000000000002220000000000000"
+          "00000000002222202000000000",
+          "0000000022744442f222000000",
+          "00000022774444444444220000",
+          "0000027744444444f44f442000",
+          "00002774444ff715f777772000",
+          "0000274444fe77551dd1f51220",
+          "0002744444f7e55111cc117772",
+          "0002114422255f41111ccf7772",
+          "00002172222f54411511777120",
+          "00021744444f24444557771520",
+          "00027444444f24441577777520",
+          "0002744444f22442ff77771200",
+          "0002214442222f22217ff42000",
+          "000002ff22224222412ff52000",
+          "000027744444f2244f44f72000",
+          "000027444441f2444444f72000",
+          "0002744444112444f444471200",
+          "000221444f12144ff445772000",
+          "00000242222224ff44f5352000",
+          "000002444444ff7544f1512000",
+          "000002444441177f4414112000",
+          "0000244444ccc14441bbbb2000",
+          "00024444411cc14441fbbb2000",
+          "000214441ccdd14f1219b20000",
+          "000025f1cccc1114202fbb2000",
+          "0002751dccc1121420219b2000",
+          "0027741ccc1121144202220000",
+          "002744111c124414a200000000",
+          "0024441f1114448aa200000000",
+          "00214422214441aaa200000000",
+          "000272222f4421aaa200000000",
+          "002744444ff202aaab20000000",
+          "02744444ff2002faaa20000000",
+          "0244444ff220021aaa20000000",
+          "2114422ff220021faa20000000",
+          "02172224220002788a20000000",
+          "2174444420000024fa20000000",
+          "2f444442000000028200000000",
+          "02144420000000002000000000",
+          "02144200000000000000000000",
+          "00242000000000000000000000",
+          "00220000000000000000000000",
+          "00020000000000000000000000"
         ],
         "anchor": [
-          17,
-          13
+          18,
+          15
         ]
       },
       "palette": [
@@ -3959,56 +5049,61 @@
       "support_kept": 15.000000000000002,
       "file": "mica/powered/frames/s2-run-steep-0.png",
       "hotspot": [
-        15,
+        18,
         11
       ],
       "size": [
-        31,
-        37
+        34,
+        42
       ],
-      "authored_area": 657,
+      "authored_area": 699,
       "selected_pixels": {
         "rows": [
-          "0000000000002020020000000000000",
-          "0000000000000202022000000000000",
-          "00000000002444f1277200000000000",
-          "000000022f444177777200000000000",
-          "00000244f44f7111ff7e00000000000",
-          "0000274f44377ffffc7f20000000000",
-          "0000774f44771ccccc7720000000000",
-          "000274414171ccccc77720000000000",
-          "000274441171ccc1777802200000000",
-          "00274441f471111777712cc00000000",
-          "002744f71444224777171cc20000000",
-          "02774477e244444478f77f120000000",
-          "0274447ae7444444244177200000000",
-          "077444177fff444f2f4197720000000",
-          "077444f244f224f244f117942f00000",
-          "27444f2244f22f22441cc9741f20000",
-          "2744f22444f224f241c1cc123b12000",
-          "2444174444f224ff41ccc021bb1b200",
-          "2442774444f244f2ff1ccc02bbb1b20",
-          "220077444f2444f24121cc211999bf9",
-          "22007744f2444f224f4411222299bbb",
-          "2002744217444f24414442440022222",
-          "000244202744f24442f442442000000",
-          "0002420077441444f24441442000000",
-          "000200007420244412414f141200000",
-          "0000000072002444224f4faa1b20000",
-          "0000000000002447444121aaa120000",
-          "0000000000002227444f21aa1bb2200",
-          "00000000000020244412418aaaa1a00",
-          "00000000000000244224421faaaaaa0",
-          "00000000000000242744121188aaaa2",
-          "00000000000000202744f222288fff2",
-          "0000000000000000274142220288882",
-          "0000000000000000271742200002220",
-          "0000000000000000222242200000000",
-          "0000000000000000000220000000000",
-          "0000000000000000000220000000000"
+          "0000000000222027200000000000000000",
+          "0000000044447277720000000000000000",
+          "0000002444f71577720000000000000000",
+          "000002f44771f1f7152000000000000000",
+          "00022444f71dccc71b5000000000000000",
+          "00274444ffdccc77775000000000000000",
+          "0024444151111177772000000000000000",
+          "027444f751115577724500000000000000",
+          "0f744f7a541145777f5572000000000000",
+          "07744feef44441f7fff771200000000000",
+          "27444f7554444f21244f47200000000000",
+          "f74444f2f2444224f44477520000000000",
+          "274441224f244224444453512000000000",
+          "f74442244f22f2244f44f51bb200000000",
+          "f744f2444f2242244f44f14bbb00000000",
+          "07f174444f224f244ff441bbbb22000000",
+          "02217444422441244f54419f9bbb000000",
+          "00027444f24441f14f7f44121f9f000000",
+          "00027441f4444122f57444202222000000",
+          "0000272174444f2441124f340000000000",
+          "00002202744412241cc141444b20000000",
+          "0000000274442444cccd12144abb000000",
+          "000000002721444411dd12114aaa200000",
+          "00000000220274441ccc12418aaabb2000",
+          "00000000000274441ccc12441aaaaab200",
+          "00000000000074441ccc12441faaaaab20",
+          "000000000000744f1dcc1144128fafaab0",
+          "000000000000221511c1c14420228f8fa2",
+          "0000000000000027411f12fff000274482",
+          "00000000000000274441224f2200222220",
+          "00000000000000274442244f2200000000",
+          "000000000000000244f2444f2200000000",
+          "00000000000000027274444ff200000000",
+          "0000000000000000007444f24200000000",
+          "0000000000000000007444224400000000",
+          "0000000000000000007444244400000000",
+          "0000000000000000002717444400000000",
+          "0000000000000000002217444400000000",
+          "0000000000000000000027444400000000",
+          "000000000000000000002f714400000000",
+          "0000000000000000000000227420000000",
+          "0000000000000000000000002220000000"
         ],
         "anchor": [
-          15,
+          18,
           11
         ]
       },
@@ -4104,48 +5199,46 @@
       "support_kept": 15.556349186104047,
       "file": "mica/powered/frames/s2-run-inverted-0.png",
       "hotspot": [
-        10,
-        8
+        14,
+        7
       ],
       "size": [
-        38,
-        28
+        43,
+        26
       ],
-      "authored_area": 652,
+      "authored_area": 695,
       "selected_pixels": {
         "rows": [
-          "00000222220000000000000000000000000000",
-          "00000027712200000000000000000000000000",
-          "0002221777f722220000000000000000000000",
-          "00220277fc77202c2200000000000000000000",
-          "0000277ffc77721cc200022222222000000000",
-          "0002411fccc77777772221f11bbbb200000000",
-          "002447fccc777177777941bb119bb200000000",
-          "0024f77ccc7777f1117972bbb9992000000000",
-          "02f4371cc117774411cc222111220000000000",
-          "02f4771c114442fffcc2000212000000000000",
-          "02f44771124444244c1c222220000000000000",
-          "24ff417744444f2441cccc1242222200200000",
-          "2741414444444f224111114244411b22122220",
-          "2744411444444f2ffff14444111aaabbaaaaf2",
-          "0244477e7ff2224ff24ff4444faaa11aaaaf82",
-          "0274477a7fff2224f224124414faaaaaa88882",
-          "02744477744ff2244f244224ff21a8f8882220",
-          "002744412444ff244f244f2241221111120000",
-          "0027444f22444f244f24442244244222200000",
-          "0027744422444f244414444444144122200000",
-          "00027444f7444f244422444744244442220000",
-          "00002744177444174202242244274114200000",
-          "00002744427744227200222224277172200000",
-          "00002144202742002200022022027722220000",
-          "00000222000242000000000002002200000000",
-          "00000022200242000000000000000000000000",
-          "00000002200020000000000000000000000000",
-          "00000000200000000000000000000000000000"
+          "0000002200000000000000000000000000000000000",
+          "0000027722200000000000000000000000000000000",
+          "0000027715520000200000000000000000000000000",
+          "0002217771712222122222202200000000000000000",
+          "0024751f7777457777511bb2bb20000000000000000",
+          "00247f1c7777ffff47351bbbb920000000000000000",
+          "024f71cc1777ff4445514bb9f120000000000000000",
+          "02447dc11577724444ff1bf12200000222222000000",
+          "02447d11555f11f4444441120022222baaaaa200000",
+          "2f4ff111141f2444ff444441224aaaaaaaa8f820000",
+          "02445511144222444ff5f44f4444aaaaaaf84200000",
+          "244415544444222444f7744411118aaaf1172000000",
+          "2444775f4444f222444f71111214411222220000000",
+          "2444f7e5522224ff212f1ccd1124442000000000000",
+          "2444fe75fff2224112241ccdc112444200000000000",
+          "27444ff2244f224411244c1ccc11144f22200000000",
+          "02744442244422444f24441ccccc11fff2220000000",
+          "027444422444424444244441ccc11224fff22000000",
+          "0027444424444f44442444441dc1f2244ff44200000",
+          "0027744474444f7444444444f111122444224420000",
+          "0002774117441277412224445544442444224442000",
+          "0000227121772022720002412774447444424444200",
+          "0000002202222000220000220277412744474444422",
+          "0000000000000000000000000022220274117411220",
+          "0000000000000000000000000000000022121f22000",
+          "0000000000000000000000000000000000202200000"
         ],
         "anchor": [
-          10,
-          8
+          14,
+          7
         ]
       },
       "palette": [
@@ -4241,56 +5334,62 @@
       "file": "mica/powered/frames/s2-run-up45-1.png",
       "hotspot": [
         20,
-        13
+        16
       ],
       "size": [
-        29,
-        37
+        25,
+        43
       ],
-      "authored_area": 646,
+      "authored_area": 685,
       "selected_pixels": {
         "rows": [
-          "00000000000000222220000000000",
-          "000000000022227444f2200000000",
-          "00000002227774444444422222000",
-          "00000027777744444444444112000",
-          "0000227744444444f4f71ff112000",
-          "000277444441f12417777711c2022",
-          "0024444444427e247111c1f1c7282",
-          "0222244f44477e44411ccccff7772",
-          "000002ff222271444211ccccc7720",
-          "0000027424444ff442411ccc77200",
-          "000227444444fff44247777777200",
-          "02277444444f22244447777778220",
-          "2174444444f222f44421117712000",
-          "22222244ff2224f2222f417112000",
-          "00000212222244f224444171d2000",
-          "00002174444444f244444771c2000",
-          "000217444444422441111791c2000",
-          "000222244442222111ccc771c2000",
-          "00000002222222f111ccc71220000",
-          "0000002774444122cccc112000000",
-          "0000027744442221cc2c112000000",
-          "00002174444222441202120000000",
-          "0000021222222444112d192000000",
-          "00000272422414412441bb2000000",
-          "00000274444fff114441b20000000",
-          "0000221444ff4f111411f20000000",
-          "00000024f14441aa1122112000000",
-          "0000024444411faaa200220000000",
-          "0000244444ff1fabb200000000000",
-          "000002224f2218ab1200000000000",
-          "00000272422218aab200000000000",
-          "00002774222218aaa200000000000",
-          "00002222220028faa200000000000",
-          "00000000000002fa2000000000000",
-          "00000000000002f82000000000000",
-          "00000000000000282000000000000",
-          "00000000000000022000000000000"
+          "0000000000222000000000000",
+          "0000000022144222222200000",
+          "0000002277444444444422000",
+          "0000027744444f44447412000",
+          "0000274444415fff777777220",
+          "0002744444fee751111115772",
+          "0002444444feef111ccff7772",
+          "00022444ff55944111ccf7772",
+          "000027f2222f4441117c77712",
+          "00027744444f4444457777120",
+          "0021744444f24444477777b20",
+          "002744444ff2f44f277777200",
+          "000244442222ff2221ff21200",
+          "000021722424f2224fff55200",
+          "00002744444422241f4433200",
+          "00002444444f2244444477200",
+          "0002744444122444444477200",
+          "0022244441224441444777200",
+          "00000212222244f4445531200",
+          "000027744442215f445552000",
+          "000027444444574f411112000",
+          "0002744441cc1244419bbb200",
+          "0002744411cc124441fbb2000",
+          "0002144111cd14f4221bf2000",
+          "00021f1ccccd1ff20021b2000",
+          "002171ccccc22242000292000",
+          "0027411ccc122142000020000",
+          "027441ccc1224144200000000",
+          "02744411c1244141200000000",
+          "027442221144114ab20000000",
+          "002742222f4118aab20000000",
+          "002444444f121aaaa20000000",
+          "0274444412202aaab20000000",
+          "274444ff222028aab20000000",
+          "27444f2222002ffaa20000000",
+          "217f42422000028aa20000000",
+          "277444420000002aa20000000",
+          "2744442000000028b20000000",
+          "2744420000000002220000000",
+          "214f200000000000000000000",
+          "0242000000000000000000000",
+          "0020000000000000000000000",
+          "0022000000000000000000000"
         ],
         "anchor": [
           20,
-          13
+          16
         ]
       },
       "palette": [
@@ -4385,57 +5484,63 @@
       "support_kept": 14.000000000000002,
       "file": "mica/powered/frames/s2-run-steep-1.png",
       "hotspot": [
-        17,
-        11
+        19,
+        12
       ],
       "size": [
-        32,
-        37
+        34,
+        43
       ],
-      "authored_area": 651,
+      "authored_area": 693,
       "selected_pixels": {
         "rows": [
-          "00000000000002000220000000000000",
-          "00000000000002220282000000000000",
-          "00000000000221112772000000000000",
-          "0000000022444f1c7777000000000000",
-          "00000022f444f711ff71f00000000000",
-          "00000244444171fffc7f820000000000",
-          "0000274444f71ccccc77820000000000",
-          "0000774144711cccc677200000000000",
-          "00027444f1711ccc1777122000000000",
-          "000274444471111177781dc200000000",
-          "0027744124442477771711cc20000000",
-          "002774f7e44442441141711c20000000",
-          "02774417ee4444442f44797120000000",
-          "0274442771ff44422444177200000000",
-          "0774444124f22f424411c17200000000",
-          "077444f224f22f22441ccc7120000000",
-          "27444f2444f224f2441ccc1119000000",
-          "2744f22444f2244f4411ccc190200000",
-          "244f174444f22442212ccc0d1b9f0000",
-          "2420274444f244422f21ccc119bf2000",
-          "220027444f2444f22124111421ff2000",
-          "200027441244442244244f2441222000",
-          "0002744217444f244224414442000000",
-          "0002742027441244422f41111a200000",
-          "000272002744274442214f1aaab00000",
-          "00022000222027442241f41aab120000",
-          "0000000020002742224f241fab1b2000",
-          "0000000000002712444f2418faaaa200",
-          "0000000000002217444141f18faaa200",
-          "000000000000002744f44f22188fa820",
-          "000000000000000727444f222288f882",
-          "00000000000000020744412200022220",
-          "00000000000000000744242200000000",
-          "00000000000000000742742200000000",
-          "00000000000000000202742000000000",
-          "00000000000000000002720000000000",
-          "00000000000000000002200000000000"
+          "000000000002009f000000000000000000",
+          "0000000022212217200000000000000000",
+          "0000000044417577720000000000000000",
+          "0000002444771c77720000000000000000",
+          "00000ff44771fff7112000000000000000",
+          "00024444f71cccc7fb5000000000000000",
+          "002744f4f1dccc77772000000000000000",
+          "002444ff51111777771200000000000000",
+          "0274445751115577724520000000000000",
+          "077441aef4f14f777f5372000000000000",
+          "07744fee94444421f44777200000000000",
+          "274444f5f4444f24f44f77120000000000",
+          "f74444f2f2444224144473720000000000",
+          "27444f244f2ff22444445551b200000000",
+          "274442244f22f2244f44f51bbb00000000",
+          "f744f2444f2242244144414bbb20000000",
+          "0721744442244f244ff4419fbfb2000000",
+          "0002744442444124415f44119192000000",
+          "00027444f2444121417444122222000000",
+          "0002174174444122257244200000000000",
+          "0000272174444f2441124f420000000000",
+          "0000000274441244ccc14f442000000000",
+          "00000000774124441c9d12144222000000",
+          "000000002721744411cd121441bb200000",
+          "00000000220274441ccc224144aab20000",
+          "00000000000274441ccc124414aaab2200",
+          "000000000000744f1ccc124418aaaabb00",
+          "000000000000771fcdccc14412faaaaa20",
+          "000000000000221711c1c1f42028f8aab2",
+          "0000000000000027411f22ff200222f8f2",
+          "00000000000000274442244f2200002220",
+          "0000000000000027444224412200000000",
+          "000000000000000274f4444f2200000000",
+          "0000000000000002727444f22200000000",
+          "0000000000000000007444f24200000000",
+          "0000000000000000007444244400000000",
+          "000000000000000000274f444400000000",
+          "0000000000000000002717444400000000",
+          "0000000000000000000217444400000000",
+          "000000000000000000002744f400000000",
+          "0000000000000000000002714400000000",
+          "0000000000000000000000227420000000",
+          "0000000000000000000000000220000000"
         ],
         "anchor": [
-          17,
-          11
+          19,
+          12
         ]
       },
       "palette": [
@@ -4530,49 +5635,45 @@
       "support_kept": 14.142135623730951,
       "file": "mica/powered/frames/s2-run-inverted-1.png",
       "hotspot": [
-        12,
-        8
+        17,
+        6
       ],
       "size": [
-        37,
-        29
+        43,
+        25
       ],
-      "authored_area": 646,
+      "authored_area": 685,
       "selected_pixels": {
         "rows": [
-          "0000022200000000000000000000000000000",
-          "0000028720020000000000000000000000000",
-          "0000002772220000000000000000000000000",
-          "0022227777782222220000000000000000000",
-          "00211ccfc77711dccc2000000000000000000",
-          "0021111fcc777111112000000000000000000",
-          "0024f1fccc777777971220220020000000000",
-          "0024f71ccc7711177771129b2212000000000",
-          "024417ccc17714441cc1111bbf12000000000",
-          "0244771c11771f441cccc2d11120000000000",
-          "2f44f711144422441ccc20244120000000000",
-          "2444471122244244111cc2144412222220000",
-          "2444f17444444224411cc112411ab1baa2222",
-          "24444444444442224112144111aabbaaaa882",
-          "274442244ff2ffff22f2244411aaaaaafff20",
-          "024441ee1ff2244422212244ff1ff88882200",
-          "02744f7774f2224442242221f441111120000",
-          "02774127244f222442244224ff41f22200000",
-          "027744442444f224442444224f44f22200000",
-          "0027444424444f244424442244144f2220000",
-          "0027444422444f244427442444f4444220000",
-          "0027744ff4444424442774224444422420000",
-          "00027444f7444417420277177124427720000",
-          "0000274422744221720021222202422720000",
-          "0000274200274202120002000200200220000",
-          "0000024200274200220000000000000000000",
-          "0000002200027200000000000000000000000",
-          "0000000200021200000000000000000000000",
-          "0000000000002200000000000000000000000"
+          "0000022220000000000000000000000000000000000",
+          "0000277712200000000000000000000000000000000",
+          "0000277771b22222222002000000000000000000000",
+          "002275777777153777122b222200000000000000000",
+          "002171ff7777253777351bbfb920000000000000000",
+          "024471fcc777ff4447551bbb1200000000000000000",
+          "024771cc7777ff44445519f12000000000000000000",
+          "024471c115771ff4444411120000022222222220000",
+          "02447111144224144444444200022bbabbaaab20000",
+          "0244f111144f2244414ff44422241aaaaaaaa820000",
+          "0244f5144444222444f5444ff44444aaaaf82200000",
+          "024ff7f44444f22244417224f211118aa8f20000000",
+          "24445ee9444fff22244251111224411122200000000",
+          "24441ee5ff22244f22224ccdd222441200000000000",
+          "21444ff524ff224412244ccccc12244122000000000",
+          "0274444f244f244441244111ccc111ff22200000000",
+          "0274444f2444224444244411ccccc12412220000000",
+          "002744442444424444244441cccc12244f222000000",
+          "00274444f4444744441744441c1c12244f244200000",
+          "000274447744417444277444f111422444f24420000",
+          "0000274227744222720227711744444444444442000",
+          "00000222021720002200022221744474444f444f202",
+          "0000000000220000020000000227772274477444422",
+          "0000000000000000000000000002220027717771200",
+          "0000000000000000000000000000000002222222000"
         ],
         "anchor": [
-          12,
-          8
+          17,
+          6
         ]
       },
       "palette": [
@@ -4667,59 +5768,63 @@
       "support_kept": 14.8492424049175,
       "file": "mica/powered/frames/s3k-run-up45-0.png",
       "hotspot": [
-        22,
-        11
+        20,
+        13
       ],
       "size": [
-        30,
-        39
+        25,
+        43
       ],
-      "authored_area": 681,
+      "authored_area": 690,
       "selected_pixels": {
         "rows": [
-          "000000000000022222222000000000",
-          "000000000002277744144200200000",
-          "000000000227744444f44422120000",
-          "000000002777444444444744120000",
-          "00000002774442111f777777f12020",
-          "0000002744442777147111111c7212",
-          "00002244444417ee44411ccf117720",
-          "00027444444f27e442221cccff7720",
-          "00244422fff22271444421cccc7200",
-          "024222002222444f4444777dd7f200",
-          "20200002744444ff44444777777200",
-          "00000027444444ff2444f777772200",
-          "0000027444444ff2f2412211720000",
-          "000027444444ff24222f2447720000",
-          "0002444444fff24f22444447200000",
-          "00022211f22244ff44444447200000",
-          "0000002174444fff444f4417720000",
-          "000002274444ff2f44111197200000",
-          "00002244444ff22ff1cc2797200000",
-          "000022444f22222f1cc11221200000",
-          "00000022224422f41ccc1212000000",
-          "0000002744444f44cc2c1112000000",
-          "0000027444441f4412021bb2000000",
-          "00002744444224441c211120000000",
-          "000021122222f14222119120000000",
-          "00002174444ff2224f21ff20000000",
-          "0002174444ff24444202f920000000",
-          "000221444221441442002b20000000",
-          "00000217424fffa412000220000000",
-          "0000027444ff1aaaa2000020000000",
-          "000024444ff21aaa12000000000000",
-          "00022444ff2218abb2000000000000",
-          "00000222242218a112000000000000",
-          "00000027442218aa12000000000000",
-          "000002222220288aa2000000000000",
-          "000002000000288aaa200000000000",
-          "000000000000218fa2000000000000",
-          "0000000000000288f2000000000000",
-          "000000000000002220000000000000"
+          "0000000000002000000000000",
+          "0000000022224222222200000",
+          "00000222774444f7444420000",
+          "0000217744444474444442000",
+          "0002174444fff1747777ff200",
+          "0002744444f77777711717200",
+          "00022444447eff711dc115122",
+          "000002442f75e44111ccf7772",
+          "0000024222fff444511c77120",
+          "0000244424424444457771720",
+          "0002744444f24444477777b20",
+          "0027744441224444f77777520",
+          "00274444f222244f47777f200",
+          "0022114222242222412f45200",
+          "000027444444f224422457200",
+          "00002744444422241f4477200",
+          "0002744444422244444371200",
+          "0002144444222444244f72000",
+          "000021142221444f444452000",
+          "000027722241f42f441112000",
+          "000027444441f5f4411120000",
+          "0002744441cc1f44419b12000",
+          "0027444441cc124411bbb2000",
+          "00214441111d1144419bb2000",
+          "0002111cccdd141f411fb2000",
+          "000214cccccd11141211b2000",
+          "002744ccccc12244202222000",
+          "002444c1cc222111420000000",
+          "002444f1c122418aa20000000",
+          "002444f11f4411aaa20000000",
+          "0021f1122f4411aaa20000000",
+          "002742224f441aaaa20000000",
+          "0274444442f21faaa20000000",
+          "02444444222021aaab2000000",
+          "27444442222002aaa20000000",
+          "21ff4222220002a8a20000000",
+          "027724420000024a820000000",
+          "0274444200000024820000000",
+          "2744442000000002200000000",
+          "27f4420000000000000000000",
+          "02f4200000000000000000000",
+          "0242000000000000000000000",
+          "0020000000000000000000000"
         ],
         "anchor": [
-          22,
-          11
+          20,
+          13
         ]
       },
       "palette": [
@@ -4814,59 +5919,62 @@
       "support_kept": 18.0,
       "file": "mica/powered/frames/s3k-run-steep-0.png",
       "hotspot": [
-        13,
-        12
+        15,
+        11
       ],
       "size": [
-        32,
-        39
+        34,
+        42
       ],
-      "authored_area": 696,
+      "authored_area": 698,
       "selected_pixels": {
         "rows": [
-          "00000000000000002200000000000000",
-          "00000000000222002700000000000000",
-          "00000000002111227720000000000000",
-          "000000022444ffc77720000000000000",
-          "0000022444477111f7a7000000000000",
-          "0000074144771fffc7f7200000000000",
-          "0000244f4171ccccc777200000000000",
-          "000274441711ccccd779000000000000",
-          "00027444f71111177772000000000000",
-          "00274441f44242777717200000000000",
-          "00774417142424417117220000000000",
-          "0277427ee444444f2442772000000000",
-          "0274427ae71444412444172000000000",
-          "0774441771ff444ff444177200000000",
-          "077444f224ff2f224444197200000000",
-          "077444f2444f242244f1272120000000",
-          "07444f22444f24f2441c1221b2000000",
-          "07444f24444f24f4441c1121b2000000",
-          "2744f174444f24ff441ccc1bbbf00000",
-          "27440274444f24f2ff1cccd111b20000",
-          "2742027444f244f22f1cc0d191fbf000",
-          "24400274442244f22f41ccf12f9bb200",
-          "242007744f2444f22f44112202fbb200",
-          "22000774217444224f44424f00000000",
-          "2000074402744f2441f4424420000000",
-          "00000742024442444f21524442000000",
-          "0000072002442744422f24141af20000",
-          "0000000002421744424f241aaa1b0000",
-          "0000000002002744244f14faaabb2000",
-          "000000000000274244412f11aa11ba20",
-          "000000000000271744424f218faaaaa2",
-          "000000000000221744424f22188aaaaa",
-          "000000000000002742744f2222888fff",
-          "000000000000002721744f4220218888",
-          "00000000000000220274424420022882",
-          "00000000000000000244274420000000",
-          "00000000000000000242274200000000",
-          "00000000000000000200074000000000",
-          "00000000000000000000020000000000"
+          "0000000002222202200000000000000000",
+          "000000002444f727720000000000000000",
+          "0000000244477157720000000000000000",
+          "00000227457711f7172000000000000000",
+          "000024f74771ccc71b5200000000000000",
+          "000244f7471dccc7775200000000000000",
+          "002744417711117777f200000000000000",
+          "00f744f777215577774520000000000000",
+          "0f744f7af44444777f4572000000000000",
+          "07744f7ee44444f7724f71200000000000",
+          "274444775f4444f4124437200000000000",
+          "274444f2f24444244f44f7520000000000",
+          "274444224f244f22414444520000000000",
+          "274442224f22222244244f112200000000",
+          "2764f44441224f224424414bbb20000000",
+          "022074444f22442244f4419bbbb2000000",
+          "000074444f244422442f441f9f9b200000",
+          "0000774442444421445f4412111f200000",
+          "00007744144444221f5f44402222000000",
+          "0000271274444422411224f42000000000",
+          "00002220774442241cc1141442b2000000",
+          "00000000774412441ccd112414af200000",
+          "0000000007217444411dd1214aabb20000",
+          "000000000202744441ccd1218aaaab2000",
+          "00000000000274441cccc2241faaaab200",
+          "00000000000074441cccc12411aaaaab20",
+          "00000000000077411ccdc144418faaaab2",
+          "00000000000022214cc1c1f442228a8a8b",
+          "000000000000000744cf122ff0002f4f4f",
+          "00000000000000074444f2242220022222",
+          "0000000000000002744412442220000000",
+          "0000000000000000744f22442220000000",
+          "0000000000000000271744442220000000",
+          "00000000000000000027444f2200000000",
+          "0000000000000000002744424420000000",
+          "0000000000000000002744f24420000000",
+          "000000000000000000027f744420000000",
+          "0000000000000000000221744420000000",
+          "0000000000000000000002744420000000",
+          "000000000000000000000077f420000000",
+          "0000000000000000000000222420000000",
+          "0000000000000000000000000220000000"
         ],
         "anchor": [
-          13,
-          12
+          15,
+          11
         ]
       },
       "palette": [
@@ -4961,50 +6069,45 @@
       "support_kept": 15.556349186104047,
       "file": "mica/powered/frames/s3k-run-inverted-0.png",
       "hotspot": [
-        14,
-        11
+        17,
+        9
       ],
       "size": [
-        39,
-        30
+        43,
+        25
       ],
-      "authored_area": 681,
+      "authored_area": 690,
       "selected_pixels": {
         "rows": [
-          "000002000000000000000000000000000000000",
-          "000021220000000000000000000000000000000",
-          "000002772222000000000000000000000000000",
-          "000027777f72000000000000000000000000000",
-          "00221c1fc777220020000000000000000000000",
-          "0211f11fcd77772272220000000000000000000",
-          "002471fccd77177777712220000000000000000",
-          "002471ccc7771444199211b2222222000000000",
-          "024771cc17772444417221b11f9b20000000000",
-          "24447111274f2244412111119ff200000000000",
-          "2444711244441f44f1c1cc21112000000000000",
-          "21f477424444424441ccc202120000000002000",
-          "2444f44244442224441ccc2c2f222222222a220",
-          "244411444442f22444f11c1124441a1b11aaaf2",
-          "274417e41fff24ffffff444422444aab1aaaf82",
-          "274417ee74fff24ff222f4444241aaaaaa88882",
-          "274427772444ff24ff222ff41244faa88888120",
-          "0274421224444ff44ff22412ff24f1111122200",
-          "0277444f224444f244f244422ff1ff222200000",
-          "00274444f24444f24442444424f24ff22220000",
-          "00277444f2444442444f2444244224ff4420000",
-          "00027444f274444f744424442444444f2420000",
-          "000027442027444117442744244474442720000",
-          "000002442002744122442274174417442220000",
-          "000000244200274202220027117122442022000",
-          "000000274200024200220002221200220000000",
-          "000000024200002200000000002200020000000",
-          "000000002420000000000000000000000000000",
-          "000000000200000000000000000000000000000",
-          "000000000020000000000000000000000000000"
+          "0000002200000000000000000000000000000000000",
+          "0000002722220000000000000000000000000000000",
+          "0000221717b52222200000000000000000000000000",
+          "0002f7577177f577122202222220000000000000000",
+          "0024f11f77777457775121bbbb20000000000000000",
+          "0244771cc7777f443f411bbbf120000000000000000",
+          "024471cc17777224444119b91120000002000000000",
+          "024471d11577712f44441111120222222b222200000",
+          "02447711544f4441424444144124aaaaaaaa8820000",
+          "027447114444f24444ff4444f441aaaaaaa8a420000",
+          "02f77774444442224442f44411418aaaaaaa4200000",
+          "024417f44444422224445f214121111af1222000000",
+          "2444f7fef44422f2224ff1111122411112000000000",
+          "0244f7e5f222244422111ccddd12244420000000000",
+          "0244ff77f4f2224442244cc1dcc22444f2200000000",
+          "0274444f2441224444224111cccc1fff22220000000",
+          "027444422244f24444224441ccccc12442220000000",
+          "002744442444424444424441ccc1112244222200000",
+          "0027444444444444441744441cccff1244424420000",
+          "0021744224444177441774441444441244424442000",
+          "000217200277412271222744114444f444442444200",
+          "00002220002772002200027122744417444f7444420",
+          "00000000000222000000002200222222744f774ff42",
+          "0000000000000000000000000000000022712277220",
+          "0000000000000000000000000000000000220022000"
         ],
         "anchor": [
-          14,
-          11
+          17,
+          9
         ]
       },
       "palette": [
@@ -5096,61 +6199,66 @@
       "host": "s3k",
       "derived_from": "run-1",
       "rotation": 45,
-      "support_kept": 13.435028842544407,
+      "support_kept": 13.435028842544405,
       "file": "mica/powered/frames/s3k-run-up45-1.png",
       "hotspot": [
         24,
-        12
+        13
       ],
       "size": [
-        30,
-        38
+        25,
+        43
       ],
       "authored_area": 685,
       "selected_pixels": {
         "rows": [
-          "000000000000000020000000000000",
-          "000000000000022212220000000000",
-          "000000000002277744f42220000000",
-          "000000000227774441f44442220000",
-          "000000002777444441444444112000",
-          "000000027744422441777177712020",
-          "0000002774444777f471c111111272",
-          "000022774444f7ee4441cccf117772",
-          "00027444444f27e444421cccff7720",
-          "00274444f42222774442211ccc7720",
-          "024222211222244f4422777dd7f820",
-          "22200002744444ff44444777777720",
-          "00000227444444f224444777772200",
-          "0002277444444ff22fff22f1120000",
-          "002177444444ff2222222447120000",
-          "0027222444fff2222222f417220000",
-          "00020002f222224442444217720000",
-          "000000277444444f444f1177720000",
-          "00000277444444ff4411c177200000",
-          "000027444444ff2f1111c177200000",
-          "00002224442f222ffcccc121200000",
-          "00000002222222f4cc22c111200000",
-          "0000000277444f4442002bbb200000",
-          "000000274444ff444122111b200000",
-          "00000224444224442141119b200000",
-          "0000200222f2f442f442219b200000",
-          "000000274421f2222420029b200000",
-          "0000027744ff2222ff20002b200000",
-          "0000217441ff444aaa200002200000",
-          "0000021f4227441aaa120000000000",
-          "0000027444ff4218aab20000000000",
-          "000027444ff22218fb120000000000",
-          "000221442f222218aab20000000000",
-          "0000021224422218fa120000000000",
-          "0000027744422218fa200000000000",
-          "00000224422200288a200000000000",
-          "000000022000000288200000000000",
-          "000000000000000022200000000000"
+          "0000000000002000000000000",
+          "0000000022224222222220000",
+          "00000222774444f7774420000",
+          "0000217744444f77444412200",
+          "0000274444111f77777711200",
+          "0002744444f777f7711777722",
+          "0002744444feee111dc1fc772",
+          "00002144f375e44511ccf7720",
+          "0000024f2225f444111cc7720",
+          "0000274444444444457777120",
+          "0002744444444444477777b20",
+          "0002744444222444f77777720",
+          "000274444222212f427777120",
+          "0000214222242222412f45200",
+          "000021444444f222412447200",
+          "0000244444442224444477200",
+          "0002744444412244424f72000",
+          "00021444441ff444244f72000",
+          "000221f42f22f442444f57200",
+          "000002722222f45f444552000",
+          "000027444411f554441112000",
+          "0002744441cc15244114bb200",
+          "0021744441ccc124111fb2000",
+          "0021444111cd1144111fbb200",
+          "0002114ccccdd1ff1229b2000",
+          "000214ccccc112f4200212000",
+          "002144ccccc22214200020000",
+          "0027441ccc122144200000000",
+          "002744111c224114200000000",
+          "002444121f241111a20000000",
+          "002121122f44118aa20000000",
+          "000242224f44211aa20000000",
+          "00244444422202faab2000000",
+          "027444442220028aaa2000000",
+          "27744f42f22002faab2000000",
+          "21fff2222200002aab2000000",
+          "027744420000002aaa2000000",
+          "02744442000000028a2000000",
+          "0274442000000000222000000",
+          "02ff420000000000000000000",
+          "02f4200000000000000000000",
+          "0274200000000000000000000",
+          "0022000000000000000000000"
         ],
         "anchor": [
           24,
-          12
+          13
         ]
       },
       "palette": [
@@ -5245,58 +6353,62 @@
       "support_kept": 17.0,
       "file": "mica/powered/frames/s3k-run-steep-1.png",
       "hotspot": [
-        14,
+        17,
         12
       ],
       "size": [
-        32,
-        39
+        35,
+        43
       ],
-      "authored_area": 696,
+      "authored_area": 690,
       "selected_pixels": {
         "rows": [
-          "00000000000000002200000000000000",
-          "00000000000022202720000000000000",
-          "00000000002211127720000000000000",
-          "00000000224417117772000000000000",
-          "0000024444477111f7f8200000000000",
-          "0000274f44111fffc7f7200000000000",
-          "0000244f4f71ccccc777200000000000",
-          "00027441471cccc1d772000000000000",
-          "00027444171111177772000000000000",
-          "00277444f44222777711200000000000",
-          "00274427144442417f17220000000000",
-          "00774277e44424442441772000000000",
-          "0274447ee744444f2441772000000000",
-          "077444f771ff444f2f42777200000000",
-          "027444f224f22ff22411377120000000",
-          "02744422244f222224fc1721b2000000",
-          "02744422244f2222441cc111b1200000",
-          "07744f24444f22f44411cc1b1bbb2000",
-          "2744f174444f224f441cccc119bbf000",
-          "274f2174444f224ff1fcc0d1199bb200",
-          "2742027444f2244f2f2cccd122f22200",
-          "274002744422444f2f44114200000000",
-          "242027744f2444f22f44424420000000",
-          "22002744277444f24f444f4442000000",
-          "22002742077444224ff4422faa220000",
-          "00002720074442244f24422aaa1b2000",
-          "0000220007442774422f224aaab1b200",
-          "00000000072007744f2124418faa1a00",
-          "0000000002000744224ff44218faaa20",
-          "0000000000000742444f2742228ffaa2",
-          "000000000000070274412f2220288882",
-          "000000000000020274424f22222f88f2",
-          "000000000000000274f44f2222000000",
-          "000000000000000221744f2422000000",
-          "00000000000000020274424422000000",
-          "00000000000000000274274420000000",
-          "00000000000000000272174200000000",
-          "00000000000000000220274200000000",
-          "00000000000000000000220000000000"
+          "00000000002020020000000000000000000",
+          "00000000021212027000000000000000000",
+          "00000000244417777200000000000000000",
+          "00000002744771c77200000000000000000",
+          "0000022744771ff77150000000000000000",
+          "000024f74771cccc7bb2000000000000000",
+          "000244f7771dccc77772000000000000000",
+          "0027444f771111777771200000000000000",
+          "00774417f15115777745200000000000000",
+          "0274417ae44444f77f45720000000000000",
+          "02744f5eef4444f21244777000000000000",
+          "274444f75f4444f41244f77200000000000",
+          "27444432224441224144f75500000000000",
+          "274444f24422122244244f552b000000000",
+          "27444f244422222244244f51bb200000000",
+          "0272744444224f2244244414bbb20000000",
+          "0220744444224422442f4419fbb20000000",
+          "000077444424441f4455441119f20000000",
+          "000077444244441ff455441122220000000",
+          "00002744144444122f55244200000000000",
+          "00000772144444f2411124f420000000000",
+          "00000000274442241ccc14f412000000000",
+          "000000002744f2441ccdd12144242000000",
+          "000000000212744441ccd121441ab200000",
+          "000000000220744441cc1221114aabb2000",
+          "00000000000074441cccc124118aaaaf200",
+          "00000000000077441cccc124111faaabb20",
+          "00000000000027414ccccc2441228aaaab2",
+          "000000000000222141cc11f442002f8a8a2",
+          "00000000000000024411222f2200022f4f2",
+          "00000000000000027444122422200000000",
+          "00000000000000027444124422200000000",
+          "000000000000000077422444f2200000000",
+          "00000000000000002727444422000000000",
+          "00000000000000000007444f24000000000",
+          "0000000000000000000744f244200000000",
+          "0000000000000000000774f444200000000",
+          "000000000000000000027f7444200000000",
+          "00000000000000000002217444200000000",
+          "0000000000000000000002774f200000000",
+          "000000000000000000000027f4200000000",
+          "00000000000000000000000227420000000",
+          "00000000000000000000000002220000000"
         ],
         "anchor": [
-          14,
+          17,
           12
         ]
       },
@@ -5392,50 +6504,45 @@
       "support_kept": 14.142135623730951,
       "file": "mica/powered/frames/s3k-run-inverted-1.png",
       "hotspot": [
-        17,
-        11
+        21,
+        9
       ],
       "size": [
-        38,
-        30
+        43,
+        25
       ],
       "authored_area": 685,
       "selected_pixels": {
         "rows": [
-          "00000022000000000000000000000000000000",
-          "00000277222200000000000000000000000000",
-          "00000027778720000000000000000000000000",
-          "0000221777f720000000000000000000000000",
-          "00021111fc7772222200000000000000000000",
-          "00021711fcd771127722222222222000000000",
-          "0002471fccd77177777711bbbbbb2000000000",
-          "0024471cc1777f41177721b199920000000000",
-          "0024411cc1777244211111b111200000000000",
-          "002447cc1274422f41cccc2112000000000000",
-          "0244471122244f224f11c20212000222220000",
-          "02ff477444244f224411c202442221b1b12222",
-          "0241114444444f222441cc21144faaabaaaa82",
-          "214444f4444422224441fc442f2faaafaff882",
-          "0274447e47ff22224ffff4444222aa88888820",
-          "0274427ee74fff2244f22f4444224111111200",
-          "0277427772444ff2244f22ff44224422222000",
-          "0027444f222444ff244f224f2ff24442222000",
-          "00277444f224444f2444f244221ff7f2222200",
-          "000274444224444f244422444f2ff2ff244200",
-          "0002774444244444244442744244124ff44200",
-          "000027744f174444f744427442444444224420",
-          "00000277441274442774422742774f44427420",
-          "00000027442027420274200220277174417200",
-          "00000002442027720027200020021227122200",
-          "00000002742002720002200002002002200000",
-          "00000000272002172000000000000000200000",
-          "00000000024200220000000000000000000000",
-          "00000000002200000000000000000000000000",
-          "00000000000200000000000000000000000000"
+          "0000022000000000000000000000000000000000000",
+          "0000027222222000000000000000000000000000000",
+          "0002277771b71222002002020000000000000000000",
+          "000217c77777757722722b2b2200000000000000000",
+          "022117ffc777744777551bbbb120000000000000000",
+          "0244771cc7777f44fff514ff9200000000000000000",
+          "024471cc17777224444411112000000022222220000",
+          "027471d1157721142444411120000222babbaa20000",
+          "02747711144f44444244441112222aaaaaaaa820000",
+          "027777154444f224442f4444f44441aaaaaaa200000",
+          "02f77f144444222244455224ff141181f8f22000000",
+          "024ff7e444441222244455111221111122200000000",
+          "244417eef44222f22ffff1c1d122411200000000000",
+          "024417e5544224441f221ccdd122244420000000000",
+          "02441ff72442224441221cccccc1224422200000000",
+          "027444432444224444f24111cccccfff22220000000",
+          "0274444f2444424444224441cccc112442f20000000",
+          "00274444f444424444424441cccc122244222200000",
+          "002744444444444444f744444cc1111244424420000",
+          "0021744127444114441274441444441244f24442000",
+          "00022772027772227120277411444424444f4444220",
+          "00000220002220002220021122177412444f744f442",
+          "00000000000000000000002200222220277f777ff72",
+          "0000000000000000000000000000000002712222220",
+          "0000000000000000000000000000000000220000000"
         ],
         "anchor": [
-          17,
-          11
+          21,
+          9
         ]
       },
       "palette": [

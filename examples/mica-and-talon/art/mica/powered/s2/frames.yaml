@@ -398,12 +398,12 @@
       "order": 0,
       "file": "../frames/s2-run-0.png",
       "hotspot": [
-        26,
-        17
+        31,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Powered concepts pilot: mica-pilot-run-v2 cell 0; fixed scale 14.0; see powered-concepts-generation.json."
+      "notes": "Powered concepts pilot: mica-regen-run-v1 cell 0; fixed scale 13.5; see powered-concepts-generation.json."
     },
     {
       "id": "s2-run-up45-0",
@@ -411,8 +411,8 @@
       "order": 0,
       "file": "../frames/s2-run-up45-0.png",
       "hotspot": [
-        17,
-        13
+        18,
+        15
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -423,7 +423,7 @@
       "order": 0,
       "file": "../frames/s2-run-steep-0.png",
       "hotspot": [
-        15,
+        18,
         11
       ],
       "angle_set": "steep",
@@ -435,8 +435,8 @@
       "order": 0,
       "file": "../frames/s2-run-inverted-0.png",
       "hotspot": [
-        10,
-        8
+        14,
+        7
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -447,12 +447,12 @@
       "order": 1,
       "file": "../frames/s2-run-1.png",
       "hotspot": [
-        26,
-        18
+        31,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Powered concepts pilot: mica-pilot-run-v2 cell 1; fixed scale 14.0; see powered-concepts-generation.json."
+      "notes": "Powered concepts pilot: mica-regen-run-v1 cell 1; fixed scale 13.5; see powered-concepts-generation.json."
     },
     {
       "id": "s2-run-up45-1",
@@ -461,7 +461,7 @@
       "file": "../frames/s2-run-up45-1.png",
       "hotspot": [
         20,
-        13
+        16
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -472,8 +472,8 @@
       "order": 1,
       "file": "../frames/s2-run-steep-1.png",
       "hotspot": [
-        17,
-        11
+        19,
+        12
       ],
       "angle_set": "steep",
       "duration_ticks": 1
@@ -484,8 +484,8 @@
       "order": 1,
       "file": "../frames/s2-run-inverted-1.png",
       "hotspot": [
-        12,
-        8
+        17,
+        6
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -544,12 +544,12 @@
       "order": 0,
       "file": "../frames/s2-wait-0.png",
       "hotspot": [
-        17,
-        23
+        16,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Powered concepts pilot: mica-pilot-wait-v1 cell 0; fixed scale 11.3; see powered-concepts-generation.json."
+      "notes": "Powered concepts pilot: mica-regen-wait-v2 cell 0; fixed scale 9.8; see powered-concepts-generation.json."
     },
     {
       "id": "s2-wait-1",
@@ -562,7 +562,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Powered concepts pilot: mica-pilot-wait-v1 cell 1; fixed scale 11.3; see powered-concepts-generation.json."
+      "notes": "Powered concepts pilot: mica-regen-wait-v2 cell 1; fixed scale 9.8; see powered-concepts-generation.json."
     },
     {
       "id": "s2-wait-2",
@@ -570,12 +570,12 @@
       "order": 2,
       "file": "../frames/s2-wait-2.png",
       "hotspot": [
-        16,
-        23
+        15,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Powered concepts pilot: mica-pilot-wait-v1 cell 2; fixed scale 11.3; see powered-concepts-generation.json."
+      "notes": "Powered concepts pilot: mica-regen-wait-v2 cell 2; fixed scale 9.8; see powered-concepts-generation.json."
     },
     {
       "id": "balance-0",
@@ -667,12 +667,12 @@
       "order": 0,
       "file": "../frames/transform-0.png",
       "hotspot": [
-        13,
+        14,
         14
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Powered concepts pilot: mica-pilot-transform-v1 cell 0; fixed scale 11.3; see powered-concepts-generation.json."
+      "notes": "Powered concepts pilot: mica-regen-transform-v2 cell 0; fixed scale 11.2; see powered-concepts-generation.json."
     },
     {
       "id": "transform-1",
@@ -681,11 +681,11 @@
       "file": "../frames/transform-1.png",
       "hotspot": [
         12,
-        12
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Powered concepts pilot: mica-pilot-transform-v1 cell 1; fixed scale 11.3; see powered-concepts-generation.json."
+      "notes": "Powered concepts pilot: mica-regen-transform-v2 cell 1; fixed scale 11.2; see powered-concepts-generation.json."
     },
     {
       "id": "transform-2",
@@ -694,11 +694,11 @@
       "file": "../frames/transform-2.png",
       "hotspot": [
         19,
-        25
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Powered concepts pilot: mica-pilot-transform-v1 cell 2; fixed scale 11.3; see powered-concepts-generation.json."
+      "notes": "Powered concepts pilot: mica-regen-transform-v2 cell 2; fixed scale 11.2; see powered-concepts-generation.json."
     },
     {
       "id": "transform-3",
@@ -706,12 +706,12 @@
       "order": 3,
       "file": "../frames/transform-3.png",
       "hotspot": [
-        22,
-        25
+        20,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Powered concepts pilot: mica-pilot-transform-v1 cell 3; fixed scale 11.3; see powered-concepts-generation.json."
+      "notes": "Powered concepts pilot: mica-regen-transform-v2 cell 3; fixed scale 11.2; see powered-concepts-generation.json."
     },
     {
       "id": "transform-4",
@@ -719,12 +719,12 @@
       "order": 4,
       "file": "../frames/transform-4.png",
       "hotspot": [
-        22,
-        24
+        20,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Powered concepts pilot: mica-pilot-transform-v1 cell 4; fixed scale 11.3; see powered-concepts-generation.json."
+      "notes": "Powered concepts pilot: mica-regen-transform-v2 cell 4; fixed scale 11.2; see powered-concepts-generation.json."
     },
     {
       "id": "gold-roll-00",
