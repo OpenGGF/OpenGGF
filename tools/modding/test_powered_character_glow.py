@@ -3,7 +3,10 @@ import colorsys
 import json
 from pathlib import Path
 import unittest
-from PIL import Image
+try:
+    from PIL import Image  # Pillow is the art pipeline's only third-party dependency
+except ModuleNotFoundError:
+    raise unittest.SkipTest('Pillow is not installed; the playable-art pipeline tests need it')
 
 ROOT=Path(__file__).resolve().parents[2]
 ART=ROOT/'examples/mica-and-talon/art'
