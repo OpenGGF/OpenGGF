@@ -1,0 +1,129 @@
+{
+  "status": "blocked before artwork generation; no owner item completed",
+  "date": "2026-11-11",
+  "base": "eba8cce479",
+  "branch": "feature/ai-mt-powered-art",
+  "scope": "Owner feedback items 2, 4, 6, 7: powered-form and flight art",
+  "stop_authority": "art-brief.md: If you need an engine/API change, stop and report it rather than making it.",
+  "findings": [
+    {
+      "owner_items": [
+        2
+      ],
+      "observed": "TalonSolar selects WAIT in S2/S3K/S1; MicaGilded selects WAIT in S1.",
+      "location": "src/main/java/micaandtalon/TalonSolar.java; src/main/java/micaandtalon/MicaGilded.java",
+      "classification": "configuration root cause; no visual acceptance performed"
+    },
+    {
+      "owner_items": [
+        4
+      ],
+      "observed": "TalonSolar has no PoweredPlayableSheet. Solar applies palette tables over normal art.",
+      "classification": "configuration fact; muddiness remains a visual hypothesis"
+    },
+    {
+      "owner_items": [
+        4
+      ],
+      "observed": "LevelPlayableArtInitializer passes the host PoweredAnimationProvider source unconditionally for all powered creator banks. S2 and S3K providers construct Sonic super sources. PoweredPlayableArtBinding only installs authored canonical timing when source == null; with a source it traverses source families exclusively.",
+      "locations": [
+        "src/main/java/com/openggf/level/LevelPlayableArtInitializer.java:702",
+        "src/main/java/com/openggf/game/sonic2/Sonic2.java:349",
+        "src/main/java/com/openggf/game/sonic3k/Sonic3k.java:170",
+        "src/main/java/com/openggf/level/objects/PoweredPlayableArtBinding.java:65"
+      ],
+      "classification": "engine binding prerequisite for dedicated powered Tails flight bank"
+    },
+    {
+      "owner_items": [
+        4,
+        6
+      ],
+      "observed": "TalonCharacter.installFlightArt reads captured normal materialized art, then writes private FLIGHT scripts into the active set with the normal relocation. It does not consume the active powered bank.",
+      "location": "src/main/java/micaandtalon/TalonCharacter.java:126",
+      "classification": "additional prerequisite in effects-lane-owned class"
+    }
+  ],
+  "probe": {
+    "source": "$HOME/scratch/agent-tmp/mt-feedback-20261111/art/PoweredFlightProbe.java",
+    "sha256": "533465360073bd00c4221c9963c3c463acf72ef67ac411e2de3a8bfd31bfd443",
+    "log": "$HOME/scratch/agent-tmp/mt-feedback-20261111/art/binding-probe.log",
+    "inputs": "Synthetic normal and canonical powered one-tile banks; Tails donor capabilities; non-null synthetic Sonic WAIT family source. No ROM art or gameplay captures.",
+    "observed": {
+      "S2": {
+        "flight_id": 32,
+        "source_present": {
+          "frames": [
+            0
+          ],
+          "delay": 9
+        },
+        "source_absent_control": {
+          "frames": [
+            1
+          ],
+          "delay": 2
+        }
+      },
+      "S3K": {
+        "flight_id": 32,
+        "source_present": {
+          "frames": [
+            0
+          ],
+          "delay": 9
+        },
+        "source_absent_control": {
+          "frames": [
+            1
+          ],
+          "delay": 2
+        }
+      }
+    },
+    "interpretation": "Source-present view silently retains normal flight; removing source binds and relocates authored flight. This is a binding reproduction, not an engine-render acceptance test."
+  },
+  "required_handoff": [
+    "Engine owner: provide archetype-aware powered binding that retains native Tails families and accepts authored powered-only flight/transform scripts without borrowing Sonic movement timing.",
+    "Effects/character owner: allow private flight presentation to select the active powered bank and relocation; retain native pose selection, carry contacts, and rewind/refresh behavior.",
+    "Art lane then resumes native-pose image generation, native-style size checks, and stock/before/after real-engine 60 Hz comparisons."
+  ],
+  "not_attempted": [
+    "No art generation or palette replacement",
+    "No diagnosis of MICA Super run defect from captures",
+    "No visual diagnosis/redraw of carry versus flight",
+    "No size-check table: no new set",
+    "No stock/before/after review page or MP4",
+    "No zero-fallback claim"
+  ],
+  "runtime_changes": false,
+  "validation": {
+    "tested_source": "eba8cce479; no runtime changes",
+    "python": {
+      "command": "python3 -m unittest discover -s tools/modding -p 'test_*.py'",
+      "tests": 78,
+      "result": "pass",
+      "seconds": 13.608
+    },
+    "java": {
+      "command": "env -u DISPLAY -u WAYLAND_DISPLAY JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestPoweredPlayableArtBinding,TestMicaCharacterIntegration,TestCharacterArtCoverageAudit,TestModApiSignatureSurface' -Dart.audit.output=$HOME/scratch/agent-tmp/mt-feedback-20261111/art/baseline test",
+      "completed": {
+        "TestCharacterArtCoverageAudit": 3,
+        "TestPoweredPlayableArtBinding": 5,
+        "TestModApiSignatureSurface": 12
+      },
+      "completed_failures": 0,
+      "completed_errors": 0,
+      "completed_skips": 0,
+      "TestMicaCharacterIntegration": "incomplete: wrapper exited 143; surviving integration JVM subsequently exited before attempted termination; no integration result XML",
+      "roms": "all found; none missing",
+      "queue_wait_seconds": 0,
+      "run_duration": "incomplete; approximately three minutes compilation and partial test execution; no overall Maven verdict"
+    },
+    "probe": "exit 0; two hosts confirm source-present omission and source-absent control",
+    "coverage": "unchanged: no art/binding changes; test emitted host JSON inventories, not matrix.csv/totals.json",
+    "review_page": null,
+    "size_check": null,
+    "limits": "No art or gameplay acceptance, no zero-fallback certification; no full-suite run."
+  }
+}
