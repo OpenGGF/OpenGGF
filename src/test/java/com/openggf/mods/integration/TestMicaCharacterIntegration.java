@@ -624,16 +624,22 @@ class TestMicaCharacterIntegration {
             var renderers=(Map<EndingSpriteSet.Surface,PlayerSpriteRenderer>)privateField(adapter,"renderers");
             @SuppressWarnings("unchecked")
             var sets=(Map<EndingSpriteSet.Surface,EndingSpriteSet>)privateField(adapter,"sets");
+            var residentRanges = new ArrayList<int[]>();
             for(var entry:renderers.entrySet()) {
                 var actual=(com.openggf.sprites.art.SpriteArtSet)privateField(entry.getValue(),"artSet");
                 var expected=com.openggf.game.presentation.StageSpriteCompiler.compile(sets.get(entry.getKey()).sprites(),null);
+                int start = actual.basePatternIndex(), end = start + actual.bankSize();
+                assertTrue(residentRanges.stream().allMatch(range -> end <= range[0] || start >= range[1]),
+                        "Queued ending surfaces must have disjoint complete pattern banks");
+                residentRanges.add(new int[]{start,end});
                 assertEquals(expected.mappingFrames(),actual.mappingFrames());
                 for(int t=0;t<expected.artTiles().length;t++) for(int y=0;y<8;y++) for(int x=0;x<8;x++)
                     assertEquals(expected.artTiles()[t].getPixel(x,y),actual.artTiles()[t].getPixel(x,y));
                 assertTrue(entry.getValue().getRenderContext().getEffectivePaletteLine(0)>3);
                 var palette=entry.getValue().getRenderContext().getPalette(0);
                 if(!powered || entry.getKey()==EndingSpriteSet.Surface.S2_PHOTOS
-                        || entry.getKey()==EndingSpriteSet.Surface.S2_TORNADO_PILOT) {
+                        || entry.getKey()==EndingSpriteSet.Surface.S2_TORNADO_PILOT
+                        || entry.getKey()==EndingSpriteSet.Surface.S2_FINAL_TORNADO_PILOT) {
                     for(int i=0;i<16;i++) {
                         var c=palette.getColor(i);
                         assertEquals(sets.get(entry.getKey()).rgb()[i],((c.r&255)<<16)|((c.g&255)<<8)|(c.b&255));
@@ -647,6 +653,11 @@ class TestMicaCharacterIntegration {
                     assertTrue(cycle.contains(words),"Gilded cycle owns the flight palette");
                 }
             }
+            @SuppressWarnings("unchecked")
+            var planeTiles=(Map<Integer,Integer>)privateField(adapter,"finalPlanePatterns");
+            for (int tile : planeTiles.values()) assertTrue(residentRanges.stream()
+                    .noneMatch(range -> tile >= range[0] && tile < range[1]),
+                    "Prepared native Enigma tiles must not alias creator sprite residency");
             var nativeArt=new com.openggf.game.sonic2.credits.Sonic2EndingArt();
             nativeArt.loadPalettes(GameServices.rom().getRom(),powered?
                     com.openggf.game.sonic2.credits.Sonic2EndingArt.EndingRoutine.SUPER_SONIC:
@@ -2170,6 +2181,23 @@ class TestMicaCharacterIntegration {
                     wanted.sidekicks().isEmpty()?"talon-s3k-no-save-solo":"mica-talon-s3k-no-save-team");
         }
         presentation.reset();
+    }
+
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void soloTalonEndingBindsTailsFamiliesAndMicaPilot() throws Exception {
+        var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320,
+                "mica-and-talon:talon", "", "off", null, null, null);
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            session.boot(Path.of(System.getProperty("sonic2.rom.path")), 10, 0, settings);
+            var pilot = com.openggf.game.presentation.EndingCharacterPresentation.pilot(EndingSpriteSet.Surface.S2_TORNADO_PILOT);
+            assertNotNull(pilot);
+            assertEquals(Set.of(45,46,47,48), pilot.sprites().frames().keySet());
+            assertEquals(50, pilot.sprites().frames().get(45).hotspotX());
+            var manager = new com.openggf.game.sonic2.credits.Sonic2EndingCutsceneManager();
+            assertDoesNotThrow(() -> manager.initialize(GameServices.rom().getRom()),
+                    "Tails-role ending must bind Tails animation families, never Sonic's families");
+        }
     }
 
     private Path buildSample() throws Exception {

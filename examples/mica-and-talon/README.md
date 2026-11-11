@@ -178,3 +178,15 @@ Removed dated README logs (all last present at `2e7d9fa348`):
 - `art/talon/oriented-stage/README.md`
 - `art/talon/reels/README.md`
 - `art/talon/titles/README.md`
+
+S2 cockpit ownership follows the cast: TALON pilots for MICA (paired or solo),
+and MICA pilots for solo TALON. The optional solo companion ending banks retain
+native pilot selectors and clocks in the ending and SCZ/WFZ. S3K endings use the
+same companion policy; the small S3K title fly-by remains native. The S2 title
+body pass now honors the native emblem mask, including transparent logo gaps;
+settled poses and MICA's hand origin remain unchanged.
+
+The S2 final front-view Tornado has its own pilot surface: TALON for MICA and
+MICA for solo TALON. Authored binary masks remove the stock cockpit pilot while
+the plane, its livery, wings and struts stay ROM-backed. Ending surfaces use
+independent pattern residency so queued cockpit pixels survive later rider draws.

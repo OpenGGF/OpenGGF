@@ -3563,3 +3563,51 @@ is declared at240. Exit takes declare debug completion at465 S3K /470 S2 to keep
 actors visible through the fade. These are presentation and selection checks,
 not complete-stage routes or exhaustive team-role certification. Commit locally;
 do not merge or push. Delete this worktree's `target/` after the commit.
+
+#### Owner feedback: title mask and solo cockpit (2026-11-11)
+
+The S2 title omitted the semantic masking-sprite pass: Plane A redraw alone left
+six MICA pixels below the emblem on capture frames 597–600. Body clipping now
+applies the ROM's rows 112–175 to native and creator bodies. Art and hand origins
+are unchanged; settled captures remain pixel-identical.
+
+MICA-leading already resolves TALON on the feedback base. Solo TALON previously
+had no configured sidekick, no MICA cockpit art, and no override for plane mapping
+frames 4–7. Explicit solo companion surfaces now select four new MICA head crops;
+S2 ending and SCZ/WFZ preserve native Sonic pilot selectors 45–48. Binding the
+Tails-role ending also requires the Tails donor animation families. S3K ending
+pilot selection shares the solo companion policy; its tiny title fly-by is still
+native embedded vehicle art, outside this delivered override.
+
+#### Final-plane pilot correction (2026-11-11)
+
+The earlier feedback pass checked the side-view cockpit but stopped before the
+final pose. `ObjCC_Init` (s2.asm:13545-13572) selects
+`MapEng_EndingTailsPlane` / `MapEng_EndingSonicPlane` (s2.asm:90912-90914),
+backed by `ArtNem_EndingFinalTornado` (s2.asm:90925). That Enigma backdrop
+embedded the stock pilot independently of the side-view DPLC path. New optional
+final-plane cockpit banks and per-frame binary native clear masks replace only
+the character. Per-cell ROM pattern copies preserve the vehicle; creator art
+is drawn behind retained wing/strut pixels. A real frame-4098 capture additionally
+caught shared-atlas corruption: each S2 ending surface now owns a separate
+pattern range, keeping queued pilot and rider pixels independent.
+
+#### Capture identity and creator-pixel regression check (2026-11-11)
+
+The follow-up review found real scrambled TALON pixels in intermediate
+`after-*` captures made before ending-surface residency was separated. Those
+rejected files remained beside the clean `final-*` captures, obscuring which
+artifact was being reviewed. A fresh build of `f7c7bce16e` reproduced all 4,500
+PNG files per team byte-for-byte from `final-*`; it did not reproduce the corrupt
+intermediate images. Frame 4090 has one lead on the wing in stock and clean
+creator captures; the intermediate extra TALON is corruption, not a native actor.
+
+A stock-colour scan cannot detect misplaced creator pixels. The new
+`compare_frame_regions.py` compares a clean baseline and candidate against stock,
+requiring every frame and independently declared changed-region geometry. The
+corrupt intermediate fails on 335 of frames 3900–4437; fresh captures of both
+teams have no changed pixels outside the cockpit envelope. The envelope comes
+from authored pilot/clear-mask geometry plus read-only production scroll state,
+not from candidate pixel bounds. Atlas assertions now check complete sprite-bank
+intervals and exclusion of prepared Enigma tiles, rather than distinct bases
+alone. Current review evidence labels source identity and rejected intermediates.

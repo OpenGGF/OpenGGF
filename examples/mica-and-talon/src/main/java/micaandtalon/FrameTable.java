@@ -19,17 +19,28 @@ import java.util.Map;
 final class FrameTable {
     private final Map<String, StageSpriteSet> banks;
     private final Map<String, int[]> palettes;
+    private final Map<String, Map<Integer, com.openggf.game.CharacterPresentation.Image>> masks;
 
-    private FrameTable(Map<String, StageSpriteSet> banks, Map<String, int[]> palettes) {
+    private FrameTable(Map<String, StageSpriteSet> banks, Map<String, int[]> palettes, Map<String, Map<Integer, com.openggf.game.CharacterPresentation.Image>> masks) {
         this.banks = Map.copyOf(banks);
         this.palettes = Map.copyOf(palettes);
+        this.masks = Map.copyOf(masks);
     }
 
     static FrameTable read(ModAssetRoot assets, String table) throws IOException {
         var frames = new LinkedHashMap<String, Map<Integer, StageSpriteSet.Frame>>();
         var palettes = new LinkedHashMap<String, int[]>();
+        var masks = new LinkedHashMap<String, Map<Integer, com.openggf.game.CharacterPresentation.Image>>();
         for (String[] row : rows(assets, table)) {
             try {
+                if (row[0].equals("mask")) {
+                    if (row.length != 4) throw new IllegalArgumentException("Expected mask bank selector image");
+                    var bank = masks.computeIfAbsent(row[1], ignored -> new LinkedHashMap<>());
+                    if (bank.putIfAbsent(Integer.parseInt(row[2]),
+                            PresentationImages.read(assets, relative(table,row[3]))) != null)
+                        throw new IllegalArgumentException("Duplicate ending mask");
+                    continue;
+                }
                 if (row[0].equals("palette")) {
                     if (row.length != 3 || palettes.containsKey(row[1])) {
                         throw new IllegalArgumentException("Expected palette bank image");
@@ -59,7 +70,7 @@ final class FrameTable {
         }
         var banks = new LinkedHashMap<String, StageSpriteSet>();
         frames.forEach((name, bank) -> banks.put(name, new StageSpriteSet(bank)));
-        return new FrameTable(banks, palettes);
+        return new FrameTable(banks, palettes, masks);
     }
 
     Map<String, StageSpriteSet> banks() {
@@ -81,7 +92,7 @@ final class FrameTable {
                 (name, bank) ->
                         result.put(
                                 EndingSpriteSet.Surface.valueOf(name),
-                                new EndingSpriteSet(bank, palettes.get(name))));
+                                new EndingSpriteSet(bank, palettes.get(name), masks.getOrDefault(name, Map.of()))));
         return Map.copyOf(result);
     }
 
