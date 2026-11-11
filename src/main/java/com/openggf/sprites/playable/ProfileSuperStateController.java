@@ -126,6 +126,9 @@ public final class ProfileSuperStateController extends SuperStateController impl
     @Override protected int getTransformationAnimationId() {
         var selected = eligibleTier();
         var animation = profile.games().get(host).get(selected).transformationAnimation();
+        var powered = poweredViews.get(selected);
+        int authored = PoweredPlayableSheet.animationId(animation);
+        if (powered != null && powered.animationSet().getScript(authored) != null) return authored;
         int id = player.resolveAnimationId(animation);
         return normalAnimations.getScript(id) != null || profile.games().get(host).get(selected).animations().containsKey(animation)
                 ? id : player.resolveAnimationId(CanonicalAnimation.WAIT);

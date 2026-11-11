@@ -21,6 +21,8 @@ INVENTORY = {
         ("art/talon/sheet", "talon", "art/talon.ggfp"),
         *((f"art/mica/powered/{host}", f"mica_powered_{host}", f"art/mica-powered-{host}.ggfp")
           for host in ("s2", "s3k")),
+        *((f"art/talon/powered/{host}", f"talon_powered_{host}", f"art/talon-powered-{host}.ggfp")
+          for host in ("s2", "s3k")),
     ),
     "surfaces": tuple(
         (f"art/{character}/{surface}", f"art/{character}/{surface}", (("**/*.txt",) if surface == "powered" else ("**/*.png", "**/*.mask", "**/*.clear", "**/*frames.txt")))

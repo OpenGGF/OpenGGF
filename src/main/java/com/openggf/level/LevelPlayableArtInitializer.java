@@ -699,9 +699,13 @@ final class LevelPlayableArtInitializer {
                 var host = levelManager.activeGameModule();
                 var forms = definition.superFormSupplier().load(playable.characterKey().persisted()).games().get(host.getGameId());
                 if (forms != null && forms.values().stream().anyMatch(form -> form.poweredArt() != null)) {
+                    var archetype = definition.behavesLike() == com.openggf.game.PlayerCharacter.TAILS_ALONE
+                            && host.getDonorCapabilities().getPlayableCharacters().contains(definition.behavesLike())
+                            ? com.openggf.game.PlayerCharacter.TAILS_ALONE : com.openggf.game.PlayerCharacter.SONIC_ALONE;
                     var source = levelManager.game instanceof com.openggf.game.internal.PoweredAnimationProvider provider
-                            ? provider.loadPoweredAnimations() : null;
-                    var combined = com.openggf.level.objects.PoweredPlayableArtBinding.combine(art, forms, source, host.getDonorCapabilities());
+                            ? provider.loadPoweredAnimations(archetype) : null;
+                    var combined = com.openggf.level.objects.PoweredPlayableArtBinding.combine(art, forms, source,
+                            host.getDonorCapabilities().forPlayableCharacter(archetype));
                     poweredArt.put(playable, combined);
                     art = combined.normal();
                 } else poweredArt.remove(playable);

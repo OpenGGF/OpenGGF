@@ -2138,6 +2138,41 @@ class TestMicaCharacterIntegration {
         presentation.reset();
     }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void authoredTransformAndPoweredWingAddressesSurviveNativeBootAndRefresh() throws Exception {
+        Path jar=buildSample();
+        for(String game:List.of("s1","s2","s3k")) for(String character:List.of("mica","talon")) {
+            String code="mica-and-talon:"+character;
+            var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,code,"","off",null,null,null);
+            try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
+                session.applyMod(jar);
+                String property=game.equals("s1")?"sonic1.rom.path":game.equals("s2")?"sonic2.rom.path":"s3k.rom.path";
+                session.boot(Path.of(System.getProperty(property)),0,1,settings);
+                for(int tick=0;tick<120;tick++)session.step(null);
+                var player=session.player();var controller=player.getSuperStateController();
+                player.setCentreY((short)(player.getCentreY()-96));player.setAir(true);player.setJumping(true);
+                player.setYSpeed((short)0x28);player.addRings(100-player.getRingCount());player.setInvincibleFrames(0);
+                for(int e=0;e<player.currentGameState().getChaosEmeraldCount();e++)player.currentGameState().markEmeraldCollected(e);
+                if(game.equals("s3k"))assertTrue(controller.activateFromAirAbility());else controller.checkTransformationBeforeMove();
+                int transform=PoweredPlayableSheet.animationId(CanonicalAnimation.SUPER_TRANSFORM);
+                assertEquals(transform,player.getForcedAnimationId(),game+"/"+character);
+                var transformFrames=new HashSet<Integer>();
+                for(int tick=0;tick<40;tick++){session.step(null);transformFrames.add(player.getMappingFrame());}
+                assertTrue(transformFrames.size()>=5,"wind-up must animate "+game+"/"+character+": "+transformFrames);
+                for(int tick=0;tick<60;tick++)session.step(null);
+                assertEquals(com.openggf.sprites.playable.SuperState.SUPER,controller.getState());
+                if(character.equals("talon")) {
+                    int fly=PoweredPlayableSheet.animationId(CanonicalAnimation.TAILS_FLY);
+                    var expected=player.getAnimationSet().getScript(fly);
+                    assertNotNull(expected);assertEquals(6,expected.frames().size());
+                    var saved=player.captureRewindState(true);
+                    GameServices.level().refreshPlayableSpriteArt();player.restoreRewindState(saved);
+                    assertEquals(expected,player.getAnimationSet().getScript(fly));
+                }
+            }
+        }
+    }
+
     private Path buildSample() throws Exception {
         Path project = Path.of("examples/mica-and-talon"), classes = temp.resolve("classes");
         Files.createDirectories(classes.resolve("art"));
@@ -2152,7 +2187,7 @@ class TestMicaCharacterIntegration {
                 classes.resolve("META-INF/openggf-mod.yaml"));
         // Exercise the same generated sheets and surface tree as the example build.
         Path generated = com.openggf.tests.ExampleCharacterArt.assemble(temp.resolve("generated"));
-        for (String name : List.of("mica", "talon", "mica_powered_s2", "mica_powered_s3k")) {
+        for (String name : List.of("mica", "talon", "mica_powered_s2", "mica_powered_s3k", "talon_powered_s2", "talon_powered_s3k")) {
             String packed = name.replace("_powered_", "-powered-");
             assertEquals(0, com.openggf.tools.modsdk.GgfModCli.run(new String[]{"convert", "art", "--playable",
                     "--image", generated.resolve(name + ".png").toString(),

@@ -9,6 +9,13 @@ import java.util.Set;
  */
 @ModApi
 public record PoweredPlayableSheet(SpriteArtSet art, Set<CanonicalAnimation> normalAliases, java.util.Map<String,String> normalPhaseAliases) {
+    /** Runtime script address in a bound powered view, independent of the host's native vocabulary.
+     * Present only for authored keys that are not declared normal aliases. Mapping indices
+     * in this script are already relocated; callers must not relocate them again. */
+    public static int animationId(CanonicalAnimation animation) {
+        return 0x400 + java.util.Objects.requireNonNull(animation).ordinal();
+    }
+
     public PoweredPlayableSheet(SpriteArtSet art, Set<CanonicalAnimation> normalAliases) {
         this(art, normalAliases, java.util.Map.of());
     }

@@ -396,10 +396,10 @@
       "id": "run-0",
       "animation": "NATIVE_POSE",
       "order": 0,
-      "file": "../frames/run-0.png",
+      "file": "../frames/s2-run-0.png",
       "hotspot": [
-        17,
-        15
+        28,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 1
@@ -410,8 +410,8 @@
       "order": 0,
       "file": "../frames/s2-run-up45-0.png",
       "hotspot": [
-        9,
-        20
+        19,
+        13
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -422,8 +422,8 @@
       "order": 0,
       "file": "../frames/s2-run-steep-0.png",
       "hotspot": [
-        15,
-        19
+        16,
+        11
       ],
       "angle_set": "steep",
       "duration_ticks": 1
@@ -434,8 +434,8 @@
       "order": 0,
       "file": "../frames/s2-run-inverted-0.png",
       "hotspot": [
-        20,
-        13
+        13,
+        7
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -444,9 +444,9 @@
       "id": "run-1",
       "animation": "NATIVE_POSE",
       "order": 1,
-      "file": "../frames/run-1.png",
+      "file": "../frames/s2-run-1.png",
       "hotspot": [
-        17,
+        28,
         18
       ],
       "angle_set": "flat",
@@ -458,8 +458,8 @@
       "order": 1,
       "file": "../frames/s2-run-up45-1.png",
       "hotspot": [
-        11,
-        23
+        21,
+        15
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -471,7 +471,7 @@
       "file": "../frames/s2-run-steep-1.png",
       "hotspot": [
         18,
-        21
+        11
       ],
       "angle_set": "steep",
       "duration_ticks": 1
@@ -482,8 +482,8 @@
       "order": 1,
       "file": "../frames/s2-run-inverted-1.png",
       "hotspot": [
-        24,
-        12
+        16,
+        6
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -655,6 +655,71 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1
+    },
+    {
+      "id": "transform-0",
+      "animation": "SUPER_TRANSFORM",
+      "order": 0,
+      "file": "../frames/transform-0.png",
+      "hotspot": [
+        10,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "transform-1",
+      "animation": "SUPER_TRANSFORM",
+      "order": 1,
+      "file": "../frames/transform-1.png",
+      "hotspot": [
+        13,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "transform-2",
+      "animation": "SUPER_TRANSFORM",
+      "order": 2,
+      "file": "../frames/transform-2.png",
+      "hotspot": [
+        16,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "transform-3",
+      "animation": "SUPER_TRANSFORM",
+      "order": 3,
+      "file": "../frames/transform-3.png",
+      "hotspot": [
+        16,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "transform-4",
+      "animation": "SUPER_TRANSFORM",
+      "order": 4,
+      "file": "../frames/transform-4.png",
+      "hotspot": [
+        16,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
     }
   ],
   "nativeFrames": {
@@ -711,7 +776,12 @@
     "family-balance/3": "balance-3",
     "family-balance/4": "balance-4",
     "family-balance/5": "balance-5",
-    "family-duck/0": "duck-0"
+    "family-duck/0": "duck-0",
+    "family-super-transform/0": "transform-0",
+    "family-super-transform/1": "transform-1",
+    "family-super-transform/2": "transform-2",
+    "family-super-transform/3": "transform-3",
+    "family-super-transform/4": "transform-4"
   },
   "scripts": {
     "WAIT": {
@@ -722,6 +792,40 @@
         1
       ],
       "end": "loop"
+    },
+    "SUPER_TRANSFORM": {
+      "frames": [
+        "transform-0",
+        "transform-0",
+        "transform-1",
+        "transform-1",
+        "transform-2",
+        "transform-3",
+        "transform-4",
+        "transform-3",
+        "transform-4",
+        "transform-3",
+        "transform-4",
+        "transform-3",
+        "transform-4"
+      ],
+      "durations": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "end": "next",
+      "next": "WAIT"
     }
   }
 }

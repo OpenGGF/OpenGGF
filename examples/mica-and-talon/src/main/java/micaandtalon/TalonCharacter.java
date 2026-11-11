@@ -112,12 +112,19 @@ public final class TalonCharacter extends AbstractPlayableSprite {
     }
 
     private int installFlightArt(CanonicalAnimation pose) {
-        var source = authoredAnimations.getScript(pose.ordinal());
+        // A transformation retains its forced wind-up even if flight was active.
+        if (getSuperStateController() != null
+                && getSuperStateController().getState() == SuperState.TRANSFORMING
+                && getForcedAnimationId() >= 0) return getForcedAnimationId();
+        // Powered binding has already relocated these canonical scripts into the
+        // shared mapping bank. Normal private wing cycles still use source indices.
+        boolean powered = isSuperSonic();
+        var source = powered ? getAnimationSet().getScript(PoweredPlayableSheet.animationId(pose)) : null;
+        boolean boundPowered = source != null;
+        if (!boundPowered) source = authoredAnimations.getScript(pose.ordinal());
         if (source == null)
             source = authoredAnimations.getScript(CanonicalAnimation.TAILS_FLY.ordinal());
-        // Native-frame aliases reserve the byte-sized object namespace before the
-        // creator mapping bank. Do not write unrelocated source indices into it.
-        int relocation = getAnimationFrameCount() >= authoredMappingCount + 256 ? 256 : 0;
+        int relocation = !boundPowered && getAnimationFrameCount() >= authoredMappingCount + 256 ? 256 : 0;
         var frames = source.frames().stream().map(frame -> frame + relocation).toList();
         int id = FLIGHT + pose.ordinal();
         getAnimationSet()

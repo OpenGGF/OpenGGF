@@ -60,25 +60,55 @@ public final class PoweredPlayableArtBinding {
             capacity = Math.max(capacity, art.bankSize());
             var scripts = new SpriteAnimationSet();
             normal.animationSet().getAllScripts().forEach(scripts::addScript);
-            var profile = ((ScriptedVelocityAnimationProfile) normal.animationProfile()).withRunSpeedThreshold(0x800);
+            // A native flight vocabulary has no Super Sonic movement table. Its creator
+            // may animate integrated wings while retaining its own native motion profile.
+            boolean nativeFlight = source != null && source.families().values().stream()
+                    .anyMatch(binding -> binding.family() == CanonicalAnimation.TAILS_FLY);
+            var normalProfile = (ScriptedVelocityAnimationProfile) normal.animationProfile();
+            var profile = normalProfile.withRunSpeedThreshold(nativeFlight ? normalProfile.getRunSpeedThreshold() : 0x800);
             boolean walk = false, run = false;
+            // Host-independent addresses let creator-only flight and transformations
+            // coexist with native byte IDs, including hosts without a matching native slot.
+            for (var authored : art.animationSet().getAllScripts().entrySet()) {
+                var key = CanonicalAnimation.values()[authored.getKey()];
+                if (bank.normalAliases().contains(key)) continue;
+                var script = authored.getValue();
+                int next = script.endParam();
+                if (script.endAction() == SpriteAnimationEndAction.SWITCH) {
+                    var nextKey = CanonicalAnimation.values()[next];
+                    next = !bank.normalAliases().contains(nextKey)
+                            && art.animationSet().getScript(nextKey.ordinal()) != null
+                            ? PoweredPlayableSheet.animationId(nextKey) : host == null ? -1 : host.resolveNativeId(nextKey);
+                    if (next < 0) throw new IllegalArgumentException("Unbound powered next animation " + nextKey);
+                }
+                scripts.addScript(PoweredPlayableSheet.animationId(key), new SpriteAnimationScript(
+                        script.delay(), script.frames().stream().map(f -> f + frameOffset).toList(), script.endAction(), next));
+            }
+
             // A host without native powered scripts consumes authored canonical timing.
             // It requires only its own animation vocabulary, never another host's ROM.
-            if (source == null && host != null) for (var authored : art.animationSet().getAllScripts().entrySet()) {
+            if ((source == null || nativeFlight) && host != null) for (var authored : art.animationSet().getAllScripts().entrySet()) {
                 var canonicalAnimation = CanonicalAnimation.values()[authored.getKey()];
                 int id = host.resolveNativeId(canonicalAnimation);
                 if (id < 0 || bank.normalAliases().contains(canonicalAnimation)) continue;
                 var script = authored.getValue();
+                // The contiguous creator slope bank owns geometry; native movement
+                // still owns its timer/end action. Flight can author an integrated-wing clock.
+                var nativeMovement = nativeFlight && (canonicalAnimation == CanonicalAnimation.WALK
+                        || canonicalAnimation == CanonicalAnimation.RUN) ? source.scripts().getScript(id) : null;
                 int next = script.endAction() == SpriteAnimationEndAction.SWITCH
                         ? host.resolveNativeId(CanonicalAnimation.values()[script.endParam()]) : script.endParam();
-                scripts.addScript(id, new SpriteAnimationScript(script.delay(), script.frames().stream()
-                        .map(f -> f + frameOffset).toList(), script.endAction(), next));
+                scripts.addScript(id, new SpriteAnimationScript(nativeMovement == null ? script.delay() : nativeMovement.delay(), script.frames().stream()
+                        .map(f -> f + frameOffset).toList(), nativeMovement == null ? script.endAction() : nativeMovement.endAction(),
+                        nativeMovement == null ? next : nativeMovement.endParam()));
                 if (canonicalAnimation == CanonicalAnimation.WALK) profile.setWalkSlopeFrameStride(canonical.strides.getOrDefault(canonicalAnimation,-1));
                 if (canonicalAnimation == CanonicalAnimation.RUN) profile.setRunSlopeFrameStride(canonical.strides.getOrDefault(canonicalAnimation,-1));
             }
 
             if (source != null) for (var family : new TreeMap<>(source.families()).entrySet()) {
                 int id = family.getKey();
+                if (nativeFlight && (family.getValue().family() == CanonicalAnimation.WALK
+                        || family.getValue().family() == CanonicalAnimation.RUN)) continue;
                 if (family.getValue().animation() != null && bank.normalAliases().contains(family.getValue().animation())
                         && normal.animationSet().getScript(id) != null) continue;
                 var poses = source.poses(id);
@@ -95,12 +125,12 @@ public final class PoweredPlayableArtBinding {
                 var nativeScript = source.scripts().getScript(id);
                 scripts.addScript(id, new SpriteAnimationScript(nativeScript.delay(),
                         nativeScript.frames().stream().map(f -> f + base).toList(), nativeScript.endAction(), nativeScript.endParam()));
-                if (family.getValue().family() == CanonicalAnimation.WALK) {
+                if (!nativeFlight && family.getValue().family() == CanonicalAnimation.WALK) {
                     walk = true;
                     profile.setWalkSlopeFrameStride(source.walkStride() / 2);
                     profile.setSuperAlternateFrameStep(source.alternateMask(), source.alternateStep(), base + source.alternateCeiling());
                 }
-                if (family.getValue().family() == CanonicalAnimation.RUN) {
+                if (!nativeFlight && family.getValue().family() == CanonicalAnimation.RUN) {
                     run = true;
                     // S2's compact run selector uses offsets 0,1,2,3 rather than 0,2,4,6.
                     profile.setCompactSuperRunSlope(source.runStride() == 1);

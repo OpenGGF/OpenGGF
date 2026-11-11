@@ -85,7 +85,7 @@ class TestCharacterArtCoverageAudit {
                     "--sheet",project.resolve("mica_powered_"+suffix+"-sheet.yaml").toString(),"--out",poweredEncoded.toString()},System.out));
             var poweredArt = PlayableSheetMaterializer.read(Files.readAllBytes(poweredEncoded)).art();
             var aliases = java.util.EnumSet.allOf(CanonicalAnimation.class);
-            aliases.removeAll(Set.of(CanonicalAnimation.WALK, CanonicalAnimation.RUN, CanonicalAnimation.PUSH, CanonicalAnimation.WAIT, CanonicalAnimation.BALANCE, CanonicalAnimation.DUCK));
+            aliases.removeAll(Set.of(CanonicalAnimation.WALK, CanonicalAnimation.RUN, CanonicalAnimation.PUSH, CanonicalAnimation.WAIT, CanonicalAnimation.BALANCE, CanonicalAnimation.DUCK, CanonicalAnimation.SUPER_TRANSFORM));
             var palette=List.of(Collections.nCopies(16,0));
             if (game.equals("S3K")) aliases.removeAll(Set.of(CanonicalAnimation.BLINK,CanonicalAnimation.BALANCE2,CanonicalAnimation.BUBBLE,CanonicalAnimation.FLY));
             var phaseAliases = new ObjectMapper().readValue(Files.readAllBytes(Path.of("examples/mica-and-talon/art/mica/powered",suffix,"normal-phase-aliases.json")),new com.fasterxml.jackson.core.type.TypeReference<Map<String,String>>(){});
@@ -143,6 +143,43 @@ class TestCharacterArtCoverageAudit {
                 assertTrue(selected.contains(sprite.getMappingFrame()) || game.equals("S2") && speed<0x800 && selected.contains(sprite.getMappingFrame()-32),"speed selection "+game+"/"+speed+" frame "+sprite.getMappingFrame());
             }
             result.put("poweredCoverage",coverage);
+        }
+        if (character.equals("talon") && !game.equals("S1")) {
+            String suffix=game.toLowerCase(java.util.Locale.ROOT);
+            Path poweredEncoded=temporary.resolve("talon-powered-"+suffix+".ggfp");
+            assertEquals(0,GgfModCli.run(new String[]{"convert","art","--playable","--image",
+                    project.resolve("talon_powered_"+suffix+".png").toString(),"--sheet",
+                    project.resolve("talon_powered_"+suffix+"-sheet.yaml").toString(),"--out",poweredEncoded.toString()},System.out));
+            var powered=PlayableSheetMaterializer.read(Files.readAllBytes(poweredEncoded)).art();
+            var authored=Set.of(CanonicalAnimation.WAIT,CanonicalAnimation.RUN,CanonicalAnimation.TAILS_FLY,
+                    CanonicalAnimation.TAILS_FLY_ASCEND,CanonicalAnimation.SUPER_TRANSFORM);
+            var aliases=EnumSet.allOf(CanonicalAnimation.class); aliases.removeAll(authored);
+            var palette=List.of(Collections.nCopies(16,0));
+            var form=new SuperFormProfile.Form(palette,palette,List.of(),1,1,PhysicsProfile.SONIC_3K_SUPER_TAILS,
+                    CanonicalAnimation.SUPER_TRANSFORM,Map.of(),false,false,new PoweredPlayableSheet(powered,aliases));
+            var profile=(ScriptedVelocityAnimationProfile)nativeArt.animationProfile();
+            var sourceClocks=new com.openggf.game.internal.PoweredAnimationSource(nativeArt.animationSet(),
+                    host.getAnimationFamilies(),profile.getWalkSlopeFrameStride()*2,profile.getRunSlopeFrameStride()*2,0,0,0);
+            var view=PoweredPlayableArtBinding.combine(bound,Map.of(SuperFormProfile.Tier.SUPER,form),sourceClocks,host)
+                    .powered().get(SuperFormProfile.Tier.SUPER);
+            var coverage=new TreeMap<String,Object>();
+            for (var key:CanonicalAnimation.values()) {
+                if (!authored.contains(key)) continue;
+                var script=view.animationSet().getScript(PoweredPlayableSheet.animationId(key));
+                assertNotNull(script,"Missing powered creator key "+game+"/"+key);
+                assertTrue(script.frames().stream().allMatch(f->f>=bound.mappingFrames().size()));
+                coverage.put(key.name(),Map.of("status","authored","reason","relocated authored powered canonical script", "frames",script.frames()));
+            }
+            for(var family:host.getAnimationFamilies().entrySet()) {
+                var key=family.getValue().animation();
+                if (key!=null && aliases.contains(key)) {
+                    assertSame(bound.animationSet().getScript(family.getKey()),view.animationSet().getScript(family.getKey()));
+                    coverage.put(key.name(),Map.of("status","alias","reason","explicit normal bank alias with native timing", "frames",view.animationSet().getScript(family.getKey()).frames()));
+                }
+            }
+            assertEquals(((ScriptedVelocityAnimationProfile)bound.animationProfile()).getRunSpeedThreshold(),
+                    ((ScriptedVelocityAnimationProfile)view.animationProfile()).getRunSpeedThreshold());
+            result.put("poweredCanonicalCoverage",coverage);
         }
         var names=new TreeMap<Integer,List<String>>();
         for(var canonical:CanonicalAnimation.values()) {

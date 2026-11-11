@@ -82,6 +82,9 @@ def main():
             for sid,s in d.get('superScripts',{}).items():
                 row=d.get('poweredCoverage',{}).get(sid,{})
                 add(c,g,'Super/Hyper animation',f'{int(sid):02X}',row.get('status','fallback'),row.get('reason','normal creator canonical sheet / owned palette'),rank='rare/powered play',evidence=f'{p.name}: poweredCoverage.{sid}',notes='native powered frames='+str(s['frames'])+'; bound frames='+str(row.get('frames',[]))+'; Hyper shares powered geometry.')
+            for key,row in d.get('poweredCanonicalCoverage',{}).items():
+                add(c,g,'Solar canonical animation',key,row['status'],row['reason'],rank='powered play',
+                    evidence=f'{p.name}: poweredCanonicalCoverage.{key}',notes='bound frames='+str(row['frames']))
         # Source drawings are listed separately, excluding them from obligation totals.
         for i,f in enumerate(manifest['frames']):
             inventory.append(dict(character=c.upper(),game='shared',bank='authored source',frame=i,script_ids=f.get('animation',''),evidence='; '.join(prov.get(f['id'],['older/other method; frames.yaml notes'])),actual_raw_targets=f['id'],image=str((ART/c/'sheet'/f['file']).relative_to(ROOT))))

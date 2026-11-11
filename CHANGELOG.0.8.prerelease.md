@@ -187,7 +187,11 @@ under the matching area heading; see the
 ## Modding and tools
 
 - **MICA, an original character framework example:** TALON now joins as her
-  default sidekick and is selectable solo. Joint native-pose carry redraws now
+  default sidekick and is selectable solo. Powered banks now keep each movement
+  archetype's native clocks and expose host-independent authored flight and
+  transformation scripts. TALON has dedicated white-gold Solar banks, and new
+  profile-facing flight art matches his carry identity; MICA's powered run uses
+  stable native lean/contact phases. Joint native-pose carry redraws now
   keep MICA’s raised gloves against TALON’s shoes throughout his wingbeat,
   with native-style material contours and the complete S3K hanging sequence.
   S3K title wag sprites now own the complete glove and backing context,

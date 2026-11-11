@@ -557,9 +557,15 @@ Mega Drive colour words. An optional `PoweredPlayableSheet` carries a canonical
 GGFP bank, explicit normal-animation aliases and optional normal-phase aliases.
 The old Form constructor keeps its normal-sheet behavior. Banks combine once
 at art initialization; missing complete powered families retain their whole bound
-normal animation. Host providers supply native powered timing and selectors.
-A host without those scripts uses authored canonical GGFP timings without a donor
-ROM. Existing `animations` overrides take precedence and address the combined bank.
+normal animation. Host providers select the movement archetype's native timing
+and selectors; Tails-family creators do not consume Super Sonic's movement table.
+Authored powered scripts also have host-independent runtime addresses through
+`PoweredPlayableSheet.animationId(key)`. Read these from the active animation set;
+their frame indices are already relocated into the shared mapping bank. A normal
+alias has no authored powered address. This lets integrated wing cycles and
+transformation scripts play even where the host has no corresponding native ID,
+including S1 creator forms. A host without native powered scripts uses authored
+canonical GGFP timings without a donor ROM. Existing `animations` overrides take precedence and address the combined bank.
 The profile controller restores views during transformation, Super/Hyper, revert,
 rewind and art refresh. MICA's S2/S3K bank and Hyper geometry sharing are documented
 in her [powered-art provenance](../../examples/mica-and-talon/production/mica/powered/provenance.json).

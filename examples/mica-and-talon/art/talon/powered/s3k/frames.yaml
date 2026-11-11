@@ -1,0 +1,454 @@
+{
+  "format": "openggf-playable-art-handoff-1",
+  "character": "talon_powered_s3k",
+  "palette": "palette.yaml",
+  "facing": "right",
+  "tick_rate": 60,
+  "requiredAnimations": [
+    "WAIT"
+  ],
+  "frames": [
+    {
+      "id": "idle",
+      "animation": "WAIT",
+      "order": 0,
+      "file": "frames/idle.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-0",
+      "animation": "RUN",
+      "order": 0,
+      "file": "frames/run-0.png",
+      "hotspot": [
+        15,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-up45-0",
+      "animation": "RUN",
+      "order": 0,
+      "file": "frames/run-up45-0.png",
+      "hotspot": [
+        16,
+        17
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-steep-0",
+      "animation": "RUN",
+      "order": 0,
+      "file": "frames/run-steep-0.png",
+      "hotspot": [
+        17,
+        15
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-inverted-0",
+      "animation": "RUN",
+      "order": 0,
+      "file": "frames/run-inverted-0.png",
+      "hotspot": [
+        17,
+        9
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-1",
+      "animation": "RUN",
+      "order": 1,
+      "file": "frames/run-1.png",
+      "hotspot": [
+        16,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-up45-1",
+      "animation": "RUN",
+      "order": 1,
+      "file": "frames/run-up45-1.png",
+      "hotspot": [
+        16,
+        19
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-steep-1",
+      "animation": "RUN",
+      "order": 1,
+      "file": "frames/run-steep-1.png",
+      "hotspot": [
+        17,
+        17
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-inverted-1",
+      "animation": "RUN",
+      "order": 1,
+      "file": "frames/run-inverted-1.png",
+      "hotspot": [
+        19,
+        10
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-2",
+      "animation": "RUN",
+      "order": 2,
+      "file": "frames/run-2.png",
+      "hotspot": [
+        18,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-up45-2",
+      "animation": "RUN",
+      "order": 2,
+      "file": "frames/run-up45-2.png",
+      "hotspot": [
+        12,
+        18
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-steep-2",
+      "animation": "RUN",
+      "order": 2,
+      "file": "frames/run-steep-2.png",
+      "hotspot": [
+        15,
+        17
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-inverted-2",
+      "animation": "RUN",
+      "order": 2,
+      "file": "frames/run-inverted-2.png",
+      "hotspot": [
+        18,
+        12
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-3",
+      "animation": "RUN",
+      "order": 3,
+      "file": "frames/run-3.png",
+      "hotspot": [
+        18,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-up45-3",
+      "animation": "RUN",
+      "order": 3,
+      "file": "frames/run-up45-3.png",
+      "hotspot": [
+        11,
+        20
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-steep-3",
+      "animation": "RUN",
+      "order": 3,
+      "file": "frames/run-steep-3.png",
+      "hotspot": [
+        16,
+        18
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2
+    },
+    {
+      "id": "run-inverted-3",
+      "animation": "RUN",
+      "order": 3,
+      "file": "frames/run-inverted-3.png",
+      "hotspot": [
+        19,
+        12
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2
+    },
+    {
+      "id": "fly-0",
+      "animation": "TAILS_FLY",
+      "order": 0,
+      "file": "frames/fly-0.png",
+      "hotspot": [
+        17,
+        31
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "fly-1",
+      "animation": "TAILS_FLY",
+      "order": 1,
+      "file": "frames/fly-1.png",
+      "hotspot": [
+        27,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "fly-2",
+      "animation": "TAILS_FLY",
+      "order": 2,
+      "file": "frames/fly-2.png",
+      "hotspot": [
+        32,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "fly-3",
+      "animation": "TAILS_FLY",
+      "order": 3,
+      "file": "frames/fly-3.png",
+      "hotspot": [
+        16,
+        25
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "fly-4",
+      "animation": "TAILS_FLY",
+      "order": 4,
+      "file": "frames/fly-4.png",
+      "hotspot": [
+        27,
+        25
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "fly-5",
+      "animation": "TAILS_FLY",
+      "order": 5,
+      "file": "frames/fly-5.png",
+      "hotspot": [
+        28,
+        26
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "fly-ascend",
+      "animation": "TAILS_FLY_ASCEND",
+      "order": 0,
+      "file": "frames/fly-0.png",
+      "hotspot": [
+        17,
+        31
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "transform-0",
+      "animation": "SUPER_TRANSFORM",
+      "order": 0,
+      "file": "frames/transform-0.png",
+      "hotspot": [
+        14,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "transform-1",
+      "animation": "SUPER_TRANSFORM",
+      "order": 1,
+      "file": "frames/transform-1.png",
+      "hotspot": [
+        12,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "transform-2",
+      "animation": "SUPER_TRANSFORM",
+      "order": 2,
+      "file": "frames/transform-2.png",
+      "hotspot": [
+        14,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "transform-3",
+      "animation": "SUPER_TRANSFORM",
+      "order": 3,
+      "file": "frames/transform-3.png",
+      "hotspot": [
+        16,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    },
+    {
+      "id": "transform-4",
+      "animation": "SUPER_TRANSFORM",
+      "order": 4,
+      "file": "frames/transform-4.png",
+      "hotspot": [
+        18,
+        26
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2
+    }
+  ],
+  "scripts": {
+    "WAIT": {
+      "frames": [
+        "idle"
+      ],
+      "durations": [
+        8
+      ],
+      "end": "loop"
+    },
+    "RUN": {
+      "frames": [
+        "run-0",
+        "run-1",
+        "run-2",
+        "run-3"
+      ],
+      "speedDriven": true,
+      "end": "loop"
+    },
+    "TAILS_FLY": {
+      "frames": [
+        "fly-0",
+        "fly-1",
+        "fly-2",
+        "fly-3",
+        "fly-4",
+        "fly-5"
+      ],
+      "durations": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "end": "loop"
+    },
+    "TAILS_FLY_ASCEND": {
+      "frames": [
+        "fly-0",
+        "fly-1",
+        "fly-2",
+        "fly-3",
+        "fly-4",
+        "fly-5"
+      ],
+      "durations": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "end": "loop"
+    },
+    "SUPER_TRANSFORM": {
+      "frames": [
+        "transform-0",
+        "transform-0",
+        "transform-1",
+        "transform-1",
+        "transform-2",
+        "transform-3",
+        "transform-4",
+        "transform-3",
+        "transform-4",
+        "transform-3",
+        "transform-4",
+        "transform-3",
+        "transform-4"
+      ],
+      "durations": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "end": "next",
+      "next": "WAIT"
+    }
+  },
+  "nativeFrames": {}
+}

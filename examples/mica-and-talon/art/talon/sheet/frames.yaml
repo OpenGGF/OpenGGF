@@ -494,11 +494,11 @@
       "file": "frames/fly-00.png",
       "hotspot": [
         20,
-        22
+        27
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Flight scale: original fly2.png cell 0, uniform 9:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Original wing silhouette; no rotor stub."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale."
     },
     {
       "id": "fly-01",
@@ -506,12 +506,12 @@
       "order": 1,
       "file": "frames/fly-01.png",
       "hotspot": [
-        23,
-        13
+        26,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Flight scale: original fly1.png cell 1, uniform 9:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Original wing silhouette; no rotor stub."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale."
     },
     {
       "id": "fly-02",
@@ -519,12 +519,12 @@
       "order": 2,
       "file": "frames/fly-02.png",
       "hotspot": [
-        22,
-        14
+        30,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Flight scale: original fly2.png cell 2, uniform 9:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Original wing silhouette; no rotor stub."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale."
     },
     {
       "id": "fly-03",
@@ -533,11 +533,11 @@
       "file": "frames/fly-03.png",
       "hotspot": [
         17,
-        14
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Flight scale: original fly2.png cell 3, uniform 9:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Original wing silhouette; no rotor stub."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale."
     },
     {
       "id": "fly-04",
@@ -545,12 +545,12 @@
       "order": 4,
       "file": "frames/fly-04.png",
       "hotspot": [
-        21,
-        14
+        24,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Flight scale: original fly1.png cell 4, uniform 9:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Original wing silhouette; no rotor stub."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale."
     },
     {
       "id": "fly-05",
@@ -558,12 +558,12 @@
       "order": 5,
       "file": "frames/fly-05.png",
       "hotspot": [
-        20,
-        18
+        27,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Flight scale: original fly2.png cell 5, uniform 9:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Original wing silhouette; no rotor stub."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale."
     },
     {
       "id": "fly_tired-00",
@@ -1780,12 +1780,12 @@
       "order": 0,
       "file": "frames/family-tails-fly-ascend-00.png",
       "hotspot": [
-        23,
-        22
+        20,
+        27
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_ASCEND: attempt row 1, phase 0; uniform anatomical/goggle scale 5.6000:1. No painted contours."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale."
     },
     {
       "id": "family-tails-fly-ascend-01",
@@ -1793,12 +1793,12 @@
       "order": 1,
       "file": "frames/family-tails-fly-ascend-01.png",
       "hotspot": [
-        22,
-        15
+        26,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_ASCEND: attempt row 2, phase 1; uniform anatomical/goggle scale 5.6000:1. No painted contours."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale."
     },
     {
       "id": "family-tails-fly-ascend-02",
@@ -1806,12 +1806,12 @@
       "order": 2,
       "file": "frames/family-tails-fly-ascend-02.png",
       "hotspot": [
-        27,
-        13
+        30,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_ASCEND: attempt row 3, phase 2; uniform anatomical/goggle scale 5.7000:1. No painted contours."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale."
     },
     {
       "id": "family-tails-fly-ascend-03",
@@ -1819,12 +1819,12 @@
       "order": 3,
       "file": "frames/family-tails-fly-ascend-03.png",
       "hotspot": [
-        20,
-        14
+        17,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_ASCEND: attempt row 1, phase 3; uniform anatomical/goggle scale 5.6000:1. No painted contours."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale."
     },
     {
       "id": "family-tails-fly-ascend-04",
@@ -1832,12 +1832,12 @@
       "order": 4,
       "file": "frames/family-tails-fly-ascend-04.png",
       "hotspot": [
-        21,
-        13
+        24,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_ASCEND: attempt row 2, phase 4; uniform anatomical/goggle scale 5.6000:1. No painted contours."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale."
     },
     {
       "id": "family-tails-fly-ascend-05",
@@ -1845,12 +1845,12 @@
       "order": 5,
       "file": "frames/family-tails-fly-ascend-05.png",
       "hotspot": [
-        22,
-        21
+        27,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_FLY_ASCEND: attempt row 3, phase 5; uniform anatomical/goggle scale 5.5000:1. No painted contours."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale."
     },
     {
       "id": "family-tails-fly-carry-00",

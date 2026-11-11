@@ -17,6 +17,7 @@ public final class ModApiVersion {
      * Title plane masks select native opaque or transparent replacement indices per owned pixel.
      * Optional per-host normal/powered 32x32 reel portraits extend the unpublished candidate.
      * S3K Competition miniature body/tail surfaces extend indexed presentation frames.
+     * Host-independent powered canonical-script addresses support creator flight/transform cycles.
      * Optional per-form powered GGFP banks and explicit normal aliases extend the unpublished candidate.
      * Host-aware character presentation suppliers extend the unpublished 0.7 candidate.
      * Optional directional canonical homing strike sheet keys extend this same 0.7 candidate.

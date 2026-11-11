@@ -81,4 +81,53 @@ class TestPoweredPlayableArtBinding {
         assertEquals(2,script.delay()); assertEquals(List.of(1),script.frames());
     }
 
+    @Test void tailsSourcePresentBindsAuthoredFlightAndTransformWithoutSonicMovementTiming() {
+        for (var module : List.of(new com.openggf.game.sonic2.Sonic2GameModule(),
+                new com.openggf.game.sonic3k.Sonic3kGameModule())) {
+            var host = module.getDonorCapabilities().forPlayableCharacter(PlayerCharacter.TAILS_ALONE);
+            int flight = host.resolveNativeId(CanonicalAnimation.TAILS_FLY);
+            var normal = art(false, Map.of());
+            normal.animationSet().addScript(flight, new SpriteAnimationScript(9, List.of(0), SpriteAnimationEndAction.LOOP, 0));
+            var normalProfile = (ScriptedVelocityAnimationProfile) normal.animationProfile();
+            normalProfile.setRunSpeedThreshold(0x600);
+            var authored = art(true, Map.of());
+            authored.animationSet().addScript(CanonicalAnimation.TAILS_FLY.ordinal(),
+                    new SpriteAnimationScript(2, List.of(0,0,0), SpriteAnimationEndAction.LOOP, 0));
+            authored.animationSet().addScript(CanonicalAnimation.SUPER_TRANSFORM.ordinal(),
+                    new SpriteAnimationScript(3, List.of(0,0), SpriteAnimationEndAction.LOOP, 0));
+            var nativeScripts = new SpriteAnimationSet();
+            nativeScripts.addScript(flight, new SpriteAnimationScript(1,List.of(0),SpriteAnimationEndAction.LOOP,0));
+            var source = new PoweredAnimationSource(nativeScripts, Map.of(flight,new AnimationFamilies.Binding(
+                    CanonicalAnimation.TAILS_FLY,CanonicalAnimation.TAILS_FLY,List.of(0))),8,6,0,0,0);
+            var result = PoweredPlayableArtBinding.combine(normal,Map.of(SuperFormProfile.Tier.SUPER,
+                    form(new PoweredPlayableSheet(authored,Set.of(CanonicalAnimation.WAIT)))),source,host);
+            var view = result.powered().get(SuperFormProfile.Tier.SUPER);
+            var script = view.animationSet().getScript(flight);
+            assertEquals(2,script.delay(),module.getGameId().toString());
+            assertEquals(List.of(1,1,1),script.frames());
+            assertEquals(0x600,((ScriptedVelocityAnimationProfile)view.animationProfile()).getRunSpeedThreshold());
+            assertEquals(List.of(1,1,1),view.animationSet().getScript(
+                    PoweredPlayableSheet.animationId(CanonicalAnimation.TAILS_FLY)).frames());
+            assertEquals(List.of(1,1),view.animationSet().getScript(
+                    PoweredPlayableSheet.animationId(CanonicalAnimation.SUPER_TRANSFORM)).frames());
+            int transform = host.resolveNativeId(CanonicalAnimation.SUPER_TRANSFORM);
+            if (transform >= 0) assertEquals(List.of(1,1),view.animationSet().getScript(transform).frames());
+            assertEquals(0,normal.mappingFrames().getFirst().pieces().size());
+            assertEquals(1,view.dplcFrames().get(script.frames().getFirst()).requests().getFirst().startTile());
+        }
+    }
+
+    @Test void creatorOnlyTransformUsesRelocatedAddressAndCanonicalNextOnHostWithoutSuperId() {
+        var normal=art(false,Map.of()); var authored=art(true,Map.of());
+        authored.animationSet().addScript(CanonicalAnimation.SUPER_TRANSFORM.ordinal(),new SpriteAnimationScript(
+                2,List.of(0,0,0),SpriteAnimationEndAction.SWITCH,CanonicalAnimation.WAIT.ordinal()));
+        var result=PoweredPlayableArtBinding.combine(normal,Map.of(SuperFormProfile.Tier.SUPER,
+                form(new PoweredPlayableSheet(authored,Set.of()))),null,
+                new com.openggf.game.sonic1.Sonic1GameModule().getDonorCapabilities());
+        var script=result.powered().get(SuperFormProfile.Tier.SUPER).animationSet()
+                .getScript(PoweredPlayableSheet.animationId(CanonicalAnimation.SUPER_TRANSFORM));
+        assertEquals(List.of(1,1,1),script.frames());
+        assertEquals(PoweredPlayableSheet.animationId(CanonicalAnimation.WAIT),script.endParam());
+    }
+
 }

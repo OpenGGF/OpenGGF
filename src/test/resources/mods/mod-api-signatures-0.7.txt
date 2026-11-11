@@ -7121,6 +7121,7 @@ METHOD com.openggf.game.PoweredPlayableSheet public  java.util.Set<com.openggf.g
 METHOD com.openggf.game.PoweredPlayableSheet public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.PoweredPlayableSheet public,final  int hashCode()
 METHOD com.openggf.game.PoweredPlayableSheet public,final  java.lang.String toString()
+METHOD com.openggf.game.PoweredPlayableSheet public,static  int animationId(com.openggf.game.CanonicalAnimation)
 METHOD com.openggf.game.PresentationFrameSet public  int[] rgb()
 METHOD com.openggf.game.PresentationFrameSet public  java.util.Map<java.lang.String,java.util.Map<java.lang.Integer,com.openggf.game.PresentationFrameSet$Pose>> banks()
 METHOD com.openggf.game.PresentationFrameSet public,final  boolean equals(java.lang.Object)

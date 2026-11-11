@@ -167,6 +167,18 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, com.opengg
     }
 
     @Override
+    public com.openggf.game.internal.PoweredAnimationSource loadPoweredAnimations(com.openggf.game.PlayerCharacter archetype) throws IOException {
+        if (archetype != com.openggf.game.PlayerCharacter.TAILS_ALONE) return loadPoweredAnimations();
+        var nativeArt = loadPlayerSpriteArt("tails");
+        var profile = (com.openggf.sprites.animation.ScriptedVelocityAnimationProfile) nativeArt.animationProfile();
+        var families = new Sonic3kGameModule().getDonorCapabilities()
+                .forPlayableCharacter(archetype).getAnimationFamilies();
+        // Tails has no alternate Super Sonic movement table. Keep his own ROM clocks.
+        return new com.openggf.game.internal.PoweredAnimationSource(nativeArt.animationSet(), families,
+                profile.getWalkSlopeFrameStride() * 2, profile.getRunSlopeFrameStride() * 2, 0, 0, 0);
+    }
+
+    @Override
     public com.openggf.game.internal.PoweredAnimationSource loadPoweredAnimations() throws IOException {
         loadPlayerSpriteArt("sonic");
         var families = new java.util.HashMap<>(new Sonic3kGameModule().getDonorCapabilities().getAnimationFamilies());

@@ -60,10 +60,11 @@ final class MicaGilded {
                                         8,
                                         4,
                                         PhysicsProfile.SONIC_2_SUPER_SONIC,
-                                        CanonicalAnimation.WAIT,
+                                        CanonicalAnimation.SUPER_TRANSFORM,
                                         Map.of(),
                                         false,
-                                        false)),
+                                        false,
+                                        s2Bank)),
                         GameId.S2,
                         Map.of(SuperFormProfile.Tier.SUPER, s2),
                         GameId.S3K,
@@ -89,7 +90,8 @@ final class MicaGilded {
                         CanonicalAnimation.PUSH,
                         CanonicalAnimation.WAIT,
                         CanonicalAnimation.BALANCE,
-                        CanonicalAnimation.DUCK));
+                        CanonicalAnimation.DUCK,
+                        CanonicalAnimation.SUPER_TRANSFORM));
         if (game.equals("s3k"))
             aliases.removeAll(
                     Set.of(
