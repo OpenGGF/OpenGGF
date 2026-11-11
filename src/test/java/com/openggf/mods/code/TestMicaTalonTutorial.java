@@ -53,6 +53,9 @@ class TestMicaTalonTutorial {
 
     @Test
     void checkpointBakesItsSheetAndPassesValidation() throws Exception {
+        // The checkpoint bakes its sheet with the playable-art pipeline, which needs Pillow.
+        org.junit.jupiter.api.Assumptions.assumeTrue(pythonHasPillow(),
+                "the checkpoint's sheet bake needs Python with Pillow");
         var compiled = ExampleModHarness.compile(PART, work);
         assertEquals("mica-and-talon-part2", compiled.manifest().id());
         var sheet = PlayableSheetReader.read(Files.readAllBytes(work.resolve("classes/art/mica.ggfp")));
@@ -86,6 +89,8 @@ class TestMicaTalonTutorial {
     @Test
     @RequiresRom(SonicGame.SONIC_2)
     void firstPlayableWalksRunsAndRollsInSonic2() throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(pythonHasPillow(),
+                "the checkpoint's sheet bake needs Python with Pillow");
         try (ExampleModHarness harness = ExampleModHarness.compile(PART, work).open(work.resolve("storage"))) {
             Sonic2GameModule base = new Sonic2GameModule();
             GameModule resolved = harness.launch(base, CODE);
@@ -116,5 +121,12 @@ class TestMicaTalonTutorial {
             assertEquals(capabilities.resolveNativeId(CanonicalAnimation.ROLL), mica.getAnimationId());
             assertEquals(Map.of(), harness.findings());
         }
+    }
+
+    private static boolean pythonHasPillow() throws Exception {
+        Process probe = new ProcessBuilder(System.getenv().getOrDefault("PYTHON_BIN", "python3"),
+                "-c", "import PIL").redirectErrorStream(true).start();
+        probe.getInputStream().transferTo(java.io.OutputStream.nullOutputStream());
+        return probe.waitFor() == 0;
     }
 }
