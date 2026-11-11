@@ -43,7 +43,9 @@ transformation are fresh owner-concept generations, recorded with selected rows 
 [`powered-concepts-generation.json`](../../production/mica/powered/powered-concepts-generation.json).
 Slots 2–6 are lifted plates from a deep amber underside to a pale-gold edge; face,
 belly, gloves and coral boots keep the sheet colours. Hyper reuses the bank with the
-Prism Gilt cycle. Walk, push, balance and duck are earlier drawings in the new palette.
+Prism Gilt cycle. Walk (with derived slopes), push, duck and balance followed in the
+rollout from her own earlier native-pose drawings; balance stays upright, as native
+`SupSonAni_Balance` (s2.asm:38815) is. Every powered frame is now an Open Cone drawing.
 
 `production/talon/feedback_art.py` reproduces every selected/converted image from
 original indexed rows; raw generations and decoded native references stay outside

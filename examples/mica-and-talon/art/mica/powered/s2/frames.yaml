@@ -14,11 +14,12 @@
       "order": 0,
       "file": "../frames/s2-walk-0.png",
       "hotspot": [
-        16,
-        23
+        17,
+        24
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-walk-s2-v1 cell 0; fixed scale 10.3; see powered-concepts-generation.json."
     },
     {
       "id": "s2-walk-up45-0",
@@ -26,8 +27,8 @@
       "order": 0,
       "file": "../frames/s2-walk-up45-0.png",
       "hotspot": [
-        17,
-        21
+        18,
+        20
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -38,8 +39,8 @@
       "order": 0,
       "file": "../frames/s2-walk-steep-0.png",
       "hotspot": [
-        23,
-        17
+        24,
+        18
       ],
       "angle_set": "steep",
       "duration_ticks": 1
@@ -50,8 +51,8 @@
       "order": 0,
       "file": "../frames/s2-walk-inverted-0.png",
       "hotspot": [
-        20,
-        19
+        19,
+        20
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -63,10 +64,11 @@
       "file": "../frames/s2-walk-1.png",
       "hotspot": [
         15,
-        23
+        24
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-walk-s2-v1 cell 1; fixed scale 10.3; see powered-concepts-generation.json."
     },
     {
       "id": "s2-walk-up45-1",
@@ -74,8 +76,8 @@
       "order": 1,
       "file": "../frames/s2-walk-up45-1.png",
       "hotspot": [
-        18,
-        22
+        20,
+        20
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -86,7 +88,7 @@
       "order": 1,
       "file": "../frames/s2-walk-steep-1.png",
       "hotspot": [
-        23,
+        24,
         16
       ],
       "angle_set": "steep",
@@ -98,7 +100,7 @@
       "order": 1,
       "file": "../frames/s2-walk-inverted-1.png",
       "hotspot": [
-        22,
+        20,
         23
       ],
       "angle_set": "inverted",
@@ -111,10 +113,11 @@
       "file": "../frames/s2-walk-2.png",
       "hotspot": [
         14,
-        21
+        23
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-walk-s2-v1 cell 2; fixed scale 10.3; see powered-concepts-generation.json."
     },
     {
       "id": "s2-walk-up45-2",
@@ -122,8 +125,8 @@
       "order": 2,
       "file": "../frames/s2-walk-up45-2.png",
       "hotspot": [
-        16,
-        20
+        19,
+        19
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -134,8 +137,8 @@
       "order": 2,
       "file": "../frames/s2-walk-steep-2.png",
       "hotspot": [
-        21,
-        15
+        23,
+        14
       ],
       "angle_set": "steep",
       "duration_ticks": 1
@@ -146,8 +149,8 @@
       "order": 2,
       "file": "../frames/s2-walk-inverted-2.png",
       "hotspot": [
-        20,
-        17
+        19,
+        18
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -158,11 +161,12 @@
       "order": 3,
       "file": "../frames/s2-walk-3.png",
       "hotspot": [
-        16,
-        22
+        18,
+        23
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-walk-s2-v1 cell 3; fixed scale 10.3; see powered-concepts-generation.json."
     },
     {
       "id": "s2-walk-up45-3",
@@ -170,8 +174,8 @@
       "order": 3,
       "file": "../frames/s2-walk-up45-3.png",
       "hotspot": [
-        18,
-        19
+        21,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -182,8 +186,8 @@
       "order": 3,
       "file": "../frames/s2-walk-steep-3.png",
       "hotspot": [
-        22,
-        15
+        23,
+        14
       ],
       "angle_set": "steep",
       "duration_ticks": 1
@@ -194,8 +198,8 @@
       "order": 3,
       "file": "../frames/s2-walk-inverted-3.png",
       "hotspot": [
-        19,
-        19
+        18,
+        18
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -207,10 +211,11 @@
       "file": "../frames/s2-walk-4.png",
       "hotspot": [
         16,
-        21
+        23
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-walk-s2-v1 cell 4; fixed scale 10.3; see powered-concepts-generation.json."
     },
     {
       "id": "s2-walk-up45-4",
@@ -218,7 +223,7 @@
       "order": 4,
       "file": "../frames/s2-walk-up45-4.png",
       "hotspot": [
-        17,
+        20,
         20
       ],
       "angle_set": "up45",
@@ -230,8 +235,8 @@
       "order": 4,
       "file": "../frames/s2-walk-steep-4.png",
       "hotspot": [
-        21,
-        19
+        23,
+        20
       ],
       "angle_set": "steep",
       "duration_ticks": 1
@@ -255,10 +260,11 @@
       "file": "../frames/s2-walk-5.png",
       "hotspot": [
         15,
-        22
+        23
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-walk-s2-v1 cell 5; fixed scale 10.3; see powered-concepts-generation.json."
     },
     {
       "id": "s2-walk-up45-5",
@@ -266,8 +272,8 @@
       "order": 5,
       "file": "../frames/s2-walk-up45-5.png",
       "hotspot": [
-        18,
-        20
+        19,
+        19
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -278,7 +284,7 @@
       "order": 5,
       "file": "../frames/s2-walk-steep-5.png",
       "hotspot": [
-        22,
+        23,
         16
       ],
       "angle_set": "steep",
@@ -290,7 +296,7 @@
       "order": 5,
       "file": "../frames/s2-walk-inverted-5.png",
       "hotspot": [
-        20,
+        19,
         23
       ],
       "angle_set": "inverted",
@@ -302,11 +308,12 @@
       "order": 6,
       "file": "../frames/s2-walk-6.png",
       "hotspot": [
-        14,
-        21
+        15,
+        24
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-walk-s2-v1 cell 6; fixed scale 10.3; see powered-concepts-generation.json."
     },
     {
       "id": "s2-walk-up45-6",
@@ -314,7 +321,7 @@
       "order": 6,
       "file": "../frames/s2-walk-up45-6.png",
       "hotspot": [
-        18,
+        21,
         19
       ],
       "angle_set": "up45",
@@ -326,7 +333,7 @@
       "order": 6,
       "file": "../frames/s2-walk-steep-6.png",
       "hotspot": [
-        21,
+        24,
         13
       ],
       "angle_set": "steep",
@@ -339,7 +346,7 @@
       "file": "../frames/s2-walk-inverted-6.png",
       "hotspot": [
         19,
-        17
+        18
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -350,11 +357,12 @@
       "order": 7,
       "file": "../frames/s2-walk-7.png",
       "hotspot": [
-        14,
-        21
+        15,
+        24
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-walk-s2-v1 cell 7; fixed scale 10.3; see powered-concepts-generation.json."
     },
     {
       "id": "s2-walk-up45-7",
@@ -362,8 +370,8 @@
       "order": 7,
       "file": "../frames/s2-walk-up45-7.png",
       "hotspot": [
-        17,
-        19
+        21,
+        20
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -374,8 +382,8 @@
       "order": 7,
       "file": "../frames/s2-walk-steep-7.png",
       "hotspot": [
-        21,
-        14
+        24,
+        13
       ],
       "angle_set": "steep",
       "duration_ticks": 1
@@ -386,8 +394,8 @@
       "order": 7,
       "file": "../frames/s2-walk-inverted-7.png",
       "hotspot": [
-        19,
-        21
+        20,
+        20
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -497,10 +505,11 @@
       "file": "../frames/push-0.png",
       "hotspot": [
         20,
-        19
+        21
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-push-duck-v1 cell 0; fixed scale 12.2; see powered-concepts-generation.json."
     },
     {
       "id": "push-1",
@@ -508,11 +517,12 @@
       "order": 1,
       "file": "../frames/push-1.png",
       "hotspot": [
-        18,
-        20
+        19,
+        21
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-push-duck-v1 cell 1; fixed scale 12.2; see powered-concepts-generation.json."
     },
     {
       "id": "push-2",
@@ -524,7 +534,8 @@
         19
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-push-duck-v1 cell 2; fixed scale 12.2; see powered-concepts-generation.json."
     },
     {
       "id": "push-3",
@@ -533,10 +544,11 @@
       "file": "../frames/push-3.png",
       "hotspot": [
         20,
-        22
+        21
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-push-duck-v1 cell 3; fixed scale 12.2; see powered-concepts-generation.json."
     },
     {
       "id": "s2-wait-0",
@@ -583,11 +595,12 @@
       "order": 0,
       "file": "../frames/balance-0.png",
       "hotspot": [
-        19,
-        23
+        18,
+        20
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-balance-v1 cell 0; fixed scale 12.6; see powered-concepts-generation.json."
     },
     {
       "id": "balance-1",
@@ -595,11 +608,12 @@
       "order": 1,
       "file": "../frames/balance-1.png",
       "hotspot": [
-        20,
-        24
+        19,
+        20
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-balance-v1 cell 1; fixed scale 12.6; see powered-concepts-generation.json."
     },
     {
       "id": "balance-2",
@@ -608,10 +622,11 @@
       "file": "../frames/balance-2.png",
       "hotspot": [
         20,
-        24
+        20
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-balance-v1 cell 2; fixed scale 12.6; see powered-concepts-generation.json."
     },
     {
       "id": "balance-3",
@@ -619,11 +634,12 @@
       "order": 3,
       "file": "../frames/balance-3.png",
       "hotspot": [
-        21,
-        22
+        20,
+        21
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-balance-v1 cell 3; fixed scale 12.6; see powered-concepts-generation.json."
     },
     {
       "id": "balance-4",
@@ -631,11 +647,12 @@
       "order": 4,
       "file": "../frames/balance-4.png",
       "hotspot": [
-        20,
-        22
+        21,
+        21
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-balance-v1 cell 4; fixed scale 12.6; see powered-concepts-generation.json."
     },
     {
       "id": "balance-5",
@@ -643,11 +660,12 @@
       "order": 5,
       "file": "../frames/balance-5.png",
       "hotspot": [
-        20,
-        23
+        21,
+        22
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-balance-v1 cell 5; fixed scale 12.6; see powered-concepts-generation.json."
     },
     {
       "id": "duck-0",
@@ -655,11 +673,12 @@
       "order": 0,
       "file": "../frames/duck-0.png",
       "hotspot": [
-        16,
-        9
+        17,
+        10
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-rollout-push-duck-v1 cell 4; fixed scale 12.2; see powered-concepts-generation.json."
     },
     {
       "id": "transform-0",
