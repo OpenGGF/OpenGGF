@@ -75,8 +75,8 @@ final class MicaGilded {
                         Map.of(
                                 SuperFormProfile.Tier.SUPER,
                                 new SuperFormProfile.Form(
-                                        fade,
-                                        colors.get("s2"),
+                                        gold(fade),
+                                        gold(colors.get("s2")),
                                         List.of(),
                                         8,
                                         4,
@@ -113,7 +113,8 @@ final class MicaGilded {
                         CanonicalAnimation.WAIT,
                         CanonicalAnimation.BALANCE,
                         CanonicalAnimation.DUCK,
-                        CanonicalAnimation.SUPER_TRANSFORM));
+                        CanonicalAnimation.SUPER_TRANSFORM,
+                        CanonicalAnimation.ROLL, CanonicalAnimation.ROLL2));
         if (game.equals("s3k"))
             aliases.removeAll(
                     Set.of(

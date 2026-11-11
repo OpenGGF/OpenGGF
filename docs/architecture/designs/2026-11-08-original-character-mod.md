@@ -1670,6 +1670,57 @@ or blockers remain; the lead owns subsequent integration. No merge or push.
 
 ## Coverage audit (2026-11-09)
 
+**Powered-form owner feedback, 2026-11-11:** powered binding selects the creator’s
+movement archetype; native Tails families retain Tails clocks instead of consuming
+Super Sonic’s movement table. Authored powered scripts have relocated canonical
+addresses (`PoweredPlayableSheet.animationId`) independent of native animation IDs.
+The form controller can therefore select a wind-up in S1 and in S2’s Tails host,
+and TALON’s private flight reads the active bank without relocating it twice.
+Candidate 0.7’s signature pin and `ModApiVersion` are updated together; its
+unpublished version remains 0.7.0 under the descriptor’s policy.
+
+MICA’s old shared run drawings had inconsistent lean/registration; the native
+two-phase timer was correct. Fresh per-host run poses retain that clock. TALON’s
+old free-flight head was small, dark and front-facing compared with his approved
+profile carry art. New free/ascending flight uses that profile, wing design,
+skull/torso scale and selective material contours. Source-row placement drift was
+corrected with measured goggle/skull hotspots, never wingspan or area fitting.
+Normal carry images and hand-to-feet contact geometry remain unchanged.
+The first run candidate panel accidentally omitted approved core references and
+was rejected. Four fresh independent core-referenced attempts replaced it; the
+selected fourth set preserves the compact hood and alternating trailing boots.
+
+Solar now has authored S2/S3K banks for idle/run/flight/transformation and approved
+original rolling geometry, also used by S1’s creator form. Gilded and Solar have
+bright yellow/white and warmer amber/white shimmer respectively; no brown body
+phase remains. Fixed powered silhouette ink is remapped to cycling gold2, keeping
+interior eye/glove/shoe separators. Saturated contours preserve scale/feather
+readability at the white peak. The merged effects lane’s glints, motes, flare,
+heat trail and Hyper-only MICA Instagib behavior remain present.
+
+Independent sqrt(mean opaque-area ratio), measured after anatomical reduction:
+MICA flat run **0.964**, TALON free/ascending flight **1.170**, Solar idle/run
+**1.033**, Solar flight **1.212**, transformation **1.011**. Integrated wings add
+area over the native rotor-free body. Approved rolling reuse is MICA S2/S3K
+**1.036/1.033**, TALON **1.079/1.079**. Colour conversion changes no alpha.
+Provenance and reproducible selected rows are in the two `feedback-generation.json`
+records; the maintained producer is `production/talon/feedback_art.py`.
+
+The audit keeps **zero fallback rows**. MICA S2/S3K authored obligations move
+**143/174 →146/177** as transformation and rolling move from normal aliases to
+powered drawings. TALON’s new Solar canonical view reports **7 authored + 21 normal
+aliases** in S2 and **7+28** in S3K; normal pose obligations remain authored/aliased.
+The canonical transformation boot/rewind/refresh regression covers all three hosts.
+A single self-contained external HTML review embeds real stock/before/after PNGs
+at 3× and 640px CRF 30, 60 fps motion, including standing/run/roll and whole shimmer
+cycles. S3K also has live carry-controller and manual-acquisition captures. S2’s
+carry panel is an explicitly declared pose-only renderer check: native S2 has no
+carry state, and forcing S3K’s scripted-CNZ carry contract there hits an inherited
+missing carried-script resolution in both baseline and changed trees. That
+rejected probe is not physical carry acceptance or an engine parity exception.
+No complete-route or other-platform rendering certification is claimed.
+
+
 **Paired carry polish, 2026-11-10:** three MICA hanging and twelve TALON
 normal/ascent carrier slots now use jointly generated grip geometry, with
 selective material contours and the native 12/10 opaque-colour budgets. The

@@ -33,7 +33,7 @@ mica-and-talon/
     continue/                 native screen pose banks
     portrait/                 data-select portraits
     endings/                  native ending and cockpit replacements
-    powered/                  MICA's host-specific Gilded sheet inputs
+    powered/                  host-specific Gilded/Solar sheets, cycles and effects
     snowboard/                MICA's native snowboard poses
   production/{mica,talon}/     recipes, selected parts, prompts and provenance
   concept/                    approved original character references
@@ -178,3 +178,35 @@ Removed dated README logs (all last present at `2e7d9fa348`):
 - `art/talon/oriented-stage/README.md`
 - `art/talon/reels/README.md`
 - `art/talon/titles/README.md`
+
+## Powered art and the feedback checkpoint
+
+Gilded and Solar use host-specific powered GGFP banks. TALON retains Tails’
+native movement clocks; his integrated wings read the active bank’s already
+relocated canonical script. S1 creator forms can play the same five-pose wind-up
+without a donor ROM or a native Super animation slot. See
+[powered script addresses](../../docs/modding/characters.md) for the candidate API.
+
+MICA’s run now keeps the native two-phase lean and contact clock. TALON’s free
+flight uses the approved carry profile, skull scale, wing design and material
+contours. Carry geometry and MICA’s hand-to-feet registration are unchanged.
+Gilded shimmers bright yellow to white; Solar keeps warmer amber shadows and
+orange tips. Powered silhouettes use cycling gold, retaining only interior eye,
+glove and shoe separators. Rolling reuses approved original geometry with that
+same material conversion. Normal-bank aliases remain explicit.
+
+Selected indexed pixels, original generation attempts, anatomical scales and
+material remapping are recorded in `production/*/feedback-generation.json`.
+Check or rebuild the selected images without native pixels or raw generations:
+
+```bash
+python3 examples/mica-and-talon/production/talon/feedback_art.py --check
+python3 tools/modding/playable_art/gilded_java.py --check
+python3 tools/modding/playable_art/solar_java.py --check
+```
+
+The feedback review is one self-contained HTML file with embedded PNGs and
+640px, CRF 30, 60 fps MP4s; lossless masters and per-frame CSVs stay in the external
+capture directory. S3K carry has live-controller and manual-acquisition captures.
+S2 has no native carry state: its carry comparison is a declared pose-only
+renderer check, alongside native Tails flight. Neither certifies a complete route.

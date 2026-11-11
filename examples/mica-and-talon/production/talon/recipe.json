@@ -1649,8 +1649,8 @@
           "0000000000000222000000000000000000"
         ],
         "anchor": [
-          20,
-          27
+          21,
+          26
         ]
       },
       "outline_mode": "material"
@@ -1699,7 +1699,7 @@
           "000000000000000022200000000000000000"
         ],
         "anchor": [
-          26,
+          24,
           18
         ]
       },
@@ -1749,7 +1749,7 @@
           "000000000000000000000222000000000000000000000000000"
         ],
         "anchor": [
-          30,
+          29,
           18
         ]
       },
@@ -1806,7 +1806,7 @@
         ],
         "anchor": [
           17,
-          22
+          18
         ]
       },
       "outline_mode": "material"
@@ -1855,8 +1855,8 @@
           "00000000000000022300000000000000000"
         ],
         "anchor": [
-          24,
-          22
+          23,
+          18
         ]
       },
       "outline_mode": "material"
@@ -1905,8 +1905,8 @@
           "00000000000000000022200000000000000000"
         ],
         "anchor": [
-          27,
-          22
+          25,
+          18
         ]
       },
       "outline_mode": "material"
@@ -6316,8 +6316,8 @@
           "0000000000000222000000000000000000"
         ],
         "anchor": [
-          20,
-          27
+          21,
+          26
         ]
       },
       "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale.",
@@ -6366,7 +6366,7 @@
           "000000000000000022200000000000000000"
         ],
         "anchor": [
-          26,
+          24,
           18
         ]
       },
@@ -6416,7 +6416,7 @@
           "000000000000000000000222000000000000000000000000000"
         ],
         "anchor": [
-          30,
+          29,
           18
         ]
       },
@@ -6473,7 +6473,7 @@
         ],
         "anchor": [
           17,
-          22
+          18
         ]
       },
       "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale.",
@@ -6522,8 +6522,8 @@
           "00000000000000022300000000000000000"
         ],
         "anchor": [
-          24,
-          22
+          23,
+          18
         ]
       },
       "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale.",
@@ -6572,8 +6572,8 @@
           "00000000000000000022200000000000000000"
         ],
         "anchor": [
-          27,
-          22
+          25,
+          18
         ]
       },
       "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity and material contours match approved carry; fixed skull/torso scale.",

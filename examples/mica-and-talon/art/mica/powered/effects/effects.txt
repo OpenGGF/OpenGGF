@@ -4,7 +4,7 @@
 # front <set> <rgb> <radius> <size> <alpha> <arc>        heat front, outer haze first
 # particle <name> <frame-ticks>, then per frame: frame <hotspot-x> <hotspot-y> and its pixel rows.
 #   Pixels are hex indices on MICA's own live palette line ('.' is transparent), so Gilded
-#   glints follow her gold cycle: 2 amber, 3 orange, 4 gold, 5 yellow, 6 cream, 7 pale gold, c white.
+#   glints follow her gold cycle: 2 saturated gold, 3–5 yellow/white shimmer, 6 cream, 7 pale gold, c white.
 # emitter <set> <TRIGGER> <particle[,particle]> <count> <interval> <RING|SCATTER>
 #   <offset-x> <offset-y> <radius> <speed-x> <speed-y> <jitter> <gravity> <life>
 #   offsets in pixels, +x in front of her; speeds, jitter and gravity in 1/256 px per tick.

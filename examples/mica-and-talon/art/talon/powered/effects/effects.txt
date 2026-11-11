@@ -1,5 +1,5 @@
 # TALON strike trails and Solar particles. Row syntax: art/mica/powered/effects/effects.txt.
-#   Pixels index TALON's own live palette line; in Solar form 2 orange, 3 amber, 4 gold,
+#   Pixels index TALON's own live palette line; in Solar form 2 bright amber, 3 warm gold, 4 white-gold,
 #   5 pale gold, 6 orange-gold, c white.
 
 # Normal TALON: slate body and haze with a warm courier-amber core (sheet 49496D/9292B6/FFB624).

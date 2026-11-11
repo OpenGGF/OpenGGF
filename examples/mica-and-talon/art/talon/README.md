@@ -21,7 +21,7 @@ the repository root. `assemble.py` is `tools/modding/playable_art/assemble.py`.
 | `stage-poses/` | `frames.txt` (per host for MICA endings); 36 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `titles/` | `*-frames.txt`; 50 PNGs; masks and clear mask | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 
-| `powered/` | `palettes.txt` | Solar fade and cycle colour words | `python3 tools/modding/playable_art/solar_java.py` (or `--check`). |
+| `powered/` | `s2/`, `s3k/`; 64 PNGs; `palettes.txt`; effects | Authored Solar idle/run/flight/transform, original rolling reuse, cycle-owned contours | `assemble.py` each host handoff; `production/talon/feedback_art.py --check`; `solar_java.py --check`. |
 
 Production records are in [`production/talon/`](../../production/talon/).
 The final special-stage manifests point from that tree to these approved PNGs.
@@ -33,3 +33,25 @@ S2 title BODY0–4 use the camera-facing face selections in
 [`s2-gaze-generation.json`](../../production/talon/titles/s2-gaze-generation.json).
 The approved goggles, crest, connected wings and outfit remain outside the face
 windows; native hotspots, indexed palette and MICA overlap pixels are retained.
+
+## Powered-form feedback, 2026-11-11
+
+Fresh native-pose generations and selected indexed rows live in
+[`feedback-generation.json`](../../production/talon/feedback-generation.json).
+Six free-flight phases now match the approved carry profile and material contours;
+normal/ascending variants share the native identical torso pose. Goggle/skull
+registration removes source-atlas row drift without changing scale or pixels.
+Solar has dedicated S2/S3K banks, shared by the S1 creator form, and an animated
+five-pose wind-up. Its warm gold/orange cycle retains clear white-gold plumage;
+powered silhouette ink belongs to the cycle. Normal carry contact geometry is
+unchanged. Native S2 has no carry state; its picture comparison is pose-only.
+
+`production/talon/feedback_art.py` reproduces every selected/converted image from
+original indexed rows; raw generations and decoded native references stay outside
+Git. `production/talon/PoweredFeedbackCapture.java` is the maintained native-clock
+presentation probe: build the example, compile it against `target/classes` and
+`target/mica-classpath.txt`, then pass game, character, `true|false|hyper`, jar
+(or `-` for stock), and an external output directory. Run with DISPLAY and
+WAYLAND_DISPLAY unset, surfaceless EGL and an owned save root. The probe declares
+emeralds/rings, an airborne transformation start, camera registration and held
+pose speed 0x900; it is art/palette evidence, not route certification.

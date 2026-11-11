@@ -493,8 +493,8 @@
       "order": 0,
       "file": "frames/fly-00.png",
       "hotspot": [
-        20,
-        27
+        21,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
@@ -506,7 +506,7 @@
       "order": 1,
       "file": "frames/fly-01.png",
       "hotspot": [
-        26,
+        24,
         18
       ],
       "angle_set": "flat",
@@ -519,7 +519,7 @@
       "order": 2,
       "file": "frames/fly-02.png",
       "hotspot": [
-        30,
+        29,
         18
       ],
       "angle_set": "flat",
@@ -533,7 +533,7 @@
       "file": "frames/fly-03.png",
       "hotspot": [
         17,
-        22
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
@@ -545,8 +545,8 @@
       "order": 4,
       "file": "frames/fly-04.png",
       "hotspot": [
-        24,
-        22
+        23,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
@@ -558,8 +558,8 @@
       "order": 5,
       "file": "frames/fly-05.png",
       "hotspot": [
-        27,
-        22
+        25,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
@@ -1780,8 +1780,8 @@
       "order": 0,
       "file": "frames/family-tails-fly-ascend-00.png",
       "hotspot": [
-        20,
-        27
+        21,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1793,7 +1793,7 @@
       "order": 1,
       "file": "frames/family-tails-fly-ascend-01.png",
       "hotspot": [
-        26,
+        24,
         18
       ],
       "angle_set": "flat",
@@ -1806,7 +1806,7 @@
       "order": 2,
       "file": "frames/family-tails-fly-ascend-02.png",
       "hotspot": [
-        30,
+        29,
         18
       ],
       "angle_set": "flat",
@@ -1820,7 +1820,7 @@
       "file": "frames/family-tails-fly-ascend-03.png",
       "hotspot": [
         17,
-        22
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1832,8 +1832,8 @@
       "order": 4,
       "file": "frames/family-tails-fly-ascend-04.png",
       "hotspot": [
-        24,
-        22
+        23,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1845,8 +1845,8 @@
       "order": 5,
       "file": "frames/family-tails-fly-ascend-05.png",
       "hotspot": [
-        27,
-        22
+        25,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,

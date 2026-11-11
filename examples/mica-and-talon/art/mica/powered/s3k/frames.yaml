@@ -398,8 +398,8 @@
       "order": 0,
       "file": "../frames/s3k-run-0.png",
       "hotspot": [
-        28,
-        13
+        32,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 1
@@ -410,8 +410,8 @@
       "order": 0,
       "file": "../frames/s3k-run-up45-0.png",
       "hotspot": [
-        20,
-        11
+        19,
+        13
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -422,8 +422,8 @@
       "order": 0,
       "file": "../frames/s3k-run-steep-0.png",
       "hotspot": [
-        13,
-        10
+        14,
+        11
       ],
       "angle_set": "steep",
       "duration_ticks": 1
@@ -434,8 +434,8 @@
       "order": 0,
       "file": "../frames/s3k-run-inverted-0.png",
       "hotspot": [
-        15,
-        9
+        17,
+        8
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -446,8 +446,8 @@
       "order": 1,
       "file": "../frames/s3k-run-1.png",
       "hotspot": [
-        28,
-        13
+        32,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 1
@@ -458,8 +458,8 @@
       "order": 1,
       "file": "../frames/s3k-run-up45-1.png",
       "hotspot": [
-        22,
-        11
+        21,
+        13
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -470,7 +470,7 @@
       "order": 1,
       "file": "../frames/s3k-run-steep-1.png",
       "hotspot": [
-        14,
+        15,
         11
       ],
       "angle_set": "steep",
@@ -482,8 +482,8 @@
       "order": 1,
       "file": "../frames/s3k-run-inverted-1.png",
       "hotspot": [
-        17,
-        9
+        19,
+        8
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -672,6 +672,84 @@
       "angle_set": "flat",
       "duration_ticks": 1,
       "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "gold-roll-00",
+      "animation": "ROLL",
+      "order": 0,
+      "file": "frames/gold-roll-00.png",
+      "hotspot": [
+        15,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "gold-roll-blur",
+      "animation": "ROLL",
+      "order": 1,
+      "file": "frames/gold-roll-blur.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "gold-roll-01",
+      "animation": "ROLL",
+      "order": 2,
+      "file": "frames/gold-roll-01.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "gold-roll-02",
+      "animation": "ROLL",
+      "order": 3,
+      "file": "frames/gold-roll-02.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "gold-roll-03",
+      "animation": "ROLL",
+      "order": 4,
+      "file": "frames/gold-roll-03.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "gold-roll2",
+      "animation": "ROLL2",
+      "order": 0,
+      "file": "frames/gold-roll-00.png",
+      "hotspot": [
+        15,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
     }
   ],
   "nativeFrames": {
@@ -737,7 +815,17 @@
     "family-super-transform/1": "transform-1",
     "family-super-transform/2": "transform-2",
     "family-super-transform/3": "transform-3",
-    "family-super-transform/4": "transform-4"
+    "family-super-transform/4": "transform-4",
+    "roll/0": "gold-roll-00",
+    "roll/1": "gold-roll-01",
+    "roll/2": "gold-roll-02",
+    "roll/3": "gold-roll-03",
+    "roll/4": "gold-roll-blur",
+    "family-roll/0": "gold-roll-blur",
+    "family-roll/1": "gold-roll-00",
+    "family-roll/4": "gold-roll-03",
+    "family-roll/2": "gold-roll-01",
+    "family-roll/3": "gold-roll-02"
   },
   "scripts": {
     "WAIT": {
@@ -782,6 +870,33 @@
       ],
       "end": "next",
       "next": "WAIT"
+    },
+    "ROLL": {
+      "frames": [
+        "gold-roll-00",
+        "gold-roll-blur",
+        "gold-roll-01",
+        "gold-roll-blur",
+        "gold-roll-02",
+        "gold-roll-blur",
+        "gold-roll-03",
+        "gold-roll-blur"
+      ],
+      "end": "loop"
+    },
+    "ROLL2": {
+      "frames": [
+        "gold-roll-00",
+        "gold-roll-blur",
+        "gold-roll-01",
+        "gold-roll-blur",
+        "gold-roll-02",
+        "gold-roll-blur",
+        "gold-roll-03",
+        "gold-roll-blur"
+      ],
+      "end": "loop",
+      "speedDriven": true
     }
   }
 }

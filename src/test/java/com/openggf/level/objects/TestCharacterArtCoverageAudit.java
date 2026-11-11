@@ -85,7 +85,7 @@ class TestCharacterArtCoverageAudit {
                     "--sheet",project.resolve("mica_powered_"+suffix+"-sheet.yaml").toString(),"--out",poweredEncoded.toString()},System.out));
             var poweredArt = PlayableSheetMaterializer.read(Files.readAllBytes(poweredEncoded)).art();
             var aliases = java.util.EnumSet.allOf(CanonicalAnimation.class);
-            aliases.removeAll(Set.of(CanonicalAnimation.WALK, CanonicalAnimation.RUN, CanonicalAnimation.PUSH, CanonicalAnimation.WAIT, CanonicalAnimation.BALANCE, CanonicalAnimation.DUCK, CanonicalAnimation.SUPER_TRANSFORM));
+            aliases.removeAll(Set.of(CanonicalAnimation.WALK, CanonicalAnimation.RUN, CanonicalAnimation.PUSH, CanonicalAnimation.WAIT, CanonicalAnimation.BALANCE, CanonicalAnimation.DUCK, CanonicalAnimation.SUPER_TRANSFORM, CanonicalAnimation.ROLL, CanonicalAnimation.ROLL2));
             var palette=List.of(Collections.nCopies(16,0));
             if (game.equals("S3K")) aliases.removeAll(Set.of(CanonicalAnimation.BLINK,CanonicalAnimation.BALANCE2,CanonicalAnimation.BUBBLE,CanonicalAnimation.FLY));
             var phaseAliases = new ObjectMapper().readValue(Files.readAllBytes(Path.of("examples/mica-and-talon/art/mica/powered",suffix,"normal-phase-aliases.json")),new com.fasterxml.jackson.core.type.TypeReference<Map<String,String>>(){});
@@ -152,7 +152,7 @@ class TestCharacterArtCoverageAudit {
                     project.resolve("talon_powered_"+suffix+"-sheet.yaml").toString(),"--out",poweredEncoded.toString()},System.out));
             var powered=PlayableSheetMaterializer.read(Files.readAllBytes(poweredEncoded)).art();
             var authored=Set.of(CanonicalAnimation.WAIT,CanonicalAnimation.RUN,CanonicalAnimation.TAILS_FLY,
-                    CanonicalAnimation.TAILS_FLY_ASCEND,CanonicalAnimation.SUPER_TRANSFORM);
+                    CanonicalAnimation.TAILS_FLY_ASCEND,CanonicalAnimation.SUPER_TRANSFORM,CanonicalAnimation.ROLL,CanonicalAnimation.ROLL2);
             var aliases=EnumSet.allOf(CanonicalAnimation.class); aliases.removeAll(authored);
             var palette=List.of(Collections.nCopies(16,0));
             var form=new SuperFormProfile.Form(palette,palette,List.of(),1,1,PhysicsProfile.SONIC_3K_SUPER_TAILS,

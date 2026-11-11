@@ -1,129 +1,367 @@
 {
-  "status": "blocked before artwork generation; no owner item completed",
+  "status": "implemented, verified and visually reviewed; lead owns integration",
   "date": "2026-11-11",
   "base": "eba8cce479",
   "branch": "feature/ai-mt-powered-art",
-  "scope": "Owner feedback items 2, 4, 6, 7: powered-form and flight art",
-  "stop_authority": "art-brief.md: If you need an engine/API change, stop and report it rather than making it.",
-  "findings": [
-    {
-      "owner_items": [
-        2
-      ],
-      "observed": "TalonSolar selects WAIT in S2/S3K/S1; MicaGilded selects WAIT in S1.",
-      "location": "src/main/java/micaandtalon/TalonSolar.java; src/main/java/micaandtalon/MicaGilded.java",
-      "classification": "configuration root cause; no visual acceptance performed"
-    },
-    {
-      "owner_items": [
-        4
-      ],
-      "observed": "TalonSolar has no PoweredPlayableSheet. Solar applies palette tables over normal art.",
-      "classification": "configuration fact; muddiness remains a visual hypothesis"
-    },
-    {
-      "owner_items": [
-        4
-      ],
-      "observed": "LevelPlayableArtInitializer passes the host PoweredAnimationProvider source unconditionally for all powered creator banks. S2 and S3K providers construct Sonic super sources. PoweredPlayableArtBinding only installs authored canonical timing when source == null; with a source it traverses source families exclusively.",
-      "locations": [
-        "src/main/java/com/openggf/level/LevelPlayableArtInitializer.java:702",
-        "src/main/java/com/openggf/game/sonic2/Sonic2.java:349",
-        "src/main/java/com/openggf/game/sonic3k/Sonic3k.java:170",
-        "src/main/java/com/openggf/level/objects/PoweredPlayableArtBinding.java:65"
-      ],
-      "classification": "engine binding prerequisite for dedicated powered Tails flight bank"
-    },
-    {
-      "owner_items": [
-        4,
-        6
-      ],
-      "observed": "TalonCharacter.installFlightArt reads captured normal materialized art, then writes private FLIGHT scripts into the active set with the normal relocation. It does not consume the active powered bank.",
-      "location": "src/main/java/micaandtalon/TalonCharacter.java:126",
-      "classification": "additional prerequisite in effects-lane-owned class"
-    }
+  "authority": "Lead expanded lane ownership to powered engine binding/providers/tests and localized flight presentation, then explicitly required merge of feature/ai-original-character. No push or destination merge authorized.",
+  "commits": [
+    "943fed8ec107872cf153f8261cae4d98b15250a7",
+    "eabd6c20b3",
+    "c82ea1b640"
   ],
-  "probe": {
-    "source": "$HOME/scratch/agent-tmp/mt-feedback-20261111/art/PoweredFlightProbe.java",
-    "sha256": "533465360073bd00c4221c9963c3c463acf72ef67ac411e2de3a8bfd31bfd443",
-    "log": "$HOME/scratch/agent-tmp/mt-feedback-20261111/art/binding-probe.log",
-    "inputs": "Synthetic normal and canonical powered one-tile banks; Tails donor capabilities; non-null synthetic Sonic WAIT family source. No ROM art or gameplay captures.",
-    "observed": {
-      "S2": {
-        "flight_id": 32,
-        "source_present": {
-          "frames": [
-            0
-          ],
-          "delay": 9
+  "initial_stop": {
+    "status": "blocked before artwork generation; no owner item completed",
+    "date": "2026-11-11",
+    "base": "eba8cce479",
+    "branch": "feature/ai-mt-powered-art",
+    "scope": "Owner feedback items 2, 4, 6, 7: powered-form and flight art",
+    "stop_authority": "art-brief.md: If you need an engine/API change, stop and report it rather than making it.",
+    "findings": [
+      {
+        "owner_items": [
+          2
+        ],
+        "observed": "TalonSolar selects WAIT in S2/S3K/S1; MicaGilded selects WAIT in S1.",
+        "location": "src/main/java/micaandtalon/TalonSolar.java; src/main/java/micaandtalon/MicaGilded.java",
+        "classification": "configuration root cause; no visual acceptance performed"
+      },
+      {
+        "owner_items": [
+          4
+        ],
+        "observed": "TalonSolar has no PoweredPlayableSheet. Solar applies palette tables over normal art.",
+        "classification": "configuration fact; muddiness remains a visual hypothesis"
+      },
+      {
+        "owner_items": [
+          4
+        ],
+        "observed": "LevelPlayableArtInitializer passes the host PoweredAnimationProvider source unconditionally for all powered creator banks. S2 and S3K providers construct Sonic super sources. PoweredPlayableArtBinding only installs authored canonical timing when source == null; with a source it traverses source families exclusively.",
+        "locations": [
+          "src/main/java/com/openggf/level/LevelPlayableArtInitializer.java:702",
+          "src/main/java/com/openggf/game/sonic2/Sonic2.java:349",
+          "src/main/java/com/openggf/game/sonic3k/Sonic3k.java:170",
+          "src/main/java/com/openggf/level/objects/PoweredPlayableArtBinding.java:65"
+        ],
+        "classification": "engine binding prerequisite for dedicated powered Tails flight bank"
+      },
+      {
+        "owner_items": [
+          4,
+          6
+        ],
+        "observed": "TalonCharacter.installFlightArt reads captured normal materialized art, then writes private FLIGHT scripts into the active set with the normal relocation. It does not consume the active powered bank.",
+        "location": "src/main/java/micaandtalon/TalonCharacter.java:126",
+        "classification": "additional prerequisite in effects-lane-owned class"
+      }
+    ],
+    "probe": {
+      "source": "$HOME/scratch/agent-tmp/mt-feedback-20261111/art/PoweredFlightProbe.java",
+      "sha256": "533465360073bd00c4221c9963c3c463acf72ef67ac411e2de3a8bfd31bfd443",
+      "log": "$HOME/scratch/agent-tmp/mt-feedback-20261111/art/binding-probe.log",
+      "inputs": "Synthetic normal and canonical powered one-tile banks; Tails donor capabilities; non-null synthetic Sonic WAIT family source. No ROM art or gameplay captures.",
+      "observed": {
+        "S2": {
+          "flight_id": 32,
+          "source_present": {
+            "frames": [
+              0
+            ],
+            "delay": 9
+          },
+          "source_absent_control": {
+            "frames": [
+              1
+            ],
+            "delay": 2
+          }
         },
-        "source_absent_control": {
-          "frames": [
-            1
-          ],
-          "delay": 2
+        "S3K": {
+          "flight_id": 32,
+          "source_present": {
+            "frames": [
+              0
+            ],
+            "delay": 9
+          },
+          "source_absent_control": {
+            "frames": [
+              1
+            ],
+            "delay": 2
+          }
         }
       },
-      "S3K": {
-        "flight_id": 32,
-        "source_present": {
-          "frames": [
-            0
-          ],
-          "delay": 9
+      "interpretation": "Source-present view silently retains normal flight; removing source binds and relocates authored flight. This is a binding reproduction, not an engine-render acceptance test."
+    },
+    "required_handoff": [
+      "Engine owner: provide archetype-aware powered binding that retains native Tails families and accepts authored powered-only flight/transform scripts without borrowing Sonic movement timing.",
+      "Effects/character owner: allow private flight presentation to select the active powered bank and relocation; retain native pose selection, carry contacts, and rewind/refresh behavior.",
+      "Art lane then resumes native-pose image generation, native-style size checks, and stock/before/after real-engine 60 Hz comparisons."
+    ],
+    "not_attempted": [
+      "No art generation or palette replacement",
+      "No diagnosis of MICA Super run defect from captures",
+      "No visual diagnosis/redraw of carry versus flight",
+      "No size-check table: no new set",
+      "No stock/before/after review page or MP4",
+      "No zero-fallback claim"
+    ],
+    "runtime_changes": false,
+    "validation": {
+      "tested_source": "eba8cce479; no runtime changes",
+      "python": {
+        "command": "python3 -m unittest discover -s tools/modding -p 'test_*.py'",
+        "tests": 78,
+        "result": "pass",
+        "seconds": 13.608
+      },
+      "java": {
+        "command": "env -u DISPLAY -u WAYLAND_DISPLAY JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestPoweredPlayableArtBinding,TestMicaCharacterIntegration,TestCharacterArtCoverageAudit,TestModApiSignatureSurface' -Dart.audit.output=$HOME/scratch/agent-tmp/mt-feedback-20261111/art/baseline test",
+        "completed": {
+          "TestCharacterArtCoverageAudit": 3,
+          "TestPoweredPlayableArtBinding": 5,
+          "TestModApiSignatureSurface": 12
         },
-        "source_absent_control": {
-          "frames": [
-            1
-          ],
-          "delay": 2
-        }
+        "completed_failures": 0,
+        "completed_errors": 0,
+        "completed_skips": 0,
+        "TestMicaCharacterIntegration": "incomplete: wrapper exited 143; surviving integration JVM subsequently exited before attempted termination; no integration result XML",
+        "roms": "all found; none missing",
+        "queue_wait_seconds": 0,
+        "run_duration": "incomplete; approximately three minutes compilation and partial test execution; no overall Maven verdict"
+      },
+      "probe": "exit 0; two hosts confirm source-present omission and source-absent control",
+      "coverage": "unchanged: no art/binding changes; test emitted host JSON inventories, not matrix.csv/totals.json",
+      "review_page": null,
+      "size_check": null,
+      "limits": "No art or gameplay acceptance, no zero-fallback certification; no full-suite run."
+    }
+  },
+  "runtime_changes": true,
+  "resolution": {
+    "binding": "Archetype-aware S2/S3K powered sources retain native Tails vocabulary/movement clocks. Authored scripts bind in a relocated canonical namespace even with a native source. Talon private flight reads the active powered bank and relocation; form controller can play source-independent transforms, including S1. Focused source-present regression covers both hosts. Candidate signature pins and ModApiVersion move together under the unchanged unpublished0.7.0 descriptor policy.",
+    "item2": "Solar used WAIT. New five-pose thirteen-step authored transformation executes through native form activation in S2/S3K and shared creator path in S1; S1 MICA gets her authored transformation too.",
+    "item4": "Solar previously cycled normal slate art. New dedicated host banks have clean white-gold material shading, idle/run/flight/transform and approved rolling geometry. Yellow-to-white cycles remain bright; Solar retains warmer amber and orange tips. Integrated effects constructor fields preserved, warm Solar motes and Gilded glints inspected in real captures.",
+    "item6": "Real before captures show small dark front-facing free-flight head versus approved profile carry. Redrew free/ascending flight to match carry skull/torso/profile/wing contours; measured goggle landmarks remove source-row placement drift. Normal carry art/contact geometry unchanged; S3K before/after carry PNGs pixel-identical at inspected30/60/100 ticks.",
+    "item7": "Native two-phase run timing was correct; shared drawings had inconsistent forward lean/head registration. New per-host poses keep native clock and alternating trailing boots. Initial candidate omitted approved core reference and was rejected; selected fourth fresh core-referenced attempt locks18\u201319px skull/8px torso before independent area measurement.",
+    "A_B": "Dark orange/brown body phases and fixed silhouette ink caused muddy gold and a black rim. Body slots now shimmer bright yellow/white, MICA darkest contour near0CE/0EE and Solar warmer without brown. Powered fixed outer ink becomes cycle-owned gold2; interior eye/glove/shoe separators retained. Saturated contour preserves plates at bright peak. Approved rolling geometry receives same conversion."
+  },
+  "audit": {
+    "before": {
+      "MICA/S1": {
+        "authored": 66,
+        "native alias": 3,
+        "N/A": 2
+      },
+      "MICA/S2": {
+        "authored": 143,
+        "native alias": 1,
+        "alias": 26,
+        "N/A": 5
+      },
+      "MICA/S3K": {
+        "authored": 174,
+        "native alias": 121,
+        "alias": 24,
+        "N/A": 10
+      },
+      "TALON/S1": {
+        "N/A": 2,
+        "authored": 30,
+        "native alias": 2
+      },
+      "TALON/S2": {
+        "authored": 133,
+        "native alias": 69,
+        "N/A": 52
+      },
+      "TALON/S3K": {
+        "authored": 128,
+        "native alias": 236,
+        "N/A": 83
       }
     },
-    "interpretation": "Source-present view silently retains normal flight; removing source binds and relocates authored flight. This is a binding reproduction, not an engine-render acceptance test."
+    "after": {
+      "MICA/S1": {
+        "authored": 66,
+        "native alias": 3,
+        "N/A": 2
+      },
+      "MICA/S2": {
+        "authored": 146,
+        "native alias": 1,
+        "alias": 23,
+        "N/A": 5
+      },
+      "MICA/S3K": {
+        "authored": 177,
+        "native alias": 121,
+        "alias": 21,
+        "N/A": 10
+      },
+      "TALON/S1": {
+        "N/A": 2,
+        "authored": 30,
+        "native alias": 2
+      },
+      "TALON/S2": {
+        "authored": 140,
+        "native alias": 69,
+        "alias": 21,
+        "N/A": 52
+      },
+      "TALON/S3K": {
+        "authored": 135,
+        "native alias": 236,
+        "alias": 28,
+        "N/A": 83
+      }
+    },
+    "fallback_rows": 0,
+    "matrix_rows": 1373,
+    "native_evidence_rows": 12287,
+    "moved": "MICA S2/S3K authored143/174 ->146/177 (transform + rolling); TALON133/128 ->140/135 (7 Solar canonical obligations per host), plus21/28 explicit normal aliases. S1 unchanged; inherited N/A categories remain."
   },
-  "required_handoff": [
-    "Engine owner: provide archetype-aware powered binding that retains native Tails families and accepts authored powered-only flight/transform scripts without borrowing Sonic movement timing.",
-    "Effects/character owner: allow private flight presentation to select the active powered bank and relocation; retain native pose selection, carry contacts, and rewind/refresh behavior.",
-    "Art lane then resumes native-pose image generation, native-style size checks, and stock/before/after real-engine 60 Hz comparisons."
+  "size_check": [
+    {
+      "set": "powered-roll-mica-s2",
+      "frames": 5,
+      "native_mean": 601.8,
+      "authored_mean": 646.4,
+      "ratio": 1.0363932652870418
+    },
+    {
+      "set": "powered-roll-mica-s3k",
+      "frames": 5,
+      "native_mean": 605.8,
+      "authored_mean": 646.4,
+      "ratio": 1.0329660294955394
+    },
+    {
+      "set": "mica",
+      "frames": 4,
+      "native_mean": 640.75,
+      "authored_mean": 595.75,
+      "ratio": 0.9642457160985659
+    },
+    {
+      "set": "fly",
+      "frames": 12,
+      "native_mean": 535.0,
+      "authored_mean": 731.8333333333334,
+      "ratio": 1.1695780318498077
+    },
+    {
+      "set": "solarMain",
+      "frames": 10,
+      "native_mean": 520.6,
+      "authored_mean": 555.5,
+      "ratio": 1.0329753303147182
+    },
+    {
+      "set": "solarFly",
+      "frames": 12,
+      "native_mean": 535.0,
+      "authored_mean": 785.8333333333334,
+      "ratio": 1.2119601280673065
+    },
+    {
+      "set": "transform",
+      "frames": 10,
+      "native_mean": 699.8,
+      "authored_mean": 715.8,
+      "ratio": 1.0113672307010002
+    },
+    {
+      "set": "powered-roll-talon-s2",
+      "frames": 4,
+      "native_mean": 540.0,
+      "authored_mean": 628.75,
+      "ratio": 1.0790513666419461
+    },
+    {
+      "set": "powered-roll-talon-s3k",
+      "frames": 4,
+      "native_mean": 540.0,
+      "authored_mean": 628.75,
+      "ratio": 1.0790513666419461
+    }
   ],
-  "not_attempted": [
-    "No art generation or palette replacement",
-    "No diagnosis of MICA Super run defect from captures",
-    "No visual diagnosis/redraw of carry versus flight",
-    "No size-check table: no new set",
-    "No stock/before/after review page or MP4",
-    "No zero-fallback claim"
-  ],
-  "runtime_changes": false,
   "validation": {
-    "tested_source": "eba8cce479; no runtime changes",
+    "source": "feature/ai-mt-powered-art final source/art tree; engine checkpoint eabd6c20b3 plus effects merge c82ea1b640 and final gold/core-referenced art changes",
+    "roms": "all wrapper properties found; none missing",
+    "java": [
+      {
+        "command": "env -u DISPLAY -u WAYLAND_DISPLAY JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestPoweredPlayableArtBinding,TestCharacterArtCoverageAudit,TestModApiSignatureSurface,TestPoweredFormEffects,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestDrawPathFieldWriteGuard,TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard,TestBroadCatchSwallowingGuard' -Dart.audit.output=$HOME/scratch/agent-tmp/mt-feedback-20261111/art/audit-delivery test",
+        "tests": 94,
+        "failures": 0,
+        "errors": 0,
+        "skips": 0,
+        "result": "BUILD SUCCESS",
+        "log": "focused-delivery.log",
+        "queue_seconds": 136,
+        "maven_seconds": 51.427,
+        "limit": "Before final MICA run image replacement; all engine/form/source code identical. Two TestSonic3kLevelLoading classes match the selector."
+      },
+      {
+        "command": "env -u DISPLAY -u WAYLAND_DISPLAY JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestMicaCharacterIntegration' test",
+        "tests": 51,
+        "failures": 0,
+        "errors": 0,
+        "skips": 0,
+        "result": "BUILD SUCCESS",
+        "log": "integration-core-final.log",
+        "queue_seconds": 0,
+        "maven_seconds": 137,
+        "test_seconds": 99.54,
+        "limit": "Standalone rerun on final artwork, includes all three hosts and powered flight/transform refresh/rewind."
+      },
+      {
+        "command": "env -u DISPLAY -u WAYLAND_DISPLAY JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCharacterArtCoverageAudit' -Dart.audit.output=$HOME/scratch/agent-tmp/mt-feedback-20261111/art/audit-final test",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skips": 0,
+        "result": "BUILD SUCCESS",
+        "log": "audit-final.log",
+        "queue_seconds": 24,
+        "maven_seconds": 37.469
+      }
+    ],
     "python": {
       "command": "python3 -m unittest discover -s tools/modding -p 'test_*.py'",
-      "tests": 78,
-      "result": "pass",
-      "seconds": 13.608
+      "tests": 81,
+      "result": "OK",
+      "seconds": 14.17,
+      "log": "python-core-final.log"
     },
-    "java": {
-      "command": "env -u DISPLAY -u WAYLAND_DISPLAY JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestPoweredPlayableArtBinding,TestMicaCharacterIntegration,TestCharacterArtCoverageAudit,TestModApiSignatureSurface' -Dart.audit.output=$HOME/scratch/agent-tmp/mt-feedback-20261111/art/baseline test",
-      "completed": {
-        "TestCharacterArtCoverageAudit": 3,
-        "TestPoweredPlayableArtBinding": 5,
-        "TestModApiSignatureSurface": 12
-      },
-      "completed_failures": 0,
-      "completed_errors": 0,
-      "completed_skips": 0,
-      "TestMicaCharacterIntegration": "incomplete: wrapper exited 143; surviving integration JVM subsequently exited before attempted termination; no integration result XML",
-      "roms": "all found; none missing",
-      "queue_wait_seconds": 0,
-      "run_duration": "incomplete; approximately three minutes compilation and partial test execution; no overall Maven verdict"
-    },
-    "probe": "exit 0; two hosts confirm source-present omission and source-absent control",
-    "coverage": "unchanged: no art/binding changes; test emitted host JSON inventories, not matrix.csv/totals.json",
-    "review_page": null,
-    "size_check": null,
-    "limits": "No art or gameplay acceptance, no zero-fallback certification; no full-suite run."
-  }
+    "other_checks": [
+      "python3 examples/mica-and-talon/build.py: Validation passed, 0 findings",
+      "feedback_art.py --check: 187 indexed frame records match",
+      "gilded_java.py --check and solar_java.py --check: pass",
+      "git diff --check: pass"
+    ],
+    "initial_143": "Original combined wrapper ended143 with no integration verdict. Preserved initial java.log/dumps; standalone final rerun completed all51 with BUILD SUCCESS. Wrapper warns about native-stream channel output, but reports no failures/errors/skips.",
+    "citation_check": "Whole-repository disasm citation check detects existing reference debt (2040 stale,32 out-of-range,121 missing-file); no new disassembly citation added by this lane. Staged hook validates changed citations.",
+    "scope": "Focused verification, not a full-suite/category smoke pass. Change-based dry plan selects4671 classes; not run. No category-run VERDICT applies.",
+    "time": "Final integration queue0s / Maven137s / tests99.54s; final audit queue24s / Maven37.469s; focused queue136s / Maven51.427s; user wait0. Remaining investigation/art/capture time was not separately instrumented and is unknown."
+  },
+  "review": {
+    "page": "$HOME/scratch/agent-tmp/mt-feedback-20261111/art/review.html",
+    "inline_excerpt": "review-inline.html",
+    "media": "62 embedded image/video/poster data URIs;20 real-capture comparison videos, each640px/60fps CRF30; exactRGB PNGs at3x; lossless masters external",
+    "inputs": "before uses eba8cce479 jar; final after built from final source/art, effects integration included; per-frame CSV/provenance saved in before/after, captures and carry-pose",
+    "judgment": "Bright native-like silhouettes and legible gold plates/feathers; native-style sprint/carry identities and full motion reviewed. No orange-brown MICA shimmer phase; warm orange Solar embers retained."
+  },
+  "limits": [
+    "S2 has no native carry or Super Tails. S2 carry panels are explicitly declared pose-only rendering; native Tails flight is the stock reference.",
+    "Forcing S3K scripted-CNZ carry context in S2 fails carried-script resolution on both baseline and changed trees. Rejected logs retained; not physical carry acceptance.",
+    "Controlled presentation starts declare positions/emeralds/rings/speed and suppress translation with native bit7. Separate S3K manual-carry input captures exist; no complete-route certification.",
+    "Viewer MP4 is lossy640px CRF30; exact palette judgments use embeddedRGB PNGs. No other-platform rendering certification.",
+    "No push, no destination merge. Lead owns subsequent integration."
+  ],
+  "live_jobs": [],
+  "blocker": null,
+  "next_action": "Lead integrates the local powered-art commit. No push or destination merge by this lane."
 }

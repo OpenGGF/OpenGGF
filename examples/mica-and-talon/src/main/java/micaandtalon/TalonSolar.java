@@ -69,7 +69,8 @@ final class TalonSolar {
         var aliases = EnumSet.allOf(CanonicalAnimation.class);
         aliases.removeAll(Set.of(CanonicalAnimation.WAIT, CanonicalAnimation.RUN,
                 CanonicalAnimation.TAILS_FLY, CanonicalAnimation.TAILS_FLY_ASCEND,
-                CanonicalAnimation.SUPER_TRANSFORM));
+                CanonicalAnimation.SUPER_TRANSFORM,
+                CanonicalAnimation.ROLL, CanonicalAnimation.ROLL2));
         // Native carry geometry/contact and all other poses are explicit normal-bank aliases.
         return new PoweredPlayableSheet(art, aliases);
     }
