@@ -2147,8 +2147,8 @@ class TestMicaCharacterIntegration {
         try (var files = Files.walk(project.resolve("art"))) {
             for (var file : files.filter(Files::isRegularFile).filter(p ->
                     !p.toString().replace('\\', '/').contains("/sheet/")
-                    && !p.toString().replace('\\', '/').contains("/powered/")).filter(p ->
-                    p.toString().endsWith(".png") || p.toString().endsWith(".mask") || p.toString().endsWith(".clear")).toList()) {
+                    && (!p.toString().replace('\\', '/').contains("/powered/") || p.toString().endsWith(".txt"))).filter(p ->
+                    p.toString().endsWith(".png") || p.toString().endsWith(".mask") || p.toString().endsWith(".clear") || p.toString().endsWith(".txt")).toList()) {
                 Path destination = classes.resolve(project.relativize(file));
                 Files.createDirectories(destination.getParent());
                 Files.copy(file, destination);

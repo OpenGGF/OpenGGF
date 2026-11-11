@@ -69,6 +69,7 @@ All classes are in `src/main/java/micaandtalon/`. The descriptor names `MicaMod`
 
 | Surface | Classes | Asset folder beneath `art/<character>/` |
 | --- | --- | --- |
+| Art-side table loading | `FrameTable` | `*-frames.txt`, `frames.txt`, `powered/palettes.txt` |
 | Registration and team | `MicaMod`, `TalonMod` | `sheet/` → packed GGFP |
 | Movement and abilities | `MicaCharacter`, `TalonCharacter` | `sheet/` |
 | Base presentation and stage selectors | `MicaPresentation`, `TalonPresentation` | `hud-and-screens/`, `stage-poses/` |
@@ -81,6 +82,42 @@ All classes are in `src/main/java/micaandtalon/`. The descriptor names `MicaMod`
 | Slot symbols | `ReelPresentation` | `reels/` |
 | Powered forms | `MicaGilded`, `TalonSolar` | `powered/`; palette records in `production/*/presentation/` |
 | Load-scoped form options | `GildedSettings` | none |
+
+## Editing frame tables
+
+Selector/file/hotspot inventories live beside their images, rather than in Java:
+`stage-poses/frames.txt`, `special-stage/frames.txt`, `competition/frames.txt`,
+`endings/**/frames.txt`, and host-specific `s1-frames.txt`, `s2-frames.txt` and
+`s3k-frames.txt` in titles and screen surfaces. The shared `FrameTable` helper
+reads them through `ModAssetRoot` and `PresentationImages`; no engine extension
+or additional dependency is involved.
+
+Each non-comment frame row has five whitespace-separated fields:
+
+```text
+# bank selector image hotspotX hotspotY
+HAND 9 s2-9.png -18 0
+```
+
+Bank names are native surface/part names, or screen banks such as
+`continue/player`. Images are relative to the table, selectors are decimal and
+hotspots may be signed where the native surface permits them. Duplicate selectors
+within one bank are rejected. `special-stage/frames.txt` names banks such as
+`S2_HALF_PIPE/n` and `S2_HALF_PIPE/hv`; `OrientedStageArt` uses the existing API
+orientation methods while the host retains native selectors and flip decisions.
+
+Ending tables also declare `palette <bank> <image>`, naming the image whose
+sixteen colours the ending bank owns. `powered/palettes.txt` stores one cycle
+row per line: its bank (`fade`, `s2`, `s3k`) followed by sixteen hexadecimal
+Mega Drive colour words. The existing `gilded_java.py` and `solar_java.py`
+commands now regenerate/check those data files from the production records;
+the historical command names remain available. Form rules and timing stay in Java.
+
+To change an image binding, edit its row and rebuild. Keep native bank names,
+selectors, origins, palettes and ownership unless the intended art change
+specifically requires them. MICA's S2 HAND selector 9 intentionally uses the
+owner-approved −18 origin. Title masks and clear-mask rules remain in
+`TitlePresentation`; the table only binds drawings.
 
 ## Art rules
 
