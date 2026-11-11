@@ -212,6 +212,9 @@ public class Ym2612Chip implements FmChip {
     private final int[] pinBuffer = new int[2];
     private final BlipResampler resampler = new BlipResampler(INTERNAL_RATE, DEFAULT_OUTPUT_RATE);
     private final boolean[] mutes = new boolean[6];
+    /** Presentation gains ({@link FmChip#setOutputGain}); never part of a snapshot or backup. */
+    private final int[] outputGains = {UNITY_GAIN, UNITY_GAIN, UNITY_GAIN, UNITY_GAIN, UNITY_GAIN, UNITY_GAIN};
+    private boolean unityOutputGain = true;
     private ChipWriteObserver writeObserver = ChipWriteObserver.NONE;
     private DacData dacData;
 
@@ -222,6 +225,9 @@ public class Ym2612Chip implements FmChip {
     /* Frame accumulation and the 1:1 frame queue used when no resampling is needed. */
     private int frameSumLeft;
     private int frameSumRight;
+    /* The same sums after the presentation gains; equal to the raw sums at unity. */
+    private int gainedSumLeft;
+    private int gainedSumRight;
     private int[] directFrames = new int[2 * 256];
     private int directFrameHead;
     private int directFrameCount;
@@ -388,6 +394,8 @@ public class Ym2612Chip implements FmChip {
         busHold = 0;
         frameSumLeft = 0;
         frameSumRight = 0;
+        gainedSumLeft = 0;
+        gainedSumRight = 0;
         directFrameHead = 0;
         directFrameCount = 0;
         dacSampleId = NO_DAC_VALUE;
@@ -513,6 +521,24 @@ public class Ym2612Chip implements FmChip {
         }
     }
 
+    /**
+     * Scales the channel's pin values about the silent resting level, so a
+     * zero gain sounds like a mute. The native-compatible stage keeps the raw
+     * sums: it is a parity oracle, not a listening path.
+     */
+    @Override
+    public void setOutputGain(int ch, int gain) {
+        if (ch < 0 || ch >= 6) {
+            return;
+        }
+        outputGains[ch] = Math.clamp(gain, 0, UNITY_GAIN);
+        boolean unity = true;
+        for (int g : outputGains) {
+            unity &= g == UNITY_GAIN;
+        }
+        unityOutputGain = unity;
+    }
+
     // ------------------------------------------------------------------ DAC
 
     /** Starts streaming the sample mapped to {@code note} through the live {@link DacData}. */
@@ -615,16 +641,26 @@ public class Ym2612Chip implements FmChip {
         }
         frameSumLeft += leftPin;
         frameSumRight += rightPin;
+        int gain = unityOutputGain ? UNITY_GAIN : outputGains[PIN_WINDOW_CHANNEL[cycle >> 2]];
+        if (gain != UNITY_GAIN) {
+            int silent = (core.chipType() & NukedOpn2.MODE_YM2612) != 0 ? YM2612_SILENT_PIN_VALUE : 0;
+            leftPin = silent + (((leftPin - silent) * gain) >> 8);
+            rightPin = silent + (((rightPin - silent) * gain) >> 8);
+        }
+        gainedSumLeft += leftPin;
+        gainedSumRight += rightPin;
         if (busHold > 0) {
             busHold--;
         }
         if (state.cycles == 0) {
-            emitFrame(frameSumLeft << OUTPUT_SHIFT, frameSumRight << OUTPUT_SHIFT);
+            emitFrame(gainedSumLeft << OUTPUT_SHIFT, gainedSumRight << OUTPUT_SHIFT);
             if (nativeOutput != null) {
                 nativeOutput.latchFmFrame(frameSumLeft, frameSumRight);
             }
             frameSumLeft = 0;
             frameSumRight = 0;
+            gainedSumLeft = 0;
+            gainedSumRight = 0;
         }
         if (nativeOutput != null) {
             nativeOutput.clockFm();
@@ -981,6 +1017,8 @@ public class Ym2612Chip implements FmChip {
         chipType = backup.chipType;
         frameSumLeft = backup.frameSumLeft;
         frameSumRight = backup.frameSumRight;
+        gainedSumLeft = frameSumLeft;
+        gainedSumRight = frameSumRight;
         directFrameCount = backup.directFrameCount;
         busHold = backup.busHold;
         pendingCount = backup.pendingCount;
@@ -1091,6 +1129,8 @@ public class Ym2612Chip implements FmChip {
         state.copyFrom(snapshot.coreRef());
         frameSumLeft = snapshot.frameSumLeft();
         frameSumRight = snapshot.frameSumRight();
+        gainedSumLeft = frameSumLeft;
+        gainedSumRight = frameSumRight;
         int[] direct = snapshot.directFramesRef();
         if (directFrames.length < direct.length) {
             directFrames = new int[Math.max(direct.length, directFrames.length * 2)];

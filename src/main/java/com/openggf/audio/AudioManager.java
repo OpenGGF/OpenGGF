@@ -621,6 +621,11 @@ public class AudioManager implements MusicRestoreSink {
         return PcmHistoryRing.capacityFramesFor(sampleRate, limitType, seconds, sizeMB);
     }
 
+    /** A 0-100 volume setting as a 256 = unity presentation gain. */
+    static int volumeGain(int percent) {
+        return Math.clamp(percent, 0, 100) * AudioPresentationMixer.UNITY_GAIN / 100;
+    }
+
     private static com.openggf.configuration.SonicConfigurationService configuredServicesOrNull() {
         try {
             return GameServices.configuration();
@@ -1241,6 +1246,7 @@ public class AudioManager implements MusicRestoreSink {
 
     public void presentFrame(PresentationMode mode) {
         presentationBinding.ensureShadowPresentation();
+        presentationBinding.applyMixVolumes();
         AudioPresentationProducer.PresentationResult result =
                 presentationBinding.shadowProducer.present(commandTimeline.currentFrame(), mode);
         if (result == AudioPresentationProducer.PresentationResult
@@ -3063,6 +3069,10 @@ public class AudioManager implements MusicRestoreSink {
         private AudioVoiceRegistry shadowRegistry;
         private AudioPresentationProducer shadowProducer;
         private SmpsDriverSession shadowSmpsSession;
+        private AudioPresentationMixer shadowMixer;
+        /* Percentages last pushed to the mixer and chip; -1 forces the next push. */
+        private int appliedMusicVolume = -1;
+        private int appliedSfxVolume = -1;
         private AudioRequestService shadowRequestService;
         private int shadowFrameRate;
         private AudioPresentationParityProbe shadowParity;
@@ -3347,6 +3357,9 @@ public class AudioManager implements MusicRestoreSink {
                     sink, smpsSession, shadowRequestService,
                     shadowResolver, commandTimeline, shadowParity);
             shadowSmpsSession = smpsSession;
+            shadowMixer = mixer;
+            appliedMusicVolume = -1;
+            appliedSfxVolume = -1;
             shadowFrameRate = frameRate;
             captureLeases.rebindLiveCaptureAudioHandle(sampleRate);
         }
@@ -3362,6 +3375,31 @@ public class AudioManager implements MusicRestoreSink {
             if (musicTempoPercent != 100) {
                 shadowSmpsSession.applyCommand(
                         new com.openggf.audio.session.SmpsSessionCommand.SetMusicTempoPercent(musicTempoPercent));
+            }
+        }
+
+        /**
+         * Pushes the configured music and sound-effect volumes when they change.
+         * They are presentation-only: what the driver plays, and therefore
+         * gameplay, rewind and traces, never depends on them.
+         */
+        private void applyMixVolumes() {
+            if (shadowMixer == null) {
+                return;
+            }
+            SonicConfigurationService config = configuredServicesOrNull();
+            int music = config == null ? 100 : config.getInt(SonicConfiguration.AUDIO_MUSIC_VOLUME);
+            int sfx = config == null ? 100 : config.getInt(SonicConfiguration.AUDIO_SFX_VOLUME);
+            if (music == appliedMusicVolume && sfx == appliedSfxVolume) {
+                return;
+            }
+            appliedMusicVolume = music;
+            appliedSfxVolume = sfx;
+            int musicGain = volumeGain(music);
+            int sfxGain = volumeGain(sfx);
+            shadowMixer.setGains(musicGain, sfxGain);
+            if (shadowSmpsSession != null) {
+                shadowSmpsSession.setMixGains(musicGain, sfxGain);
             }
         }
 
@@ -3386,6 +3424,7 @@ public class AudioManager implements MusicRestoreSink {
             shadowResolver = null;
             shadowRegistry = null;
             shadowSmpsSession = null;
+            shadowMixer = null;
             shadowRequestService = null;
             shadowCommands = null;
             shadowFactory = null;

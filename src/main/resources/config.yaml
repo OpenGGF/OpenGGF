@@ -70,6 +70,8 @@ audio:
   hubMusicEnabled: false   # Optional filtered ROM title theme in the hub
   hubMusicVolume: 20   # Hub theme volume, 0 to 100 percent
   enabled: true   # Enable music and SFX
+  musicVolume: 100   # Music volume, 0 to 100 percent; 0 keeps sound effects without music
+  sfxVolume: 100   # Sound-effect volume, 0 to 100 percent
   region: "NTSC"   # Region for audio timing
   dacInterpolate: false   # Optional DAC smoothing (no hardware counterpart); true interpolates between PCM samples
   fmCore: fast   # FM core: accurate (cycle-exact Nuked-OPN2) or fast (register-level clean-room core)

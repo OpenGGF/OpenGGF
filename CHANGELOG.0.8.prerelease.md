@@ -6,6 +6,16 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Separate music and sound-effect volumes:** Settings → Audio has Music
+  volume and Sound effects volume sliders (`audio.musicVolume`,
+  `audio.sfxVolume`, 0–100%, applied on save). Each sound-chip channel takes
+  the volume of whichever track last wrote to it, so a sound effect that
+  borrows a music channel keeps the sound-effect volume. Music at 0% gives
+  game audio with only sound effects, for example for recordings; the
+  headless gameplay capture tool has `--no-music` for the same. The volumes
+  only scale the output: the sound driver, gameplay, rewind and traces are
+  unchanged, and at 100% the output is bit-identical to before.
+
 - **Sonic 1's Sonic on Sonic 3&K tumble objects:** Sonic 1 has no tumble frames,
   so a donated Sonic 1 Sonic riding a Flying Battery wire cage or another tumble
   object vanished. He now keeps his own walk and run frames there, and a donor's
