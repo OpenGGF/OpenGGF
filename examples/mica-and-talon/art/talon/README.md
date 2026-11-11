@@ -33,3 +33,11 @@ S2 title BODY0–4 use the camera-facing face selections in
 [`s2-gaze-generation.json`](../../production/talon/titles/s2-gaze-generation.json).
 The approved goggles, crest, connected wings and outfit remain outside the face
 windows; native hotspots, indexed palette and MICA overlap pixels are retained.
+
+### Lives-name correction (2026-11-11)
+
+TALON uses his full five-letter name on S1/S2/S3K lives displays. S3K packs
+its native glyphs into 32 pixels by removing only empty edge columns when the
+ordinary word is too wide. No glyph ink, shadow, portrait pixels or palettes
+change; MICA's name and the S1/S2 words keep their original composition. The
+S2 special-stage HUD also retains full TALON. No new art is generated or stored.

@@ -178,3 +178,11 @@ Removed dated README logs (all last present at `2e7d9fa348`):
 - `art/talon/oriented-stage/README.md`
 - `art/talon/reels/README.md`
 - `art/talon/titles/README.md`
+
+### Lives-name correction (2026-11-11)
+
+TALON uses his full five-letter name on S1/S2/S3K lives displays. S3K packs
+its native glyphs into 32 pixels by removing only empty edge columns when the
+ordinary word is too wide. No glyph ink, shadow, portrait pixels or palettes
+change; MICA's name and the S1/S2 words keep their original composition. The
+S2 special-stage HUD also retains full TALON. No new art is generated or stored.

@@ -29,7 +29,7 @@ public final class Sonic3kCharacterPresentation {
         String name = presentation.hudName() != null ? presentation.hudName() : presentation.displayName();
         Image composed = name == null ? null : compose(rom, presentation, name, Style.HUD);
         if (composed != null && (composed.width() > 32 || composed.height() > 16))
-            throw new IllegalArgumentException("S3K HUD name exceeds the 32 by 16 pixel cell; supply a short HUD name");
+            throw new IllegalArgumentException("S3K HUD name exceeds the 32 by 16 pixel cell; supply a name with less ink");
         if (composed == null && (art == null || art.hudLifeIcon() == null)) return nativeTiles;
         Pattern[] result = nativeTiles.clone();
         if (art != null && art.hudLifeIcon() != null)
@@ -96,8 +96,10 @@ public final class Sonic3kCharacterPresentation {
             Sonic3kCharacterFont.title(rom).forEach(letters::putIfAbsent);
             font = letters;
         }
-        var composition = CharacterNameComposer.compose(name, font,
-                presentation.supplementaryGlyphs().getOrDefault(new Font(Host.S3K, style), Map.of()), 0);
+        var supplements = presentation.supplementaryGlyphs().getOrDefault(new Font(Host.S3K, style), Map.of());
+        var composition = style == Style.HUD
+                ? CharacterNameComposer.composeToWidth(name, font, supplements, 32)
+                : CharacterNameComposer.compose(name, font, supplements, 0);
         if (!composition.complete()) throw new IllegalArgumentException("Missing S3K " + style + " glyphs: " + composition.missingGlyphs());
         return composition.image();
     }
