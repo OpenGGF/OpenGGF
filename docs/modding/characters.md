@@ -461,7 +461,11 @@ pilot unless that sidekick supplies `S2_TORNADO_PILOT`. This optional set uses
 native Tails pilot mapping IDs 1, 2, 3, 4 and 16, each a 24×16 cockpit crop with
 hotspot (48, 8) relative to the Tornado origin. The host retains its 24-step,
 nine-clock sequence and DPLC submissions. The ending and SCZ/WFZ vehicles share
-this override; the Sonic pilot on Tails-alone routes remains native. Missing
+this override. Solo teams may supply `S2_SOLO_TORNADO_PILOT` on the main's
+presentation to depict their companion, with Sonic pilot selectors 45–48 and
+hotspot (50, 8) on Tails-role routes, or Tails selectors 1–4/16 with hotspot
+(48, 8) on Sonic-role routes. The four Sonic-pilot mapping frames 4–7 share the
+same cockpit replacement path. Missing
 character, set or selector retains the native cockpit. Ending fades apply to the
 private pilot palette; powered lead palettes never recolour the sidekick.
 Normal and Super paths retain their native choreography. Powered poses
@@ -814,6 +818,8 @@ remain native archetype-owned: campaign sprite factories, physics and abilities
 are not invoked. The maintained MICA/TALON example shows all body selectors,
 explicit transparent tail frames and independent per-frame hotspots.
 
+`S3K_SOLO_TORNADO_PILOT` optionally supplies the solo main's companion in that
+same selector 12 and hotspot (12, 8). It does not replace the title fly-by plane.
 `S3K_TORNADO_PILOT` belongs to the first configured sidekick on the Sonic/team
 ending route. It replaces native plane selector 12 at hotspot (12,8). The 24×16
 crop shares the S2 side-view cockpit geometry, so creators may reuse that image.

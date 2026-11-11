@@ -3563,3 +3563,18 @@ is declared at240. Exit takes declare debug completion at465 S3K /470 S2 to keep
 actors visible through the fade. These are presentation and selection checks,
 not complete-stage routes or exhaustive team-role certification. Commit locally;
 do not merge or push. Delete this worktree's `target/` after the commit.
+
+#### Owner feedback: title mask and solo cockpit (2026-11-11)
+
+The S2 title omitted the semantic masking-sprite pass: Plane A redraw alone left
+six MICA pixels below the emblem on capture frames 597–600. Body clipping now
+applies the ROM's rows 112–175 to native and creator bodies. Art and hand origins
+are unchanged; settled captures remain pixel-identical.
+
+MICA-leading already resolves TALON on the feedback base. Solo TALON previously
+had no configured sidekick, no MICA cockpit art, and no override for plane mapping
+frames 4–7. Explicit solo companion surfaces now select four new MICA head crops;
+S2 ending and SCZ/WFZ preserve native Sonic pilot selectors 45–48. Binding the
+Tails-role ending also requires the Tails donor animation families. S3K ending
+pilot selection shares the solo companion policy; its tiny title fly-by is still
+native embedded vehicle art, outside this delivered override.

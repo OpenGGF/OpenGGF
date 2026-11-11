@@ -12,7 +12,7 @@ the repository root. `assemble.py` is `tools/modding/playable_art/assemble.py`.
 | `competition/` | `frames.txt` (per host for MICA endings); 44 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `competition-menu/` | 2 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `continue/` | `*-frames.txt`; 53 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
-| `endings/` | `frames.txt` (per host for MICA endings); 60 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
+| `endings/` | `frames.txt` (per host for MICA endings); 64 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `hud-and-screens/` | 28 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `portrait/` | `*-frames.txt`; 1 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `powered/` | `palettes.txt`; 94 PNGs | Host-specific native-pose powered sheets | Run `assemble.py` for each `powered/s2` and `powered/s3k` handoff into a target directory. |
@@ -28,3 +28,10 @@ The final special-stage manifests point from that tree to these approved PNGs.
 The remaining scripts record individual production steps and may require external
 raw generations or ROM references; the ordinary build never runs them. Changes
 to approved drawings need the native-style and render checks described above.
+
+`endings/pilot/` supplies four native-pose cockpit head crops (Sonic pilot
+selectors 45–48, hotspot 50,8), plus a selector-12 S3K alias (12,8). TALON's solo
+companion presentation selects them; MICA's solo companion bank selects existing
+TALON pilot art. Fresh GPT Image candidates and native references stay in the
+feedback-round scratch directory; reduction and area checks are recorded in
+`production/mica/endings/pilot/provenance.json` (scale ratios 0.988–1.017).

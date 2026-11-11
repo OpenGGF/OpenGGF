@@ -14,8 +14,12 @@ public record EndingSpriteSet(StageSpriteSet sprites, int[] rgb) {
         S2_PHOTOS,
         /** First sidekick cockpit crops, native Tails pilot mapping IDs 1..4/16, 24x16. */
         S2_TORNADO_PILOT,
+        /** Main-owned companion cockpit art when no sidekick is configured; native pilot selectors. */
+        S2_SOLO_TORNADO_PILOT,
         /** First sidekick supplies native Sonic-plane pilot selector 12. */
         S3K_TORNADO_PILOT,
+        /** Main-owned companion cockpit art for a solo team, native selector 12. */
+        S3K_SOLO_TORNADO_PILOT,
         S3K_NORMAL_POSE, S3K_POWERED_POSE, S3K_PASSENGER, S3K_EYECATCH,
         S3K_PLAYER, S3K_POWERED_PLAYER
     }

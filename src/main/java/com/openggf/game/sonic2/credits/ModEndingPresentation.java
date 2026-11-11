@@ -44,7 +44,7 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
         var sidekicks = com.openggf.game.session.ActiveGameplayTeamResolver.resolveSidekicks(GameServices.configuration());
         var photos = world == null ? null : sidekickPhotos(world.getPlayableCharacterRegistry(), sidekicks);
         if (photos != null) sets.put(EndingSpriteSet.Surface.S2_PHOTOS, photos);
-        var pilot = EndingCharacterPresentation.sidekick(EndingSpriteSet.Surface.S2_TORNADO_PILOT);
+        var pilot = EndingCharacterPresentation.pilot(EndingSpriteSet.Surface.S2_TORNADO_PILOT);
         if (pilot != null) sets.put(EndingSpriteSet.Surface.S2_TORNADO_PILOT, pilot);
         if (!sets.containsKey(EndingSpriteSet.Surface.S2_TORNADO_PILOT) && !sets.containsKey(EndingSpriteSet.Surface.S2_ENDING) && !sets.containsKey(EndingSpriteSet.Surface.S2_PHOTOS)) return null;
         return new ModEndingPresentation(rom, definition, sets);

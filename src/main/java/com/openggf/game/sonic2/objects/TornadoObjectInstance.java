@@ -1165,10 +1165,13 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Map_objB2_a 0..3 piece 3 is the six-tile Tails cockpit at (-48,-8).
+        // Map_objB2_a 0..7 piece 3 is the six-tile cockpit (Sonic at -50, Tails at -48).
         // Draw the pilot before the vehicle so its foreground retains native occlusion.
-        if (Sonic2ObjectArtKeys.TORNADO.equals(key) && mappingFrame >= 0 && mappingFrame < 4
-                && customPilot.draw(TAILS_PILOT_FRAMES[pilotTableCursor], currentX, currentY)) {
+        if (Sonic2ObjectArtKeys.TORNADO.equals(key) && mappingFrame >= 0 && mappingFrame < 8
+                && customPilot.draw((com.openggf.game.session.ActiveGameplayTeamResolver
+                        .resolvePlayerCharacter(services().configuration())
+                        == com.openggf.game.PlayerCharacter.TAILS_ALONE
+                        ? SONIC_PILOT_FRAMES : TAILS_PILOT_FRAMES)[pilotTableCursor], currentX, currentY)) {
             for (int i = 9; i >= 0; i--) if (i != 3)
                 renderer.drawFramePieceByIndex(mappingFrame, i, currentX, currentY, false, false);
         } else renderer.drawFrameIndex(mappingFrame, currentX, currentY, false, false);

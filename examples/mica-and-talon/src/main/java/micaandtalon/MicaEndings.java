@@ -19,6 +19,12 @@ final class MicaEndings {
                         EndingSpriteSet.Surface.class);
         result.putAll(FrameTable.read(assets, "art/mica/endings/s1/frames.txt").endings());
         result.putAll(FrameTable.read(assets, "art/mica/endings/s2/frames.txt").endings());
+        result.putAll(FrameTable.read(assets, "art/mica/endings/pilot/frames.txt").endings());
+        var companion = FrameTable.read(assets, "art/talon/endings/frames.txt").endings();
+        result.put(EndingSpriteSet.Surface.S2_SOLO_TORNADO_PILOT,
+                companion.get(EndingSpriteSet.Surface.S2_TORNADO_PILOT));
+        result.put(EndingSpriteSet.Surface.S3K_SOLO_TORNADO_PILOT,
+                companion.get(EndingSpriteSet.Surface.S3K_TORNADO_PILOT));
         return Map.copyOf(result);
     }
 }

@@ -14,7 +14,7 @@ public final class TornadoPilotPresentation {
     public boolean draw(int frame, int x, int y) {
         try {
             if (!loaded) {
-                set = EndingCharacterPresentation.sidekick(EndingSpriteSet.Surface.S2_TORNADO_PILOT);
+                set = EndingCharacterPresentation.pilot(EndingSpriteSet.Surface.S2_TORNADO_PILOT);
                 if (set != null) renderer = EndingCharacterPresentation.renderer(set);
                 loaded = true;
             }

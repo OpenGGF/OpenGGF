@@ -1,0 +1,63 @@
+{
+  "method": "Fresh built-in GPT Image, four native 8x cockpit poses + approved concept and WAIT. Two independent candidate rows; top selected for simpler native shade count. Native head width 23px, 13px crown-to-neck span; threshold alpha and reduce to fixed MICA palette. Stray pixels below neck cropped.",
+  "source_sha256": "fc9918145d9aa8728796102e0451622a406ee70c5bbf3ce0b998867b7a98e33b",
+  "prompt": "Four columns, two alternative rows. Replace native Sonic pilot rear-right head crops with MICA; 24x16 cockpit, jade overlapping scales, tiny cream muzzle and pink ears; 16-bit outlines and three jade shade steps. No body or plane.",
+  "frames": [
+    {
+      "selector": 45,
+      "native_area": 238,
+      "authored_area": 236,
+      "area_scale": 0.996,
+      "size": [
+        24,
+        16
+      ],
+      "hotspot": [
+        50,
+        8
+      ]
+    },
+    {
+      "selector": 46,
+      "native_area": 243,
+      "authored_area": 237,
+      "area_scale": 0.988,
+      "size": [
+        24,
+        16
+      ],
+      "hotspot": [
+        50,
+        8
+      ]
+    },
+    {
+      "selector": 47,
+      "native_area": 238,
+      "authored_area": 246,
+      "area_scale": 1.017,
+      "size": [
+        24,
+        16
+      ],
+      "hotspot": [
+        50,
+        8
+      ]
+    },
+    {
+      "selector": 48,
+      "native_area": 243,
+      "authored_area": 251,
+      "area_scale": 1.016,
+      "size": [
+        24,
+        16
+      ],
+      "hotspot": [
+        50,
+        8
+      ]
+    }
+  ]
+}

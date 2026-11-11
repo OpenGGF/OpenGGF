@@ -215,7 +215,11 @@ under the matching area heading; see the
   use original MICA/TALON portraits with independent palettes and native origins;
   absent portraits retain native art; failed creator loads propagate through the
   registered owner fault boundary. Intro renderer inputs are prepared during update,
-  and Tornado pilot art is re-derived after rewind recreation. Native Competition has no character-name
+  and Tornado pilot art is re-derived after rewind recreation. S2 title bodies
+  now obey the native emblem masking rows through the rise without changing
+  approved settled poses. Explicit solo companion cockpit banks let MICA pilot
+  for solo TALON and TALON pilot for MICA; ending and SCZ/WFZ support both native
+  pilot mapping families, and Tails-role ending art binds its own animation families. Native Competition has no character-name
   strings. S3K Competition renders MICA/TALON with
   independent native-ID miniature banks and hotspots, per-frame native fallback
   and private palettes; configured creator team members occupy their native

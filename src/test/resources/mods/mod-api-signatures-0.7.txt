@@ -3003,6 +3003,7 @@ FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.g
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S2_ENDING
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S2_FLOAT
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S2_PHOTOS
+FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S2_SOLO_TORNADO_PILOT
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S2_SUPER
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S2_TORNADO_PILOT
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S3K_EYECATCH
@@ -3011,6 +3012,7 @@ FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.g
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S3K_PLAYER
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S3K_POWERED_PLAYER
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S3K_POWERED_POSE
+FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S3K_SOLO_TORNADO_PILOT
 FIELD com.openggf.game.EndingSpriteSet$Surface public,static,final com.openggf.game.EndingSpriteSet$Surface S3K_TORNADO_PILOT
 FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId S1
 FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId S2

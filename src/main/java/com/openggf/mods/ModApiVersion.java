@@ -10,7 +10,7 @@ public final class ModApiVersion {
     // Rebuild matching creator artifacts after this intentional package migration.
     /**
      * Optional final-orientation stage drawings preserve native selectors, timing, priority and fades.
-     * Sidekick-owned S2/S3K Tornado cockpit crops extend the unpublished candidate.
+     * Sidekick-owned S2/S3K Tornado cockpit crops and explicit solo companion banks extend the unpublished candidate.
      * Optional S3K Competition player/record portrait surfaces extend the unpublished candidate.
      * Optional per-host title mascot banks include hotspots, independent palettes and plane masks.
      * Title mascot pairs may exchange native S2 presentation slots without moving paths.

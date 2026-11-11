@@ -1879,7 +1879,7 @@ public class Sonic2EndingCutsceneManager {
         if (frames == null || frameIndex < 0 || frameIndex >= frames.size()) {
             return;
         }
-        boolean pilot = frames == tornadoFrames && frameIndex < 4 && pilotAnimSequence != null && presentation != null
+        boolean pilot = frames == tornadoFrames && frameIndex < 8 && pilotAnimSequence != null && presentation != null
                 && presentation.drawPilot(pilotAnimSequence[pilotAnimIndex], screenXForWidth(originX, viewportWidth), originY);
         SpriteMappingFrame frame = frames.get(frameIndex);
         List<SpriteMappingPiece> pieces = frame.pieces();

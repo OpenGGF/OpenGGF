@@ -2138,6 +2138,23 @@ class TestMicaCharacterIntegration {
         presentation.reset();
     }
 
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void soloTalonEndingBindsTailsFamiliesAndMicaPilot() throws Exception {
+        var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320,
+                "mica-and-talon:talon", "", "off", null, null, null);
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            session.boot(Path.of(System.getProperty("sonic2.rom.path")), 10, 0, settings);
+            var pilot = com.openggf.game.presentation.EndingCharacterPresentation.pilot(EndingSpriteSet.Surface.S2_TORNADO_PILOT);
+            assertNotNull(pilot);
+            assertEquals(Set.of(45,46,47,48), pilot.sprites().frames().keySet());
+            assertEquals(50, pilot.sprites().frames().get(45).hotspotX());
+            var manager = new com.openggf.game.sonic2.credits.Sonic2EndingCutsceneManager();
+            assertDoesNotThrow(() -> manager.initialize(GameServices.rom().getRom()),
+                    "Tails-role ending must bind Tails animation families, never Sonic's families");
+        }
+    }
+
     private Path buildSample() throws Exception {
         Path project = Path.of("examples/mica-and-talon"), classes = temp.resolve("classes");
         Files.createDirectories(classes.resolve("art"));
