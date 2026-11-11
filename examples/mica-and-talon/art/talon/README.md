@@ -55,3 +55,17 @@ presentation probe: build the example, compile it against `target/classes` and
 WAYLAND_DISPLAY unset, surfaceless EGL and an owned save root. The probe declares
 emeralds/rings, an airborne transformation start, camera registration and held
 pose speed 0x900; it is art/palette evidence, not route certification.
+
+`endings/final-pilot/` contains the front-view cockpit overlay and binary native
+clear mask (184×120, selector 0, hotspot 0,0). It follows the independently
+scrolling ending-plane backdrop. The native-pose reference, two candidate rows,
+selected reduction, palette and size check are recorded under
+`production/talon/endings/final-pilot/provenance.json`. Vehicle pixels come from
+the ROM, not the authored overlay.
+
+TALON uses his full five-letter name on S1/S2/S3K lives displays. S3K packs
+its native glyphs into 32 pixels by removing only empty edge columns when the
+ordinary word is too wide. No glyph ink, shadow, portrait pixels or palettes
+change; MICA's name and the S1/S2 words keep their original composition. The
+S2 special-stage HUD also retains full TALON. No new art is generated or stored. All three hosts preserve the native lower
+counter row, including ×; S3K now replaces only the upper name tiles.

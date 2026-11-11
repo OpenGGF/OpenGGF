@@ -29,9 +29,32 @@ public final class EndingCharacterPresentation {
         var presentation = definition.presentationSupplier().load(definition.key().persisted());
         return presentation == null ? null : presentation.endings().get(surface);
     }
+    /** Configured companions own their portrait; solo leads may explicitly supply companion art. */
+    public static EndingSpriteSet pilot(EndingSpriteSet.Surface surface) throws IOException {
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        if (world == null) return null;
+        var config = GameServices.configuration();
+        return pilot(world.getPlayableCharacterRegistry(),
+                com.openggf.game.session.ActiveGameplayTeamResolver.resolveMainCharacterCode(config),
+                com.openggf.game.session.ActiveGameplayTeamResolver.resolveSidekicks(config), surface);
+    }
+    public static EndingSpriteSet pilot(PlayableCharacterRegistry registry, String main,
+            java.util.List<String> companions, EndingSpriteSet.Surface surface) throws IOException {
+        if (!companions.isEmpty()) return sidekick(registry, companions, surface);
+        var soloSurface = switch (surface) {
+            case S2_FINAL_TORNADO_PILOT -> EndingSpriteSet.Surface.S2_SOLO_FINAL_TORNADO_PILOT;
+            case S2_TORNADO_PILOT -> EndingSpriteSet.Surface.S2_SOLO_TORNADO_PILOT;
+            case S3K_TORNADO_PILOT -> EndingSpriteSet.Surface.S3K_SOLO_TORNADO_PILOT;
+            default -> throw new IllegalArgumentException("Not a cockpit surface: " + surface);
+        };
+        return sidekick(registry, java.util.List.of(main), soloSurface);
+    }
     public static PlayerSpriteRenderer renderer(EndingSpriteSet set) {
+        return renderer(set, com.openggf.graphics.PatternAtlasRange.CHARACTER_STAGE_PRESENTATION.base());
+    }
+    public static PlayerSpriteRenderer renderer(EndingSpriteSet set, int patternBase) {
         if (set == null) return null;
-        var renderer = new PlayerSpriteRenderer(StageSpriteCompiler.compile(set.sprites(), null));
+        var renderer = new PlayerSpriteRenderer(StageSpriteCompiler.compile(set.sprites(), null, patternBase));
         var context = RenderContext.createSidekickContext(GameServices.module().getGameId());
         var palette = new Palette();
         int[] rgb = set.rgb();

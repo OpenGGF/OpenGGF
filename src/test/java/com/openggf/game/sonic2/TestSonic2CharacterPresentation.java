@@ -21,8 +21,13 @@ class TestSonic2CharacterPresentation {
     @Test void hudUsesMicaIconAndSmallNativeNamePreservingCounterRow() throws Exception {
         var rom = TestEnvironment.currentRom();
         var stock = PatternDecompressor.nemesis(rom, Sonic2Constants.ART_NEM_SONIC_LIFE_ADDR);
+        byte[] cross = CharacterNameComposer.extract(stock, 4, 4, 2, 0, 8, 8, 8).pixels();
+        int crossInk = 0;
+        for (byte pixel : cross) if (pixel != 0) crossInk++;
+        assertTrue(crossInk > 0, "Stock lives display has a native cross");
         assertSame(stock, Sonic2CharacterPresentation.hud(rom,stock,null));
         var custom = Sonic2CharacterPresentation.hud(rom,stock,mica());
+        assertArrayEquals(cross, CharacterNameComposer.extract(custom, 4, 4, 2, 0, 8, 8, 8).pixels());
         var expected = CharacterNameComposer.compose("MICA",Sonic2CharacterFont.hud(rom),Map.of(),0).image();
         for (int x=0;x<16;x++) for(int y=0;y<16;y++)
             assertEquals(3, custom[x/8*2+y/8].getPixel(x%8,y%8));

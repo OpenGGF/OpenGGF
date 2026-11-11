@@ -179,10 +179,25 @@ def main():
         path=ART/'talon/endings'/f'{group}-{frame:02x}.png'
         return path.is_file()
     for f in [1,2,3]:add('talon' ,'S2','ending search photos',f,'authored' if talon_ending('photos',f) else 'fallback','TalonEndings S2_PHOTOS',evidence=citation('docs/s2disasm/s2.asm','ArtNem_EndingPics'),notes='Sidekick-owned search photographs; TalonEndings awaits presentation-lane wiring.')
-    add('talon','S2','Tornado pilot','native pilot sequence','native alias' if talon_ending('pilot',16) else 'fallback','native 24-step / nine-clock sequence',evidence=citation('docs/s2disasm/s2.asm','ObjB2_Animate_Pilot'),notes='S2_TORNADO_PILOT supplies cockpit crops in ending and SCZ/WFZ. Native DPLC/timing retained; presentation wiring pending.')
+    for character in ['mica', 'talon']:
+        add(character,'S2','Final Tornado cockpit','0',
+            'authored' if (ART/character/'endings/final-pilot/front.png').is_file() else 'fallback',
+            'S2_FINAL_TORNADO_PILOT with native clear mask',
+            evidence=citation('docs/s2disasm/s2.asm','ObjCC_Init'),
+            notes='Separate Enigma final backdrop pilot; paired or explicit solo companion ownership')
+    for selector in range(45, 49):
+        authored = (ART/'mica/endings/pilot'/f'{selector:02x}.png').is_file()
+        add('mica','S2','Tornado pilot mapping',f'{selector:02X}',
+            'authored' if authored else 'fallback','MicaEndings S2_TORNADO_PILOT',
+            evidence=citation('docs/s2disasm/s2.asm','Sonic_pilot_frames'),
+            notes='24x16 companion cockpit; solo TALON uses Sonic pilot sequence and hotspot 50,8')
+    add('mica','S3K','Tornado pilot','0C',
+        'native alias' if (ART/'mica/endings/pilot/2d.png').is_file() else 'fallback',
+        'MicaEndings S3K_TORNADO_PILOT',notes='Solo companion bank aliases authored S2 head; hotspot 12,8')
+    add('talon','S2','Tornado pilot','native pilot sequence','native alias' if talon_ending('pilot',16) else 'fallback','native 24-step / nine-clock sequence',evidence=citation('docs/s2disasm/s2.asm','ObjB2_Animate_Pilot'),notes='S2_TORNADO_PILOT supplies cockpit crops in ending and SCZ/WFZ. Native DPLC/timing retained; paired and solo companion selection wired.')
     add('talon','S3K','Tornado pilot','0C','native alias' if talon_ending('pilot',16) else 'fallback',
         'TalonEndings S3K_TORNADO_PILOT: S2 side-view cockpit crop; hotspot 12,8',
-        evidence='EndingKnucklesFlightChildObjectInstance PILOT',notes='Native S3K/S2 pilot alpha/index geometry matches; native palettes differ; first configured sidekick owns this reunion pilot; presentation wiring pending.')
+        evidence='EndingKnucklesFlightChildObjectInstance PILOT',notes='Native S3K/S2 pilot alpha/index geometry matches; native palettes differ; configured sidekick or explicit solo companion owns this reunion pilot.')
     add('mica','S3K','ICZ snowboard' ,'Tails route','N/A',notes='MICA uses Sonic rider bank; TALON uses Tails route and needs no Sonic snowboard art.')
     add('talon','S3K','ICZ snowboard','all','N/A',notes='Native Tails route skips Sonic rider choreography; do not generate 13 falcon snowboard frames by assumption.')
     # Tails-specific independent banks; native split maps establish exact selector counts.
@@ -256,7 +271,7 @@ def main():
             notes='Approved core aliases; three native roll phases plus two FixBugs=0 goal-fade mapping selectors, no separate tail')
     for f in [1,2,3,4,0x10]:
         add('talon','S2','Tornado pilot mapping',f'{f:02X}','authored' if talon_ending('pilot',f) else 'fallback','TalonEndings S2_TORNADO_PILOT',
-            evidence=citation('docs/s2disasm/s2.asm','Tails_pilot_frames'),notes='Five generated 24x16 cockpit crops; native 24-step/nine-clock sequence retained in ending and SCZ/WFZ; TalonPresentation merge pending')
+            evidence=citation('docs/s2disasm/s2.asm','Tails_pilot_frames'),notes='Five generated 24x16 cockpit crops; native 24-step/nine-clock sequence retained in ending and SCZ/WFZ; TalonPresentation owns paired pilot and MICA solo companion bank')
     for f in [0x18,0x19,9,10,11,15,16,17]:
         add('talon','S2','ending object bank',f'{f:02X}','authored' if talon_ending('s2',f) else 'fallback','TalonEndings S2_ENDING',
             evidence=citation('docs/s2disasm/s2.asm','ObjCE_Init'),notes='TalonEndings: solo Tails route rotation/final leap; separate ObjCF bank; presentation merge pending')

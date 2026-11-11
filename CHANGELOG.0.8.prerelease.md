@@ -186,7 +186,10 @@ under the matching area heading; see the
 
 ## Modding and tools
 
-- **MICA, an original character framework example:** TALON now joins as her
+- **MICA, an original character framework example:** TALON’s S3K lives label now
+  spells his full name using native glyph pixels with tighter blank padding; S1,
+  S2 and MICA retain their existing words and portraits. Creator S3K lives names
+  preserve the native × beside the counter, as S1/S2 already do. TALON now joins as her
   default sidekick and is selectable solo. Powered banks now keep each movement
   archetype's native clocks and expose host-independent authored flight and
   transformation scripts. TALON has dedicated white-gold Solar banks, and new
@@ -222,7 +225,13 @@ under the matching area heading; see the
   use original MICA/TALON portraits with independent palettes and native origins;
   absent portraits retain native art; failed creator loads propagate through the
   registered owner fault boundary. Intro renderer inputs are prepared during update,
-  and Tornado pilot art is re-derived after rewind recreation. Native Competition has no character-name
+  and Tornado pilot art is re-derived after rewind recreation. S2 title bodies
+  now obey the native emblem masking rows through the rise without changing
+  approved settled poses. Explicit solo companion cockpit banks let MICA pilot
+  for solo TALON and TALON pilot for MICA; ending and SCZ/WFZ support both native
+  pilot mapping families, and Tails-role ending art binds its own animation families.
+  The separate final front-view cockpit now selects the companion too, using
+  bounded native clear masks and independent ending-surface pattern residency. Native Competition has no character-name
   strings. S3K Competition renders MICA/TALON with
   independent native-ID miniature banks and hotspots, per-frame native fallback
   and private palettes; configured creator team members occupy their native

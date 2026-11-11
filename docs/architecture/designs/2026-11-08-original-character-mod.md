@@ -3016,10 +3016,50 @@ and inherited route gaps are unchanged.
 
 TALON now has a `CharacterPresentation` and packed original presentation PNGs.
 HUD/1-up portraits and complete sign face/spin/backing sets cover S1/S2/S3K;
-S1 supplements T/A/L, S2 composes full TALON from native small glyphs, and S3K
-uses TALO (28 pixels). The five native glyph advances total 35 pixels against
-the fixed 32-pixel HUD cell; native glyph precedence prevents supplement-based
-font replacement. Full results names remain TALON.
+S1 supplements T/A/L, and all three hosts now show full TALON. The owner-feedback
+correction (2026-11-11) removes both TALO declarations. S3K's five native glyph
+advances total 35 pixels; bounded composition removes three wholly transparent
+glyph-edge columns to fit the 32-pixel word cell. Every native ink and shadow
+pixel survives, with no scaling or redrawn glyphs. Words that already fit,
+including MICA, retain byte-identical composition. S1/S2 were already full TALON
+through the host supplier override; their lives and S2 half-pipe word paths
+remain unchanged. Full results names remain TALON.
+
+Native research: S1's life-counter name is part of its life-icon bank; S2 swaps
+whole Sonic/Miles/Tails counter banks (`ArtNem_TailsLife`, s2.asm:90570), and S3K
+likewise selects complete character banks (`ArtNem_KnucklesLifeIcon`,
+sonic3k.asm:202118-202120). Knuckles' lives word is **K.T.E.**, not KNUCKLES;
+the full KNUCKLES name belongs to results. The existing creator adapter already
+builds the packed word into those same native tiles. Removing blank advance
+columns is sufficient for TALON, so no new art or Mod API surface is needed.
+The portrait remains 16×16 and native cross/digit tiles are retained. Art-audit
+obligations and opaque areas do not change (size ratio 1.000 for every host).
+
+Verification: the focused name/presentation, MICA integration, coverage, signature
+and required S3K selection passed 141 tests with no skips; the four field-write,
+rewind/helper and broad-catch guards passed nine tests with no skips. Python
+modding discovery passed 78 tests. The self-contained owner review is in the
+feedback round's `lives/review.html` scratch artifact with real 4× HUD crops and
+60 Hz lockstep video. Before/after state CSVs match; S1/S2 TALON and every MICA
+HUD crop match exactly, while S3K changes 145 pixels. The stock Tails requests
+in S1/S2 expose an inherited Sonic life-bank selection; the page shows that
+limitation rather than substituting reconstructed stock artwork. No route,
+full-suite or new special-stage visual certification is claimed. No Mod API
+surface changed; the existing descriptor/version/signature pins remain paired.
+
+**Counter-cross follow-up (owner review, 2026-11-11):** the earlier S3K adapter
+replaced all eight tiles in the 32×16 word/counter cell, clearing the lower row
+while writing an 8-pixel-high name. That erased the native × for every named
+creator character. S1/S2 already replaced only upper tiles. S3K now replaces
+only tiles 4/6/8/10 and retains native lower tiles 5/7/9/11, including the cross.
+The independent 16×16 portrait occupies tiles 0–3 and was not responsible.
+HUD glyphs taller than 8 pixels are rejected before they can cover the counter.
+ROM-backed assertions compare nonblank cross pixels and the complete lower row
+against Sonic/Tails/Knuckles banks for both MICA/TALON words, with and without
+portraits, and check the tall-glyph rejection. S1/S2 assertions likewise verify
+the nonblank ROM cross is preserved. No art or API surface changes are needed.
+
+
 
 Existing `StageSpriteSet` ownership is sufficient; internal routing now selects
 the native Tails actor independently from the Sonic leader. Separate pattern
@@ -3614,3 +3654,51 @@ is declared at240. Exit takes declare debug completion at465 S3K /470 S2 to keep
 actors visible through the fade. These are presentation and selection checks,
 not complete-stage routes or exhaustive team-role certification. Commit locally;
 do not merge or push. Delete this worktree's `target/` after the commit.
+
+#### Owner feedback: title mask and solo cockpit (2026-11-11)
+
+The S2 title omitted the semantic masking-sprite pass: Plane A redraw alone left
+six MICA pixels below the emblem on capture frames 597–600. Body clipping now
+applies the ROM's rows 112–175 to native and creator bodies. Art and hand origins
+are unchanged; settled captures remain pixel-identical.
+
+MICA-leading already resolves TALON on the feedback base. Solo TALON previously
+had no configured sidekick, no MICA cockpit art, and no override for plane mapping
+frames 4–7. Explicit solo companion surfaces now select four new MICA head crops;
+S2 ending and SCZ/WFZ preserve native Sonic pilot selectors 45–48. Binding the
+Tails-role ending also requires the Tails donor animation families. S3K ending
+pilot selection shares the solo companion policy; its tiny title fly-by is still
+native embedded vehicle art, outside this delivered override.
+
+#### Final-plane pilot correction (2026-11-11)
+
+The earlier feedback pass checked the side-view cockpit but stopped before the
+final pose. `ObjCC_Init` (s2.asm:13545-13572) selects
+`MapEng_EndingTailsPlane` / `MapEng_EndingSonicPlane` (s2.asm:90912-90914),
+backed by `ArtNem_EndingFinalTornado` (s2.asm:90925). That Enigma backdrop
+embedded the stock pilot independently of the side-view DPLC path. New optional
+final-plane cockpit banks and per-frame binary native clear masks replace only
+the character. Per-cell ROM pattern copies preserve the vehicle; creator art
+is drawn behind retained wing/strut pixels. A real frame-4098 capture additionally
+caught shared-atlas corruption: each S2 ending surface now owns a separate
+pattern range, keeping queued pilot and rider pixels independent.
+
+#### Capture identity and creator-pixel regression check (2026-11-11)
+
+The follow-up review found real scrambled TALON pixels in intermediate
+`after-*` captures made before ending-surface residency was separated. Those
+rejected files remained beside the clean `final-*` captures, obscuring which
+artifact was being reviewed. A fresh build of `f7c7bce16e` reproduced all 4,500
+PNG files per team byte-for-byte from `final-*`; it did not reproduce the corrupt
+intermediate images. Frame 4090 has one lead on the wing in stock and clean
+creator captures; the intermediate extra TALON is corruption, not a native actor.
+
+A stock-colour scan cannot detect misplaced creator pixels. The new
+`compare_frame_regions.py` compares a clean baseline and candidate against stock,
+requiring every frame and independently declared changed-region geometry. The
+corrupt intermediate fails on 335 of frames 3900–4437; fresh captures of both
+teams have no changed pixels outside the cockpit envelope. The envelope comes
+from authored pilot/clear-mask geometry plus read-only production scroll state,
+not from candidate pixel bounds. Atlas assertions now check complete sprite-bank
+intervals and exclusion of prepared Enigma tiles, rather than distinct bases
+alone. Current review evidence labels source identity and rejected intermediates.

@@ -84,7 +84,7 @@ public final class StageCharacterPresentation {
         var art = definition.artSupplier().load(definition.key().persisted());
         if (com.openggf.level.objects.PlayableSheetAnimationBinding.requiresBinding(art)) {
             art = com.openggf.level.objects.PlayableSheetAnimationBinding.bind(art,
-                    GameServices.module().getDonorCapabilities(),
+                    GameServices.module().getDonorCapabilities().forPlayableCharacter(definition.behavesLike()),
                     nativeArt);
         }
         return art;

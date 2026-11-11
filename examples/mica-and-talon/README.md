@@ -210,3 +210,22 @@ The feedback review is one self-contained HTML file with embedded PNGs and
 capture directory. S3K carry has live-controller and manual-acquisition captures.
 S2 has no native carry state: its carry comparison is a declared pose-only
 renderer check, alongside native Tails flight. Neither certifies a complete route.
+
+S2 cockpit ownership follows the cast: TALON pilots for MICA (paired or solo),
+and MICA pilots for solo TALON. The optional solo companion ending banks retain
+native pilot selectors and clocks in the ending and SCZ/WFZ. S3K endings use the
+same companion policy; the small S3K title fly-by remains native. The S2 title
+body pass now honors the native emblem mask, including transparent logo gaps;
+settled poses and MICA's hand origin remain unchanged.
+
+The S2 final front-view Tornado has its own pilot surface: TALON for MICA and
+MICA for solo TALON. Authored binary masks remove the stock cockpit pilot while
+the plane, its livery, wings and struts stay ROM-backed. Ending surfaces use
+independent pattern residency so queued cockpit pixels survive later rider draws.
+
+TALON uses his full five-letter name on S1/S2/S3K lives displays. S3K packs
+its native glyphs into 32 pixels by removing only empty edge columns when the
+ordinary word is too wide. No glyph ink, shadow, portrait pixels or palettes
+change; MICA's name and the S1/S2 words keep their original composition. The
+S2 special-stage HUD also retains full TALON. No new art is generated or stored. All three hosts preserve the native lower
+counter row, including ×; S3K now replaces only the upper name tiles.

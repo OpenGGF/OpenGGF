@@ -22,7 +22,7 @@ final class EndingCharacterPresentation {
         if (!sidekick && (definition == null || definition.presentationSupplier() == null)) return false;
         try {
             var presentation = sidekick ? null : definition.presentationSupplier().load(definition.key().persisted());
-            var set = sidekick ? com.openggf.game.presentation.EndingCharacterPresentation.sidekick(surface)
+            var set = sidekick ? com.openggf.game.presentation.EndingCharacterPresentation.pilot(surface)
                     : presentation == null ? null : presentation.endings().get(surface);
             if (set == null || !set.sprites().frames().containsKey(frame)) return false;
             var renderers = CACHE.computeIfAbsent(services.currentLevel(), ignored -> new HashMap<>());

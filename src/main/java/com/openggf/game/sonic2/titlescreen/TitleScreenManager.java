@@ -1574,8 +1574,27 @@ public class TitleScreenManager implements TitleScreenProvider {
         var owner = sprite == sonicSprite || sprite == sonicHandSprite ? titleLead
                 : sprite == tailsSprite || sprite == tailsHandSprite ? titleSidekick : null;
         var part = sprite == sonicHandSprite || sprite == tailsHandSprite ? TitlePart.HAND : TitlePart.BODY;
-        if (owner == null || !owner.draw(part, sprite.mappingFrame, screenX, screenY))
+        if (sprite == sonicSprite || sprite == tailsSprite) {
+            // Obj0E_MaskingSprite_Init (s2.asm:26688-26702), TitleScreen_Loop
+            // (s2.asm:4462-4490): the emblem's mask suppresses body rows 112..175.
+            // Translate that output into clipping, including transparent emblem gaps;
+            // repainting Plane A alone cannot mask a creator's different silhouette.
+            var gm = GameServices.graphics();
+            gm.flushPatternBatch();
+            gm.flushScreenSpace();
+            for (int[] band : new int[][] {{0, 112}, {176, SCREEN_HEIGHT - 176}}) {
+                if (!enableMdScissorRect(gm, 0, band[0], viewportWidth(), band[1])) continue;
+                gm.beginPatternBatch();
+                if (owner == null || !owner.draw(part, sprite.mappingFrame, screenX, screenY))
+                    spriteRenderer.drawFrameIndex(sprite.mappingFrame, screenX, screenY);
+                gm.flushPatternBatch();
+                gm.flushScreenSpace();
+                gm.disableScissor();
+            }
+            gm.beginPatternBatch();
+        } else if (owner == null || !owner.draw(part, sprite.mappingFrame, screenX, screenY)) {
             spriteRenderer.drawFrameIndex(sprite.mappingFrame, screenX, screenY);
+        }
     }
 
     /**

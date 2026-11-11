@@ -357,10 +357,17 @@ MICA packages its HUD, monitor, sign and supplementary S1 HUD glyph assets this 
 
 S1, S2 and S3K consume the HUD life icon/name, act-results name, special-stage
 results name (S2 including the Super announcement; S3K Blue Sphere) and 1-up
-monitor face slots. HUD names use each host's small font inside its native 32×16 cell; the short
-name is preferred when supplied. Results use the host title/results alphabet.
-Absent slots, names with unsupported glyphs and HUD names that do not fit
-retain the native presentation. 1-up faces must be 16×16; other sizes retain the
+monitor face slots. HUD names use each host's small font in the upper 32×8 row of its native
+32×16 word/counter cell; the lower row retains the ROM cross and counter space.
+Creator glyphs cannot extend into that lower row. The short name is preferred
+when supplied. S3K removes wholly transparent glyph-edge
+columns only when the ordinary word exceeds 32 pixels; it never scales, removes
+ink or replaces native glyphs. If the packed word still exceeds the cell, S3K
+rejects it. This allows full names such as TALON without new font art. Results
+use the host title/results alphabet.
+Absent slots retain native presentation. S1/S2 names with unsupported glyphs or
+oversized HUD words retain native presentation; S3K rejects unsupported or
+oversized names. 1-up faces must be 16×16; other sizes retain the
 native face. Stock characters without a supplier keep their native tiles and
 mappings. The internal name composer reports native, supplementary and missing
 glyph coverage and extracts pixel crops across tile boundaries. Title-font readers
@@ -461,7 +468,11 @@ pilot unless that sidekick supplies `S2_TORNADO_PILOT`. This optional set uses
 native Tails pilot mapping IDs 1, 2, 3, 4 and 16, each a 24×16 cockpit crop with
 hotspot (48, 8) relative to the Tornado origin. The host retains its 24-step,
 nine-clock sequence and DPLC submissions. The ending and SCZ/WFZ vehicles share
-this override; the Sonic pilot on Tails-alone routes remains native. Missing
+this override. Solo teams may supply `S2_SOLO_TORNADO_PILOT` on the main's
+presentation to depict their companion, with Sonic pilot selectors 45–48 and
+hotspot (50, 8) on Tails-role routes, or Tails selectors 1–4/16 with hotspot
+(48, 8) on Sonic-role routes. The four Sonic-pilot mapping frames 4–7 share the
+same cockpit replacement path. Missing
 character, set or selector retains the native cockpit. Ending fades apply to the
 private pilot palette; powered lead palettes never recolour the sidekick.
 Normal and Super paths retain their native choreography. Powered poses
@@ -862,6 +873,8 @@ remain native archetype-owned: campaign sprite factories, physics and abilities
 are not invoked. The maintained MICA/TALON example shows all body selectors,
 explicit transparent tail frames and independent per-frame hotspots.
 
+`S3K_SOLO_TORNADO_PILOT` optionally supplies the solo main's companion in that
+same selector 12 and hotspot (12, 8). It does not replace the title fly-by plane.
 `S3K_TORNADO_PILOT` belongs to the first configured sidekick on the Sonic/team
 ending route. It replaces native plane selector 12 at hotspot (12,8). The 24×16
 crop shares the S2 side-view cockpit geometry, so creators may reuse that image.
@@ -942,3 +955,16 @@ The host composes that patch during the native empty/wait selector and uses the
 native finger selectors 0/1 during a wag; it does not add another clock.
 This is presentation only: it supplies no title script, music, gameplay or timing.
 See the maintained example's `TitlePresentation.java` and `art/*/titles/` banks.
+
+### S2 final-plane cockpit
+
+The final front-view Tornado is an Enigma backdrop, separate from the animated
+side-view cockpit. A companion supplies `S2_FINAL_TORNADO_PILOT`; a solo main may
+supply `S2_SOLO_FINAL_TORNADO_PILOT`. Selector 0 is positioned relative to the
+184×120 backdrop's top-left and scrolls with it. Supply a matching binary image
+in `EndingSpriteSet.nativeClearMasks`: 1 removes an owned native pilot pixel,
+0 preserves the native plane. Masks must match their authored frame dimensions.
+The existing two-argument constructor keeps an empty mask map. The host creates
+private native tile copies at initialization, draws the creator behind retained
+vehicle pixels and applies ending fades to the creator's independent palette.
+Neither the mask nor the overlay changes the ROM backdrop or shared art.

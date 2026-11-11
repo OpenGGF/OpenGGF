@@ -32,7 +32,7 @@ final class TalonPresentation {
         var glyphs = Map.of(new Font(Host.S1, Style.HUD), letters);
         var stages = OrientedStageArt.load(assets, "talon", stages(assets));
         return new CharacterPresentation(
-                "TALON", "TALO", art, glyphs, stages, TalonEndings.load(assets));
+                "TALON", "TALON", art, glyphs, stages, TalonEndings.load(assets));
     }
 
     private static Art art(ModAssetRoot assets, Host host) throws IOException {
