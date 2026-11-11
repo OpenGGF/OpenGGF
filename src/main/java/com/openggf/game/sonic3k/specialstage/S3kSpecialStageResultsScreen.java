@@ -1348,8 +1348,16 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
     // ================================================================
 
     private void loadArt() {
+        com.openggf.data.Rom rom;
         try {
-            var rom = GameServices.rom().getRom();
+            rom = GameServices.rom().getRom();
+        } catch (java.io.IOException e) {
+            // ROM-less unit fixtures keep the results logic and draw nothing; an
+            // unreadable configured ROM is still a failure.
+            if (com.openggf.data.RomManager.isConfiguredRomMissing(e)) return;
+            throw new java.io.UncheckedIOException("Cannot open the ROM for S3K special-stage results", e);
+        }
+        try {
             RomByteReader reader = RomByteReader.fromRom(rom);
             Sonic3kObjectArt objectArt = new Sonic3kObjectArt(null, reader);
 

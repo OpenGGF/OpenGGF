@@ -321,13 +321,14 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        lastFrameCounter = vIntRunCount;
+        // The camera owner is read first so its failure is never masked by art preparation.
+        AbstractPlayableSprite trackedPlayer = resolveTrackedPlayer(player);
         prepareCreatorIntroRenderers();
         ensureIntroSonicRenderersLoaded();
         rebindIntroSpriteArtAfterRestore();
         claimIntroSpriteArtIfReady();
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        lastFrameCounter = vIntRunCount;
-        AbstractPlayableSprite trackedPlayer = resolveTrackedPlayer(player);
 
         // ROM: routine dispatch FIRST (s3.asm line 81252-81259)
         switch (routine) {
