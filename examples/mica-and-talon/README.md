@@ -190,9 +190,9 @@ without a donor ROM or a native Super animation slot. See
 MICA’s run now keeps the native two-phase lean and contact clock. TALON’s free
 flight uses the approved carry profile, skull scale, wing design and material
 contours. Carry geometry and MICA’s hand-to-feet registration are unchanged.
-The owner-picked concepts (2026-11-11) are in pilot: Open Cone Gilded MICA and
-Corona Crest Solar TALON redraw wait, run, roll and the transformation for S2 and
-S3K. Gilded plates breathe from a deep amber underside to a pale-gold edge; Hyper
+The owner-picked concepts (2026-11-11) are rolled out: Open Cone Gilded MICA redraws
+every powered pose, and Corona Crest Solar TALON every common pose, for S2 and S3K.
+Normal TALON stands 37 px (owner rung); Solar's crest rises above that body. Gilded plates breathe from a deep amber underside to a pale-gold edge; Hyper
 reuses that bank and flashes Prism Gilt (gold, white-hot, jade, rose-gold). Solar
 keeps a dark bronze slot for TALON's bars and moustache, with fixed amber/red
 flame tips. Powered silhouettes use the cycling contour slot, retaining only

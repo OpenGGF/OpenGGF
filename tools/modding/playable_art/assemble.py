@@ -30,6 +30,9 @@ OPTIONAL |= {name: (8, 'loop') for name in (
 
 SPEED = {'WALK', 'RUN', 'ROLL', 'ROLL2', 'PUSH'}
 SLOPES = ('flat', 'up45', 'steep', 'inverted')
+# Atlas cell per frame. Mappings are cut into 32x32 pieces, so the cell only bounds the source
+# atlas layout; 64 rows fit tall forms such as a crest above a 37 px body.
+CELL_W, CELL_H = 64, 64
 
 
 def assemble(root, output):
@@ -41,7 +44,7 @@ def assemble(root, output):
     fixed = FIXED | OPTIONAL
     colors = json.loads((root / 'palette.yaml').read_text())['colors']
     palette = sum(colors, [])
-    sheet = Image.new('P', (512, ((len(source) + 7) // 8) * 48), 0)
+    sheet = Image.new('P', (8 * CELL_W, ((len(source) + 7) // 8) * CELL_H), 0)
     sheet.putpalette(palette + [0] * (768 - len(palette)))
     frames, groups, custom = [], defaultdict(list), {}
     max_tiles = 0
@@ -53,9 +56,9 @@ def assemble(root, output):
         with Image.open(root / frame['file']) as image:
             if image.mode != 'P' or image.getpalette()[:48] != palette or image.info.get('transparency') != 0:
                 raise ValueError('Frame must use the shared indexed palette: ' + frame['id'])
-            if max(image.get_flattened_data() if hasattr(image, "get_flattened_data") else image.getdata()) > 15 or image.width > 64 or image.height > 48:
+            if max(image.get_flattened_data() if hasattr(image, "get_flattened_data") else image.getdata()) > 15 or image.width > CELL_W or image.height > CELL_H:
                 raise ValueError('Frame exceeds indexed cell bounds: ' + frame['id'])
-            sx, sy = (i % 8) * 64, (i // 8) * 48
+            sx, sy = (i % 8) * CELL_W, (i // 8) * CELL_H
             sheet.paste(image, (sx, sy))
             w, h = (image.width + 7) // 8 * 8, (image.height + 7) // 8 * 8
         pieces = []

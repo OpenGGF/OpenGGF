@@ -1670,6 +1670,14 @@ or blockers remain; the lead owns subsequent integration. No merge or push.
 
 ## Coverage audit (2026-11-09)
 
+**Powered concepts rollout, 2026-11-11:** the owner-picked Open Cone (MICA) and Corona Crest
+(TALON) replace every powered drawing. MICA's powered coverage is **S2 9 authored / 23 alias / 2
+N/A and S3K 13 / 21 / 2**; TALON's Solar canonical view is **16 authored + 12 aliases in S2 and 16
++ 19 in S3K** (walk, duck, look up, hurt, skid, balance, push, spring and spindash are new). Zero
+fallback rows remain. Normal TALON was rescaled to the owner's 37 px rung (see
+`production/talon/rescale-37.json`); the carry contact check still touches in all 36 pairings.
+New creator API: `PoweredEffects.strikePalette` and `StrikeTrailStyle.echoPhaseSlot`.
+
 **Powered-form owner feedback, 2026-11-11:** powered binding selects the creator’s
 movement archetype; native Tails families retain Tails clocks instead of consuming
 Super Sonic’s movement table. Authored powered scripts have relocated canonical

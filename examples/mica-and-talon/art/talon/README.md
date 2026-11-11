@@ -21,7 +21,7 @@ the repository root. `assemble.py` is `tools/modding/playable_art/assemble.py`.
 | `stage-poses/` | `frames.txt` (per host for MICA endings); 36 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `titles/` | `*-frames.txt`; 50 PNGs; masks and clear mask | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 
-| `powered/` | `s2/`, `s3k/`; 64 PNGs; `palettes.txt`; effects | Authored Solar idle/run/flight/transform, original rolling reuse, cycle-owned contours | `assemble.py` each host handoff; `production/talon/feedback_art.py --check`; `solar_java.py --check`. |
+| `powered/` | `s2/`, `s3k/`; 162 PNGs; `palettes.txt`; effects | Corona Crest Solar for every common pose at the 37 px rung, one-limb canon, cycle-owned contours | `assemble.py` each host handoff; `production/talon/feedback_art.py --check`; `solar_java.py --check`. |
 
 Production records are in [`production/talon/`](../../production/talon/).
 The final special-stage manifests point from that tree to these approved PNGs.
@@ -46,16 +46,28 @@ five-pose wind-up. Powered silhouette ink belongs to the contour slot. Normal ca
 contact geometry is unchanged. Native S2 has no carry state; its picture comparison
 is pose-only.
 
-**Corona Crest pilot (2026-11-11).** Wait (two-frame crest flicker), run (with
-derived slopes), roll and the transformation (wings wrapped, goggles drop, wings
-thrown open as the crest ignites) are fresh owner-concept generations, recorded in
+**Corona Crest Solar (2026-11-11).** Fresh owner-concept generations cover wait (crest
+flicker), walk and run (with derived slopes), roll, spindash, spring, duck, look up, hurt,
+skid, balance, push, free flight and the transformation (wings wrapped, goggles drop,
+white flash, wings thrown open as the crest ignites). They are recorded in
 [`powered-concepts-generation.json`](../../production/talon/powered-concepts-generation.json).
-Slot 2 stays dark bronze for the chest bars, moustache and feather breaks; 3–5 are
-white-gold plumage, 6 the cycling orange tip, and fixed amber 14/15 and red 10
-finish the flames. Every Solar frame is body-locked to TALON's 11 px skull, so the
-crest extends above his normal body: he stands 43 px (Knuckles is 40), with his sole
-on normal TALON's ground line and unchanged hotspots and collision. Free flight is the
-earlier drawing in the new palette.
+Every frame keeps the one-limb canon: a gloved hand at the end of each feathered
+wing-arm, with feathers folding along a forearm that reaches out. Slot 2 stays dark bronze
+for the chest bars, moustache and feather breaks; 3–5 are white-gold plumage, 6 the cycling
+orange tip, and fixed amber 14/15 and red 10 finish the flames. Each frame is locked to his
+skull and registered to his normal frame for the same pose, so the crest rises above his
+normal body (42–44 px standing). Carry, swim, hang and other rare poses stay normal-bank
+aliases, as native Super Tails reuses Tails' art.
+
+**Owner height rung, 37 px (2026-11-11).** Normal TALON stands 37 px (Tails 31, MICA 39).
+The in-level sheet, its slopes and the full-body ending frames were rescaled with feet and
+hotspots fixed (hanging and carried poses keep their grip at the top; push keeps the hand on
+the wall); collision stays the Tails archetype. 37 frames were re-reduced from their raw
+generations; the rest reduce a Scale2x master and restore the original 1 px material
+contours. [`rescale-37.json`](../../production/talon/rescale-37.json) lists every frame's route
+and reason. Titles, the settled S2 title poses, lives icons, special-stage and slot poses,
+ending close-ups, far shots and cockpit heads keep their native scene scale. The carry grip
+still touches in all 36 pairings.
 
 `production/talon/feedback_art.py` reproduces every selected/converted image from
 original indexed rows; raw generations and decoded native references stay outside

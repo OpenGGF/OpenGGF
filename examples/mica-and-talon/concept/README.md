@@ -73,7 +73,7 @@ down+jump starts a divebomb.
 | Wings | Part of his body. He has no separate tail sprite and no rotor; flight is drawn with flapping wings. |
 | Spin-ball | Wings wrapped around the body, with the goggles still showing. |
 | Homing dive | A raptor's stoop with the wings folded back. |
-| Solar form | **Corona Crest** (owner pick, 2026-11-11). The crest becomes three tall flame-feathers, the goggles come down with glowing lenses, and the outer flight feathers and tail fan get flame tips (white, amber, orange, red). His chest bars and moustache stripe stay dark bronze. Each flap lifts twice as hard. He has no Flickies and no Hyper tier. |
+| Solar form | **Corona Crest** (owner pick, 2026-11-11). The crest becomes three tall flame-feathers, the goggles come down with glowing lenses, and the outer flight feathers and tail fan get flame tips (white, amber, orange, red). His chest bars and moustache stripe stay dark bronze. He keeps one limb per side: the gloved hand is at the end of each wing-arm. Each flap lifts twice as hard. He has no Flickies and no Hyper tier. |
 
 In-game palette, `../art/talon/palette.yaml` (index 0 is transparent):
 

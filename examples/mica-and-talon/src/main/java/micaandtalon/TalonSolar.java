@@ -67,11 +67,13 @@ final class TalonSolar {
         var art = PlayableSheetMaterializer.read(assets.readBounded(
                 "art/talon-powered-" + game + ".ggfp", assets.limits().maxAssetBytes())).art();
         var aliases = EnumSet.allOf(CanonicalAnimation.class);
-        aliases.removeAll(Set.of(CanonicalAnimation.WAIT, CanonicalAnimation.RUN,
+        aliases.removeAll(Set.of(CanonicalAnimation.WAIT, CanonicalAnimation.WALK, CanonicalAnimation.RUN,
                 CanonicalAnimation.TAILS_FLY, CanonicalAnimation.TAILS_FLY_ASCEND,
-                CanonicalAnimation.SUPER_TRANSFORM,
-                CanonicalAnimation.ROLL, CanonicalAnimation.ROLL2));
-        // Native carry geometry/contact and all other poses are explicit normal-bank aliases.
+                CanonicalAnimation.SUPER_TRANSFORM, CanonicalAnimation.ROLL, CanonicalAnimation.ROLL2,
+                CanonicalAnimation.DUCK, CanonicalAnimation.LOOK_UP, CanonicalAnimation.HURT,
+                CanonicalAnimation.SKID, CanonicalAnimation.BALANCE, CanonicalAnimation.PUSH,
+                CanonicalAnimation.SPRING, CanonicalAnimation.SPINDASH));
+        // Carry contact geometry and the remaining rare poses stay explicit normal-bank aliases.
         return new PoweredPlayableSheet(art, aliases);
     }
 

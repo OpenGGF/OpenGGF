@@ -1,0 +1,6358 @@
+{
+ "decision": "Owner rung 37 (2026-11-11): normal TALON stands 37 px; Solar follows by the skull rule.",
+ "method": "TALON in-level rescale to the owner-approved 37 px rung (31 -> 37).\n\nRoute 1: re-reduce from the raw generation with the frame's original recorded method (cell crop,\naspect-safe pad to the native box, LANCZOS, indexed palette, 1 px inside outline), at the native\nbox scaled by 37/31, then re-apply recorded post-reduction rules. Each route-1 frame is validated by\nreducing the same raw at the old box: if that does not reproduce the installed pixels (agreement\nbelow AGREE), the frame carries an unrecorded edit and is routed to route 2 instead.\nRoute 2: Scale2x x3 of the approved pixels (an 8x smooth master), reduced with the same method at\nthe new box: uniform 1 px outlines, no uneven row/column doubling.\nPlain: Scale2x x3 then nearest to the new box (shown only for comparison).\nFeet and hotspot stay fixed: the hotspot keeps its distance above the sole scaled by 37/31.",
+ "anchors": "Anchors: the sole keeps its distance below the hotspot for grounded, rolling and flying frames (feet\non the ground, carry shoes where MICA grips); hanging and carried poses keep their top (the hands on\nthe bar or carrier); object poses scale about the hotspot. Slopes are re-derived from the rescaled\nflats at the replaced frames' support distance. Writes PNGs, frames.yaml hotspots, recipe.json\nnative_pixels and production/talon/rescale-37.json (route and reason per frame). argv[1] = repo.",
+ "summary": {
+  "route 1": 37,
+  "route 2": 209,
+  "derived slope": 36
+ },
+ "frames": [
+  {
+   "id": "wait-00",
+   "file": "frames/wait-00.png",
+   "animation": "WAIT",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/wait-attempt-2.png cell 0; reproduces 88% at 31",
+   "old_size": [
+    20,
+    31
+   ],
+   "new_size": [
+    24,
+    37
+   ],
+   "old_hotspot": [
+    10,
+    12
+   ],
+   "new_hotspot": [
+    12,
+    18
+   ]
+  },
+  {
+   "id": "wait-01",
+   "file": "frames/wait-01.png",
+   "animation": "WAIT",
+   "route": "route 2",
+   "reason": "raw at 31 reproduces 52% of installed pixels (unrecorded edit)",
+   "old_size": [
+    20,
+    31
+   ],
+   "new_size": [
+    24,
+    37
+   ],
+   "old_hotspot": [
+    10,
+    12
+   ],
+   "new_hotspot": [
+    12,
+    18
+   ]
+  },
+  {
+   "id": "wait-02",
+   "file": "frames/wait-02.png",
+   "animation": "WAIT",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/wait-attempt-2.png cell 2; reproduces 98% at 31",
+   "old_size": [
+    20,
+    31
+   ],
+   "new_size": [
+    24,
+    37
+   ],
+   "old_hotspot": [
+    10,
+    12
+   ],
+   "new_hotspot": [
+    12,
+    18
+   ]
+  },
+  {
+   "id": "wait-03",
+   "file": "frames/wait-03.png",
+   "animation": "WAIT",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/wait-attempt-2.png cell 3; reproduces 97% at 31",
+   "old_size": [
+    20,
+    31
+   ],
+   "new_size": [
+    24,
+    37
+   ],
+   "old_hotspot": [
+    10,
+    12
+   ],
+   "new_hotspot": [
+    12,
+    18
+   ]
+  },
+  {
+   "id": "wait-04",
+   "file": "frames/wait-04.png",
+   "animation": "WAIT",
+   "route": "route 2",
+   "reason": "raw at 31 reproduces 43% of installed pixels (unrecorded edit)",
+   "old_size": [
+    19,
+    31
+   ],
+   "new_size": [
+    23,
+    37
+   ],
+   "old_hotspot": [
+    9,
+    12
+   ],
+   "new_hotspot": [
+    11,
+    18
+   ]
+  },
+  {
+   "id": "wait-05",
+   "file": "frames/wait-05.png",
+   "animation": "WAIT",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/wait-attempt-2.png cell 5; reproduces 99% at 31",
+   "old_size": [
+    20,
+    31
+   ],
+   "new_size": [
+    24,
+    37
+   ],
+   "old_hotspot": [
+    10,
+    12
+   ],
+   "new_hotspot": [
+    12,
+    18
+   ]
+  },
+  {
+   "id": "wait-06",
+   "file": "frames/wait-06.png",
+   "animation": "WAIT",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/wait-attempt-2.png cell 6; reproduces 98% at 31",
+   "old_size": [
+    21,
+    31
+   ],
+   "new_size": [
+    25,
+    37
+   ],
+   "old_hotspot": [
+    10,
+    12
+   ],
+   "new_hotspot": [
+    12,
+    18
+   ]
+  },
+  {
+   "id": "walk-00",
+   "file": "frames/walk-00.png",
+   "animation": "WALK",
+   "route": "route 2",
+   "reason": "raw at 31 reproduces 70% of installed pixels (unrecorded edit)",
+   "old_size": [
+    19,
+    31
+   ],
+   "new_size": [
+    23,
+    37
+   ],
+   "old_hotspot": [
+    10,
+    11
+   ],
+   "new_hotspot": [
+    12,
+    17
+   ]
+  },
+  {
+   "id": "walk-01",
+   "file": "frames/walk-01.png",
+   "animation": "WALK",
+   "route": "route 2",
+   "reason": "raw at 31 reproduces 77% of installed pixels (unrecorded edit)",
+   "old_size": [
+    22,
+    32
+   ],
+   "new_size": [
+    26,
+    38
+   ],
+   "old_hotspot": [
+    12,
+    12
+   ],
+   "new_hotspot": [
+    14,
+    18
+   ]
+  },
+  {
+   "id": "walk-02",
+   "file": "frames/walk-02.png",
+   "animation": "WALK",
+   "route": "route 2",
+   "reason": "raw at 31 reproduces 69% of installed pixels (unrecorded edit)",
+   "old_size": [
+    27,
+    32
+   ],
+   "new_size": [
+    32,
+    38
+   ],
+   "old_hotspot": [
+    13,
+    13
+   ],
+   "new_hotspot": [
+    15,
+    19
+   ]
+  },
+  {
+   "id": "walk-03",
+   "file": "frames/walk-03.png",
+   "animation": "WALK",
+   "route": "route 1",
+   "reason": "raw talon-art-r2-20261109/walk-attempt-3.png cell 3; reproduces 88% at 31",
+   "old_size": [
+    27,
+    31
+   ],
+   "new_size": [
+    32,
+    37
+   ],
+   "old_hotspot": [
+    13,
+    12
+   ],
+   "new_hotspot": [
+    15,
+    18
+   ]
+  },
+  {
+   "id": "walk-04",
+   "file": "frames/walk-04.png",
+   "animation": "WALK",
+   "route": "route 1",
+   "reason": "raw talon-art-r2-20261109/walk-attempt-3.png cell 4; reproduces 83% at 31",
+   "old_size": [
+    19,
+    31
+   ],
+   "new_size": [
+    23,
+    37
+   ],
+   "old_hotspot": [
+    10,
+    11
+   ],
+   "new_hotspot": [
+    12,
+    17
+   ]
+  },
+  {
+   "id": "walk-05",
+   "file": "frames/walk-05.png",
+   "animation": "WALK",
+   "route": "route 1",
+   "reason": "raw talon-art-r2-20261109/walk-attempt-3.png cell 5; reproduces 87% at 31",
+   "old_size": [
+    22,
+    32
+   ],
+   "new_size": [
+    26,
+    38
+   ],
+   "old_hotspot": [
+    11,
+    12
+   ],
+   "new_hotspot": [
+    13,
+    18
+   ]
+  },
+  {
+   "id": "walk-06",
+   "file": "frames/walk-06.png",
+   "animation": "WALK",
+   "route": "route 1",
+   "reason": "raw talon-art-r2-20261109/walk-attempt-3.png cell 6; reproduces 89% at 31",
+   "old_size": [
+    27,
+    30
+   ],
+   "new_size": [
+    32,
+    36
+   ],
+   "old_hotspot": [
+    14,
+    13
+   ],
+   "new_hotspot": [
+    17,
+    19
+   ]
+  },
+  {
+   "id": "walk-07",
+   "file": "frames/walk-07.png",
+   "animation": "WALK",
+   "route": "route 1",
+   "reason": "raw talon-art-r2-20261109/walk-attempt-3.png cell 7; reproduces 92% at 31",
+   "old_size": [
+    26,
+    31
+   ],
+   "new_size": [
+    31,
+    37
+   ],
+   "old_hotspot": [
+    13,
+    12
+   ],
+   "new_hotspot": [
+    16,
+    18
+   ]
+  },
+  {
+   "id": "run-00",
+   "file": "frames/run-00.png",
+   "animation": "RUN",
+   "route": "route 1",
+   "reason": "round-3 recorded crop [86, 171, 450, 569] at 13.34/1.194; reproduces 100% at 31",
+   "old_size": [
+    27,
+    30
+   ],
+   "new_size": [
+    33,
+    36
+   ],
+   "old_hotspot": [
+    11,
+    11
+   ],
+   "new_hotspot": [
+    13,
+    17
+   ]
+  },
+  {
+   "id": "run-01",
+   "file": "frames/run-01.png",
+   "animation": "RUN",
+   "route": "route 1",
+   "reason": "raw talon-art-r2-20261109/run-attempt-2.png cell 1; reproduces 95% at 31",
+   "old_size": [
+    31,
+    31
+   ],
+   "new_size": [
+    37,
+    37
+   ],
+   "old_hotspot": [
+    15,
+    11
+   ],
+   "new_hotspot": [
+    18,
+    17
+   ]
+  },
+  {
+   "id": "run-02",
+   "file": "frames/run-02.png",
+   "animation": "RUN",
+   "route": "route 2",
+   "reason": "raw at 31 reproduces 75% of installed pixels (unrecorded edit)",
+   "old_size": [
+    30,
+    31
+   ],
+   "new_size": [
+    36,
+    37
+   ],
+   "old_hotspot": [
+    14,
+    11
+   ],
+   "new_hotspot": [
+    17,
+    17
+   ]
+  },
+  {
+   "id": "run-03",
+   "file": "frames/run-03.png",
+   "animation": "RUN",
+   "route": "route 1",
+   "reason": "raw talon-art-r2-20261109/run-attempt-2.png cell 3; reproduces 96% at 31",
+   "old_size": [
+    31,
+    31
+   ],
+   "new_size": [
+    37,
+    37
+   ],
+   "old_hotspot": [
+    15,
+    11
+   ],
+   "new_hotspot": [
+    18,
+    17
+   ]
+  },
+  {
+   "id": "roll-00",
+   "file": "frames/roll-00.png",
+   "animation": "ROLL",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/roll-attempt-2.png cell 0; reproduces 100% at 31",
+   "old_size": [
+    29,
+    29
+   ],
+   "new_size": [
+    35,
+    35
+   ],
+   "old_hotspot": [
+    14,
+    14
+   ],
+   "new_hotspot": [
+    17,
+    20
+   ]
+  },
+  {
+   "id": "roll-01",
+   "file": "frames/roll-01.png",
+   "animation": "ROLL",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/roll-attempt-2.png cell 1; reproduces 100% at 31",
+   "old_size": [
+    29,
+    29
+   ],
+   "new_size": [
+    35,
+    35
+   ],
+   "old_hotspot": [
+    14,
+    14
+   ],
+   "new_hotspot": [
+    17,
+    20
+   ]
+  },
+  {
+   "id": "roll-02",
+   "file": "frames/roll-02.png",
+   "animation": "ROLL",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/roll-attempt-2.png cell 2; reproduces 100% at 31",
+   "old_size": [
+    29,
+    29
+   ],
+   "new_size": [
+    35,
+    35
+   ],
+   "old_hotspot": [
+    14,
+    14
+   ],
+   "new_hotspot": [
+    17,
+    20
+   ]
+  },
+  {
+   "id": "roll-03",
+   "file": "frames/roll-03.png",
+   "animation": "ROLL",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/roll-attempt-2.png cell 3; reproduces 100% at 31",
+   "old_size": [
+    29,
+    29
+   ],
+   "new_size": [
+    35,
+    35
+   ],
+   "old_hotspot": [
+    14,
+    14
+   ],
+   "new_hotspot": [
+    17,
+    20
+   ]
+  },
+  {
+   "id": "spindash-00",
+   "file": "frames/spindash-00.png",
+   "animation": "SPINDASH",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/spindash-attempt-2.png cell 0; reproduces 91% at 31",
+   "old_size": [
+    26,
+    24
+   ],
+   "new_size": [
+    31,
+    29
+   ],
+   "old_hotspot": [
+    13,
+    9
+   ],
+   "new_hotspot": [
+    16,
+    14
+   ]
+  },
+  {
+   "id": "spindash-01",
+   "file": "frames/spindash-01.png",
+   "animation": "SPINDASH",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/spindash-attempt-2.png cell 1; reproduces 90% at 31",
+   "old_size": [
+    26,
+    25
+   ],
+   "new_size": [
+    31,
+    30
+   ],
+   "old_hotspot": [
+    13,
+    10
+   ],
+   "new_hotspot": [
+    16,
+    15
+   ]
+  },
+  {
+   "id": "spindash-02",
+   "file": "frames/spindash-02.png",
+   "animation": "SPINDASH",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/spindash-attempt-2.png cell 2; reproduces 90% at 31",
+   "old_size": [
+    26,
+    23
+   ],
+   "new_size": [
+    31,
+    27
+   ],
+   "old_hotspot": [
+    13,
+    8
+   ],
+   "new_hotspot": [
+    16,
+    12
+   ]
+  },
+  {
+   "id": "spindash-03",
+   "file": "frames/spindash-03.png",
+   "animation": "SPINDASH",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/spindash-attempt-2.png cell 3; reproduces 84% at 31",
+   "old_size": [
+    26,
+    24
+   ],
+   "new_size": [
+    31,
+    29
+   ],
+   "old_hotspot": [
+    13,
+    9
+   ],
+   "new_hotspot": [
+    16,
+    14
+   ]
+  },
+  {
+   "id": "spring-00",
+   "file": "frames/spring-00.png",
+   "animation": "SPRING",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    28,
+    30
+   ],
+   "new_size": [
+    33,
+    36
+   ],
+   "old_hotspot": [
+    14,
+    11
+   ],
+   "new_hotspot": [
+    16,
+    17
+   ]
+  },
+  {
+   "id": "hurt-00",
+   "file": "frames/hurt-00.png",
+   "animation": "HURT",
+   "route": "route 2",
+   "reason": "raw at 31 reproduces 79% of installed pixels (unrecorded edit)",
+   "old_size": [
+    29,
+    28
+   ],
+   "new_size": [
+    35,
+    33
+   ],
+   "old_hotspot": [
+    14,
+    12
+   ],
+   "new_hotspot": [
+    17,
+    17
+   ]
+  },
+  {
+   "id": "death-00",
+   "file": "frames/death-00.png",
+   "animation": "DEATH",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/poses-attempt-1.png cell 2; reproduces 99% at 31",
+   "old_size": [
+    29,
+    30
+   ],
+   "new_size": [
+    35,
+    36
+   ],
+   "old_hotspot": [
+    14,
+    14
+   ],
+   "new_hotspot": [
+    17,
+    20
+   ]
+  },
+  {
+   "id": "duck-00",
+   "file": "frames/duck-00.png",
+   "animation": "DUCK",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/poses-attempt-1.png cell 3; reproduces 92% at 31",
+   "old_size": [
+    25,
+    17
+   ],
+   "new_size": [
+    30,
+    20
+   ],
+   "old_hotspot": [
+    16,
+    1
+   ],
+   "new_hotspot": [
+    19,
+    4
+   ]
+  },
+  {
+   "id": "look_up-00",
+   "file": "frames/look_up-00.png",
+   "animation": "LOOK_UP",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/poses-attempt-1.png cell 4; reproduces 100% at 31",
+   "old_size": [
+    23,
+    31
+   ],
+   "new_size": [
+    27,
+    37
+   ],
+   "old_hotspot": [
+    11,
+    15
+   ],
+   "new_hotspot": [
+    13,
+    21
+   ]
+  },
+  {
+   "id": "skid-00",
+   "file": "frames/skid-00.png",
+   "animation": "SKID",
+   "route": "route 1",
+   "reason": "raw talon-art-20261109/poses-attempt-1.png cell 5; reproduces 83% at 31",
+   "old_size": [
+    33,
+    28
+   ],
+   "new_size": [
+    39,
+    33
+   ],
+   "old_hotspot": [
+    22,
+    13
+   ],
+   "new_hotspot": [
+    26,
+    18
+   ]
+  },
+  {
+   "id": "skid-01",
+   "file": "frames/skid-01.png",
+   "animation": "SKID",
+   "route": "route 2",
+   "reason": "raw at 31 reproduces 76% of installed pixels (unrecorded edit)",
+   "old_size": [
+    32,
+    29
+   ],
+   "new_size": [
+    38,
+    35
+   ],
+   "old_hotspot": [
+    21,
+    13
+   ],
+   "new_hotspot": [
+    25,
+    19
+   ]
+  },
+  {
+   "id": "fly-00",
+   "file": "frames/fly-00.png",
+   "animation": "TAILS_FLY",
+   "route": "route 1",
+   "reason": "feedback raw exec-6fb3a262-5311-420d-82f0-513dea56ab59.png crop [94, 49, 416, 443] at 9.5/1.194; reproduces 100% at 31",
+   "old_size": [
+    34,
+    41
+   ],
+   "new_size": [
+    40,
+    50
+   ],
+   "old_hotspot": [
+    21,
+    26
+   ],
+   "new_hotspot": [
+    25,
+    35
+   ]
+  },
+  {
+   "id": "fly-01",
+   "file": "frames/fly-01.png",
+   "animation": "TAILS_FLY",
+   "route": "route 1",
+   "reason": "feedback raw exec-6fb3a262-5311-420d-82f0-513dea56ab59.png crop [42, 127, 387, 442] at 9.5/1.194; reproduces 100% at 31",
+   "old_size": [
+    36,
+    33
+   ],
+   "new_size": [
+    43,
+    40
+   ],
+   "old_hotspot": [
+    24,
+    18
+   ],
+   "new_hotspot": [
+    29,
+    25
+   ]
+  },
+  {
+   "id": "fly-02",
+   "file": "frames/fly-02.png",
+   "animation": "TAILS_FLY",
+   "route": "route 1",
+   "reason": "feedback raw exec-6fb3a262-5311-420d-82f0-513dea56ab59.png crop [0, 127, 486, 441] at 9.5/1.194; reproduces 100% at 31",
+   "old_size": [
+    51,
+    33
+   ],
+   "new_size": [
+    61,
+    39
+   ],
+   "old_hotspot": [
+    29,
+    18
+   ],
+   "new_hotspot": [
+    35,
+    24
+   ]
+  },
+  {
+   "id": "fly-03",
+   "file": "frames/fly-03.png",
+   "animation": "TAILS_FLY",
+   "route": "route 1",
+   "reason": "feedback raw exec-6fb3a262-5311-420d-82f0-513dea56ab59.png crop [125, 95, 412, 463] at 9.5/1.194; reproduces 100% at 31",
+   "old_size": [
+    30,
+    39
+   ],
+   "new_size": [
+    36,
+    46
+   ],
+   "old_hotspot": [
+    17,
+    18
+   ],
+   "new_hotspot": [
+    20,
+    25
+   ]
+  },
+  {
+   "id": "fly-04",
+   "file": "frames/fly-04.png",
+   "animation": "TAILS_FLY",
+   "route": "route 1",
+   "reason": "feedback raw exec-6fb3a262-5311-420d-82f0-513dea56ab59.png crop [61, 96, 393, 407] at 9.5/1.194; reproduces 100% at 31",
+   "old_size": [
+    35,
+    33
+   ],
+   "new_size": [
+    42,
+    39
+   ],
+   "old_hotspot": [
+    23,
+    18
+   ],
+   "new_hotspot": [
+    28,
+    24
+   ]
+  },
+  {
+   "id": "fly-05",
+   "file": "frames/fly-05.png",
+   "animation": "TAILS_FLY",
+   "route": "route 1",
+   "reason": "feedback raw exec-6fb3a262-5311-420d-82f0-513dea56ab59.png crop [34, 95, 391, 409] at 9.5/1.194; reproduces 100% at 31",
+   "old_size": [
+    38,
+    33
+   ],
+   "new_size": [
+    45,
+    39
+   ],
+   "old_hotspot": [
+    25,
+    18
+   ],
+   "new_hotspot": [
+    30,
+    24
+   ]
+  },
+  {
+   "id": "fly_tired-00",
+   "file": "frames/fly_tired-00.png",
+   "animation": "TAILS_FLY_TIRED",
+   "route": "route 2",
+   "reason": "raw at 31 reproduces 15% of installed pixels (unrecorded edit)",
+   "old_size": [
+    29,
+    31
+   ],
+   "new_size": [
+    35,
+    37
+   ],
+   "old_hotspot": [
+    17,
+    14
+   ],
+   "new_hotspot": [
+    21,
+    20
+   ]
+  },
+  {
+   "id": "fly_tired-01",
+   "file": "frames/fly_tired-01.png",
+   "animation": "TAILS_FLY_TIRED",
+   "route": "route 2",
+   "reason": "raw at 31 reproduces 16% of installed pixels (unrecorded edit)",
+   "old_size": [
+    32,
+    31
+   ],
+   "new_size": [
+    38,
+    37
+   ],
+   "old_hotspot": [
+    18,
+    14
+   ],
+   "new_hotspot": [
+    21,
+    20
+   ]
+  },
+  {
+   "id": "fly_tired-02",
+   "file": "frames/fly_tired-02.png",
+   "animation": "TAILS_FLY_TIRED",
+   "route": "route 2",
+   "reason": "cell not found in strip",
+   "old_size": [
+    30,
+    31
+   ],
+   "new_size": [
+    36,
+    37
+   ],
+   "old_hotspot": [
+    18,
+    14
+   ],
+   "new_hotspot": [
+    22,
+    20
+   ]
+  },
+  {
+   "id": "fly_tired-03",
+   "file": "frames/fly_tired-03.png",
+   "animation": "TAILS_FLY_TIRED",
+   "route": "route 2",
+   "reason": "cell not found in strip",
+   "old_size": [
+    27,
+    32
+   ],
+   "new_size": [
+    32,
+    38
+   ],
+   "old_hotspot": [
+    15,
+    14
+   ],
+   "new_hotspot": [
+    18,
+    20
+   ]
+  },
+  {
+   "id": "fly_tired-04",
+   "file": "frames/fly_tired-04.png",
+   "animation": "TAILS_FLY_TIRED",
+   "route": "route 2",
+   "reason": "cell not found in strip",
+   "old_size": [
+    31,
+    31
+   ],
+   "new_size": [
+    37,
+    37
+   ],
+   "old_hotspot": [
+    18,
+    14
+   ],
+   "new_hotspot": [
+    21,
+    20
+   ]
+  },
+  {
+   "id": "fly_tired-05",
+   "file": "frames/fly_tired-05.png",
+   "animation": "TAILS_FLY_TIRED",
+   "route": "route 2",
+   "reason": "cell not found in strip",
+   "old_size": [
+    31,
+    31
+   ],
+   "new_size": [
+    37,
+    37
+   ],
+   "old_hotspot": [
+    17,
+    14
+   ],
+   "new_hotspot": [
+    20,
+    20
+   ]
+  },
+  {
+   "id": "family-push-00",
+   "file": "frames/family-push-00.png",
+   "animation": "PUSH",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    34,
+    30
+   ],
+   "new_size": [
+    41,
+    36
+   ],
+   "old_hotspot": [
+    18,
+    11
+   ],
+   "new_hotspot": [
+    25,
+    17
+   ],
+   "anchor": "push: hand-side edge keeps its native distance from the hotspot"
+  },
+  {
+   "id": "family-push-01",
+   "file": "frames/family-push-01.png",
+   "animation": "PUSH",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    26,
+    31
+   ],
+   "new_size": [
+    31,
+    37
+   ],
+   "old_hotspot": [
+    10,
+    12
+   ],
+   "new_hotspot": [
+    15,
+    18
+   ],
+   "anchor": "push: hand-side edge keeps its native distance from the hotspot"
+  },
+  {
+   "id": "family-push-02",
+   "file": "frames/family-push-02.png",
+   "animation": "PUSH",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    28,
+    32
+   ],
+   "new_size": [
+    33,
+    38
+   ],
+   "old_hotspot": [
+    12,
+    13
+   ],
+   "new_hotspot": [
+    17,
+    19
+   ],
+   "anchor": "push: hand-side edge keeps its native distance from the hotspot"
+  },
+  {
+   "id": "family-push-03",
+   "file": "frames/family-push-03.png",
+   "animation": "PUSH",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    29,
+    32
+   ],
+   "new_size": [
+    35,
+    38
+   ],
+   "old_hotspot": [
+    13,
+    13
+   ],
+   "new_hotspot": [
+    19,
+    19
+   ],
+   "anchor": "push: hand-side edge keeps its native distance from the hotspot"
+  },
+  {
+   "id": "family-balance-00",
+   "file": "frames/family-balance-00.png",
+   "animation": "BALANCE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    27,
+    31
+   ],
+   "new_size": [
+    32,
+    37
+   ],
+   "old_hotspot": [
+    13,
+    12
+   ],
+   "new_hotspot": [
+    15,
+    18
+   ]
+  },
+  {
+   "id": "family-balance-01",
+   "file": "frames/family-balance-01.png",
+   "animation": "BALANCE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    25,
+    29
+   ],
+   "new_size": [
+    30,
+    35
+   ],
+   "old_hotspot": [
+    12,
+    10
+   ],
+   "new_hotspot": [
+    14,
+    16
+   ]
+  },
+  {
+   "id": "family-balance2-00",
+   "file": "frames/family-balance2-00.png",
+   "animation": "BALANCE2",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    33
+   ],
+   "new_size": [
+    38,
+    39
+   ],
+   "old_hotspot": [
+    15,
+    13
+   ],
+   "new_hotspot": [
+    18,
+    19
+   ]
+  },
+  {
+   "id": "family-balance2-01",
+   "file": "frames/family-balance2-01.png",
+   "animation": "BALANCE2",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    31,
+    35
+   ],
+   "new_size": [
+    37,
+    42
+   ],
+   "old_hotspot": [
+    15,
+    15
+   ],
+   "new_hotspot": [
+    18,
+    22
+   ]
+  },
+  {
+   "id": "family-balance2-02",
+   "file": "frames/family-balance2-02.png",
+   "animation": "BALANCE2",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    30,
+    33
+   ],
+   "new_size": [
+    36,
+    39
+   ],
+   "old_hotspot": [
+    14,
+    13
+   ],
+   "new_hotspot": [
+    17,
+    19
+   ]
+  },
+  {
+   "id": "family-balance3-00",
+   "file": "frames/family-balance3-00.png",
+   "animation": "BALANCE3",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    33,
+    35
+   ],
+   "new_size": [
+    39,
+    42
+   ],
+   "old_hotspot": [
+    16,
+    16
+   ],
+   "new_hotspot": [
+    19,
+    23
+   ]
+  },
+  {
+   "id": "family-balance3-01",
+   "file": "frames/family-balance3-01.png",
+   "animation": "BALANCE3",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    35,
+    32
+   ],
+   "new_size": [
+    42,
+    38
+   ],
+   "old_hotspot": [
+    17,
+    13
+   ],
+   "new_hotspot": [
+    20,
+    19
+   ]
+  },
+  {
+   "id": "family-balance4-00",
+   "file": "frames/family-balance4-00.png",
+   "animation": "BALANCE4",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    24,
+    32
+   ],
+   "new_size": [
+    29,
+    38
+   ],
+   "old_hotspot": [
+    11,
+    12
+   ],
+   "new_hotspot": [
+    13,
+    18
+   ]
+  },
+  {
+   "id": "family-balance4-01",
+   "file": "frames/family-balance4-01.png",
+   "animation": "BALANCE4",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    36,
+    37
+   ],
+   "new_size": [
+    43,
+    44
+   ],
+   "old_hotspot": [
+    18,
+    17
+   ],
+   "new_hotspot": [
+    22,
+    24
+   ]
+  },
+  {
+   "id": "family-balance4-02",
+   "file": "frames/family-balance4-02.png",
+   "animation": "BALANCE4",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    39,
+    35
+   ],
+   "new_size": [
+    47,
+    42
+   ],
+   "old_hotspot": [
+    19,
+    15
+   ],
+   "new_hotspot": [
+    23,
+    22
+   ]
+  },
+  {
+   "id": "family-balance4-03",
+   "file": "frames/family-balance4-03.png",
+   "animation": "BALANCE4",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    42,
+    37
+   ],
+   "new_size": [
+    50,
+    44
+   ],
+   "old_hotspot": [
+    20,
+    17
+   ],
+   "new_hotspot": [
+    24,
+    24
+   ]
+  },
+  {
+   "id": "family-balance4-04",
+   "file": "frames/family-balance4-04.png",
+   "animation": "BALANCE4",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    30,
+    33
+   ],
+   "new_size": [
+    36,
+    39
+   ],
+   "old_hotspot": [
+    14,
+    13
+   ],
+   "new_hotspot": [
+    17,
+    19
+   ]
+  },
+  {
+   "id": "family-hang-00",
+   "file": "frames/family-hang-00.png",
+   "animation": "HANG",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    44,
+    24
+   ],
+   "new_size": [
+    53,
+    29
+   ],
+   "old_hotspot": [
+    22,
+    12
+   ],
+   "new_hotspot": [
+    26,
+    12
+   ]
+  },
+  {
+   "id": "family-hang-01",
+   "file": "frames/family-hang-01.png",
+   "animation": "HANG",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    45,
+    25
+   ],
+   "new_size": [
+    54,
+    30
+   ],
+   "old_hotspot": [
+    22,
+    12
+   ],
+   "new_hotspot": [
+    26,
+    12
+   ]
+  },
+  {
+   "id": "family-hang2-00",
+   "file": "frames/family-hang2-00.png",
+   "animation": "HANG2",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    26,
+    32
+   ],
+   "new_size": [
+    31,
+    38
+   ],
+   "old_hotspot": [
+    13,
+    16
+   ],
+   "new_hotspot": [
+    16,
+    16
+   ]
+  },
+  {
+   "id": "family-hang2-01",
+   "file": "frames/family-hang2-01.png",
+   "animation": "HANG2",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    27,
+    33
+   ],
+   "new_size": [
+    32,
+    39
+   ],
+   "old_hotspot": [
+    13,
+    16
+   ],
+   "new_hotspot": [
+    15,
+    16
+   ]
+  },
+  {
+   "id": "family-bubble-00",
+   "file": "frames/family-bubble-00.png",
+   "animation": "BUBBLE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    29,
+    37
+   ],
+   "new_size": [
+    35,
+    44
+   ],
+   "old_hotspot": [
+    20,
+    19
+   ],
+   "new_hotspot": [
+    24,
+    26
+   ]
+  },
+  {
+   "id": "family-bubble-01",
+   "file": "frames/family-bubble-01.png",
+   "animation": "BUBBLE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    36
+   ],
+   "new_size": [
+    38,
+    43
+   ],
+   "old_hotspot": [
+    20,
+    19
+   ],
+   "new_hotspot": [
+    24,
+    26
+   ]
+  },
+  {
+   "id": "family-bubble-02",
+   "file": "frames/family-bubble-02.png",
+   "animation": "BUBBLE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    29,
+    34
+   ],
+   "new_size": [
+    35,
+    41
+   ],
+   "old_hotspot": [
+    20,
+    19
+   ],
+   "new_hotspot": [
+    24,
+    26
+   ]
+  },
+  {
+   "id": "family-hurt-fall-00",
+   "file": "frames/family-hurt-fall-00.png",
+   "animation": "HURT_FALL",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    30,
+    36
+   ],
+   "new_size": [
+    36,
+    43
+   ],
+   "old_hotspot": [
+    17,
+    21
+   ],
+   "new_hotspot": [
+    20,
+    28
+   ]
+  },
+  {
+   "id": "family-hurt-fall-01",
+   "file": "frames/family-hurt-fall-01.png",
+   "animation": "HURT_FALL",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    34,
+    35
+   ],
+   "new_size": [
+    41,
+    42
+   ],
+   "old_hotspot": [
+    19,
+    19
+   ],
+   "new_hotspot": [
+    23,
+    26
+   ]
+  },
+  {
+   "id": "family-drown-00",
+   "file": "frames/family-drown-00.png",
+   "animation": "DROWN",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    31,
+    36
+   ],
+   "new_size": [
+    37,
+    43
+   ],
+   "old_hotspot": [
+    16,
+    20
+   ],
+   "new_hotspot": [
+    19,
+    27
+   ]
+  },
+  {
+   "id": "family-float2-00",
+   "file": "frames/family-float2-00.png",
+   "animation": "FLOAT2",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    38,
+    19
+   ],
+   "new_size": [
+    45,
+    23
+   ],
+   "old_hotspot": [
+    19,
+    9
+   ],
+   "new_hotspot": [
+    22,
+    13
+   ]
+  },
+  {
+   "id": "family-float2-01",
+   "file": "frames/family-float2-01.png",
+   "animation": "FLOAT2",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    19
+   ],
+   "new_size": [
+    38,
+    23
+   ],
+   "old_hotspot": [
+    16,
+    9
+   ],
+   "new_hotspot": [
+    19,
+    13
+   ]
+  },
+  {
+   "id": "family-float2-02",
+   "file": "frames/family-float2-02.png",
+   "animation": "FLOAT2",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    21
+   ],
+   "new_size": [
+    38,
+    25
+   ],
+   "old_hotspot": [
+    16,
+    10
+   ],
+   "new_hotspot": [
+    19,
+    14
+   ]
+  },
+  {
+   "id": "family-float2-03",
+   "file": "frames/family-float2-03.png",
+   "animation": "FLOAT2",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    33,
+    20
+   ],
+   "new_size": [
+    39,
+    24
+   ],
+   "old_hotspot": [
+    16,
+    9
+   ],
+   "new_hotspot": [
+    19,
+    13
+   ]
+  },
+  {
+   "id": "family-float2-04",
+   "file": "frames/family-float2-04.png",
+   "animation": "FLOAT2",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    36,
+    18
+   ],
+   "new_size": [
+    43,
+    21
+   ],
+   "old_hotspot": [
+    18,
+    9
+   ],
+   "new_hotspot": [
+    22,
+    12
+   ]
+  },
+  {
+   "id": "family-float2-05",
+   "file": "frames/family-float2-05.png",
+   "animation": "FLOAT2",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    31,
+    23
+   ],
+   "new_size": [
+    37,
+    27
+   ],
+   "old_hotspot": [
+    15,
+    12
+   ],
+   "new_hotspot": [
+    18,
+    16
+   ]
+  },
+  {
+   "id": "family-float2-06",
+   "file": "frames/family-float2-06.png",
+   "animation": "FLOAT2",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    30,
+    24
+   ],
+   "new_size": [
+    36,
+    29
+   ],
+   "old_hotspot": [
+    15,
+    12
+   ],
+   "new_hotspot": [
+    18,
+    17
+   ]
+  },
+  {
+   "id": "family-float2-07",
+   "file": "frames/family-float2-07.png",
+   "animation": "FLOAT2",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    31,
+    23
+   ],
+   "new_size": [
+    37,
+    27
+   ],
+   "old_hotspot": [
+    15,
+    12
+   ],
+   "new_hotspot": [
+    18,
+    16
+   ]
+  },
+  {
+   "id": "family-blink-00",
+   "file": "frames/family-blink-00.png",
+   "animation": "BLINK",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    20,
+    31
+   ],
+   "new_size": [
+    24,
+    37
+   ],
+   "old_hotspot": [
+    10,
+    12
+   ],
+   "new_hotspot": [
+    12,
+    18
+   ]
+  },
+  {
+   "id": "family-blink-01",
+   "file": "frames/family-blink-01.png",
+   "animation": "BLINK",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    19,
+    29
+   ],
+   "new_size": [
+    23,
+    35
+   ],
+   "old_hotspot": [
+    9,
+    10
+   ],
+   "new_hotspot": [
+    11,
+    16
+   ]
+  },
+  {
+   "id": "family-blink-02",
+   "file": "frames/family-blink-02.png",
+   "animation": "BLINK",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    20,
+    30
+   ],
+   "new_size": [
+    24,
+    36
+   ],
+   "old_hotspot": [
+    10,
+    11
+   ],
+   "new_hotspot": [
+    12,
+    17
+   ]
+  },
+  {
+   "id": "family-get-up-00",
+   "file": "frames/family-get-up-00.png",
+   "animation": "GET_UP",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    40,
+    21
+   ],
+   "new_size": [
+    48,
+    25
+   ],
+   "old_hotspot": [
+    20,
+    2
+   ],
+   "new_hotspot": [
+    24,
+    6
+   ]
+  },
+  {
+   "id": "family-get-up-01",
+   "file": "frames/family-get-up-01.png",
+   "animation": "GET_UP",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    19,
+    32
+   ],
+   "new_size": [
+    23,
+    38
+   ],
+   "old_hotspot": [
+    9,
+    13
+   ],
+   "new_hotspot": [
+    11,
+    19
+   ]
+  },
+  {
+   "id": "family-victory-00",
+   "file": "frames/family-victory-00.png",
+   "animation": "VICTORY",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    24,
+    39
+   ],
+   "new_size": [
+    29,
+    47
+   ],
+   "old_hotspot": [
+    12,
+    19
+   ],
+   "new_hotspot": [
+    14,
+    27
+   ]
+  },
+  {
+   "id": "family-victory-01",
+   "file": "frames/family-victory-01.png",
+   "animation": "VICTORY",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    28,
+    38
+   ],
+   "new_size": [
+    33,
+    45
+   ],
+   "old_hotspot": [
+    13,
+    18
+   ],
+   "new_hotspot": [
+    15,
+    25
+   ]
+  },
+  {
+   "id": "family-victory-02",
+   "file": "frames/family-victory-02.png",
+   "animation": "VICTORY",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    29,
+    38
+   ],
+   "new_size": [
+    35,
+    45
+   ],
+   "old_hotspot": [
+    14,
+    18
+   ],
+   "new_hotspot": [
+    17,
+    25
+   ]
+  },
+  {
+   "id": "family-victory-03",
+   "file": "frames/family-victory-03.png",
+   "animation": "VICTORY",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    28,
+    39
+   ],
+   "new_size": [
+    33,
+    47
+   ],
+   "old_hotspot": [
+    13,
+    19
+   ],
+   "new_hotspot": [
+    15,
+    27
+   ]
+  },
+  {
+   "id": "family-tails-carried-00",
+   "file": "frames/family-tails-carried-00.png",
+   "animation": "TAILS_CARRIED",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    30,
+    39
+   ],
+   "new_size": [
+    36,
+    47
+   ],
+   "old_hotspot": [
+    15,
+    24
+   ],
+   "new_hotspot": [
+    18,
+    24
+   ]
+  },
+  {
+   "id": "family-tails-carried-01",
+   "file": "frames/family-tails-carried-01.png",
+   "animation": "TAILS_CARRIED",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    34,
+    38
+   ],
+   "new_size": [
+    41,
+    45
+   ],
+   "old_hotspot": [
+    16,
+    24
+   ],
+   "new_hotspot": [
+    19,
+    24
+   ]
+  },
+  {
+   "id": "family-tails-carried-02",
+   "file": "frames/family-tails-carried-02.png",
+   "animation": "TAILS_CARRIED",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    37,
+    34
+   ],
+   "new_size": [
+    44,
+    41
+   ],
+   "old_hotspot": [
+    19,
+    24
+   ],
+   "new_hotspot": [
+    23,
+    24
+   ]
+  },
+  {
+   "id": "family-super-transform-00",
+   "file": "frames/family-super-transform-00.png",
+   "animation": "SUPER_TRANSFORM",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    30,
+    32
+   ],
+   "new_size": [
+    36,
+    38
+   ],
+   "old_hotspot": [
+    20,
+    17
+   ],
+   "new_hotspot": [
+    24,
+    23
+   ]
+  },
+  {
+   "id": "family-super-transform-01",
+   "file": "frames/family-super-transform-01.png",
+   "animation": "SUPER_TRANSFORM",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    43
+   ],
+   "new_size": [
+    38,
+    51
+   ],
+   "old_hotspot": [
+    23,
+    19
+   ],
+   "new_hotspot": [
+    27,
+    27
+   ]
+  },
+  {
+   "id": "family-super-transform-02",
+   "file": "frames/family-super-transform-02.png",
+   "animation": "SUPER_TRANSFORM",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    34,
+    38
+   ],
+   "new_size": [
+    41,
+    45
+   ],
+   "old_hotspot": [
+    17,
+    19
+   ],
+   "new_hotspot": [
+    20,
+    26
+   ]
+  },
+  {
+   "id": "family-super-transform-03",
+   "file": "frames/family-super-transform-03.png",
+   "animation": "SUPER_TRANSFORM",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    38,
+    38
+   ],
+   "new_size": [
+    45,
+    45
+   ],
+   "old_hotspot": [
+    22,
+    17
+   ],
+   "new_hotspot": [
+    26,
+    24
+   ]
+  },
+  {
+   "id": "family-super-transform-04",
+   "file": "frames/family-super-transform-04.png",
+   "animation": "SUPER_TRANSFORM",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    34,
+    38
+   ],
+   "new_size": [
+    41,
+    45
+   ],
+   "old_hotspot": [
+    20,
+    17
+   ],
+   "new_hotspot": [
+    24,
+    24
+   ]
+  },
+  {
+   "id": "family-tails-fly-ascend-00",
+   "file": "frames/family-tails-fly-ascend-00.png",
+   "animation": "TAILS_FLY_ASCEND",
+   "route": "route 1",
+   "reason": "feedback raw exec-6fb3a262-5311-420d-82f0-513dea56ab59.png crop [94, 49, 416, 443] at 9.5/1.194; reproduces 100% at 31",
+   "old_size": [
+    34,
+    41
+   ],
+   "new_size": [
+    40,
+    50
+   ],
+   "old_hotspot": [
+    21,
+    26
+   ],
+   "new_hotspot": [
+    25,
+    35
+   ]
+  },
+  {
+   "id": "family-tails-fly-ascend-01",
+   "file": "frames/family-tails-fly-ascend-01.png",
+   "animation": "TAILS_FLY_ASCEND",
+   "route": "route 1",
+   "reason": "feedback raw exec-6fb3a262-5311-420d-82f0-513dea56ab59.png crop [42, 127, 387, 442] at 9.5/1.194; reproduces 100% at 31",
+   "old_size": [
+    36,
+    33
+   ],
+   "new_size": [
+    43,
+    40
+   ],
+   "old_hotspot": [
+    24,
+    18
+   ],
+   "new_hotspot": [
+    29,
+    25
+   ]
+  },
+  {
+   "id": "family-tails-fly-ascend-02",
+   "file": "frames/family-tails-fly-ascend-02.png",
+   "animation": "TAILS_FLY_ASCEND",
+   "route": "route 1",
+   "reason": "feedback raw exec-6fb3a262-5311-420d-82f0-513dea56ab59.png crop [0, 127, 486, 441] at 9.5/1.194; reproduces 100% at 31",
+   "old_size": [
+    51,
+    33
+   ],
+   "new_size": [
+    61,
+    39
+   ],
+   "old_hotspot": [
+    29,
+    18
+   ],
+   "new_hotspot": [
+    35,
+    24
+   ]
+  },
+  {
+   "id": "family-tails-fly-ascend-03",
+   "file": "frames/family-tails-fly-ascend-03.png",
+   "animation": "TAILS_FLY_ASCEND",
+   "route": "route 1",
+   "reason": "feedback raw exec-6fb3a262-5311-420d-82f0-513dea56ab59.png crop [125, 95, 412, 463] at 9.5/1.194; reproduces 100% at 31",
+   "old_size": [
+    30,
+    39
+   ],
+   "new_size": [
+    36,
+    46
+   ],
+   "old_hotspot": [
+    17,
+    18
+   ],
+   "new_hotspot": [
+    20,
+    25
+   ]
+  },
+  {
+   "id": "family-tails-fly-ascend-04",
+   "file": "frames/family-tails-fly-ascend-04.png",
+   "animation": "TAILS_FLY_ASCEND",
+   "route": "route 1",
+   "reason": "feedback raw exec-6fb3a262-5311-420d-82f0-513dea56ab59.png crop [61, 96, 393, 407] at 9.5/1.194; reproduces 100% at 31",
+   "old_size": [
+    35,
+    33
+   ],
+   "new_size": [
+    42,
+    39
+   ],
+   "old_hotspot": [
+    23,
+    18
+   ],
+   "new_hotspot": [
+    28,
+    24
+   ]
+  },
+  {
+   "id": "family-tails-fly-ascend-05",
+   "file": "frames/family-tails-fly-ascend-05.png",
+   "animation": "TAILS_FLY_ASCEND",
+   "route": "route 1",
+   "reason": "feedback raw exec-6fb3a262-5311-420d-82f0-513dea56ab59.png crop [34, 95, 391, 409] at 9.5/1.194; reproduces 100% at 31",
+   "old_size": [
+    38,
+    33
+   ],
+   "new_size": [
+    45,
+    39
+   ],
+   "old_hotspot": [
+    25,
+    18
+   ],
+   "new_hotspot": [
+    30,
+    24
+   ]
+  },
+  {
+   "id": "family-tails-fly-carry-00",
+   "file": "frames/family-tails-fly-carry-00.png",
+   "animation": "TAILS_FLY_CARRY",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    29,
+    37
+   ],
+   "new_size": [
+    35,
+    44
+   ],
+   "old_hotspot": [
+    18,
+    29
+   ],
+   "new_hotspot": [
+    22,
+    36
+   ]
+  },
+  {
+   "id": "family-tails-fly-carry-01",
+   "file": "frames/family-tails-fly-carry-01.png",
+   "animation": "TAILS_FLY_CARRY",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    34,
+    34
+   ],
+   "new_size": [
+    41,
+    41
+   ],
+   "old_hotspot": [
+    23,
+    26
+   ],
+   "new_hotspot": [
+    28,
+    33
+   ]
+  },
+  {
+   "id": "family-tails-fly-carry-02",
+   "file": "frames/family-tails-fly-carry-02.png",
+   "animation": "TAILS_FLY_CARRY",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    49,
+    30
+   ],
+   "new_size": [
+    58,
+    36
+   ],
+   "old_hotspot": [
+    28,
+    22
+   ],
+   "new_hotspot": [
+    33,
+    28
+   ]
+  },
+  {
+   "id": "family-tails-fly-carry-03",
+   "file": "frames/family-tails-fly-carry-03.png",
+   "animation": "TAILS_FLY_CARRY",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    34,
+    30
+   ],
+   "new_size": [
+    41,
+    36
+   ],
+   "old_hotspot": [
+    19,
+    22
+   ],
+   "new_hotspot": [
+    23,
+    28
+   ]
+  },
+  {
+   "id": "family-tails-fly-carry-04",
+   "file": "frames/family-tails-fly-carry-04.png",
+   "animation": "TAILS_FLY_CARRY",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    35,
+    30
+   ],
+   "new_size": [
+    42,
+    36
+   ],
+   "old_hotspot": [
+    23,
+    22
+   ],
+   "new_hotspot": [
+    28,
+    28
+   ]
+  },
+  {
+   "id": "family-tails-fly-carry-05",
+   "file": "frames/family-tails-fly-carry-05.png",
+   "animation": "TAILS_FLY_CARRY",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    52,
+    30
+   ],
+   "new_size": [
+    62,
+    36
+   ],
+   "old_hotspot": [
+    31,
+    22
+   ],
+   "new_hotspot": [
+    37,
+    28
+   ]
+  },
+  {
+   "id": "family-tails-fly-carry-ascend-00",
+   "file": "frames/family-tails-fly-carry-ascend-00.png",
+   "animation": "TAILS_FLY_CARRY_ASCEND",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    29,
+    37
+   ],
+   "new_size": [
+    35,
+    44
+   ],
+   "old_hotspot": [
+    18,
+    29
+   ],
+   "new_hotspot": [
+    22,
+    36
+   ]
+  },
+  {
+   "id": "family-tails-fly-carry-ascend-01",
+   "file": "frames/family-tails-fly-carry-ascend-01.png",
+   "animation": "TAILS_FLY_CARRY_ASCEND",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    34,
+    34
+   ],
+   "new_size": [
+    41,
+    41
+   ],
+   "old_hotspot": [
+    23,
+    26
+   ],
+   "new_hotspot": [
+    28,
+    33
+   ]
+  },
+  {
+   "id": "family-tails-fly-carry-ascend-02",
+   "file": "frames/family-tails-fly-carry-ascend-02.png",
+   "animation": "TAILS_FLY_CARRY_ASCEND",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    49,
+    30
+   ],
+   "new_size": [
+    58,
+    36
+   ],
+   "old_hotspot": [
+    28,
+    22
+   ],
+   "new_hotspot": [
+    33,
+    28
+   ]
+  },
+  {
+   "id": "family-tails-fly-carry-ascend-03",
+   "file": "frames/family-tails-fly-carry-ascend-03.png",
+   "animation": "TAILS_FLY_CARRY_ASCEND",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    34,
+    30
+   ],
+   "new_size": [
+    41,
+    36
+   ],
+   "old_hotspot": [
+    19,
+    22
+   ],
+   "new_hotspot": [
+    23,
+    28
+   ]
+  },
+  {
+   "id": "family-tails-fly-carry-ascend-04",
+   "file": "frames/family-tails-fly-carry-ascend-04.png",
+   "animation": "TAILS_FLY_CARRY_ASCEND",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    35,
+    30
+   ],
+   "new_size": [
+    42,
+    36
+   ],
+   "old_hotspot": [
+    23,
+    22
+   ],
+   "new_hotspot": [
+    28,
+    28
+   ]
+  },
+  {
+   "id": "family-tails-fly-carry-ascend-05",
+   "file": "frames/family-tails-fly-carry-ascend-05.png",
+   "animation": "TAILS_FLY_CARRY_ASCEND",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    52,
+    30
+   ],
+   "new_size": [
+    62,
+    36
+   ],
+   "old_hotspot": [
+    31,
+    22
+   ],
+   "new_hotspot": [
+    37,
+    28
+   ]
+  },
+  {
+   "id": "family-tails-swim-00",
+   "file": "frames/family-tails-swim-00.png",
+   "animation": "TAILS_SWIM",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    34,
+    30
+   ],
+   "new_size": [
+    41,
+    36
+   ],
+   "old_hotspot": [
+    22,
+    18
+   ],
+   "new_hotspot": [
+    27,
+    24
+   ]
+  },
+  {
+   "id": "family-tails-swim-01",
+   "file": "frames/family-tails-swim-01.png",
+   "animation": "TAILS_SWIM",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    36,
+    29
+   ],
+   "new_size": [
+    43,
+    35
+   ],
+   "old_hotspot": [
+    23,
+    18
+   ],
+   "new_hotspot": [
+    27,
+    24
+   ]
+  },
+  {
+   "id": "family-tails-swim-02",
+   "file": "frames/family-tails-swim-02.png",
+   "animation": "TAILS_SWIM",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    44,
+    28
+   ],
+   "new_size": [
+    53,
+    33
+   ],
+   "old_hotspot": [
+    27,
+    18
+   ],
+   "new_hotspot": [
+    33,
+    23
+   ]
+  },
+  {
+   "id": "family-tails-swim-03",
+   "file": "frames/family-tails-swim-03.png",
+   "animation": "TAILS_SWIM",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    34,
+    30
+   ],
+   "new_size": [
+    41,
+    36
+   ],
+   "old_hotspot": [
+    23,
+    18
+   ],
+   "new_hotspot": [
+    28,
+    24
+   ]
+  },
+  {
+   "id": "family-tails-swim-04",
+   "file": "frames/family-tails-swim-04.png",
+   "animation": "TAILS_SWIM",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    38,
+    30
+   ],
+   "new_size": [
+    45,
+    36
+   ],
+   "old_hotspot": [
+    24,
+    18
+   ],
+   "new_hotspot": [
+    28,
+    24
+   ]
+  },
+  {
+   "id": "family-tails-swim-ascend-00",
+   "file": "frames/family-tails-swim-ascend-00.png",
+   "animation": "TAILS_SWIM_ASCEND",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    30
+   ],
+   "new_size": [
+    38,
+    36
+   ],
+   "old_hotspot": [
+    22,
+    15
+   ],
+   "new_hotspot": [
+    26,
+    21
+   ]
+  },
+  {
+   "id": "family-tails-swim-ascend-01",
+   "file": "frames/family-tails-swim-ascend-01.png",
+   "animation": "TAILS_SWIM_ASCEND",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    40,
+    27
+   ],
+   "new_size": [
+    48,
+    32
+   ],
+   "old_hotspot": [
+    25,
+    15
+   ],
+   "new_hotspot": [
+    30,
+    20
+   ]
+  },
+  {
+   "id": "family-tails-swim-ascend-02",
+   "file": "frames/family-tails-swim-ascend-02.png",
+   "animation": "TAILS_SWIM_ASCEND",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    29
+   ],
+   "new_size": [
+    38,
+    35
+   ],
+   "old_hotspot": [
+    20,
+    15
+   ],
+   "new_hotspot": [
+    24,
+    21
+   ]
+  },
+  {
+   "id": "family-tails-swim-ascend-03",
+   "file": "frames/family-tails-swim-ascend-03.png",
+   "animation": "TAILS_SWIM_ASCEND",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    33,
+    27
+   ],
+   "new_size": [
+    39,
+    32
+   ],
+   "old_hotspot": [
+    22,
+    15
+   ],
+   "new_hotspot": [
+    26,
+    20
+   ]
+  },
+  {
+   "id": "family-tails-swim-ascend-04",
+   "file": "frames/family-tails-swim-ascend-04.png",
+   "animation": "TAILS_SWIM_ASCEND",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    30
+   ],
+   "new_size": [
+    38,
+    36
+   ],
+   "old_hotspot": [
+    21,
+    15
+   ],
+   "new_hotspot": [
+    25,
+    21
+   ]
+  },
+  {
+   "id": "family-tails-swim-carry-00",
+   "file": "frames/family-tails-swim-carry-00.png",
+   "animation": "TAILS_SWIM_CARRY",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    40,
+    34
+   ],
+   "new_size": [
+    48,
+    41
+   ],
+   "old_hotspot": [
+    23,
+    21
+   ],
+   "new_hotspot": [
+    28,
+    28
+   ]
+  },
+  {
+   "id": "family-tails-swim-carry-01",
+   "file": "frames/family-tails-swim-carry-01.png",
+   "animation": "TAILS_SWIM_CARRY",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    41,
+    34
+   ],
+   "new_size": [
+    49,
+    41
+   ],
+   "old_hotspot": [
+    24,
+    21
+   ],
+   "new_hotspot": [
+    29,
+    28
+   ]
+  },
+  {
+   "id": "family-tails-swim-tired-00",
+   "file": "frames/family-tails-swim-tired-00.png",
+   "animation": "TAILS_SWIM_TIRED",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    35,
+    31
+   ],
+   "new_size": [
+    42,
+    37
+   ],
+   "old_hotspot": [
+    21,
+    20
+   ],
+   "new_hotspot": [
+    25,
+    26
+   ]
+  },
+  {
+   "id": "family-tails-swim-tired-01",
+   "file": "frames/family-tails-swim-tired-01.png",
+   "animation": "TAILS_SWIM_TIRED",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    34,
+    31
+   ],
+   "new_size": [
+    41,
+    37
+   ],
+   "old_hotspot": [
+    20,
+    18
+   ],
+   "new_hotspot": [
+    24,
+    24
+   ]
+  },
+  {
+   "id": "family-tails-swim-tired-02",
+   "file": "frames/family-tails-swim-tired-02.png",
+   "animation": "TAILS_SWIM_TIRED",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    36,
+    30
+   ],
+   "new_size": [
+    43,
+    36
+   ],
+   "old_hotspot": [
+    21,
+    17
+   ],
+   "new_hotspot": [
+    25,
+    23
+   ]
+  },
+  {
+   "id": "family-blank-00",
+   "file": "frames/family-blank-00.png",
+   "animation": "BLANK",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    1,
+    1
+   ],
+   "new_size": [
+    1,
+    1
+   ],
+   "old_hotspot": [
+    0,
+    0
+   ],
+   "new_hotspot": [
+    0,
+    0
+   ]
+  },
+  {
+   "id": "family-blink-03",
+   "file": "frames/family-blink-03.png",
+   "animation": "BLINK",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    21,
+    33
+   ],
+   "new_size": [
+    25,
+    39
+   ],
+   "old_hotspot": [
+    10,
+    17
+   ],
+   "new_hotspot": [
+    12,
+    23
+   ]
+  },
+  {
+   "id": "family-blink-04",
+   "file": "frames/family-blink-04.png",
+   "animation": "BLINK",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    28,
+    26
+   ],
+   "new_size": [
+    33,
+    31
+   ],
+   "old_hotspot": [
+    14,
+    10
+   ],
+   "new_hotspot": [
+    16,
+    15
+   ]
+  },
+  {
+   "id": "object4-s3k-82",
+   "file": "frames/object4-s3k-82.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    44
+   ],
+   "new_size": [
+    38,
+    53
+   ],
+   "old_hotspot": [
+    16,
+    22
+   ],
+   "new_hotspot": [
+    19,
+    26
+   ]
+  },
+  {
+   "id": "object4-s3k-8d",
+   "file": "frames/object4-s3k-8d.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    31,
+    26
+   ],
+   "new_size": [
+    37,
+    31
+   ],
+   "old_hotspot": [
+    15,
+    13
+   ],
+   "new_hotspot": [
+    18,
+    16
+   ]
+  },
+  {
+   "id": "object5-31",
+   "file": "frames/object5-31.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    21,
+    32
+   ],
+   "new_size": [
+    25,
+    38
+   ],
+   "old_hotspot": [
+    13,
+    16
+   ],
+   "new_hotspot": [
+    15,
+    19
+   ]
+  },
+  {
+   "id": "object5-32",
+   "file": "frames/object5-32.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    23,
+    33
+   ],
+   "new_size": [
+    27,
+    39
+   ],
+   "old_hotspot": [
+    14,
+    13
+   ],
+   "new_hotspot": [
+    16,
+    15
+   ]
+  },
+  {
+   "id": "object5-33",
+   "file": "frames/object5-33.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    22,
+    28
+   ],
+   "new_size": [
+    26,
+    33
+   ],
+   "old_hotspot": [
+    12,
+    15
+   ],
+   "new_hotspot": [
+    14,
+    18
+   ]
+  },
+  {
+   "id": "object5-34",
+   "file": "frames/object5-34.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    21,
+    20
+   ],
+   "new_size": [
+    25,
+    24
+   ],
+   "old_hotspot": [
+    13,
+    7
+   ],
+   "new_hotspot": [
+    15,
+    8
+   ]
+  },
+  {
+   "id": "object5-35",
+   "file": "frames/object5-35.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    23,
+    26
+   ],
+   "new_size": [
+    27,
+    31
+   ],
+   "old_hotspot": [
+    13,
+    13
+   ],
+   "new_hotspot": [
+    15,
+    16
+   ]
+  },
+  {
+   "id": "object5-36",
+   "file": "frames/object5-36.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    23,
+    29
+   ],
+   "new_size": [
+    27,
+    35
+   ],
+   "old_hotspot": [
+    13,
+    14
+   ],
+   "new_hotspot": [
+    15,
+    17
+   ]
+  },
+  {
+   "id": "object5-37",
+   "file": "frames/object5-37.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    21,
+    30
+   ],
+   "new_size": [
+    25,
+    36
+   ],
+   "old_hotspot": [
+    11,
+    13
+   ],
+   "new_hotspot": [
+    13,
+    16
+   ]
+  },
+  {
+   "id": "object5-38",
+   "file": "frames/object5-38.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    21,
+    30
+   ],
+   "new_size": [
+    25,
+    36
+   ],
+   "old_hotspot": [
+    12,
+    15
+   ],
+   "new_hotspot": [
+    14,
+    18
+   ]
+  },
+  {
+   "id": "object5-39",
+   "file": "frames/object5-39.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    19,
+    26
+   ],
+   "new_size": [
+    23,
+    31
+   ],
+   "old_hotspot": [
+    12,
+    14
+   ],
+   "new_hotspot": [
+    15,
+    17
+   ]
+  },
+  {
+   "id": "object5-3a",
+   "file": "frames/object5-3a.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    20,
+    21
+   ],
+   "new_size": [
+    24,
+    25
+   ],
+   "old_hotspot": [
+    12,
+    11
+   ],
+   "new_hotspot": [
+    14,
+    13
+   ]
+  },
+  {
+   "id": "object5-3b",
+   "file": "frames/object5-3b.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    21,
+    25
+   ],
+   "new_size": [
+    25,
+    30
+   ],
+   "old_hotspot": [
+    13,
+    11
+   ],
+   "new_hotspot": [
+    15,
+    13
+   ]
+  },
+  {
+   "id": "object5-3c",
+   "file": "frames/object5-3c.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    20,
+    28
+   ],
+   "new_size": [
+    24,
+    33
+   ],
+   "old_hotspot": [
+    12,
+    13
+   ],
+   "new_hotspot": [
+    14,
+    15
+   ]
+  },
+  {
+   "id": "object5-3d",
+   "file": "frames/object5-3d.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    22,
+    31
+   ],
+   "new_size": [
+    26,
+    37
+   ],
+   "old_hotspot": [
+    12,
+    14
+   ],
+   "new_hotspot": [
+    14,
+    17
+   ]
+  },
+  {
+   "id": "object5-3e",
+   "file": "frames/object5-3e.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    23,
+    26
+   ],
+   "new_size": [
+    27,
+    31
+   ],
+   "old_hotspot": [
+    14,
+    13
+   ],
+   "new_hotspot": [
+    16,
+    16
+   ]
+  },
+  {
+   "id": "object5-3f",
+   "file": "frames/object5-3f.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    22,
+    24
+   ],
+   "new_size": [
+    26,
+    29
+   ],
+   "old_hotspot": [
+    12,
+    13
+   ],
+   "new_hotspot": [
+    14,
+    16
+   ]
+  },
+  {
+   "id": "object5-40",
+   "file": "frames/object5-40.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    23,
+    27
+   ],
+   "new_size": [
+    27,
+    32
+   ],
+   "old_hotspot": [
+    13,
+    14
+   ],
+   "new_hotspot": [
+    15,
+    17
+   ]
+  },
+  {
+   "id": "object5-41",
+   "file": "frames/object5-41.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    23,
+    30
+   ],
+   "new_size": [
+    27,
+    36
+   ],
+   "old_hotspot": [
+    14,
+    14
+   ],
+   "new_hotspot": [
+    16,
+    17
+   ]
+  },
+  {
+   "id": "object5-42",
+   "file": "frames/object5-42.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    24,
+    29
+   ],
+   "new_size": [
+    29,
+    35
+   ],
+   "old_hotspot": [
+    16,
+    13
+   ],
+   "new_hotspot": [
+    19,
+    16
+   ]
+  },
+  {
+   "id": "object5-43",
+   "file": "frames/object5-43.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    20,
+    27
+   ],
+   "new_size": [
+    24,
+    32
+   ],
+   "old_hotspot": [
+    12,
+    13
+   ],
+   "new_hotspot": [
+    14,
+    15
+   ]
+  },
+  {
+   "id": "object5-44",
+   "file": "frames/object5-44.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    21,
+    26
+   ],
+   "new_size": [
+    25,
+    31
+   ],
+   "old_hotspot": [
+    13,
+    14
+   ],
+   "new_hotspot": [
+    15,
+    17
+   ]
+  },
+  {
+   "id": "object5-45",
+   "file": "frames/object5-45.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    22,
+    22
+   ],
+   "new_size": [
+    26,
+    26
+   ],
+   "old_hotspot": [
+    14,
+    12
+   ],
+   "new_hotspot": [
+    17,
+    14
+   ]
+  },
+  {
+   "id": "object5-46",
+   "file": "frames/object5-46.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    19,
+    20
+   ],
+   "new_size": [
+    23,
+    24
+   ],
+   "old_hotspot": [
+    12,
+    10
+   ],
+   "new_hotspot": [
+    15,
+    12
+   ]
+  },
+  {
+   "id": "object5-47",
+   "file": "frames/object5-47.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    19,
+    29
+   ],
+   "new_size": [
+    23,
+    35
+   ],
+   "old_hotspot": [
+    10,
+    16
+   ],
+   "new_hotspot": [
+    12,
+    19
+   ]
+  },
+  {
+   "id": "object5-48",
+   "file": "frames/object5-48.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    20,
+    28
+   ],
+   "new_size": [
+    24,
+    33
+   ],
+   "old_hotspot": [
+    11,
+    15
+   ],
+   "new_hotspot": [
+    13,
+    18
+   ]
+  },
+  {
+   "id": "object5-49",
+   "file": "frames/object5-49.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    31,
+    24
+   ],
+   "new_size": [
+    37,
+    29
+   ],
+   "old_hotspot": [
+    17,
+    14
+   ],
+   "new_hotspot": [
+    20,
+    17
+   ]
+  },
+  {
+   "id": "object5-4a",
+   "file": "frames/object5-4a.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    31,
+    24
+   ],
+   "new_size": [
+    37,
+    29
+   ],
+   "old_hotspot": [
+    15,
+    14
+   ],
+   "new_hotspot": [
+    18,
+    17
+   ]
+  },
+  {
+   "id": "object5-4b",
+   "file": "frames/object5-4b.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    29,
+    21
+   ],
+   "new_size": [
+    35,
+    25
+   ],
+   "old_hotspot": [
+    14,
+    11
+   ],
+   "new_hotspot": [
+    17,
+    13
+   ]
+  },
+  {
+   "id": "object5-4c",
+   "file": "frames/object5-4c.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    22,
+    22
+   ],
+   "new_size": [
+    26,
+    26
+   ],
+   "old_hotspot": [
+    11,
+    12
+   ],
+   "new_hotspot": [
+    13,
+    14
+   ]
+  },
+  {
+   "id": "object5-4d",
+   "file": "frames/object5-4d.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    24,
+    29
+   ],
+   "new_size": [
+    29,
+    35
+   ],
+   "old_hotspot": [
+    12,
+    13
+   ],
+   "new_hotspot": [
+    14,
+    16
+   ]
+  },
+  {
+   "id": "object5-4e",
+   "file": "frames/object5-4e.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    26,
+    29
+   ],
+   "new_size": [
+    31,
+    35
+   ],
+   "old_hotspot": [
+    16,
+    13
+   ],
+   "new_hotspot": [
+    19,
+    16
+   ]
+  },
+  {
+   "id": "object5-4f",
+   "file": "frames/object5-4f.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    28,
+    34
+   ],
+   "new_size": [
+    33,
+    41
+   ],
+   "old_hotspot": [
+    16,
+    18
+   ],
+   "new_hotspot": [
+    19,
+    22
+   ]
+  },
+  {
+   "id": "object5-50",
+   "file": "frames/object5-50.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    25,
+    33
+   ],
+   "new_size": [
+    30,
+    39
+   ],
+   "old_hotspot": [
+    13,
+    18
+   ],
+   "new_hotspot": [
+    16,
+    21
+   ]
+  },
+  {
+   "id": "object5-51",
+   "file": "frames/object5-51.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    24,
+    31
+   ],
+   "new_size": [
+    29,
+    37
+   ],
+   "old_hotspot": [
+    14,
+    16
+   ],
+   "new_hotspot": [
+    17,
+    19
+   ]
+  },
+  {
+   "id": "object5-52",
+   "file": "frames/object5-52.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    25,
+    19
+   ],
+   "new_size": [
+    30,
+    23
+   ],
+   "old_hotspot": [
+    14,
+    10
+   ],
+   "new_hotspot": [
+    17,
+    12
+   ]
+  },
+  {
+   "id": "object5-53",
+   "file": "frames/object5-53.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    29,
+    22
+   ],
+   "new_size": [
+    35,
+    26
+   ],
+   "old_hotspot": [
+    16,
+    11
+   ],
+   "new_hotspot": [
+    19,
+    13
+   ]
+  },
+  {
+   "id": "object5-54",
+   "file": "frames/object5-54.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    22
+   ],
+   "new_size": [
+    38,
+    26
+   ],
+   "old_hotspot": [
+    18,
+    12
+   ],
+   "new_hotspot": [
+    21,
+    14
+   ]
+  },
+  {
+   "id": "object5-58",
+   "file": "frames/object5-58.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    19,
+    31
+   ],
+   "new_size": [
+    23,
+    37
+   ],
+   "old_hotspot": [
+    9,
+    15
+   ],
+   "new_hotspot": [
+    11,
+    18
+   ]
+  },
+  {
+   "id": "object5-59",
+   "file": "frames/object5-59.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    21,
+    31
+   ],
+   "new_size": [
+    25,
+    37
+   ],
+   "old_hotspot": [
+    10,
+    15
+   ],
+   "new_hotspot": [
+    12,
+    18
+   ]
+  },
+  {
+   "id": "object5-5a",
+   "file": "frames/object5-5a.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    18,
+    27
+   ],
+   "new_size": [
+    21,
+    32
+   ],
+   "old_hotspot": [
+    9,
+    13
+   ],
+   "new_hotspot": [
+    10,
+    15
+   ]
+  },
+  {
+   "id": "object5-5b",
+   "file": "frames/object5-5b.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    18,
+    26
+   ],
+   "new_size": [
+    21,
+    31
+   ],
+   "old_hotspot": [
+    9,
+    12
+   ],
+   "new_hotspot": [
+    10,
+    14
+   ]
+  },
+  {
+   "id": "object5-5c",
+   "file": "frames/object5-5c.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    36,
+    22
+   ],
+   "new_size": [
+    43,
+    26
+   ],
+   "old_hotspot": [
+    13,
+    10
+   ],
+   "new_hotspot": [
+    16,
+    12
+   ]
+  },
+  {
+   "id": "object5-5d",
+   "file": "frames/object5-5d.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    25,
+    21
+   ],
+   "new_size": [
+    30,
+    25
+   ],
+   "old_hotspot": [
+    1,
+    11
+   ],
+   "new_hotspot": [
+    1,
+    13
+   ]
+  },
+  {
+   "id": "object5-5e",
+   "file": "frames/object5-5e.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    23
+   ],
+   "new_size": [
+    38,
+    27
+   ],
+   "old_hotspot": [
+    16,
+    11
+   ],
+   "new_hotspot": [
+    19,
+    13
+   ]
+  },
+  {
+   "id": "object5-5f",
+   "file": "frames/object5-5f.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    36,
+    23
+   ],
+   "new_size": [
+    43,
+    27
+   ],
+   "old_hotspot": [
+    22,
+    11
+   ],
+   "new_hotspot": [
+    26,
+    13
+   ]
+  },
+  {
+   "id": "object5-60",
+   "file": "frames/object5-60.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    30,
+    23
+   ],
+   "new_size": [
+    36,
+    27
+   ],
+   "old_hotspot": [
+    11,
+    11
+   ],
+   "new_hotspot": [
+    13,
+    13
+   ]
+  },
+  {
+   "id": "object5-61",
+   "file": "frames/object5-61.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    30,
+    21
+   ],
+   "new_size": [
+    36,
+    25
+   ],
+   "old_hotspot": [
+    24,
+    10
+   ],
+   "new_hotspot": [
+    29,
+    12
+   ]
+  },
+  {
+   "id": "object5-62",
+   "file": "frames/object5-62.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    36,
+    24
+   ],
+   "new_size": [
+    43,
+    29
+   ],
+   "old_hotspot": [
+    18,
+    12
+   ],
+   "new_hotspot": [
+    22,
+    14
+   ]
+  },
+  {
+   "id": "object5-69",
+   "file": "frames/object5-69.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    33,
+    30
+   ],
+   "new_size": [
+    39,
+    36
+   ],
+   "old_hotspot": [
+    16,
+    15
+   ],
+   "new_hotspot": [
+    19,
+    18
+   ]
+  },
+  {
+   "id": "object5-6a",
+   "file": "frames/object5-6a.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    29,
+    26
+   ],
+   "new_size": [
+    35,
+    31
+   ],
+   "old_hotspot": [
+    17,
+    13
+   ],
+   "new_hotspot": [
+    21,
+    16
+   ]
+  },
+  {
+   "id": "object5-6b",
+   "file": "frames/object5-6b.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    22,
+    28
+   ],
+   "new_size": [
+    26,
+    33
+   ],
+   "old_hotspot": [
+    13,
+    16
+   ],
+   "new_hotspot": [
+    15,
+    19
+   ]
+  },
+  {
+   "id": "object5-6c",
+   "file": "frames/object5-6c.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    30,
+    21
+   ],
+   "new_size": [
+    36,
+    25
+   ],
+   "old_hotspot": [
+    17,
+    12
+   ],
+   "new_hotspot": [
+    20,
+    14
+   ]
+  },
+  {
+   "id": "object5-6d",
+   "file": "frames/object5-6d.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    20
+   ],
+   "new_size": [
+    38,
+    24
+   ],
+   "old_hotspot": [
+    17,
+    9
+   ],
+   "new_hotspot": [
+    20,
+    11
+   ]
+  },
+  {
+   "id": "object5-6e",
+   "file": "frames/object5-6e.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    27,
+    19
+   ],
+   "new_size": [
+    32,
+    23
+   ],
+   "old_hotspot": [
+    12,
+    8
+   ],
+   "new_hotspot": [
+    14,
+    10
+   ]
+  },
+  {
+   "id": "object5-6f",
+   "file": "frames/object5-6f.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    21,
+    21
+   ],
+   "new_size": [
+    25,
+    25
+   ],
+   "old_hotspot": [
+    10,
+    9
+   ],
+   "new_hotspot": [
+    12,
+    11
+   ]
+  },
+  {
+   "id": "object5-70",
+   "file": "frames/object5-70.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    25,
+    21
+   ],
+   "new_size": [
+    30,
+    25
+   ],
+   "old_hotspot": [
+    14,
+    9
+   ],
+   "new_hotspot": [
+    17,
+    11
+   ]
+  },
+  {
+   "id": "object5-71",
+   "file": "frames/object5-71.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    27,
+    20
+   ],
+   "new_size": [
+    32,
+    24
+   ],
+   "old_hotspot": [
+    14,
+    9
+   ],
+   "new_hotspot": [
+    17,
+    11
+   ]
+  },
+  {
+   "id": "object5-72",
+   "file": "frames/object5-72.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    29,
+    24
+   ],
+   "new_size": [
+    35,
+    29
+   ],
+   "old_hotspot": [
+    15,
+    10
+   ],
+   "new_hotspot": [
+    18,
+    12
+   ]
+  },
+  {
+   "id": "object5-73",
+   "file": "frames/object5-73.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    30,
+    23
+   ],
+   "new_size": [
+    36,
+    27
+   ],
+   "old_hotspot": [
+    15,
+    10
+   ],
+   "new_hotspot": [
+    18,
+    12
+   ]
+  },
+  {
+   "id": "object5-74",
+   "file": "frames/object5-74.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    25,
+    23
+   ],
+   "new_size": [
+    30,
+    27
+   ],
+   "old_hotspot": [
+    12,
+    11
+   ],
+   "new_hotspot": [
+    14,
+    13
+   ]
+  },
+  {
+   "id": "object5-75",
+   "file": "frames/object5-75.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    21,
+    21
+   ],
+   "new_size": [
+    25,
+    25
+   ],
+   "old_hotspot": [
+    11,
+    9
+   ],
+   "new_hotspot": [
+    13,
+    11
+   ]
+  },
+  {
+   "id": "object5-76",
+   "file": "frames/object5-76.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    25,
+    23
+   ],
+   "new_size": [
+    30,
+    27
+   ],
+   "old_hotspot": [
+    13,
+    11
+   ],
+   "new_hotspot": [
+    16,
+    13
+   ]
+  },
+  {
+   "id": "object5-77",
+   "file": "frames/object5-77.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    30,
+    23
+   ],
+   "new_size": [
+    36,
+    27
+   ],
+   "old_hotspot": [
+    14,
+    12
+   ],
+   "new_hotspot": [
+    17,
+    14
+   ]
+  },
+  {
+   "id": "object5-78",
+   "file": "frames/object5-78.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    31,
+    35
+   ],
+   "new_size": [
+    37,
+    42
+   ],
+   "old_hotspot": [
+    14,
+    25
+   ],
+   "new_hotspot": [
+    17,
+    30
+   ]
+  },
+  {
+   "id": "object5-79",
+   "file": "frames/object5-79.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    38,
+    36
+   ],
+   "new_size": [
+    45,
+    43
+   ],
+   "old_hotspot": [
+    26,
+    27
+   ],
+   "new_hotspot": [
+    31,
+    32
+   ]
+  },
+  {
+   "id": "object5-7e",
+   "file": "frames/object5-7e.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    35,
+    31
+   ],
+   "new_size": [
+    42,
+    37
+   ],
+   "old_hotspot": [
+    7,
+    14
+   ],
+   "new_hotspot": [
+    8,
+    17
+   ]
+  },
+  {
+   "id": "object5-80",
+   "file": "frames/object5-80.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    38
+   ],
+   "new_size": [
+    38,
+    45
+   ],
+   "old_hotspot": [
+    17,
+    23
+   ],
+   "new_hotspot": [
+    20,
+    27
+   ]
+  },
+  {
+   "id": "object5-81",
+   "file": "frames/object5-81.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    44
+   ],
+   "new_size": [
+    38,
+    53
+   ],
+   "old_hotspot": [
+    25,
+    23
+   ],
+   "new_hotspot": [
+    30,
+    28
+   ]
+  },
+  {
+   "id": "object5-83",
+   "file": "frames/object5-83.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    34,
+    40
+   ],
+   "new_size": [
+    41,
+    48
+   ],
+   "old_hotspot": [
+    19,
+    24
+   ],
+   "new_hotspot": [
+    23,
+    29
+   ]
+  },
+  {
+   "id": "object5-84",
+   "file": "frames/object5-84.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    43
+   ],
+   "new_size": [
+    38,
+    51
+   ],
+   "old_hotspot": [
+    22,
+    23
+   ],
+   "new_hotspot": [
+    26,
+    27
+   ]
+  },
+  {
+   "id": "object5-85",
+   "file": "frames/object5-85.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    43
+   ],
+   "new_size": [
+    38,
+    51
+   ],
+   "old_hotspot": [
+    19,
+    23
+   ],
+   "new_hotspot": [
+    23,
+    27
+   ]
+  },
+  {
+   "id": "object5-90",
+   "file": "frames/object5-90.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    25,
+    43
+   ],
+   "new_size": [
+    30,
+    51
+   ],
+   "old_hotspot": [
+    11,
+    23
+   ],
+   "new_hotspot": [
+    13,
+    27
+   ]
+  },
+  {
+   "id": "object5-92",
+   "file": "frames/object5-92.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    27,
+    32
+   ],
+   "new_size": [
+    32,
+    38
+   ],
+   "old_hotspot": [
+    9,
+    23
+   ],
+   "new_hotspot": [
+    11,
+    27
+   ]
+  },
+  {
+   "id": "object5-93",
+   "file": "frames/object5-93.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    18,
+    28
+   ],
+   "new_size": [
+    21,
+    33
+   ],
+   "old_hotspot": [
+    8,
+    23
+   ],
+   "new_hotspot": [
+    9,
+    27
+   ]
+  },
+  {
+   "id": "object5-94",
+   "file": "frames/object5-94.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    32,
+    43
+   ],
+   "new_size": [
+    38,
+    51
+   ],
+   "old_hotspot": [
+    16,
+    23
+   ],
+   "new_hotspot": [
+    19,
+    27
+   ]
+  },
+  {
+   "id": "object5-95",
+   "file": "frames/object5-95.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    25,
+    34
+   ],
+   "new_size": [
+    30,
+    41
+   ],
+   "old_hotspot": [
+    13,
+    24
+   ],
+   "new_hotspot": [
+    16,
+    29
+   ]
+  },
+  {
+   "id": "object5-ca",
+   "file": "frames/object5-ca.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    39,
+    27
+   ],
+   "new_size": [
+    47,
+    32
+   ],
+   "old_hotspot": [
+    20,
+    6
+   ],
+   "new_hotspot": [
+    24,
+    7
+   ]
+  },
+  {
+   "id": "object5-df",
+   "file": "frames/object5-df.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    25,
+    36
+   ],
+   "new_size": [
+    30,
+    43
+   ],
+   "old_hotspot": [
+    14,
+    20
+   ],
+   "new_hotspot": [
+    17,
+    24
+   ]
+  },
+  {
+   "id": "object5-e0",
+   "file": "frames/object5-e0.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    22,
+    28
+   ],
+   "new_size": [
+    26,
+    33
+   ],
+   "old_hotspot": [
+    10,
+    15
+   ],
+   "new_hotspot": [
+    12,
+    18
+   ]
+  },
+  {
+   "id": "object5-e1",
+   "file": "frames/object5-e1.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    23,
+    34
+   ],
+   "new_size": [
+    27,
+    41
+   ],
+   "old_hotspot": [
+    10,
+    17
+   ],
+   "new_hotspot": [
+    12,
+    20
+   ]
+  },
+  {
+   "id": "object5-e2",
+   "file": "frames/object5-e2.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    22,
+    36
+   ],
+   "new_size": [
+    26,
+    43
+   ],
+   "old_hotspot": [
+    10,
+    19
+   ],
+   "new_hotspot": [
+    12,
+    23
+   ]
+  },
+  {
+   "id": "object5-e3",
+   "file": "frames/object5-e3.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    29,
+    35
+   ],
+   "new_size": [
+    35,
+    42
+   ],
+   "old_hotspot": [
+    14,
+    19
+   ],
+   "new_hotspot": [
+    17,
+    23
+   ]
+  },
+  {
+   "id": "object5-e4",
+   "file": "frames/object5-e4.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    27,
+    40
+   ],
+   "new_size": [
+    32,
+    48
+   ],
+   "old_hotspot": [
+    13,
+    20
+   ],
+   "new_hotspot": [
+    15,
+    24
+   ]
+  },
+  {
+   "id": "object5-e5",
+   "file": "frames/object5-e5.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    27,
+    34
+   ],
+   "new_size": [
+    32,
+    41
+   ],
+   "old_hotspot": [
+    12,
+    17
+   ],
+   "new_hotspot": [
+    14,
+    20
+   ]
+  },
+  {
+   "id": "object5-e6",
+   "file": "frames/object5-e6.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    21,
+    36
+   ],
+   "new_size": [
+    25,
+    43
+   ],
+   "old_hotspot": [
+    9,
+    18
+   ],
+   "new_hotspot": [
+    11,
+    22
+   ]
+  },
+  {
+   "id": "object5-e7",
+   "file": "frames/object5-e7.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    22,
+    40
+   ],
+   "new_size": [
+    26,
+    48
+   ],
+   "old_hotspot": [
+    10,
+    20
+   ],
+   "new_hotspot": [
+    12,
+    24
+   ]
+  },
+  {
+   "id": "object5-e8",
+   "file": "frames/object5-e8.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    24,
+    37
+   ],
+   "new_size": [
+    29,
+    44
+   ],
+   "old_hotspot": [
+    12,
+    19
+   ],
+   "new_hotspot": [
+    14,
+    23
+   ]
+  },
+  {
+   "id": "object5-e9",
+   "file": "frames/object5-e9.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    19,
+    34
+   ],
+   "new_size": [
+    23,
+    41
+   ],
+   "old_hotspot": [
+    9,
+    17
+   ],
+   "new_hotspot": [
+    11,
+    20
+   ]
+  },
+  {
+   "id": "object5-ea",
+   "file": "frames/object5-ea.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    20,
+    40
+   ],
+   "new_size": [
+    24,
+    48
+   ],
+   "old_hotspot": [
+    8,
+    20
+   ],
+   "new_hotspot": [
+    10,
+    24
+   ]
+  },
+  {
+   "id": "object5-ef",
+   "file": "frames/object5-ef.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    30,
+    30
+   ],
+   "new_size": [
+    36,
+    36
+   ],
+   "old_hotspot": [
+    14,
+    15
+   ],
+   "new_hotspot": [
+    17,
+    18
+   ]
+  },
+  {
+   "id": "object5-f0",
+   "file": "frames/object5-f0.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    27,
+    30
+   ],
+   "new_size": [
+    32,
+    36
+   ],
+   "old_hotspot": [
+    13,
+    15
+   ],
+   "new_hotspot": [
+    15,
+    18
+   ]
+  },
+  {
+   "id": "object5-f1",
+   "file": "frames/object5-f1.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    27,
+    31
+   ],
+   "new_size": [
+    32,
+    37
+   ],
+   "old_hotspot": [
+    15,
+    15
+   ],
+   "new_hotspot": [
+    18,
+    18
+   ]
+  },
+  {
+   "id": "object5-f2",
+   "file": "frames/object5-f2.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    30,
+    31
+   ],
+   "new_size": [
+    36,
+    37
+   ],
+   "old_hotspot": [
+    15,
+    15
+   ],
+   "new_hotspot": [
+    18,
+    18
+   ]
+  },
+  {
+   "id": "object5-f6",
+   "file": "frames/object5-f6.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    26,
+    30
+   ],
+   "new_size": [
+    31,
+    36
+   ],
+   "old_hotspot": [
+    12,
+    15
+   ],
+   "new_hotspot": [
+    14,
+    18
+   ]
+  },
+  {
+   "id": "object5-f7",
+   "file": "frames/object5-f7.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    24,
+    30
+   ],
+   "new_size": [
+    29,
+    36
+   ],
+   "old_hotspot": [
+    11,
+    15
+   ],
+   "new_hotspot": [
+    13,
+    18
+   ]
+  },
+  {
+   "id": "object5-f8",
+   "file": "frames/object5-f8.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    30,
+    31
+   ],
+   "new_size": [
+    36,
+    37
+   ],
+   "old_hotspot": [
+    15,
+    15
+   ],
+   "new_hotspot": [
+    18,
+    18
+   ]
+  },
+  {
+   "id": "object5-63",
+   "file": "frames/object5-63.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    22,
+    36
+   ],
+   "new_size": [
+    26,
+    43
+   ],
+   "old_hotspot": [
+    12,
+    13
+   ],
+   "new_hotspot": [
+    14,
+    16
+   ]
+  },
+  {
+   "id": "object5-64",
+   "file": "frames/object5-64.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    21,
+    25
+   ],
+   "new_size": [
+    25,
+    30
+   ],
+   "old_hotspot": [
+    10,
+    1
+   ],
+   "new_hotspot": [
+    12,
+    1
+   ]
+  },
+  {
+   "id": "object5-65",
+   "file": "frames/object5-65.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    23,
+    32
+   ],
+   "new_size": [
+    27,
+    38
+   ],
+   "old_hotspot": [
+    12,
+    16
+   ],
+   "new_hotspot": [
+    14,
+    19
+   ]
+  },
+  {
+   "id": "object5-66",
+   "file": "frames/object5-66.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    23,
+    36
+   ],
+   "new_size": [
+    27,
+    43
+   ],
+   "old_hotspot": [
+    12,
+    22
+   ],
+   "new_hotspot": [
+    14,
+    26
+   ]
+  },
+  {
+   "id": "object5-67",
+   "file": "frames/object5-67.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    23,
+    30
+   ],
+   "new_size": [
+    27,
+    36
+   ],
+   "old_hotspot": [
+    12,
+    11
+   ],
+   "new_hotspot": [
+    14,
+    13
+   ]
+  },
+  {
+   "id": "object5-68",
+   "file": "frames/object5-68.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    21,
+    30
+   ],
+   "new_size": [
+    25,
+    36
+   ],
+   "old_hotspot": [
+    11,
+    24
+   ],
+   "new_hotspot": [
+    13,
+    29
+   ]
+  },
+  {
+   "id": "object5-7a",
+   "file": "frames/object5-7a.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    35,
+    31
+   ],
+   "new_size": [
+    42,
+    37
+   ],
+   "old_hotspot": [
+    25,
+    17
+   ],
+   "new_hotspot": [
+    30,
+    20
+   ]
+  },
+  {
+   "id": "object5-7b",
+   "file": "frames/object5-7b.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    36,
+    38
+   ],
+   "new_size": [
+    43,
+    45
+   ],
+   "old_hotspot": [
+    27,
+    12
+   ],
+   "new_hotspot": [
+    32,
+    14
+   ]
+  },
+  {
+   "id": "object5-7c",
+   "file": "frames/object5-7c.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    31,
+    35
+   ],
+   "new_size": [
+    37,
+    42
+   ],
+   "old_hotspot": [
+    17,
+    10
+   ],
+   "new_hotspot": [
+    20,
+    12
+   ]
+  },
+  {
+   "id": "object5-7d",
+   "file": "frames/object5-7d.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    38,
+    36
+   ],
+   "new_size": [
+    45,
+    43
+   ],
+   "old_hotspot": [
+    12,
+    9
+   ],
+   "new_hotspot": [
+    14,
+    11
+   ]
+  },
+  {
+   "id": "object5-7f",
+   "file": "frames/object5-7f.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    36,
+    38
+   ],
+   "new_size": [
+    43,
+    45
+   ],
+   "old_hotspot": [
+    9,
+    26
+   ],
+   "new_hotspot": [
+    11,
+    31
+   ]
+  },
+  {
+   "id": "object5-f3",
+   "file": "frames/object5-f3.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    27,
+    31
+   ],
+   "new_size": [
+    32,
+    37
+   ],
+   "old_hotspot": [
+    11,
+    15
+   ],
+   "new_hotspot": [
+    13,
+    18
+   ]
+  },
+  {
+   "id": "object5-f4",
+   "file": "frames/object5-f4.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    27,
+    30
+   ],
+   "new_size": [
+    32,
+    36
+   ],
+   "old_hotspot": [
+    13,
+    15
+   ],
+   "new_hotspot": [
+    15,
+    18
+   ]
+  },
+  {
+   "id": "object5-f5",
+   "file": "frames/object5-f5.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    30,
+    30
+   ],
+   "new_size": [
+    36,
+    36
+   ],
+   "old_hotspot": [
+    15,
+    15
+   ],
+   "new_hotspot": [
+    18,
+    18
+   ]
+  },
+  {
+   "id": "object5-f9",
+   "file": "frames/object5-f9.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    24,
+    30
+   ],
+   "new_size": [
+    29,
+    36
+   ],
+   "old_hotspot": [
+    12,
+    15
+   ],
+   "new_hotspot": [
+    14,
+    18
+   ]
+  },
+  {
+   "id": "object5-fa",
+   "file": "frames/object5-fa.png",
+   "animation": "NATIVE_POSE",
+   "route": "route 2",
+   "reason": "no recorded raw strip",
+   "old_size": [
+    26,
+    30
+   ],
+   "new_size": [
+    31,
+    36
+   ],
+   "old_hotspot": [
+    13,
+    15
+   ],
+   "new_hotspot": [
+    16,
+    18
+   ]
+  },
+  {
+   "id": "walk-up45-00",
+   "file": "frames/walk-up45-00.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-00 at the old support 18.4",
+   "old_size": [
+    29,
+    29
+   ],
+   "new_size": [
+    35,
+    34
+   ],
+   "new_hotspot": [
+    18,
+    16
+   ]
+  },
+  {
+   "id": "walk-up45-01",
+   "file": "frames/walk-up45-01.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-01 at the old support 18.4",
+   "old_size": [
+    30,
+    31
+   ],
+   "new_size": [
+    36,
+    37
+   ],
+   "new_hotspot": [
+    19,
+    16
+   ]
+  },
+  {
+   "id": "walk-up45-02",
+   "file": "frames/walk-up45-02.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-02 at the old support 17.7",
+   "old_size": [
+    29,
+    35
+   ],
+   "new_size": [
+    34,
+    41
+   ],
+   "new_hotspot": [
+    17,
+    18
+   ]
+  },
+  {
+   "id": "walk-up45-03",
+   "file": "frames/walk-up45-03.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-03 at the old support 17.7",
+   "old_size": [
+    32,
+    35
+   ],
+   "new_size": [
+    38,
+    41
+   ],
+   "new_hotspot": [
+    16,
+    18
+   ]
+  },
+  {
+   "id": "walk-up45-04",
+   "file": "frames/walk-up45-04.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-04 at the old support 18.4",
+   "old_size": [
+    28,
+    29
+   ],
+   "new_size": [
+    34,
+    35
+   ],
+   "new_hotspot": [
+    18,
+    16
+   ]
+  },
+  {
+   "id": "walk-up45-05",
+   "file": "frames/walk-up45-05.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-05 at the old support 18.4",
+   "old_size": [
+    29,
+    32
+   ],
+   "new_size": [
+    35,
+    38
+   ],
+   "new_hotspot": [
+    18,
+    18
+   ]
+  },
+  {
+   "id": "walk-up45-06",
+   "file": "frames/walk-up45-06.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-06 at the old support 15.6",
+   "old_size": [
+    28,
+    34
+   ],
+   "new_size": [
+    34,
+    40
+   ],
+   "new_hotspot": [
+    18,
+    17
+   ]
+  },
+  {
+   "id": "walk-up45-07",
+   "file": "frames/walk-up45-07.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-07 at the old support 17.7",
+   "old_size": [
+    32,
+    35
+   ],
+   "new_size": [
+    39,
+    41
+   ],
+   "new_hotspot": [
+    17,
+    17
+   ]
+  },
+  {
+   "id": "walk-steep-00",
+   "file": "frames/walk-steep-00.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-00 at the old support 19.0",
+   "old_size": [
+    31,
+    19
+   ],
+   "new_size": [
+    37,
+    23
+   ],
+   "new_hotspot": [
+    17,
+    11
+   ]
+  },
+  {
+   "id": "walk-steep-01",
+   "file": "frames/walk-steep-01.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-01 at the old support 19.0",
+   "old_size": [
+    32,
+    22
+   ],
+   "new_size": [
+    38,
+    26
+   ],
+   "new_hotspot": [
+    18,
+    12
+   ]
+  },
+  {
+   "id": "walk-steep-02",
+   "file": "frames/walk-steep-02.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-02 at the old support 18.0",
+   "old_size": [
+    32,
+    27
+   ],
+   "new_size": [
+    38,
+    32
+   ],
+   "new_hotspot": [
+    19,
+    17
+   ]
+  },
+  {
+   "id": "walk-steep-03",
+   "file": "frames/walk-steep-03.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-03 at the old support 18.0",
+   "old_size": [
+    31,
+    27
+   ],
+   "new_size": [
+    37,
+    32
+   ],
+   "new_hotspot": [
+    18,
+    17
+   ]
+  },
+  {
+   "id": "walk-steep-04",
+   "file": "frames/walk-steep-04.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-04 at the old support 19.0",
+   "old_size": [
+    31,
+    19
+   ],
+   "new_size": [
+    37,
+    23
+   ],
+   "new_hotspot": [
+    17,
+    11
+   ]
+  },
+  {
+   "id": "walk-steep-05",
+   "file": "frames/walk-steep-05.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-05 at the old support 19.0",
+   "old_size": [
+    32,
+    22
+   ],
+   "new_size": [
+    38,
+    26
+   ],
+   "new_hotspot": [
+    18,
+    13
+   ]
+  },
+  {
+   "id": "walk-steep-06",
+   "file": "frames/walk-steep-06.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-06 at the old support 16.0",
+   "old_size": [
+    30,
+    27
+   ],
+   "new_size": [
+    36,
+    32
+   ],
+   "new_hotspot": [
+    19,
+    15
+   ]
+  },
+  {
+   "id": "walk-steep-07",
+   "file": "frames/walk-steep-07.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-07 at the old support 18.0",
+   "old_size": [
+    31,
+    26
+   ],
+   "new_size": [
+    37,
+    31
+   ],
+   "new_hotspot": [
+    18,
+    15
+   ]
+  },
+  {
+   "id": "walk-inverted-00",
+   "file": "frames/walk-inverted-00.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-00 at the old support 18.4",
+   "old_size": [
+    29,
+    29
+   ],
+   "new_size": [
+    34,
+    35
+   ],
+   "new_hotspot": [
+    18,
+    18
+   ]
+  },
+  {
+   "id": "walk-inverted-01",
+   "file": "frames/walk-inverted-01.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-01 at the old support 18.4",
+   "old_size": [
+    31,
+    30
+   ],
+   "new_size": [
+    37,
+    36
+   ],
+   "new_hotspot": [
+    18,
+    18
+   ]
+  },
+  {
+   "id": "walk-inverted-02",
+   "file": "frames/walk-inverted-02.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-02 at the old support 17.7",
+   "old_size": [
+    35,
+    29
+   ],
+   "new_size": [
+    41,
+    34
+   ],
+   "new_hotspot": [
+    19,
+    17
+   ]
+  },
+  {
+   "id": "walk-inverted-03",
+   "file": "frames/walk-inverted-03.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-03 at the old support 17.7",
+   "old_size": [
+    35,
+    32
+   ],
+   "new_size": [
+    41,
+    38
+   ],
+   "new_hotspot": [
+    19,
+    22
+   ]
+  },
+  {
+   "id": "walk-inverted-04",
+   "file": "frames/walk-inverted-04.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-04 at the old support 18.4",
+   "old_size": [
+    29,
+    28
+   ],
+   "new_size": [
+    35,
+    34
+   ],
+   "new_hotspot": [
+    18,
+    17
+   ]
+  },
+  {
+   "id": "walk-inverted-05",
+   "file": "frames/walk-inverted-05.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-05 at the old support 18.4",
+   "old_size": [
+    32,
+    29
+   ],
+   "new_size": [
+    38,
+    35
+   ],
+   "new_hotspot": [
+    20,
+    18
+   ]
+  },
+  {
+   "id": "walk-inverted-06",
+   "file": "frames/walk-inverted-06.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-06 at the old support 15.6",
+   "old_size": [
+    34,
+    28
+   ],
+   "new_size": [
+    40,
+    34
+   ],
+   "new_hotspot": [
+    18,
+    16
+   ]
+  },
+  {
+   "id": "walk-inverted-07",
+   "file": "frames/walk-inverted-07.png",
+   "animation": "WALK",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled walk-07 at the old support 17.7",
+   "old_size": [
+    35,
+    32
+   ],
+   "new_size": [
+    41,
+    39
+   ],
+   "new_hotspot": [
+    18,
+    22
+   ]
+  },
+  {
+   "id": "run-up45-00",
+   "file": "frames/run-up45-00.png",
+   "animation": "RUN",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled run-00 at the old support 17.7",
+   "old_size": [
+    32,
+    32
+   ],
+   "new_size": [
+    38,
+    38
+   ],
+   "new_hotspot": [
+    17,
+    22
+   ]
+  },
+  {
+   "id": "run-up45-01",
+   "file": "frames/run-up45-01.png",
+   "animation": "RUN",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled run-01 at the old support 18.4",
+   "old_size": [
+    29,
+    33
+   ],
+   "new_size": [
+    35,
+    40
+   ],
+   "new_hotspot": [
+    15,
+    22
+   ]
+  },
+  {
+   "id": "run-up45-02",
+   "file": "frames/run-up45-02.png",
+   "animation": "RUN",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled run-02 at the old support 18.4",
+   "old_size": [
+    27,
+    33
+   ],
+   "new_size": [
+    33,
+    40
+   ],
+   "new_hotspot": [
+    13,
+    22
+   ]
+  },
+  {
+   "id": "run-up45-03",
+   "file": "frames/run-up45-03.png",
+   "animation": "RUN",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled run-03 at the old support 18.4",
+   "old_size": [
+    30,
+    33
+   ],
+   "new_size": [
+    35,
+    40
+   ],
+   "new_hotspot": [
+    15,
+    22
+   ]
+  },
+  {
+   "id": "run-steep-00",
+   "file": "frames/run-steep-00.png",
+   "animation": "RUN",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled run-00 at the old support 18.0",
+   "old_size": [
+    30,
+    27
+   ],
+   "new_size": [
+    36,
+    33
+   ],
+   "new_hotspot": [
+    17,
+    20
+   ]
+  },
+  {
+   "id": "run-steep-01",
+   "file": "frames/run-steep-01.png",
+   "animation": "RUN",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled run-01 at the old support 19.0",
+   "old_size": [
+    31,
+    31
+   ],
+   "new_size": [
+    37,
+    37
+   ],
+   "new_hotspot": [
+    17,
+    19
+   ]
+  },
+  {
+   "id": "run-steep-02",
+   "file": "frames/run-steep-02.png",
+   "animation": "RUN",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled run-02 at the old support 19.0",
+   "old_size": [
+    31,
+    30
+   ],
+   "new_size": [
+    37,
+    36
+   ],
+   "new_hotspot": [
+    17,
+    19
+   ]
+  },
+  {
+   "id": "run-steep-03",
+   "file": "frames/run-steep-03.png",
+   "animation": "RUN",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled run-03 at the old support 19.0",
+   "old_size": [
+    31,
+    31
+   ],
+   "new_size": [
+    37,
+    37
+   ],
+   "new_hotspot": [
+    17,
+    19
+   ]
+  },
+  {
+   "id": "run-inverted-00",
+   "file": "frames/run-inverted-00.png",
+   "animation": "RUN",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled run-00 at the old support 17.7",
+   "old_size": [
+    32,
+    32
+   ],
+   "new_size": [
+    38,
+    38
+   ],
+   "new_hotspot": [
+    23,
+    21
+   ]
+  },
+  {
+   "id": "run-inverted-01",
+   "file": "frames/run-inverted-01.png",
+   "animation": "RUN",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled run-01 at the old support 18.4",
+   "old_size": [
+    33,
+    29
+   ],
+   "new_size": [
+    40,
+    35
+   ],
+   "new_hotspot": [
+    24,
+    21
+   ]
+  },
+  {
+   "id": "run-inverted-02",
+   "file": "frames/run-inverted-02.png",
+   "animation": "RUN",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled run-02 at the old support 18.4",
+   "old_size": [
+    33,
+    27
+   ],
+   "new_size": [
+    40,
+    33
+   ],
+   "new_hotspot": [
+    24,
+    21
+   ]
+  },
+  {
+   "id": "run-inverted-03",
+   "file": "frames/run-inverted-03.png",
+   "animation": "RUN",
+   "route": "derived slope",
+   "reason": "derive_slopes from rescaled run-03 at the old support 18.4",
+   "old_size": [
+    33,
+    30
+   ],
+   "new_size": [
+    40,
+    35
+   ],
+   "new_hotspot": [
+    24,
+    21
+   ]
+  }
+ ]
+}

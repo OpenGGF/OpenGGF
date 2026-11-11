@@ -6,14 +6,14 @@ and [`TalonSolar`](../../../../examples/mica-and-talon/src/main/java/micaandtalo
 
 | You build | You learn | Checkpoint |
 | --- | --- | --- |
-| MICA's gold Gilded form and TALON's white-gold Solar form, in all three games | `SuperFormProfile`, palette fade and cycle rows, powered sheets, and each game's gates | the finished example |
+| MICA's Open Cone Gilded form (and Prism Gilt Hyper) and TALON's Corona Crest Solar form, in all three games | `SuperFormProfile`, palette fade and cycle rows, powered sheets, and each game's gates | the finished example |
 
 Sonic's Super form is mostly colour: a fade from blue to gold, then a shimmering
 cycle. A powered form for your character is the same idea, built from your own
-palette. MICA's jade and cream fade to gold; with every Chaos Emerald and 50 rings,
-a press in the air transforms her.
+palette, plus drawings where the form changes shape: MICA's plates lift like an opening
+pine cone. With every Chaos Emerald and 50 rings, a press in the air transforms her.
 
-![Six close-ups of MICA transforming in Angel Island: airborne, the transformation pose, three fade steps from jade through white and olive to gold, then Gilded MICA.](images/gilded-transform.png)
+![Six close-ups of MICA transforming in Angel Island: airborne, curled tight in her jade plates, gold light in the seams, a white flash silhouette, the gold plates snapping open, then settled.](images/gilded-transform.png)
 
 ## Steps
 
@@ -40,8 +40,8 @@ Knuckles). Each `Form` holds the colours, timing, physics and art:
 ```java
 // MicaGilded.java: the Sonic 3 & Knuckles form
 new SuperFormProfile.Form(
-        gold(fade),                              // fade rows, played on transforming
-        gold(colors.get("s3k")),                 // cycle rows, repeated while powered
+        fade,                                    // fade rows, played on transforming
+        colors.get("s3k"),                       // cycle rows, repeated while powered
         List.of(),                               // underwater cycle: derived from the zone
         7,                                       // ticks per cycle row
         2,                                       // ticks per fade row
@@ -53,9 +53,13 @@ new SuperFormProfile.Form(
         gilded);                                 // optional strike colours and particles
 ```
 
-MICA's Hyper form shares these colours and drawings but sets `afterImages` to `true`
-for the native Hyper echo trail, and takes the denser `hyper` effects. Her strike is
-Instagib only in Hyper; Super Gilded homes as she does normally.
+MICA's Hyper form shares these drawings but cycles its own Prism Gilt rows (gold,
+white-hot, gold, jade, gold, rose-gold), sets `afterImages` to `true` for the native Hyper
+echo trail, and takes the denser `hyper` effects. Her strike is Instagib only in Hyper;
+Super Gilded homes as she does normally. The Hyper effects also hold her jade row while a
+strike flies (`PoweredEffects.strikePalette`) and tint each strike echo with the cycle
+phase it spawned in (`StrikeTrailStyle.echoPhaseSlot`), so the echoes band through her
+colours.
 
 ### 3. Write the colour rows
 
@@ -68,11 +72,16 @@ fade 000 222 440 660 680 8A2 AC6 8CE 6AC 68A 44E 22A EEE CCC 88E 024
 ```
 
 MICA's table, [`art/mica/powered/palettes.txt`](../../../../examples/mica-and-talon/art/mica/powered/palettes.txt),
-has six `fade` rows, nine `s2` cycle rows and three `s3k` cycle rows. Only indices 2 to 6
-(her jade) change along the fade; Java then sets the pale-gold indices 7 and 8 for the
-powered rows. The rows are generated from a production record and checked with:
+has six `fade` rows, nine `s2` and nine `s3k` cycle rows, and eighteen `hyper` rows. Only
+indices 2 to 6 (her plates) change; face, belly, gloves and boots keep their colours. The
+fade is front-loaded (half, most, then gold), and the transformation's white flash beat
+uses fixed white and cream, so the change happens under the flash and the plates are
+already gold when they open. Native fades step evenly through the transformation instead;
+the [powered palettes script](../../../../examples/mica-and-talon/production/powered_palettes.py)
+cites them. The rows are generated from that script and checked with:
 
 ```bash
+python3 examples/mica-and-talon/production/powered_palettes.py --check
 python3 tools/modding/playable_art/gilded_java.py --check
 ```
 
@@ -92,7 +101,9 @@ return new PoweredPlayableSheet(art, aliases, phaseAliases);
 
 Phase aliases do the same for single phases of shared families. Anything the bank
 leaves out falls back to the normal drawing, so a palette-only form is valid.
-TALON's Solar is palette-only: it uses the `Form` constructor without a bank.
+TALON's Solar has its own bank too: the Corona Crest drawings (flame crest, goggles down,
+flame-tipped wings) for every common pose, sized by his skull so the crest rises above his
+normal body. Rare poses stay normal-bank aliases, as native Super Tails reuses Tails' art.
 
 ### 5. Know each game's gates
 
@@ -118,9 +129,10 @@ python3 tools/testing/maven_queue.py exec:java "-Dexec.mainClass=com.openggf.too
 
 [Part 9](09-proving-it.md#5-film-it) shows how to write `transform.txt`. The script used
 for the animation below was `30 -; 1 A; 20 -; 1 A; 40 -; repeat 8 { 1 R+A; 16 R }; 120 R`:
-jump, transform in the air, then strike.
+jump, transform in the air, then strike. With `--emeralds 3333333` (all seven Super
+Emeralds) the press makes her Hyper, and the strikes are Instagib:
 
-![Gilded MICA, animated: a gold spinning shell striking Angel Island badniks one after another, leaving a golden trail.](images/gilded-instagib.png)
+![Hyper MICA, animated: a plated ball flashing white-hot, gold, jade and rose-gold, striking Angel Island badniks with Instagib; each strike holds her jade colour and leaves banded echoes.](images/gilded-instagib.png)
 
 ### 6. Give the form its own sparkle
 

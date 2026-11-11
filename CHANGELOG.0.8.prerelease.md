@@ -198,7 +198,8 @@ under the matching area heading; see the
   flame-tipped wings), with new wait, run, roll and transformation art. Powered
   forms can hold a strike palette while a strike flies and tint each strike echo
   with its spawn-time cycle phase (`PoweredEffects.strikePalette`,
-  `StrikeTrailStyle.echoPhaseSlot`); new
+  `StrikeTrailStyle.echoPhaseSlot`). Normal TALON now stands 37 px, and every
+  Solar pose keeps one gloved wing-arm per side; new
   profile-facing flight art matches his carry identity. S1 creator
   forms play animated transformations. Joint native-pose carry redraws now
   keep MICA’s raised gloves against TALON’s shoes throughout his wingbeat,

@@ -151,8 +151,10 @@ class TestCharacterArtCoverageAudit {
                     project.resolve("talon_powered_"+suffix+".png").toString(),"--sheet",
                     project.resolve("talon_powered_"+suffix+"-sheet.yaml").toString(),"--out",poweredEncoded.toString()},System.out));
             var powered=PlayableSheetMaterializer.read(Files.readAllBytes(poweredEncoded)).art();
-            var authored=Set.of(CanonicalAnimation.WAIT,CanonicalAnimation.RUN,CanonicalAnimation.TAILS_FLY,
-                    CanonicalAnimation.TAILS_FLY_ASCEND,CanonicalAnimation.SUPER_TRANSFORM,CanonicalAnimation.ROLL,CanonicalAnimation.ROLL2);
+            var authored=Set.of(CanonicalAnimation.WAIT,CanonicalAnimation.WALK,CanonicalAnimation.RUN,CanonicalAnimation.TAILS_FLY,
+                    CanonicalAnimation.TAILS_FLY_ASCEND,CanonicalAnimation.SUPER_TRANSFORM,CanonicalAnimation.ROLL,CanonicalAnimation.ROLL2,
+                    CanonicalAnimation.DUCK,CanonicalAnimation.LOOK_UP,CanonicalAnimation.HURT,CanonicalAnimation.SKID,
+                    CanonicalAnimation.BALANCE,CanonicalAnimation.PUSH,CanonicalAnimation.SPRING,CanonicalAnimation.SPINDASH);
             var aliases=EnumSet.allOf(CanonicalAnimation.class); aliases.removeAll(authored);
             var palette=List.of(Collections.nCopies(16,0));
             var form=new SuperFormProfile.Form(palette,palette,List.of(),1,1,PhysicsProfile.SONIC_3K_SUPER_TAILS,

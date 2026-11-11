@@ -51,8 +51,8 @@
       "order": 0,
       "file": "frames/wait-00.png",
       "hotspot": [
-        10,
-        12
+        12,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -64,8 +64,8 @@
       "order": 1,
       "file": "frames/wait-01.png",
       "hotspot": [
-        10,
-        12
+        12,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -77,8 +77,8 @@
       "order": 2,
       "file": "frames/wait-02.png",
       "hotspot": [
-        10,
-        12
+        12,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -90,8 +90,8 @@
       "order": 3,
       "file": "frames/wait-03.png",
       "hotspot": [
-        10,
-        12
+        12,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -103,8 +103,8 @@
       "order": 4,
       "file": "frames/wait-04.png",
       "hotspot": [
-        9,
-        12
+        11,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -116,8 +116,8 @@
       "order": 5,
       "file": "frames/wait-05.png",
       "hotspot": [
-        10,
-        12
+        12,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -129,8 +129,8 @@
       "order": 6,
       "file": "frames/wait-06.png",
       "hotspot": [
-        10,
-        12
+        12,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -142,8 +142,8 @@
       "order": 0,
       "file": "frames/walk-00.png",
       "hotspot": [
-        10,
-        11
+        12,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -155,8 +155,8 @@
       "order": 1,
       "file": "frames/walk-01.png",
       "hotspot": [
-        12,
-        12
+        14,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -168,8 +168,8 @@
       "order": 2,
       "file": "frames/walk-02.png",
       "hotspot": [
-        13,
-        13
+        15,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -181,8 +181,8 @@
       "order": 3,
       "file": "frames/walk-03.png",
       "hotspot": [
-        13,
-        12
+        15,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -194,8 +194,8 @@
       "order": 4,
       "file": "frames/walk-04.png",
       "hotspot": [
-        10,
-        11
+        12,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -207,8 +207,8 @@
       "order": 5,
       "file": "frames/walk-05.png",
       "hotspot": [
-        11,
-        12
+        13,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -220,8 +220,8 @@
       "order": 6,
       "file": "frames/walk-06.png",
       "hotspot": [
-        14,
-        13
+        17,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -233,8 +233,8 @@
       "order": 7,
       "file": "frames/walk-07.png",
       "hotspot": [
-        13,
-        12
+        16,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -246,8 +246,8 @@
       "order": 0,
       "file": "frames/run-00.png",
       "hotspot": [
-        11,
-        11
+        13,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -259,8 +259,8 @@
       "order": 1,
       "file": "frames/run-01.png",
       "hotspot": [
-        15,
-        11
+        18,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -272,8 +272,8 @@
       "order": 2,
       "file": "frames/run-02.png",
       "hotspot": [
-        14,
-        11
+        17,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -285,8 +285,8 @@
       "order": 3,
       "file": "frames/run-03.png",
       "hotspot": [
-        15,
-        11
+        18,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -298,8 +298,8 @@
       "order": 0,
       "file": "frames/roll-00.png",
       "hotspot": [
-        14,
-        14
+        17,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -311,8 +311,8 @@
       "order": 1,
       "file": "frames/roll-01.png",
       "hotspot": [
-        14,
-        14
+        17,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -324,8 +324,8 @@
       "order": 2,
       "file": "frames/roll-02.png",
       "hotspot": [
-        14,
-        14
+        17,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -337,8 +337,8 @@
       "order": 3,
       "file": "frames/roll-03.png",
       "hotspot": [
-        14,
-        14
+        17,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -350,8 +350,8 @@
       "order": 0,
       "file": "frames/spindash-00.png",
       "hotspot": [
-        13,
-        9
+        16,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -363,8 +363,8 @@
       "order": 1,
       "file": "frames/spindash-01.png",
       "hotspot": [
-        13,
-        10
+        16,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -376,8 +376,8 @@
       "order": 2,
       "file": "frames/spindash-02.png",
       "hotspot": [
-        13,
-        8
+        16,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -389,8 +389,8 @@
       "order": 3,
       "file": "frames/spindash-03.png",
       "hotspot": [
-        13,
-        9
+        16,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -402,8 +402,8 @@
       "order": 0,
       "file": "frames/spring-00.png",
       "hotspot": [
-        14,
-        11
+        16,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -415,8 +415,8 @@
       "order": 1,
       "file": "frames/hurt-00.png",
       "hotspot": [
-        14,
-        12
+        17,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -428,8 +428,8 @@
       "order": 2,
       "file": "frames/death-00.png",
       "hotspot": [
-        14,
-        14
+        17,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -441,8 +441,8 @@
       "order": 3,
       "file": "frames/duck-00.png",
       "hotspot": [
-        16,
-        1
+        19,
+        4
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -454,8 +454,8 @@
       "order": 4,
       "file": "frames/look_up-00.png",
       "hotspot": [
-        11,
-        15
+        13,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -467,8 +467,8 @@
       "order": 5,
       "file": "frames/skid-00.png",
       "hotspot": [
-        22,
-        13
+        26,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -480,8 +480,8 @@
       "order": 6,
       "file": "frames/skid-01.png",
       "hotspot": [
-        21,
-        13
+        25,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -493,8 +493,8 @@
       "order": 0,
       "file": "frames/fly-00.png",
       "hotspot": [
-        21,
-        26
+        25,
+        35
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
@@ -506,8 +506,8 @@
       "order": 1,
       "file": "frames/fly-01.png",
       "hotspot": [
-        24,
-        18
+        29,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
@@ -519,8 +519,8 @@
       "order": 2,
       "file": "frames/fly-02.png",
       "hotspot": [
-        29,
-        18
+        35,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
@@ -532,8 +532,8 @@
       "order": 3,
       "file": "frames/fly-03.png",
       "hotspot": [
-        17,
-        18
+        20,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
@@ -545,8 +545,8 @@
       "order": 4,
       "file": "frames/fly-04.png",
       "hotspot": [
-        23,
-        18
+        28,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
@@ -558,8 +558,8 @@
       "order": 5,
       "file": "frames/fly-05.png",
       "hotspot": [
-        25,
-        18
+        30,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
@@ -571,8 +571,8 @@
       "order": 0,
       "file": "frames/fly_tired-00.png",
       "hotspot": [
-        17,
-        14
+        21,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
@@ -584,8 +584,8 @@
       "order": 1,
       "file": "frames/fly_tired-01.png",
       "hotspot": [
-        18,
-        14
+        21,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
@@ -597,8 +597,8 @@
       "order": 2,
       "file": "frames/fly_tired-02.png",
       "hotspot": [
-        18,
-        14
+        22,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
@@ -610,8 +610,8 @@
       "order": 3,
       "file": "frames/fly_tired-03.png",
       "hotspot": [
-        15,
-        14
+        18,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
@@ -623,8 +623,8 @@
       "order": 4,
       "file": "frames/fly_tired-04.png",
       "hotspot": [
-        18,
-        14
+        21,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
@@ -636,8 +636,8 @@
       "order": 5,
       "file": "frames/fly_tired-05.png",
       "hotspot": [
-        17,
-        14
+        20,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
@@ -649,8 +649,8 @@
       "order": 8,
       "file": "frames/walk-up45-00.png",
       "hotspot": [
-        13,
-        11
+        18,
+        16
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -662,8 +662,8 @@
       "order": 9,
       "file": "frames/walk-up45-01.png",
       "hotspot": [
-        14,
-        11
+        19,
+        16
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -675,8 +675,8 @@
       "order": 10,
       "file": "frames/walk-up45-02.png",
       "hotspot": [
-        13,
-        13
+        17,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -688,8 +688,8 @@
       "order": 11,
       "file": "frames/walk-up45-03.png",
       "hotspot": [
-        12,
-        13
+        16,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -701,8 +701,8 @@
       "order": 12,
       "file": "frames/walk-up45-04.png",
       "hotspot": [
-        13,
-        11
+        18,
+        16
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -714,8 +714,8 @@
       "order": 13,
       "file": "frames/walk-up45-05.png",
       "hotspot": [
-        13,
-        13
+        18,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -727,8 +727,8 @@
       "order": 14,
       "file": "frames/walk-up45-06.png",
       "hotspot": [
-        13,
-        13
+        18,
+        17
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -740,8 +740,8 @@
       "order": 15,
       "file": "frames/walk-up45-07.png",
       "hotspot": [
-        12,
-        13
+        17,
+        17
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -753,8 +753,8 @@
       "order": 16,
       "file": "frames/walk-steep-00.png",
       "hotspot": [
-        11,
-        9
+        17,
+        11
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -766,8 +766,8 @@
       "order": 17,
       "file": "frames/walk-steep-01.png",
       "hotspot": [
-        12,
-        10
+        18,
+        12
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -779,8 +779,8 @@
       "order": 18,
       "file": "frames/walk-steep-02.png",
       "hotspot": [
-        13,
-        14
+        19,
+        17
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -792,8 +792,8 @@
       "order": 19,
       "file": "frames/walk-steep-03.png",
       "hotspot": [
-        12,
-        14
+        18,
+        17
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -805,8 +805,8 @@
       "order": 20,
       "file": "frames/walk-steep-04.png",
       "hotspot": [
-        11,
-        9
+        17,
+        11
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -818,8 +818,8 @@
       "order": 21,
       "file": "frames/walk-steep-05.png",
       "hotspot": [
-        12,
-        11
+        18,
+        13
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -831,8 +831,8 @@
       "order": 22,
       "file": "frames/walk-steep-06.png",
       "hotspot": [
-        13,
-        13
+        19,
+        15
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -844,8 +844,8 @@
       "order": 23,
       "file": "frames/walk-steep-07.png",
       "hotspot": [
-        12,
-        13
+        18,
+        15
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -857,8 +857,8 @@
       "order": 24,
       "file": "frames/walk-inverted-00.png",
       "hotspot": [
-        13,
-        17
+        18,
+        18
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -870,8 +870,8 @@
       "order": 25,
       "file": "frames/walk-inverted-01.png",
       "hotspot": [
-        13,
-        17
+        18,
+        18
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -883,8 +883,8 @@
       "order": 26,
       "file": "frames/walk-inverted-02.png",
       "hotspot": [
-        14,
-        16
+        19,
+        17
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -896,8 +896,8 @@
       "order": 27,
       "file": "frames/walk-inverted-03.png",
       "hotspot": [
-        14,
-        20
+        19,
+        22
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -909,8 +909,8 @@
       "order": 28,
       "file": "frames/walk-inverted-04.png",
       "hotspot": [
-        13,
-        16
+        18,
+        17
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -922,8 +922,8 @@
       "order": 29,
       "file": "frames/walk-inverted-05.png",
       "hotspot": [
-        15,
-        17
+        20,
+        18
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -935,8 +935,8 @@
       "order": 30,
       "file": "frames/walk-inverted-06.png",
       "hotspot": [
-        14,
-        15
+        18,
+        16
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -948,8 +948,8 @@
       "order": 31,
       "file": "frames/walk-inverted-07.png",
       "hotspot": [
-        14,
-        20
+        18,
+        22
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -961,8 +961,8 @@
       "order": 4,
       "file": "frames/run-up45-00.png",
       "hotspot": [
-        12,
-        16
+        17,
+        22
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -974,8 +974,8 @@
       "order": 5,
       "file": "frames/run-up45-01.png",
       "hotspot": [
-        10,
-        16
+        15,
+        22
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -987,8 +987,8 @@
       "order": 6,
       "file": "frames/run-up45-02.png",
       "hotspot": [
-        8,
-        16
+        13,
+        22
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -1000,8 +1000,8 @@
       "order": 7,
       "file": "frames/run-up45-03.png",
       "hotspot": [
-        11,
-        16
+        15,
+        22
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
@@ -1013,8 +1013,8 @@
       "order": 8,
       "file": "frames/run-steep-00.png",
       "hotspot": [
-        11,
-        16
+        17,
+        20
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -1026,8 +1026,8 @@
       "order": 9,
       "file": "frames/run-steep-01.png",
       "hotspot": [
-        11,
-        16
+        17,
+        19
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -1039,8 +1039,8 @@
       "order": 10,
       "file": "frames/run-steep-02.png",
       "hotspot": [
-        11,
-        16
+        17,
+        19
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -1052,8 +1052,8 @@
       "order": 11,
       "file": "frames/run-steep-03.png",
       "hotspot": [
-        11,
-        16
+        17,
+        19
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
@@ -1065,8 +1065,8 @@
       "order": 12,
       "file": "frames/run-inverted-00.png",
       "hotspot": [
-        17,
-        20
+        23,
+        21
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -1078,8 +1078,8 @@
       "order": 13,
       "file": "frames/run-inverted-01.png",
       "hotspot": [
-        18,
-        20
+        24,
+        21
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -1091,8 +1091,8 @@
       "order": 14,
       "file": "frames/run-inverted-02.png",
       "hotspot": [
-        18,
-        20
+        24,
+        21
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -1104,8 +1104,8 @@
       "order": 15,
       "file": "frames/run-inverted-03.png",
       "hotspot": [
-        18,
-        20
+        24,
+        21
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
@@ -1117,8 +1117,8 @@
       "order": 0,
       "file": "frames/family-push-00.png",
       "hotspot": [
-        18,
-        11
+        25,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1130,8 +1130,8 @@
       "order": 1,
       "file": "frames/family-push-01.png",
       "hotspot": [
-        10,
-        12
+        15,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1143,8 +1143,8 @@
       "order": 2,
       "file": "frames/family-push-02.png",
       "hotspot": [
-        12,
-        13
+        17,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1156,8 +1156,8 @@
       "order": 3,
       "file": "frames/family-push-03.png",
       "hotspot": [
-        13,
-        13
+        19,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1169,8 +1169,8 @@
       "order": 0,
       "file": "frames/family-balance-00.png",
       "hotspot": [
-        13,
-        12
+        15,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1182,8 +1182,8 @@
       "order": 1,
       "file": "frames/family-balance-01.png",
       "hotspot": [
-        12,
-        10
+        14,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1195,8 +1195,8 @@
       "order": 0,
       "file": "frames/family-balance2-00.png",
       "hotspot": [
-        15,
-        13
+        18,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1208,8 +1208,8 @@
       "order": 1,
       "file": "frames/family-balance2-01.png",
       "hotspot": [
-        15,
-        15
+        18,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1221,8 +1221,8 @@
       "order": 2,
       "file": "frames/family-balance2-02.png",
       "hotspot": [
-        14,
-        13
+        17,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1234,8 +1234,8 @@
       "order": 0,
       "file": "frames/family-balance3-00.png",
       "hotspot": [
-        16,
-        16
+        19,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1247,8 +1247,8 @@
       "order": 1,
       "file": "frames/family-balance3-01.png",
       "hotspot": [
-        17,
-        13
+        20,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1260,8 +1260,8 @@
       "order": 0,
       "file": "frames/family-balance4-00.png",
       "hotspot": [
-        11,
-        12
+        13,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1273,8 +1273,8 @@
       "order": 1,
       "file": "frames/family-balance4-01.png",
       "hotspot": [
-        18,
-        17
+        22,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1286,8 +1286,8 @@
       "order": 2,
       "file": "frames/family-balance4-02.png",
       "hotspot": [
-        19,
-        15
+        23,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1299,8 +1299,8 @@
       "order": 3,
       "file": "frames/family-balance4-03.png",
       "hotspot": [
-        20,
-        17
+        24,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1312,8 +1312,8 @@
       "order": 4,
       "file": "frames/family-balance4-04.png",
       "hotspot": [
-        14,
-        13
+        17,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1325,7 +1325,7 @@
       "order": 0,
       "file": "frames/family-hang-00.png",
       "hotspot": [
-        22,
+        26,
         12
       ],
       "angle_set": "flat",
@@ -1338,7 +1338,7 @@
       "order": 1,
       "file": "frames/family-hang-01.png",
       "hotspot": [
-        22,
+        26,
         12
       ],
       "angle_set": "flat",
@@ -1351,7 +1351,7 @@
       "order": 0,
       "file": "frames/family-hang2-00.png",
       "hotspot": [
-        13,
+        16,
         16
       ],
       "angle_set": "flat",
@@ -1364,7 +1364,7 @@
       "order": 1,
       "file": "frames/family-hang2-01.png",
       "hotspot": [
-        13,
+        15,
         16
       ],
       "angle_set": "flat",
@@ -1377,8 +1377,8 @@
       "order": 0,
       "file": "frames/family-bubble-00.png",
       "hotspot": [
-        20,
-        19
+        24,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1390,8 +1390,8 @@
       "order": 1,
       "file": "frames/family-bubble-01.png",
       "hotspot": [
-        20,
-        19
+        24,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1403,8 +1403,8 @@
       "order": 2,
       "file": "frames/family-bubble-02.png",
       "hotspot": [
-        20,
-        19
+        24,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1416,8 +1416,8 @@
       "order": 0,
       "file": "frames/family-hurt-fall-00.png",
       "hotspot": [
-        17,
-        21
+        20,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1429,8 +1429,8 @@
       "order": 1,
       "file": "frames/family-hurt-fall-01.png",
       "hotspot": [
-        19,
-        19
+        23,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1442,8 +1442,8 @@
       "order": 0,
       "file": "frames/family-drown-00.png",
       "hotspot": [
-        16,
-        20
+        19,
+        27
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1455,8 +1455,8 @@
       "order": 0,
       "file": "frames/family-float2-00.png",
       "hotspot": [
-        19,
-        9
+        22,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1468,8 +1468,8 @@
       "order": 1,
       "file": "frames/family-float2-01.png",
       "hotspot": [
-        16,
-        9
+        19,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1481,8 +1481,8 @@
       "order": 2,
       "file": "frames/family-float2-02.png",
       "hotspot": [
-        16,
-        10
+        19,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1494,8 +1494,8 @@
       "order": 3,
       "file": "frames/family-float2-03.png",
       "hotspot": [
-        16,
-        9
+        19,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1507,8 +1507,8 @@
       "order": 4,
       "file": "frames/family-float2-04.png",
       "hotspot": [
-        18,
-        9
+        22,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1520,8 +1520,8 @@
       "order": 5,
       "file": "frames/family-float2-05.png",
       "hotspot": [
-        15,
-        12
+        18,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1533,8 +1533,8 @@
       "order": 6,
       "file": "frames/family-float2-06.png",
       "hotspot": [
-        15,
-        12
+        18,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1546,8 +1546,8 @@
       "order": 7,
       "file": "frames/family-float2-07.png",
       "hotspot": [
-        15,
-        12
+        18,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1559,8 +1559,8 @@
       "order": 0,
       "file": "frames/family-blink-00.png",
       "hotspot": [
-        10,
-        12
+        12,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1572,8 +1572,8 @@
       "order": 1,
       "file": "frames/family-blink-01.png",
       "hotspot": [
-        9,
-        10
+        11,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1585,8 +1585,8 @@
       "order": 2,
       "file": "frames/family-blink-02.png",
       "hotspot": [
-        10,
-        11
+        12,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1598,8 +1598,8 @@
       "order": 0,
       "file": "frames/family-get-up-00.png",
       "hotspot": [
-        20,
-        2
+        24,
+        6
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1611,8 +1611,8 @@
       "order": 1,
       "file": "frames/family-get-up-01.png",
       "hotspot": [
-        9,
-        13
+        11,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1624,8 +1624,8 @@
       "order": 0,
       "file": "frames/family-victory-00.png",
       "hotspot": [
-        12,
-        19
+        14,
+        27
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1637,8 +1637,8 @@
       "order": 1,
       "file": "frames/family-victory-01.png",
       "hotspot": [
-        13,
-        18
+        15,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1650,8 +1650,8 @@
       "order": 2,
       "file": "frames/family-victory-02.png",
       "hotspot": [
-        14,
-        18
+        17,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1663,8 +1663,8 @@
       "order": 3,
       "file": "frames/family-victory-03.png",
       "hotspot": [
-        13,
-        19
+        15,
+        27
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1676,7 +1676,7 @@
       "order": 0,
       "file": "frames/family-tails-carried-00.png",
       "hotspot": [
-        15,
+        18,
         24
       ],
       "angle_set": "flat",
@@ -1689,7 +1689,7 @@
       "order": 1,
       "file": "frames/family-tails-carried-01.png",
       "hotspot": [
-        16,
+        19,
         24
       ],
       "angle_set": "flat",
@@ -1702,7 +1702,7 @@
       "order": 2,
       "file": "frames/family-tails-carried-02.png",
       "hotspot": [
-        19,
+        23,
         24
       ],
       "angle_set": "flat",
@@ -1715,8 +1715,8 @@
       "order": 0,
       "file": "frames/family-super-transform-00.png",
       "hotspot": [
-        20,
-        17
+        24,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1728,8 +1728,8 @@
       "order": 1,
       "file": "frames/family-super-transform-01.png",
       "hotspot": [
-        23,
-        19
+        27,
+        27
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1741,8 +1741,8 @@
       "order": 2,
       "file": "frames/family-super-transform-02.png",
       "hotspot": [
-        17,
-        19
+        20,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1754,8 +1754,8 @@
       "order": 3,
       "file": "frames/family-super-transform-03.png",
       "hotspot": [
-        22,
-        17
+        26,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1767,8 +1767,8 @@
       "order": 4,
       "file": "frames/family-super-transform-04.png",
       "hotspot": [
-        20,
-        17
+        24,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1780,8 +1780,8 @@
       "order": 0,
       "file": "frames/family-tails-fly-ascend-00.png",
       "hotspot": [
-        21,
-        26
+        25,
+        35
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1793,8 +1793,8 @@
       "order": 1,
       "file": "frames/family-tails-fly-ascend-01.png",
       "hotspot": [
-        24,
-        18
+        29,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1806,8 +1806,8 @@
       "order": 2,
       "file": "frames/family-tails-fly-ascend-02.png",
       "hotspot": [
-        29,
-        18
+        35,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1819,8 +1819,8 @@
       "order": 3,
       "file": "frames/family-tails-fly-ascend-03.png",
       "hotspot": [
-        17,
-        18
+        20,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1832,8 +1832,8 @@
       "order": 4,
       "file": "frames/family-tails-fly-ascend-04.png",
       "hotspot": [
-        23,
-        18
+        28,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1845,8 +1845,8 @@
       "order": 5,
       "file": "frames/family-tails-fly-ascend-05.png",
       "hotspot": [
-        25,
-        18
+        30,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1858,8 +1858,8 @@
       "order": 0,
       "file": "frames/family-tails-fly-carry-00.png",
       "hotspot": [
-        18,
-        29
+        22,
+        36
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1871,8 +1871,8 @@
       "order": 1,
       "file": "frames/family-tails-fly-carry-01.png",
       "hotspot": [
-        23,
-        26
+        28,
+        33
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1884,8 +1884,8 @@
       "order": 2,
       "file": "frames/family-tails-fly-carry-02.png",
       "hotspot": [
-        28,
-        22
+        33,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1897,8 +1897,8 @@
       "order": 3,
       "file": "frames/family-tails-fly-carry-03.png",
       "hotspot": [
-        19,
-        22
+        23,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1910,8 +1910,8 @@
       "order": 4,
       "file": "frames/family-tails-fly-carry-04.png",
       "hotspot": [
-        23,
-        22
+        28,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1923,8 +1923,8 @@
       "order": 5,
       "file": "frames/family-tails-fly-carry-05.png",
       "hotspot": [
-        31,
-        22
+        37,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1936,8 +1936,8 @@
       "order": 0,
       "file": "frames/family-tails-fly-carry-ascend-00.png",
       "hotspot": [
-        18,
-        29
+        22,
+        36
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1949,8 +1949,8 @@
       "order": 1,
       "file": "frames/family-tails-fly-carry-ascend-01.png",
       "hotspot": [
-        23,
-        26
+        28,
+        33
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1962,8 +1962,8 @@
       "order": 2,
       "file": "frames/family-tails-fly-carry-ascend-02.png",
       "hotspot": [
-        28,
-        22
+        33,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1975,8 +1975,8 @@
       "order": 3,
       "file": "frames/family-tails-fly-carry-ascend-03.png",
       "hotspot": [
-        19,
-        22
+        23,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -1988,8 +1988,8 @@
       "order": 4,
       "file": "frames/family-tails-fly-carry-ascend-04.png",
       "hotspot": [
-        23,
-        22
+        28,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2001,8 +2001,8 @@
       "order": 5,
       "file": "frames/family-tails-fly-carry-ascend-05.png",
       "hotspot": [
-        31,
-        22
+        37,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2014,8 +2014,8 @@
       "order": 0,
       "file": "frames/family-tails-swim-00.png",
       "hotspot": [
-        22,
-        18
+        27,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2027,8 +2027,8 @@
       "order": 1,
       "file": "frames/family-tails-swim-01.png",
       "hotspot": [
-        23,
-        18
+        27,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2040,8 +2040,8 @@
       "order": 2,
       "file": "frames/family-tails-swim-02.png",
       "hotspot": [
-        27,
-        18
+        33,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2053,8 +2053,8 @@
       "order": 3,
       "file": "frames/family-tails-swim-03.png",
       "hotspot": [
-        23,
-        18
+        28,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2066,8 +2066,8 @@
       "order": 4,
       "file": "frames/family-tails-swim-04.png",
       "hotspot": [
-        24,
-        18
+        28,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2079,8 +2079,8 @@
       "order": 0,
       "file": "frames/family-tails-swim-ascend-00.png",
       "hotspot": [
-        22,
-        15
+        26,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2092,8 +2092,8 @@
       "order": 1,
       "file": "frames/family-tails-swim-ascend-01.png",
       "hotspot": [
-        25,
-        15
+        30,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2105,8 +2105,8 @@
       "order": 2,
       "file": "frames/family-tails-swim-ascend-02.png",
       "hotspot": [
-        20,
-        15
+        24,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2118,8 +2118,8 @@
       "order": 3,
       "file": "frames/family-tails-swim-ascend-03.png",
       "hotspot": [
-        22,
-        15
+        26,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2131,8 +2131,8 @@
       "order": 4,
       "file": "frames/family-tails-swim-ascend-04.png",
       "hotspot": [
-        21,
-        15
+        25,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2144,8 +2144,8 @@
       "order": 0,
       "file": "frames/family-tails-swim-carry-00.png",
       "hotspot": [
-        23,
-        21
+        28,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2157,8 +2157,8 @@
       "order": 1,
       "file": "frames/family-tails-swim-carry-01.png",
       "hotspot": [
-        24,
-        21
+        29,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2170,8 +2170,8 @@
       "order": 0,
       "file": "frames/family-tails-swim-tired-00.png",
       "hotspot": [
-        21,
-        20
+        25,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2183,8 +2183,8 @@
       "order": 1,
       "file": "frames/family-tails-swim-tired-01.png",
       "hotspot": [
-        20,
-        18
+        24,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2196,8 +2196,8 @@
       "order": 2,
       "file": "frames/family-tails-swim-tired-02.png",
       "hotspot": [
-        21,
-        17
+        25,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
@@ -2222,8 +2222,8 @@
       "order": 3,
       "file": "frames/family-blink-03.png",
       "hotspot": [
-        10,
-        17
+        12,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 16,
@@ -2235,8 +2235,8 @@
       "order": 4,
       "file": "frames/family-blink-04.png",
       "hotspot": [
-        14,
-        10
+        16,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 16,
@@ -2248,8 +2248,8 @@
       "order": 200,
       "file": "frames/object4-s3k-82.png",
       "hotspot": [
-        16,
-        22
+        19,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2261,8 +2261,8 @@
       "order": 201,
       "file": "frames/object4-s3k-8d.png",
       "hotspot": [
-        15,
-        13
+        18,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2274,8 +2274,8 @@
       "order": 349,
       "file": "frames/object5-31.png",
       "hotspot": [
-        13,
-        16
+        15,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2287,8 +2287,8 @@
       "order": 350,
       "file": "frames/object5-32.png",
       "hotspot": [
-        14,
-        13
+        16,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2300,8 +2300,8 @@
       "order": 351,
       "file": "frames/object5-33.png",
       "hotspot": [
-        12,
-        15
+        14,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2313,8 +2313,8 @@
       "order": 352,
       "file": "frames/object5-34.png",
       "hotspot": [
-        13,
-        7
+        15,
+        8
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2326,8 +2326,8 @@
       "order": 353,
       "file": "frames/object5-35.png",
       "hotspot": [
-        13,
-        13
+        15,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2339,8 +2339,8 @@
       "order": 354,
       "file": "frames/object5-36.png",
       "hotspot": [
-        13,
-        14
+        15,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2352,8 +2352,8 @@
       "order": 355,
       "file": "frames/object5-37.png",
       "hotspot": [
-        11,
-        13
+        13,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2365,8 +2365,8 @@
       "order": 356,
       "file": "frames/object5-38.png",
       "hotspot": [
-        12,
-        15
+        14,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2378,8 +2378,8 @@
       "order": 357,
       "file": "frames/object5-39.png",
       "hotspot": [
-        12,
-        14
+        15,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2391,8 +2391,8 @@
       "order": 358,
       "file": "frames/object5-3a.png",
       "hotspot": [
-        12,
-        11
+        14,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2404,8 +2404,8 @@
       "order": 359,
       "file": "frames/object5-3b.png",
       "hotspot": [
-        13,
-        11
+        15,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2417,8 +2417,8 @@
       "order": 360,
       "file": "frames/object5-3c.png",
       "hotspot": [
-        12,
-        13
+        14,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2430,8 +2430,8 @@
       "order": 361,
       "file": "frames/object5-3d.png",
       "hotspot": [
-        12,
-        14
+        14,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2443,8 +2443,8 @@
       "order": 362,
       "file": "frames/object5-3e.png",
       "hotspot": [
-        14,
-        13
+        16,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2456,8 +2456,8 @@
       "order": 363,
       "file": "frames/object5-3f.png",
       "hotspot": [
-        12,
-        13
+        14,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2469,8 +2469,8 @@
       "order": 364,
       "file": "frames/object5-40.png",
       "hotspot": [
-        13,
-        14
+        15,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2482,8 +2482,8 @@
       "order": 365,
       "file": "frames/object5-41.png",
       "hotspot": [
-        14,
-        14
+        16,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2495,8 +2495,8 @@
       "order": 366,
       "file": "frames/object5-42.png",
       "hotspot": [
-        16,
-        13
+        19,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2508,8 +2508,8 @@
       "order": 367,
       "file": "frames/object5-43.png",
       "hotspot": [
-        12,
-        13
+        14,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2521,8 +2521,8 @@
       "order": 368,
       "file": "frames/object5-44.png",
       "hotspot": [
-        13,
-        14
+        15,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2534,8 +2534,8 @@
       "order": 369,
       "file": "frames/object5-45.png",
       "hotspot": [
-        14,
-        12
+        17,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2547,8 +2547,8 @@
       "order": 370,
       "file": "frames/object5-46.png",
       "hotspot": [
-        12,
-        10
+        15,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2560,8 +2560,8 @@
       "order": 371,
       "file": "frames/object5-47.png",
       "hotspot": [
-        10,
-        16
+        12,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2573,8 +2573,8 @@
       "order": 372,
       "file": "frames/object5-48.png",
       "hotspot": [
-        11,
-        15
+        13,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2586,8 +2586,8 @@
       "order": 373,
       "file": "frames/object5-49.png",
       "hotspot": [
-        17,
-        14
+        20,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2599,8 +2599,8 @@
       "order": 374,
       "file": "frames/object5-4a.png",
       "hotspot": [
-        15,
-        14
+        18,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2612,8 +2612,8 @@
       "order": 375,
       "file": "frames/object5-4b.png",
       "hotspot": [
-        14,
-        11
+        17,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2625,8 +2625,8 @@
       "order": 376,
       "file": "frames/object5-4c.png",
       "hotspot": [
-        11,
-        12
+        13,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2638,8 +2638,8 @@
       "order": 377,
       "file": "frames/object5-4d.png",
       "hotspot": [
-        12,
-        13
+        14,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2651,8 +2651,8 @@
       "order": 378,
       "file": "frames/object5-4e.png",
       "hotspot": [
-        16,
-        13
+        19,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2664,8 +2664,8 @@
       "order": 379,
       "file": "frames/object5-4f.png",
       "hotspot": [
-        16,
-        18
+        19,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2677,8 +2677,8 @@
       "order": 380,
       "file": "frames/object5-50.png",
       "hotspot": [
-        13,
-        18
+        16,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2690,8 +2690,8 @@
       "order": 381,
       "file": "frames/object5-51.png",
       "hotspot": [
-        14,
-        16
+        17,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2703,8 +2703,8 @@
       "order": 382,
       "file": "frames/object5-52.png",
       "hotspot": [
-        14,
-        10
+        17,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2716,8 +2716,8 @@
       "order": 383,
       "file": "frames/object5-53.png",
       "hotspot": [
-        16,
-        11
+        19,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2729,8 +2729,8 @@
       "order": 384,
       "file": "frames/object5-54.png",
       "hotspot": [
-        18,
-        12
+        21,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2742,8 +2742,8 @@
       "order": 388,
       "file": "frames/object5-58.png",
       "hotspot": [
-        9,
-        15
+        11,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2755,8 +2755,8 @@
       "order": 389,
       "file": "frames/object5-59.png",
       "hotspot": [
-        10,
-        15
+        12,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2768,8 +2768,8 @@
       "order": 390,
       "file": "frames/object5-5a.png",
       "hotspot": [
-        9,
-        13
+        10,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2781,8 +2781,8 @@
       "order": 391,
       "file": "frames/object5-5b.png",
       "hotspot": [
-        9,
-        12
+        10,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2794,8 +2794,8 @@
       "order": 392,
       "file": "frames/object5-5c.png",
       "hotspot": [
-        13,
-        10
+        16,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2808,7 +2808,7 @@
       "file": "frames/object5-5d.png",
       "hotspot": [
         1,
-        11
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2820,8 +2820,8 @@
       "order": 394,
       "file": "frames/object5-5e.png",
       "hotspot": [
-        16,
-        11
+        19,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2833,8 +2833,8 @@
       "order": 395,
       "file": "frames/object5-5f.png",
       "hotspot": [
-        22,
-        11
+        26,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2846,8 +2846,8 @@
       "order": 396,
       "file": "frames/object5-60.png",
       "hotspot": [
-        11,
-        11
+        13,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2859,8 +2859,8 @@
       "order": 397,
       "file": "frames/object5-61.png",
       "hotspot": [
-        24,
-        10
+        29,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2872,8 +2872,8 @@
       "order": 398,
       "file": "frames/object5-62.png",
       "hotspot": [
-        18,
-        12
+        22,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2885,8 +2885,8 @@
       "order": 405,
       "file": "frames/object5-69.png",
       "hotspot": [
-        16,
-        15
+        19,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2898,8 +2898,8 @@
       "order": 406,
       "file": "frames/object5-6a.png",
       "hotspot": [
-        17,
-        13
+        21,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2911,8 +2911,8 @@
       "order": 407,
       "file": "frames/object5-6b.png",
       "hotspot": [
-        13,
-        16
+        15,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2924,8 +2924,8 @@
       "order": 408,
       "file": "frames/object5-6c.png",
       "hotspot": [
-        17,
-        12
+        20,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2937,8 +2937,8 @@
       "order": 409,
       "file": "frames/object5-6d.png",
       "hotspot": [
-        17,
-        9
+        20,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2950,8 +2950,8 @@
       "order": 410,
       "file": "frames/object5-6e.png",
       "hotspot": [
-        12,
-        8
+        14,
+        10
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2963,8 +2963,8 @@
       "order": 411,
       "file": "frames/object5-6f.png",
       "hotspot": [
-        10,
-        9
+        12,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2976,8 +2976,8 @@
       "order": 412,
       "file": "frames/object5-70.png",
       "hotspot": [
-        14,
-        9
+        17,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -2989,8 +2989,8 @@
       "order": 413,
       "file": "frames/object5-71.png",
       "hotspot": [
-        14,
-        9
+        17,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3002,8 +3002,8 @@
       "order": 414,
       "file": "frames/object5-72.png",
       "hotspot": [
-        15,
-        10
+        18,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3015,8 +3015,8 @@
       "order": 415,
       "file": "frames/object5-73.png",
       "hotspot": [
-        15,
-        10
+        18,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3028,8 +3028,8 @@
       "order": 416,
       "file": "frames/object5-74.png",
       "hotspot": [
-        12,
-        11
+        14,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3041,8 +3041,8 @@
       "order": 417,
       "file": "frames/object5-75.png",
       "hotspot": [
-        11,
-        9
+        13,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3054,8 +3054,8 @@
       "order": 418,
       "file": "frames/object5-76.png",
       "hotspot": [
-        13,
-        11
+        16,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3067,8 +3067,8 @@
       "order": 419,
       "file": "frames/object5-77.png",
       "hotspot": [
-        14,
-        12
+        17,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3080,8 +3080,8 @@
       "order": 420,
       "file": "frames/object5-78.png",
       "hotspot": [
-        14,
-        25
+        17,
+        30
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3093,8 +3093,8 @@
       "order": 421,
       "file": "frames/object5-79.png",
       "hotspot": [
-        26,
-        27
+        31,
+        32
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3106,8 +3106,8 @@
       "order": 426,
       "file": "frames/object5-7e.png",
       "hotspot": [
-        7,
-        14
+        8,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3119,8 +3119,8 @@
       "order": 428,
       "file": "frames/object5-80.png",
       "hotspot": [
-        17,
-        23
+        20,
+        27
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3132,8 +3132,8 @@
       "order": 429,
       "file": "frames/object5-81.png",
       "hotspot": [
-        25,
-        23
+        30,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3145,8 +3145,8 @@
       "order": 431,
       "file": "frames/object5-83.png",
       "hotspot": [
-        19,
-        24
+        23,
+        29
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3158,8 +3158,8 @@
       "order": 432,
       "file": "frames/object5-84.png",
       "hotspot": [
-        22,
-        23
+        26,
+        27
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3171,8 +3171,8 @@
       "order": 433,
       "file": "frames/object5-85.png",
       "hotspot": [
-        19,
-        23
+        23,
+        27
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3184,8 +3184,8 @@
       "order": 444,
       "file": "frames/object5-90.png",
       "hotspot": [
-        11,
-        23
+        13,
+        27
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3197,8 +3197,8 @@
       "order": 446,
       "file": "frames/object5-92.png",
       "hotspot": [
-        9,
-        23
+        11,
+        27
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3210,8 +3210,8 @@
       "order": 447,
       "file": "frames/object5-93.png",
       "hotspot": [
-        8,
-        23
+        9,
+        27
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3223,8 +3223,8 @@
       "order": 448,
       "file": "frames/object5-94.png",
       "hotspot": [
-        16,
-        23
+        19,
+        27
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3236,8 +3236,8 @@
       "order": 449,
       "file": "frames/object5-95.png",
       "hotspot": [
-        13,
-        24
+        16,
+        29
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3249,8 +3249,8 @@
       "order": 502,
       "file": "frames/object5-ca.png",
       "hotspot": [
-        20,
-        6
+        24,
+        7
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3262,8 +3262,8 @@
       "order": 523,
       "file": "frames/object5-df.png",
       "hotspot": [
-        14,
-        20
+        17,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3275,8 +3275,8 @@
       "order": 524,
       "file": "frames/object5-e0.png",
       "hotspot": [
-        10,
-        15
+        12,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3288,8 +3288,8 @@
       "order": 525,
       "file": "frames/object5-e1.png",
       "hotspot": [
-        10,
-        17
+        12,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3301,8 +3301,8 @@
       "order": 526,
       "file": "frames/object5-e2.png",
       "hotspot": [
-        10,
-        19
+        12,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3314,8 +3314,8 @@
       "order": 527,
       "file": "frames/object5-e3.png",
       "hotspot": [
-        14,
-        19
+        17,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3327,8 +3327,8 @@
       "order": 528,
       "file": "frames/object5-e4.png",
       "hotspot": [
-        13,
-        20
+        15,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3340,8 +3340,8 @@
       "order": 529,
       "file": "frames/object5-e5.png",
       "hotspot": [
-        12,
-        17
+        14,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3353,8 +3353,8 @@
       "order": 530,
       "file": "frames/object5-e6.png",
       "hotspot": [
-        9,
-        18
+        11,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3366,8 +3366,8 @@
       "order": 531,
       "file": "frames/object5-e7.png",
       "hotspot": [
-        10,
-        20
+        12,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3379,8 +3379,8 @@
       "order": 532,
       "file": "frames/object5-e8.png",
       "hotspot": [
-        12,
-        19
+        14,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3392,8 +3392,8 @@
       "order": 533,
       "file": "frames/object5-e9.png",
       "hotspot": [
-        9,
-        17
+        11,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3405,8 +3405,8 @@
       "order": 534,
       "file": "frames/object5-ea.png",
       "hotspot": [
-        8,
-        20
+        10,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3418,8 +3418,8 @@
       "order": 539,
       "file": "frames/object5-ef.png",
       "hotspot": [
-        14,
-        15
+        17,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3431,8 +3431,8 @@
       "order": 540,
       "file": "frames/object5-f0.png",
       "hotspot": [
-        13,
-        15
+        15,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3444,8 +3444,8 @@
       "order": 541,
       "file": "frames/object5-f1.png",
       "hotspot": [
-        15,
-        15
+        18,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3457,8 +3457,8 @@
       "order": 542,
       "file": "frames/object5-f2.png",
       "hotspot": [
-        15,
-        15
+        18,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3470,8 +3470,8 @@
       "order": 546,
       "file": "frames/object5-f6.png",
       "hotspot": [
-        12,
-        15
+        14,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3483,8 +3483,8 @@
       "order": 547,
       "file": "frames/object5-f7.png",
       "hotspot": [
-        11,
-        15
+        13,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3496,8 +3496,8 @@
       "order": 548,
       "file": "frames/object5-f8.png",
       "hotspot": [
-        15,
-        15
+        18,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3509,8 +3509,8 @@
       "order": 399,
       "file": "frames/object5-63.png",
       "hotspot": [
-        12,
-        13
+        14,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3522,7 +3522,7 @@
       "order": 400,
       "file": "frames/object5-64.png",
       "hotspot": [
-        10,
+        12,
         1
       ],
       "angle_set": "flat",
@@ -3535,8 +3535,8 @@
       "order": 401,
       "file": "frames/object5-65.png",
       "hotspot": [
-        12,
-        16
+        14,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3548,8 +3548,8 @@
       "order": 402,
       "file": "frames/object5-66.png",
       "hotspot": [
-        12,
-        22
+        14,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3561,8 +3561,8 @@
       "order": 403,
       "file": "frames/object5-67.png",
       "hotspot": [
-        12,
-        11
+        14,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3574,8 +3574,8 @@
       "order": 404,
       "file": "frames/object5-68.png",
       "hotspot": [
-        11,
-        24
+        13,
+        29
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3587,8 +3587,8 @@
       "order": 422,
       "file": "frames/object5-7a.png",
       "hotspot": [
-        25,
-        17
+        30,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3600,8 +3600,8 @@
       "order": 423,
       "file": "frames/object5-7b.png",
       "hotspot": [
-        27,
-        12
+        32,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3613,8 +3613,8 @@
       "order": 424,
       "file": "frames/object5-7c.png",
       "hotspot": [
-        17,
-        10
+        20,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3626,8 +3626,8 @@
       "order": 425,
       "file": "frames/object5-7d.png",
       "hotspot": [
-        12,
-        9
+        14,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3639,8 +3639,8 @@
       "order": 427,
       "file": "frames/object5-7f.png",
       "hotspot": [
-        9,
-        26
+        11,
+        31
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3652,8 +3652,8 @@
       "order": 543,
       "file": "frames/object5-f3.png",
       "hotspot": [
-        11,
-        15
+        13,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3665,8 +3665,8 @@
       "order": 544,
       "file": "frames/object5-f4.png",
       "hotspot": [
-        13,
-        15
+        15,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3678,8 +3678,8 @@
       "order": 545,
       "file": "frames/object5-f5.png",
       "hotspot": [
-        15,
-        15
+        18,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3691,8 +3691,8 @@
       "order": 549,
       "file": "frames/object5-f9.png",
       "hotspot": [
-        12,
-        15
+        14,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
@@ -3704,8 +3704,8 @@
       "order": 550,
       "file": "frames/object5-fa.png",
       "hotspot": [
-        13,
-        15
+        16,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
