@@ -1,62 +1,40 @@
-"""Regenerate TALON's Solar super-form tables in TalonSolar.java from solar.yaml.
+"""Regenerate TalonSolar's art-side palette table from the production solar.yaml.
 
-Purpose: solar.yaml is the single source of TALON's
-Solar palette cycles; the example mod's Java profile carries the same tables as
-Mega Drive colour words. This keeps the two in step.
-Inputs: examples/mica-and-talon/production/talon/presentation/solar.yaml (JSON subset).
-Origin: TALON character mod, 2026-11-09; binds the approved Solar presentation data.
-
-Usage: python3 -I tools/modding/playable_art/solar_java.py [--check]
+The historical command name is retained for existing callers. Palette rows are
+now data; form gates, native physics and timing decisions remain in Java.
 """
 import json
-import pathlib
-import re
+from pathlib import Path
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[3]
 YAML = ROOT / "examples/mica-and-talon/production/talon/presentation/solar.yaml"
-JAVA = ROOT / "examples/mica-and-talon/src/main/java/micaandtalon/TalonSolar.java"
+TABLE = ROOT / "examples/mica-and-talon/art/talon/powered/palettes.txt"
 STEPS = [0, 36, 73, 109, 146, 182, 219, 255]
 
 
 def md_word(rgb):
-    r, g, b = (STEPS.index(c) * 2 for c in rgb)
+    r, g, b = (STEPS.index(value) * 2 for value in rgb)
     return (b << 8) | (g << 4) | r
 
 
-def table(frames):
-    rows = ["List.of(" + ",".join(hex(md_word(c)) for c in frame) + ")" for frame in frames]
-    return "List.of(" + ",\n            ".join(rows) + ")"
-
-
-def render(source, data):
-    tables = {"fade": data["fade_frames"], "s2": data["cycles"]["s2"]["frames"],
-              "s3k": data["cycles"]["s3k"]["frames"]}
-    for name, frames in tables.items():
-        pattern = re.compile(r"(private static List<List<Integer>> " + name + r"\(\) \{ return ).*?(; \})", re.S)
-        source, count = pattern.subn(lambda m: m.group(1) + table(frames) + m.group(2), source)
-        if count != 1:
-            raise SystemExit(f"TalonSolar.{name}() not found exactly once")
-    for name in ("s2", "s3k"):
-        cycle = data["cycles"][name]
-        pattern = re.compile(r"(new SuperFormProfile.Form\(fade, " + name + r"\(\), List.of\(\), )\d+, \d+,")
-        source, count = pattern.subn(lambda m: m.group(1) + str(cycle["ticks_per_frame"])
-                                    + ", " + str(cycle["fade_ticks_per_frame"]) + ",", source)
-        if count != 1:
-            raise SystemExit(f"TalonSolar.{name} timing not found exactly once")
-    return source
+def render(data):
+    banks = {"fade": data["fade_frames"], "s2": data["cycles"]["s2"]["frames"],
+             "s3k": data["cycles"]["s3k"]["frames"]}
+    rows = ["# bank followed by sixteen Mega Drive colour words, in animation order."]
+    for bank, frames in banks.items():
+        rows.extend(bank + " " + " ".join(f"{md_word(color):03X}" for color in frame) for frame in frames)
+    return "\n".join(rows) + "\n"
 
 
 def main(argv):
-    data = json.loads(YAML.read_text())
-    current = JAVA.read_text()
-    wanted = render(current, data)
+    wanted = render(json.loads(YAML.read_text()))
     if "--check" in argv:
-        if current != wanted:
-            print("TalonSolar.java is out of date with solar.yaml; run solar_java.py")
+        if TABLE.read_text() != wanted:
+            print("Palette table is out of date; run solar_java.py")
             return 1
         return 0
-    JAVA.write_text(wanted)
+    TABLE.write_text(wanted)
     return 0
 
 

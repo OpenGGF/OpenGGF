@@ -251,6 +251,8 @@ under the matching area heading; see the
   facing mirrors and generic/native fallbacks. The maintained
   `examples/mica-and-talon` demo groups runtime art by surface, separates production
   records, documents its class map, and builds generated sheets only under `target/`.
+  Native selector, filename, hotspot and palette-cycle tables live beside the art
+  and load through one example helper; formatted Java retains gameplay and native presentation decisions.
   Its paired `micaandtalon` package keeps the same mod/character IDs. The demo plays in all three stock games with Sonic's
   single-player physics, native S2/S3K spindash (disabled in S1), character-owned
   homing (including an untargeted forward

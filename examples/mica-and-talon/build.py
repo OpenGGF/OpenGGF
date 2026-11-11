@@ -23,12 +23,12 @@ INVENTORY = {
           for host in ("s2", "s3k")),
     ),
     "surfaces": tuple(
-        (f"art/{character}/{surface}", f"art/{character}/{surface}", ("**/*.png", "**/*.mask", "**/*.clear"))
+        (f"art/{character}/{surface}", f"art/{character}/{surface}", (("**/*.txt",) if surface == "powered" else ("**/*.png", "**/*.mask", "**/*.clear", "**/*frames.txt")))
         for character, surfaces in (
             ("mica", ("hud-and-screens", "special-stage", "competition-menu", "reels", "competition",
-                      "titles", "stage-poses", "continue", "portrait", "snowboard", "endings")),
+                      "titles", "stage-poses", "continue", "portrait", "snowboard", "endings", "powered")),
             ("talon", ("hud-and-screens", "special-stage", "competition-menu", "reels", "competition",
-                       "titles", "stage-poses", "continue", "portrait", "endings")),
+                       "titles", "stage-poses", "continue", "portrait", "endings", "powered")),
         )
         for surface in surfaces
     ),

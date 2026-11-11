@@ -8,6 +8,8 @@ posed stage art, `stage-poses/` the base stage/native object banks, and
 `hud-and-screens/` the base presentation identity. Generated converter inputs
 and custom-frame inventories live in `target/mica-and-talon/generated/`.
 The example README contains the current class/surface map and recovery History.
+`FrameTable` loads the adjacent plain-text frame and palette-cycle inventories;
+Java retains native orientation, mask, palette ownership and gameplay decisions.
 Earlier sections are dated design evidence, not current build instructions.
 
 

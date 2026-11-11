@@ -1,0 +1,28 @@
+# bank selector image hotspotX hotspotY; image paths are relative to this table.
+palette S2_ENDING s2-0a.png
+S2_ENDING 9 s2-09.png 5 19
+S2_ENDING 10 s2-0a.png 8 19
+S2_ENDING 11 s2-0b.png 9 15
+S2_ENDING 15 s2-0f.png 0 0
+S2_ENDING 16 s2-10.png 0 -8
+S2_ENDING 17 s2-11.png 0 0
+S2_ENDING 24 s2-18.png -6 32
+S2_ENDING 25 s2-19.png -4 25
+palette S2_PHOTOS photos-01.png
+S2_PHOTOS 1 photos-01.png 0 0
+S2_PHOTOS 2 photos-02.png 0 0
+S2_PHOTOS 3 photos-03.png 0 0
+palette S2_TORNADO_PILOT pilot-01.png
+S2_TORNADO_PILOT 1 pilot-01.png 48 8
+S2_TORNADO_PILOT 2 pilot-02.png 48 8
+S2_TORNADO_PILOT 3 pilot-03.png 48 8
+S2_TORNADO_PILOT 4 pilot-04.png 48 8
+S2_TORNADO_PILOT 16 pilot-10.png 48 8
+palette S3K_NORMAL_POSE s3k-03.png
+S3K_NORMAL_POSE 3 s3k-03.png 20 24
+S3K_NORMAL_POSE 4 s3k-04.png 48 48
+palette S3K_POWERED_POSE s3k-03.png
+S3K_POWERED_POSE 3 s3k-03.png 20 24
+S3K_POWERED_POSE 4 s3k-04.png 48 48
+palette S3K_TORNADO_PILOT pilot-10.png
+S3K_TORNADO_PILOT 12 pilot-10.png 12 8
