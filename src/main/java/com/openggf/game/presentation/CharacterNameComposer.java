@@ -46,6 +46,55 @@ public final class CharacterNameComposer {
         }
         return new Composition(result, Set.copyOf(nativeUsed), Set.copyOf(supplementaryUsed), Set.copyOf(missing));
     }
+    /** Fit a packed native word by removing only empty glyph-edge columns when needed.
+     * Ink, shadows, vertical alignment and native glyph precedence are unchanged.
+     * If padding cannot provide enough room, return the oversized composition so
+     * the surface owner can reject it rather than silently truncate letters.
+     */
+    public static Composition composeToWidth(String name, Map<Character, Image> nativeFont,
+            Map<Character, Image> supplements, int maxWidth) {
+        if (maxWidth < 1) throw new IllegalArgumentException("Positive name cell width required");
+        var normal = compose(name, nativeFont, supplements, 0);
+        if (!normal.complete() || normal.image().width() <= maxWidth) return normal;
+        int remove = normal.image().width() - maxWidth;
+        var letters = new ArrayList<Image>();
+        for (char letter : name.toUpperCase(Locale.ROOT).toCharArray()) {
+            Image glyph = nativeFont.getOrDefault(letter, supplements.get(letter));
+            byte[] source = glyph.pixels();
+            int left = 0, right = glyph.width();
+            while (remove > 0 && right - left > 1 && emptyColumn(glyph, source, left)) {
+                left++;
+                remove--;
+            }
+            while (remove > 0 && right - left > 1 && emptyColumn(glyph, source, right - 1)) {
+                right--;
+                remove--;
+            }
+            byte[] pixels = new byte[(right - left) * glyph.height()];
+            for (int y = 0; y < glyph.height(); y++)
+                System.arraycopy(source, y * glyph.width() + left, pixels, y * (right - left), right - left);
+            letters.add(new Image(right - left, glyph.height(), pixels));
+        }
+        int width = letters.stream().mapToInt(Image::width).sum();
+        int height = normal.image().height();
+        byte[] pixels = new byte[width * height];
+        int x = 0;
+        for (Image glyph : letters) {
+            byte[] source = glyph.pixels();
+            for (int y = 0; y < glyph.height(); y++)
+                System.arraycopy(source, y * glyph.width(), pixels, y * width + x, glyph.width());
+            x += glyph.width();
+        }
+        return new Composition(new Image(width, height, pixels), normal.nativeGlyphs(),
+                normal.supplementaryGlyphs(), normal.missingGlyphs());
+    }
+
+    private static boolean emptyColumn(Image glyph, byte[] pixels, int x) {
+        for (int y = 0; y < glyph.height(); y++)
+            if (pixels[y * glyph.width() + x] != 0) return false;
+        return true;
+    }
+
     /** Rasterize a column-major native sprite, including non-tile-aligned glyph crops. */
     public static Image extract(Pattern[] patterns, int firstTile, int columns, int rows,
             int x, int y, int width, int height) {

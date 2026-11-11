@@ -1562,7 +1562,21 @@ class TestMicaCharacterIntegration {
             var solar = definition.superFormSupplier().load(talonCode).games().get(base.getGameId());
             assertEquals(Set.of(SuperFormProfile.Tier.SUPER), solar.keySet());
             assertEquals(PhysicsProfile.SONIC_3K_SUPER_TAILS, solar.get(SuperFormProfile.Tier.SUPER).physics());
-            assertEquals(game.equals("s3k") ? "TALO" : "TALON", definition.presentationSupplier().load(talonCode, base.getGameId()).hudName());
+            assertEquals("TALON", definition.presentationSupplier().load(talonCode, base.getGameId()).hudName());
+            if (game.equals("s3k")) {
+                var font = com.openggf.game.sonic3k.Sonic3kCharacterFont.hud(GameServices.rom().getRom());
+                var normal = com.openggf.game.presentation.CharacterNameComposer.compose("TALON", font, Map.of(), 0);
+                var fitted = com.openggf.game.presentation.CharacterNameComposer.composeToWidth("TALON", font, Map.of(), 32);
+                assertEquals(35, normal.image().width());
+                assertEquals(32, fitted.image().width());
+                for (int colour = 1; colour < 16; colour++) {
+                    int before = 0, after = 0;
+                    for (byte pixel : normal.image().pixels()) if (pixel == colour) before++;
+                    for (byte pixel : fitted.image().pixels()) if (pixel == colour) after++;
+                    assertEquals(before, after, "Preserve every native ink/shadow pixel");
+                }
+            }
+
             talon.setCentreY((short) 120);
             talon.setAir(true); talon.setJumping(true); talon.setRolling(true); talon.setRollingJump(true);
             var movement = new com.openggf.sprites.managers.PlayableSpriteMovement(talon);

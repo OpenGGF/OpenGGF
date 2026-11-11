@@ -190,3 +190,10 @@ The S2 final front-view Tornado has its own pilot surface: TALON for MICA and
 MICA for solo TALON. Authored binary masks remove the stock cockpit pilot while
 the plane, its livery, wings and struts stay ROM-backed. Ending surfaces use
 independent pattern residency so queued cockpit pixels survive later rider draws.
+
+TALON uses his full five-letter name on S1/S2/S3K lives displays. S3K packs
+its native glyphs into 32 pixels by removing only empty edge columns when the
+ordinary word is too wide. No glyph ink, shadow, portrait pixels or palettes
+change; MICA's name and the S1/S2 words keep their original composition. The
+S2 special-stage HUD also retains full TALON. No new art is generated or stored. All three hosts preserve the native lower
+counter row, including ×; S3K now replaces only the upper name tiles.

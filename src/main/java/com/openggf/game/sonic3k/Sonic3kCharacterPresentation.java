@@ -28,18 +28,21 @@ public final class Sonic3kCharacterPresentation {
         var art = presentation.art().get(Host.S3K);
         String name = presentation.hudName() != null ? presentation.hudName() : presentation.displayName();
         Image composed = name == null ? null : compose(rom, presentation, name, Style.HUD);
-        if (composed != null && (composed.width() > 32 || composed.height() > 16))
-            throw new IllegalArgumentException("S3K HUD name exceeds the 32 by 16 pixel cell; supply a short HUD name");
+        if (composed != null && (composed.width() > 32 || composed.height() > 8))
+            throw new IllegalArgumentException("S3K HUD name exceeds the 32 by 8 pixel name row; supply a name with less ink");
         if (composed == null && (art == null || art.hudLifeIcon() == null)) return nativeTiles;
         Pattern[] result = nativeTiles.clone();
         if (art != null && art.hudLifeIcon() != null)
             System.arraycopy(CharacterNameComposer.tiles(art.hudLifeIcon()), 0, result, 0, 4);
         if (composed != null) {
-            byte[] cell = new byte[32 * 16];
+            // The column-major 4x2 bank packs the name above the native cross/counter.
+            // Replace only upper tiles (4/6/8/10); lower tiles (5/7/9/11) stay ROM-owned.
+            byte[] cell = new byte[32 * 8];
             byte[] pixels = composed.pixels();
             for (int y = 0; y < composed.height(); y++)
                 System.arraycopy(pixels, y * composed.width(), cell, y * 32, composed.width());
-            System.arraycopy(CharacterNameComposer.tiles(new Image(32, 16, cell)), 0, result, 4, 8);
+            Pattern[] nameTiles = CharacterNameComposer.tiles(new Image(32, 8, cell));
+            for (int column = 0; column < 4; column++) result[4 + column * 2] = nameTiles[column];
         }
         return result;
     }
@@ -96,8 +99,10 @@ public final class Sonic3kCharacterPresentation {
             Sonic3kCharacterFont.title(rom).forEach(letters::putIfAbsent);
             font = letters;
         }
-        var composition = CharacterNameComposer.compose(name, font,
-                presentation.supplementaryGlyphs().getOrDefault(new Font(Host.S3K, style), Map.of()), 0);
+        var supplements = presentation.supplementaryGlyphs().getOrDefault(new Font(Host.S3K, style), Map.of());
+        var composition = style == Style.HUD
+                ? CharacterNameComposer.composeToWidth(name, font, supplements, 32)
+                : CharacterNameComposer.compose(name, font, supplements, 0);
         if (!composition.complete()) throw new IllegalArgumentException("Missing S3K " + style + " glyphs: " + composition.missingGlyphs());
         return composition.image();
     }

@@ -37,6 +37,23 @@ class TestCharacterNameComposer {
         assertEquals(Set.of('M','C','A'), incomplete.missingGlyphs());
         assertNull(incomplete.image());
     }
+    @Test void boundedWordsRemoveOnlyPaddingAndKeepNativePrecedence() {
+        var nativeGlyph = new Image(4, 2, new byte[]{0, 1, 2, 0, 0, 3, 4, 0});
+        var supplement = new Image(2, 2, new byte[]{5, 6, 7, 8});
+        var font = Map.of('A', nativeGlyph);
+        var normal = CharacterNameComposer.compose("AB", font, Map.of('A', supplement, 'B', supplement), 0);
+        assertArrayEquals(normal.image().pixels(), CharacterNameComposer.composeToWidth(
+                "AB", font, Map.of('A', supplement, 'B', supplement), 6).image().pixels());
+        var fitted = CharacterNameComposer.composeToWidth("AB", font, Map.of('A', supplement, 'B', supplement), 4);
+        assertEquals(4, fitted.image().width());
+        assertArrayEquals(new byte[]{1, 2, 5, 6, 3, 4, 7, 8}, fitted.image().pixels());
+        assertEquals(Set.of('A'), fitted.nativeGlyphs());
+        assertEquals(Set.of('B'), fitted.supplementaryGlyphs());
+        assertEquals(4, CharacterNameComposer.composeToWidth("AB", font,
+                Map.of('B', supplement), 3).image().width(), "Never discard ink to fit");
+        assertFalse(CharacterNameComposer.composeToWidth("AC", font, Map.of(), 4).complete());
+    }
+
     @Test void presentationCannotRetainMutableCreatorArraysOrMaps() {
         byte[] pixels = {1};
         Image image = new Image(1,1,pixels);
