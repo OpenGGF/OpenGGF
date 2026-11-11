@@ -11,14 +11,19 @@
       36
     ],
     [
-      255,
-      255,
+      182,
+      73,
       0
     ],
     [
       255,
+      146,
+      0
+    ],
+    [
       255,
-      36
+      219,
+      0
     ],
     [
       255,
@@ -28,22 +33,17 @@
     [
       255,
       255,
-      146
-    ],
-    [
-      255,
-      255,
       219
     ],
     [
       255,
-      255,
-      182
+      219,
+      146
     ],
     [
       219,
-      219,
-      146
+      182,
+      109
     ],
     [
       182,
@@ -81,5 +81,5 @@
       0
     ]
   ],
-  "notes": "Semantic Gilded palette for installed powered poses; Form cycles own gold scale and pale-gold face/belly slots. Normal MICA cream remains unchanged."
+  "notes": "Open Cone Gilded palette for installed powered poses: slots 2-6 plates (deep amber underside to pale gold), cycled by the Form; face, belly, gloves and coral boots keep MICA's sheet colours."
 }

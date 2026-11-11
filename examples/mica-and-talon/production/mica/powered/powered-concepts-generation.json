@@ -1,0 +1,5525 @@
+{
+  "method": "Fresh built-in GPT Image attempts (lead-run Sol lane) from real-palette native 8x pose references, the owner-approved powered concept, the model sheet and approved normal sprites; fixed anatomical scale per image; mode filter of a third of a native pixel, then centre (nearest) sampling at the grid phase with the most uniform samples; palette-role indexing; ink bounding plates/plumage and the outer silhouette joins contour slot 2; single-pixel material despeckle. Slopes derived with derive_slopes.derive at the replaced frames' support distance. No native pixels shipped.",
+  "selection": "MICA: wait v1, run v2 (boots), roll v1, transformation v1. TALON: wait v2, run v2 (darker chest bars), roll v2, transformation v1 (pale wrapped first beat).",
+  "plan": [
+    {
+      "id": "mica-pilot-wait",
+      "prompt": "Use case: identity-preserve. Production 1990s Sega Genesis / Mega Drive sprite art, exactly like the native sprites in image 1: hard square pixels, no anti-aliasing, no gradients, no glow, cel shading with two or three flat shade steps per material, light from the upper left, a dark one-pixel outline, at most 15 colours. Each sprite is drawn LARGE (about 8x) on a plain flat mid-grey background, one sprite per equal grid cell, no text, no labels, no numbers, no ground shadows, no rings, no effects or sparkles outside the body. She is MICA, an original jade pangolin (image 3 is her approved model sheet; image 4 is her approved in-game sprites at 8x and LOCKS her head size, torso size, eye shape and pixel style). Keep from the model sheet: soft round sand-cream face and pointed snout, large brown eyes with lashes, small pink ears, ridged cream belly, white gloves, and HER OWN CORAL-RED BOOTS with tan treaded soles and teal laces (never sneakers, never Sonic's shoes). Her armour is overlapping PANGOLIN SCALE PLATES, each broad and rounded, WIDER THAN IT IS LONG. Never quills, spikes, spines, hair or fur. No resemblance to Sonic or any Sega character. POWERED FORM 'GILDED MICA', direction OPEN CONE, exactly as in image 2 (the owner-approved concept): every scale plate on her back, head crest and tail has LIFTED on its hinge like a pine cone opening, so her outline is a bold stepped sawtooth of five or six large rounded plate tips pointing up and back, the tail fans into a wide serrated leaf, and the head-crest plates rise into a tiered swept-back cowl. IMPORTANT CHANGE FROM IMAGE 2: the topmost crown plate has NO curly flick and NO curled hook at its tip; every crown plate rises as a STRAIGHT, broad, POINTED plate. Plates are polished GOLD: pale-gold upper edge, gold and yellow faces, deep amber underside showing in the gap under each lifted plate. Face, belly, gloves and boots keep their model-sheet colours. Set, confident brow. Image 1 is the native standing/breathing poses in their real game palette at 8x: top row S2 frames $72,$73,$74, bottom row S3K frames $BA,$BB. Draw FIVE sprites in a 3-column, 2-row grid in the same cells (bottom-right cell empty), each copying the matching native pose's stance, facing, head tilt, arm and foot placement and size: feet planted, fists closed, chin down. The plates BREATHE: in each row the frames alternate between plates at full lift and plates settled about one pixel lower, so the sawtooth outline visibly rises and settles.",
+      "reference_images": [
+        "$LANE_SCRATCH/powered/refs/native-mica-wait.png",
+        "$LANE_SCRATCH/powered/refs/mica-open-cone-concept.png",
+        "examples/mica-and-talon/concept/mica.png",
+        "$LANE_SCRATCH/powered/refs/mica-approved-8x.png"
+      ],
+      "variants": 2,
+      "size": "1536x1024",
+      "cells": [
+        "s2-wait-0",
+        "s2-wait-1",
+        "s2-wait-2",
+        "s3k-wait-0",
+        "s3k-wait-1",
+        null
+      ]
+    },
+    {
+      "id": "mica-pilot-run",
+      "prompt": "Use case: identity-preserve. Production 1990s Sega Genesis / Mega Drive sprite art, exactly like the native sprites in image 1: hard square pixels, no anti-aliasing, no gradients, no glow, cel shading with two or three flat shade steps per material, light from the upper left, a dark one-pixel outline, at most 15 colours. Each sprite is drawn LARGE (about 8x) on a plain flat mid-grey background, one sprite per equal grid cell, no text, no labels, no numbers, no ground shadows, no rings, no effects or sparkles outside the body. She is MICA, an original jade pangolin (image 3 is her approved model sheet; image 4 is her approved in-game sprites at 8x and LOCKS her head size, torso size, eye shape and pixel style). Keep from the model sheet: soft round sand-cream face and pointed snout, large brown eyes with lashes, small pink ears, ridged cream belly, white gloves, and HER OWN CORAL-RED BOOTS with tan treaded soles and teal laces (never sneakers, never Sonic's shoes). Her armour is overlapping PANGOLIN SCALE PLATES, each broad and rounded, WIDER THAN IT IS LONG. Never quills, spikes, spines, hair or fur. No resemblance to Sonic or any Sega character. POWERED FORM 'GILDED MICA', direction OPEN CONE, exactly as in image 2 (the owner-approved concept): every scale plate on her back, head crest and tail has LIFTED on its hinge like a pine cone opening, so her outline is a bold stepped sawtooth of five or six large rounded plate tips pointing up and back, the tail fans into a wide serrated leaf, and the head-crest plates rise into a tiered swept-back cowl. IMPORTANT CHANGE FROM IMAGE 2: the topmost crown plate has NO curly flick and NO curled hook at its tip; every crown plate rises as a STRAIGHT, broad, POINTED plate. Plates are polished GOLD: pale-gold upper edge, gold and yellow faces, deep amber underside showing in the gap under each lifted plate. Face, belly, gloves and boots keep their model-sheet colours. Set, confident brow. Image 1 is the native full-speed run in its real game palette at 8x: top row S2 frames $B5,$B9, bottom row S3K frames $21,$22. Draw FOUR sprites in the same 2x2 grid, each copying the matching native frame's forward hovering sprint posture, lean and leg phase: head to the right, body leaning forward, legs in the two alternating contact phases. Plates are raked back with their tips trailing; the fanned tail is held flat behind as a rudder.",
+      "reference_images": [
+        "$LANE_SCRATCH/powered/refs/native-mica-run.png",
+        "$LANE_SCRATCH/powered/refs/mica-open-cone-concept.png",
+        "examples/mica-and-talon/concept/mica.png",
+        "$LANE_SCRATCH/powered/refs/mica-approved-8x.png"
+      ],
+      "variants": 2,
+      "size": "1536x1024",
+      "cells": [
+        "s2-run-0",
+        "s2-run-1",
+        "s3k-run-0",
+        "s3k-run-1"
+      ]
+    },
+    {
+      "id": "mica-pilot-roll",
+      "prompt": "Use case: identity-preserve. Production 1990s Sega Genesis / Mega Drive sprite art, exactly like the native sprites in image 1: hard square pixels, no anti-aliasing, no gradients, no glow, cel shading with two or three flat shade steps per material, light from the upper left, a dark one-pixel outline, at most 15 colours. Each sprite is drawn LARGE (about 8x) on a plain flat mid-grey background, one sprite per equal grid cell, no text, no labels, no numbers, no ground shadows, no rings, no effects or sparkles outside the body. She is MICA, an original jade pangolin (image 3 is her approved model sheet; image 4 is her approved in-game sprites at 8x and LOCKS her head size, torso size, eye shape and pixel style). Keep from the model sheet: soft round sand-cream face and pointed snout, large brown eyes with lashes, small pink ears, ridged cream belly, white gloves, and HER OWN CORAL-RED BOOTS with tan treaded soles and teal laces (never sneakers, never Sonic's shoes). Her armour is overlapping PANGOLIN SCALE PLATES, each broad and rounded, WIDER THAN IT IS LONG. Never quills, spikes, spines, hair or fur. No resemblance to Sonic or any Sega character. POWERED FORM 'GILDED MICA', direction OPEN CONE, exactly as in image 2 (the owner-approved concept): every scale plate on her back, head crest and tail has LIFTED on its hinge like a pine cone opening, so her outline is a bold stepped sawtooth of five or six large rounded plate tips pointing up and back, the tail fans into a wide serrated leaf, and the head-crest plates rise into a tiered swept-back cowl. IMPORTANT CHANGE FROM IMAGE 2: the topmost crown plate has NO curly flick and NO curled hook at its tip; every crown plate rises as a STRAIGHT, broad, POINTED plate. Plates are polished GOLD: pale-gold upper edge, gold and yellow faces, deep amber underside showing in the gap under each lifted plate. Face, belly, gloves and boots keep their model-sheet colours. Set, confident brow. Image 1 is the native spin-ball rotation in its real game palette at 8x: four rotation frames then one blur frame. Draw FIVE sprites in one row, same size as the native balls: a closed gold ball of armour with EIGHT broad rounded plate teeth round its rim like a circular saw blade, as image 2's roll. Frames 1 to 4 rotate the teeth clockwise by a quarter of the gap between two teeth each frame, so frame 4 leads smoothly back into frame 1. Keep the small glimpse of her face, snout and coral boot that her approved roll (last sprite of image 4) and the native balls show, turning with the ball. Frame 5 is the motion-blur frame: the same ball with the teeth smeared into a ring.",
+      "reference_images": [
+        "$LANE_SCRATCH/powered/refs/native-mica-roll.png",
+        "$LANE_SCRATCH/powered/refs/mica-open-cone-concept.png",
+        "examples/mica-and-talon/concept/mica.png",
+        "$LANE_SCRATCH/powered/refs/mica-approved-8x.png"
+      ],
+      "variants": 2,
+      "size": "1536x1024",
+      "cells": [
+        "roll-00",
+        "roll-01",
+        "roll-02",
+        "roll-03",
+        "roll-blur"
+      ]
+    },
+    {
+      "id": "mica-pilot-transform",
+      "prompt": "Use case: identity-preserve. Production 1990s Sega Genesis / Mega Drive sprite art, exactly like the native sprites in image 1: hard square pixels, no anti-aliasing, no gradients, no glow, cel shading with two or three flat shade steps per material, light from the upper left, a dark one-pixel outline, at most 15 colours. Each sprite is drawn LARGE (about 8x) on a plain flat mid-grey background, one sprite per equal grid cell, no text, no labels, no numbers, no ground shadows, no rings, no effects or sparkles outside the body. She is MICA, an original jade pangolin (image 3 is her approved model sheet; image 4 is her approved in-game sprites at 8x and LOCKS her head size, torso size, eye shape and pixel style). Keep from the model sheet: soft round sand-cream face and pointed snout, large brown eyes with lashes, small pink ears, ridged cream belly, white gloves, and HER OWN CORAL-RED BOOTS with tan treaded soles and teal laces (never sneakers, never Sonic's shoes). Her armour is overlapping PANGOLIN SCALE PLATES, each broad and rounded, WIDER THAN IT IS LONG. Never quills, spikes, spines, hair or fur. No resemblance to Sonic or any Sega character. POWERED FORM 'GILDED MICA', direction OPEN CONE, exactly as in image 2 (the owner-approved concept): every scale plate on her back, head crest and tail has LIFTED on its hinge like a pine cone opening, so her outline is a bold stepped sawtooth of five or six large rounded plate tips pointing up and back, the tail fans into a wide serrated leaf, and the head-crest plates rise into a tiered swept-back cowl. IMPORTANT CHANGE FROM IMAGE 2: the topmost crown plate has NO curly flick and NO curled hook at its tip; every crown plate rises as a STRAIGHT, broad, POINTED plate. Plates are polished GOLD: pale-gold upper edge, gold and yellow faces, deep amber underside showing in the gap under each lifted plate. Face, belly, gloves and boots keep their model-sheet colours. Set, confident brow. Image 1 is the native five-pose transformation in its real game palette at 8x: top row S2 $6D-$71, bottom row S3K $D2-$D6, the same five beats. Draw FIVE sprites in one row following those five beats and sizes: (1) she curls tight, knees up and head tucked, every plate CLOSED flat and smooth like her normal jade armour but already gold; (2) still curled, thin bright pale-gold light showing in the seams between the closed plates; (3) she SNAPS OPEN, arms and legs flung out, every plate at FULL LIFT, the sawtooth outline at its largest, drawn as an almost-white pale-gold flash silhouette with only a light outline, as the native third beat is; (4) upright, fists clenched, plates at full lift; (5) the same pose with the plates settled one pixel lower. Frames 4 and 5 alternate in game, so keep their bodies identical apart from the plates.",
+      "reference_images": [
+        "$LANE_SCRATCH/powered/refs/native-transform.png",
+        "$LANE_SCRATCH/powered/refs/mica-open-cone-concept.png",
+        "examples/mica-and-talon/concept/mica.png",
+        "$LANE_SCRATCH/powered/refs/mica-approved-8x.png"
+      ],
+      "variants": 2,
+      "size": "1536x1024",
+      "cells": [
+        "transform-0",
+        "transform-1",
+        "transform-2",
+        "transform-3",
+        "transform-4"
+      ]
+    }
+  ],
+  "frames": [
+    {
+      "group": "mica-pilot-wait",
+      "id": "s2-wait-0",
+      "host": "s2",
+      "variant": "v1",
+      "cell": 0,
+      "raw_sha256": "0dfa5b71c214f34f795ce0a0f1bca1abeaad95c59e47df58cb89c57524f4dfa6",
+      "source_box": [
+        76,
+        20,
+        388,
+        504
+      ],
+      "grid_offset": [
+        8,
+        0
+      ],
+      "source_pixels_per_native_pixel": 11.3,
+      "landmark": "eye top to sole 350px = approved wait-00 31px",
+      "registration": "ground",
+      "file": "mica/powered/frames/s2-wait-0.png",
+      "hotspot": [
+        17,
+        23
+      ],
+      "size": [
+        28,
+        43
+      ],
+      "authored_area": 713,
+      "selected_pixels": {
+        "rows": [
+          "0000000022000000000000000000",
+          "0000000002772200000000000000",
+          "0000000000247722000000000000",
+          "0000000000044477720000000000",
+          "0000000000024444772200000000",
+          "0000007722222444444420000000",
+          "0000002477772344444442000000",
+          "00000002444422f1344444000000",
+          "000000004444427771f444200000",
+          "0000000024444f7eb73444422000",
+          "0000000021f4417ef34f14442000",
+          "00000222222f1271447779442200",
+          "0000027732222224437117244200",
+          "00000024443222f4441dd1734200",
+          "0000000244444434421ccd17f200",
+          "0000000024444244441cccff2000",
+          "0000000002222222277cccf72000",
+          "0000222272222242277777777720",
+          "0000277774222f44417777777200",
+          "000002444444f444321177722000",
+          "000000344444f11f34299f200000",
+          "0000002224444f1344f72f700000",
+          "00222272222212444f1777700000",
+          "0002444422222144123992220000",
+          "0000444444441cc1f43777720000",
+          "0000244444441ccc143777700000",
+          "0000222222211991127777200000",
+          "027772222221ccccc127771d2000",
+          "004444222221ccccc172211d2000",
+          "002444444221dcccc17771dd2000",
+          "00022444222216dc141121200000",
+          "2277222222222ff1482242000000",
+          "2774422144322f44422242000000",
+          "024343f44442021f1111ba000000",
+          "0000024322000aaaaabbaa000000",
+          "0000000000000aa111111b200000",
+          "0000000000002ab1b1bbb1120000",
+          "0000000000002ab1b11b1bbaa200",
+          "0000000000002aab111baaaaaaa0",
+          "000000000002ba11aaaabbaaaaa0",
+          "0000000000029aaaafff27878772",
+          "0000000000029778877822222222",
+          "0000000000000222222200000000"
+        ],
+        "anchor": [
+          17,
+          23
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-wait",
+      "id": "s2-wait-1",
+      "host": "s2",
+      "variant": "v1",
+      "cell": 1,
+      "raw_sha256": "0dfa5b71c214f34f795ce0a0f1bca1abeaad95c59e47df58cb89c57524f4dfa6",
+      "source_box": [
+        588,
+        40,
+        900,
+        504
+      ],
+      "grid_offset": [
+        4,
+        4
+      ],
+      "source_pixels_per_native_pixel": 11.3,
+      "landmark": "eye top to sole 350px = approved wait-00 31px",
+      "registration": "ground",
+      "file": "mica/powered/frames/s2-wait-1.png",
+      "hotspot": [
+        16,
+        21
+      ],
+      "size": [
+        27,
+        41
+      ],
+      "authored_area": 681,
+      "selected_pixels": {
+        "rows": [
+          "000000002220000000000000000",
+          "000000000247720000000000000",
+          "000000000027772200000000000",
+          "000000000004447772200000000",
+          "00000222000f444447720000000",
+          "0000002777772f1244444200000",
+          "0000002444442177344ff200000",
+          "000000044444f7ea7f444440000",
+          "00000002444417ee7ff44442000",
+          "00000000214447e14777f442000",
+          "000000021f131f1427117f44200",
+          "000027773222224444dc1174200",
+          "000002444422224421cccf71200",
+          "000000234444344447cccf61200",
+          "000000022444431f777cc2cf200",
+          "000000002222222277777777720",
+          "0000222272222444f7777777200",
+          "0000244444227441f2111200000",
+          "000002444444322444199200000",
+          "00000024444442444f777720000",
+          "0000022222222244ff777720000",
+          "0077773222222444f4772272000",
+          "002444442221cc1134277772000",
+          "000244444441ccc134f77720000",
+          "2221224444f209112f777720000",
+          "27772222212ccccc127771d2000",
+          "03444222222cccc1177711d2000",
+          "024444222221c1c1177119d2000",
+          "002344441f2111d142222220000",
+          "227321112222f13442242000000",
+          "274422f24432114420242000000",
+          "00222144422021111211a200000",
+          "0000274220002aaaa1baa200000",
+          "0000000000002a111111bb00000",
+          "000000000002b1b11111b122000",
+          "000000000002aab1bbbaf1aa200",
+          "000000000002aabaaa1baaaaaa2",
+          "00000000000baaaaaaa1baaaaf2",
+          "0000000000081aaafff17777882",
+          "000000000008171818712222222",
+          "000000000000222222220000000"
+        ],
+        "anchor": [
+          16,
+          21
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-wait",
+      "id": "s2-wait-2",
+      "host": "s2",
+      "variant": "v1",
+      "cell": 2,
+      "raw_sha256": "0dfa5b71c214f34f795ce0a0f1bca1abeaad95c59e47df58cb89c57524f4dfa6",
+      "source_box": [
+        1100,
+        20,
+        1412,
+        504
+      ],
+      "grid_offset": [
+        7,
+        0
+      ],
+      "source_pixels_per_native_pixel": 11.3,
+      "landmark": "eye top to sole 350px = approved wait-00 31px",
+      "registration": "ground",
+      "file": "mica/powered/frames/s2-wait-2.png",
+      "hotspot": [
+        16,
+        23
+      ],
+      "size": [
+        27,
+        43
+      ],
+      "authored_area": 708,
+      "selected_pixels": {
+        "rows": [
+          "000000002000000000000000000",
+          "000000002772200000000000000",
+          "000000000247722000000000000",
+          "000000000044477720000000000",
+          "0000000000f4444772200000000",
+          "00000777221f444444420000000",
+          "000002477772f44444442000000",
+          "0000002444422f1444443000000",
+          "00000004444427771f444200000",
+          "00000002444417ea72444422000",
+          "00000002f144f7ef34ff4442000",
+          "00002221222f171447777442200",
+          "000027772222224437117f44200",
+          "0000024442222f4441dc1724200",
+          "000000244444434421ccd17f200",
+          "000000024444244441ccc172000",
+          "000000002222111277cccf7f000",
+          "0002222722222f2277777777720",
+          "000077774222f44417777777200",
+          "00002444444f744421177722000",
+          "00000244444f12244499f200000",
+          "00000222444441444f722700000",
+          "022227222221f344ff777700000",
+          "002344422222144124922220000",
+          "000444444441cc1f43777770000",
+          "000244444441ccc133777700000",
+          "00022222221199112f777120000",
+          "27772222221ccccc127771d2000",
+          "04444222221ccccc172211d2000",
+          "02444444221dcccd17771dd2000",
+          "002244442221c16172121200000",
+          "227222222222f12450f42000000",
+          "774422f44322f14420242000000",
+          "24343f4444202111121aa000000",
+          "0000243220002aaaa1baa000000",
+          "0000000000002a111111b200000",
+          "000000000002b11b1bbb1120000",
+          "000000000002a11b11b1bbaa200",
+          "000000000002aab1111aaaaaaa0",
+          "00000000002baa1aaaabbaaaaa0",
+          "000000000029faaafff27778872",
+          "000000000028771817822222222",
+          "000000000000222222200000000"
+        ],
+        "anchor": [
+          16,
+          23
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-wait",
+      "id": "s3k-wait-0",
+      "host": "s3k",
+      "variant": "v1",
+      "cell": 3,
+      "raw_sha256": "0dfa5b71c214f34f795ce0a0f1bca1abeaad95c59e47df58cb89c57524f4dfa6",
+      "source_box": [
+        48,
+        532,
+        400,
+        1000
+      ],
+      "grid_offset": [
+        0,
+        8
+      ],
+      "source_pixels_per_native_pixel": 11.3,
+      "landmark": "eye top to sole 350px = approved wait-00 31px",
+      "registration": "ground",
+      "file": "mica/powered/frames/s3k-wait-0.png",
+      "hotspot": [
+        18,
+        22
+      ],
+      "size": [
+        31,
+        42
+      ],
+      "authored_area": 821,
+      "selected_pixels": {
+        "rows": [
+          "0000000000022000000000000000000",
+          "0000000000067220000000000000000",
+          "0000000000002477220000000000000",
+          "0000000000002444772000000000000",
+          "0000000000000244444772000000000",
+          "00000002222221f4444444200000000",
+          "000000002777772f444444420000000",
+          "00000000244444422ff444442000000",
+          "0000000002444444f771ff442200000",
+          "00000000002444447ea7f4444420000",
+          "00000000002214447ee714444442000",
+          "0000002227722f127ef4777f4442000",
+          "0000000444422222214271177444200",
+          "0000000244444222244411d17244200",
+          "000000002444444434421cc91781200",
+          "0000000002221f1114444cccf972000",
+          "000022222722222f2f17716cfc7f000",
+          "00002777744222144447777c8771220",
+          "0000024444422144442f77777777720",
+          "000000244444f121f11117771772000",
+          "000000022444421214442f111120000",
+          "002222722211134ff41127771112220",
+          "00277744222f643116cc177771cc6d2",
+          "000244444227441d2cccc12271cdcc2",
+          "000024444432221c0cccc17771dccc2",
+          "222272244442221ccccc077212c1d20",
+          "07774222211234311c1127772022200",
+          "0444442222f4444f211779912000000",
+          "00244442214444f444f2771f4200000",
+          "00224444f1221f44441221244200000",
+          "022222222222114441f002341200000",
+          "067432222221a111f2000baaaa20000",
+          "00244442222aaaaaa2000aaaaa20000",
+          "00000222000aa11aa20002ffbbb2000",
+          "00000000002bb11b20002aa11b12000",
+          "00000000021b111b2002baa1abb1220",
+          "0000000002a111112002baaaa1aaaa2",
+          "000000000aaaaaaaa002ffaaaaaaaaa",
+          "000000002aaaaaaaa2028878f111fff",
+          "0000000027fffffff20227287877887",
+          "0000000021778878120000022222222",
+          "0000000002222222220000000000000"
+        ],
+        "anchor": [
+          18,
+          22
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-wait",
+      "id": "s3k-wait-1",
+      "host": "s3k",
+      "variant": "v1",
+      "cell": 4,
+      "raw_sha256": "0dfa5b71c214f34f795ce0a0f1bca1abeaad95c59e47df58cb89c57524f4dfa6",
+      "source_box": [
+        560,
+        552,
+        912,
+        1000
+      ],
+      "grid_offset": [
+        0,
+        6
+      ],
+      "source_pixels_per_native_pixel": 11.3,
+      "landmark": "eye top to sole 350px = approved wait-00 31px",
+      "registration": "ground",
+      "file": "mica/powered/frames/s3k-wait-1.png",
+      "hotspot": [
+        19,
+        19
+      ],
+      "size": [
+        31,
+        39
+      ],
+      "authored_area": 783,
+      "selected_pixels": {
+        "rows": [
+          "0000000000027220000000000000000",
+          "0000000000002772200000000000000",
+          "0000000000002444777220000000000",
+          "0000000000000234477772000000000",
+          "0000000222000024444447720000000",
+          "0000000023777722fff444442000000",
+          "0000000004444442f771f1f12200000",
+          "00000000023444437e9714444420000",
+          "00000000002444447ee7ff444442000",
+          "00000000027224437ef4777f4442000",
+          "0000002777422222244121177f44200",
+          "0000000244442222244441c17744220",
+          "0000000024444422444421ccf173200",
+          "000000002f344444224481ccfd12000",
+          "00000000222221f1442777cc2c72000",
+          "0000277777222214444777777777720",
+          "0000024444422f44442277777777200",
+          "000000244444f112274421777729000",
+          "0000000224444222141127f11202200",
+          "0022227222221f3f31cc1777712cc22",
+          "0027777222227441dcc0c17721c19d2",
+          "000244444227441c1cccc17771dccc2",
+          "000044444421111c9cc691772211d12",
+          "2202f1244442f221c1cc1777202cc20",
+          "277772222222444f11d127772020000",
+          "0444442222744414444777124200000",
+          "0244444226444284441792244200000",
+          "00024444f121214441f200444200000",
+          "022422212221a111f1200b11aa20000",
+          "027444222221aaaaa2000aaaaa20000",
+          "00022443222aaaaaa2000aaa11b2000",
+          "000002220002b111a2002bbbbb12000",
+          "00000000002b11b120002aa1bb1b000",
+          "0000000002aabbbb2002baaaabaaaa2",
+          "000000000aa1aaaa2002baaaaaaaaaa",
+          "000000000aaaaaaaa20287ffaaaaaf2",
+          "000000002faaaaaaf20217887777777",
+          "0000000028887778720222227272772",
+          "0000000022222822220000000000000"
+        ],
+        "anchor": [
+          19,
+          19
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-run",
+      "id": "run-0",
+      "host": "s2",
+      "variant": "v2",
+      "cell": 0,
+      "raw_sha256": "3166a1e20c31fdd96b7f4d539469168fd9acc438ffe38fe9bde65366abe21b21",
+      "source_box": [
+        60,
+        132,
+        576,
+        568
+      ],
+      "grid_offset": [
+        0,
+        0
+      ],
+      "source_pixels_per_native_pixel": 14.0,
+      "landmark": "skull/eye: ~200px head = approved run-00 14px hood",
+      "registration": "centre",
+      "file": "mica/powered/frames/s2-run-0.png",
+      "hotspot": [
+        26,
+        17
+      ],
+      "size": [
+        37,
+        31
+      ],
+      "authored_area": 657,
+      "selected_pixels": {
+        "rows": [
+          "0000000000000002222222000000000000000",
+          "0000000000000000224477772200000000000",
+          "0000000000000000004444777722000000000",
+          "0000000000002222002444444777220000000",
+          "00000000000004477771f4444444777200000",
+          "000000000000024477772f444444447720000",
+          "0000000000000024444422f177f4444440000",
+          "000000000000000244444227a77141ff42000",
+          "0000000000077721f4444447ee1f1444f2000",
+          "00000000000247772f44444f724411444f000",
+          "000000000000244442ffffff4447777344200",
+          "00000000000004444422222f44411177f4400",
+          "00000000222221f4444222244421cc1774402",
+          "000000000244442ff4444f444421cccf11420",
+          "00000222224444422ffff2f44441cccf17f02",
+          "0000004447744444222f222f44771ccf17120",
+          "0022222444421f4444f4444227777ccff7200",
+          "0027777244422221f1f1144f487777ccf7722",
+          "00214442144444f4421cc1f44f17777777720",
+          "222714442f1f144441cc1c111771877fe2200",
+          "22444f14422444441ccccc197712022200000",
+          "00222222111ff1221cc0c9777fcc200000000",
+          "002222118aaa14442202179721cc200000000",
+          "0000221faaaa4444212124420220000000000",
+          "0000028aa1a1122021bb31200000000000000",
+          "0000288aab1b200029bbbff00000000000000",
+          "000088aaab22000299b112000000000000000",
+          "00028faa12000002991b20000000000000000",
+          "00028faaa2000002bbb200000000000000000",
+          "00028faa00000002bf2000000000000000000",
+          "0000222000000002b90000000000000000000"
+        ],
+        "anchor": [
+          26,
+          17
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-run",
+      "id": "run-1",
+      "host": "s2",
+      "variant": "v2",
+      "cell": 1,
+      "raw_sha256": "3166a1e20c31fdd96b7f4d539469168fd9acc438ffe38fe9bde65366abe21b21",
+      "source_box": [
+        676,
+        132,
+        1196,
+        576
+      ],
+      "grid_offset": [
+        5,
+        0
+      ],
+      "source_pixels_per_native_pixel": 14.0,
+      "landmark": "skull/eye: ~200px head = approved run-00 14px hood",
+      "registration": "centre",
+      "file": "mica/powered/frames/s2-run-1.png",
+      "hotspot": [
+        26,
+        18
+      ],
+      "size": [
+        37,
+        32
+      ],
+      "authored_area": 651,
+      "selected_pixels": {
+        "rows": [
+          "0000000000000002222220000000000000000",
+          "0000000000000000244777722000000000000",
+          "0000000000000000024447777220000000000",
+          "000000000002222000f444447772200000000",
+          "0000000000027772221f44444777772000000",
+          "00000000000024477772f4444444477200000",
+          "000000000000024444422f421f44444420000",
+          "0000000000000024444442177714414420000",
+          "000000000022221144444227ee24f444f2000",
+          "0000000000027772f4444441e444144442000",
+          "00000000000244442fffffff444777f444000",
+          "00000000000044444222222f4441117144200",
+          "00000000222221444422222444211117f4200",
+          "00000000277772f444444ff44241ccc17f122",
+          "0000000211444422f444f2444471cccf11120",
+          "0000027772244442222f22224471cccf1c120",
+          "00000024442244442224444221771ccff7200",
+          "00277774442222241f144444f17776ccf7722",
+          "0004444f44442222222111144417777777782",
+          "222244441ff11f4441c1cc144178777f17220",
+          "27772444422f44441cccccc177111288f0000",
+          "024441ff1444f11f1ccccc17911d202200000",
+          "00222222f11111421c0c177771cc200000000",
+          "0002222218faa14441d111221cc2000000000",
+          "000000218faaa144211912002220000000000",
+          "00000028fabbaa2119b090000000000000000",
+          "00000088aa11b202fb9200000000000000000",
+          "0000028faab20002fff000000000000000000",
+          "000002faaa200002220000000000000000000",
+          "0000028822000000000000000000000000000",
+          "0000028200000000000000000000000000000",
+          "0000002000000000000000000000000000000"
+        ],
+        "anchor": [
+          26,
+          18
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-run",
+      "id": "run-0",
+      "host": "s3k",
+      "variant": "v2",
+      "cell": 2,
+      "raw_sha256": "3166a1e20c31fdd96b7f4d539469168fd9acc438ffe38fe9bde65366abe21b21",
+      "source_box": [
+        48,
+        736,
+        596,
+        1192
+      ],
+      "grid_offset": [
+        4,
+        2
+      ],
+      "source_pixels_per_native_pixel": 14.0,
+      "landmark": "skull/eye: ~200px head = approved run-00 14px hood",
+      "registration": "centre",
+      "file": "mica/powered/frames/s3k-run-0.png",
+      "hotspot": [
+        27,
+        14
+      ],
+      "size": [
+        39,
+        32
+      ],
+      "authored_area": 696,
+      "selected_pixels": {
+        "rows": [
+          "000000000000002222222000000000000000000",
+          "000000000000000244777777772200000000000",
+          "000000000000000024444447777772000000000",
+          "000000000000000000244444444777220000000",
+          "00000000000000000000f444444444772000000",
+          "000000000000777772221ff4442244444720000",
+          "00000000000024477777722ff17714444420000",
+          "00000000000002444444442227ae7144f142000",
+          "00000000000000024444444427ee1ff14442000",
+          "0000000000222221f4444444417444771444000",
+          "000000000004447722f44444ff1424117744200",
+          "0000000000024444422fffffff4442111774120",
+          "0000000222212444444222222444241cc17f120",
+          "00000002777772f444444444f444421ccf1f120",
+          "0000222114444422fffffff22444471ccf1c200",
+          "00002777724444422222f4222f1f177ccf17200",
+          "0000024444244444222f44444f22777dccf7722",
+          "0222212444422f1fffff4444444417777777772",
+          "00447774444422f44411111f444411777fa2200",
+          "0024444221fff14441ccccc1444277297770000",
+          "00224444421225441cccc112111722002200000",
+          "27772fffff4442221c0cc127977720000000000",
+          "0444442221f114442fdd1222772200000000000",
+          "0024422211aa444f2111b111220000000000000",
+          "000222218aaa14200291bbb2000000000000000",
+          "00000028faaaa2002f11b220000000000000000",
+          "00000288a1b1f000f9fbf000000000000000000",
+          "0000218aa1bb2000bbb20000000000000000000",
+          "0000288aab200000bbf00000000000000000000",
+          "000088faaa00000022000000000000000000000",
+          "000088faa200000000000000000000000000000",
+          "000028fa2000000000000000000000000000000"
+        ],
+        "anchor": [
+          27,
+          14
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-run",
+      "id": "run-1",
+      "host": "s3k",
+      "variant": "v2",
+      "cell": 3,
+      "raw_sha256": "3166a1e20c31fdd96b7f4d539469168fd9acc438ffe38fe9bde65366abe21b21",
+      "source_box": [
+        664,
+        736,
+        1212,
+        1184
+      ],
+      "grid_offset": [
+        2,
+        0
+      ],
+      "source_pixels_per_native_pixel": 14.0,
+      "landmark": "skull/eye: ~200px head = approved run-00 14px hood",
+      "registration": "centre",
+      "file": "mica/powered/frames/s3k-run-1.png",
+      "hotspot": [
+        27,
+        14
+      ],
+      "size": [
+        39,
+        32
+      ],
+      "authored_area": 696,
+      "selected_pixels": {
+        "rows": [
+          "000000000000002222222000000000000000000",
+          "000000000000002247777722272000000000000",
+          "000000000000000024444777777722000000000",
+          "0000000000000000002f4444444777220000000",
+          "00000000000022222002f444444447772200000",
+          "000000000000277772211f44444244444720000",
+          "000000000000024477777222ff7724444440000",
+          "00000000000000244444442227e77441ff40000",
+          "00000000000000024444442227ee1f144442000",
+          "0000000000277777f444444441744477f442000",
+          "000000000002447722f44444ff4444117144200",
+          "0000000000004444422fffff2f44421c1174200",
+          "0000000000002444442222222442421cc171120",
+          "000000027777724444422222f444221ccf17120",
+          "000000000447722ff4444f22f444471ccf11120",
+          "00002222224444222ffff4222ff41771cf11200",
+          "0000027774244444222f44422222777dccf7722",
+          "02222144442f2ffffff144444f44f7777777772",
+          "027777f4444222f4442f111f144411777ff7220",
+          "002444421ff1f44444ccc1cc121171227782000",
+          "2212444422f2244441ccccc1377722002220000",
+          "27772ffff744222f21c0cc17777720000000000",
+          "044442222444422444ddc112772200000000000",
+          "022444222221aaf442111b11120000000000000",
+          "000222222218aaa4202111bb200000000000000",
+          "00002222028faaa200299b12000000000000000",
+          "0000000228fab12000f9bb20000000000000000",
+          "0000000f8faa1b20002bbb00000000000000000",
+          "000000088fa1b200002bf200000000000000000",
+          "000000088aaa200000220000000000000000000",
+          "0000000f8a20000000000000000000000000000",
+          "000000022200000000000000000000000000000"
+        ],
+        "anchor": [
+          27,
+          14
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-roll",
+      "id": "gold-roll-00",
+      "host": "s2",
+      "variant": "v1",
+      "cell": 0,
+      "raw_sha256": "7bb646c5def87d44209cbbbc9f414fec8b1f47a5183a942041223465c871d38e",
+      "source_box": [
+        52,
+        164,
+        412,
+        552
+      ],
+      "grid_offset": [
+        0,
+        1
+      ],
+      "source_pixels_per_native_pixel": 12.9,
+      "landmark": "ball diameter = approved/native roll 29px",
+      "registration": "centre",
+      "file": "mica/powered/s2/frames/gold-roll-00.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "size": [
+        28,
+        30
+      ],
+      "authored_area": 607,
+      "selected_pixels": {
+        "rows": [
+          "000000000fffffff000000000000",
+          "00000000ff777777ff0000000000",
+          "0000000000f2444477ff20000000",
+          "00000ffffff22444447f7f000000",
+          "000fff7777773224444277f00000",
+          "000f2444444474f2772f447f0000",
+          "000ff2244444442fee74772f0000",
+          "000000222444444fe4444477f000",
+          "00000ff22f244442ff327244f000",
+          "000f577772ff2444221ff7727f00",
+          "02f777777772fff222f99f575f00",
+          "0f744444444442f2ff1dcdf73f00",
+          "f74444444444444222fcccf1f000",
+          "f444444444444444477dccfcf000",
+          "f2222f2222ffffff22777cf77ff0",
+          "fffff2222222222f22f8777777f0",
+          "ff00f244444442fccf22f9f7ff00",
+          "000f2744444442cc9c9288f000f0",
+          "00f444444444ffccccc177ff00ff",
+          "0ff444444ff22fdcccdf77f00fff",
+          "0f54444f22222f1ccc187f9fff2f",
+          "0f444f2f224444fdd02efff0aa2f",
+          "0f4fff2244444fd1f9eb1baaaaf0",
+          "0ff000f44444ffcf77fbaaaaa2f0",
+          "000000f4444f2f0fffafaaaaff00",
+          "000000f442222fffaaaaaafff000",
+          "000000f43f244fffaaabffff0000",
+          "00000094f0f442ff22ffff200000",
+          "0000000f000f44ff2ffff0000000",
+          "000000000000ffffff0000000000"
+        ],
+        "anchor": [
+          15,
+          14
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-roll",
+      "id": "gold-roll-00",
+      "host": "s3k",
+      "variant": "v1",
+      "cell": 0,
+      "raw_sha256": "7bb646c5def87d44209cbbbc9f414fec8b1f47a5183a942041223465c871d38e",
+      "source_box": [
+        52,
+        164,
+        412,
+        552
+      ],
+      "grid_offset": [
+        0,
+        1
+      ],
+      "source_pixels_per_native_pixel": 12.9,
+      "landmark": "ball diameter = approved/native roll 29px",
+      "registration": "centre",
+      "file": "mica/powered/s3k/frames/gold-roll-00.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "size": [
+        28,
+        30
+      ],
+      "authored_area": 607,
+      "selected_pixels": {
+        "rows": [
+          "000000000fffffff000000000000",
+          "00000000ff777777ff0000000000",
+          "0000000000f2444477ff20000000",
+          "00000ffffff22444447f7f000000",
+          "000fff7777773224444277f00000",
+          "000f2444444474f2772f447f0000",
+          "000ff2244444442fee74772f0000",
+          "000000222444444fe4444477f000",
+          "00000ff22f244442ff327244f000",
+          "000f577772ff2444221ff7727f00",
+          "02f777777772fff222f99f575f00",
+          "0f744444444442f2ff1dcdf73f00",
+          "f74444444444444222fcccf1f000",
+          "f444444444444444477dccfcf000",
+          "f2222f2222ffffff22777cf77ff0",
+          "fffff2222222222f22f8777777f0",
+          "ff00f244444442fccf22f9f7ff00",
+          "000f2744444442cc9c9288f000f0",
+          "00f444444444ffccccc177ff00ff",
+          "0ff444444ff22fdcccdf77f00fff",
+          "0f54444f22222f1ccc187f9fff2f",
+          "0f444f2f224444fdd02efff0aa2f",
+          "0f4fff2244444fd1f9eb1baaaaf0",
+          "0ff000f44444ffcf77fbaaaaa2f0",
+          "000000f4444f2f0fffafaaaaff00",
+          "000000f442222fffaaaaaafff000",
+          "000000f43f244fffaaabffff0000",
+          "00000094f0f442ff22ffff200000",
+          "0000000f000f44ff2ffff0000000",
+          "000000000000ffffff0000000000"
+        ],
+        "anchor": [
+          15,
+          14
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-roll",
+      "id": "gold-roll-01",
+      "host": "s2",
+      "variant": "v1",
+      "cell": 1,
+      "raw_sha256": "7bb646c5def87d44209cbbbc9f414fec8b1f47a5183a942041223465c871d38e",
+      "source_box": [
+        476,
+        176,
+        864,
+        540
+      ],
+      "grid_offset": [
+        0,
+        2
+      ],
+      "source_pixels_per_native_pixel": 12.9,
+      "landmark": "ball diameter = approved/native roll 29px",
+      "registration": "centre",
+      "file": "mica/powered/s2/frames/gold-roll-01.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "size": [
+        30,
+        28
+      ],
+      "authored_area": 581,
+      "selected_pixels": {
+        "rows": [
+          "000000000000000ffff00000000000",
+          "0000000fffff000ff77ff000000000",
+          "0000000ff777fff0f2777f000f0000",
+          "000000000f4477fff24774f00ff000",
+          "000000000f2444742227774f0f7f00",
+          "000fffffff22444742f7777f0f7ff0",
+          "000ff244772f4444432747742277f0",
+          "00000ff44442244443f744742777f0",
+          "00002ff44444244443f44443277720",
+          "00f572222444224443f4444277777f",
+          "0ff24443f44422444324442f75777f",
+          "f7444444224422f442f4422744473f",
+          "f44fff242f3442f44f242f444444f0",
+          "f2fffffffdf242f32222f4442222ff",
+          "ffffff0f0cd1fff2f222f442772f42",
+          "fffffbbfccc61c92f222242fa8747f",
+          "00ffaa11ccc1976df22fff448e447f",
+          "000faaa11c91777f272f1f442447f0",
+          "000f2aaa99ff778f77002f457444f0",
+          "000ffaab1f8f77f778ccff4723ff00",
+          "000ffaaab1ff77f77ccdf747fff000",
+          "0000ffaaab1ff2f77fff147fff0000",
+          "00000fbaaa1200f777c177fff00000",
+          "00000ffaaaa200f77ff77f20000000",
+          "0000000faaaff0027200f000000000",
+          "0000000ffaaaff002f000000000000",
+          "000000000ffaaaff00000000000000",
+          "00000000000ffff000000000000000"
+        ],
+        "anchor": [
+          15,
+          14
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-roll",
+      "id": "gold-roll-01",
+      "host": "s3k",
+      "variant": "v1",
+      "cell": 1,
+      "raw_sha256": "7bb646c5def87d44209cbbbc9f414fec8b1f47a5183a942041223465c871d38e",
+      "source_box": [
+        476,
+        176,
+        864,
+        540
+      ],
+      "grid_offset": [
+        0,
+        2
+      ],
+      "source_pixels_per_native_pixel": 12.9,
+      "landmark": "ball diameter = approved/native roll 29px",
+      "registration": "centre",
+      "file": "mica/powered/s3k/frames/gold-roll-01.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "size": [
+        30,
+        28
+      ],
+      "authored_area": 581,
+      "selected_pixels": {
+        "rows": [
+          "000000000000000ffff00000000000",
+          "0000000fffff000ff77ff000000000",
+          "0000000ff777fff0f2777f000f0000",
+          "000000000f4477fff24774f00ff000",
+          "000000000f2444742227774f0f7f00",
+          "000fffffff22444742f7777f0f7ff0",
+          "000ff244772f4444432747742277f0",
+          "00000ff44442244443f744742777f0",
+          "00002ff44444244443f44443277720",
+          "00f572222444224443f4444277777f",
+          "0ff24443f44422444324442f75777f",
+          "f7444444224422f442f4422744473f",
+          "f44fff242f3442f44f242f444444f0",
+          "f2fffffffdf242f32222f4442222ff",
+          "ffffff0f0cd1fff2f222f442772f42",
+          "fffffbbfccc61c92f222242fa8747f",
+          "00ffaa11ccc1976df22fff448e447f",
+          "000faaa11c91777f272f1f442447f0",
+          "000f2aaa99ff778f77002f457444f0",
+          "000ffaab1f8f77f778ccff4723ff00",
+          "000ffaaab1ff77f77ccdf747fff000",
+          "0000ffaaab1ff2f77fff147fff0000",
+          "00000fbaaa1200f777c177fff00000",
+          "00000ffaaaa200f77ff77f20000000",
+          "0000000faaaff0027200f000000000",
+          "0000000ffaaaff002f000000000000",
+          "000000000ffaaaff00000000000000",
+          "00000000000ffff000000000000000"
+        ],
+        "anchor": [
+          15,
+          14
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-roll",
+      "id": "gold-roll-02",
+      "host": "s2",
+      "variant": "v1",
+      "cell": 2,
+      "raw_sha256": "7bb646c5def87d44209cbbbc9f414fec8b1f47a5183a942041223465c871d38e",
+      "source_box": [
+        916,
+        164,
+        1288,
+        552
+      ],
+      "grid_offset": [
+        0,
+        2
+      ],
+      "source_pixels_per_native_pixel": 12.9,
+      "landmark": "ball diameter = approved/native roll 29px",
+      "registration": "centre",
+      "file": "mica/powered/s2/frames/gold-roll-02.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "size": [
+        29,
+        30
+      ],
+      "authored_area": 623,
+      "selected_pixels": {
+        "rows": [
+          "0000000000ffff000000000000000",
+          "000000ffff7777f0f000000000000",
+          "000000ff3744443f3ff0000000000",
+          "00000000f244477ff5ff0ff000000",
+          "0000000fff24fe94444f0fff00000",
+          "00002f77422ffe44644fff7f00000",
+          "000ff7445742f22ff242f777f0000",
+          "00f74444444442f990f22777f0000",
+          "0054422ffffffffcccdf7757f0000",
+          "0f2f22222f2332f9ccf24454f0ff0",
+          "09f274444322ff77cd544442ff7f0",
+          "0f74444442fcff97f4444422f77f0",
+          "0f44442ff9c9cdff444422f7777f0",
+          "f442fffffc1ccc144422f777774f0",
+          "f2fff1f71ccccc122227774444f00",
+          "fffff112fcccc0f44444444443f00",
+          "ff2fff1f81dcd222444444444f0ff",
+          "000ffbb278fff2f2224444444ff7f",
+          "000fbba272222472f222222f2777f",
+          "002fbbabf22f2444722ff257777f0",
+          "00ffbb99244f224444777777774f0",
+          "00ffabbb2442f2444444444444f00",
+          "000faaab24447f24444444442ff00",
+          "000ffaaff44442f2444444442f000",
+          "00002aaff44444f222444444f0000",
+          "00000faff244444f222222ff00000",
+          "00000ffbff444445ffffff0000000",
+          "000000fffff444444f00000000000",
+          "0000000ffffff44444f0000000000",
+          "0000000000000ffffff0000000000"
+        ],
+        "anchor": [
+          14,
+          15
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-roll",
+      "id": "gold-roll-02",
+      "host": "s3k",
+      "variant": "v1",
+      "cell": 2,
+      "raw_sha256": "7bb646c5def87d44209cbbbc9f414fec8b1f47a5183a942041223465c871d38e",
+      "source_box": [
+        916,
+        164,
+        1288,
+        552
+      ],
+      "grid_offset": [
+        0,
+        2
+      ],
+      "source_pixels_per_native_pixel": 12.9,
+      "landmark": "ball diameter = approved/native roll 29px",
+      "registration": "centre",
+      "file": "mica/powered/s3k/frames/gold-roll-02.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "size": [
+        29,
+        30
+      ],
+      "authored_area": 623,
+      "selected_pixels": {
+        "rows": [
+          "0000000000ffff000000000000000",
+          "000000ffff7777f0f000000000000",
+          "000000ff3744443f3ff0000000000",
+          "00000000f244477ff5ff0ff000000",
+          "0000000fff24fe94444f0fff00000",
+          "00002f77422ffe44644fff7f00000",
+          "000ff7445742f22ff242f777f0000",
+          "00f74444444442f990f22777f0000",
+          "0054422ffffffffcccdf7757f0000",
+          "0f2f22222f2332f9ccf24454f0ff0",
+          "09f274444322ff77cd544442ff7f0",
+          "0f74444442fcff97f4444422f77f0",
+          "0f44442ff9c9cdff444422f7777f0",
+          "f442fffffc1ccc144422f777774f0",
+          "f2fff1f71ccccc122227774444f00",
+          "fffff112fcccc0f44444444443f00",
+          "ff2fff1f81dcd222444444444f0ff",
+          "000ffbb278fff2f2224444444ff7f",
+          "000fbba272222472f222222f2777f",
+          "002fbbabf22f2444722ff257777f0",
+          "00ffbb99244f224444777777774f0",
+          "00ffabbb2442f2444444444444f00",
+          "000faaab24447f24444444442ff00",
+          "000ffaaff44442f2444444442f000",
+          "00002aaff44444f222444444f0000",
+          "00000faff244444f222222ff00000",
+          "00000ffbff444445ffffff0000000",
+          "000000fffff444444f00000000000",
+          "0000000ffffff44444f0000000000",
+          "0000000000000ffffff0000000000"
+        ],
+        "anchor": [
+          14,
+          15
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-roll",
+      "id": "gold-roll-03",
+      "host": "s2",
+      "variant": "v1",
+      "cell": 3,
+      "raw_sha256": "7bb646c5def87d44209cbbbc9f414fec8b1f47a5183a942041223465c871d38e",
+      "source_box": [
+        1328,
+        176,
+        1716,
+        540
+      ],
+      "grid_offset": [
+        0,
+        0
+      ],
+      "source_pixels_per_native_pixel": 12.9,
+      "landmark": "ball diameter = approved/native roll 29px",
+      "registration": "centre",
+      "file": "mica/powered/s2/frames/gold-roll-03.png",
+      "hotspot": [
+        15,
+        13
+      ],
+      "size": [
+        30,
+        28
+      ],
+      "authored_area": 609,
+      "selected_pixels": {
+        "rows": [
+          "0000000000000000fffff000000000",
+          "000000000000000002377f2f200000",
+          "000000000f000fff00f447f7ff0000",
+          "0000000fff00ffcf20f244777f0000",
+          "00000fff2f00fd0cc0f2244273f000",
+          "0000ff2abffffcc0c2dff44247ff00",
+          "000faaaaafffccccc11df44244ff00",
+          "00faaaaabf21ccccd769f2224447f0",
+          "00faaaabb289cccd16dff2f22422f0",
+          "0ffaabb11f771cd1169f7ff2273472",
+          "0ffff1f37432fff87ff77ff224777f",
+          "0ffff447742f44f7777799dff4777f",
+          "00f44447732244777977c11ff4747f",
+          "0f4444477f224477d977f11c722ff0",
+          "f4444472f444442477797fcc92a200",
+          "f44444f24444242477f477c122b9ff",
+          "f4444f2244477f243724477725ff3f",
+          "f244f22444477f4472f44444777720",
+          "0f42f2244447f244772244444444f0",
+          "0f22ff244475224447222444444f00",
+          "0f2f0f2444422244472222fffff000",
+          "00ff0f24444222444722222f000000",
+          "002200f2444f222444ff2222ff0000",
+          "000000f24442f224447fffffff0000",
+          "0000000f2422ff22444f0000000000",
+          "00000000f222f0ff2444ff00000000",
+          "000000000ff2ff00ff444f00000000",
+          "0000000000ffff0000ffff00000000"
+        ],
+        "anchor": [
+          15,
+          13
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-roll",
+      "id": "gold-roll-03",
+      "host": "s3k",
+      "variant": "v1",
+      "cell": 3,
+      "raw_sha256": "7bb646c5def87d44209cbbbc9f414fec8b1f47a5183a942041223465c871d38e",
+      "source_box": [
+        1328,
+        176,
+        1716,
+        540
+      ],
+      "grid_offset": [
+        0,
+        0
+      ],
+      "source_pixels_per_native_pixel": 12.9,
+      "landmark": "ball diameter = approved/native roll 29px",
+      "registration": "centre",
+      "file": "mica/powered/s3k/frames/gold-roll-03.png",
+      "hotspot": [
+        15,
+        13
+      ],
+      "size": [
+        30,
+        28
+      ],
+      "authored_area": 609,
+      "selected_pixels": {
+        "rows": [
+          "0000000000000000fffff000000000",
+          "000000000000000002377f2f200000",
+          "000000000f000fff00f447f7ff0000",
+          "0000000fff00ffcf20f244777f0000",
+          "00000fff2f00fd0cc0f2244273f000",
+          "0000ff2abffffcc0c2dff44247ff00",
+          "000faaaaafffccccc11df44244ff00",
+          "00faaaaabf21ccccd769f2224447f0",
+          "00faaaabb289cccd16dff2f22422f0",
+          "0ffaabb11f771cd1169f7ff2273472",
+          "0ffff1f37432fff87ff77ff224777f",
+          "0ffff447742f44f7777799dff4777f",
+          "00f44447732244777977c11ff4747f",
+          "0f4444477f224477d977f11c722ff0",
+          "f4444472f444442477797fcc92a200",
+          "f44444f24444242477f477c122b9ff",
+          "f4444f2244477f243724477725ff3f",
+          "f244f22444477f4472f44444777720",
+          "0f42f2244447f244772244444444f0",
+          "0f22ff244475224447222444444f00",
+          "0f2f0f2444422244472222fffff000",
+          "00ff0f24444222444722222f000000",
+          "002200f2444f222444ff2222ff0000",
+          "000000f24442f224447fffffff0000",
+          "0000000f2422ff22444f0000000000",
+          "00000000f222f0ff2444ff00000000",
+          "000000000ff2ff00ff444f00000000",
+          "0000000000ffff0000ffff00000000"
+        ],
+        "anchor": [
+          15,
+          13
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-roll",
+      "id": "gold-roll-blur",
+      "host": "s2",
+      "variant": "v1",
+      "cell": 4,
+      "raw_sha256": "7bb646c5def87d44209cbbbc9f414fec8b1f47a5183a942041223465c871d38e",
+      "source_box": [
+        1764,
+        176,
+        2132,
+        552
+      ],
+      "grid_offset": [
+        9,
+        0
+      ],
+      "source_pixels_per_native_pixel": 12.9,
+      "landmark": "ball diameter = approved/native roll 29px",
+      "registration": "centre",
+      "file": "mica/powered/s2/frames/gold-roll-blur.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "size": [
+        29,
+        29
+      ],
+      "authored_area": 657,
+      "selected_pixels": {
+        "rows": [
+          "00000000000fffffff00000000000",
+          "00000000fff7777777ff000000000",
+          "000000ff777774444777ff0000000",
+          "00000ff777544477444777ff00000",
+          "0000ff77444477777774777ff0000",
+          "000ff75444477777777777777f000",
+          "00027444747777777777777777000",
+          "00f7444747777777777ccc7777f00",
+          "02f444447777777777ccccc777ff0",
+          "0f7444447777777777cccccc777f0",
+          "0f4444457777777777cccccc777f0",
+          "f74447477777777777cccccc7777f",
+          "f444474777777777777cccc77777f",
+          "f444474477777777777777777777f",
+          "f444474747777777777777777777f",
+          "f744445777777777777777777777f",
+          "f744447747777777777777777777f",
+          "f74444747777777777777777777ff",
+          "0f7444474777777777777777777f0",
+          "0f7444474477477777777777777f0",
+          "0f774444744774777777777477ff0",
+          "00f74444475477774474474747f00",
+          "0027744444474744774477745f000",
+          "000f77444444447447774444f0000",
+          "0000f754444444444444444ff0000",
+          "00000f7744444444444444ff00000",
+          "000000ff777444444444ff0000000",
+          "00000000fff7744444ff000000000",
+          "00000000000fffffff00000000000"
+        ],
+        "anchor": [
+          15,
+          15
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-roll",
+      "id": "gold-roll-blur",
+      "host": "s3k",
+      "variant": "v1",
+      "cell": 4,
+      "raw_sha256": "7bb646c5def87d44209cbbbc9f414fec8b1f47a5183a942041223465c871d38e",
+      "source_box": [
+        1764,
+        176,
+        2132,
+        552
+      ],
+      "grid_offset": [
+        9,
+        0
+      ],
+      "source_pixels_per_native_pixel": 12.9,
+      "landmark": "ball diameter = approved/native roll 29px",
+      "registration": "centre",
+      "file": "mica/powered/s3k/frames/gold-roll-blur.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "size": [
+        29,
+        29
+      ],
+      "authored_area": 657,
+      "selected_pixels": {
+        "rows": [
+          "00000000000fffffff00000000000",
+          "00000000fff7777777ff000000000",
+          "000000ff777774444777ff0000000",
+          "00000ff777544477444777ff00000",
+          "0000ff77444477777774777ff0000",
+          "000ff75444477777777777777f000",
+          "00027444747777777777777777000",
+          "00f7444747777777777ccc7777f00",
+          "02f444447777777777ccccc777ff0",
+          "0f7444447777777777cccccc777f0",
+          "0f4444457777777777cccccc777f0",
+          "f74447477777777777cccccc7777f",
+          "f444474777777777777cccc77777f",
+          "f444474477777777777777777777f",
+          "f444474747777777777777777777f",
+          "f744445777777777777777777777f",
+          "f744447747777777777777777777f",
+          "f74444747777777777777777777ff",
+          "0f7444474777777777777777777f0",
+          "0f7444474477477777777777777f0",
+          "0f774444744774777777777477ff0",
+          "00f74444475477774474474747f00",
+          "0027744444474744774477745f000",
+          "000f77444444447447774444f0000",
+          "0000f754444444444444444ff0000",
+          "00000f7744444444444444ff00000",
+          "000000ff777444444444ff0000000",
+          "00000000fff7744444ff000000000",
+          "00000000000fffffff00000000000"
+        ],
+        "anchor": [
+          15,
+          15
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-transform",
+      "id": "transform-0",
+      "host": "s2",
+      "variant": "v1",
+      "cell": 0,
+      "raw_sha256": "529e10d132f19dfe8869f729e046e734f1c3d6205b27cb6e1a8783ac5e81c119",
+      "source_box": [
+        44,
+        240,
+        340,
+        560
+      ],
+      "grid_offset": [
+        3,
+        3
+      ],
+      "source_pixels_per_native_pixel": 11.3,
+      "landmark": "eye top to sole 350px = approved wait-00 31px",
+      "registration": "centre",
+      "file": "mica/powered/frames/transform-0.png",
+      "hotspot": [
+        13,
+        14
+      ],
+      "size": [
+        26,
+        28
+      ],
+      "authored_area": 587,
+      "selected_pixels": {
+        "rows": [
+          "00000000000022222200000000",
+          "00000002222777444422200000",
+          "00000027757774444444422000",
+          "00002377447444444444442000",
+          "00027744442444444441243200",
+          "002774444442344444f7712400",
+          "0027444444252fff3f7ee72320",
+          "0022444f444444444f7ee71242",
+          "0022222f444444424f7a17f222",
+          "0244444f444444441111117f32",
+          "2444444f444444422311dd1742",
+          "24444444f2444422221cccf120",
+          "2444444222ffff12421ccc1d20",
+          "2244422432222212f79ccc1d20",
+          "0ffff244432222227777ccf200",
+          "2222f444444444127777777722",
+          "232224444444439c1177777712",
+          "244442244442f1cccc187771f2",
+          "224444fffff21dccccc1211aa2",
+          "02442f2222222dcccdc202aa12",
+          "02ff2f33222441ddcc112aab20",
+          "0022222444444f11d1aaabf200",
+          "00243422444421111aaabbf200",
+          "00024443ffff221bbbbbbf2000",
+          "00002233f222221bb2bb120000",
+          "000002ff2222221bbf22900000",
+          "00000002f22221fff200000000",
+          "00000000022222220000000000"
+        ],
+        "anchor": [
+          13,
+          14
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-transform",
+      "id": "transform-1",
+      "host": "s2",
+      "variant": "v1",
+      "cell": 1,
+      "raw_sha256": "529e10d132f19dfe8869f729e046e734f1c3d6205b27cb6e1a8783ac5e81c119",
+      "source_box": [
+        420,
+        240,
+        720,
+        560
+      ],
+      "grid_offset": [
+        8,
+        3
+      ],
+      "source_pixels_per_native_pixel": 11.3,
+      "landmark": "eye top to sole 350px = approved wait-00 31px",
+      "registration": "centre",
+      "file": "mica/powered/frames/transform-1.png",
+      "hotspot": [
+        12,
+        12
+      ],
+      "size": [
+        27,
+        28
+      ],
+      "authored_area": 600,
+      "selected_pixels": {
+        "rows": [
+          "000000000000222222000000000",
+          "000000022227777444322200000",
+          "000000277767744444444220000",
+          "000002777374444444444422000",
+          "000027744447444444462244200",
+          "002273444443666644617724200",
+          "00217444446642666627ee73300",
+          "00226666f3444444441eea72320",
+          "0022222f244444444329f872220",
+          "024444464444444472211177332",
+          "044444446444444417311d11832",
+          "244444462266667f4221ccdf130",
+          "26444462222222f13431ccf1d20",
+          "02666224422222212278ccf1600",
+          "022222444444444227777cffd00",
+          "222224444444446127777777722",
+          "2442264444444618c1f77777712",
+          "0444443266662f2cccc177771b2",
+          "02444562222221dccccc1111aa2",
+          "02376f32222222dccccc19aaa12",
+          "021ff2642222441dddc111aab20",
+          "00222226444444611d11aaab200",
+          "002234466444466111aaabbf200",
+          "0000234336666221bbabbbb2000",
+          "0000033376222221b66bbf20000",
+          "000002666222222166f22200000",
+          "000000002f222263f2200000000",
+          "000000000022222220000000000"
+        ],
+        "anchor": [
+          12,
+          12
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-transform",
+      "id": "transform-2",
+      "host": "s2",
+      "variant": "v1",
+      "cell": 2,
+      "raw_sha256": "529e10d132f19dfe8869f729e046e734f1c3d6205b27cb6e1a8783ac5e81c119",
+      "source_box": [
+        780,
+        72,
+        1200,
+        604
+      ],
+      "grid_offset": [
+        4,
+        4
+      ],
+      "source_pixels_per_native_pixel": 11.3,
+      "landmark": "eye top to sole 350px = approved wait-00 31px",
+      "registration": "ground",
+      "file": "mica/powered/frames/transform-2.png",
+      "hotspot": [
+        19,
+        25
+      ],
+      "size": [
+        37,
+        47
+      ],
+      "authored_area": 1011,
+      "selected_pixels": {
+        "rows": [
+          "0000000000005550000000000000000000000",
+          "0000000000000666550000000000000000000",
+          "0000000000000966666550000000000000000",
+          "0000000000000066666665500000000000000",
+          "0000000000000056666666650000000000000",
+          "0000000000000056666666665000000000000",
+          "0000005555555555666666666650000000000",
+          "0000000566666666666666666650000000000",
+          "0000000056666666666666666650000000000",
+          "0000000005666666666666666666000000000",
+          "0000000000566666665566666666500000000",
+          "0000000000055666566666666666650000000",
+          "0055566666665666566667666666650000000",
+          "0056666666666666566662262666660000000",
+          "0000666666666666666622262266665000000",
+          "000056666666666666666266662666f000000",
+          "00000566666666666666626662226f0000000",
+          "0000005666666666666666666626ff0000000",
+          "00000000556666666666666666666f0000000",
+          "0000000566666666666666666666665000000",
+          "0000666666666666666666622222666500000",
+          "5666666666666666666666622222666000000",
+          "0666666666666666666666622226665000000",
+          "0056666666666666666666662266650000000",
+          "0004666666655664466646666664000466540",
+          "0000856666666666446446666640000366665",
+          "0000005666666666664666666664554466665",
+          "0000000566666666666666666666666666665",
+          "0065556666666666664466666666666666660",
+          "0066666666666666666664666669466666640",
+          "0056666666666644666646666650000555000",
+          "0000666666666666666656666650000000000",
+          "0000055666666666666566666665000000000",
+          "0005566666666666666666507666000000000",
+          "5556666666666666666666000666640000000",
+          "5666666666666666666650000066650000000",
+          "0066666666666644666600000046666500000",
+          "0055666666566494666650000566666500000",
+          "0000555550000966666780000566666000000",
+          "0000000000000566665000000055666550000",
+          "0000000000005666665000000056666664000",
+          "0000000000566666665000000056666666600",
+          "0000000000566666650000000056666666650",
+          "0000000005666666650000000056666666650",
+          "0000000005666666650000000000556666650",
+          "0000000005666666500000000000005555500",
+          "0000000000555555000000000000000000000"
+        ],
+        "anchor": [
+          19,
+          25
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-transform",
+      "id": "transform-3",
+      "host": "s2",
+      "variant": "v1",
+      "cell": 3,
+      "raw_sha256": "529e10d132f19dfe8869f729e046e734f1c3d6205b27cb6e1a8783ac5e81c119",
+      "source_box": [
+        1244,
+        72,
+        1676,
+        604
+      ],
+      "grid_offset": [
+        0,
+        2
+      ],
+      "source_pixels_per_native_pixel": 11.3,
+      "landmark": "eye top to sole 350px = approved wait-00 31px",
+      "registration": "ground",
+      "file": "mica/powered/frames/transform-3.png",
+      "hotspot": [
+        22,
+        25
+      ],
+      "size": [
+        38,
+        47
+      ],
+      "authored_area": 1095,
+      "selected_pixels": {
+        "rows": [
+          "00000000000000257200000000000000000000",
+          "00000000000000027772200000000000000000",
+          "00000000000000002377722000000000000000",
+          "00000000000000000444777200000000000000",
+          "00000000000000000f44447777200000000000",
+          "00000000000000000244444477720000000000",
+          "00000000222227777124444444772000000000",
+          "00000000027777777774444444434200000000",
+          "0000000000244444444f144444444200000000",
+          "000000000002344444432f1344444420000000",
+          "000000000000234444441111f4444420000000",
+          "00000000000212244442777111222222000000",
+          "00000000222777223337eea734444473000000",
+          "00000277777777222f37eee7f7144445000000",
+          "000000244444444222227e1377774444502000",
+          "00000002444444442222242211177444402000",
+          "00000000344444444442444211c11244120000",
+          "0000000002444444444234421ccc1113c22000",
+          "00000000002f4444432344471cc11f72000000",
+          "000000002272222ff14444377cc11f7df00000",
+          "002222227777222222233f3777ccf177200000",
+          "00277777775442222222217777777777772000",
+          "00003444444444443222217777711117720000",
+          "00002444444444444443f197777aa177200000",
+          "000002244444444444412221977aa172000000",
+          "0000002144444444421f122211977720000000",
+          "00000002f2222222221cc11442211f20002220",
+          "022222277222222221cc11c441777120c2ccc0",
+          "002477744422222221cdccc1f1777722c11cc2",
+          "000244444442222221cccc022177771c1cccc2",
+          "000244444444444441dccc923777771dcccc20",
+          "0000222444444444f111d114277771121dd220",
+          "0002122234444221f22ff14447777120222000",
+          "22277722222222222222144418771470000000",
+          "027444422222222343225444f2212442000000",
+          "02244444422222334321344f20022442000000",
+          "000224444444442211a1144000002311200000",
+          "00002f34442222222aaaa11200021aaaa20000",
+          "0000002fff1222221baaaaa20002aaaaa20000",
+          "0000000000222200b1bb1f200002aab11b0000",
+          "00000000000000021bbbba200002bbbbbb2000",
+          "000000000000002abbabaa20002baaabbaa200",
+          "000000000000002aaaaabb20002baaabaaaa20",
+          "000000000000021aaaaa1120002888faaaaa20",
+          "00000000000002888788882000281977877720",
+          "00000000000002187818112000022181818120",
+          "00000000000000222222220000000222222200"
+        ],
+        "anchor": [
+          22,
+          25
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "mica-pilot-transform",
+      "id": "transform-4",
+      "host": "s2",
+      "variant": "v1",
+      "cell": 4,
+      "raw_sha256": "529e10d132f19dfe8869f729e046e734f1c3d6205b27cb6e1a8783ac5e81c119",
+      "source_box": [
+        1728,
+        100,
+        2160,
+        604
+      ],
+      "grid_offset": [
+        3,
+        10
+      ],
+      "source_pixels_per_native_pixel": 11.3,
+      "landmark": "eye top to sole 350px = approved wait-00 31px",
+      "registration": "ground",
+      "file": "mica/powered/frames/transform-4.png",
+      "hotspot": [
+        22,
+        24
+      ],
+      "size": [
+        38,
+        45
+      ],
+      "authored_area": 1051,
+      "selected_pixels": {
+        "rows": [
+          "00000000000000222000000000000000000000",
+          "00000000000000027777220000000000000000",
+          "00000000000000002447712000000000000000",
+          "00000000000000000244477722000000000000",
+          "00000000000000000244444777220000000000",
+          "00000000022222272124444444712000000000",
+          "0000000002777777777f344444437200000000",
+          "00000000000233474447223444343400000000",
+          "00000000000023344444322333344320000000",
+          "0000000000000234444ff77222222322000000",
+          "0000000000022122344f7ee724444423200000",
+          "000000000021777222217ee211244445200000",
+          "0000002777774434222f8e1377774444500000",
+          "00000002443444433222174211117444402000",
+          "0000000024444444443473481ddd1744120000",
+          "0000000002444444444244321cccf114c22000",
+          "0000000000233444442744471cccff11200000",
+          "0000000022722221115344377cccff66f00000",
+          "0022222277772222ff12223777777777200000",
+          "00027777774443222222227777777777772000",
+          "000024444444444332222277777bb117720000",
+          "000002444444444444432217777aa177200000",
+          "000000244444444444412222277ee172000000",
+          "000000002344443431f1122442177720000000",
+          "0000000222222222221dc1144219922002cd20",
+          "027777777222222222cc11c441777120d1ccc0",
+          "002447744422222221cccdc1f1777712ddccc2",
+          "000244444444222221dccc112177771cccccc2",
+          "00002444444444444fddcd124777771cdccc20",
+          "000002244444431112111124477777122dd220",
+          "090221221fff11ff2222f14447777120022000",
+          "27777772222112222222244411712352000000",
+          "037444442222233332222444f2222442000000",
+          "00244444444433144211444200002344200000",
+          "0002244444442f2211a113400000f411200000",
+          "00002f34442112222aaaaaa20002aaaaa20000",
+          "00000022f2f222229111aaa20002aaa1120000",
+          "0000000000222200bbbbb1200002fab1b20000",
+          "0000000000000002abbbba200002bbbb9b2000",
+          "000000000000002abbbbaa20002baaabbaa200",
+          "000000000000002aaaabbb20002baaa1aaaa20",
+          "000000000000021aaaaa1120002888baaaaa20",
+          "000000000000027887788820002f8888887820",
+          "00000000000002177818182000022181181820",
+          "00000000000000222222220000000222222200"
+        ],
+        "anchor": [
+          22,
+          24
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "slope",
+      "id": "s2-run-up45-0",
+      "host": "s2",
+      "derived_from": "run-0",
+      "rotation": 45,
+      "support_kept": 14.8492424049175,
+      "file": "mica/powered/frames/s2-run-up45-0.png",
+      "hotspot": [
+        17,
+        13
+      ],
+      "size": [
+        28,
+        38
+      ],
+      "authored_area": 652,
+      "selected_pixels": {
+        "rows": [
+          "0000000000000022200000000000",
+          "0000000000022277422200000000",
+          "0000000022277444ffff22002000",
+          "0000000277744441f44444202200",
+          "00002227744444444473f4420200",
+          "0002177444447711177777172202",
+          "002244444447771477117f177122",
+          "022244444f17ae4471ccccff7772",
+          "2220241f22277744411ccccff772",
+          "000002772244ff444211ccccc712",
+          "000027744444ff44444177c77f20",
+          "00227744444ff244444777777720",
+          "0244444444ff2244444777772200",
+          "0022244ffff222fff42771720200",
+          "000002122222242222f4f7712200",
+          "0000027444444ff244f4177cc200",
+          "000027444444fff444f1177c2000",
+          "000022244fff22f11cc117722000",
+          "00000002122224f1c1cc77200000",
+          "0000002244444f11cc2c99200000",
+          "0000022444441f41c20274200000",
+          "0000224444f22441c20221120000",
+          "00002224422244441202bbf20000",
+          "00000227422444422221bb120000",
+          "00002244444f14144211b1120000",
+          "00022444441f4f14202191b20000",
+          "000002221222fa14200299b20000",
+          "000027744421aaa120029bb20000",
+          "00027744441aaaa120002bb20000",
+          "000271141218a1ab200002200000",
+          "00002714221fa1b2000000000000",
+          "000022422218aab2000000000000",
+          "000022222218aaa1200000000000",
+          "0000200200288aa2000000000000",
+          "0000000000028aa2000000000000",
+          "0000000000028fa2000000000000",
+          "00000000000288f2000000000000",
+          "0000000000002220000000000000"
+        ],
+        "anchor": [
+          17,
+          13
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "slope",
+      "id": "s2-run-steep-0",
+      "host": "s2",
+      "derived_from": "run-0",
+      "rotation": 90,
+      "support_kept": 15.000000000000002,
+      "file": "mica/powered/frames/s2-run-steep-0.png",
+      "hotspot": [
+        15,
+        11
+      ],
+      "size": [
+        31,
+        37
+      ],
+      "authored_area": 657,
+      "selected_pixels": {
+        "rows": [
+          "0000000000002020020000000000000",
+          "0000000000000202022000000000000",
+          "00000000002444f1277200000000000",
+          "000000022f444177777200000000000",
+          "00000244f44f7111ff7e00000000000",
+          "0000274f44377ffffc7f20000000000",
+          "0000774f44771ccccc7720000000000",
+          "000274414171ccccc77720000000000",
+          "000274441171ccc1777802200000000",
+          "00274441f471111777712cc00000000",
+          "002744f71444224777171cc20000000",
+          "02774477e244444478f77f120000000",
+          "0274447ae7444444244177200000000",
+          "077444177fff444f2f4197720000000",
+          "077444f244f224f244f117942f00000",
+          "27444f2244f22f22441cc9741f20000",
+          "2744f22444f224f241c1cc123b12000",
+          "2444174444f224ff41ccc021bb1b200",
+          "2442774444f244f2ff1ccc02bbb1b20",
+          "220077444f2444f24121cc211999bf9",
+          "22007744f2444f224f4411222299bbb",
+          "2002744217444f24414442440022222",
+          "000244202744f24442f442442000000",
+          "0002420077441444f24441442000000",
+          "000200007420244412414f141200000",
+          "0000000072002444224f4faa1b20000",
+          "0000000000002447444121aaa120000",
+          "0000000000002227444f21aa1bb2200",
+          "00000000000020244412418aaaa1a00",
+          "00000000000000244224421faaaaaa0",
+          "00000000000000242744121188aaaa2",
+          "00000000000000202744f222288fff2",
+          "0000000000000000274142220288882",
+          "0000000000000000271742200002220",
+          "0000000000000000222242200000000",
+          "0000000000000000000220000000000",
+          "0000000000000000000220000000000"
+        ],
+        "anchor": [
+          15,
+          11
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "slope",
+      "id": "s2-run-inverted-0",
+      "host": "s2",
+      "derived_from": "run-0",
+      "rotation": 135,
+      "support_kept": 15.556349186104047,
+      "file": "mica/powered/frames/s2-run-inverted-0.png",
+      "hotspot": [
+        10,
+        8
+      ],
+      "size": [
+        38,
+        28
+      ],
+      "authored_area": 652,
+      "selected_pixels": {
+        "rows": [
+          "00000222220000000000000000000000000000",
+          "00000027712200000000000000000000000000",
+          "0002221777f722220000000000000000000000",
+          "00220277fc77202c2200000000000000000000",
+          "0000277ffc77721cc200022222222000000000",
+          "0002411fccc77777772221f11bbbb200000000",
+          "002447fccc777177777941bb119bb200000000",
+          "0024f77ccc7777f1117972bbb9992000000000",
+          "02f4371cc117774411cc222111220000000000",
+          "02f4771c114442fffcc2000212000000000000",
+          "02f44771124444244c1c222220000000000000",
+          "24ff417744444f2441cccc1242222200200000",
+          "2741414444444f224111114244411b22122220",
+          "2744411444444f2ffff14444111aaabbaaaaf2",
+          "0244477e7ff2224ff24ff4444faaa11aaaaf82",
+          "0274477a7fff2224f224124414faaaaaa88882",
+          "02744477744ff2244f244224ff21a8f8882220",
+          "002744412444ff244f244f2241221111120000",
+          "0027444f22444f244f24442244244222200000",
+          "0027744422444f244414444444144122200000",
+          "00027444f7444f244422444744244442220000",
+          "00002744177444174202242244274114200000",
+          "00002744427744227200222224277172200000",
+          "00002144202742002200022022027722220000",
+          "00000222000242000000000002002200000000",
+          "00000022200242000000000000000000000000",
+          "00000002200020000000000000000000000000",
+          "00000000200000000000000000000000000000"
+        ],
+        "anchor": [
+          10,
+          8
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "slope",
+      "id": "s2-run-up45-1",
+      "host": "s2",
+      "derived_from": "run-1",
+      "rotation": 45,
+      "support_kept": 13.435028842544405,
+      "file": "mica/powered/frames/s2-run-up45-1.png",
+      "hotspot": [
+        20,
+        13
+      ],
+      "size": [
+        29,
+        37
+      ],
+      "authored_area": 646,
+      "selected_pixels": {
+        "rows": [
+          "00000000000000222220000000000",
+          "000000000022227444f2200000000",
+          "00000002227774444444422222000",
+          "00000027777744444444444112000",
+          "0000227744444444f4f71ff112000",
+          "000277444441f12417777711c2022",
+          "0024444444427e247111c1f1c7282",
+          "0222244f44477e44411ccccff7772",
+          "000002ff222271444211ccccc7720",
+          "0000027424444ff442411ccc77200",
+          "000227444444fff44247777777200",
+          "02277444444f22244447777778220",
+          "2174444444f222f44421117712000",
+          "22222244ff2224f2222f417112000",
+          "00000212222244f224444171d2000",
+          "00002174444444f244444771c2000",
+          "000217444444422441111791c2000",
+          "000222244442222111ccc771c2000",
+          "00000002222222f111ccc71220000",
+          "0000002774444122cccc112000000",
+          "0000027744442221cc2c112000000",
+          "00002174444222441202120000000",
+          "0000021222222444112d192000000",
+          "00000272422414412441bb2000000",
+          "00000274444fff114441b20000000",
+          "0000221444ff4f111411f20000000",
+          "00000024f14441aa1122112000000",
+          "0000024444411faaa200220000000",
+          "0000244444ff1fabb200000000000",
+          "000002224f2218ab1200000000000",
+          "00000272422218aab200000000000",
+          "00002774222218aaa200000000000",
+          "00002222220028faa200000000000",
+          "00000000000002fa2000000000000",
+          "00000000000002f82000000000000",
+          "00000000000000282000000000000",
+          "00000000000000022000000000000"
+        ],
+        "anchor": [
+          20,
+          13
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "slope",
+      "id": "s2-run-steep-1",
+      "host": "s2",
+      "derived_from": "run-1",
+      "rotation": 90,
+      "support_kept": 14.000000000000002,
+      "file": "mica/powered/frames/s2-run-steep-1.png",
+      "hotspot": [
+        17,
+        11
+      ],
+      "size": [
+        32,
+        37
+      ],
+      "authored_area": 651,
+      "selected_pixels": {
+        "rows": [
+          "00000000000002000220000000000000",
+          "00000000000002220282000000000000",
+          "00000000000221112772000000000000",
+          "0000000022444f1c7777000000000000",
+          "00000022f444f711ff71f00000000000",
+          "00000244444171fffc7f820000000000",
+          "0000274444f71ccccc77820000000000",
+          "0000774144711cccc677200000000000",
+          "00027444f1711ccc1777122000000000",
+          "000274444471111177781dc200000000",
+          "0027744124442477771711cc20000000",
+          "002774f7e44442441141711c20000000",
+          "02774417ee4444442f44797120000000",
+          "0274442771ff44422444177200000000",
+          "0774444124f22f424411c17200000000",
+          "077444f224f22f22441ccc7120000000",
+          "27444f2444f224f2441ccc1119000000",
+          "2744f22444f2244f4411ccc190200000",
+          "244f174444f22442212ccc0d1b9f0000",
+          "2420274444f244422f21ccc119bf2000",
+          "220027444f2444f22124111421ff2000",
+          "200027441244442244244f2441222000",
+          "0002744217444f244224414442000000",
+          "0002742027441244422f41111a200000",
+          "000272002744274442214f1aaab00000",
+          "00022000222027442241f41aab120000",
+          "0000000020002742224f241fab1b2000",
+          "0000000000002712444f2418faaaa200",
+          "0000000000002217444141f18faaa200",
+          "000000000000002744f44f22188fa820",
+          "000000000000000727444f222288f882",
+          "00000000000000020744412200022220",
+          "00000000000000000744242200000000",
+          "00000000000000000742742200000000",
+          "00000000000000000202742000000000",
+          "00000000000000000002720000000000",
+          "00000000000000000002200000000000"
+        ],
+        "anchor": [
+          17,
+          11
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "slope",
+      "id": "s2-run-inverted-1",
+      "host": "s2",
+      "derived_from": "run-1",
+      "rotation": 135,
+      "support_kept": 14.142135623730951,
+      "file": "mica/powered/frames/s2-run-inverted-1.png",
+      "hotspot": [
+        12,
+        8
+      ],
+      "size": [
+        37,
+        29
+      ],
+      "authored_area": 646,
+      "selected_pixels": {
+        "rows": [
+          "0000022200000000000000000000000000000",
+          "0000028720020000000000000000000000000",
+          "0000002772220000000000000000000000000",
+          "0022227777782222220000000000000000000",
+          "00211ccfc77711dccc2000000000000000000",
+          "0021111fcc777111112000000000000000000",
+          "0024f1fccc777777971220220020000000000",
+          "0024f71ccc7711177771129b2212000000000",
+          "024417ccc17714441cc1111bbf12000000000",
+          "0244771c11771f441cccc2d11120000000000",
+          "2f44f711144422441ccc20244120000000000",
+          "2444471122244244111cc2144412222220000",
+          "2444f17444444224411cc112411ab1baa2222",
+          "24444444444442224112144111aabbaaaa882",
+          "274442244ff2ffff22f2244411aaaaaafff20",
+          "024441ee1ff2244422212244ff1ff88882200",
+          "02744f7774f2224442242221f441111120000",
+          "02774127244f222442244224ff41f22200000",
+          "027744442444f224442444224f44f22200000",
+          "0027444424444f244424442244144f2220000",
+          "0027444422444f244427442444f4444220000",
+          "0027744ff4444424442774224444422420000",
+          "00027444f7444417420277177124427720000",
+          "0000274422744221720021222202422720000",
+          "0000274200274202120002000200200220000",
+          "0000024200274200220000000000000000000",
+          "0000002200027200000000000000000000000",
+          "0000000200021200000000000000000000000",
+          "0000000000002200000000000000000000000"
+        ],
+        "anchor": [
+          12,
+          8
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "slope",
+      "id": "s3k-run-up45-0",
+      "host": "s3k",
+      "derived_from": "run-0",
+      "rotation": 45,
+      "support_kept": 14.8492424049175,
+      "file": "mica/powered/frames/s3k-run-up45-0.png",
+      "hotspot": [
+        22,
+        11
+      ],
+      "size": [
+        30,
+        39
+      ],
+      "authored_area": 681,
+      "selected_pixels": {
+        "rows": [
+          "000000000000022222222000000000",
+          "000000000002277744144200200000",
+          "000000000227744444f44422120000",
+          "000000002777444444444744120000",
+          "00000002774442111f777777f12020",
+          "0000002744442777147111111c7212",
+          "00002244444417ee44411ccf117720",
+          "00027444444f27e442221cccff7720",
+          "00244422fff22271444421cccc7200",
+          "024222002222444f4444777dd7f200",
+          "20200002744444ff44444777777200",
+          "00000027444444ff2444f777772200",
+          "0000027444444ff2f2412211720000",
+          "000027444444ff24222f2447720000",
+          "0002444444fff24f22444447200000",
+          "00022211f22244ff44444447200000",
+          "0000002174444fff444f4417720000",
+          "000002274444ff2f44111197200000",
+          "00002244444ff22ff1cc2797200000",
+          "000022444f22222f1cc11221200000",
+          "00000022224422f41ccc1212000000",
+          "0000002744444f44cc2c1112000000",
+          "0000027444441f4412021bb2000000",
+          "00002744444224441c211120000000",
+          "000021122222f14222119120000000",
+          "00002174444ff2224f21ff20000000",
+          "0002174444ff24444202f920000000",
+          "000221444221441442002b20000000",
+          "00000217424fffa412000220000000",
+          "0000027444ff1aaaa2000020000000",
+          "000024444ff21aaa12000000000000",
+          "00022444ff2218abb2000000000000",
+          "00000222242218a112000000000000",
+          "00000027442218aa12000000000000",
+          "000002222220288aa2000000000000",
+          "000002000000288aaa200000000000",
+          "000000000000218fa2000000000000",
+          "0000000000000288f2000000000000",
+          "000000000000002220000000000000"
+        ],
+        "anchor": [
+          22,
+          11
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "slope",
+      "id": "s3k-run-steep-0",
+      "host": "s3k",
+      "derived_from": "run-0",
+      "rotation": 90,
+      "support_kept": 18.0,
+      "file": "mica/powered/frames/s3k-run-steep-0.png",
+      "hotspot": [
+        13,
+        12
+      ],
+      "size": [
+        32,
+        39
+      ],
+      "authored_area": 696,
+      "selected_pixels": {
+        "rows": [
+          "00000000000000002200000000000000",
+          "00000000000222002700000000000000",
+          "00000000002111227720000000000000",
+          "000000022444ffc77720000000000000",
+          "0000022444477111f7a7000000000000",
+          "0000074144771fffc7f7200000000000",
+          "0000244f4171ccccc777200000000000",
+          "000274441711ccccd779000000000000",
+          "00027444f71111177772000000000000",
+          "00274441f44242777717200000000000",
+          "00774417142424417117220000000000",
+          "0277427ee444444f2442772000000000",
+          "0274427ae71444412444172000000000",
+          "0774441771ff444ff444177200000000",
+          "077444f224ff2f224444197200000000",
+          "077444f2444f242244f1272120000000",
+          "07444f22444f24f2441c1221b2000000",
+          "07444f24444f24f4441c1121b2000000",
+          "2744f174444f24ff441ccc1bbbf00000",
+          "27440274444f24f2ff1cccd111b20000",
+          "2742027444f244f22f1cc0d191fbf000",
+          "24400274442244f22f41ccf12f9bb200",
+          "242007744f2444f22f44112202fbb200",
+          "22000774217444224f44424f00000000",
+          "2000074402744f2441f4424420000000",
+          "00000742024442444f21524442000000",
+          "0000072002442744422f24141af20000",
+          "0000000002421744424f241aaa1b0000",
+          "0000000002002744244f14faaabb2000",
+          "000000000000274244412f11aa11ba20",
+          "000000000000271744424f218faaaaa2",
+          "000000000000221744424f22188aaaaa",
+          "000000000000002742744f2222888fff",
+          "000000000000002721744f4220218888",
+          "00000000000000220274424420022882",
+          "00000000000000000244274420000000",
+          "00000000000000000242274200000000",
+          "00000000000000000200074000000000",
+          "00000000000000000000020000000000"
+        ],
+        "anchor": [
+          13,
+          12
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "slope",
+      "id": "s3k-run-inverted-0",
+      "host": "s3k",
+      "derived_from": "run-0",
+      "rotation": 135,
+      "support_kept": 15.556349186104047,
+      "file": "mica/powered/frames/s3k-run-inverted-0.png",
+      "hotspot": [
+        14,
+        11
+      ],
+      "size": [
+        39,
+        30
+      ],
+      "authored_area": 681,
+      "selected_pixels": {
+        "rows": [
+          "000002000000000000000000000000000000000",
+          "000021220000000000000000000000000000000",
+          "000002772222000000000000000000000000000",
+          "000027777f72000000000000000000000000000",
+          "00221c1fc777220020000000000000000000000",
+          "0211f11fcd77772272220000000000000000000",
+          "002471fccd77177777712220000000000000000",
+          "002471ccc7771444199211b2222222000000000",
+          "024771cc17772444417221b11f9b20000000000",
+          "24447111274f2244412111119ff200000000000",
+          "2444711244441f44f1c1cc21112000000000000",
+          "21f477424444424441ccc202120000000002000",
+          "2444f44244442224441ccc2c2f222222222a220",
+          "244411444442f22444f11c1124441a1b11aaaf2",
+          "274417e41fff24ffffff444422444aab1aaaf82",
+          "274417ee74fff24ff222f4444241aaaaaa88882",
+          "274427772444ff24ff222ff41244faa88888120",
+          "0274421224444ff44ff22412ff24f1111122200",
+          "0277444f224444f244f244422ff1ff222200000",
+          "00274444f24444f24442444424f24ff22220000",
+          "00277444f2444442444f2444244224ff4420000",
+          "00027444f274444f744424442444444f2420000",
+          "000027442027444117442744244474442720000",
+          "000002442002744122442274174417442220000",
+          "000000244200274202220027117122442022000",
+          "000000274200024200220002221200220000000",
+          "000000024200002200000000002200020000000",
+          "000000002420000000000000000000000000000",
+          "000000000200000000000000000000000000000",
+          "000000000020000000000000000000000000000"
+        ],
+        "anchor": [
+          14,
+          11
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "slope",
+      "id": "s3k-run-up45-1",
+      "host": "s3k",
+      "derived_from": "run-1",
+      "rotation": 45,
+      "support_kept": 13.435028842544407,
+      "file": "mica/powered/frames/s3k-run-up45-1.png",
+      "hotspot": [
+        24,
+        12
+      ],
+      "size": [
+        30,
+        38
+      ],
+      "authored_area": 685,
+      "selected_pixels": {
+        "rows": [
+          "000000000000000020000000000000",
+          "000000000000022212220000000000",
+          "000000000002277744f42220000000",
+          "000000000227774441f44442220000",
+          "000000002777444441444444112000",
+          "000000027744422441777177712020",
+          "0000002774444777f471c111111272",
+          "000022774444f7ee4441cccf117772",
+          "00027444444f27e444421cccff7720",
+          "00274444f42222774442211ccc7720",
+          "024222211222244f4422777dd7f820",
+          "22200002744444ff44444777777720",
+          "00000227444444f224444777772200",
+          "0002277444444ff22fff22f1120000",
+          "002177444444ff2222222447120000",
+          "0027222444fff2222222f417220000",
+          "00020002f222224442444217720000",
+          "000000277444444f444f1177720000",
+          "00000277444444ff4411c177200000",
+          "000027444444ff2f1111c177200000",
+          "00002224442f222ffcccc121200000",
+          "00000002222222f4cc22c111200000",
+          "0000000277444f4442002bbb200000",
+          "000000274444ff444122111b200000",
+          "00000224444224442141119b200000",
+          "0000200222f2f442f442219b200000",
+          "000000274421f2222420029b200000",
+          "0000027744ff2222ff20002b200000",
+          "0000217441ff444aaa200002200000",
+          "0000021f4227441aaa120000000000",
+          "0000027444ff4218aab20000000000",
+          "000027444ff22218fb120000000000",
+          "000221442f222218aab20000000000",
+          "0000021224422218fa120000000000",
+          "0000027744422218fa200000000000",
+          "00000224422200288a200000000000",
+          "000000022000000288200000000000",
+          "000000000000000022200000000000"
+        ],
+        "anchor": [
+          24,
+          12
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "slope",
+      "id": "s3k-run-steep-1",
+      "host": "s3k",
+      "derived_from": "run-1",
+      "rotation": 90,
+      "support_kept": 17.0,
+      "file": "mica/powered/frames/s3k-run-steep-1.png",
+      "hotspot": [
+        14,
+        12
+      ],
+      "size": [
+        32,
+        39
+      ],
+      "authored_area": 696,
+      "selected_pixels": {
+        "rows": [
+          "00000000000000002200000000000000",
+          "00000000000022202720000000000000",
+          "00000000002211127720000000000000",
+          "00000000224417117772000000000000",
+          "0000024444477111f7f8200000000000",
+          "0000274f44111fffc7f7200000000000",
+          "0000244f4f71ccccc777200000000000",
+          "00027441471cccc1d772000000000000",
+          "00027444171111177772000000000000",
+          "00277444f44222777711200000000000",
+          "00274427144442417f17220000000000",
+          "00774277e44424442441772000000000",
+          "0274447ee744444f2441772000000000",
+          "077444f771ff444f2f42777200000000",
+          "027444f224f22ff22411377120000000",
+          "02744422244f222224fc1721b2000000",
+          "02744422244f2222441cc111b1200000",
+          "07744f24444f22f44411cc1b1bbb2000",
+          "2744f174444f224f441cccc119bbf000",
+          "274f2174444f224ff1fcc0d1199bb200",
+          "2742027444f2244f2f2cccd122f22200",
+          "274002744422444f2f44114200000000",
+          "242027744f2444f22f44424420000000",
+          "22002744277444f24f444f4442000000",
+          "22002742077444224ff4422faa220000",
+          "00002720074442244f24422aaa1b2000",
+          "0000220007442774422f224aaab1b200",
+          "00000000072007744f2124418faa1a00",
+          "0000000002000744224ff44218faaa20",
+          "0000000000000742444f2742228ffaa2",
+          "000000000000070274412f2220288882",
+          "000000000000020274424f22222f88f2",
+          "000000000000000274f44f2222000000",
+          "000000000000000221744f2422000000",
+          "00000000000000020274424422000000",
+          "00000000000000000274274420000000",
+          "00000000000000000272174200000000",
+          "00000000000000000220274200000000",
+          "00000000000000000000220000000000"
+        ],
+        "anchor": [
+          14,
+          12
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    },
+    {
+      "group": "slope",
+      "id": "s3k-run-inverted-1",
+      "host": "s3k",
+      "derived_from": "run-1",
+      "rotation": 135,
+      "support_kept": 14.142135623730951,
+      "file": "mica/powered/frames/s3k-run-inverted-1.png",
+      "hotspot": [
+        17,
+        11
+      ],
+      "size": [
+        38,
+        30
+      ],
+      "authored_area": 685,
+      "selected_pixels": {
+        "rows": [
+          "00000022000000000000000000000000000000",
+          "00000277222200000000000000000000000000",
+          "00000027778720000000000000000000000000",
+          "0000221777f720000000000000000000000000",
+          "00021111fc7772222200000000000000000000",
+          "00021711fcd771127722222222222000000000",
+          "0002471fccd77177777711bbbbbb2000000000",
+          "0024471cc1777f41177721b199920000000000",
+          "0024411cc1777244211111b111200000000000",
+          "002447cc1274422f41cccc2112000000000000",
+          "0244471122244f224f11c20212000222220000",
+          "02ff477444244f224411c202442221b1b12222",
+          "0241114444444f222441cc21144faaabaaaa82",
+          "214444f4444422224441fc442f2faaafaff882",
+          "0274447e47ff22224ffff4444222aa88888820",
+          "0274427ee74fff2244f22f4444224111111200",
+          "0277427772444ff2244f22ff44224422222000",
+          "0027444f222444ff244f224f2ff24442222000",
+          "00277444f224444f2444f244221ff7f2222200",
+          "000274444224444f244422444f2ff2ff244200",
+          "0002774444244444244442744244124ff44200",
+          "000027744f174444f744427442444444224420",
+          "00000277441274442774422742774f44427420",
+          "00000027442027420274200220277174417200",
+          "00000002442027720027200020021227122200",
+          "00000002742002720002200002002002200000",
+          "00000000272002172000000000000000200000",
+          "00000000024200220000000000000000000000",
+          "00000000002200000000000000000000000000",
+          "00000000000200000000000000000000000000"
+        ],
+        "anchor": [
+          17,
+          11
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          182,
+          73,
+          0
+        ],
+        [
+          255,
+          146,
+          0
+        ],
+        [
+          255,
+          219,
+          0
+        ],
+        [
+          255,
+          255,
+          73
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          255,
+          219,
+          146
+        ],
+        [
+          219,
+          182,
+          109
+        ],
+        [
+          182,
+          146,
+          109
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          146,
+          146
+        ],
+        [
+          73,
+          36,
+          0
+        ]
+      ]
+    }
+  ]
+}

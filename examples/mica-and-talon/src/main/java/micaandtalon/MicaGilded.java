@@ -5,7 +5,6 @@ import com.openggf.io.ModAssetRoot;
 import com.openggf.level.objects.PlayableSheetMaterializer;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -27,8 +26,8 @@ final class MicaGilded {
         var gilded = effects.effects("super");
         var s2 =
                 new SuperFormProfile.Form(
-                        gold(fade),
-                        gold(colors.get("s2")),
+                        fade,
+                        colors.get("s2"),
                         List.of(),
                         8,
                         4,
@@ -41,8 +40,8 @@ final class MicaGilded {
                         gilded);
         var s3k =
                 new SuperFormProfile.Form(
-                        gold(fade),
-                        gold(colors.get("s3k")),
+                        fade,
+                        colors.get("s3k"),
                         List.of(),
                         7,
                         2,
@@ -53,12 +52,12 @@ final class MicaGilded {
                         false,
                         s3kBank,
                         gilded);
-        // Hyper Gilded keeps her gold palette and adds the native echo trail, her own denser
-        // glints and Instagib strikes; no Sonic stars.
+        // Hyper is the same Open Cone bank flashing Prism Gilt (gold, white-hot, jade, rose-gold);
+        // the native echo trail, glints and Instagib strikes follow the live phase. No Sonic stars.
         var hyper =
                 new SuperFormProfile.Form(
                         s3k.fade(),
-                        s3k.dryCycle(),
+                        colors.get("hyper"),
                         List.of(),
                         7,
                         2,
@@ -75,8 +74,8 @@ final class MicaGilded {
                         Map.of(
                                 SuperFormProfile.Tier.SUPER,
                                 new SuperFormProfile.Form(
-                                        gold(fade),
-                                        gold(colors.get("s2")),
+                                        fade,
+                                        colors.get("s2"),
                                         List.of(),
                                         8,
                                         4,
@@ -133,18 +132,5 @@ final class MicaGilded {
         for (int phase = 0; phase < 3; phase++)
             phaseAliases.put("family-tails-carried/" + phase, "family-tails-carried/" + phase);
         return new PoweredPlayableSheet(art, aliases, phaseAliases);
-    }
-
-    /** Pale gold belongs to the powered view; normal MICA cream slots stay unchanged. */
-    private static List<List<Integer>> gold(List<List<Integer>> rows) {
-        return rows.stream()
-                .map(
-                        row -> {
-                            var copy = new ArrayList<>(row);
-                            copy.set(7, 0xAEE);
-                            copy.set(8, 0x8CC);
-                            return List.copyOf(copy);
-                        })
-                .toList();
     }
 }

@@ -21,6 +21,8 @@ def md_word(rgb):
 def render(data):
     banks = {"fade": data["fade_frames"], "s2": data["cycles"]["s2"]["frames"],
              "s3k": data["cycles"]["s3k"]["frames"]}
+    if "hyper" in data["cycles"]:
+        banks["hyper"] = data["cycles"]["hyper"]["frames"]
     rows = ["# bank followed by sixteen Mega Drive colour words, in animation order."]
     for bank, frames in banks.items():
         rows.extend(bank + " " + " ".join(f"{md_word(color):03X}" for color in frame) for frame in frames)

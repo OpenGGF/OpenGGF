@@ -32,7 +32,7 @@ frame 1 1
 frame 0 0
 6
 frame 0 0
-2
+f
 
 # Flare: a burst ray cooling outward (plays once).
 particle flare 6
@@ -47,7 +47,7 @@ frame 1 1
 6c6
 .6.
 frame 0 0
-2
+f
 
 # Solar: motes drift back and up from the wings in flight, a spray on each flap, a flare ring
 # as the form arrives and a heat trail of motes behind the divebomb.

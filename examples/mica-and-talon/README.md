@@ -190,17 +190,22 @@ without a donor ROM or a native Super animation slot. See
 MICA’s run now keeps the native two-phase lean and contact clock. TALON’s free
 flight uses the approved carry profile, skull scale, wing design and material
 contours. Carry geometry and MICA’s hand-to-feet registration are unchanged.
-Gilded shimmers bright yellow to white; Solar keeps warmer amber shadows and
-orange tips. Powered silhouettes use cycling gold, retaining only interior eye,
-glove and shoe separators. Rolling reuses approved original geometry with that
-same material conversion. Normal-bank aliases remain explicit.
+The owner-picked concepts (2026-11-11) are in pilot: Open Cone Gilded MICA and
+Corona Crest Solar TALON redraw wait, run, roll and the transformation for S2 and
+S3K. Gilded plates breathe from a deep amber underside to a pale-gold edge; Hyper
+reuses that bank and flashes Prism Gilt (gold, white-hot, jade, rose-gold). Solar
+keeps a dark bronze slot for TALON's bars and moustache, with fixed amber/red
+flame tips. Powered silhouettes use the cycling contour slot, retaining only
+interior eye, glove and shoe separators. Normal-bank aliases remain explicit.
 
 Selected indexed pixels, original generation attempts, anatomical scales and
-material remapping are recorded in `production/*/feedback-generation.json`.
+material remapping are recorded in `production/*/feedback-generation.json` and,
+for the powered concepts, `production/*/powered-concepts-generation.json`.
 Check or rebuild the selected images without native pixels or raw generations:
 
 ```bash
 python3 examples/mica-and-talon/production/talon/feedback_art.py --check
+python3 examples/mica-and-talon/production/powered_palettes.py --check
 python3 tools/modding/playable_art/gilded_java.py --check
 python3 tools/modding/playable_art/solar_java.py --check
 ```

@@ -35,9 +35,15 @@ Fresh native-pose generations and selected indexed rows live in
 [`feedback-generation.json`](../../production/mica/powered/feedback-generation.json).
 The S2/S3K run drawings use one hood/torso scale and retain native phase timing.
 The five already-approved transformation poses now play through the shared form
-controller, including S1’s creator form. Gold shadows stay saturated yellow at
-maximum shimmer so scale plates remain legible. Fixed silhouette ink is converted
-to cycling gold; interior eye/glove/shoe separators may remain dark.
+controller, including S1’s creator form. Fixed silhouette ink is converted
+to the cycling contour slot; interior eye/glove/shoe separators may remain dark.
+
+**Open Cone pilot (2026-11-11).** Wait, run (with derived slopes), roll and the
+transformation are fresh owner-concept generations, recorded with selected rows in
+[`powered-concepts-generation.json`](../../production/mica/powered/powered-concepts-generation.json).
+Slots 2–6 are lifted plates from a deep amber underside to a pale-gold edge; face,
+belly, gloves and coral boots keep the sheet colours. Hyper reuses the bank with the
+Prism Gilt cycle. Walk, push, balance and duck are earlier drawings in the new palette.
 
 `production/talon/feedback_art.py` reproduces every selected/converted image from
 original indexed rows; raw generations and decoded native references stay outside

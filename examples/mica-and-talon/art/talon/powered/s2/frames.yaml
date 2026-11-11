@@ -9,16 +9,30 @@
   ],
   "frames": [
     {
-      "id": "idle",
+      "id": "idle-0",
       "animation": "WAIT",
       "order": 0,
-      "file": "frames/idle.png",
+      "file": "frames/idle-0.png",
       "hotspot": [
-        11,
-        18
+        13,
+        23
       ],
       "angle_set": "flat",
-      "duration_ticks": 2
+      "duration_ticks": 2,
+      "notes": "Powered concepts pilot: talon-pilot-wait-v2 cell 0; fixed scale 13.0; see powered-concepts-generation.json."
+    },
+    {
+      "id": "idle-1",
+      "animation": "WAIT",
+      "order": 0,
+      "file": "frames/idle-1.png",
+      "hotspot": [
+        12,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Powered concepts pilot: talon-pilot-wait-v2 cell 1; fixed scale 13.0; see powered-concepts-generation.json."
     },
     {
       "id": "run-0",
@@ -26,11 +40,12 @@
       "order": 0,
       "file": "frames/run-0.png",
       "hotspot": [
-        15,
-        17
+        17,
+        19
       ],
       "angle_set": "flat",
-      "duration_ticks": 2
+      "duration_ticks": 2,
+      "notes": "Powered concepts pilot: talon-pilot-run-v2 cell 0; fixed scale 9.6; see powered-concepts-generation.json."
     },
     {
       "id": "run-up45-0",
@@ -38,8 +53,8 @@
       "order": 0,
       "file": "frames/run-up45-0.png",
       "hotspot": [
-        15,
-        17
+        19,
+        18
       ],
       "angle_set": "up45",
       "duration_ticks": 2
@@ -50,8 +65,8 @@
       "order": 0,
       "file": "frames/run-steep-0.png",
       "hotspot": [
-        16,
-        15
+        18,
+        16
       ],
       "angle_set": "steep",
       "duration_ticks": 2
@@ -62,8 +77,8 @@
       "order": 0,
       "file": "frames/run-inverted-0.png",
       "hotspot": [
-        17,
-        9
+        18,
+        12
       ],
       "angle_set": "inverted",
       "duration_ticks": 2
@@ -74,11 +89,12 @@
       "order": 1,
       "file": "frames/run-1.png",
       "hotspot": [
-        16,
-        17
+        17,
+        19
       ],
       "angle_set": "flat",
-      "duration_ticks": 2
+      "duration_ticks": 2,
+      "notes": "Powered concepts pilot: talon-pilot-run-v2 cell 1; fixed scale 9.6; see powered-concepts-generation.json."
     },
     {
       "id": "run-up45-1",
@@ -86,7 +102,7 @@
       "order": 1,
       "file": "frames/run-up45-1.png",
       "hotspot": [
-        14,
+        16,
         19
       ],
       "angle_set": "up45",
@@ -98,8 +114,8 @@
       "order": 1,
       "file": "frames/run-steep-1.png",
       "hotspot": [
-        16,
-        17
+        18,
+        18
       ],
       "angle_set": "steep",
       "duration_ticks": 2
@@ -111,7 +127,7 @@
       "file": "frames/run-inverted-1.png",
       "hotspot": [
         19,
-        11
+        12
       ],
       "angle_set": "inverted",
       "duration_ticks": 2
@@ -122,11 +138,12 @@
       "order": 2,
       "file": "frames/run-2.png",
       "hotspot": [
-        18,
-        16
+        20,
+        17
       ],
       "angle_set": "flat",
-      "duration_ticks": 2
+      "duration_ticks": 2,
+      "notes": "Powered concepts pilot: talon-pilot-run-v2 cell 2; fixed scale 9.6; see powered-concepts-generation.json."
     },
     {
       "id": "run-up45-2",
@@ -135,7 +152,7 @@
       "file": "frames/run-up45-2.png",
       "hotspot": [
         11,
-        18
+        19
       ],
       "angle_set": "up45",
       "duration_ticks": 2
@@ -146,8 +163,8 @@
       "order": 2,
       "file": "frames/run-steep-2.png",
       "hotspot": [
-        15,
-        17
+        14,
+        18
       ],
       "angle_set": "steep",
       "duration_ticks": 2
@@ -158,8 +175,8 @@
       "order": 2,
       "file": "frames/run-inverted-2.png",
       "hotspot": [
-        17,
-        12
+        16,
+        13
       ],
       "angle_set": "inverted",
       "duration_ticks": 2
@@ -171,10 +188,11 @@
       "file": "frames/run-3.png",
       "hotspot": [
         18,
-        17
+        18
       ],
       "angle_set": "flat",
-      "duration_ticks": 2
+      "duration_ticks": 2,
+      "notes": "Powered concepts pilot: talon-pilot-run-v2 cell 3; fixed scale 9.6; see powered-concepts-generation.json."
     },
     {
       "id": "run-up45-3",
@@ -182,7 +200,7 @@
       "order": 3,
       "file": "frames/run-up45-3.png",
       "hotspot": [
-        11,
+        13,
         19
       ],
       "angle_set": "up45",
@@ -206,8 +224,8 @@
       "order": 3,
       "file": "frames/run-inverted-3.png",
       "hotspot": [
-        18,
-        12
+        17,
+        13
       ],
       "angle_set": "inverted",
       "duration_ticks": 2
@@ -302,11 +320,12 @@
       "order": 0,
       "file": "frames/transform-0.png",
       "hotspot": [
-        14,
+        10,
         18
       ],
       "angle_set": "flat",
-      "duration_ticks": 2
+      "duration_ticks": 2,
+      "notes": "Powered concepts pilot: talon-pilot-transform-v1 cell 0; fixed scale 14.2; see powered-concepts-generation.json."
     },
     {
       "id": "transform-1",
@@ -314,11 +333,12 @@
       "order": 1,
       "file": "frames/transform-1.png",
       "hotspot": [
-        12,
-        24
+        10,
+        18
       ],
       "angle_set": "flat",
-      "duration_ticks": 2
+      "duration_ticks": 2,
+      "notes": "Powered concepts pilot: talon-pilot-transform-v1 cell 1; fixed scale 14.2; see powered-concepts-generation.json."
     },
     {
       "id": "transform-2",
@@ -326,11 +346,12 @@
       "order": 2,
       "file": "frames/transform-2.png",
       "hotspot": [
-        14,
-        23
+        20,
+        26
       ],
       "angle_set": "flat",
-      "duration_ticks": 2
+      "duration_ticks": 2,
+      "notes": "Powered concepts pilot: talon-pilot-transform-v1 cell 2; fixed scale 14.2; see powered-concepts-generation.json."
     },
     {
       "id": "transform-3",
@@ -338,11 +359,12 @@
       "order": 3,
       "file": "frames/transform-3.png",
       "hotspot": [
-        16,
-        24
+        15,
+        25
       ],
       "angle_set": "flat",
-      "duration_ticks": 2
+      "duration_ticks": 2,
+      "notes": "Powered concepts pilot: talon-pilot-transform-v1 cell 3; fixed scale 14.2; see powered-concepts-generation.json."
     },
     {
       "id": "transform-4",
@@ -350,11 +372,12 @@
       "order": 4,
       "file": "frames/transform-4.png",
       "hotspot": [
-        18,
-        25
+        14,
+        27
       ],
       "angle_set": "flat",
-      "duration_ticks": 2
+      "duration_ticks": 2,
+      "notes": "Powered concepts pilot: talon-pilot-transform-v1 cell 4; fixed scale 14.2; see powered-concepts-generation.json."
     },
     {
       "id": "gold-roll-00",
@@ -363,11 +386,11 @@
       "file": "frames/gold-roll-00.png",
       "hotspot": [
         14,
-        14
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image roll strip attempt 2, cell 0; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Powered concepts pilot: talon-pilot-roll-v2 cell 0; fixed scale 12.8; see powered-concepts-generation.json."
     },
     {
       "id": "gold-roll-03",
@@ -380,7 +403,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image roll strip attempt 2, cell 3; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Powered concepts pilot: talon-pilot-roll-v2 cell 3; fixed scale 12.8; see powered-concepts-generation.json."
     },
     {
       "id": "gold-roll-01",
@@ -388,12 +411,12 @@
       "order": 2,
       "file": "frames/gold-roll-01.png",
       "hotspot": [
-        14,
-        14
+        15,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image roll strip attempt 2, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Powered concepts pilot: talon-pilot-roll-v2 cell 1; fixed scale 12.8; see powered-concepts-generation.json."
     },
     {
       "id": "gold-roll-02",
@@ -402,11 +425,11 @@
       "file": "frames/gold-roll-02.png",
       "hotspot": [
         14,
-        14
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image roll strip attempt 2, cell 2; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Powered concepts pilot: talon-pilot-roll-v2 cell 2; fixed scale 12.8; see powered-concepts-generation.json."
     },
     {
       "id": "gold-roll2",
@@ -415,7 +438,7 @@
       "file": "frames/gold-roll-00.png",
       "hotspot": [
         14,
-        14
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
@@ -425,9 +448,11 @@
   "scripts": {
     "WAIT": {
       "frames": [
-        "idle"
+        "idle-0",
+        "idle-1"
       ],
       "durations": [
+        8,
         8
       ],
       "end": "loop"

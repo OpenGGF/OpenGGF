@@ -398,11 +398,12 @@
       "order": 0,
       "file": "../frames/s3k-run-0.png",
       "hotspot": [
-        32,
+        27,
         14
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-pilot-run-v2 cell 2; fixed scale 14.0; see powered-concepts-generation.json."
     },
     {
       "id": "s3k-run-up45-0",
@@ -410,8 +411,8 @@
       "order": 0,
       "file": "../frames/s3k-run-up45-0.png",
       "hotspot": [
-        19,
-        13
+        22,
+        11
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -422,8 +423,8 @@
       "order": 0,
       "file": "../frames/s3k-run-steep-0.png",
       "hotspot": [
-        14,
-        11
+        13,
+        12
       ],
       "angle_set": "steep",
       "duration_ticks": 1
@@ -434,8 +435,8 @@
       "order": 0,
       "file": "../frames/s3k-run-inverted-0.png",
       "hotspot": [
-        17,
-        8
+        14,
+        11
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -446,11 +447,12 @@
       "order": 1,
       "file": "../frames/s3k-run-1.png",
       "hotspot": [
-        32,
+        27,
         14
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-pilot-run-v2 cell 3; fixed scale 14.0; see powered-concepts-generation.json."
     },
     {
       "id": "s3k-run-up45-1",
@@ -458,8 +460,8 @@
       "order": 1,
       "file": "../frames/s3k-run-up45-1.png",
       "hotspot": [
-        21,
-        13
+        24,
+        12
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -470,8 +472,8 @@
       "order": 1,
       "file": "../frames/s3k-run-steep-1.png",
       "hotspot": [
-        15,
-        11
+        14,
+        12
       ],
       "angle_set": "steep",
       "duration_ticks": 1
@@ -482,8 +484,8 @@
       "order": 1,
       "file": "../frames/s3k-run-inverted-1.png",
       "hotspot": [
-        19,
-        8
+        17,
+        11
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -542,11 +544,12 @@
       "order": 0,
       "file": "../frames/s3k-wait-0.png",
       "hotspot": [
-        15,
-        21
+        18,
+        22
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-pilot-wait-v1 cell 3; fixed scale 11.3; see powered-concepts-generation.json."
     },
     {
       "id": "s3k-wait-1",
@@ -554,11 +557,12 @@
       "order": 1,
       "file": "../frames/s3k-wait-1.png",
       "hotspot": [
-        15,
-        20
+        19,
+        19
       ],
       "angle_set": "flat",
-      "duration_ticks": 1
+      "duration_ticks": 1,
+      "notes": "Powered concepts pilot: mica-pilot-wait-v1 cell 4; fixed scale 11.3; see powered-concepts-generation.json."
     },
     {
       "id": "balance-0",
@@ -614,12 +618,12 @@
       "order": 0,
       "file": "../frames/transform-0.png",
       "hotspot": [
-        10,
-        15
+        13,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Powered concepts pilot: mica-pilot-transform-v1 cell 0; fixed scale 11.3; see powered-concepts-generation.json."
     },
     {
       "id": "transform-1",
@@ -627,12 +631,12 @@
       "order": 1,
       "file": "../frames/transform-1.png",
       "hotspot": [
-        13,
-        18
+        12,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Powered concepts pilot: mica-pilot-transform-v1 cell 1; fixed scale 11.3; see powered-concepts-generation.json."
     },
     {
       "id": "transform-2",
@@ -640,12 +644,12 @@
       "order": 2,
       "file": "../frames/transform-2.png",
       "hotspot": [
-        16,
-        20
+        19,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Powered concepts pilot: mica-pilot-transform-v1 cell 2; fixed scale 11.3; see powered-concepts-generation.json."
     },
     {
       "id": "transform-3",
@@ -653,12 +657,12 @@
       "order": 3,
       "file": "../frames/transform-3.png",
       "hotspot": [
-        16,
-        20
+        22,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Powered concepts pilot: mica-pilot-transform-v1 cell 3; fixed scale 11.3; see powered-concepts-generation.json."
     },
     {
       "id": "transform-4",
@@ -666,12 +670,12 @@
       "order": 4,
       "file": "../frames/transform-4.png",
       "hotspot": [
-        16,
-        20
+        22,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Powered concepts pilot: mica-pilot-transform-v1 cell 4; fixed scale 11.3; see powered-concepts-generation.json."
     },
     {
       "id": "gold-roll-00",
@@ -680,11 +684,11 @@
       "file": "frames/gold-roll-00.png",
       "hotspot": [
         15,
-        12
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Powered concepts pilot: mica-pilot-roll-v1 cell 0; fixed scale 12.9; see powered-concepts-generation.json."
     },
     {
       "id": "gold-roll-blur",
@@ -697,7 +701,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Powered concepts pilot: mica-pilot-roll-v1 cell 4; fixed scale 12.9; see powered-concepts-generation.json."
     },
     {
       "id": "gold-roll-01",
@@ -710,7 +714,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Powered concepts pilot: mica-pilot-roll-v1 cell 1; fixed scale 12.9; see powered-concepts-generation.json."
     },
     {
       "id": "gold-roll-02",
@@ -719,11 +723,11 @@
       "file": "frames/gold-roll-02.png",
       "hotspot": [
         14,
-        14
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Powered concepts pilot: mica-pilot-roll-v1 cell 2; fixed scale 12.9; see powered-concepts-generation.json."
     },
     {
       "id": "gold-roll-03",
@@ -731,12 +735,12 @@
       "order": 4,
       "file": "frames/gold-roll-03.png",
       "hotspot": [
-        14,
-        14
+        15,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Powered concepts pilot: mica-pilot-roll-v1 cell 3; fixed scale 12.9; see powered-concepts-generation.json."
     },
     {
       "id": "gold-roll2",
@@ -745,7 +749,7 @@
       "file": "frames/gold-roll-00.png",
       "hotspot": [
         15,
-        12
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 4,

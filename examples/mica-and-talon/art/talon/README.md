@@ -42,9 +42,17 @@ Six free-flight phases now match the approved carry profile and material contour
 normal/ascending variants share the native identical torso pose. Goggle/skull
 registration removes source-atlas row drift without changing scale or pixels.
 Solar has dedicated S2/S3K banks, shared by the S1 creator form, and an animated
-five-pose wind-up. Its warm gold/orange cycle retains clear white-gold plumage;
-powered silhouette ink belongs to the cycle. Normal carry contact geometry is
-unchanged. Native S2 has no carry state; its picture comparison is pose-only.
+five-pose wind-up. Powered silhouette ink belongs to the contour slot. Normal carry
+contact geometry is unchanged. Native S2 has no carry state; its picture comparison
+is pose-only.
+
+**Corona Crest pilot (2026-11-11).** Wait (two-frame crest flicker), run (with
+derived slopes), roll and the transformation (wings wrapped, goggles drop, wings
+thrown open as the crest ignites) are fresh owner-concept generations, recorded in
+[`powered-concepts-generation.json`](../../production/talon/powered-concepts-generation.json).
+Slot 2 stays dark bronze for the chest bars, moustache and feather breaks; 3–5 are
+white-gold plumage, 6 the cycling orange tip, and fixed amber 14/15 and red 10
+finish the flames. Free flight is the earlier drawing in the new palette.
 
 `production/talon/feedback_art.py` reproduces every selected/converted image from
 original indexed rows; raw generations and decoded native references stay outside

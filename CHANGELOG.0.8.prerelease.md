@@ -192,11 +192,11 @@ under the matching area heading; see the
   preserve the native × beside the counter, as S1/S2 already do. TALON now joins as her
   default sidekick and is selectable solo. Powered banks now keep each movement
   archetype's native clocks and expose host-independent authored flight and
-  transformation scripts. TALON has dedicated white-gold Solar banks, and new
-  profile-facing flight art matches his carry identity; MICA's powered run uses
-  stable native lean/contact phases. Both forms shimmer yellow/gold to white,
-  with cycling silhouette contours and readable scale/feather shading; original
-  rolling geometry now uses the same powered material treatment. S1 creator
+  transformation scripts. Powered forms follow the owner-picked concepts: Open
+  Cone Gilded MICA (lifted gold plates; Hyper flashes Prism Gilt gold, white-hot,
+  jade and rose-gold) and Corona Crest Solar TALON (flame crest, goggles down,
+  flame-tipped wings), with new wait, run, roll and transformation art; new
+  profile-facing flight art matches his carry identity. S1 creator
   forms play animated transformations. Joint native-pose carry redraws now
   keep MICA’s raised gloves against TALON’s shoes throughout his wingbeat,
   with native-style material contours and the complete S3K hanging sequence.
