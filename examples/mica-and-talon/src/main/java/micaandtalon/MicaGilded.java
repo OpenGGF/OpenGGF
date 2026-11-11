@@ -14,6 +14,8 @@ import java.util.Set;
 
 /** SuperFormProfile for MICA, including powered sheets, native gates and palette cycles. */
 final class MicaGilded {
+    static final String EFFECTS = "art/mica/powered/effects/effects.txt";
+
     private MicaGilded() {}
 
     static SuperFormProfile profile(ModAssetRoot assets) throws IOException {
@@ -21,6 +23,8 @@ final class MicaGilded {
         var s3kBank = bank(assets, "s3k");
         var colors = FrameTable.colors(assets, "art/mica/powered/palettes.txt");
         var fade = colors.get("fade");
+        var effects = EffectsTable.read(assets, EFFECTS);
+        var gilded = effects.effects("super");
         var s2 =
                 new SuperFormProfile.Form(
                         gold(fade),
@@ -33,7 +37,8 @@ final class MicaGilded {
                         Map.of(),
                         false,
                         false,
-                        s2Bank);
+                        s2Bank,
+                        gilded);
         var s3k =
                 new SuperFormProfile.Form(
                         gold(fade),
@@ -46,8 +51,24 @@ final class MicaGilded {
                         Map.of(),
                         false,
                         false,
-                        s3kBank);
-        // Hyper Gilded deliberately retains her gold palette and homing ability; no Sonic stars.
+                        s3kBank,
+                        gilded);
+        // Hyper Gilded keeps her gold palette and adds the native echo trail, her own denser
+        // glints and Instagib strikes; no Sonic stars.
+        var hyper =
+                new SuperFormProfile.Form(
+                        s3k.fade(),
+                        s3k.dryCycle(),
+                        List.of(),
+                        7,
+                        2,
+                        PhysicsProfile.SONIC_3K_SUPER_SONIC,
+                        CanonicalAnimation.SUPER_TRANSFORM,
+                        Map.of(),
+                        true,
+                        false,
+                        s3kBank,
+                        effects.effects("hyper"));
         return new SuperFormProfile(
                 Map.of(
                         GameId.S1,
@@ -63,7 +84,9 @@ final class MicaGilded {
                                         CanonicalAnimation.WAIT,
                                         Map.of(),
                                         false,
-                                        false)),
+                                        false,
+                                        null,
+                                        gilded)),
                         GameId.S2,
                         Map.of(SuperFormProfile.Tier.SUPER, s2),
                         GameId.S3K,
@@ -71,7 +94,7 @@ final class MicaGilded {
                                 SuperFormProfile.Tier.SUPER,
                                 s3k,
                                 SuperFormProfile.Tier.HYPER,
-                                s3k)));
+                                hyper)));
     }
 
     private static PoweredPlayableSheet bank(ModAssetRoot assets, String game) throws IOException {

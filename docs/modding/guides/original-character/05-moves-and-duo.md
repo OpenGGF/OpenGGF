@@ -33,8 +33,15 @@ protected boolean onAbilityActivate(boolean up, boolean down, boolean left, bool
     // The S3K form gate owns an eligible transformation press before her strike.
     if (getSuperStateController() != null && getSuperStateController().activateFromAirAbility())
         return true;
-    return HomingAttack.start(
-            this, isSuperSonic() ? HomingAttack.Mode.INSTAGIB : HomingAttack.Mode.HOMING);
+    // Only Hyper Gilded strikes are Instagib (one-hit bosses, blown-apart badniks).
+    return HomingAttack.start(this, poweredTier() == SuperFormProfile.Tier.HYPER
+            ? HomingAttack.Mode.INSTAGIB : HomingAttack.Mode.HOMING);
+}
+
+// Jade strike colours, read from art/mica/powered/effects/effects.txt (part 7).
+@Override
+public StrikeTrailStyle strikeTrailStyle() {
+    return trail;
 }
 ```
 
@@ -81,8 +88,7 @@ alone:
 protected boolean onAbilityActivate(boolean up, boolean down, boolean left, boolean right) {
     if (getSuperStateController() != null && getSuperStateController().activateFromAirAbility())
         return true;
-    return getAir() && down && HomingAttack.divebomb(
-            this, isSuperSonic() ? HomingAttack.Mode.INSTAGIB : HomingAttack.Mode.HOMING);
+    return getAir() && down && HomingAttack.divebomb(this, HomingAttack.Mode.HOMING);
 }
 ```
 

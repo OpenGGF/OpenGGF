@@ -17,6 +17,7 @@ public final class TalonCharacter extends AbstractPlayableSprite {
     private static final int FLIGHT = 0x200;
     private SpriteAnimationSet authoredAnimations;
     private int authoredMappingCount;
+    private StrikeTrailStyle trail;
 
     public TalonCharacter(String code, int x, int y) {
         super(code, (short) x, (short) y, new CharacterPhysicsSpec(PhysicsProfile.SONIC_2_TAILS));
@@ -26,7 +27,8 @@ public final class TalonCharacter extends AbstractPlayableSprite {
             String owner,
             PlayableSheetMaterializer.MaterializedArt materialized,
             CharacterPresentation presentation,
-            SuperFormProfile solar) {
+            SuperFormProfile solar,
+            StrikeTrailStyle trail) {
         return new CharacterDefinition(
                 CharacterKey.mod(owner, "talon"),
                 "TALON",
@@ -34,6 +36,7 @@ public final class TalonCharacter extends AbstractPlayableSprite {
                     var talon = new TalonCharacter(code, x, y);
                     talon.authoredAnimations = materialized.art().animationSet();
                     talon.authoredMappingCount = materialized.art().mappingFrames().size();
+                    talon.trail = trail;
                     return talon;
                 },
                 SidekickRespawnStrategy::tails,
@@ -134,11 +137,14 @@ public final class TalonCharacter extends AbstractPlayableSprite {
         if (getSuperStateController() != null && getSuperStateController().activateFromAirAbility())
             return true;
         // Ground duck/spindash and native flight descent retain their own input paths.
-        return getAir()
-                && down
-                && HomingAttack.divebomb(
-                        this,
-                        isSuperSonic() ? HomingAttack.Mode.INSTAGIB : HomingAttack.Mode.HOMING);
+        // Solar divebombs are ordinary strikes; Instagib belongs to Hyper MICA alone.
+        return getAir() && down && HomingAttack.divebomb(this, HomingAttack.Mode.HOMING);
+    }
+
+    /** Slate normal trail; Solar supplies its own heat trail through the effects table. */
+    @Override
+    public StrikeTrailStyle strikeTrailStyle() {
+        return trail;
     }
 
     @Override

@@ -14,6 +14,12 @@ final class PlayableSpriteArtPresentation {
             sprite.getSpriteRenderer().drawFrame(
                     sprite.getMappingFrame(), sprite.getRenderCentreX(), sprite.getRenderCentreY(),
                     sprite.getRenderHFlip(), sprite.getRenderVFlip());
+            // Authored powered forms: the Hyper echo trail and creator particles follow the live
+            // body, so the body owns overlap at the same priority (as Sonic and Knuckles draw).
+            if (sprite.getSuperStateController() instanceof ProfileSuperStateController profile) {
+                PlayableMutatorPresentation.draw(sprite, com.openggf.graphics.SpritePresentation.Part.ATTACHED_EFFECT,
+                        profile::renderPoweredTrail);
+            }
         }
     }
 

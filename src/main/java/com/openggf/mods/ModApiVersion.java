@@ -20,6 +20,8 @@ public final class ModApiVersion {
      * Optional per-form powered GGFP banks and explicit normal aliases extend the unpublished candidate.
      * Host-aware character presentation suppliers extend the unpublished 0.7 candidate.
      * Optional directional canonical homing strike sheet keys extend this same 0.7 candidate.
+     * Creator strike trail colours (StrikeTrailStyle), per-form powered particles and emitters
+     * (PoweredEffects) and the powered-tier query extend the unpublished candidate.
      * Current unpublished compiled-mod API candidate, including the grouped landing animation rule,
      * saved rewind budget scope,
      * allowance and stage/life-loss controls, plus the saved sprite scanline-limit
