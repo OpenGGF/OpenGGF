@@ -357,8 +357,11 @@ origin, hand and timing unchanged. The real-capture check was frames 700, 760
 and 850 of a fresh 900-tick capture.
 
 The owner then judged the settled glove too far left: it sat in the middle of
-her quills, not in front of her chest like Sonic's. HAND9 is now drawn 6 px
-right of the native hand origin (`TitlePresentation` x offset −14 rather than
-−8; also recorded in `s2-frames.json`). Selectors, timing and body origins
-stay native. TALON's transparent HAND19 is unchanged. Checked on capture ticks
-642–850 across every hand phase.
+her quills, not in front of her chest like Sonic's, and her forearm angles
+down-left. HAND9 is now drawn 10 px right of the native hand origin
+(`TitlePresentation` x offset −18 rather than −8; also recorded in
+`s2-frames.json`). The move uncovered small holes that the glove had hidden in
+BODY18's quill mass; 42 enclosed transparent pixels are filled with crevice
+index 2. Selectors, timing and body origins stay native, and TALON's
+transparent HAND19 is unchanged. Checked on capture ticks 642–850 across every
+hand phase; a 14 px shift detached the forearm from her body.

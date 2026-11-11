@@ -42,7 +42,7 @@ final class TitlePresentation {
                         Map.entry(7,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-7.png"),-16,-8)),
                         Map.entry(18,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-18.png"),-24,-8)))));
                     parts.put(TitlePart.HAND,new StageSpriteSet(Map.ofEntries(
-                        Map.entry(9,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-9.png"),character.equals("mica") ? -14 : -8,0)),
+                        Map.entry(9,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-9.png"),character.equals("mica") ? -18 : -8,0)),
                         Map.entry(19,new StageSpriteSet.Frame(PresentationImages.read(assets,root+"s2-19.png"),-8,0)))));
                 }
                 case S3K -> {
