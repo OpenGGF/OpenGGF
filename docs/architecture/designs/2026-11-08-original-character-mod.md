@@ -1670,17 +1670,6 @@ or blockers remain; the lead owns subsequent integration. No merge or push.
 
 ## Coverage audit (2026-11-09)
 
-**Interim normal RUN footwear, 2026-11-11:** the owner deferred powered silhouette
-rollout to a separate concept round. The interim replaces only normal RUN shoes
-with actual approved MICA boot pixels, including jade laces and tan soles. The far
-boot uses darker coral and a clear ink outline. Upper anatomy and the native
-four-phase cadence stay unchanged; each flat phase retains centre +20 ground
-support, and all twelve slopes are rederived with their native support distances.
-The new mean opaque area is 606.25 versus native S2's 628.75, sqrt ratio **0.982**.
-The producer/record is `production/mica/normal_run_boots.py` / `normal-run-boots.json`.
-Committed Solar banks, powered effects, flight/carry and engine binding stay as-is;
-all later powered experiments remain in external scratch pending owner direction.
-
 **Powered-form owner feedback, 2026-11-11:** powered binding selects the creator’s
 movement archetype; native Tails families retain Tails clocks instead of consuming
 Super Sonic’s movement table. Authored powered scripts have relocated canonical

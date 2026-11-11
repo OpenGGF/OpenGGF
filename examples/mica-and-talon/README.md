@@ -179,18 +179,6 @@ Removed dated README logs (all last present at `2e7d9fa348`):
 - `art/talon/reels/README.md`
 - `art/talon/titles/README.md`
 
-## Interim normal RUN footwear
-
-Normal MICA's four RUN phases now reuse her approved ankle boots: coral uppers,
-jade laces, tan soles and dark contours. The far boot uses the darker coral shade.
-The existing upper anatomy, native four-phase timing and ground support remain;
-all twelve slope poses are regenerated from those flat phases. Check the selected
-pixels and contacts with
-`python3 examples/mica-and-talon/production/mica/normal_run_boots.py --check`.
-
-The powered silhouette redesign is deferred to the owner's concept round. This
-interim changes no powered bank, palette, effect, flight/carry or binding source.
-
 ## Powered art and the feedback checkpoint
 
 Gilded and Solar use host-specific powered GGFP banks. TALON retains Tails’
