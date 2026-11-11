@@ -24,3 +24,8 @@ The final special-stage manifests point from that tree to these approved PNGs.
 The remaining scripts record individual production steps and may require external
 raw generations or ROM references; the ordinary build never runs them. Changes
 to approved drawings need the native-style and render checks described above.
+
+S2 title BODY0–4 use the camera-facing face selections in
+[`s2-gaze-generation.json`](../../production/talon/titles/s2-gaze-generation.json).
+The approved goggles, crest, connected wings and outfit remain outside the face
+windows; native hotspots, indexed palette and MICA overlap pixels are retained.

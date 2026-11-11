@@ -91,6 +91,10 @@ contours, compact upper-left highlights and stepped clusters. Never repaint or
 ship decoded native art. Raw generations and decoded references stay in external
 scratch; retain selected indexed sources, prompts, hashes and measurements.
 
+TALON’s S2 title BODY0–4 turn three-quarter toward the camera, retaining the
+closed-eye rise phase and open-beak settled smile. The face-only generation
+record is `production/talon/titles/s2-gaze-generation.json`.
+
 Native selectors, origins, facing, mapping order, priority, occlusion, palettes,
 fades and animation clocks remain host-owned. Dedicated final-orientation drawings
 preserve upper-left lighting through native flips. Carry contacts use the native

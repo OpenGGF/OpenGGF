@@ -208,7 +208,8 @@ under the matching area heading; see the
   independent role palettes and native fallback; MICA and TALON supply all three
   hosts while title timing, branding and occlusion remain native. The S2 duo
   keeps MICA centre-right in the Sonic slot with a separately animated palm-facing
-  thumbs-up and TALON left in the Tails slot with connected wings and no glove; all S1
+  thumbs-up and TALON left in the Tails slot with connected wings, no glove, and
+  a three-quarter face looking at the camera through the rise and settled smile; all S1
   poses follow native geometry, and MICA's S3K bank uses baked3D shading. Native
   opaque palette clearing prevents sky holes around animated patches. S3K Competition wheel, arena selection, results panels and record icons now
   use original MICA/TALON portraits with independent palettes and native origins;
