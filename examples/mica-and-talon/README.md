@@ -11,6 +11,10 @@ The stable IDs are `mica-and-talon:mica` and `mica-and-talon:talon`.
 This is artwork and character registration over native host mechanics; it does
 not certify complete routes or introduce standalone Blue Sphere hosting.
 
+To learn to build a character like these, follow the
+[nine-part tutorial](../../docs/modding/guides/original-character/README.md). Its part 2
+checkpoint mod is in [`tutorial/part-2-first-playable`](tutorial/part-2-first-playable).
+
 ## Directory map
 
 ```text
@@ -33,6 +37,7 @@ mica-and-talon/
     snowboard/                MICA's native snowboard poses
   production/{mica,talon}/     recipes, selected parts, prompts and provenance
   concept/                    approved original character references
+  tutorial/                   the tutorial's part 2 checkpoint mod
   build.py                    declarative jar inventory and build entry point
 ```
 

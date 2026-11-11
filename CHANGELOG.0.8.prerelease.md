@@ -310,8 +310,9 @@ under the matching area heading; see the
   and vehicles; powered ending poses use her Gilded cycle. Acceptance covers
   launch/save/rewind/disabled-owner fallback and session-owned S2 HUD/1-up art,
   with three-game headless footage
-  of movement, springs, normal/powered strikes and a GHZ airborne chain. The
-  [tutorial](docs/modding/guides/original-character.md) explains the workflow.
+  of movement, springs, normal/powered strikes and a GHZ airborne chain. A
+  [nine-part tutorial](docs/modding/guides/original-character/README.md) builds an
+  original character from design to every surface, with a part 2 checkpoint mod.
   TALON is included as a playable leader and follower; this is not a released mod or full-route certification.
 
 

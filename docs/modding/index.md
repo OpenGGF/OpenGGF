@@ -69,8 +69,9 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 
 ## Follow-along guides
 
-- [Original character across three games](guides/original-character.md) — build MICA
-  from a concept through playable art, abilities, presentation and Gilded forms.
+- [MICA and TALON: an original character in nine parts](guides/original-character/README.md) —
+  build MICA from a design to a first playable, then draw, animate and present her and
+  TALON on every screen of all three games, with a checkpoint mod and real captures.
 
 - [Second Strike](../../examples/second-strike/README.md) — a normal-campaign S3K
   difficulty prototype using native placement bindings, original-ring retention,

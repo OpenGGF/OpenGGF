@@ -78,7 +78,7 @@ matching engine and SDK artifacts from one commit. The
 current API version and publication status; the
 [compatibility guide](../architecture/mod-api-compatibility.md) explains the contract.
 
-- [Original character across three games](../modding/guides/original-character.md) — the MICA concept-to-capture tutorial.
+- [MICA and TALON: an original character in nine parts](../modding/guides/original-character/README.md) — the MICA and TALON concept-to-capture tutorial.
 
 ## Related Documents
 
