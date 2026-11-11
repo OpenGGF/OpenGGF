@@ -346,3 +346,12 @@ ownership around the existing eye/lashes; it does not rescale the portrait.
 No audit rows move. Review and 60 Hz film:
 `$HOME/scratch/agent-tmp/title-s3k-wink/review.html`. The ink topology checks
 complement visual inspection; they do not classify arbitrary generated lashes.
+
+## S2 settled-pose quill fill (owner follow-up, 2026-11-11)
+
+The owner saw clipping at the bottom of MICA's settled S2 pose. BODY18 had no
+quills right of HAND9, so the ring and a yellow notch showed between the glove
+and the banner. `s2_clip_patch.py` adds two back-row scales in palette indices
+1/3/4/5/6. It writes only transparent pixels (158 px) and leaves the native
+origin, hand and timing unchanged. The real-capture check was frames 700, 760
+and 850 of a fresh 900-tick capture.
