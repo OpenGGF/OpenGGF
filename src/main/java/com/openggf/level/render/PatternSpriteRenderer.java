@@ -125,6 +125,7 @@ public class PatternSpriteRenderer {
      */
     public void drawFrameIndexWithPaletteBase(int frameIndex, int originX, int originY,
             boolean hFlip, boolean vFlip, int paletteBase) {
+        if (SpriteFrameCaptureInternalAccess.unsupported("drawFrameIndexWithPaletteBase")) return;
         if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0
                 || !isFrameRenderSafe(frameIndex)) {
             return;
@@ -138,6 +139,8 @@ public class PatternSpriteRenderer {
      * @param paletteOverride palette index to use, or -1 to use the sprite sheet's default
      */
     public void drawFrameIndex(int frameIndex, int originX, int originY, boolean hFlip, boolean vFlip, int paletteOverride) {
+        if (SpriteFrameCaptureInternalAccess.frame(this, spriteSheet, frameIndex, originX, originY,
+                hFlip, vFlip, paletteOverride)) return;
         if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0
                 || !isFrameRenderSafe(frameIndex)) {
             return;
@@ -149,6 +152,8 @@ public class PatternSpriteRenderer {
 
     public void drawFrameIndexWithSatReplayRole(int frameIndex, int originX, int originY,
             boolean hFlip, boolean vFlip, int paletteOverride, SpriteMaskReplayRole satReplayRole) {
+        if (SpriteFrameCaptureInternalAccess.frame(this, spriteSheet, frameIndex, originX, originY,
+                hFlip, vFlip, paletteOverride)) return;
         if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0
                 || !isFrameRenderSafe(frameIndex)) {
             return;
@@ -185,6 +190,7 @@ public class PatternSpriteRenderer {
             int originY,
             boolean hFlip,
             boolean vFlip) {
+        if (SpriteFrameCaptureInternalAccess.unsupported("drawPieces")) return;
         if (pieces == null || patternBase < 0 || !arePiecesRenderSafe(pieces, -1)) {
             return;
         }
@@ -197,6 +203,7 @@ public class PatternSpriteRenderer {
      */
     public void drawFramePieceByIndex(int frameIndex, int pieceIndex, int originX, int originY,
             boolean hFlip, boolean vFlip) {
+        if (SpriteFrameCaptureInternalAccess.unsupported("drawFramePieceByIndex")) return;
         if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0
                 || !isFrameRenderSafe(frameIndex)) {
             return;
@@ -211,6 +218,7 @@ public class PatternSpriteRenderer {
     }
 
     public void drawPatternIndex(int patternIndex, int drawX, int drawY, int paletteIndex) {
+        if (SpriteFrameCaptureInternalAccess.unsupported("drawPatternIndex")) return;
         if (patternBase < 0) {
             return;
         }
@@ -402,6 +410,7 @@ public class PatternSpriteRenderer {
      */
     public void drawFrameIndexFilteredByPriority(int frameIndex, int originX, int originY,
             boolean hFlip, boolean vFlip, int paletteOverride, boolean priorityFilter) {
+        if (SpriteFrameCaptureInternalAccess.unsupported("drawFrameIndexFilteredByPriority")) return;
         drawFrameIndexFilteredByPriority(frameIndex, originX, originY, hFlip, vFlip,
                 paletteOverride, priorityFilter, SpriteMaskReplayRole.NORMAL);
     }
@@ -409,6 +418,7 @@ public class PatternSpriteRenderer {
     public void drawFrameIndexFilteredByPriority(int frameIndex, int originX, int originY,
             boolean hFlip, boolean vFlip, int paletteOverride, boolean priorityFilter,
             SpriteMaskReplayRole satReplayRole) {
+        if (SpriteFrameCaptureInternalAccess.unsupported("drawFrameIndexFilteredByPriority")) return;
         if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0
                 || !isFrameRenderSafe(frameIndex)) {
             return;
@@ -496,6 +506,7 @@ public class PatternSpriteRenderer {
      */
     public void drawFrameIndexForcedPriority(int frameIndex, int originX, int originY,
             boolean hFlip, boolean vFlip, int paletteOverride, boolean forcedPriority) {
+        if (SpriteFrameCaptureInternalAccess.unsupported("drawFrameIndexForcedPriority")) return;
         if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0
                 || !isFrameRenderSafe(frameIndex)) {
             return;

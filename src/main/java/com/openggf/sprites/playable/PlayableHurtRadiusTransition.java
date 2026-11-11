@@ -16,6 +16,8 @@ final class PlayableHurtRadiusTransition {
     }
 
     private static void apply(AbstractPlayableSprite sprite, boolean death) {
+        // Hurt_Sidekick (s2.asm:85629-85632), KillCharacter (s2.asm:85671-85677).
+        PlayableNativeFloorReset.resetChain(sprite);
         boolean wasRolling = sprite.getRolling();
         int nativeXBeforeRadiusChange = sprite.getCentreX();
         int nativeYBeforeRadiusChange = sprite.getCentreY();

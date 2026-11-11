@@ -9,6 +9,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TestHScrollBufferCompatibility {
 
     @Test
+    void progressivePageRetainsLowerRowsAndReturnsToOrdinaryHeight() {
+        var buffer = new HScrollBuffer();
+        int[] page = new int[448];
+        page[447] = 0x4000;
+        buffer.stageForUpload(page);
+        assertEquals(448, buffer.lineCount());
+        assertEquals(0x4000 / 32767.0f, buffer.stagedScrollAt(447));
+        buffer.stageForUpload(new int[224]);
+        assertEquals(224, buffer.lineCount());
+        assertEquals(0.0f, buffer.stagedScrollAt(223));
+    }
+
+    @Test
     void shorterArrayZeroFillsEveryMissingScanlineLikeIndexedView() {
         HScrollBuffer buffer = new HScrollBuffer();
 

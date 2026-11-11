@@ -88,6 +88,11 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
     // Track initialization state
     private boolean initialized;
 
+    /** Pinball crossing bytes $34/$35 only: swap_loop_objects (s2.asm:26068-26079). */
+    void swapPlayerOwnership() {
+        boolean past = sonicPastTrigger; sonicPastTrigger = tailsPastTrigger; tailsPastTrigger = past;
+    }
+
     public ForcedSpinObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name,
                 WIDTH_TABLE[spawn.subtype() & 0x03],  // halfWidth from width table

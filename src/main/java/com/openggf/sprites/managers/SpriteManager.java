@@ -1256,11 +1256,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 */
 	public void advanceTailsTailsAfterObjectExecution() {
 		AbstractPlayableSprite main = getMainPlayable();
-		if (main != null && main.getTailsTailsController() != null) {
+		if (main != null && main.getTailsTailsController() != null && !NativeDustDisplayInternalAccess.owns(main)) {
 			main.getTailsTailsController().update();
 		}
 		for (AbstractPlayableSprite sidekick : getRegisteredSidekicks()) {
-			if (sidekick != null && sidekick.getTailsTailsController() != null) {
+			if (sidekick != null && sidekick.getTailsTailsController() != null && !NativeDustDisplayInternalAccess.owns(sidekick)) {
 				sidekick.getTailsTailsController().update();
 			}
 		}
@@ -1271,6 +1271,9 @@ public class SpriteManager implements PlayableSstDispatcher {
 				sprites, sidekicks, isCpuSidekickSuppressed(),
 				playableOrderScratch, playableScheduledScratch, playableAvailableScratch);
 		for (AbstractPlayableSprite playable : playables) {
+            // Native capability-owned controllers run at their actual reserved SSTs,
+            // inside the admitted object walk, not a second broad tail callback.
+            if (NativeDustDisplayInternalAccess.owns(playable)) continue;
 			if (!(playable.getMovementManager() instanceof PlayableSpriteMovement movement)) {
 				continue;
 			}
@@ -1577,6 +1580,9 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	private void beginPlayableFrame(List<AbstractPlayableSprite> playables) {
+		// The prior BuildSprites admission expires before any new playable pass,
+		// including uncounted title passes on the next level's zero epoch.
+		nativeDisplayAdmissions.clear();
 		playableFrameActive = true;
 		playableUpdateOrder.clear();
 		deferredPostTickMutations.clear();
@@ -1677,13 +1683,21 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 	}
 
+	private final java.util.Map<AbstractPlayableSprite, Boolean> nativeDisplayAdmissions = new java.util.IdentityHashMap<>();
+
+	boolean nativeDisplayAdmission(AbstractPlayableSprite player) {
+		return nativeDisplayAdmissions.getOrDefault(player, player.shouldRefreshRenderFlagThisFrame());
+	}
+
 	public void refreshPlayableRenderFlags(Camera camera) {
 		if (camera == null) {
 			return;
 		}
+		nativeDisplayAdmissions.clear();
 		for (Sprite sprite : getAllSprites()) {
 			if (sprite instanceof AbstractPlayableSprite playable) {
 				boolean refresh = playable.shouldRefreshRenderFlagThisFrame();
+				nativeDisplayAdmissions.put(playable, refresh);
 				// The hurt routine's unconditional DisplaySprite owns only the
 				// current BuildSprites pass.
 				playable.clearHurtRoutineOwnedDisplayLatch();

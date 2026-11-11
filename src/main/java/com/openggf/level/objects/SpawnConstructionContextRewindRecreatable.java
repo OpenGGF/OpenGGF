@@ -1,25 +1,15 @@
 package com.openggf.level.objects;
 
 /**
- * Marker for spawn-based rewind recreation that must run with restore-time
- * {@link ObjectServices} installed in the construction context.
- *
- * <p>Use this only when the concrete class has an {@code ObjectSpawn}
- * constructor and that constructor or its superclass initialization expects
- * {@link ObjectConstructionContext#construct(ObjectServices, java.util.function.Supplier)}.
+ * Compatibility name for {@link SpawnRewindRecreatable}. All generic recreation
+ * hooks now run with construction services installed by ObjectRewindDynamicCodecs.
+ * New spawn-only implementations use SpawnRewindRecreatable. This adapter also
+ * preserves construction services for historical callers invoking the hook directly.
  */
-public interface SpawnConstructionContextRewindRecreatable extends RewindRecreatable {
-
+public interface SpawnConstructionContextRewindRecreatable extends SpawnRewindRecreatable {
     @Override
     default AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return ObjectConstructionContext.construct(
-                ctx.objectServices(),
-                () -> RewindRecreateConstructors.instantiateExact(
-                        this,
-                        "SpawnConstructionContextRewindRecreatable",
-                        "ObjectSpawn",
-                        "spawn construction-context rewind recreate",
-                        new Class<?>[] {ObjectSpawn.class},
-                        ctx.spawn()));
+        return ObjectConstructionContext.construct(ctx.objectServices(),
+                () -> SpawnRewindRecreatable.super.recreateForRewind(ctx));
     }
 }

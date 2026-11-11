@@ -265,7 +265,7 @@ public class PlayableSpriteAnimation {
             return;
         }
         var dust = sprite.getSpindashDustController();
-        if (dust != null && (dust.fixedSlotIndex() < 0
+        if (dust != null && !NativeDustDisplayInternalAccess.owns(sprite) && (dust.fixedSlotIndex() < 0
                 || !NativeCompetitionTitlePlayableScope.suppressFixedDustFor(sprite))) {
             dust.update();
         }

@@ -10,6 +10,7 @@ public final class ModApiSurfaceInventory {
     private static final List<String> TYPE_NAMES = List.of(
             "com.openggf.mods.assets.PresentationImages",
             "com.openggf.sprites.playable.HomingAttack",
+            "com.openggf.net.protocol.TrackKey",
             "com.openggf.level.objects.authored.AuthoredObjectProperties",
             "com.openggf.level.objects.authored.AuthoredStageplayService",
             "com.openggf.game.modzone.ModLevelSettings",
@@ -134,6 +135,9 @@ public final class ModApiSurfaceInventory {
             "com.openggf.mods.ui.AtlasFont",
             "com.openggf.mods.ui.TextLayout",
             "com.openggf.mods.ui.UiPrimitives",
+            "com.openggf.mods.ui.MenuTheme",
+            "com.openggf.mods.ui.SceneMenuChrome",
+            "com.openggf.mods.objects.AuxiliaryObjectCollection",
             "com.openggf.mods.ui.FocusRegions",
             "com.openggf.mods.ui.LevelOverlayCanvas",
             "com.openggf.control.ActionReducer",

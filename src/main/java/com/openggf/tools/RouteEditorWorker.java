@@ -61,6 +61,13 @@ public final class RouteEditorWorker {
 
     static void run(RouteEditorProtocol.Request request, PrintStream output) throws IOException {
         RouteArtifact route = RouteCodec.parseTransport(request.route());
+        if (route.launch().inlet() instanceof com.openggf.route.Inlet.Title &&
+                (request.kind() == RouteEditorProtocol.Kind.PLAN && request.row() < route.checks().startRow()
+                || request.kind() == RouteEditorProtocol.Kind.REPAIR && request.repair().firstEditable() < route.checks().startRow())) {
+            output.println(RouteEditorProtocol.result(new RouteEditorProtocol.Result(RouteEditorProtocol.Verdict.STOPPED,
+                    0, "The inherited prefix is locked", route.content().toString())));
+            return;
+        }
         switch (request.kind()) {
             case REPAIR -> {
                 repair(request, route, output);
@@ -76,12 +83,13 @@ public final class RouteEditorWorker {
             }
             default -> { }
         }
-        var replay = new RouteReplay(EngineRouteHosts.withRoms(request.roms()));
+        var replay = new RouteReplay(hosts(request, route));
         String content = route.content().toString();
         int rows = route.tape().size();
         int stride = RouteEditorProtocol.pathStride(rows);
         // One evidence-minting pass; the observer only copies post-row centres for the overlay.
         ReplayResult result = replay.replay(route, Cancellation.NONE, (row, sample) -> {
+            if (row == rows - 1) sample.facts().forEach((key,value) -> output.println(RouteEditorProtocol.fact(key,value)));
             if (row % stride == 0 || row == rows - 1) {
                 emit(output, 1, row, sample.epoch(), sample.p1());
                 if (sample.p2().isPresent()) emit(output, 2, row, sample.epoch(), sample.p2().get());
@@ -93,9 +101,7 @@ public final class RouteEditorWorker {
         switch (result) {
             case ReplayResult.Passed passed -> {
                 if (request.kind() == RouteEditorProtocol.Kind.SAVE) {
-                    var written = request.replace()
-                            ? RouteFiles.replace(request.target(), route, passed.evidence())
-                            : RouteFiles.writeNew(request.target(), route, passed.evidence());
+                    var written = com.openggf.route.RouteEditorFiles.save(request.target(), route, passed.evidence(), request.replace());
                     output.println(RouteEditorProtocol.saved(written.manifest().toAbsolutePath()));
                 }
                 output.println(RouteEditorProtocol.result(new RouteEditorProtocol.Result(
@@ -117,7 +123,7 @@ public final class RouteEditorWorker {
      */
     private static void repair(RouteEditorProtocol.Request request, RouteArtifact original, PrintStream output)
             throws IOException {
-        var hosts = EngineRouteHosts.withRoms(request.roms());
+        var hosts = hosts(request, original);
         var bounds = request.repair();
         ReferencePath reference;
         try {
@@ -173,9 +179,10 @@ public final class RouteEditorWorker {
      * the one planner. The qualifying replay streams the path; a solved plan returns the whole route.
      */
     private static void plan(RouteEditorProtocol.Request request, RouteArtifact route, PrintStream output) {
-        var hosts = EngineRouteHosts.withRoms(request.roms());
+        var hosts = hosts(request, route);
         var goals = route.checks();
-        var program = new GoalProgram(goals.routeGuard(), goals.legs(), request.row());
+        var program = route.launch().inlet() instanceof com.openggf.route.Inlet.Title
+                ? goals : new GoalProgram(goals.routeGuard(), goals.legs(), request.row());
         var task = new RouteTask.Author(route.launch(), route.tape().slice(0, request.row()), program,
                 SearchBudget.encounter());
         int[] stride = {1};
@@ -190,7 +197,17 @@ public final class RouteEditorWorker {
                 });
         switch (result) {
             case PlanResult.Solved solved -> {
-                output.println(RouteEditorProtocol.plannedRoute(RouteCodec.formatTransport(solved.route())));
+                var planned = new RouteArtifact(solved.route().manifest().withNativeFacts(route.manifest().nativeFacts()), solved.route().tape());
+                if (planned.manifest().nativeFacts().entry().isPresent()) {
+                    var anchored = new RouteReplay(hosts).replay(planned, Cancellation.NONE);
+                    if (!(anchored instanceof ReplayResult.Passed)) {
+                        output.println(RouteEditorProtocol.result(new RouteEditorProtocol.Result(
+                                RouteEditorProtocol.Verdict.STOPPED, route.tape().size(),
+                                "Native anchor verification failed: " + anchored, route.content().toString())));
+                        return;
+                    }
+                }
+                output.println(RouteEditorProtocol.plannedRoute(RouteCodec.formatTransport(planned)));
                 output.println(RouteEditorProtocol.result(new RouteEditorProtocol.Result(RouteEditorProtocol.Verdict.SOLVED,
                         solved.route().tape().size(), solved.engineEvidence().environment(),
                         solved.route().content().toString())));
@@ -208,9 +225,10 @@ public final class RouteEditorWorker {
      * placed or spawned at runtime, so the editor can pick goal targets. Comparison of values only.
      */
     private static void scan(RouteEditorProtocol.Request request, RouteArtifact route, PrintStream output) {
-        var replay = new RouteReplay(EngineRouteHosts.withRoms(request.roms()));
+        var replay = new RouteReplay(hosts(request, route));
         try (var playback = replay.open(route)) {
             RouteSample sample = playback.stepTo(Math.min(request.row(), route.tape().size()));
+            sample.facts().forEach((key,value) -> output.println(RouteEditorProtocol.fact(key,value)));
             for (ObjectView object : sample.objects()) {
                 var placement = object.placement();
                 output.println(RouteEditorProtocol.object(new RouteEditorProtocol.ScannedObject(object.typeKey(),
@@ -227,6 +245,20 @@ public final class RouteEditorWorker {
             output.println(RouteEditorProtocol.result(new RouteEditorProtocol.Result(
                     RouteEditorProtocol.Verdict.UNSUPPORTED, 0, refused.getMessage(), route.content().toString())));
         }
+    }
+
+    private static com.openggf.route.RouteWorldFactory hosts(RouteEditorProtocol.Request request, RouteArtifact route) {
+        if (route.launch().inlet() instanceof com.openggf.route.Inlet.Title) {
+            var rom=request.roms().get("s2");
+            if(rom==null) return new com.openggf.route.RouteWorldFactory() {
+                private RouteHostException unavailable() { return new RouteHostException(RouteHostException.Reason.ROM_UNAVAILABLE,"S2 REV01 required"); }
+                public com.openggf.route.RouteWorld openSearch(com.openggf.route.LaunchContract launch) { throw unavailable(); }
+                public com.openggf.route.ReplayWorld openColdReplay(com.openggf.route.LaunchContract launch) { throw unavailable(); }
+                public String environment() { return "S2 unavailable"; }
+            };
+            return new com.openggf.tools.StageplayCompetitionRouteHosts(rom);
+        }
+        return EngineRouteHosts.withRoms(request.roms());
     }
 
     private static void emit(PrintStream output, int slot, int row, long epoch, PlayerView view) {

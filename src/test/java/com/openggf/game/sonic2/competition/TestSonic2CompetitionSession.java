@@ -355,7 +355,7 @@ class TestSonic2CompetitionSession {
 
     @Test void canonicalTimerAndPolicyFlowDoNotDoubleTickAndNaturalP1TimeoutKillsActiveP2() {
         var s = started();
-        s.levelState(0).update(); s.levelState(1).update();
+        s.playerState(0).updateNativeHudTimer(); s.playerState(1).updateNativeHudTimer();
         s.advanceActFlow();
         assertEquals(1, s.levelState(0).getTimerFrames());
         assertEquals(1, s.levelState(1).getTimerFrames());
@@ -409,8 +409,8 @@ class TestSonic2CompetitionSession {
         return session;
     }
     private static void tick(Sonic2CompetitionSession session) {
-        session.levelState(0).update();
-        session.levelState(1).update();
+        session.playerState(0).updateNativeHudTimer();
+        session.playerState(1).updateNativeHudTimer();
         session.advanceActFlow();
     }
     private static void finish(Sonic2CompetitionSession session) {

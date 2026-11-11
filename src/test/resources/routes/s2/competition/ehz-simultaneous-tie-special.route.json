@@ -1,0 +1,502 @@
+{
+  "format" : "openggf-route/1",
+  "launch" : {
+    "rom" : {
+      "game" : "s2",
+      "crc32" : "7B905383",
+      "sha1" : "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9"
+    },
+    "inlet" : {
+      "kind" : "title"
+    },
+    "roster" : {
+      "main" : "sonic",
+      "sidekick" : "tails"
+    },
+    "width" : 320,
+    "donor" : "off",
+    "initial" : {
+      "vIntStart" : 0
+    }
+  },
+  "checks" : {
+    "guard" : {
+      "allowHurt" : true,
+      "allowRingLoss" : true,
+      "allowDeath" : false,
+      "allowBoundary" : true,
+      "holds" : {
+        "kind" : "fact-equals",
+        "key" : "competition.p2.dead",
+        "value" : 0
+      }
+    },
+    "startRow" : 1200,
+    "legs" : [ {
+      "id" : "act1-joint-0",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 1000, 0, 1200, 640 ]
+          }, {
+            "kind" : "player-in",
+            "player" : "P2",
+            "region" : [ 1000, 0, 1200, 640 ]
+          } ]
+        }
+      }
+    }, {
+      "id" : "act1-joint-1",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 3000, 0, 3200, 700 ]
+          }, {
+            "kind" : "player-in",
+            "player" : "P2",
+            "region" : [ 3000, 0, 3200, 700 ]
+          } ]
+        }
+      }
+    }, {
+      "id" : "act1-joint-2",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 4800, 800, 5000, 990 ]
+          }, {
+            "kind" : "player-in",
+            "player" : "P2",
+            "region" : [ 4800, 800, 5000, 990 ]
+          } ]
+        }
+      }
+    }, {
+      "id" : "joint-spring-lineup",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 6050, 850, 6110, 1000 ]
+          }, {
+            "kind" : "player-in",
+            "player" : "P2",
+            "region" : [ 6050, 850, 6110, 1000 ]
+          } ]
+        }
+      }
+    }, {
+      "id" : "act1-joint-3",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 6300, 0, 6500, 800 ]
+          }, {
+            "kind" : "player-in",
+            "player" : "P2",
+            "region" : [ 6300, 0, 6500, 800 ]
+          } ]
+        }
+      }
+    }, {
+      "id" : "act1-joint-4",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 10816, 0, 11328, 1800 ]
+          }, {
+            "kind" : "player-in",
+            "player" : "P2",
+            "region" : [ 10816, 0, 11328, 1800 ]
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.p1.timerPaused",
+            "value" : 1
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.p2.timerPaused",
+            "value" : 1
+          } ]
+        }
+      }
+    }, {
+      "id" : "act1-results-boundary",
+      "maxRows" : 1000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "enter-boundary"
+      }
+    }, {
+      "id" : "act1-board-readable",
+      "maxRows" : 1000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true,
+        "holds" : {
+          "kind" : "fact-equals",
+          "key" : "competition.phase",
+          "value" : 2
+        }
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "fact-equals",
+          "key" : "competition.presentationFrame",
+          "value" : 3500
+        }
+      }
+    }, {
+      "id" : "act2-native-entry",
+      "maxRows" : 1000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "fact-equals",
+            "key" : "competition.phase",
+            "value" : 1
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.act",
+            "value" : 1
+          } ]
+        }
+      }
+    }, {
+      "id" : "act2-joint-11",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 3000, 0, 3200, 1400 ]
+          }, {
+            "kind" : "player-in",
+            "player" : "P2",
+            "region" : [ 3000, 0, 3200, 1400 ]
+          } ]
+        }
+      }
+    }, {
+      "id" : "act2-joint-12",
+      "maxRows" : 5000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 3158, 700, 3184, 770 ]
+          }, {
+            "kind" : "player-in",
+            "player" : "P2",
+            "region" : [ 3158, 700, 3184, 770 ]
+          } ]
+        }
+      }
+    }, {
+      "id" : "act2-joint-13",
+      "maxRows" : 5000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 3300, 0, 3450, 560 ]
+          }, {
+            "kind" : "player-in",
+            "player" : "P2",
+            "region" : [ 3300, 0, 3450, 560 ]
+          } ]
+        }
+      }
+    }, {
+      "id" : "act2-joint-14",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 6200, 0, 6400, 1500 ]
+          }, {
+            "kind" : "player-in",
+            "player" : "P2",
+            "region" : [ 6200, 0, 6400, 1500 ]
+          } ]
+        }
+      }
+    }, {
+      "id" : "act2-joint-15",
+      "maxRows" : 6000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "all",
+            "clauses" : [ {
+              "kind" : "player-in",
+              "player" : "P1",
+              "region" : [ 10888, 0, 11200, 1800 ]
+            }, {
+              "kind" : "fact-equals",
+              "key" : "competition.p1.timerPaused",
+              "value" : 1
+            } ]
+          }, {
+            "kind" : "all",
+            "clauses" : [ {
+              "kind" : "player-in",
+              "player" : "P2",
+              "region" : [ 10888, 0, 11200, 1800 ]
+            }, {
+              "kind" : "fact-equals",
+              "key" : "competition.p2.timerPaused",
+              "value" : 1
+            } ]
+          } ]
+        }
+      }
+    }, {
+      "id" : "act2-results-boundary",
+      "maxRows" : 1000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "enter-boundary"
+      }
+    }, {
+      "id" : "act2-board-readable",
+      "maxRows" : 1000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true,
+        "holds" : {
+          "kind" : "fact-equals",
+          "key" : "competition.phase",
+          "value" : 2
+        }
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "fact-equals",
+          "key" : "competition.presentationFrame",
+          "value" : 6400
+        }
+      }
+    }, {
+      "id" : "tied-act-wins-to-special-stage",
+      "maxRows" : 1000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "fact-equals",
+            "key" : "competition.phase",
+            "value" : 5
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.specialStage",
+            "value" : 1
+          }, {
+            "kind" : "facts-equal",
+            "left" : "competition.zoneWins.p1",
+            "right" : "competition.zoneWins.p2"
+          } ]
+        }
+      }
+    }, {
+      "id" : "show-competitive-special-stage-start",
+      "maxRows" : 2000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : true,
+        "holds" : {
+          "kind" : "fact-equals",
+          "key" : "competition.phase",
+          "value" : 5
+        }
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "fact-equals",
+          "key" : "competition.presentationFrame",
+          "value" : 7200
+        }
+      }
+    } ]
+  },
+  "tape" : {
+    "script" : "ehz-simultaneous-tie-special.script",
+    "rows" : 8262,
+    "sha256" : "14c535a3aba5bc7daa6c608fc3191025f85de07bcda505044f80690d0b5de526"
+  },
+  "provenance" : {
+    "producer" : "RoutePlanner prefix-search/5 goal program",
+    "engine" : "openggf 0.8.prerelease-3250d8b10 stageplay-s2-competition-title/1",
+    "source" : "authored after a 7174-row prefix toward legs [act1-joint-0, act1-joint-1, act1-joint-2, joint-spring-lineup, act1-joint-3, act1-joint-4, act1-results-boundary, act1-board-readable, act2-native-entry, act2-joint-11, act2-joint-12, act2-joint-13, act2-joint-14, act2-joint-15, act2-results-boundary, act2-board-readable, tied-act-wins-to-special-stage, show-competitive-special-stage-start]",
+    "notes" : [ ]
+  },
+  "qualification" : [ {
+    "scope" : "ENGINE",
+    "passed" : true,
+    "content" : "03cd07824d60d3cb42a31aa81ac6f4e00ae46a71aeb1b1bf461ce89e41046bf1",
+    "environment" : "openggf 0.8.prerelease-3250d8b10 stageplay-s2-competition-title/1",
+    "rows" : 8262
+  }, {
+    "scope" : "BIZHAWK",
+    "passed" : false,
+    "divergedRow" : 8261,
+    "reason" : "required native goals missing: [\"ehz-act2-play\",\"tied-act-wins-to-competitive-special-stage\"]",
+    "content" : "03cd07824d60d3cb42a31aa81ac6f4e00ae46a71aeb1b1bf461ce89e41046bf1",
+    "environment" : "BizHawk2.11/GPGX cold read-only required-goals movie 570b9c6b4597ba629ddefb8f84d1b15662d1596747c7f8607efa82a8c0f9a8ae; accepted comparison boundary 2480",
+    "rows" : 8262,
+    "coverage" : [ "ehz-act1-play" ]
+  } ],
+  "native" : {
+    "entry" : {
+      "movie" : "src/test/resources/routes/s2/competition/witnesses/ehz-native-prefix.script",
+      "prefixRows" : 1329,
+      "inputHash" : "8f8669ed648d485c9dfc349e1bdba91d2a29743b76a3be7b5644ade8e3d30c34",
+      "engineAnchorRows" : 1261,
+      "anchorBoundary" : "first-ordinary-level-lfc-zero"
+    },
+    "lag" : [ ]
+  }
+}

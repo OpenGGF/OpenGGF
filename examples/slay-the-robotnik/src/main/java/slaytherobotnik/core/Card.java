@@ -62,7 +62,7 @@ public final class Card {
     public CardDef def() { return def; }
     public String id() { return def.id(); }
     public String name() { return upgraded ? def.name() + "+" : def.name(); }
-    public String type() { return def.type(); }
+    public CardType type() { return def.type(); }
     public String color() { return def.color(); }
     public String rarity() { return def.rarity(); }
     public String target() { return def.target(); }

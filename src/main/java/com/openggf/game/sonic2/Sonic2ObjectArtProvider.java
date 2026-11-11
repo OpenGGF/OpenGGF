@@ -769,7 +769,6 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
                     com.openggf.game.sonic3k.constants.Sonic3kConstants.ART_NEM_KNUCKLES_LIFE_ICON_ADDR);
             if (knuxLife != null && knuxLife.length > 0) {
                 // Remap pixel indices from S3K palette layout to S2-compatible layout.
-                // Both palettes have the same colors but at different indices.
                 remapPaletteIndices(knuxLife);
                 return knuxLife;
             }
@@ -780,9 +779,10 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
     }
 
     /**
-     * Remaps pixel palette indices in tile art from S3K's palette layout to the
+     * Remaps the life icon's head pixels from S3K's palette layout to the
      * S2-compatible Knuckles palette layout. The same colors exist in both
-     * palettes but at different positions.
+     * palettes but at different positions. The name tiles were drawn for S3K's
+     * line 1 and use {@link KnucklesLifeIconConversion}'s table instead.
      *
      * <p>S3K Pal_Knuckles → S2-compatible (0x060BEA) index mapping, derived by
      * matching color values between the two palettes:
@@ -810,15 +810,14 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         0, 6, 5, 3, 2, 4, 12, 13, 14, 15, 10, 11, 7, 8, 9, 1
     };
 
-    private void remapPaletteIndices(Pattern[] tiles) {
-        for (Pattern tile : tiles) {
-            for (int y = 0; y < Pattern.PATTERN_HEIGHT; y++) {
-                for (int x = 0; x < Pattern.PATTERN_WIDTH; x++) {
-                    int oldIdx = tile.getPixel(x, y) & 0x0F;
-                    tile.setPixel(x, y, (byte) S3K_TO_S2_PALETTE_REMAP[oldIdx]);
-                }
-            }
-        }
+    /**
+     * Head: S3K line-0 layout to the S2-compatible line ({@link #S3K_TO_S2_PALETTE_REMAP}).
+     * Name: drawn on line 0 ({@code livesNameUsesIconPalette}, {@code Pal_KnuxEndPose}) like
+     * KiS2's, so it takes KiS2's lives-name roles; the sprite table would send its strokes
+     * to green index 4.
+     */
+    private static void remapPaletteIndices(Pattern[] tiles) {
+        KnucklesLifeIconConversion.convert(tiles, S3K_TO_S2_PALETTE_REMAP);
     }
 
     @Override

@@ -9,7 +9,8 @@ public final class Protocol {
     // 6: room chat modes, quick chat and explicit directory chat-mode metadata.
     // 7: private admission, invitation controls and correlated master requests.
     // 8: broker-bound route generations and host-issued frozen race launches.
-    public static final int VERSION = 8;
+    // 9: competition tracks, clocks, lap progress and server-mediated teleport contracts.
+    public static final int VERSION = 9;
     // A full 256-player roster with bounded labels must fit in one control frame.
     public static final int MAX_CONTROL_BYTES = 64 * 1024;
     public static final int MAX_BINARY_BYTES = 4096;

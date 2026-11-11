@@ -1018,17 +1018,17 @@ class TestSonic2TriggerParticipation {
                 "ObjC2 caches MainCharacter+anim before SolidObject and busts on cached anim==2");
     }
 
-    @Test
-    void cpzBreakableBlockBreaksFromRollAnimationNotRollingStatus() {
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void cpzBreakableBlockBreaksFromRollAnimationNotRollingStatus() throws Exception {
         TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
         main.setRolling(false);
         main.setAnimationId(Sonic2AnimationIds.ROLL.id());
         BreakableBlockObjectInstance block = new BreakableBlockObjectInstance(
                 new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BREAKABLE_BLOCK, 0, 0, false, 0),
                 "BreakableBlock");
-        block.setServices(new QueryOnlyPlayerServices(main, List.of()).withGameState(new GameStateManager()));
+        installBreakFixture(block, main, List.of());
 
-        block.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
+        block.update(0, main);
 
         assertTrue(block.isDestroyed(),
                 "Obj32 snapshots player anim before SolidObject and breaks on anim==Roll");
@@ -1045,8 +1045,8 @@ class TestSonic2TriggerParticipation {
                 "Obj32's SolidObject bhi gate accepts relX == 2*d1");
     }
 
-    @Test
-    void cpzBreakableBlockRemainsSolidForLaterParticipantsInDestroyPass() {
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void cpzBreakableBlockResolvesBothStandingParticipantsBeforeDestroy() throws Exception {
         TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
         main.setRolling(false);
         main.setAnimationId(Sonic2AnimationIds.ROLL.id());
@@ -1054,18 +1054,19 @@ class TestSonic2TriggerParticipation {
         BreakableBlockObjectInstance block = new BreakableBlockObjectInstance(
                 new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BREAKABLE_BLOCK, 0, 0, false, 0),
                 "BreakableBlock");
-        block.setServices(new QueryOnlyPlayerServices(main, List.of(sidekick)).withGameState(new GameStateManager()));
+        installBreakFixture(block, main, List.of(sidekick));
 
-        block.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
+        block.update(0, main);
 
         assertTrue(block.isDestroyed(),
                 "Obj32 should destroy as soon as the rolling standing player breaks it");
-        assertTrue(block.isSolidFor(sidekick),
-                "ROM Obj32 computes both players' standing state before the destroy branch");
+        assertTrue(main.getAir());
+        assertTrue(sidekick.getAir(), "Obj32 releases BOTH actors after the full SolidObject call");
+        assertEquals(0, sidekick.getYSpeed(), "the non-rolling rider is released without the roll bounce");
     }
 
-    @Test
-    void htzSmashableGroundBreaksFromRollAnimationNotRollingStatus() {
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void htzSmashableGroundBreaksFromRollAnimationNotRollingStatus() throws Exception {
         TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
         main.setRolling(false);
         main.setAnimationId(Sonic2AnimationIds.ROLL.id());
@@ -1073,15 +1074,33 @@ class TestSonic2TriggerParticipation {
         SmashableGroundObjectInstance ground = new SmashableGroundObjectInstance(
                 new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.SMASHABLE_GROUND, 0, 0, false, 0),
                 "SmashableGround");
-        GameStateManager gameState = new GameStateManager();
-        ground.setServices(new QueryOnlyPlayerServices(main, List.of()).withGameState(gameState));
+        installBreakFixture(ground, main, List.of());
 
         ground.update(0, main);
-        ground.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
 
         assertTrue(ground.isDestroyed(),
                 "Obj2F snapshots player anim before SolidObject and breaks on anim==Roll");
         assertTrue(main.getAir());
+    }
+
+    private static void installBreakFixture(AbstractObjectInstance parent, TestablePlayableSprite main,
+                                            List<? extends PlayableEntity> sidekicks) throws Exception {
+        var services = new QueryOnlyPlayerServices(main, sidekicks);
+        services.withGameModule(new com.openggf.game.sonic2.Sonic2GameModule());
+        var contacts = new java.util.IdentityHashMap<PlayableEntity, PlayerSolidContactResult>();
+        contacts.put(main, standingContact());
+        for (var actor : sidekicks) contacts.put(actor, standingContact());
+        services.withCheckpointBatch(new SolidCheckpointBatch(parent, contacts));
+        services.withGameState(new GameStateManager()).withRomReader(
+                com.openggf.data.RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom()));
+        var headlessLevel = mock(LevelManager.class);
+        when(headlessLevel.getObjectRenderManager()).thenReturn(mock(com.openggf.level.objects.ObjectRenderManager.class));
+        services.withLevelManager(headlessLevel);
+        var manager = new ObjectManager(List.of(), new Sonic2ObjectRegistry(), 0, null, null, null, null, services) {
+            @Override public int getPreContactAnimationId() { return main.getAnimationId(); }
+        };
+        services.withObjectManager(manager);
+        manager.addDynamicObjectAtSlot(parent, 0x30);
     }
 
     @Test
@@ -1091,6 +1110,7 @@ class TestSonic2TriggerParticipation {
         CNZConveyorBeltObjectInstance conveyor = new CNZConveyorBeltObjectInstance(
                 new ObjectSpawn(0x1DFA, 0x0620, 0x72, 0x90, 0, false, 0),
                 "CNZConveyorBelt");
+        conveyor.setServices(new QueryOnlyPlayerServices(player, List.of()));
 
         conveyor.update(0, player);
 
@@ -1105,6 +1125,7 @@ class TestSonic2TriggerParticipation {
         CNZConveyorBeltObjectInstance conveyor = new CNZConveyorBeltObjectInstance(
                 new ObjectSpawn(0x1000, 0x1000, 0x72, 0x01, 0, false, 0),
                 "CNZConveyorBelt");
+        conveyor.setServices(new QueryOnlyPlayerServices(player, List.of()));
 
         conveyor.update(0, player);
 

@@ -233,7 +233,8 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
         }
         return new S3kCustomZonePaletteBridge(
                 contribution.ownerModId(), contribution.ownerModId() + ":" + contribution.localKey(),
-                level.getPalette(0), contribution.levelData().paletteClaims(),
+                level.getPalette(0), ((Sonic3kLevel) com.openggf.level.LevelOrigin.original(level))
+                        .customZonePaletteClaims(),
                 objectArtProvider.getHudFlashPaletteLine(), objectArtProvider.getHudStaticArt(),
                 objectArtProvider.getHudLivesNumbers(), objectArtProvider::getHudLivesPaletteOverride);
     }
@@ -594,6 +595,8 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
         if (type == com.openggf.game.internal.ProfileSuperHostRules.class)
             return type.cast(new com.openggf.game.internal.ProfileSuperHostRules(true, false, 60, com.openggf.game.GameId.S3K));
         if (type == com.openggf.game.internal.ProfileSuperEffects.class) return type.cast(new Sonic3kProfileSuperEffects());
+        if (type == com.openggf.game.arena.HostedArenaProvider.class)
+            return type.cast(new com.openggf.game.sonic3k.competition.S3kHostedArenaProvider());
         if (type == com.openggf.game.internal.StandingInputPolicy.class)
             return type.cast(com.openggf.game.internal.StandingInputPolicy.DOWN_FIRST);
         if (type == com.openggf.game.nativemenu.NativeTitleModeProvider.class) return type.cast(nativeTitleModes);

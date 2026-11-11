@@ -218,6 +218,8 @@ public final class ServerBrowserView {
             if (!loading) MenuPage.paragraph(canvas, "Create one below, or refresh in a moment.",
                     MenuPage.MARGIN + 16, top + 3 + NameFont.LINE_HEIGHT, width - 40, 2, MenuPage.DIM);
         }
+        // A mode tag every listed room shares says nothing row by row: then only the focused room shows it.
+        boolean mixedModes = snapshot.stream().map(ControlMessage.RoomSummary::mode).distinct().count() > 1;
         for (int i = first; i < Math.min(snapshot.size(), first + VISIBLE_ROOMS); i++) {
             int y = top + (i - first) * CARD_PITCH;
             ControlMessage.RoomSummary room = snapshot.get(i);
@@ -227,15 +229,24 @@ public final class ServerBrowserView {
             else canvas.fill(MenuPage.MARGIN, y, cardWidth, CARD_PITCH - 2, 0xC0091A4A);
             String count = room.playerCount() + "/" + room.maxPlayers();
             int countX = width - MenuPage.MARGIN - 6 - CompactFont.width(count, 1);
+            boolean competition = "COMPETITION".equals(room.mode());
+            String mode = competition ? "COMPETITION" : "TIME ATTACK";
+            int modeWidth = mixedModes || focused ? MenuPage.tagWidth(mode) + 6 : 0;
             // Room names carry the host's display name, in any script.
-            NameFont.draw(canvas, NameFont.fit(room.name(), countX - 8 - MenuPage.MARGIN - 6), MenuPage.MARGIN + 6,
-                    y, focused ? MenuPage.TEXT : MenuPage.MUTED);
+            NameFont.draw(canvas, NameFont.fit(room.name(), countX - 8 - MenuPage.MARGIN - 6 - modeWidth),
+                    MenuPage.MARGIN + 6, y, focused ? MenuPage.TEXT : MenuPage.MUTED);
+            if (modeWidth > 0) MenuPage.tag(canvas, countX - modeWidth, y + 1, mode, competition ? MenuPage.CYAN : MenuPage.DIM);
             CompactFont.draw(canvas, count, countX, y + 4, 1, MenuPage.TEXT);
             int x = MenuPage.MARGIN + 6;
+            String track = MultiplayerHudRenderer.trackLabel(trackKey(room));
+            String chat = chatLabel(room.chatMode()).toUpperCase(java.util.Locale.ROOT);
+            String times = timesFact(room);
+            // The chat mode gives way first on a narrow page; Details names it.
+            boolean chatFits = factsWidth(List.of(track, room.routing(), chat, times)) <= cardWidth - 12;
+            x = fact(canvas, x, y + 13, track, MenuPage.TEXT);
             x = fact(canvas, x, y + 13, room.routing(), MenuPage.CYAN);
-            x = fact(canvas, x, y + 13, chatLabel(room.chatMode()).toUpperCase(java.util.Locale.ROOT), MenuPage.DIM);
-            fact(canvas, x, y + 13, room.verified() ? "VERIFIED TIMES" : "NO SHARED TIMES",
-                    room.verified() ? MenuPage.GREEN : MenuPage.AMBER);
+            if (chatFits) x = fact(canvas, x, y + 13, chat, MenuPage.DIM);
+            fact(canvas, x, y + 13, times, room.verified() ? MenuPage.GREEN : MenuPage.AMBER);
         }
         int pages = Math.max(1, totalPages);
         if (pages > 1 || snapshot.size() > VISIBLE_ROOMS) {
@@ -295,6 +306,24 @@ public final class ServerBrowserView {
         return x + CompactFont.width(text, 1) + 5;
     }
 
+    /** Pixels {@link #fact} needs for {@code facts} in a row, dots included. */
+    private static int factsWidth(List<String> facts) {
+        int width = 0;
+        for (String fact : facts) width += (width > 0 ? 6 : 0) + CompactFont.width(fact, 1) + 5;
+        return width - 5;
+    }
+
+    /** The room's track as a protocol key: arenas are {@code game:arena:N}. */
+    private static String trackKey(ControlMessage.RoomSummary room) {
+        return RaceLobbyView.trackKey(room.gameId(), room.trackKind(), room.zone(), room.act());
+    }
+
+    /** A Competition room without verification publishes unverified times (design D17). */
+    private static String timesFact(ControlMessage.RoomSummary room) {
+        if (room.verified()) return "VERIFIED TIMES";
+        return "COMPETITION".equals(room.mode()) ? "UNVERIFIED" : "NO SHARED TIMES";
+    }
+
     private void rowAction(SceneCanvas canvas, int y, Focus item, String label) {
         MenuPage.action(canvas, y, label, focus == item, true);
     }
@@ -314,10 +343,13 @@ public final class ServerBrowserView {
             ControlMessage.RoomSummary room = rooms.get(selected);
             text.section("Selected room")
                     .field("Name", room.name())
+                    .field("Mode", "COMPETITION".equals(room.mode()) ? "Competition" : "Time Attack")
+                    .field("Track", MenuPage.words(MultiplayerHudRenderer.trackLabel(trackKey(room))))
                     .field("Players", room.playerCount() + " of " + room.maxPlayers())
                     .field("Routing", MenuPage.words(room.routing()))
                     .field("Chat", chatLabel(room.chatMode()))
-                    .field("Times", room.verified() ? "Verified" : "No shared times");
+                    .field("Times", room.verified() ? "Verified" : "COMPETITION".equals(room.mode())
+                            ? "Unverified, published" : "No shared times");
         }
         return text.section("Actions")
                 .field("Create room", MenuPage.words(createRouting) + ", "

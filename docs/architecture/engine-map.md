@@ -298,9 +298,12 @@ this; editor commands and initial layout decoders (e.g. `Sonic3kLevel`) are exem
 
 ## Consolidated subsystems
 
-- **`ObjectManager`** inner classes: `Placement` (spawn windowing), `SolidContacts`
-  (riding/landing/ceiling/side collision), `TouchResponses` (enemy bounce/hurt),
-  `PlaneSwitchers`. Injects `ObjectServices` into all objects at construction.
+- **`ObjectManager`** coordinates placement, touch responses and plane switching.
+  `ObjectSolidContactController` applies riding/landing/ceiling/side collision;
+  `level.objects.contact.SolidContactState` owns rides, bits and frame history.
+  `ObjectPopulation` owns membership/identity; `ObjectRewindLifecycle` owns actor
+  capture, construction-family adoption and reconstruction. The manager injects
+  `ObjectServices` at construction.
 - **`RingManager`** inner classes: `RingPlacement` (collection state, sparkle, spawning),
   `RingRenderer` (cached pattern rendering), `LostRingPool` (lost ring physics).
 - **`PlayableSpriteController`** (`sprites.playable`) coordinates `DrowningController`
@@ -308,7 +311,7 @@ this; editor commands and initial layout decoders (e.g. `Sonic3kLevel`) are exem
   (physics), `PlayableSpriteAnimation` (animation state), `SpindashDustController`.
 - **`CollisionSystem`** (`com.openggf.physics`) orchestrates collision in phases: terrain
   probes via `TerrainCollisionManager` → solid object resolution via
-  `ObjectManager.SolidContacts` → post-resolution ground mode / headroom checks. Supports
+  `ObjectSolidContactController` → post-resolution ground mode / headroom checks. Supports
   trace recording via `CollisionTrace` (`RecordingCollisionTrace` / `NoOpCollisionTrace`).
 - **`UiRenderPipeline`** (`graphics.pipeline`) enforces render order: Scene → HUD overlay →
   Fade pass. `Engine.display()` drives screen transitions through it. `RenderOrderRecorder`
@@ -479,12 +482,13 @@ central eligibility, codecs, and policy-registry rules over per-object annotatio
 rewind overrides unless bespoke state genuinely requires it. The standalone
 `RewindFieldInventoryTool` lives at `com.openggf.tools.rewind`.
 
-**Object coverage guard.** `RewindCoverageAnalyzer` + the report-only
+**Object coverage guard.** `RewindCoverageAnalyzer` + the failing new-gap
 `TestRewindCoverageGuard` (vs `src/test/resources/rewind/coverage-baseline.txt`) flag any
 spawnable object lacking a recreate path, holding an uncaptured `final` scalar, or holding
 an object reference not captured as a rewind id. Run `RewindFieldInventoryTool --coverage`
 for the report. A new gap fails the guard — fix coverage, or add its gap key to the
-baseline if the gap is intentional.
+baseline only for a separately justified, reviewed exception; adoption alone is
+not proof that every admission of a class has a recreate path.
 
 **Static-state guard.** `StaticStateRewindCoverageAnalyzer` +
 `TestStaticStateRewindCoverageGuard` (vs

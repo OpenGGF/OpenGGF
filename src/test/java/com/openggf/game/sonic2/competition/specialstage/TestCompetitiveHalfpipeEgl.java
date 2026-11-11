@@ -75,7 +75,7 @@ class TestCompetitiveHalfpipeEgl {
                 };
                 var input = new InputHandler();
                 halfpipe.loadCompetitiveStage(4, events);
-                for (int i = 0; i < 22; i++) { clock.incrementAndGet(); halfpipe.step(input); }
+                while (halfpipe.phase() != Sonic2CompetitiveHalfpipe.Phase.INTRO) { clock.incrementAndGet(); halfpipe.step(input); }
                 var neutral = PlayerInputState.neutral();
                 for (int i = 0; i < 12; i++) {
                     input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(

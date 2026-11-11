@@ -140,9 +140,8 @@ teams in `characters.dataSelectExtraCombos`, written as
 **Settings > Advanced > Extra character teams** edits them without typing: add a
 team, choose its player and sidekicks, and reorder or remove teams.
 
-Sonic 2 does not currently expose the ROM's native two-player/competition mode
-(`Two_player_mode`), so Player 2 bindings do not create a human second player.
-They remain available for the configured sidekick/manual-input paths. Native
+Player 2 bindings control Tails in Sonic 2's Competition mode (2 PLAYER on the
+title) and the configured sidekick/manual-input paths elsewhere. Native
 S2 level debug placement (`Debug_placement_mode`, including ring/item placement)
 also has no configuration or input route; the `D` shortcut is engine free-fly
 debug movement only.

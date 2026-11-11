@@ -9,6 +9,16 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+## Hosted solo arena presentation (2026-11-07)
+
+Hosted Competition arenas use one 320×224 P1 view instead of the ROM split screen.
+The extra rows are a display projection of the native terrain and sprite sources;
+the native cameras, both 112-row sprite pages and their visibility writes still run.
+The display camera does not feed death checks or physics. Remote ghosts use the
+ROM miniature mappings and art, without becoming native participants.
+See the [Competition design](architecture/designs/2026-11-07-s3k-competition-time-attack-tracks-design.md#46-full-screen-arena-view-s3k-presentation-only).
+
+
 **DEZ tube interact word (2026-10-30):** fresh original-input callbacks
 [identify the row14502 owner](status/trace-frontier-log.md#2026-10-30--dez-gravity-tube-live-interact-word-at-p2-row-14502):
 S3K's existing CPU compare needs the tube's live routine high word4, which its
@@ -218,6 +228,20 @@ records genuine actual-consumer old-red,54 focused passes and one fixed five-PNG
 comparison closing the845 targeted wall/peppermint component pixels with no new
 bad pixels. Remaining HUD/bootstrap and tiny RGB differences, native-high-glass
 control and full-product/integration qualification remain open.
+
+## Hosted network arena shoe partner (2026-11-07)
+
+In an eligible hosted Competition attempt, the native swap box requests a
+server-selected remote partner instead of exchanging with the unspawned second
+slot immediately. An admitted command replaces only the speed-shoe bit, shoe
+timer and native speed triple from the streamed partner. Position and other
+local state remain local, as the arena swap never moves either player. Each
+client applies at its own next executed step. A delayed no-partner or rejected
+command uses the shipped empty-slot shoe exchange; dead or finished recipients
+receive no effect. With swapping disabled, the native solo effect remains
+immediate. This is an intentional network room rule, distinct from the fixed
+solo parity defect in loc_3652A.
+See the [Competition swap design](architecture/designs/2026-11-07-s3k-competition-time-attack-tracks-design.md#83-what-is-swapped-and-what-the-command-carries).
 
 ## Table of Contents
 
@@ -2156,3 +2180,12 @@ loads also take that native dispatch: FBZ2 starpost5 finishes at `$B06` with
 maxY `$B00`, rather than stopping at the intermediate clamp. The
 [FBZ2 matrix](architecture/validation/levels/s3k-fbz-act2.md#native-checkpoint-initial-camera--2026-11-05)
 records the ROM-backed derivation, retained route assertions and bounded checks.
+
+### Competition idle edge balance (2026-11-09)
+
+Miniature racers now select idle terrain/object-edge balance before look/duck,
+including facing and Sonic/Knuckles' second pose. Miniature Knuckles shares
+Sonic_Move, rather than the campaign Knuckles animation reset. Tails retains
+its four-pixel object margin and single pose. See the
+[arena balance qualification](architecture/validation/2026-10-28-tas-support-competition.md#native-miniature-idle-balance-qualification-2026-11-09)
+for bounded route evidence and remaining arena gaps.

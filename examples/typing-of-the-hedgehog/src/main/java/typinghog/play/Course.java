@@ -470,7 +470,6 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         if (!reconvert("after stand " + nextStand + "'s victory")) return false;
         previousMask = standPreviousMask;
         stagehand.clear();
-        stagehand.invalidatePuppets();
         encounter = null;
         hud.flash(0xFFFFFFFF, 12);
         hud.banner("GO!", 0xFFFFFFFF);
@@ -495,7 +494,6 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         fightNativeRows = 0;
         previousMask = standPreviousMask;
         stagehand.clear();
-        stagehand.invalidatePuppets();
         rings = START_RINGS;
         field.clear();
         boolean boss = encounter != null && encounter.isBoss();

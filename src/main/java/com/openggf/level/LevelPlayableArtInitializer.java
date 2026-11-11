@@ -424,7 +424,7 @@ final class LevelPlayableArtInitializer {
             if (usesDonation(playable)) {
                 renderer.setRenderContext(crossGame.getDonorRenderContext());
             }
-            renderer.ensureCached(graphicsManager);
+            cachePlayableBank(playable, renderer, com.openggf.sprites.render.PlayerResidentBanks.Role.BODY);
             applyPlayableArt(playable, renderer, artSet);
             initSpindashDustLegacy(playable);
             initTailsTailsLegacy(playable, artSet);
@@ -505,7 +505,7 @@ final class LevelPlayableArtInitializer {
             } else if (usesDonation(sidekick)) {
                 sidekickRenderer.setRenderContext(crossGame.getDonorRenderContext());
             }
-            sidekickRenderer.ensureCached(graphicsManager);
+            cachePlayableBank(sidekick, sidekickRenderer, com.openggf.sprites.render.PlayerResidentBanks.Role.BODY);
             applyPlayableArt(sidekick, sidekickRenderer, sidekickArt);
             initSpindashDustLegacy(sidekick);
             initTailsTailsLegacy(sidekick, sidekickArt);
@@ -514,7 +514,7 @@ final class LevelPlayableArtInitializer {
             }
             initSuperState(sidekick);
         } catch (Exception e) {
-            LOGGER.log(SEVERE, "Failed to load sidekick sprite art for index " + index + ".", e);
+            throw new IllegalStateException("Failed to load sidekick sprite art for index " + index, e);
         }
     }
 
@@ -555,7 +555,7 @@ final class LevelPlayableArtInitializer {
             } else if (usesDonation(playable)) {
                 renderer.setRenderContext(crossGame.getDonorRenderContext());
             }
-            renderer.ensureCached(graphicsManager);
+            cachePlayableBank(playable, renderer, com.openggf.sprites.render.PlayerResidentBanks.Role.BODY);
             applyPlayableArt(playable, renderer, artSet);
             initSpindashDust(playable, auxiliary);
             initTailsTails(playable, auxiliary);
@@ -582,7 +582,7 @@ final class LevelPlayableArtInitializer {
             } else if (usesDonation(sidekick)) {
                 sidekickRenderer.setRenderContext(crossGame.getDonorRenderContext());
             }
-            sidekickRenderer.ensureCached(graphicsManager);
+            cachePlayableBank(sidekick, sidekickRenderer, com.openggf.sprites.render.PlayerResidentBanks.Role.BODY);
             applyPlayableArt(sidekick, sidekickRenderer, sidekickArt);
             initSpindashDust(sidekick, auxiliary);
             initTailsTails(sidekick, auxiliary);
@@ -603,6 +603,17 @@ final class LevelPlayableArtInitializer {
                     sourceArt.bankSize(),
                     sourceArt.animationProfile(),
                     sourceArt.animationSet());
+    }
+
+    private void cachePlayableBank(AbstractPlayableSprite player, PlayerSpriteRenderer renderer,
+                                   com.openggf.sprites.render.PlayerResidentBanks.Role role) {
+        if (GameServices.runtimeArtCoordinatorOrNull()
+                instanceof com.openggf.sprites.render.PlayerResidentBanks.Authority owner
+                && owner.getClass().getClassLoader() == com.openggf.sprites.render.PlayerResidentBanks.class.getClassLoader()
+                && owner.ownsBank(player, role)) {
+            com.openggf.sprites.render.PlayerResidentBanks.claim(renderer);
+        }
+        renderer.ensureCached(graphicsManager);
     }
 
     private void applyPlayableArt(AbstractPlayableSprite playable,
@@ -780,7 +791,7 @@ final class LevelPlayableArtInitializer {
             if (usesDonation(playable)) {
                 dustRenderer.setRenderContext(crossGame.getDonorRenderContext());
             }
-            dustRenderer.ensureCached(graphicsManager);
+            cachePlayableBank(playable, dustRenderer, com.openggf.sprites.render.PlayerResidentBanks.Role.ATTACHED_EFFECT);
             playable.setSpindashDustController(new SpindashDustController(
                     playable, dustRenderer, fixedDustSlotFor(playable)));
         } catch (IOException e) {
@@ -841,7 +852,7 @@ final class LevelPlayableArtInitializer {
         if (usesDonation(playable)) {
             tailsRenderer.setRenderContext(crossGame.getDonorRenderContext());
         }
-        tailsRenderer.ensureCached(graphicsManager);
+        cachePlayableBank(playable, tailsRenderer, com.openggf.sprites.render.PlayerResidentBanks.Role.APPENDAGE);
         playable.setTailsTailsController(new TailsTailsController(
                 playable, tailsRenderer, isS3k,
                 createDynamicArtOwner("tails-tails", tailsRenderer)));
@@ -879,7 +890,7 @@ final class LevelPlayableArtInitializer {
             if (usesDonation(playable)) {
                 dustRenderer.setRenderContext(crossGameFeatures.getDonorRenderContext());
             }
-            dustRenderer.ensureCached(graphicsManager);
+            cachePlayableBank(playable, dustRenderer, com.openggf.sprites.render.PlayerResidentBanks.Role.ATTACHED_EFFECT);
             playable.setSpindashDustController(new SpindashDustController(
                     playable, dustRenderer, fixedDustSlotFor(playable)));
     }
@@ -959,7 +970,7 @@ final class LevelPlayableArtInitializer {
         if (usesDonation(playable)) {
             tailsRenderer.setRenderContext(crossGameFeatures.getDonorRenderContext());
         }
-        tailsRenderer.ensureCached(graphicsManager);
+        cachePlayableBank(playable, tailsRenderer, com.openggf.sprites.render.PlayerResidentBanks.Role.APPENDAGE);
         playable.setTailsTailsController(new TailsTailsController(
                 playable, tailsRenderer, prepared.separate(),
                 createDynamicArtOwner("tails-tails", tailsRenderer)));

@@ -59,6 +59,8 @@ def argument_parser(description=__doc__):
     parser.add_argument("--movie", type=Path)
     parser.add_argument("--output", type=Path, help="new external task directory")
     parser.add_argument("--timeout", type=int, default=180)
+    parser.add_argument("--dump-wave-frames", type=int, metavar="N",
+                        help="also write BizHawk's own audio for the first N frames to audio.wav")
     parser.add_argument("--require-output", action="append", default=[], metavar="RELATIVE_PATH",
                         help="fail unless the exporter creates this nonempty file; repeatable")
     return parser
@@ -111,6 +113,9 @@ def run_capture(args, parser, *, plan_text=None, environment_aliases=None, entry
                 "DisplayInput", "DisplayRerecordCount", "DisplayMessages", "DisplayRamWatch",
                 "DisplaySubtitles"):
         config[key] = False
+    # MovieEndAction.Record overrides read-only playback at EOF in BizHawk 2.11.
+    # Finish keeps the frozen input immutable while a neutral observation tail runs.
+    config.setdefault("Movies", {})["MovieEndAction"] = 3
     config["RunLuaDuringTurbo"] = True
     for entry in config["PathEntries"]["Paths"]:
         path = home / "Firmware" if entry["Type"] == "Firmware" else output / "runtime" / entry["System"] / entry["Type"].replace(" ", "_")
@@ -139,7 +144,11 @@ def run_capture(args, parser, *, plan_text=None, environment_aliases=None, entry
                 "MONO_CRASH_NOFILE": "1", "MONO_WINFORMS_XIM_STYLE": "disabled"})
     command = ["mono", str(home / "EmuHawk.exe"), "--audiosync", "false", "--config",
                str(output / "config.ini"), "--chromeless", "--lua", str(exporter),
-               "--movie", str(movie), str(rom)]
+               "--movie", str(movie)]
+    if getattr(args, "dump_wave_frames", None):
+        command += ["--dump-type", "wave", "--dump-name", str(output / "audio.wav"),
+                    "--dump-length", str(args.dump_wave_frames), "--dump-close"]
+    command.append(str(rom))
     receipt = {"command": command, "rom_sha1": digest(rom, "sha1"), "bk2_sha256": digest(movie),
                "lua_sha256": digest(exporter), "plan_sha256": digest(output / "plan.lua"),
                "host_sha256": digest(Path(__file__)),
@@ -167,6 +176,9 @@ def run_capture(args, parser, *, plan_text=None, environment_aliases=None, entry
     except OSError as error:
         receipt["launch_error"] = str(error)
         failures.append("launch-error")
+    receipt["bk2_sha256_after"] = digest(movie)
+    if receipt["bk2_sha256_after"] != receipt["bk2_sha256"]:
+        failures.append("movie-mutated-during-capture")
     # BizHawk can exit zero after a Lua assertion. The process exit alone is not
     # evidence that the exporter ran; observed script exceptions must fail closed.
     log_text = (output / "launch.log").read_text(errors="replace")

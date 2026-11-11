@@ -1,23 +1,19 @@
 package typinghog.play;
 
-import com.openggf.level.objects.ObjectManager;
+import com.openggf.mods.objects.AuxiliaryObjectCollection;
 import com.openggf.level.objects.ObjectServices;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * The course's sprite list: every badnik, explosion, animal, score sprite and boss part the
  * course shows, as plain records in world coordinates. {@link Puppet} objects draw them with
  * the zone's own ROM art; the course alone changes them.
  *
- * <p>A course checkpoint restore rolls auxiliary objects back but not this list, so the course
- * calls {@link #invalidatePuppets()} after every restore. {@link #syncPuppets(ObjectServices)}
- * retires stale puppets through their owning object manager at the next presentation boundary,
- * even while the native world is held, then gives every current visual a fresh puppet.
+ * <p>The session-owned auxiliary collection reconciles puppets with the current visual list
+ * at presentation boundaries, including after checkpoint restore and while the world is held.
  */
 public final class Stagehand implements AutoCloseable {
     /** One sprite of a compound visual, in world coordinates. */
@@ -38,8 +34,9 @@ public final class Stagehand implements AutoCloseable {
 
     /**
      * One drawn thing. Mutable: the course moves and animates it each row. A visual with
-     * {@link #sprites} is compound: its one puppet draws them back to front in list order, which
-     * separate puppets in one bucket cannot promise (slotless objects draw in no fixed order).
+     * {@link #sprites} is compound: its one puppet draws them back to front in list order,
+     * independent of puppet registration or retirement order. Slotless objects otherwise share
+     * the same ordering slot, with insertion order breaking ties.
      */
     public static final class Visual {
         final int id;
@@ -71,11 +68,8 @@ public final class Stagehand implements AutoCloseable {
     }
 
     private final Map<Integer, Visual> visuals = new LinkedHashMap<>();
-    private final Set<Integer> puppeted = new HashSet<>();
-    private record OwnedPuppet(Puppet puppet, ObjectManager manager, int id, int generation) { }
-    private final List<OwnedPuppet> ownedPuppets = new ArrayList<>();
+    private final AuxiliaryObjectCollection<Visual> puppets = new AuxiliaryObjectCollection<>();
     private int nextId = 1;
-    private int generation = 1;
     private SectionArt sectionArt;
 
     /** Installs an entry's prepared ROM art and retires the preceding entry's private atlas bank. */
@@ -95,9 +89,8 @@ public final class Stagehand implements AutoCloseable {
 
     @Override public void close() {
         clear();
-        retireStalePuppets(null);
+        puppets.close();
         clearSectionArt();
-        invalidatePuppets();
     }
 
     public Visual add(String artKey, int x, int y) {
@@ -111,62 +104,19 @@ public final class Stagehand implements AutoCloseable {
     public void remove(Visual visual) {
         if (visual != null) {
             visuals.remove(visual.id);
-            puppeted.remove(visual.id);
         }
     }
 
     public void clear() {
         visuals.clear();
-        puppeted.clear();
     }
 
     public Visual get(int id) { return visuals.get(id); }
 
     public List<Visual> all() { return List.copyOf(visuals.values()); }
 
-    public int generation() { return generation; }
-
-    /**
-     * Presentation/frame-boundary ownership reconciliation. Never executes native object clocks.
-     * Track only puppets created here; removal uses the manager that registered each puppet, so
-     * unload callbacks, ownership and render caches follow the normal retirement path.
-     */
+    /** Reconcile presentation objects without executing native object clocks. */
     public void syncPuppets(ObjectServices services) {
-        ObjectManager manager = services.objectManager();
-        retireStalePuppets(manager);
-        for (Visual visual : takeUnpuppeted()) {
-            Puppet puppet = Puppet.spawn(services, visual, generation);
-            ownedPuppets.add(new OwnedPuppet(puppet, manager, visual.id(), generation));
-        }
-    }
-
-    private void retireStalePuppets(ObjectManager currentManager) {
-        var iterator = ownedPuppets.iterator();
-        while (iterator.hasNext()) {
-            OwnedPuppet owned = iterator.next();
-            if (owned.manager() == currentManager && !owned.puppet().isDestroyed()
-                    && current(owned.id(), owned.generation())) continue;
-            owned.manager().removeDynamicObject(owned.puppet());
-            iterator.remove();
-            if (current(owned.id(), owned.generation())) puppeted.remove(owned.id());
-        }
-    }
-
-    /** True while a puppet for {@code id} of {@code puppetGeneration} should keep drawing. */
-    public boolean current(int id, int puppetGeneration) {
-        return puppetGeneration == generation && visuals.containsKey(id);
-    }
-
-    /** Called after a checkpoint restore: every existing puppet is stale. */
-    public void invalidatePuppets() {
-        generation++;
-        puppeted.clear();
-    }
-
-    /** Visuals that still need a puppet in this generation; marks them as served. */
-    public List<Visual> takeUnpuppeted() {
-        List<Visual> out = new ArrayList<>();
-        for (Visual visual : visuals.values()) if (puppeted.add(visual.id)) out.add(visual);
-        return out;
+        puppets.synchronize(services, visuals.values(), (injected, visual) -> Puppet.create(visual));
     }
 }

@@ -16,6 +16,11 @@ updates it on demand.
 
 ## Dated artifacts
 
+- [Contributor complexity and source readability](audits/2026-11-06-ai-code-climb.md)
+  defines the working hill-climbing rubric, six static task assessments and
+  bounded refactoring candidates. Scores are inspection hypotheses, not a
+  repository-wide grade or measured onboarding performance.
+
 - [Quantitative stock-game parity](designs/2026-10-29-quantitative-stock-parity.md)
   defines original-behavior obligations, evidence authority and measured-scope
   reporting. Its partial catalogue now includes original dispatch-entry gaps

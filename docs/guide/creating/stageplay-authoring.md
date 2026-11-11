@@ -299,6 +299,110 @@ gaps, walls, larger steps, low ceilings, background-layer collision and moving
 solids fail. The object's own behaviour, contact and effects stay off: it is a
 visual route, not a controller.
 
+### Native two-human competition programmes
+
+The Java `StageplayRouteTool` also authors native controller programmes through
+`StageplayRoutePlanner.planNative`. This uses the existing bounded route search;
+qualification is a fresh, strictly linear replay of the frozen rows on the same
+production host. Existing scene point routes keep their current format and behaviour.
+Both editor frontends must run native programmes in an isolated worker.
+
+For S2, use `--competition-entry N --goals goals.json --s2-rom ROM --out NEW_STEM`,
+where the retail 2×2 menu entries are 0 EHZ, 1 MCZ, 2 CNZ and 3 special stage.
+Alternatively, `--native-route existing.route.json` continues its frozen rows;
+`--prefix-rows N` selects the immutable prefix and `--goals` optionally supplies a
+replacement programme. Completed prefix goals are evaluated, never reauthored.
+`--nodes` and `--ticks` bound search; `--bk2 NEW_FILE` exports exact two-pad rows.
+For a preserved traversal whose production pre-act locks changed, pass
+`--native-route FILE --retime-locks MAX_ROWS`. The Stageplay planner preserves
+every traversal row, authors bounded neutral waits from the live `input.locked`
+observation, and cold-qualifies the entire original goal program. Previous
+native stamps and anchors are discarded and need independent confirmation.
+
+Use `-Dopenggf.headless.gl=surfaceless-egl` with `DISPLAY` and
+`WAYLAND_DISPLAY` unset on Linux. Compile changed sources before running the tool.
+
+The `.route.json` manifest retains `openggf-route/1` and adds the inlet
+`{"kind":"title"}`. Its sibling `.script` holds the entire power-on/menu/controller
+sequence. `PlayerIn`/`Settled`/attachment predicates select P1 or P2; `All` combines
+both. Copied owner facts use `{"kind":"fact-equals","key":"...","value":1}`
+or `{"kind":"facts-equal","left":"...","right":"..."}` for ties.
+A host may publish `input.locked=1` while a production control lock is active.
+The planner authors neutral rows until that lock releases, preserving fresh button
+edges across witnessed native timing inlets. The S2 title card uses this contract.
+
+The S2 adapter publishes `competition.phase`, selection, act, ROM zone, results
+readiness, both ordinary actors' routines/rings/time/score/lives, zone wins, cage
+and slot-machine facts. Ordinary sprite coordinates are not special-stage avatar
+coordinates; use phase, special-stage and progress facts for special-stage entry.
+
+`--replay-native-route FILE --s2-rom ROM --out NEW_DIRECTORY` never plans: it
+replays the saved rows and writes engine pictures plus a report. Optional
+`--publish NEW_STEM` writes a freshly engine-qualified copy of those same rows.
+The CNZ flip witness matches resident art to ROM poses, excludes flat poses,
+requires a full projected cell inside a view, and checks actual framebuffer pixels.
+See `src/test/resources/routes/s2/competition/` for frozen examples.
+
+Engine qualification is not BizHawk confirmation. The title qualification override
+does not enable production `QUALIFIED_ZONES`. Native cold replay must independently
+confirm the exported movie and its goals; synchronous engine load timing can differ
+from hardware frame timing. Never insert fitted state or hand-edit traversal rows.
+
+Native programme repairs use `StageplayRoutePlanner.repairNative` with the existing
+reference-following search and copied engine observations for both participants.
+A required seam edit tries a single changed button before wider drift repair;
+qualification always replays the resulting frozen rows. Native CSV is never a
+planning reference. Goal expansion also tries the existing native-state-gated
+charge policy and moving Down/roll requests on each targeted human pad; native
+physics owns their effects, and the saved result is still just controller rows.
+
+Native BK2 export uses the verified witness prefix, then the engine gameplay suffix.
+Set `--native-witness FILE --native-anchor-rows N` during authoring or replay with
+`--publish NEW_STEM`. The manifest records `native.entry.prefixRows` (native anchor),
+`engineAnchorRows` (engine anchor), `anchorBoundary: "first-ordinary-level-lfc-zero"`,
+`movie` and the prefix `inputHash`. Counts mean completed rows: export is witness
+`[0,prefixRows)` plus engine `[engineAnchorRows,end)`. Replay verifies the observed
+engine boundary; it never derives a fitted offset or re-plans. A declared
+`native.exportBlocker` refuses export of provisional rows. Optional
+`qualification[].coverage` lists the checks a stamp actually establishes;
+a native goal pass does not claim unlisted state/pixel parity. Accepted native
+lag boundaries are recorded separately and never create input fillers. Replays also write a
+`state.csv` timeline. A menu Start carried into native pause is a gameplay frontier;
+do not insert an unpause row to work around it.
+
+`competition.presentationFrame` is the production screen's copied presentation
+counter. A fact-only menu goal with a leg `holds` invariant is an observation hold:
+the existing expander tries bounded neutral input through that leg's row limit,
+then qualifies the complete frozen rows. It never guesses missing counters or
+navigates a menu while maintaining the invariant. Other numeric fact goals use
+copied-value distance only to rank candidates; exact predicates decide success.
+This can author an intentional results dwell based on the ROM finish-grace period
+before the next Start edge, without a clock offset or native state injection.
+
+`ehz1-p1-finish-prefix` is a qualified partial programme, not zone-results or
+special-stage certification. Its earlier checkpoint instance-ID frontier was
+fixed by restoring the animal's points-child construction policy; strict identity
+equality remains mandatory. Continue frozen prefixes through the same planner.
+
+Later native loads use optional `native.inlets[]`. Each entry has `engineFromRows`
+(the first engine load/menu row replaced), plus the same anchor fields `movie`,
+`prefixRows`, `inputHash`, `engineAnchorRows`, `anchorBoundary`. The native witness
+binds its entire cold prefix through the later first ordinary Level/LFC0 boundary.
+Export verifies that all rows before the replacement equal the already-composed
+frozen input history, then substitutes the witnessed pre-level span and resumes
+engine rows at the later engine anchor. It never shifts gameplay state or inserts
+lag fillers. Changing any preceding gameplay row invalidates that witness history.
+Engine replay checks each later anchor using copied `input.levelAnchorRows` and LFC0.
+
+CLI author/replay publication can append one inlet with all four flags:
+`--native-inlet-witness FILE --native-inlet-anchor-rows N
+--engine-inlet-from-rows F --engine-inlet-anchor-rows A` (one command).
+`F` and `A` are observed engine counts; `N` is the observed native completed count.
+Do not fit them. Existing entry fields and input rows remain unchanged. Both editor
+surfaces preserve and list these imported inlets, resolve their witnesses relative
+to the route project and use the same export validation. Ordinary engine replays
+never read native witness data.
+
 ## Render
 
 ```bash
@@ -426,3 +530,47 @@ These details matter when you investigate a problem or write tools.
 
 Agents should also read the
 [stageplay-authoring skill](../../../.agents/skills/stageplay-authoring/SKILL.md).
+
+### Two-player programmes in both editors
+
+Open the existing Route / Tape workspace in either editor. With S2 World REV01
+loaded, New route offers the Competition title/menu host and EHZ, MCZ, CNZ or
+Special Stage entry. Both pads share a ruler; darker lanes, desaturated buttons
+and a lock mark the immutable prefix. A different level's scenery is covered by
+a neutral preview. P1 is blue, P2 purple, and joint goals teal.
+
+Add leg supports P1, P2 and Both, plus fact-equals and facts-equal with the S2
+observer key picker. Unknown/empty keys are errors. Scan copies ENGINE facts at
+the cursor; a known key absent from that observation is an inline fact-form
+error. Edit a desktop player chip, or choose an individual leg in the HUD Goals
+menu. The programme text editor preserves compound conditions and per-leg guards.
+
+Plan, replay, qualifying save, repair and scan use the isolated EGL worker and
+the shared planner. Native programmes retain their original goal cursor across
+completed prefix legs. An unchanged qualified save replays first and preserves
+both files byte for byte, including comments. Goal-only writes retain unchanged
+script spelling. Draft safety is unchanged.
+
+ENGINE qualification is distinct from BIZHAWK evidence. Native anchors records
+an observed witness, completed native/engine row counts and their shared gameplay
+boundary. Replay verifies the engine anchor; export verifies the witness hash and
+uses the shared native-prefix splice. Relative witness paths resolve from the
+route's ancestry. Changed anchors require replay before export. Provisional
+export controls are disabled, with the full reason in hover/Details; the anchor
+form preserves blockers. The frozen CNZ routes remain provisional pending lane
+F's production pause handoff correction and subsequent planner repair/native
+confirmation. These editor controls do not certify native success.
+
+### Neutral route observation holds
+
+A native goal leg may use `"goal":{"kind":"wait","rows":360}`. The planner
+supplies neutral input on both pads for that many rows and enforces the leg guard;
+replay verifies the duration. Frozen-route acceptance can also assert that the saved
+rows are neutral. This starts the hold relative to the preceding observed goal,
+without targeting an absolute timer value. `maxRows` must admit the full hold.
+S2 Competition exposes `competition.monitor.content`, `.initFrame`, `.breaker`
+and `.spawned` from the actual Obj2E owner, plus `competition.levelFrame` and
+`.levelPhase`. The player `.shield`, `.speedShoes`, `.invincibility`, `.routine`,
+`.monitors`, `.rings` and `.lives` facts can assert the award before the hold.
+The eight `routes/s2/competition/ehz-qmark-*` fixtures share a cold-title approach;
+P1 breaks the first EHZ monitor, while P2 remains near the start.

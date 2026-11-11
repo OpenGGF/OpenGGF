@@ -15,7 +15,7 @@ import java.util.Objects;
  */
 public final class RoutePlanner {
     /** Bumped when search semantics change; recorded in provenance. */
-    static final String PLANNER_REVISION = "prefix-search/2";
+    static final String PLANNER_REVISION = "prefix-search/5";
 
     private final RouteWorldFactory hosts;
     private final RouteWorldFactory draft;
@@ -57,6 +57,44 @@ public final class RoutePlanner {
             case RouteTask.Author author -> author(author, cancellation, listener, observer);
             case RouteTask.Point point -> point(point, cancellation, listener, observer);
         };
+    }
+
+    /** Re-author a preserved traversal around observed production control locks.
+     * Only neutral rows are authored. No frame offset or native observations are inputs;
+     * the entire resulting tape must pass its original goals in a fresh cold replay.
+     */
+    public PlanResult retimeLocks(RouteArtifact source, int maxLockRows, Cancellation cancelled) {
+        if (maxLockRows < 1) throw new IllegalArgumentException("positive lock-row budget required");
+        var rows = new InputTape.Builder();
+        int waits = 0;
+        RouteSample end;
+        try (var world = hosts.openSearch(source.launch())) {
+            for (int cursor=0;cursor<=source.tape().size();cursor++) {
+                if (cancelled.cancelled()) return new PlanResult.Stopped(StopReason.CANCELLED,
+                        "cancelled production control-lock repair",0,rows.build(),
+                        new WorkReport(0,world.rowsOffered(),1,0,0,1,0));
+                while (world.observe().facts().getOrDefault("input.locked",0)!=0) {
+                    if (cancelled.cancelled() || waits==maxLockRows)
+                        return new PlanResult.Stopped(cancelled.cancelled()?StopReason.CANCELLED:StopReason.BUDGET_EXHAUSTED,
+                                "production control-lock wait budget",0,rows.build(),
+                                new WorkReport(0,world.rowsOffered(),1,0,0,1,0));
+                    rows.add(world.step(PadRow.NEUTRAL).accepted()); waits++;
+                }
+                if (cursor<source.tape().size()) rows.add(world.step(source.tape().row(cursor)).accepted());
+            }
+            end=world.observe();
+        }
+        var candidate=RouteArtifact.of(source.launch(),source.checks(),rows.build(),
+                new Provenance("RoutePlanner observed-lock repair",hosts.environment(),
+                        "preserved traversal "+source.content().sha256()+"; authored "+waits+" neutral lock rows",List.of()));
+        var replay=new RouteReplay(hosts).replay(candidate,cancelled);
+        if (replay instanceof ReplayResult.Passed passed) {
+            if (!end.equals(passed.end())) throw new IllegalStateException("control-lock repair did not cold-reproduce its search endpoint");
+            return new PlanResult.Solved(candidate,passed.evidence(),null,
+                    new WorkReport(0,candidate.tape().size(),1,0,0,2,candidate.tape().size()),end,passed.end());
+        }
+        return new PlanResult.Stopped(StopReason.QUALIFICATION_FAILED,replay.toString(),0,rows.build(),
+                new WorkReport(0,candidate.tape().size(),1,0,0,2,candidate.tape().size()));
     }
 
     private PlanResult repair(RouteTask.Repair task, Cancellation cancellation, PlanProgress.Listener listener,

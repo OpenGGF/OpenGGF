@@ -53,7 +53,21 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
     private record Mapping(String key,int frame,int onlyPiece,int x,int y,boolean hFlip,boolean vFlip,
                            Boolean forcedPriority,boolean multi) { }
     private record Source(int x,int y,int halfWidth,int halfHeight,int flags,List<Mapping> mappings,
-                          Consumer<Boolean> visibility) { }
+                          Consumer<Boolean> visibility,S3kCompetitionPlayer actor,boolean tail) { }
+    /**
+     * An admitted playable body, or Tails' separately admitted tail (Obj_Tails2P_Tail), in the
+     * hosted zoom window; window pixels of the owner's centre.
+     */
+    public record Actor(int bucket,S3kCompetitionPlayer player,boolean tail,int windowX,int windowY) {
+        public Actor { Objects.requireNonNull(player); }
+    }
+    /**
+     * Hosted zoom projection of P1's window: world sprites without the playable bodies,
+     * the screen-space HUD pieces at their full-screen positions, and the admitted bodies.
+     */
+    public record Zoomed(Frame world,Frame screen,List<Actor> actors) {
+        public Zoomed { Objects.requireNonNull(world);Objects.requireNonNull(screen);actors=List.copyOf(actors); }
+    }
     private final Function<String,ObjectSpriteSheet> sheets;
     private java.util.function.BiFunction<String,Integer,String> artKey=(key,frame)->key;
     // Native Sprite_table_input count bytes are drained after building; pointer words are not cleared.
@@ -99,34 +113,72 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
     }
 
     private Frame build(int slot,int[] count,Map<Integer,Source> owners,S3kCompetitionScroll scroll) {
+        return build(slot,count,owners,scroll,inputPointers,scroll.view(slot).camera().y(),112,true);
+    }
+
+    /**
+     * No native pointer words, SAT pages or object visibility are changed by this projection:
+     * P1's camera and {@code windowHeight} rows, the same sources, bucket order and range tests.
+     */
+    public Zoomed projectZoomed(ObjectManager objects,List<S3kCompetitionPlayer> players,
+            S3kCompetitionScroll scroll,int windowHeight) {
+        int[] count = new int[8];
+        int[][] pointers = new int[8][63];
+        for (var admission : NativeSpriteSubmissionAccess.admissions(objects)) {
+            if (count[admission.bucket()] >= 63) throw new IllegalStateException("Native input bucket overflow");
+            pointers[admission.bucket()][count[admission.bucket()]++] = admission.slot();
+        }
+        var owners = currentSources(objects,players);
+        var world = new HashMap<Integer,Source>();
+        var screen = new HashMap<Integer,Source>();
+        owners.forEach((pointer,source) -> {
+            if (source.actor() == null) ((source.flags()&0x44)!=0 ? world : screen).put(pointer,source);
+        });
+        var camera = scroll.view(0).camera();
+        int xMask = scroll.profile().xWrapMask(), yMask = scroll.profile().yWrapMask();
+        var actors = new ArrayList<Actor>();
+        for (int bucket=0;bucket<8;bucket++) for (int i=0;i<count[bucket];i++) {
+            Source source = owners.get(pointers[bucket][i]);
+            if (source == null || source.actor() == null || (source.flags()&0x10)!=0) continue;
+            int hw = source.halfWidth()&255, hh = source.halfHeight()&255;
+            int qx = (source.x()-camera.x()+hw)&xMask, qy = (source.y()-camera.y()+hh)&yMask;
+            if (qx>=320+2*hw || qy>=windowHeight+2*hh) continue;
+            actors.add(new Actor(bucket,source.actor(),source.tail(),qx-hw,qy-hh));
+        }
+        return new Zoomed(build(0,count,world,scroll,pointers,camera.y(),windowHeight,false),
+                build(0,count,screen,scroll,pointers,camera.y(),224,false),actors);
+    }
+
+    private Frame build(int slot,int[] count,Map<Integer,Source> owners,S3kCompetitionScroll scroll,
+            int[][] pointers,int displayY,int height,boolean nativeVisibility) {
         var output=new ArrayList<Piece>(80);
-        if(slot==0)output.addAll(prefix());
+        if(slot==0 && nativeVisibility)output.addAll(prefix());
         var camera=scroll.view(slot).camera();
         int xMask=scroll.profile().xWrapMask(),yMask=scroll.profile().yWrapMask();
         for(int bucket=0;bucket<8;bucket++)for(int i=0;i<count[bucket];i++) {
-            int pointer=inputPointers[bucket][i];
+            int pointer=pointers[bucket][i];
             Source source=owners.get(pointer);
             if(source==null)continue;
             // P1 clears before even testing its view-skip flag; P2 only ORs successful range.
-            if(slot==0)source.visibility().accept(false);
+            if(nativeVisibility && slot==0)source.visibility().accept(false);
             int skip=slot==0?0x10:8;
             if((source.flags()&skip)!=0)continue;
             boolean world=(source.flags()&0x44)!=0;
             int originX=source.x(),originY=source.y()+slot*112;
             if(world) {
                 int qx=(source.x()-camera.x()+(source.halfWidth()&255))&xMask;
-                int qy=(source.y()-camera.y()+(source.halfHeight()&255))&yMask;
-                if(qx>=320+2*(source.halfWidth()&255)||qy>=112+2*(source.halfHeight()&255))continue;
+                int qy=(source.y()-displayY+(source.halfHeight()&255))&yMask;
+                if(qx>=320+2*(source.halfWidth()&255)||qy>=height+2*(source.halfHeight()&255))continue;
                 originX=qx+128-(source.halfWidth()&255);
                 originY=qy+128-(source.halfHeight()&255)+slot*112;
             }
-            source.visibility().accept(true); // BEFORE full SAT or empty frame tests.
+            if(nativeVisibility)source.visibility().accept(true); // BEFORE full SAT or empty frame tests.
             if(output.size()>=80)continue;
             for(Mapping mapping:source.mappings()) {
                 int mx=originX+mapping.x(),my=originY+mapping.y();
                 if(mapping.multi()) {
                     mx=(mapping.x()-camera.x()+128)&xMask;
-                    my=((mapping.y()-camera.y()+128)&yMask)+slot*112;
+                    my=((mapping.y()-displayY+128)&yMask)+slot*112;
                 }
                 emit(output,pointer,bucket,mapping,mx,my);
                 if(output.size()>=80)break;
@@ -172,7 +224,7 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
             int flags=player.nativeRenderFlags();
             sources.put(player.slot(),new Source(player.centreX(),player.centreY(),12,12,flags,
                     List.of(mapping(artKey.apply(key,player.mappingFrame()),player.mappingFrame(),(flags&1)!=0,(flags&2)!=0,player.highPriority())),
-                    player::refreshNativeVisibility));
+                    player::refreshNativeVisibility,player,false));
         }
         // Presentation-only late lookup. Gameplay touch uses the canonical previous pointer list.
         for(var object:objects.getActiveObjects()) {
@@ -185,8 +237,10 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
                 if(parent!=null) {
                     String nativeKey=S3kCompetitionCharacterArt.nativeKey(parent.character())+"_tail";
                     String key=artKey.apply(nativeKey,tail.mappingFrame());
-                    if(!key.equals(nativeKey)) source=new Source(source.x(),source.y(),source.halfWidth(),source.halfHeight(),source.flags(),
-                        List.of(mapping(key,tail.mappingFrame(),(source.flags()&1)!=0,(source.flags()&2)!=0,tail.isHighPriority())),source.visibility());
+                    var mappings=key.equals(nativeKey)?source.mappings()
+                            :List.of(mapping(key,tail.mappingFrame(),(source.flags()&1)!=0,(source.flags()&2)!=0,tail.isHighPriority()));
+                    source=new Source(source.x(),source.y(),source.halfWidth(),source.halfHeight(),source.flags(),
+                            mappings,source.visibility(),parent,true);
                 }
             }
             if(source!=null)sources.put(pointer,source);
@@ -228,7 +282,7 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
             mappings.add(mapping(S3kCompetitionRingLoss.ART_KEY,ring.mappingFrame(),(flags&1)!=0,(flags&2)!=0,null));
         } else return null;
         return new Source(object.getX(),object.getY(),object.getOnScreenHalfWidth(),object.getOnScreenHalfHeight(),flags,
-                List.copyOf(mappings),visibility);
+                List.copyOf(mappings),visibility,null,false);
     }
 
     /**

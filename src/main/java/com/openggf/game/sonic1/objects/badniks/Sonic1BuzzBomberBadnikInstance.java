@@ -232,15 +232,14 @@ public class Sonic1BuzzBomberBadnikInstance extends AbstractBadnikInstance imple
     }
 
     /**
-     * ROM equivalent: MarkObjGone keeps objects alive while near the camera.
-     * The spawn windowing system checks the original spawn.x() against the camera
-     * window, but a flying Buzz Bomber can move far from its spawn. When the camera
-     * follows the player backward (away from spawn), the spawn may leave the window
-     * even though the Buzz Bomber itself is still on-screen.
-     *
-     * Return true while our current position is within a generous margin of the
-     * camera viewport, preventing the spawn windowing system from removing us
-     * prematurely. We will be cleaned up normally when we are truly off-screen.
+     * Keep the live Buzz Bomber while its current X passes RememberState's
+     * chunk-aligned range check. Its original placement can leave the loading
+     * window after the badnik flies away or the camera retreats; that does not
+     * determine the live object's lifetime.
+     * <p>
+     * This is a horizontal ROM lifetime window, not sprite visibility or a
+     * margin around the viewport. The shared range helper preserves the unsigned
+     * comparison and scales the window for the configured viewport width.
      */
     @Override
     public boolean isPersistent() {

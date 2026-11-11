@@ -19,7 +19,8 @@ import com.openggf.level.objects.AbstractGameOverCardObjectInstance;
  * </ul>
  */
 @com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
-public final class Sonic2GameOverCardObjectInstance extends AbstractGameOverCardObjectInstance {
+public final class Sonic2GameOverCardObjectInstance extends AbstractGameOverCardObjectInstance
+        implements com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource {
 
     // A scalar native parent word survives graph recreation without retaining an old actor.
     // Obj39 tests parent+1: $B000 selects P1, $B040 selects P2.
@@ -59,6 +60,33 @@ public final class Sonic2GameOverCardObjectInstance extends AbstractGameOverCard
     }
 
     public int getNativeParentWord() { return nativeParentWord; }
+
+    @Override public int getLiveObjectId() {
+        // CheckGameOver writes Obj39 to the fixed SST before its art-ready routine.
+        return nativeCard ? 0x39 : super.getLiveObjectId();
+    }
+
+    /** Read-only native display words, including the uninitialized PLC-held state. */
+    public com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.ObjectSlot nativeCardState() {
+        if (!nativeCard) return null;
+        var entry = com.openggf.game.sonic2.competition.view.Sonic2CompetitionSpriteArtTable.entry(0x39);
+        boolean initialized = getRoutine() != ROUTINE_CHECK_ART;
+        // Obj39_Init (s2.asm:27682-27699): screen Y=$F0, flags/bucket0,
+        // mapping14C6C, art84DE; Adjust2PArtPointer preserves attributes ->826F.
+        return new com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.ObjectSlot(
+                0x39, initialized && isOnScreen() ? 0x80 : 0, getVdpX(), initialized ? 0xF0 : 0, 0, 0,
+                new com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.Mapping(
+                        initialized ? entry.mappingsAddress() : 0, getMappingFrame()),
+                initialized ? com.openggf.game.sonic2.competition.view.Sonic2CompetitionSpriteArtTable
+                        .adjust2PArtPointer(entry.artTile1P()) : 0, null);
+    }
+
+    @Override public com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.ObjectSlot nativeDisplaySlot() {
+        // Obj39_SlideIn/Wait/Display reach DisplaySprite; SetTimer's shipped
+        // fixBugs=0 rts omits one display. Parent selects dismissal, not a view:
+        // both BuildSprites screen-space passes consume the same card words.
+        return isDisplayedThisFrame() ? nativeCardState() : null;
+    }
 
     @Override
     protected boolean handleNativeDismiss() {

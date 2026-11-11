@@ -1091,3 +1091,8 @@ com.openggf.level.objects.SkidDustObjectInstance
 com.openggf.level.objects.SplashObjectInstance
 com.openggf.level.objects.authored.AuthoredGizmoInstance
 com.openggf.level.objects.boss.BossExplosionObjectInstance
+
+# Competition programme children: production recreation and scalar round trips.
+com.openggf.game.sonic2.objects.Sonic2BreakPieceObjectInstance
+com.openggf.game.sonic2.objects.Sonic2SignpostSparkleObjectInstance
+com.openggf.game.sonic2.objects.badniks.Sonic2CoconutProjectileInstance

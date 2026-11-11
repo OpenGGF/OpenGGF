@@ -15,6 +15,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestBumperObjectInstance {
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void touchLatchUsesNativePlayerSlotForHumanAndCpuTails(boolean cpu) {
+        // loc_3FA00 (s2.asm:85758-85765), not a CPU-control test.
+        var first = new com.openggf.tests.TestablePlayableSprite("first", (short) 0, (short) 0);
+        var second = new com.openggf.tests.TestablePlayableSprite("second", (short) 0, (short) 0);
+        second.setCpuControlled(cpu);
+        var query = new com.openggf.level.objects.ObjectPlayerQuery(() -> first, () -> java.util.List.of(second));
+        var bumper = new BumperObjectInstance(new ObjectSpawn(512, 768, 0x44, 0, 0, false, 0), "Bumper");
+        bumper.setServices(new com.openggf.level.objects.StubObjectServices() {
+            @Override public com.openggf.level.objects.ObjectPlayerQuery playerQuery() { return query; }
+        });
+        bumper.onTouchResponse(second, null, 0);
+        assertEquals(2, bumper.getCollisionProperty(), "native P2 pending bit is independent of CPU control");
+        bumper.onTouchResponse(first, null, 0);
+        assertEquals(3, bumper.getCollisionProperty(), "both native pending bits coexist");
+    }
+
     @Test
     void touchProfileNamesSonic2SpecialLatchPolicy() {
         BumperObjectInstance bumper = new BumperObjectInstance(

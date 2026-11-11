@@ -163,7 +163,7 @@ class TestSpotCheck {
             assertEquals(firstFinish.inputRecordingHashHex(),
                     firstJob.inputRecordingHashHex());
             assertEquals(firstFinish.ghostStreamHashHex(), firstJob.ghostStreamHashHex());
-            assertEquals(firstFinish.firstInputFrame(), firstJob.firstInputFrame());
+            assertEquals(firstFinish.clockStartFrame(), firstJob.firstInputFrame());
             assertEquals(secondFinish.finishFrame(), secondJob.finishFrame());
             List<ControlMessage.StandingsRow> before = access.room().round().standings();
 

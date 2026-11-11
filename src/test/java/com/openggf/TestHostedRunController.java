@@ -43,6 +43,16 @@ class TestHostedRunController {
     private final HostedRunController controller = new HostedRunController(mock(SonicConfigurationService.class));
 
     @Test
+    void competitionContinuesAcrossFocusLossButOrdinaryRunCanSuspend() {
+        assertFalse(controller.continuesWithoutFocus());
+        controller.begin(new RunSpec("s2",0,0,"sonic",GameplayRunPolicy.competition()), new RunHost() { });
+        assertTrue(controller.continuesWithoutFocus());
+        controller.end(RunEndReason.LEFT);
+        controller.begin(SPEC, new RunHost() { });
+        assertFalse(controller.continuesWithoutFocus());
+    }
+
+    @Test
     void pausedInputIsReportedOnceOnResumeAndDoesNotLeakIntoTheNextRun() {
         List<Boolean> resumed = new ArrayList<>();
         RunHost host = new RunHost() {

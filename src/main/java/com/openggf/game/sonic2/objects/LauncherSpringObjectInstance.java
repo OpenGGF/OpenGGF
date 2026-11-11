@@ -50,7 +50,7 @@ import java.util.Set;
  * <b>Disassembly Reference:</b> s2.asm obj85 (loc_2AD26 - loc_2AE76)
  */
 public class LauncherSpringObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.Source {
+        implements com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource, SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.Source {
     @Override
     public ObjectVisualFacing.Basis nativeFacing() {
         // loc_2B018 always launches the diagonal head UP-RIGHT, even with
@@ -124,6 +124,26 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         this.baseY = spawn.y();
         this.currentSpriteX = spawn.x();
         this.currentSpriteY = spawn.y();
+    }
+
+    /** Pressure-spring state bytes $36/$37 only: swap_loop_objects (s2.asm:26087-26092). */
+    void swapPlayerOwnership() {
+        var roster = com.openggf.game.competition.NativeCompetitionRoster.from(services().worldSession());
+        if (roster == null) return;
+        var firstPlayer = roster.player(0);
+        var secondPlayer = roster.player(1);
+        var first = playerStates.get(firstPlayer);
+        var second = playerStates.get(secondPlayer);
+        int firstState = first != null ? first.state : STATE_EMPTY;
+        int secondState = second != null ? second.state : STATE_EMPTY;
+        // Keep each actor's Java cooldown and map-entry identity. An absent
+        // entry represents the native zero byte, not another field to exchange.
+        if (first == null && secondState != STATE_EMPTY)
+            first = playerStates.computeIfAbsent(firstPlayer, ignored -> new PlayerState());
+        if (second == null && firstState != STATE_EMPTY)
+            second = playerStates.computeIfAbsent(secondPlayer, ignored -> new PlayerState());
+        if (first != null) first.state = secondState;
+        if (second != null) second.state = firstState;
     }
 
     @Override
@@ -359,7 +379,7 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // ROM loc_2AD2A (vertical Obj85_Up) only sets objoff_36 nonzero at its
         // tail (s2.asm:57968 addq.b #1,(a2)). The compression timer loc_2ADB0 is
         // reached only when objoff_36 was already nonzero at the START of the
-        // object update ("move.b (a2),d0 / bne loc_2AD7A", s2.asm:57948-57949),
+        // object update ("move.b (a2),d0 / bne loc_2AD7A", s2.asm:58120-58154),
         // so the EMPTY->STANDING capture frame runs loc_2AD2A and never advances
         // objoff_38 that frame -- the capture frame is "free" (no objoff_32
         // decrement). The engine reproduces that free frame structurally rather
@@ -373,7 +393,7 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // frame too late once objoff_32 is carried as a residual (s2 cnz2 frame
         // 4296), so no extra skip is applied.
 
-        // ROM Obj85 capture (loc_2AD2A, s2.asm:57951-57968) sets obj_control,
+        // ROM capture loc_2AD2A (s2.asm:58124-58146) sets obj_control,
         // rolling, radii and objoff_36, but NEVER writes objoff_32 (the
         // compression countdown) or objoff_38 (the compression accumulator).
         // objoff_32 is therefore carried as a residual from the previous
@@ -1033,6 +1053,23 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
             // The transition to STATE_LAUNCH_PENDING is handled by checkForLaunchTransition()
             handleCompression(player, ps);
         }
+    }
+
+    /** Obj85_Init (s2.asm:58026-58068): one SST with a fixed base child and moving head.
+     * Obj85 (s2.asm:57993-58009) submits both through DisplaySprite3 bucket 4. */
+    @Override
+    public com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.ObjectSlot nativeDisplaySlot() {
+        var mapping = new com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.Mapping(
+                isDiagonal() ? 0x2B0EC : 0x2B07E, mainSpriteFrame);
+        var child = new com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.Child(
+                baseX & 0xFFFF, (baseY + (isDiagonal() ? 0 : 0x20)) & 0xFFFF, compression >= 0x10 ? 3 : 2);
+        var multi = new com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.MultiSprite(
+                mainSpriteFrame, isDiagonal() ? 0x20 : 0x18, 0, java.util.List.of(child));
+        return new com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.ObjectSlot(
+                0x85, 0x44 | (isLeftFacing() ? 1 : 0) | (spawn.renderFlags() & 2),
+                currentSpriteX & 0xFFFF, currentSpriteY & 0xFFFF, 0x18, 0, mapping,
+                com.openggf.game.sonic2.competition.view.Sonic2CompetitionSpriteArtTable.adjust2PArtPointer(
+                        isDiagonal() ? 0x0402 : 0x0422), multi);
     }
 
     @Override

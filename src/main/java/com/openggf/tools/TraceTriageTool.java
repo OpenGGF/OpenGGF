@@ -1,9 +1,15 @@
 package com.openggf.tools;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.trace.TraceFiles;
+import com.openggf.trace.TraceMetadata;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,27 +24,23 @@ import java.util.Set;
  *
  * <p>Reads existing trace-replay report artifacts that the engine already
  * produces and prints a short FIRST-DIVERGENCE brief. It performs no ROM run
- * and never mutates engine state; it is a read-only diagnostic over committed
- * report files.
+ * and never mutates engine state. A saved report does not establish that a
+ * current test executed or that its process completed successfully.
  *
- * <p>Inputs (all under the configured {@code openggf.trace.reports} directory,
- * which defaults to {@code target/trace-reports}, unless overridden):
- * <ul>
- *   <li>a legacy {@code <game>_<zone>_report.json} or a unique nested
- *       report matching that logical key (required) — schema produced by
- *       {@link com.openggf.trace.DivergenceReport#toJson()}.</li>
- *   <li>the matching {@code <game>_<zone>_context.txt} (or nested
- *       sibling) (optional) — human-readable
- *       side-by-side frame table, scanned for nearby object/diagnostic lines.</li>
- *   <li>{@code aux_state.jsonl} (optional) — newline-delimited aux events,
- *       scanned for nearby object ids / routines / positions.</li>
- * </ul>
+ * <p>Start with the exact {@code triage:} command printed by a replay failure,
+ * or by a replay run with {@code -Dtrace.print.summary=true}. Its explicit
+ * {@code --report} and {@code --fixture} paths identify the actual allocation
+ * and compressed fixture auxiliaries; the context table is a report sibling.
+ * An optional {@code --aux <path>} overrides auxiliary evidence.
  *
- * <p>Usage:
+ * <p>Usage (substitute the emitted paths):
  * <pre>
- *   mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceTriageTool" "-Dexec.args=s2 mtz1"
- *   mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceTriageTool" "-Dexec.args=--report target/trace-reports/s2_mtz1_report.json"
+ *   python3 tools/testing/maven_queue.py -Dmse=off exec:java -Dexec.mainClass=com.openggf.tools.TraceTriageTool '-Dexec.args=--report "target/trace-reports/actual/report.json" --fixture "src/test/resources/traces/actual"'
  * </pre>
+ *
+ * <p>Legacy {@code s2 mtz1} lookup remains supported under
+ * {@code openggf.trace.reports} (default {@code target/trace-reports}); prefer
+ * the emitted explicit route when reports have unique nested allocations.
  *
  * <p>The report-parsing, first-divergence, and subsystem-classification logic
  * lives in pure static methods that operate on a parsed JSON string, so they
@@ -77,6 +79,11 @@ public final class TraceTriageTool {
             String context) {
     }
 
+    /** The replay driver's declared completion; comparison counts use a different row domain. */
+    public record ReplayGate(boolean comparisonGateReached, int plannedTraceRows,
+                             String verification) {
+    }
+
     /** Immutable view of a parsed trace report. */
     public record TraceReport(
             int errorCount,
@@ -85,12 +92,12 @@ public final class TraceTriageTool {
             String summary,
             List<Bootstrap> bootstrap,
             List<Divergence> errors,
-            List<Divergence> warnings) {
+            List<Divergence> warnings,
+            ReplayGate replayGate) {
 
         /**
-         * The first semantic divergence: the earliest-starting hard error if
-         * any exist, otherwise the earliest bootstrap error, otherwise the
-         * earliest warning, otherwise {@code null}.
+         * The earliest per-frame hard error, otherwise the earliest per-frame
+         * warning. Bootstrap errors are surfaced separately before this frontier.
          */
         public Divergence firstDivergence() {
             Divergence best = null;
@@ -135,48 +142,121 @@ public final class TraceTriageTool {
      * @throws IOException if the JSON is malformed
      */
     public static TraceReport parseReport(String json) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = new ObjectMapper()
+                .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
         JsonNode root = mapper.readTree(json);
+        if (root == null || !root.isObject() || root.has("error")) {
+            throw new IOException("Expected a DivergenceReport object, not a producer error or another report schema");
+        }
 
-        int errorCount = root.path("error_count").asInt(0);
-        int warningCount = root.path("warning_count").asInt(0);
-        int totalFrames = root.path("total_frames").asInt(0);
-        String summary = root.path("summary").asText("");
+        int errorCount = requiredCount(root, "error_count");
+        int warningCount = requiredCount(root, "warning_count");
+        int totalFrames = requiredCount(root, "total_frames");
+        String summary = requiredText(root, "summary");
 
         List<Bootstrap> bootstrap = new ArrayList<>();
-        for (JsonNode n : root.path("bootstrap")) {
+        for (JsonNode n : requiredArray(root, "bootstrap")) {
             bootstrap.add(new Bootstrap(
-                    n.path("field").asText(""),
-                    n.path("severity").asText(""),
-                    n.path("expected").asText(""),
-                    n.path("actual").asText(""),
-                    n.path("context").asText("")));
+                    requiredText(n, "field"),
+                    requiredSeverity(n),
+                    requiredText(n, "expected"),
+                    requiredText(n, "actual"),
+                    requiredText(n, "context")));
         }
 
-        List<Divergence> errors = parseGroups(root.path("errors"));
-        List<Divergence> warnings = parseGroups(root.path("warnings"));
+        List<Divergence> errors = parseGroups(requiredArray(root, "errors"), "ERROR");
+        List<Divergence> warnings = parseGroups(requiredArray(root, "warnings"), "WARNING");
+        boolean hasErrors = !errors.isEmpty()
+                || bootstrap.stream().anyMatch(entry -> "ERROR".equals(entry.severity()));
+        boolean hasWarnings = !warnings.isEmpty()
+                || bootstrap.stream().anyMatch(entry -> "WARNING".equals(entry.severity()));
+        if ((errorCount > 0) != hasErrors || (warningCount > 0) != hasWarnings) {
+            throw new IOException("Divergence counts disagree with the published error/warning groups");
+        }
 
         return new TraceReport(errorCount, warningCount, totalFrames, summary,
-                bootstrap, errors, warnings);
+                List.copyOf(bootstrap), errors, warnings, parseReplayGate(root));
     }
 
-    private static List<Divergence> parseGroups(JsonNode array) {
+    private static List<Divergence> parseGroups(JsonNode array, String severity) throws IOException {
         List<Divergence> out = new ArrayList<>();
-        if (array == null || !array.isArray()) {
-            return out;
-        }
         for (JsonNode n : array) {
+            if (!severity.equals(requiredSeverity(n))) {
+                throw new IOException("Divergence severity must match its " + severity + " group");
+            }
+            int startFrame = requiredCount(n, "start_frame");
+            int endFrame = requiredCount(n, "end_frame");
+            int frameSpan = requiredCount(n, "frame_span");
+            if (endFrame < startFrame || frameSpan == 0) {
+                throw new IOException("Divergence must have an ordered, nonempty frame span");
+            }
             out.add(new Divergence(
-                    n.path("field").asText(""),
-                    n.path("severity").asText(""),
-                    n.path("start_frame").asInt(0),
-                    n.path("end_frame").asInt(0),
-                    n.path("frame_span").asInt(0),
-                    n.path("expected_at_start").asText(""),
-                    n.path("actual_at_start").asText(""),
-                    n.path("cascading").asBoolean(false)));
+                    requiredText(n, "field"), severity, startFrame, endFrame, frameSpan,
+                    requiredText(n, "expected_at_start"),
+                    requiredText(n, "actual_at_start"),
+                    requiredBoolean(n, "cascading")));
         }
-        return out;
+        return List.copyOf(out);
+    }
+
+    private static ReplayGate parseReplayGate(JsonNode root) throws IOException {
+        if (!root.has("replay_gate")) {
+            return null;
+        }
+        JsonNode gate = root.get("replay_gate");
+        if (requiredCount(gate, "schema") != 1) {
+            throw new IOException("Unsupported replay_gate schema");
+        }
+        int plannedRows = requiredCount(gate, "planned_trace_rows");
+        if (plannedRows == 0) {
+            throw new IOException("replay_gate.planned_trace_rows must be positive");
+        }
+        String verification = requiredText(gate, "verification");
+        if (!Set.of("all", "physics", "animation").contains(verification)) {
+            throw new IOException("Unsupported replay_gate verification: " + verification);
+        }
+        return new ReplayGate(requiredBoolean(gate, "comparison_gate_reached"),
+                plannedRows, verification);
+    }
+
+    private static JsonNode requiredArray(JsonNode parent, String field) throws IOException {
+        JsonNode value = parent.get(field);
+        if (value == null || !value.isArray()) {
+            throw new IOException("DivergenceReport requires array '" + field + "'");
+        }
+        return value;
+    }
+
+    private static int requiredCount(JsonNode parent, String field) throws IOException {
+        JsonNode value = parent.get(field);
+        if (value == null || !value.isIntegralNumber() || !value.canConvertToInt() || value.intValue() < 0) {
+            throw new IOException("DivergenceReport requires nonnegative integer '" + field + "'");
+        }
+        return value.intValue();
+    }
+
+    private static String requiredText(JsonNode parent, String field) throws IOException {
+        JsonNode value = parent.get(field);
+        if (value == null || !value.isTextual()) {
+            throw new IOException("DivergenceReport requires string '" + field + "'");
+        }
+        return value.textValue();
+    }
+
+    private static boolean requiredBoolean(JsonNode parent, String field) throws IOException {
+        JsonNode value = parent.get(field);
+        if (value == null || !value.isBoolean()) {
+            throw new IOException("DivergenceReport requires boolean '" + field + "'");
+        }
+        return value.booleanValue();
+    }
+
+    private static String requiredSeverity(JsonNode parent) throws IOException {
+        String severity = requiredText(parent, "severity");
+        if (!"ERROR".equals(severity) && !"WARNING".equals(severity)) {
+            throw new IOException("Unsupported divergence severity: " + severity);
+        }
+        return severity;
     }
 
     // ------------------------------------------------------------------
@@ -451,6 +531,16 @@ public final class TraceTriageTool {
         sb.append("Totals: ").append(report.errorCount()).append(" errors, ")
                 .append(report.warningCount()).append(" warnings, ")
                 .append(report.totalFrames()).append(" frames compared\n");
+        ReplayGate gate = report.replayGate();
+        if (gate == null) {
+            sb.append("Replay completion: UNKNOWN (legacy report has no replay_gate).\n");
+        } else {
+            sb.append("Replay completion: ")
+                    .append(gate.comparisonGateReached() ? "COMPLETE" : "INCOMPLETE")
+                    .append(" (").append(gate.plannedTraceRows()).append(" planned trace rows; ")
+                    .append(gate.verification()).append(" verification).\n");
+        }
+        sb.append("Saved report only; check this invocation's Surefire result and process completion.\n");
         sb.append("Report summary: ").append(blankToDash(report.summary())).append("\n");
         sb.append("\n");
 
@@ -471,40 +561,35 @@ public final class TraceTriageTool {
 
         Divergence first = report.firstDivergence();
         if (first == null) {
-            sb.append("FIRST DIVERGENCE: none. All compared frames match.\n");
+            sb.append("PER-FRAME DIVERGENCE: none in ")
+                    .append(report.totalFrames()).append(" compared frames.\n");
             sb.append("\n");
-            sb.append(comparisonOnlyReminder());
+        } else {
+            Subsystem sub = classifySubsystem(first.field(), false);
+            sb.append("FIRST DIVERGENCE\n");
+            sb.append("  frame    : ").append(first.startFrame())
+                    .append(" (span ").append(first.frameSpan())
+                    .append(", ends ").append(first.endFrame()).append(")\n");
+            sb.append("  field    : ").append(first.field())
+                    .append("  [").append(first.severity()).append("]\n");
+            sb.append("  ROM      : ").append(first.expectedAtStart()).append("\n");
+            sb.append("  engine   : ").append(first.actualAtStart()).append("\n");
+            sb.append("  cascading: ").append(first.cascading()).append("\n");
+            sb.append("  likely owning subsystem: ").append(sub.label()).append("\n");
             sb.append("\n");
-            sb.append("Frontier log update likely needed: ")
-                    .append(frontierLogLikelyNeedsUpdate(report) ? "YES" : "no")
-                    .append("  (file: docs/status/trace-frontier-log.md)\n");
-            return sb.toString();
-        }
 
-        Subsystem sub = classifySubsystem(first.field(), false);
-        sb.append("FIRST DIVERGENCE\n");
-        sb.append("  frame    : ").append(first.startFrame())
-                .append(" (span ").append(first.frameSpan())
-                .append(", ends ").append(first.endFrame()).append(")\n");
-        sb.append("  field    : ").append(first.field())
-                .append("  [").append(first.severity()).append("]\n");
-        sb.append("  ROM      : ").append(first.expectedAtStart()).append("\n");
-        sb.append("  engine   : ").append(first.actualAtStart()).append("\n");
-        sb.append("  cascading: ").append(first.cascading()).append("\n");
-        sb.append("  likely owning subsystem: ").append(sub.label()).append("\n");
-        sb.append("\n");
+            sb.append("Suggested disassembly search terms (RomOffsetFinder / disasm label search):\n");
+            for (String t : suggestDisasmSearchTerms(first.field(), sub)) {
+                sb.append("  - ").append(t).append("\n");
+            }
+            sb.append("\n");
 
-        sb.append("Suggested disassembly search terms (RomOffsetFinder / disasm label search):\n");
-        for (String t : suggestDisasmSearchTerms(first.field(), sub)) {
-            sb.append("  - ").append(t).append("\n");
+            sb.append("Suggested focused tests:\n");
+            for (String t : suggestFocusedTests(sub)) {
+                sb.append("  - ").append(t).append("\n");
+            }
+            sb.append("\n");
         }
-        sb.append("\n");
-
-        sb.append("Suggested focused tests:\n");
-        for (String t : suggestFocusedTests(sub)) {
-            sb.append("  - ").append(t).append("\n");
-        }
-        sb.append("\n");
 
         if (contextExcerpt != null && !contextExcerpt.isBlank()) {
             sb.append("Nearby context (").append("_context.txt").append("):\n");
@@ -512,7 +597,7 @@ public final class TraceTriageTool {
             sb.append("\n");
         }
         if (auxExcerpt != null && !auxExcerpt.isBlank()) {
-            sb.append("Nearby aux events (object ids/routines/subtypes/positions):\n");
+            sb.append("Nearby aux events (focus row first; object ids/routines/subtypes/positions):\n");
             sb.append(indent(auxExcerpt));
             sb.append("\n");
         }
@@ -600,62 +685,58 @@ public final class TraceTriageTool {
         }
     }
 
-    /**
-     * Extracts aux JSONL lines whose {@code "frame":N} value is within
-     * {@code radius} of {@code frame}. Returns at most {@code maxLines} lines.
-     * Pure string scan — does not fully parse each line (one object per line).
-     */
+    /** Extracts a bounded aux window, reserving space for the actual focus row. */
     public static String extractAuxNearFrame(String auxJsonl, int frame, int radius, int maxLines) {
         if (auxJsonl == null || auxJsonl.isBlank()) {
             return "";
         }
-        List<String> out = new ArrayList<>();
-        for (String line : auxJsonl.split("\n", -1)) {
-            if (out.size() >= maxLines) {
-                break;
-            }
-            String trimmed = line.strip();
-            if (trimmed.isEmpty()) {
-                continue;
-            }
-            int auxFrame = extractJsonIntField(trimmed, "frame");
-            if (auxFrame >= 0 && Math.abs(auxFrame - frame) <= radius) {
-                out.add(trimmed);
-            }
+        try (var reader = new BufferedReader(new StringReader(auxJsonl))) {
+            return extractAuxNearFrame(reader, frame, radius, maxLines);
+        } catch (IOException failure) {
+            throw new IllegalArgumentException("Malformed auxiliary evidence", failure);
         }
-        return String.join("\n", out);
     }
 
-    /** Reads a top-level integer JSON field by name from one line; -1 if absent. */
-    static int extractJsonIntField(String jsonLine, String field) {
-        String key = "\"" + field + "\"";
-        int idx = jsonLine.indexOf(key);
-        if (idx < 0) {
-            return -1;
+    static String readAuxNearFrame(Path path, int frame, int radius, int maxLines) throws IOException {
+        try (BufferedReader reader = TraceFiles.openReader(path)) {
+            return extractAuxNearFrame(reader, frame, radius, maxLines);
         }
-        int colon = jsonLine.indexOf(':', idx + key.length());
-        if (colon < 0) {
-            return -1;
+    }
+
+    private static String extractAuxNearFrame(BufferedReader reader, int frame, int radius, int maxLines)
+            throws IOException {
+        if (maxLines <= 0) {
+            return "";
         }
-        int i = colon + 1;
-        while (i < jsonLine.length() && (jsonLine.charAt(i) == ' ' || jsonLine.charAt(i) == '"')) {
-            i++;
+        ObjectMapper mapper = new ObjectMapper();
+        List<String> focus = new ArrayList<>();
+        List<String> nearby = new ArrayList<>();
+        String line;
+        // Some diagnostic fixtures append observations out of order. Scan once
+        // with bounded storage, rather than stopping at the first later frame.
+        while ((line = reader.readLine()) != null) {
+            if (line.isBlank()) {
+                continue;
+            }
+            JsonNode event = mapper.readTree(line);
+            JsonNode recordedFrame = event.get("frame");
+            if (recordedFrame == null || !recordedFrame.isIntegralNumber()
+                    || !recordedFrame.canConvertToInt()) {
+                continue;
+            }
+            int auxFrame = recordedFrame.intValue();
+            if (auxFrame == frame && focus.size() < maxLines) {
+                focus.add(line.strip());
+                if (focus.size() == maxLines) {
+                    break;
+                }
+            } else if (Math.abs((long) auxFrame - frame) <= radius && nearby.size() < maxLines) {
+                nearby.add(line.strip());
+            }
         }
-        int start = i;
-        if (i < jsonLine.length() && (jsonLine.charAt(i) == '-' || jsonLine.charAt(i) == '+')) {
-            i++;
-        }
-        while (i < jsonLine.length() && Character.isDigit(jsonLine.charAt(i))) {
-            i++;
-        }
-        if (i == start) {
-            return -1;
-        }
-        try {
-            return Integer.parseInt(jsonLine.substring(start, i));
-        } catch (NumberFormatException e) {
-            return -1;
-        }
+        int remaining = maxLines - focus.size();
+        focus.addAll(nearby.subList(0, Math.min(remaining, nearby.size())));
+        return String.join("\n", focus);
     }
 
     // ------------------------------------------------------------------
@@ -724,28 +805,45 @@ public final class TraceTriageTool {
     }
 
     public static void main(String[] args) {
+        int status = run(args, System.out, System.err);
+        if (status != 0) {
+            System.exit(status);
+        }
+    }
+
+    static int run(String[] args, PrintStream output, PrintStream errors) {
         String game = null;
         String zone = null;
         String reportPath = null;
         String contextPath = null;
         String auxPath = null;
+        String fixturePath = null;
         String reportDir = configuredReportDirectory();
 
         List<String> positionals = new ArrayList<>();
-        for (int i = 0; i < args.length; i++) {
-            switch (args[i]) {
-                case "--report" -> reportPath = (i + 1 < args.length) ? args[++i] : null;
-                case "--context" -> contextPath = (i + 1 < args.length) ? args[++i] : null;
-                case "--aux" -> auxPath = (i + 1 < args.length) ? args[++i] : null;
-                case "--dir" -> reportDir = (i + 1 < args.length) ? args[++i] : reportDir;
-                default -> {
-                    if (args[i].startsWith("-")) {
-                        System.err.println("Unknown flag: " + args[i]);
-                    } else {
+        try {
+            for (int i = 0; i < args.length; i++) {
+                switch (args[i]) {
+                    case "--report" -> reportPath = optionValue(args, ++i);
+                    case "--context" -> contextPath = optionValue(args, ++i);
+                    case "--aux" -> auxPath = optionValue(args, ++i);
+                    case "--fixture" -> fixturePath = optionValue(args, ++i);
+                    case "--dir" -> reportDir = optionValue(args, ++i);
+                    default -> {
+                        if (args[i].startsWith("-")) {
+                            throw new IllegalArgumentException("Unknown flag: " + args[i]);
+                        }
                         positionals.add(args[i]);
                     }
                 }
             }
+            if (positionals.size() > 2) {
+                throw new IllegalArgumentException("Expected at most <game> <zone>");
+            }
+        } catch (IllegalArgumentException failure) {
+            errors.println(failure.getMessage());
+            printUsage(errors);
+            return 2;
         }
 
         if (positionals.size() >= 1) {
@@ -755,58 +853,76 @@ public final class TraceTriageTool {
             zone = positionals.get(1).toLowerCase(Locale.ROOT);
         }
 
-        if (reportPath == null) {
-            if (game == null || zone == null) {
-                System.err.println("Usage: TraceTriageTool <game> <zone>");
-                System.err.println("   or: TraceTriageTool --report <path> [--context <path>] [--aux <path>]");
-                System.err.println("Reads " + reportDir + "/<game>_<zone>_report.json by default.");
-                System.exit(2);
-                return;
-            }
-            try {
-                reportPath = resolveDefaultReportPath(reportDir, game, zone).toString();
-            } catch (IOException e) {
-                System.err.println(e.getMessage());
-                System.exit(2);
-                return;
-            }
-            if (contextPath == null) {
-                contextPath = contextPathForReport(Path.of(reportPath)).toString();
-            }
-        }
-
-        Path reportFile = Path.of(reportPath);
-        if (!Files.exists(reportFile)) {
-            System.err.println("Report not found: " + reportFile.toAbsolutePath());
-            System.err.println("Run the relevant *TraceReplay test first to generate artifacts under "
-                    + reportDir + "/.");
-            System.exit(1);
-            return;
-        }
-
         try {
+            Path fixture = fixturePath == null ? null : Path.of(fixturePath);
+            if (fixture != null) {
+                TraceMetadata metadata = TraceMetadata.load(fixture.resolve("metadata.json"));
+                if (game == null) {
+                    game = metadata.game();
+                }
+                if (zone == null) {
+                    zone = metadata.zone() + metadata.act();
+                }
+            }
+            if (reportPath == null) {
+                if (game == null || zone == null) {
+                    printUsage(errors);
+                    return 2;
+                }
+                reportPath = resolveDefaultReportPath(reportDir, game, zone).toString();
+            }
+            Path reportFile = Path.of(reportPath);
+            if (!Files.isRegularFile(reportFile)) {
+                throw new IOException("Report not found: " + reportFile.toAbsolutePath()
+                        + "; run the concrete *TraceReplay test first");
+            }
             String json = Files.readString(reportFile, StandardCharsets.UTF_8);
             TraceReport report = parseReport(json);
 
             Divergence first = report.firstDivergence();
-            int focusFrame = first != null ? first.startFrame() : 0;
+            boolean bootstrapError = report.firstBootstrapError() != null;
+            int focusFrame = bootstrapError || first == null
+                    ? 0 : first.startFrame();
+            // Aux snapshots use -1 for the pre-trace state; context begins at 0.
+            int auxFocusFrame = bootstrapError ? -1 : focusFrame;
 
             String contextExcerpt = "";
-            if (contextPath != null && Files.exists(Path.of(contextPath))) {
-                String contextText = Files.readString(Path.of(contextPath), StandardCharsets.UTF_8);
+            Path contextFile = contextPath == null
+                    ? contextPathForReport(reportFile) : Path.of(contextPath);
+            if (contextPath != null || Files.exists(contextFile)) {
+                String contextText = Files.readString(contextFile, StandardCharsets.UTF_8);
                 contextExcerpt = extractContextNearFrame(contextText, focusFrame, 2, 12);
             }
 
             String auxExcerpt = "";
-            if (auxPath != null && Files.exists(Path.of(auxPath))) {
-                String auxText = Files.readString(Path.of(auxPath), StandardCharsets.UTF_8);
-                auxExcerpt = extractAuxNearFrame(auxText, focusFrame, 3, 12);
+            Path auxFile = auxPath != null ? Path.of(auxPath)
+                    : fixture == null ? null : TraceFiles.resolve(fixture, "aux_state.jsonl");
+            if (auxFile != null && (first != null || report.firstBootstrapError() != null)) {
+                auxExcerpt = readAuxNearFrame(auxFile, auxFocusFrame, 3, 12);
             }
 
-            System.out.print(renderBrief(game, zone, report, contextExcerpt, auxExcerpt));
-        } catch (IOException e) {
-            System.err.println("Failed to read/parse report: " + e.getMessage());
-            System.exit(1);
+            output.println("Report: " + reportFile);
+            if (fixture != null) {
+                output.println("Fixture: " + fixture);
+            }
+            output.print(renderBrief(game, zone, report, contextExcerpt, auxExcerpt));
+            return 0;
+        } catch (IOException | IllegalArgumentException failure) {
+            errors.println("Failed to read diagnostic evidence: " + failure.getMessage());
+            return 1;
         }
+    }
+
+    private static String optionValue(String[] arguments, int index) {
+        if (index >= arguments.length || arguments[index].startsWith("--")) {
+            throw new IllegalArgumentException("Missing value for " + arguments[index - 1]);
+        }
+        return arguments[index];
+    }
+
+    private static void printUsage(PrintStream output) {
+        output.println("Usage: TraceTriageTool <game> <zone> [--dir <report-root>]");
+        output.println("   or: TraceTriageTool --report <path> [--fixture <directory>]");
+        output.println("Optional overrides: --context <path> --aux <path>; aux may be gzip-compressed.");
     }
 }

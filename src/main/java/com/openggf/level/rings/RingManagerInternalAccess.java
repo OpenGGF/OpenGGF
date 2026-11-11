@@ -6,6 +6,14 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 public final class RingManagerInternalAccess {
     private RingManagerInternalAccess() { }
 
+    /** Observe the existing ring/sparkle draw without primary-camera culling or advancing clocks. */
+    public static void appendLostRingNativeDisplayArt(LostRingObjectInstance ring) {
+        Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(RingManagerInternalAccess.class);
+        if (caller.getClassLoader() != RingManagerInternalAccess.class.getClassLoader())
+            throw new SecurityException("Native display observation belongs to the engine renderer");
+        java.util.Objects.requireNonNull(ring).appendNativeDisplayArt();
+    }
+
     /** Retires stale mirrors without advancing a loop's undispatched shared animation clock. */
     public static void updateLostRingHousekeeping(RingManager manager) {
         manager.updateLostRingHousekeeping();

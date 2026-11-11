@@ -2477,19 +2477,14 @@ public class TestSolidObjectManager {
         assertFalse(manager.hasObjectStandingBit(player, object));
     }
 
-    @SuppressWarnings("unchecked")
-    private static void clearEmulatedStandingLatches(
-            ObjectManager manager, PlayableEntity player) throws Exception {
-        Field contactsField = ObjectManager.class.getDeclaredField("solidContacts");
-        contactsField.setAccessible(true);
-        ObjectSolidContactController contacts =
-                (ObjectSolidContactController) contactsField.get(manager);
-        Field standingBitsField = ObjectSolidContactController.class
-                .getDeclaredField("objectStandingBitSet");
-        standingBitsField.setAccessible(true);
-        Map<PlayableEntity, ?> standingBits =
-                (Map<PlayableEntity, ?>) standingBitsField.get(contacts);
-        standingBits.remove(player);
+    private static void clearEmulatedStandingLatches(ObjectManager manager, PlayableEntity player) {
+        ObjectSolidContactController contacts = manager.solidContacts();
+        var captured = contacts.captureRewindState();
+        var remainingStanding = captured.standingBits().stream()
+                .filter(entry -> entry.player() != player)
+                .toList();
+        contacts.restoreRewindState(new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SolidContactState(
+                captured.frameCounter(), captured.riding(), remainingStanding, captured.pushingBits()));
     }
 
     @Test

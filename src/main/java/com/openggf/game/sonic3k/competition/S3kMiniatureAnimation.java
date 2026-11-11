@@ -32,6 +32,11 @@ public final class S3kMiniatureAnimation {
                 throw new IllegalStateException("Native miniature animation out of range: "+animation);
             return table[animation];
         }
+        /** Raw script bytes, from the delay byte onwards; read-only presentation consumers. */
+        byte[] rawScript(S3kCompetitionPlayer.Character character,int animation) { return script(character,animation).clone(); }
+        int scriptCount(S3kCompetitionPlayer.Character character) {
+            return switch(character) {case SONIC->sonic.length;case TAILS->tails.length;case KNUCKLES->knuckles.length;};
+        }
         public static Bank fromRom(Rom rom) throws IOException {
             return fromRom(rom,S3kCompetitionResources.LOCKED_ON);
         }
@@ -50,6 +55,7 @@ public final class S3kMiniatureAnimation {
     }
     private final Bank bank;
     public S3kMiniatureAnimation(Bank bank) { this.bank=Objects.requireNonNull(bank); }
+    Bank bank() { return bank; }
     public static S3kMiniatureAnimation fromRom(Rom rom) throws IOException {
         return fromRom(rom,S3kCompetitionResources.LOCKED_ON);
     }

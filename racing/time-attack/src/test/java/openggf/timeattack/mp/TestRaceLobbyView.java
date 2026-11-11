@@ -837,4 +837,87 @@ class TestRaceLobbyView {
         assertTrue(lobby.screen(400, 224).plain().contains("1-3 Vote"), "a keyboard can");
         assertEquals(0, leaves.get());
     }
+
+    @Test
+    void massStartShowsTheStartClockAndALoadingChipUntilHeld() {
+        RaceLobbyView view = view(joinedSession(), false, null);
+        view.setCompetitionSource(() -> openggf.timeattack.ui.CompetitionSamples.start(
+                com.openggf.mods.run.TrackKind.ARENA, openggf.timeattack.CompetitionHudState.MassStartPhase.LOADING));
+        String page = view.screen(320, 224).plain();
+        assertTrue(page.contains("| START 0:08 [LOADING]"), page);
+        view.setCompetitionSource(() -> openggf.timeattack.ui.CompetitionSamples.start(
+                com.openggf.mods.run.TrackKind.ARENA, openggf.timeattack.CompetitionHudState.MassStartPhase.HELD));
+        page = view.screen(320, 224).plain();
+        assertTrue(page.contains("| START 0:08 |"), page);
+        assertFalse(page.contains("LOADING"), page);
+        assertTrue(page.contains("COMPETITION  UNVERIFIED"), page);
+    }
+
+    @Test
+    void lateJoinersAreToldTheyRaceTheNextRound() {
+        RaceLobbyView view = view(joinedSession(), false, null);
+        view.setCompetitionSource(openggf.timeattack.ui.CompetitionSamples::lateJoin);
+        String page = view.screen(320, 224).plain();
+        assertTrue(page.contains("| NEXT ROUND"), page);
+        assertTrue(page.contains("You joined after the"), page);
+    }
+
+    @Test
+    void resultsTableListsFinishersThenDnfAndDnsAndLabelsAnUnverifiedBoard() {
+        RaceLobbyView view = view(joinedSession(), false, null);
+        view.setCompetitionSource(() -> openggf.timeattack.ui.CompetitionSamples.results(true));
+        String page = view.screen(320, 224).plain();
+        assertTrue(page.contains("FINISH ORDER UNVERIFIED | 1 Tails  1'41\"19"), page);
+        input.tapDown(view::update); // READY -> Finish order
+        input.tapEnter(view::update);
+        assertTrue(view.isShowingResults());
+        for (int width : new int[] {320, 400}) {
+            RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
+            view.draw(canvas);
+            assertEquals(List.of(
+                    "1 | Tails | T | 1'41\"19 | 0'19\"83 | UNVERIFIED",
+                    "2 | Knuckles Fan * | K | 1'46\"03 | 0'20\"66 | UNVERIFIED",
+                    "3 | Amy | S | 1'49\"34 | 0'21\"51 | UNVERIFIED",
+                    "- | Quit Early | T | -- | 0'21\"16 | DNF",
+                    "- | Spectator Seven | S | -- | -- | DNS"), view.resultsVisibleLines());
+            assertFalse(canvas.fillsIn(openggf.timeattack.ui.MenuPage.AMBER).stream()
+                    .filter(fill -> fill[1] < openggf.timeattack.ui.MenuPage.HEADER_H).toList().isEmpty(),
+                    "an amber UNVERIFIED tag in the header");
+        }
+        input.tapEnter(view::update); // the lap splits
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
+        view.draw(canvas);
+        List<String> splits = view.resultsVisibleLines();
+        assertEquals("1 | Tails | Tails | 1'41\"19", splits.get(0));
+        assertEquals("  0'20\"16 0'19\"83 0'20\"83 0'20\"01 0'20\"36", splits.get(1));
+        assertTrue(splits.contains("* A teleport swap moved this run"), splits.toString());
+        assertTrue(splits.contains("DNF: Left the race"), splits.toString());
+        input.tapEscape(view::update);
+        input.tapEscape(view::update);
+        assertFalse(view.isShowingResults());
+        assertEquals(0, leaves.get(), "backing out of the results never leaves the room");
+    }
+
+    @Test
+    void raceMenuNeverForfeitsOnOnePressAndBackClosesIt() {
+        RaceLobbyScreen.RaceMenu menu = new RaceLobbyScreen.RaceMenu();
+        assertEquals(RaceLobbyScreen.RaceMenu.Outcome.CHAT, menu.update(false, false, true, false));
+        menu.update(false, true, false, false); // to Leave race
+        assertEquals(RaceLobbyScreen.RaceMenu.Outcome.NONE, menu.update(false, false, true, false));
+        assertTrue(menu.confirming());
+        assertEquals(0, menu.focus(), "Keep racing takes the focus first");
+        assertEquals(RaceLobbyScreen.RaceMenu.Outcome.NONE, menu.update(false, false, true, false));
+        assertFalse(menu.confirming(), "keeping on returns to the menu");
+        menu.update(false, false, true, false);
+        menu.update(false, true, false, false);
+        assertEquals(RaceLobbyScreen.RaceMenu.Outcome.FORFEIT, menu.update(false, false, true, false));
+        assertEquals(RaceLobbyScreen.RaceMenu.Outcome.CLOSE, new RaceLobbyScreen.RaceMenu().update(false, false, false, true));
+        for (int width : new int[] {320, 400}) {
+            RaceLobbyScreen.Card card = menu.layout(width, 224);
+            assertTrue(card.width() <= HudTextLayout.PANEL_WIDTH, "the right column budget");
+            assertEquals(width - RaceLobbyScreen.MARGIN, card.x() + card.width());
+            assertTrue(card.y() + card.height() <= 224 - 16, "above the progress strip");
+            assertTrue(card.y() > 40, "below the room's plates in the top band");
+        }
+    }
 }

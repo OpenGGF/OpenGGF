@@ -246,6 +246,15 @@ public record ObjectManagerSnapshot(
         }
     }
 
+    /** Structural adoption evidence. A known null parent was absent from the captured population;
+     * an unknown family came through an uninstrumented admission. Null metadata on an entry
+     * is reserved for legacy snapshots and retains their historical FIFO compatibility. */
+    public record ConstructionFamily(boolean known, ObjectRefId parentId) {
+        public ConstructionFamily {
+            if (!known && parentId != null) throw new IllegalArgumentException("Unknown family has a parent id");
+        }
+    }
+
     public record DynamicObjectEntry(
             String className,
             ObjectSpawn spawn,
@@ -262,8 +271,18 @@ public record ObjectManagerSnapshot(
             String ownerModId,
             boolean rewindableAuxiliary,
             /** Captured registered player role; null retains the legacy unregistered-owner reference. */
-            PlayerRefId playerOwnerId
+            PlayerRefId playerOwnerId,
+            ConstructionFamily constructionFamily
     ) {
+        /** Preserve the former canonical constructor ABI and its legacy semantics. */
+        public DynamicObjectEntry(String className, ObjectSpawn spawn, int slotIndex,
+                                  PerObjectRewindSnapshot state, PlayableEntity playerOwner,
+                                  ObjectRefId objectId, String ownerModId, boolean rewindableAuxiliary,
+                                  PlayerRefId playerOwnerId) {
+            this(className, spawn, slotIndex, state, playerOwner, objectId, ownerModId,
+                    rewindableAuxiliary, playerOwnerId, null);
+        }
+
         public DynamicObjectEntry(String className, ObjectSpawn spawn, int slotIndex,
                                   PerObjectRewindSnapshot state, PlayableEntity playerOwner,
                                   ObjectRefId objectId, String ownerModId, boolean rewindableAuxiliary) {

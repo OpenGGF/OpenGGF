@@ -56,7 +56,7 @@ public class PlayerSpriteRenderer {
     }
 
     public void ensureCached(GraphicsManager graphicsManager) {
-        patternBank.ensureCached(graphicsManager);
+        if (!residentBankExternal) patternBank.ensureCached(graphicsManager);
     }
 
     /** Live virtual pattern-bank base used by compatibility/runtime diagnostics. */
@@ -129,7 +129,7 @@ public class PlayerSpriteRenderer {
     }
 
     private SpriteMappingFrame prepareFrame(int frameIndex) {
-        patternBank.ensureCached(graphicsManager);
+        ensureCached(graphicsManager);
         if (frameIndex < 0 || frameIndex >= artSet.mappingFrames().size()) {
             return null;
         }
@@ -196,7 +196,9 @@ public class PlayerSpriteRenderer {
     public void applyRuntimeArtUpdate(
             int mappingFrame,
             DynamicArtLifecycleService.ArtUpdate update) {
-        if (update == null || !update.mappingChanged()) {
+        // A claimed bank's native owner already receives the routine's request.
+        // Diagnostic decisions must never republish its ordinary pattern namespace.
+        if (residentBankExternal || update == null || !update.mappingChanged()) {
             return;
         }
         if (update.submitted()) {
@@ -210,6 +212,7 @@ public class PlayerSpriteRenderer {
 
     // Engine-internal resident-bank access, reached through PlayerResidentBanks.
     DynamicPatternBank residentBank() { return patternBank; }
+    void ensureResidentBankCached() { patternBank.ensureCached(graphicsManager); }
     int residentLastFrame() { return lastFrame; }
     void restoreResidentLastFrame(int frame) { lastFrame = frame; }
     void setResidentBankExternal(boolean external) { residentBankExternal = external; }

@@ -22,6 +22,12 @@ under the matching area heading; see the
   ring slots' link to the object pass. The link now survives resets. This
   regressed in 0.7.
 
+- **Keyboard in the Create Room form:** the room-access form claimed the
+  keyboard for typing whenever it was open, which hid the arrow keys from its
+  own rows, so a keyboard player could not reach CREATE ROOM. It now takes
+  typed text only while the room password is being edited. This shipped in
+  0.7.
+
 - **S3K support notice says beta:** starting Sonic 3 & Knuckles from the hub
   now shows the beta notice, matching the 0.7 release notes. 0.7 shipped with
   the alpha notice. Players who hid the alpha notice see the beta one once.
@@ -31,11 +37,152 @@ under the matching area heading; see the
   shared touch owner. The Sonic+Tails chain advances from CNZ2 to HTZ2; later
   route errors and the special-stage return timing differences remain open.
 
+- **Knuckles' lives name in Knuckles in Sonic 2:** without the optional lock-on
+  dump, the "K.T.E" name beside his HUD head was green. The stand-in Sonic &
+  Knuckles icon was drawn for a different palette line, and its name went
+  through the same colour conversion as Knuckles' sprites. The name now takes
+  the original game's yellow-orange, white and black, matching the lock-on
+  dump's art pixel for pixel. Sonic 2 with the Sonic 3&K donor and Knuckles as
+  the lead had the same green name and is fixed too.
+
 - **S2 diagonal launcher springs:** capture both riders before deciding to
   release or decompress. A fresh Tails capture now uses the native launch force
   and can hold Sonic on the spring. The complete-chain CNZ2 segment is green;
   later campaign and art-gap failures remain open.
 
+- **S2 Competition (two-player mode):** Choose 2 PLAYER on the Sonic 2 title. Sonic 2's own two-player mode runs natively, with Sonic on
+  controller 1 and Tails on controller 2. Its menu selects Emerald Hill, Mystic
+  Cave, Casino Night or the special stage. Each zone plays two acts with
+  separate rings, lives, score, time and results, then zone and game results
+  with their own music; a tied zone goes to a special-stage tiebreaker.
+  EHZ spiral jumps now retain airborne state and upward velocity when releasing
+  the invisible path controller, including simultaneous two-human routes.
+  A frozen Stageplay EHZ route now races both humans concurrently in each act,
+  with opposite act winners, readable results holds and a tied special-stage
+  inlet. Eight short frozen Stageplay routes exercise every question-mark monitor
+  outcome, with award assertions and six-second neutral holds for native comparison.
+  The two-act route is ENGINE-qualified only: cold native replay encounters level lag
+  before the first finish and does not reach act 2.
+  The screen renders at 320x448 progressive resolution with half-height pixels,
+  preserving every row of the native 8x16 cells without interlace combing.
+  It splits at progressive line 216 through the shared Competition renderer; each
+  half draws its player's planes, sprites and HUD from the ROM's two-player art.
+  Title and menu transitions fade, and both halves show the complete title card
+  before player control and the level clock start. Stageplay's visible flip checks
+  use the same complete native cells as the progressive display. Signposts publish
+  their native two-player pole and animated face art; act timers spend the interrupt before a
+  finish crossing. Teleport monitors swap the players' positions,
+  speeds, cameras and backgrounds. Badnik, bumper, bonus-block and cage
+  scores go to the player who earned them, and the Casino Night slot machines
+  and cages serve both players. Casino Night round bumpers, bonus blocks, slot
+  cages and prizes now enter both sprite pages; plungers retain their moving head
+  and fixed base with the ROM two-player art, palette and priority. Enemies whose ROM routine ends in
+  `MarkObjGone_P1` retire once both cameras are more than `$300` away and
+  reload when revisited; the finish-grace countdown runs before players move;
+  GAME OVER and TIME OVER cards appear in both views. The competitive special stage runs both players
+  on one halfpipe with its checkpoints and results. Its entry fades the previous
+  results to white, holds the shared load delay, and runs startup waits; live
+  pacing uses the same lag approximation as the one-player special stage. Held rewind is off in
+  Competition; the progressive presentation, seam and lag-frame limits are in
+  [known discrepancies](docs/status/known-discrepancies.md#s2-competition-split-screen-native-lag-and-rewind-scope).
+
+- **S2 and KiS2 badnik chains are shared:** one chain counter serves both
+  players, as in the ROM, so CPU Tails' kills and landings now continue or reset
+  Sonic's chain. Every ROM landing that clears it does so, including Knuckles'
+  landings in Knuckles in Sonic 2. Smashable ground and breakable blocks score
+  through player 1, and only once their points popup has an object slot.
+
+- **S2 breakable fragments use native slots:** smashable ground, breakable
+  blocks and Oil Ocean launchers put their first piece in the parent's slot and
+  later pieces after it, stopping at the first full slot. Fragments no longer
+  depend on whether their art is ready to draw.
+
+- **S2 points popups draw in front:** the score popup sets the high-priority
+  art bit, as `Obj29_Init` does, so it is no longer hidden behind
+  high-priority terrain.
+
+- **S2 and KiS2 touch checks reach off-screen objects:** the ROM's touch scan
+  has no on-screen test, so objects outside the main camera can now hurt,
+  give rings or be destroyed. Sonic 1 keeps its on-screen test. The rule is a
+  new `ObjectInteractionRules` component, which changes that record in the
+  unpublished 0.7 candidate Mod API.
+
+- **S2 Casino Night conveyor belts carry the sidekick:** `Obj72` moves both
+  players, as the ROM does, so a CPU sidekick rides the belts too, in Sonic 2
+  and Knuckles in Sonic 2.
+
+- **S2 Casino Night horizontal flippers accept the full landing width:**
+  horizontal `Obj86` uses the ROM's `$18` landing half-width instead of 8, so
+  players land on the flipper's whole top. Vertical flippers are unchanged.
+
+- **Freed animals keep their points popup across rewind:** a destructive
+  rewind restore now keeps how an animal spawns its points child, so the popup
+  appears and later objects keep their identities after restore and replay.
+
+- **S2 title cards follow Obj34:** the card's parts enter, wait and leave in the
+  ROM's slot order and timing. Native Emerald Hill 1 recordings match its part
+  positions on every frame and its pixels at seven sampled frames.
+
+- **S2 signpost sparkles and thrown coconuts keep their native identities:**
+  signpost sparkles stay ring-sparkle objects and Coconuts' coconuts stay their
+  own child object, so rewind recreates both with their animation.
+
+
+- **Time Attack Competition mode and the Sonic 3&K Competition arenas:** a
+  multiplayer room can now race in Competition mode as well as Time Attack.
+  Everyone starts at the same scheduled moment, there are no restarts, and the
+  first past the post wins. Placement counts each player's own frames from GO,
+  so network lag never changes the order. The host picks the monitor rules
+  and a cutoff after the first finisher. Sonic 2 acts use the original
+  two-player monitors by default: each box gives one of eight items, picked as
+  the original picks them, so teleport is never guaranteed. Normal or no
+  monitors are the alternatives. Sonic 2 and Sonic 3&K acts can be raced in
+  either mode.
+  - Sonic 3&K's five Competition arenas (Azure Lake, Balloon Park, Chrome
+    Gadget, Desert Palace and Endless Mine) are new Competition-only tracks.
+    Each player races them alone in one full-screen view, under the shipped
+    Match Race rules: five laps, losing a lap for a backwards crossing or a
+    death, false starts and the 9'59"99 limit.
+  - The arena view shows exactly what the original top half shows, magnified
+    twice, with full-size Sonic, Tails and Knuckles (and ghosts) posed and angled
+    from the original animations. They still pass behind foreground scenery, and
+    TIME, laps and the countdown keep their screen size. The item icon sits under
+    TIME and is hidden when monitors are off.
+  - A player who jumps or falls off a platform, spring or blade stops counting
+    as standing on it, as in the original. Before, the flag stayed set, sometimes for
+    the rest of the race, so slopes stopped turning the player and the pose kept
+    the angle it had when it left. This also applies to the two-player mode
+    started from the Sonic 3&K title.
+  - Azure Lake and Chrome Gadget now have full five-lap native Sonic regressions;
+    wall pushing and spring release retain the original object-owned state.
+    Idle miniature racers now balance at terrain and object edges with the
+    original facing, pose thresholds and character-specific margins.
+  - Sand bars now reject exact zero-distance top contacts, matching the
+    original contact routine instead of landing a frame early. Turning on the
+    ground also restarts Sonic's walk/run animation as in the original.
+    Same-facing acceleration preserves pushing, and unrolled object landings
+    preserve the skid pose; a native Balloon Park Sonic race covers five laps
+    through balloons, bumpers and elephants.
+    Endless Mine preserves the spring's contact-release pass and rock-pushing
+    animation, with a full five-lap native Sonic regression.
+  - A racer who rises above an arena's top edge, which the original allows,
+    is no longer removed by the room's speed check as if they had jumped
+    65,535 pixels.
+  - Lap times, the total and the best lap are shown and ranked.
+  - A teleport monitor swaps you with the nearest racer through the host.
+  - Rooms without a verifier show the finish order labelled UNVERIFIED.
+  - Solo arena runs now swap shoe state with the empty second slot, as the
+    ROM does, instead of ignoring the swap item.
+  - While the mass start holds an arena, a start card shows the track, its
+    laps, the field, the racers and the live time to GO, then fades to black
+    as the arena is released and its own fade brings in the 3-2-1-GO. The
+    held arena is never drawn before it has run a frame: as in the original
+    game, it is black until then, instead of a frozen frame with garbage
+    tiles in its background.
+  - After your finish, your final frame stays on screen while the other
+    racers keep moving and the standings and cutoff keep counting. When the
+    host ends the round, you return to the lobby: an arena has no results
+    tally to end the run, so a finisher used to stay on the finish screen.
 
 ## Modding and tools
 
@@ -187,6 +334,32 @@ under the matching area heading; see the
   immediately, and the S2 half-pipe ring HUD composes names from its native
   SONIC/MILES/TAILS alphabet with supplements for missing glyphs. Stock fallbacks
   and native screen/stage/ending choreography remain intact.
+- **Simpler creator examples:** decoded native-level patches can add registered
+  objects with engine-assigned placement identities while retaining native level
+  services. Scene menus share the engine's menu theme and public drawing helpers;
+  presentation-only object collections reconcile checkpoint and level changes.
+  Starpost Valley uses its loaded terrain's palette claims, and Slay the Robotnik
+  uses supported immutable card-type enums.
+
+- **Two-player Competition routes in both editors:** the existing Route / Tape
+  workspace now authors S2 REV01 title/menu programmes, P1/P2/joint goals and copied
+  fact predicates. Isolated workers plan, replay, repair and qualify both pads;
+  untouched route pairs keep their exact bytes. Locked inputs and player colours
+  are shared across HUD/desktop, unrelated scenery is hidden, and observed native
+  anchors use the shared BK2 splice. Provisional exports remain visibly blocked;
+  engine qualification does not imply native parity. The Stageplay route planner
+  behind them plans two-player goals and repairs or continues a route after a
+  frozen prefix. Joint search also combines independent charge, roll and jump
+  policies for the two pads, scores damage to either actor, and prunes stalled
+  trials. The desktop editor's side of this lives in the separate
+  OpenGGF-Editor repository.
+
+- **Recording audio recovery:** viewport recording retains the real audio lease
+  when detach is refused, even after switching to silence. Stopping or restarting
+  retries that lease before acquiring another, avoiding an orphaned audio tap.
+  Closing the controller also ends admission permanently, so a delayed encoder
+  finalizer cannot clear resources acquired by a recording started after close.
+  S2 music requests now use native ROM mailbox bytes while retaining playback IDs, fixing CNZ 2P audio crashes and music priority/classification.
 
 - **Seeded Data Select captures:** `GameplayCaptureTool --save-slots <file.json>`
   writes declared save slots through the production save manager into the
@@ -198,6 +371,41 @@ under the matching area heading; see the
   instead of S3K's placeholders.
 
 ## Maintenance and release preparation
+
+- **Engine quality and contributions:** the README and contributor entry point now
+  acknowledge maintainability weaknesses and invite focused improvements to object
+  lifetime, collision contact, rewind reconstruction, trace diagnosis and navigation.
+
+- **Contributor readability:** live objects, slots and stable identities share
+  population storage; actor reconstruction and contact memory have separate owners
+  behind the existing runtime entry points. Retiring multipart solids expires
+  owned contact bits and frame history without releasing player state. Contact
+  restore discards uncaptured future observations. Sole spawn-keyed dynamic solids
+  now expire contact bits without clearing surviving shared owners. Constructor-child
+  rewind adoption uses captured parent families, preserving interleaved structural
+  links; independent children can recreate when a parent defers to player refresh,
+  and CNZ defeat candidates retain their ship family. Generic recreation installs
+  construction services centrally; supported exact-spawn recipes rebuild once,
+  avoiding discarded constructor graphs while preserving custom hooks and the
+  fallback for declarations without that constructor. Destroyed
+  object paths share unload and retirement phases within their existing schedules.
+  Ordinary family/reference/coverage guidance points to the actual owners.
+  Production badnik and contact witnesses, shared coarse-X arithmetic with
+  explicit native/wider bounds, and
+  a typed rewind HUD frame make contribution paths easier to follow. HCZ owns
+  its next screen-shake value without using the renderer as scratch state.
+  Failed trace replays print their exact test/report/triage route; triage reads
+  compressed fixture auxiliaries, preserves pre-trace evidence and distinguishes
+  incomplete or unknown completion from a completed comparison. Retained raw-field
+  diagnostics follow that storage and are exercised on successful test paths.
+
+- **Fresh-level admission:** named phases expose title completion, initial
+  boundary publication and player assembly while preserving their existing
+  timing, pause and failure behavior. Creator-controlled native destinations
+  now finish their normal title and player assembly before admitting gameplay,
+  sharing the ordinary host's native title iteration. HOLD and explicit
+  presentation omission remain separate choices. In-level modal overlays remain
+  visible above a controlled native title in both live and captured frames.
 
 - **Scripted website hero reels:** `tools/media/hero_reels.py` regenerates
   the Sonic 1, Sonic 2 and Sonic 3&K title-card reels from the current engine

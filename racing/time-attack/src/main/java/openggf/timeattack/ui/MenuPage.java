@@ -154,6 +154,19 @@ public final class MenuPage {
         subtitle(canvas, subtitle);
     }
 
+    /**
+     * As {@link #page}, with the scope chip in {@code scopeColour}: amber where the chip is a
+     * warning about the page's contents (an UNVERIFIED results board), not just its scope.
+     */
+    public static void page(SceneCanvas canvas, String title, String scope, int scopeColour, String subtitle) {
+        page(canvas, title, null, subtitle);
+        if (scope != null && !scope.isEmpty()) {
+            int x = canvas.width() - MARGIN - tagWidth(scope);
+            canvas.fill(x - 8, 0, tagWidth(scope) + 8, HEADER_H - 2, HEAD);
+            tag(canvas, x, 9, scope, scopeColour);
+        }
+    }
+
     /** As {@link #page}, without the opaque background: the page is drawn over a running level. */
     public static void overlay(SceneCanvas canvas, String title, String scope, String subtitle) {
         canvas.clear(BACKGROUND);
@@ -214,6 +227,36 @@ public final class MenuPage {
         NameFont.draw(canvas, shown, x, y, valueColour);
         if (stepper) triangle(canvas, x + NameFont.width(shown) + 5, y + 4, 'R', focused ? GOLD : DIM);
         return x;
+    }
+
+    /**
+     * Tags drawn after a focused {@link #field}'s value and its right-hand triangle, left to right.
+     * A tag that would run past the row's right edge is left out with every tag after it, so the
+     * value is never covered. Returns how many were drawn.
+     */
+    public static int fieldBadges(SceneCanvas canvas, int y, int valueX, String value, List<String> badges) {
+        int right = canvas.width() - MARGIN - 4;
+        int room = right - valueX - 18;
+        int x = valueX + 9 + NameFont.width(NameFont.fit(value, Math.max(0, room))) + 5 + 6 + 4;
+        int drawn = 0;
+        for (String badge : badges) {
+            if (x + tagWidth(badge) > right) break;
+            x += tag(canvas, x, y + 1, badge, drawn == 0 ? CYAN : DIM) + 3;
+            drawn++;
+        }
+        return drawn;
+    }
+
+    /**
+     * The first of {@code visible} rows to show so row {@code focus} of {@code count} is in view,
+     * keeping {@code previousFirst} when it already is (lists scroll only when the focus leaves them).
+     */
+    public static int scrollFirst(int previousFirst, int focus, int count, int visible) {
+        if (count <= visible) return 0;
+        int first = Math.clamp(previousFirst, 0, count - visible);
+        if (focus < first) first = focus;
+        if (focus >= first + visible) first = focus - visible + 1;
+        return Math.clamp(first, 0, count - visible);
     }
 
     /** A light action row: a chevron and the label; disabled rows are faint. */

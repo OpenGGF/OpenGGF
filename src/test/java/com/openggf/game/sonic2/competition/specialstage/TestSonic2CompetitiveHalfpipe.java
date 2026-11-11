@@ -58,12 +58,50 @@ class TestSonic2CompetitiveHalfpipe {
     }
 
     @Test
+    void liveEntryAndLagHoldSimulationAndRewindAtEveryBoundary() throws Exception {
+        load(1); halfpipe.setLiveLagSimulationEnabled(true);
+        var loaded = halfpipe.capture();
+        int hold = com.openggf.game.sonic2.specialstage.Sonic2SpecialStageLagModel.ENTRY_LOAD_LAG_FRAMES;
+        for (int row = 1; row <= hold; row++) {
+            step(direction(AbstractPlayableSprite.INPUT_RIGHT), PlayerInputState.neutral());
+            assertEquals(loaded.track(), halfpipe.capture().track());
+            assertDeep(loaded.players(), halfpipe.capture().players(), "load hold actors");
+            assertEquals(LogicalInputSnapshot.neutral(), halfpipe.capture().previousInput());
+        }
+        assertEquals(Sonic2CompetitiveHalfpipe.Phase.STARTUP_DRAW, halfpipe.phase());
+        int lag = 0;
+        for (int row = 1; row <= 474; row++) {
+            var before = halfpipe.capture();
+            boolean skipped = (before.phase() == Sonic2CompetitiveHalfpipe.Phase.INTRO
+                    || before.phase() == Sonic2CompetitiveHalfpipe.Phase.RUNNING)
+                    && com.openggf.game.sonic2.specialstage.Sonic2SpecialStageLagModel.shouldSkipLiveUpdate(
+                    halfpipe.ticks() + 1, 12, before.track().geometry());
+            step(PlayerInputState.neutral(), PlayerInputState.neutral());
+            var after = halfpipe.capture();
+            if (skipped) {
+                lag++;
+                assertEquals(before.track(), after.track());
+                assertDeep(before.machine(), after.machine(), "lag object RAM");
+                assertEquals(before.palettes(), after.palettes());
+            }
+            halfpipe.restore(before);
+            verticalInterrupts.decrementAndGet();
+            step(PlayerInputState.neutral(), PlayerInputState.neutral());
+            assertDeep(after, halfpipe.capture(), "pacing rewind row " + row);
+            if (before.phase() != after.phase()) System.out.println("SS pacing row " + (hold + row)
+                    + " " + before.phase() + " -> " + after.phase());
+        }
+        System.out.println("SS first 474 post-load rows: lag=" + lag);
+        assertTrue(lag > 0);
+    }
+
+    @Test
     void productionBootKeepsBothLogicalControllersIndependentThroughNativeIntro() {
         assertEquals(Sonic2CompetitiveHalfpipe.Phase.EMPTY, halfpipe.phase());
         assertThrows(IllegalStateException.class, halfpipe::draw);
         for (int direction : new int[]{AbstractPlayableSprite.INPUT_RIGHT, AbstractPlayableSprite.INPUT_LEFT}) {
             load(0);
-            assertEquals(Sonic2CompetitiveHalfpipe.Phase.FADE_IN, halfpipe.phase());
+            assertEquals(Sonic2CompetitiveHalfpipe.Phase.LOAD_HOLD, halfpipe.phase());
             assertEquals(Sonic2SpecialStagePlayer.PlayerType.SONIC, halfpipe.player(0).getPlayerType());
             assertEquals(Sonic2SpecialStagePlayer.PlayerType.TAILS, halfpipe.player(1).getPlayerType());
             assertEquals(0x6E, halfpipe.player(0).getSSZPos());
@@ -72,7 +110,7 @@ class TestSonic2CompetitiveHalfpipe {
             assertTrue(halfpipe.player(1).isSpawned());
             int other = direction == AbstractPlayableSprite.INPUT_RIGHT
                     ? AbstractPlayableSprite.INPUT_LEFT : AbstractPlayableSprite.INPUT_RIGHT;
-            for (int tick = 0; tick < 22; tick++) step(direction(direction), direction(other));
+            fadeIn();
             assertEquals(Sonic2CompetitiveHalfpipe.Phase.INTRO, halfpipe.phase());
             assertEquals(0x40, halfpipe.player(0).getAngle(), "white fade does not execute actor passes");
             assertEquals(0x40, halfpipe.player(1).getAngle());
@@ -96,7 +134,7 @@ class TestSonic2CompetitiveHalfpipe {
     @Test
     void preStartLoopLatchesBothControllerSamplesBeforeVintAndRestoresThatLatch() {
         load(0);
-        for (int tick = 0; tick < 22; tick++) step(PlayerInputState.neutral(), PlayerInputState.neutral());
+        while (halfpipe.phase() != Sonic2CompetitiveHalfpipe.Phase.INTRO) step(PlayerInputState.neutral(), PlayerInputState.neutral());
         step(direction(AbstractPlayableSprite.INPUT_RIGHT), direction(AbstractPlayableSprite.INPUT_LEFT));
         assertEquals(0, halfpipe.player(0).getInertia());
         assertEquals(0, halfpipe.player(1).getInertia());
@@ -312,10 +350,12 @@ class TestSonic2CompetitiveHalfpipe {
         verticalInterrupts.set(0);
         events = new RecordingEvents();
         halfpipe.loadCompetitiveStage(stage, events);
+        // These tests assert logical object passes; live pacing is tested separately.
+        halfpipe.setLiveLagSimulationEnabled(false);
     }
 
     private void fadeIn() {
-        for (int tick = 0; tick < 22; tick++) step(PlayerInputState.neutral(), PlayerInputState.neutral());
+        while (halfpipe.phase() != Sonic2CompetitiveHalfpipe.Phase.INTRO) step(PlayerInputState.neutral(), PlayerInputState.neutral());
     }
 
     private void step(PlayerInputState first, PlayerInputState second) {

@@ -31,6 +31,8 @@ public final class HudTextLayout {
     public static final int MUTED = 0xFFB9CADC;
     public static final int ACCENT = 0xFF67DDF5;
     public static final int GOLD = 0xFFFFDD67;
+    /** Warnings: the Competition cutoff and the UNVERIFIED board label. */
+    public static final int AMBER = 0xFFFFB840;
     /** Translucent enough to keep the level readable behind the white text. */
     public static final int FILL = 0xC8122032;
     public static final int TEXT_INSET = 6;
@@ -44,13 +46,23 @@ public final class HudTextLayout {
      * @param name      the player's name, or null for a plain row
      * @param nameColor the name's {@code 0xAARRGGBB}
      */
-    public record Line(String text, int color, String name, int nameColor, String suffix) {
+    public record Line(String text, int color, String name, int nameColor, String suffix, int suffixColor) {
         public Line(String text, int color) {
             this(text, color, null, 0, "");
         }
 
+        /** A row whose suffix shares the row's colour. */
+        public Line(String text, int color, String name, int nameColor, String suffix) {
+            this(text, color, name, nameColor, suffix, color);
+        }
+
         public Line {
             suffix = suffix == null ? "" : suffix;
+        }
+
+        /** A plain compact row with {@code suffix} right-aligned in its own colour (an amber UNVERIFIED). */
+        public static Line split(String text, int color, String suffix, int suffixColor) {
+            return new Line(text, color, null, 0, suffix, suffixColor);
         }
 
         /** A row showing {@code prefix}, then {@code name} in {@code nameColor}, then {@code suffix} on the right. */
@@ -68,12 +80,13 @@ public final class HudTextLayout {
 
         /** Everything the row shows, as one string (tests and logs). */
         public String plain() {
-            return hasName() ? text + name + (suffix.isEmpty() ? "" : " " + suffix) : text;
+            return (hasName() ? text + name : text) + (suffix.isEmpty() ? "" : " " + suffix);
         }
 
         /** Pixels the row needs, with a gap before a right-aligned suffix. */
         public int width() {
-            if (!hasName()) return CompactFont.width(text, 1);
+            if (!hasName()) return CompactFont.width(text, 1)
+                    + (suffix.isEmpty() ? 0 : SUFFIX_GAP + CompactFont.width(suffix, 1));
             int width = text.isEmpty() ? 0 : CompactFont.width(text, 1) + 1;
             width += NameFont.width(name);
             return suffix.isEmpty() ? width : width + SUFFIX_GAP + CompactFont.width(suffix, 1);
@@ -109,7 +122,11 @@ public final class HudTextLayout {
 
     /** Fits a row into {@code pixels}: plain rows by characters, name rows by cutting the name (whole graphemes). */
     private static Line fit(Line line, int pixels) {
-        if (!line.hasName()) return new Line(CompactFont.fit(line.text(), pixels, 1), line.color());
+        if (!line.hasName()) {
+            int suffix = line.suffix().isEmpty() ? 0 : SUFFIX_GAP + CompactFont.width(line.suffix(), 1);
+            if (suffix > 0 && CompactFont.width(line.text(), 1) + suffix <= pixels) return line;
+            return new Line(CompactFont.fit(line.text(), pixels, 1), line.color());
+        }
         String prefix = CompactFont.fit(line.text(), pixels, 1);
         String suffix = line.suffix();
         int fixed = (prefix.isEmpty() ? 0 : CompactFont.width(prefix, 1) + 1)
@@ -119,7 +136,7 @@ public final class HudTextLayout {
             fixed = prefix.isEmpty() ? 0 : CompactFont.width(prefix, 1) + 1;
         }
         return new Line(prefix, line.color(), NameFont.fit(line.name(), Math.max(0, pixels - fixed)),
-                line.nameColor(), suffix);
+                line.nameColor(), suffix, line.suffixColor());
     }
 
     public static int panelHeight(int lines) {
@@ -148,7 +165,9 @@ public final class HudTextLayout {
         for (Line line : panel.lines()) {
             int x = panel.x() + TEXT_INSET;
             if (!line.hasName()) {
-                CompactFont.draw(canvas, line.text(), x, y, 1, line.color());
+                compact(canvas, line.text(), x, y, line.color());
+                if (!line.suffix().isEmpty()) compact(canvas, line.suffix(), panel.x() + panel.width() - TEXT_INSET
+                        - CompactFont.width(line.suffix(), 1), y, line.suffixColor());
                 y += LINE_HEIGHT;
                 continue;
             }
@@ -156,16 +175,51 @@ public final class HudTextLayout {
             int boxTop = y - 1;
             int compactY = boxTop + NameFont.BASELINE - 7;
             if (!line.text().isEmpty()) {
-                CompactFont.draw(canvas, line.text(), x, compactY, 1, line.color());
+                compact(canvas, line.text(), x, compactY, line.color());
                 x += CompactFont.width(line.text(), 1) + 1;
             }
             NameFont.draw(canvas, line.name(), x, boxTop, line.nameColor());
             if (!line.suffix().isEmpty()) {
-                CompactFont.draw(canvas, line.suffix(), panel.x() + panel.width() - TEXT_INSET
-                        - CompactFont.width(line.suffix(), 1), compactY, 1, line.color());
+                compact(canvas, line.suffix(), panel.x() + panel.width() - TEXT_INSET
+                        - CompactFont.width(line.suffix(), 1), compactY, line.suffixColor());
             }
             y += NAME_LINE_HEIGHT;
         }
+    }
+
+    /** The swap mark between the two names of a teleport swap ({@code SWAP ⇄ NAME}). */
+    public static final char SWAP_MARK = '\u21C4';
+
+    /**
+     * Compact capitals, plus the two marks the race HUD needs that {@link CompactFont} does not
+     * draw: the ROM clock's seconds mark {@code "} (as in {@code 0'21"50}) and {@link #SWAP_MARK}.
+     * Each takes one six-pixel cell, so {@link CompactFont#width} still measures the text.
+     */
+    public static void compact(PixelCanvas canvas, String text, int x, int y, int argb) {
+        int start = 0;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c != '"' && c != SWAP_MARK) continue;
+            if (i > start) CompactFont.draw(canvas, text.substring(start, i), x + start * 6, y, 1, argb);
+            int cell = x + i * 6;
+            if (c == '"') {
+                // Two of CompactFont's apostrophe strokes, two pixels apart.
+                for (int mark : new int[] {0, 2}) {
+                    canvas.fill(cell + mark + 1, y, 2, 1, argb);
+                    canvas.fill(cell + mark + 2, y + 1, 1, 1, argb);
+                }
+            } else {
+                // A right arrow over a left arrow, in the 5x7 cell.
+                canvas.fill(cell + 3, y, 1, 1, argb);
+                canvas.fill(cell, y + 1, 5, 1, argb);
+                canvas.fill(cell + 3, y + 2, 1, 1, argb);
+                canvas.fill(cell + 1, y + 4, 1, 1, argb);
+                canvas.fill(cell, y + 5, 5, 1, argb);
+                canvas.fill(cell + 1, y + 6, 1, 1, argb);
+            }
+            start = i + 1;
+        }
+        if (start < text.length()) CompactFont.draw(canvas, text.substring(start), x + start * 6, y, 1, argb);
     }
 
     public static String clock(long millis) {

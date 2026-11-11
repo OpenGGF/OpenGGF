@@ -3569,6 +3569,25 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     /**
+     * Rebuilds placement at an already reconstructed race target. The same camera/placement
+     * owners used by checkpoint load keep their current native boundaries and persistent banks.
+     * Power-ups and their timers remain with the local player.
+     */
+    public void reinitializeAfterRaceSwap() {
+        RaceSwapPlacement.reinitialize(camera, objectManager, ringManager, spriteManager,
+                this::reregisterPlayerDynamicObjects);
+    }
+
+    /** Full native checkpoint restore, omitting only the initial title-card presentation.
+     * The caller owns life loss and the GAME OVER/TIME OVER decision before requesting reload.
+     * Available to live execution and input-only replay; checkpoint time is restored by the load.
+     */
+    public void restartCurrentLevelFromCheckpointAfterDeath() {
+        restartCurrentLevelAfterDeath();
+        skipPendingInitialTitleCardPresentation();
+    }
+
+    /**
      * A fast death restart ({@link com.openggf.game.session.GameplayRunPolicy.DeathRestart#FAST_FROM_START}):
      * the same full death reload as {@link #restartCurrentLevelAfterDeath()}, but from the act's
      * start with star-post progress cleared (as a hosted run's retry clears it), and its title

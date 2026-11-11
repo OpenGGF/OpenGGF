@@ -50,7 +50,13 @@ The engine also has these:
 - **Each game's own screens.** Title screens, level select, title cards, results
   and continue screens all come from the game's own data.
 
-Sonic 2's two-player competition mode is not available yet.
+Sonic 2's two-player Competition mode is available: choose 2 PLAYER on the
+Sonic 2 title for the game's own split-screen mode, with Sonic on controller 1
+and Tails on controller 2, Emerald Hill, Mystic Cave, Casino Night or the
+special stage, each player's rings, lives, score and time, and the game's
+results screens. Live rewind is off in this mode. See
+[known discrepancies](../status/known-discrepancies.md#s2-competition-split-screen-native-lag-and-rewind-scope)
+for how the split screen differs from the original.
 
 ## Accuracy
 
@@ -226,6 +232,17 @@ New in 0.7. Experimental. Time Attack is a bundled mod. Open it from
 - **Solo runs.** Time your runs, retry instantly and race ghosts of your best times.
 - **Racing.** Host or join races on your local network, or browse public and private
   rooms on a master server. Every player needs the same engine build and ROM.
+- **Competition mode.** New in 0.8. A room can race in Competition mode instead of
+  Time Attack: everyone starts together, there are no restarts, and the first past
+  the post wins. The host picks the monitor rules and a cutoff after the first
+  finisher. Sonic 2 and Sonic 3&K acts work in either mode. Sonic 1 stays Time
+  Attack only.
+- **Sonic 3&K Competition arenas.** New in 0.8. Azure Lake, Balloon Park, Chrome
+  Gadget, Desert Palace and Endless Mine are Competition tracks. You race them alone
+  under the original five-lap rules, and lap times, total time and best lap are
+  ranked. The view is the original top half's camera, magnified twice, with
+  full-size characters and ghosts. Rooms without a verifier label their results
+  UNVERIFIED.
 - **Chat.** Players can chat, and an optional filter masks profanity.
 
 Time Attack comes with every build, including the native packages. See

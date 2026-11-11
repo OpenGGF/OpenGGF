@@ -5,6 +5,8 @@ import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -17,7 +19,8 @@ import java.util.List;
  * An invisible collision zone that applies horizontal velocity to grounded players.
  * Used in CNZ (Casino Night), MTZ (Metropolis), and WFZ (Wing Fortress).
  *
- * Based on Obj72 from the Sonic 2 disassembly (s2.asm lines 54775-54831).
+ * Obj72_Init (s2.asm:55406-55419), Obj72_Main (s2.asm:55421-55426),
+ * and Obj72_Action (s2.asm:55429-55451).
  *
  * Subtype encoding:
  * - Bits 0-6: Width multiplier. Width = (subtype & 0x7F) * 16 pixels
@@ -27,7 +30,7 @@ import java.util.List;
  * - X-flip clear: velocity = +2 (rightward)
  * - X-flip set: velocity = -2 (leftward)
  */
-public class CNZConveyorBeltObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+public class CNZConveyorBeltObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.Source, com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource {
     @Override
     public ObjectVisualFacing.Basis nativeFacing() {
         // Obj72's belt owns its transport direction in objoff_36 (velocityX),
@@ -77,18 +80,14 @@ public class CNZConveyorBeltObjectInstance extends AbstractObjectInstance implem
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // From disassembly Obj72_Main:
-        // lea (MainCharacter).w,a1
-        // bsr.s Obj72_Action
-        // lea (Sidekick).w,a1
-        // bsr.s Obj72_Action
-        // jmpto JmpTo5_MarkObjGone3
-
-        // We only have access to the main player here
-        if (player != null) {
-            applyConveyorAction(player);
-        }
+        // Obj72_Main (s2.asm:55421-55426), also KiS2 Obj72_Main
+        // (docs/kis2disasm/s2.asm:58586-58591): P1 then native P2, including CPU Tails.
+        services().playerQuery().visitPlayers(ObjectPlayerParticipationPolicy.NATIVE_P1_P2, this,
+                (belt, participant) -> {
+                    if (participant instanceof AbstractPlayableSprite player) {
+                        belt.applyConveyorAction(player);
+                    }
+                });
     }
 
     /**
@@ -131,7 +130,7 @@ public class CNZConveyorBeltObjectInstance extends AbstractObjectInstance implem
         // cmp.w  d0,d1
         // bhs.s  +                   ; if deltaY >= height, exit (unsigned compare)
         // The collision box is from (beltY - height) to beltY
-        // So player must be within [objY - heightPixels, objY]
+        // So player must be within [objY - heightPixels, objY)
         if (deltaY < 0 || deltaY >= heightPixels) {
             return;
         }
@@ -144,7 +143,7 @@ public class CNZConveyorBeltObjectInstance extends AbstractObjectInstance implem
 
         // move.w objoff_36(a0),d0    ; get velocity
         // add.w  d0,x_pos(a1)        ; apply velocity to player X
-        player.shiftX(velocityX);
+        NativePositionOps.addXPosPreserveSubpixel(player, velocityX);
     }
 
     /**
@@ -160,5 +159,9 @@ public class CNZConveyorBeltObjectInstance extends AbstractObjectInstance implem
     @Override
     public int getPriorityBucket() {
         return 0; // No rendering
+    }
+    /** Obj72_Main (s2.asm:55421-55426): MarkObjGone3, not DisplaySprite. */
+    @Override public com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.ObjectSlot nativeDisplaySlot() {
+        return null;
     }
 }

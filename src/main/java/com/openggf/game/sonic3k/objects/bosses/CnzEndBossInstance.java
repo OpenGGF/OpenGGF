@@ -301,12 +301,10 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         // captured ship/magnet/arm identities and their scalar state.
         CnzEndBossRobotnikShipChild ship = spawnNativeChildren();
 
-        // Routine-created CNZ graph members do not have standalone probe
-        // constructors: they require this exact restored boss/ship identity.
-        // Offer every fixed phase role as a reconstruction candidate; the
-        // ObjectManager adopts only captured entries and drops unmatched roles.
-        spawnChild(() -> new CnzEndBossExplosionControllerChild(ship, 4));
-        spawnChild(() -> new CnzEndBossRobotnikFlameChild(ship));
+        // Offer fixed phase roles under their live spawning owners. Scratch ship
+        // candidates are not published/bound by the lifecycle yet.
+        ship.setServices(services());
+        ship.recreateDefeatChildrenForRewind();
         spawnChild(() -> new CnzEndBossFieldChild(this, -0x0C));
         spawnChild(() -> new CnzEndBossFieldChild(this, 0x0C));
         spawnChild(() -> CnzEndBossBoundaryController.increaseMaxX(

@@ -57,7 +57,7 @@ public final class CourseLevel {
         String kind=session.kind(); int[] course=blocks(kind,session.game().calendar.year());
         Grid grid=kind.equals("snowboard")?downhill(source,course):new Grid(source,course,course.length,1);
         var data=ValleyEncoder.encodeGrid(grid.source(),new ValleyEncoder.Spec(grid.cells(),1,
-            kind.equals("snowboard")?-1:53,54,3,15),grid.columns(),grid.rows());
+            kind.equals("snowboard")?-1:53,54),grid.columns(),grid.rows());
         List<ModPaletteClaim> claims=new ArrayList<>(); for(int[] c:data.claims()) claims.add(new ModPaletteClaim(c[0],c[1],c[2]));
         List<ObjectSpawn> objects=new ArrayList<>();
         for(int col=0;col<course.length;col++) {

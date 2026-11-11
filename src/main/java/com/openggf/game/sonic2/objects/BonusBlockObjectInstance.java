@@ -451,7 +451,7 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
         }
 
         // Award points and spawn points display (ROM: lines 59687-59694)
-        services().gameState().addScore(points);
+        Sonic2ObjectScore.award(services(), player, points);
 
         // Spawn floating points display
         int awardedPoints = points;

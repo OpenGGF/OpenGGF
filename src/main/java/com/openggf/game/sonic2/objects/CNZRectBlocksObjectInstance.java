@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.BoxObjectInstance;
 
@@ -32,7 +34,7 @@ import java.util.List;
  * <b>Disassembly Reference:</b> s2.asm lines 58068-58201 (ObjD2)
  */
 public class CNZRectBlocksObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements Sonic2NativeDisplaySource, SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // ObjD2 translates/folds rectangular blocks without a horizontal-facing body or child.
 
     /**
@@ -74,6 +76,7 @@ public class CNZRectBlocksObjectInstance extends BoxObjectInstance
     // Mirror that by starting animTimer at 0 (not FRAMES_PER_TICK-1) so the engine
     // and ROM caterpillar animation stay phase-aligned.
     private int animTimer = 0; // objoff_3A, zero-initialized per ROM (s2.asm:58524-58538)
+    private boolean nativeDisplayRequested; // Latest execution reached the native display tail.
     private int invisibleTimer; // Counts down, object invisible when > 0
 
     // Current computed position
@@ -133,6 +136,10 @@ public class CNZRectBlocksObjectInstance extends BoxObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        // ObjD2_Main (s2.asm:58718-58734): the countdown path calls MarkObjGone3,
+        // even on the execution that decrements to zero. Keep this display request
+        // separate from the legacy ordinary-render predicate and collision state.
+        nativeDisplayRequested = invisibleTimer == 0;
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Phase 1: If invisible, count down and skip everything else
         if (invisibleTimer > 0) {
@@ -149,6 +156,9 @@ public class CNZRectBlocksObjectInstance extends BoxObjectInstance
 
             // If we wrapped back to frame 0, become invisible
             if (mappingFrame == 0) {
+                // loc_2B5E2 (s2.asm:58748-58750) branches to the position helper,
+                // whose RTS returns without the MarkObjGone2 display tail.
+                nativeDisplayRequested = false;
                 // Set invisible timer from subtype
                 int subtype = spawn.subtype() & 0xFF;
                 invisibleTimer = subtype << 4;
@@ -220,6 +230,15 @@ public class CNZRectBlocksObjectInstance extends BoxObjectInstance
         // ObjD2 stores the current x_pos in d4 immediately before SolidObject,
         // so MvSonicOnPtfm observes zero object delta for this routine.
         return getX();
+    }
+
+    @Override
+    public ObjectSlot nativeDisplaySlot() {
+        if (isDestroyed() || !nativeDisplayRequested) return null;
+        // loc_2B60C / byte_2B654 (s2.asm:58768-58812) write width_pixels
+        // on every frame; Init's width8 is not the later culling width.
+        return new ObjectSlot(0xD2,4 | (spawn.renderFlags() & 3),currentX & 0xFFFF,currentY & 0xFFFF,
+                FRAME_DATA[mappingFrame][2],0,new Mapping(0x2B694,mappingFrame),0x41BE,null);
     }
 
     @Override

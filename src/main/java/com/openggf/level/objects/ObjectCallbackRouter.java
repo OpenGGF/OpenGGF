@@ -147,6 +147,12 @@ final class ObjectCallbackRouter {
 
         boolean isFor(ObjectInstance instance) { return receiver == instance; }
 
+        void runRetirement(Runnable callback) {
+            var original = initialDispatch != null ? initialDispatch.currentReservation() : null;
+            callWithOwner(owner, () -> { callback.run(); return null; });
+            InitialObjectDispatchController.requireCurrent(original);
+        }
+
         void invoke() {
             if (!(receiver instanceof AbstractObjectInstance instance)) return;
             // Only this exact removal receiver may reuse this router's active owner.
@@ -304,6 +310,31 @@ final class ObjectCallbackRouter {
     void restoreRewind(AbstractObjectInstance object, PerObjectRewindSnapshot snapshot,
             RewindCaptureContext context) {
         run(object, () -> ObjectRewindTypeSafety.restore(object, snapshot, context));
+    }
+
+    String describeCounterBasedUnloadObject(ObjectInstance instance, ObjectSpawn spawn) {
+        StringBuilder sb = new StringBuilder("Object out_of_range check failed for ");
+        sb.append(instance.getClass().getName());
+        if (instance instanceof AbstractObjectInstance aoi) {
+            sb.append(" slot=").append(call(instance, aoi::getSlotIndex));
+            sb.append(" name=").append(call(instance, aoi::getName));
+        }
+        sb.append(" managerSpawn=");
+        if (spawn == null) {
+            sb.append("null");
+        } else {
+            sb.append(String.format("0x%04X,0x%04X id=0x%02X",
+                    spawn.x() & 0xFFFF, spawn.y() & 0xFFFF, spawn.objectId() & 0xFF));
+        }
+        ObjectSpawn instanceSpawn = call(instance, instance::getSpawn);
+        sb.append(" instanceSpawn=");
+        if (instanceSpawn == null) {
+            sb.append("null");
+        } else {
+            sb.append(String.format("0x%04X,0x%04X id=0x%02X",
+                    instanceSpawn.x() & 0xFFFF, instanceSpawn.y() & 0xFFFF, instanceSpawn.objectId() & 0xFF));
+        }
+        return sb.toString();
     }
 
 }

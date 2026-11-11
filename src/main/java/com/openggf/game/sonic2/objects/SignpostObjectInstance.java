@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.audio.GameMusic;
 import com.openggf.game.PlayableEntity;
@@ -7,7 +10,6 @@ import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.Sonic2LevelEventManager;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.level.objects.BoxObjectInstance;
-import com.openggf.level.objects.SignpostSparkleObjectInstance;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
@@ -44,7 +46,7 @@ import java.util.logging.Logger;
  * <li>Spawn results screen (Obj3A), play end-level jingle</li>
  * </ol>
  */
-public class SignpostObjectInstance extends BoxObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+public class SignpostObjectInstance extends BoxObjectInstance implements Sonic2NativeDisplaySource, RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj0D owns a rotating sign and sparkles/results, not a horizontally facing body.
 
     public static final String AUTHORED_GOAL_KEY = "openggf:authored-goal";
@@ -84,6 +86,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements RewindR
     private int routineState = STATE_IDLE;
     private final transient com.openggf.game.presentation.CharacterSignRenderer characterSign = new com.openggf.game.presentation.CharacterSignRenderer();
     private int mappingFrame = FRAME_EGGMAN;
+    private int competitionPreviousFrame = -1;
     private ObjectAnimationState animationState;
     private int currentAnimId = ANIM_IDLE;
     private int finalAnimId = ANIM_FINAL_SONIC;
@@ -119,6 +122,8 @@ public class SignpostObjectInstance extends BoxObjectInstance implements RewindR
         if (competition != null) {
             // Obj0D_Init's native branch bypasses ordinary act-two suppression.
             competition.initializeSignpost();
+            var art = services().gameService(com.openggf.game.sonic2.competition.view.Sonic2CompetitionArtResidency.class);
+            if (art != null) art.initializeSignpostPole();
         }
 
         // ROM: loc_19208 (s2.asm:34650-34656)
@@ -225,6 +230,12 @@ public class SignpostObjectInstance extends BoxObjectInstance implements RewindR
         if (animationState != null) {
             animationState.update();
             mappingFrame = animationState.getMappingFrame();
+        }
+        // PLCLoad_Signpost follows AnimateSprite, once per changed frame.
+        if (mappingFrame != competitionPreviousFrame) {
+            competitionPreviousFrame = mappingFrame;
+            var art = services().gameService(com.openggf.game.sonic2.competition.view.Sonic2CompetitionArtResidency.class);
+            if (art != null) art.loadSignpostFrame(mappingFrame);
         }
     }
 
@@ -333,7 +344,8 @@ public class SignpostObjectInstance extends BoxObjectInstance implements RewindR
         int sparkleX = spawn.x() + offset[0];
         int sparkleY = spawn.y() + offset[1];
 
-        spawnFreeChild(() -> new SignpostSparkleObjectInstance(sparkleX, sparkleY));
+        spawnFreeChild(() -> new Sonic2SignpostSparkleObjectInstance(new ObjectSpawn(
+                sparkleX,sparkleY,0x25,0,0,false,0)));
 
         // ROM stores the byte offset into Obj0D_RingSparklePositions, so
         // addq.b #2 / andi.b #$E advances through the eight x/y pairs.
@@ -480,4 +492,11 @@ public class SignpostObjectInstance extends BoxObjectInstance implements RewindR
     public int getCenterY() {
         return spawn.y();
     }
+
+    // Obj0D_Init (s2.asm:34636-34648); loc_1922C (s2.asm:34662-34669): native 2P uses its own mapping table.
+    @Override public ObjectSlot nativeDisplaySlot() {
+        return isDestroyed() ? null : new ObjectSlot(0x0D,4,spawn.x()&0xFFFF,spawn.y()&0xFFFF,
+                24,0,new Mapping(0x19656,mappingFrame),0x02F4,null);
+    }
+
 }

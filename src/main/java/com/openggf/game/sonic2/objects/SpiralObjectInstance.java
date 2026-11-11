@@ -29,7 +29,7 @@ import java.util.logging.Logger;
  * they traverse it.
  * Effectively creates a "wave" motion and sprite twisting effect.
  */
-public class SpiralObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+public class SpiralObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource {
     // Obj06 is an invisible path/rotation controller; the player owns its own facing.
 
     private static final Logger LOGGER = Logger.getLogger(SpiralObjectInstance.class.getName());
@@ -249,6 +249,7 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Rewi
         if (!player.getAir()) {
             return;
         }
+        com.openggf.sprites.playable.PlayableNativeFloorReset.resetChain(player);
         // Obj06_Cylinder calls RideObject_SetRide after snapping y_pos
         // (docs/s2disasm/s2.asm:47356-47364). RideObject_SetRide then calls
         // Sonic/Tails_ResetOnFloor_Part2 for airborne players before setting
@@ -296,13 +297,13 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Rewi
                 && player.getLatchedSolidObjectInstance() == this;
         if (latchedToThisSpiral) {
             // ROM Obj06 keeps the player in loc_215C0 while this object's standing
-            // bit is set (docs/s2disasm/s2.asm:46688-46764), then clears on_object
-            // only from the spiral fall-off path (lines 46767-46772).
+            // bit is set (s2.asm:47140-47141), then clears on_object
+            // in Obj06_Spiral_CharacterFallsOff (s2.asm:47219-47224).
             player.setOnObject(true);
         }
-        if (latchedToThisSpiral && player.getAir()) {
-            player.setAir(false);
-        }
+        // loc_215C0 tests Status_InAir before moving a rider; a jump releases
+        // only this player's standing bit and preserves y_vel. Never ground a
+        // latched rider here (s2.asm:47205-47225; shipped fixBugs=0).
 
         // ROM: loc_215C0
         int inertia = Math.abs(player.getGSpeed());
@@ -405,5 +406,9 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Rewi
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         // Invisible object
+    }
+    /** Obj06 (s2.asm:47091-47112): dispatch followed only by its no-draw lifetime check. */
+    @Override public com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.ObjectSlot nativeDisplaySlot() {
+        return null;
     }
 }

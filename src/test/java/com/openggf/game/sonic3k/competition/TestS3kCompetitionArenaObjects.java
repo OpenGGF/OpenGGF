@@ -123,11 +123,16 @@ class TestS3kCompetitionArenaObjects {
         f.players.get(1).setAirborne(true);
         f.players.get(1).setYVelocity(-0x100);
         f.tick();
-        assertEquals(0x180, blade.extensionWord(), "only one remaining rider contributes $80");
+        // Sonic_Jump only sets Status_InAir; the blade still holds P2's bit when loc_35B16 counts.
+        assertEquals(0x200, blade.extensionWord(), "the rider who just jumped still contributes $80");
+        assertEquals(0, f.players.get(1).status() & 8, "SolidObjectFull2_1P loc_1DCF0 clears Status_OnObj");
         f.players.get(0).setAirborne(true);
         f.players.get(0).setYVelocity(-0x100);
         f.tick();
-        assertEquals(0x80, blade.extensionWord());
+        assertEquals(0x280, blade.extensionWord(), "only P1's bit survived the previous release");
+        assertEquals(0, f.players.get(0).status() & 8);
+        f.tick();
+        assertEquals(0x180, blade.extensionWord(), "no riders: the blade retracts by $100");
     }
 
     @Test
@@ -168,6 +173,20 @@ class TestS3kCompetitionArenaObjects {
         assertEquals(0x536, reflected.nativeRenderX());
         assertTrue(reflected.nativeRenderXFlip()); assertFalse(reflected.nativeRenderYFlip());
         assertEquals(1, reflected.mappingFrame());
+    }
+
+    @Test
+    void elephantLandingPreservesAnUnrolledSkidAnimation() {
+        Fixture f = fixture();
+        var elephant=f.place(Kind.ELEPHANT,0x100,0x100,0x50,0);
+        f.tick();
+        var p=f.players.getFirst();
+        p.setCentre(0x100,0xE8); p.setAirborne(true); p.setYVelocity(0x100);
+        p.setAnimation(0xD);
+        elephant.tickNative(f);
+        assertEquals(elephant.nativeIdentity(),p.standingObject());
+        assertFalse(p.airborne());
+        assertEquals(0xD,p.animation(),"Player_TouchFloor only resets animation for a rolled landing");
     }
 
     @Test
@@ -249,6 +268,43 @@ class TestS3kCompetitionArenaObjects {
     }
 
     @Test
+    void springKeepsItsStandingBitUntilTheFollowingSolidPass() {
+        Fixture f=fixture();
+        var spring=f.place(Kind.SPRING,0x100,0x100,2,0);
+        f.tick();
+        var p=f.players.get(0);
+        p.setCentre(0x100,0xEE); p.setAirborne(true); p.setYVelocity(0x200);
+        f.tick();
+        assertEquals(-0xA00,p.yVelocity());
+        assertTrue(p.airborne()); assertEquals(0,p.status()&8);
+        assertEquals(1,spring.nativeStandingMask());
+        p.setCentreNative(0x100,0xE8);
+        f.tick();
+        assertEquals(0xE8,p.centreY(),"carried standing branch releases without a second top correction");
+        assertEquals(0,spring.nativeStandingMask());
+    }
+
+    @Test
+    void solidPushReleaseIsOwnedPerObjectAndRestartsWalkAnimation() {
+        Fixture f=fixture();
+        var block=f.place(Kind.INVISIBLE_PLATFORM,0x100,0x100,0x11,0);
+        f.tick();
+        var p=f.players.get(0);
+        p.setCentre(0xF8,0x100); p.setXVelocity(0x100);
+        f.tick();
+        assertTrue(p.pushing());
+        var before=f.capture();
+        p.setCentre(0x200,0x100); p.setPreviousAnimation(0);
+        f.tick();
+        assertFalse(p.pushing()); assertEquals(1,p.capture().animationState().previousAnimation());
+        // An unrelated non-contact must preserve a terrain-owned push bit.
+        p.setPushing(true); f.tick(); assertTrue(p.pushing());
+        f.restore(before);
+        p=f.players.get(0); p.setCentre(0x200,0x100);
+        f.tick(); assertFalse(p.pushing(),"rewind restores the object's push ownership");
+    }
+
+    @Test
     void floorButtonCanLatchTheRetractingSpringTrigger() {
         Fixture f = fixture();
         var button = f.place(Kind.FLOOR_BUTTON, 0x100, 0x200, 0x10, 0);
@@ -308,6 +364,50 @@ class TestS3kCompetitionArenaObjects {
         assertEquals(1, p2.flipAngle());
         assertEquals(0, p2.flipsRemaining());
         assertEquals(4, p2.flipSpeed());
+    }
+
+    @Test
+    void upwardSpringRetainsItsStandingBitUntilTheNextSolidPass() {
+        Fixture f = fixture();
+        var spring = f.place(Kind.SPRING, 0x200, 0x200, 2, 0);
+        spring.tickNative(f);
+        var p = f.players.get(0);
+        p.setCentre(0x200, 0x1EC); p.setAirborne(true); p.setYVelocity(0x100);
+        spring.tickNative(f);
+        assertEquals(-0xA00, p.yVelocity());
+        // The next actor pass rises ten pixels. SolidObjectFull2_1P must only
+        // release the spring's standing bit, without resolving a second contact.
+        p.setCentreNative(p.centreX(), p.centreY() - 10);
+        int expectedY = p.centreY();
+        spring.tickNative(f);
+        assertEquals(expectedY, p.centreY());
+        assertTrue(p.airborne());
+    }
+
+    @Test
+    void fullSolidsReleaseOnlyTheirOwnPushContact() {
+        Fixture f = fixture();
+        var rock = f.place(Kind.ROCK, 0x100, 0x100, 0x31, 0);
+        var other = f.place(Kind.ROCK, 0x100, 0x200, 0x31, 0);
+        f.tick();
+        var p = f.players.get(0);
+        p.setCentre(0x110, 0x100); p.setXVelocity(-0x100);
+        rock.tickNative(f);
+        assertTrue(p.pushing());
+        var pushed = f.capture();
+        other.tickNative(f);
+        assertTrue(p.pushing(), "an unrelated solid does not clear the rock's Push bit");
+        p.setCentre(0x180, 0x100);
+        rock.tickNative(f);
+        assertFalse(p.pushing(), "the owning rock clears Push when X leaves its range");
+        assertEquals(0, p.animation());
+        assertEquals(1, p.animationState().previousAnimation());
+        f.restore(pushed);
+        p = f.players.get(0);
+        assertTrue(p.pushing());
+        p.setCentre(0x180, 0x100);
+        f.objects.get(0).tickNative(f);
+        assertFalse(p.pushing(), "rewind preserves the owning object's pushing bit");
     }
 
     @Test
@@ -633,6 +733,11 @@ class TestS3kCompetitionArenaObjects {
         int[] result = new int[count];
         for (int i = 0; i < count; i++) result[i] = rom.readU8(address + i * 6 + 4);
         return result;
+    }
+
+    @Test void sinkingMudPublishesItsNativeBalanceSuppressionAndWidth() {
+        var mud=fixture().place(Kind.MUD,0x680,0x200,12,1);
+        assertEquals(new S3kCompetitionPlayer.BalanceObject(0x680,96,129),mud.balanceSurface());
     }
 
     private Fixture fixture() { return new Fixture(animations, rockDebris); }

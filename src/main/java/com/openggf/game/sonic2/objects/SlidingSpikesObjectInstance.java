@@ -404,6 +404,10 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
      * At native 320px width the limit is {@code $80 + $180 + $80 = $280}.
      */
     private boolean isBasePositionOnScreen() {
+        // MarkObjGone2 (s2.asm:30237-30248): native 2P banks own retirement.
+        if (com.openggf.game.competition.NativeCompetitionRoster.from(services().worldSession()) != null) {
+            return true;
+        }
         var camera = services().camera();
         if (camera == null) {
             return true;  // Assume on-screen if no camera

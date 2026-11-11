@@ -61,8 +61,9 @@ frames or icons. Evidence and scoring history:
   row only, and on every row only when the visible types differ (the path browser's
   ROM?, the shader picker's formats). Every focusable keypad cell is a real key.
 - Mod-owned pages (the bundled Time Attack mode, examples) cannot import `MenuChrome`:
-  they echo it with their own helper on the public scene canvas (Time Attack's
-  `openggf.timeattack.ui.MenuPage`): bold canvas text for titles and the launch
+  use public `SceneMenuChrome` drawing helpers and `MenuTheme` colours/dimensions on
+  the scene canvas. Legacy page helpers (such as Time Attack's
+  `openggf.timeattack.ui.MenuPage`) can migrate incrementally: bold canvas text for titles and the launch
   button, `NameFont` for rows and sentences, `CompactFont` capitals for key caps and
   tags, all measured with the face that draws them. Do not change `NameFont` or the
   creator contract to make a page fit. Their read-only details page (F1, R3 on a pad) carries

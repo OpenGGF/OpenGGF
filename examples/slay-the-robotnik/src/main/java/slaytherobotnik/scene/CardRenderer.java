@@ -200,7 +200,7 @@ public final class CardRenderer {
         c.fill(x + 5, y + 16, BIG_W - 10, 44, Colors.BLACK);
         art.draw(c, card, x + 6, y + 17, BIG_W - 12, 42);
         // Type ribbon.
-        String type = card.type().toUpperCase();
+        String type = card.type().toString().toUpperCase(java.util.Locale.ROOT);
         int tw = f.width(type) + 8;
         c.fill(x + (BIG_W - tw) / 2, y + 59, tw, 8, Colors.BLACK);
         c.fill(x + (BIG_W - tw) / 2 + 1, y + 60, tw - 2, 6, Colors.mix(frameColor(card), Colors.BLACK, 0.4f));

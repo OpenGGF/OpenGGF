@@ -36,8 +36,11 @@ class TestS3kEnemyScorePresentation {
     void s1AndS2PointsKeepTheirExistingPresentationContract() {
         for (var popup : List.of(new Sonic1PointsObjectInstance(SPAWN, services(), 100),
                 new PointsObjectInstance(SPAWN, services(), 100))) {
-            assertEquals(0, popup.getPriorityBucket());
-            assertFalse(popup.isHighPriority());
+            // 9010a9a92: Obj29_Init (s2.asm:24918-24926) uses bucket 1
+            // and high art priority; S1 retains its separate contract.
+            boolean sonic2 = popup instanceof PointsObjectInstance;
+            assertEquals(sonic2 ? 1 : 0, popup.getPriorityBucket());
+            assertEquals(sonic2, popup.isHighPriority());
             assertEquals(0, popup.scoreFrame);
             assertEquals(-0x300, popup.yVel);
         }

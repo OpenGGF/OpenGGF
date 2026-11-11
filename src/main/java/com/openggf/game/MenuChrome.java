@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.mods.ui.MenuTheme;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.graphics.MenuPixelFont;
@@ -22,33 +23,37 @@ public final class MenuChrome {
     private MenuChrome() { }
 
     public static final int SCREEN_H = 224;
-    public static final int HEADER_H = 29;
-    public static final int FOOTER_Y = 205;
+    public static final int HEADER_H = MenuTheme.HEADER_H;
+    public static final int FOOTER_Y = MenuTheme.FOOTER_Y;
     public static final int FOOTER_H = SCREEN_H - FOOTER_Y;
     /** Light and bold cell widths; proportional text measures with {@link #compactWidth}/{@link #labelWidth}. */
     public static final int COMPACT_ADVANCE = 6;
     public static final int LABEL_ADVANCE = 9;
 
     // Palette, matching the existing hub navy/gold so the new screens sit beside old pages.
-    public static final float[] INK = {.008f, .031f, .11f};
+    public static final float[] INK = themeRgb(MenuTheme.INK);
     public static final float[] NAVY = {.02f, .07f, .23f};
-    public static final float[] HEAD = {.04f, .14f, .36f};
+    public static final float[] HEAD = themeRgb(MenuTheme.HEAD);
     public static final float[] BUTTON = {.05f, .16f, .38f};
     public static final float[] EDGE = {.17f, .31f, .62f};
-    public static final float[] FOCUS_FILL = {.11f, .29f, .66f};
-    public static final float[] GOLD = {1f, .84f, .3f};
+    public static final float[] FOCUS_FILL = themeRgb(MenuTheme.FOCUS_FILL);
+    public static final float[] GOLD = themeRgb(MenuTheme.GOLD);
     /** Deep navy text keeps plain menu lettering legible on gold buttons. */
     public static final float[] GOLD_INK = {.06f, .14f, .45f};
-    public static final float[] CYAN = {.5f, .91f, 1f};
-    public static final float[] AMBER = {1f, .72f, .25f};
-    public static final float[] TEXT = {.91f, .93f, 1f};
+    public static final float[] CYAN = themeRgb(MenuTheme.CYAN);
+    public static final float[] AMBER = themeRgb(MenuTheme.AMBER);
+    public static final float[] TEXT = themeRgb(MenuTheme.TEXT);
     public static final float[] WHITE = {1f, 1f, 1f};
-    public static final float[] DIM = {.53f, .58f, .74f};
-    public static final float[] MUTED = {.72f, .77f, .9f};
-    public static final float[] RED = {1f, .42f, .42f};
+    public static final float[] DIM = themeRgb(MenuTheme.DIM);
+    public static final float[] MUTED = themeRgb(MenuTheme.MUTED);
+    public static final float[] RED = themeRgb(MenuTheme.RED);
     /** Enabled/healthy state, kept clear of the amber that marks changed values. */
-    public static final float[] GREEN = {.45f, .92f, .58f};
+    public static final float[] GREEN = themeRgb(MenuTheme.GREEN);
     public static final float[] GREEN_TRACK = {.08f, .36f, .22f};
+
+    private static float[] themeRgb(int argb) {
+        return new float[] {(argb >>> 16 & 255) / 255f, (argb >>> 8 & 255) / 255f, (argb & 255) / 255f};
+    }
 
     /** Key-cap glyph names for direction pairs. */
     public static final String ARROWS_LR = "←→";

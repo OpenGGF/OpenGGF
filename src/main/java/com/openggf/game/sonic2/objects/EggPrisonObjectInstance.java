@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource;
+import com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.*;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.audio.GameMusic;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
@@ -64,7 +67,7 @@ import java.util.logging.Logger;
  * - When none remain, calls Load_EndOfAct
  */
 public class EggPrisonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.Container {
+        implements Sonic2NativeDisplaySource, SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.Container {
     // Obj3E capsule/lock geometry has no shared facing; released animals own independent child anchors and directions.
 
     private static final Logger LOGGER = Logger.getLogger(EggPrisonObjectInstance.class.getName());
@@ -802,7 +805,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     }
 
     private static final class EggPrisonLockSlotChild extends AbstractObjectInstance
-            implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+            implements RewindRecreatable, Sonic2NativeDisplaySource, ObjectVisualFacing.NonDirectional {
         @RewindTransient(reason = "structural Obj3E component link is restored by parent lookup")
         private final EggPrisonObjectInstance parent;
 
@@ -836,6 +839,14 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
             }
         }
 
+        @Override public java.util.List<DisplaySlot> nativeDisplaySlots() {
+            ObjectSlot display=nativeDisplaySlot();
+            return display==null ? java.util.List.of() : java.util.List.of(new DisplaySlot(getSlotIndex(),3,display));
+        }
+        @Override public ObjectSlot nativeDisplaySlot() {
+            return isDestroyed() || parent==null || !parent.lockVisible ? null : new ObjectSlot(
+                    0x3E,0x84,getX()&0xFFFF,getY()&0xFFFF,8,0,new Mapping(0x3F436,5),0x2680,null);
+        }
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             // The parent draws the lock; this slot owns the native lock dispatch.
@@ -853,7 +864,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     }
 
     private static final class EggPrisonBrokenSlotChild extends AbstractObjectInstance
-            implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+            implements RewindRecreatable, Sonic2NativeDisplaySource, ObjectVisualFacing.NonDirectional {
         @RewindTransient(reason = "structural Obj3E component link is restored by parent lookup")
         private final EggPrisonObjectInstance parent;
 
@@ -887,6 +898,8 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
             }
         }
 
+        // loc_3F3A8 / loc_3F406 (s2.asm:85096-85149): end-checker never calls DisplaySprite.
+        @Override public ObjectSlot nativeDisplaySlot() { return null; }
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             // The parent renders the body; this slot owns the broken/end-checker dispatch.
@@ -902,4 +915,11 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
             return parent != null ? parent.spawn.y() : spawn.y();
         }
     }
+
+    // loc_3F228 (s2.asm:84973-84988): no Adjust2PArtPointer; body, button and lock have actual SSTs.
+    @Override public ObjectSlot nativeDisplaySlot() {
+        return isDestroyed() ? null : new ObjectSlot(0x3E,0x84,spawn.x()&0xFFFF,spawn.y()&0xFFFF,
+                32,0,new Mapping(0x3F436,bodyAnimFrame),0x2680,null);
+    }
+
 }

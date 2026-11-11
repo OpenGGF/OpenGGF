@@ -1,6 +1,6 @@
 package slaytherobotnik.core;
 
-/** Relic rarity tiers, as in Slay the Spire. See {@link CardType} for why these are Strings. */
+/** Relic rarity tiers, as in Slay the Spire. These identifiers retain their existing save and content keys. */
 public final class RelicTier {
     /** The character's starting relic. */
     public static final String STARTER = "Starter";

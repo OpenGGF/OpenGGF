@@ -8,7 +8,15 @@ import com.openggf.graphics.PixelFontTextRenderer;
 
 import java.util.regex.Pattern;
 
-/** Native-pixel transport plates for gameplay; contains no input or transport state. */
+/**
+ * Shared native-pixel transport plates for gameplay.
+ *
+ * <p>Capability-specific adapters choose a {@link Message}; this class owns its layout,
+ * status colours, glyphs and drawing. Keep input handling and transport state with the
+ * capability, and reuse this renderer when adding a plate. {@link MenuChrome} supplies
+ * the shared visual vocabulary. UI conventions live in
+ * {@code .agents/skills/ui-design-language/SKILL.md}.
+ */
 public final class TransportHud {
     // Gameplay overlay budget: one row, a second only for an exception, plate sized to content.
     private static final int MAX_WIDTH = 144;
