@@ -3239,6 +3239,31 @@ Limits: pair title presentation only; S1/S3K and inherited alternate-role art
 are unchanged, with no new gameplay-route certification.
 
 
+**TALON camera gaze follow-up (2026-11-11):** S2 BODY0–4 now turn
+three-quarter toward the viewer, with both eyes readable in the open-eye poses;
+BODY1 retains its closed-eye rise and BODY4 its open-beak smile. Fresh built-in
+GPT Image alternatives used the same real-palette 8× native references, approved
+model and WAIT. Only generated face windows are substituted: goggles, crests,
+wings, outfit, palette, boxes and native hotspots remain approved. Original
+pixels at MICA alpha overlaps preserve the native draw-order result.
+`production/talon/titles/s2-gaze-generation.json` records crops, prompts, source
+hash, alternatives and per-selector areas. The set size ratio is **1.0040**.
+
+Fresh stock/before/after captures agree on all **900** native state rows. MICA’s
+positioned body/hand alpha masks compare **3,453,727** pixels with **zero** changed
+ticks. The review contains all **186** distinct captured portrait frames at 3×
+(including pre-title presentation), a settled 5× strip, shared landmark guides
+and a lossless RGB paired 60 fps film. Evidence:
+`$HOME/scratch/agent-tmp/mt-talon-gaze-20261111/review.html`.
+Coverage rows remain authored; TALON S2 retains **133 authored / 69 native alias /
+52 N/A**, with no fallback. Final checks: queued `TestTitleCharacterPresentation`
+(6), `TestCharacterArtCoverageAudit` (3) and `TestMicaCharacterIntegration` (50)
+all pass, zero skips, under display-free surfaceless EGL; Python modding discovery
+passes all 76 tests. Both example builds validate with zero findings. Limits:
+MICA-led S2 title only; inherited alternate roles and gameplay routes are not
+newly certified.
+
+
 #### Native special-stage orientation checkpoint (superseded art)
 
 MICA and TALON now supply dedicated final-orientation drawings for Blue Sphere's
