@@ -355,3 +355,10 @@ and the banner. `s2_clip_patch.py` adds two back-row scales in palette indices
 1/3/4/5/6. It writes only transparent pixels (158 px) and leaves the native
 origin, hand and timing unchanged. The real-capture check was frames 700, 760
 and 850 of a fresh 900-tick capture.
+
+The owner then judged the settled glove too far left: it sat in the middle of
+her quills, not in front of her chest like Sonic's. HAND9 is now drawn 6 px
+right of the native hand origin (`TitlePresentation` x offset −14 rather than
+−8; also recorded in `s2-frames.json`). Selectors, timing and body origins
+stay native. TALON's transparent HAND19 is unchanged. Checked on capture ticks
+642–850 across every hand phase.
