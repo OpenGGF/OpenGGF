@@ -6,6 +6,17 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Final Death Egg boss floor and wide views:** in the giant robot fight that
+  ends Sonic 3 & Knuckles, the robot's lower body covered the girder floor. The
+  original draws the floor in front of the robot, as it does Sonic and Tails.
+  The floor is now in front at every width. Wide views also lost the planet
+  beside the robot: live play greyed out both margins, and wide trace captures
+  ended the planet with a black band on the right. The planet and floor now
+  reach the screen edges. In wide views the robot also vanished once the
+  emerald-beam chase carried the camera past the end of the level layout, and
+  black patches appeared at the bottom of the extended planet while the screen
+  shook. Both are fixed. This shipped in 0.7.
+
 - **Separate music and sound-effect volumes:** Settings → Audio has Music
   volume and Sound effects volume sliders (`audio.musicVolume`,
   `audio.sfxVolume`, 0–100%, applied on save). Each sound-chip channel takes

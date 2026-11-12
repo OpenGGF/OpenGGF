@@ -59,6 +59,26 @@ class TestLevelBoundsMaskGeometry {
         mask=LevelScrollPresentation.captureArenaMask(level);
         assertEquals(459,mask.left());assertEquals(779,mask.right());
     }
+    @Test void sceneOwningItsWidescreenMarginsIsNotMaskedAtLockedNativeBounds() {
+        var level=mock(LevelManager.class);var camera=spy(new Camera());
+        doReturn((short)800).when(camera).getWidth();
+        // A lock to one native window (min == max) masks both 240px wings by default.
+        camera.setMinX((short)0x500);camera.setMaxX((short)0x500);camera.setX((short)(0x500-240));
+        level.camera=camera;
+        var provider=mock(com.openggf.game.ZoneFeatureProvider.class,
+                withSettings().extraInterfaces(com.openggf.game.internal.NativeArenaCameraFraming.class));
+        when(level.getZoneFeatureProvider()).thenReturn(provider);
+        var framing=(com.openggf.game.internal.NativeArenaCameraFraming)provider;
+        when(framing.presentationNativeHorizontalOrigin()).thenReturn(java.util.OptionalInt.empty());
+        var mask=LevelScrollPresentation.captureArenaMask(level);
+        assertEquals(240,mask.left());assertEquals(560,mask.right());
+        when(framing.ownsWidescreenMargins()).thenReturn(true);
+        for(int x:new int[]{-0x8000,0,0x500-240,0x7FFF}){
+            camera.setX((short)x);
+            assertFalse(LevelScrollPresentation.captureArenaMask(level).visible(800),"camera "+x);
+        }
+        assertEquals(0x500,camera.getMinX());assertEquals(0x500,camera.getMaxX());
+    }
     @Test void nativeScreenProjectionUsesPublishedCopiesAndShakeAtEveryPresetWidth() {
         int[] widths={320,352,400,528,800},insets={0,16,40,104,240};
         for(int i=0;i<widths.length;i++){

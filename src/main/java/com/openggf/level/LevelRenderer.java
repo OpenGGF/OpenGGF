@@ -1447,6 +1447,7 @@ public final class LevelRenderer {
         com.openggf.graphics.TilemapGpuRendererInternalAccess.setClipHorizontal(tilemapRenderer, lm.camera.getWidth() > 320
                 && foregroundPlaneSource(currentAdvancedRenderFrameState) == TilemapGpuRenderer.Layer.FOREGROUND
                 && retainedPlane(foregroundPlaneSource(currentAdvancedRenderFrameState)) == null
+                && !ownsWidescreenMargins()
                 && (cinematicFullScroll != null ? !cinematicFullScroll.backgroundBuildParameters().foregroundWraps()
                 : lm.zoneFeatureProvider == null || !lm.zoneFeatureProvider.foregroundWrapsHorizontally()));
         boolean completeForeground = retainedPlane(TilemapGpuRenderer.Layer.FOREGROUND) != null;
@@ -1462,6 +1463,14 @@ public final class LevelRenderer {
                 || currentAdvancedRenderFrameState.enablePerLineForegroundScroll()) {
             tilemapRenderer.enablePerLineForegroundScroll(pendingFgHScrollView);
         }
+    }
+
+    /** A scene drawing its own margins addresses Plane A by plane, not camera, coordinates
+     * (final DEZ's robot scrolls with the boss past the 2560px layout); the finite
+     * camera-space clip would discard it. */
+    private boolean ownsWidescreenMargins() {
+        return lm.zoneFeatureProvider instanceof com.openggf.game.internal.NativeArenaCameraFraming framing
+                && framing.ownsWidescreenMargins();
     }
 
     private com.openggf.game.internal.RetainedPlaneDescriptorSource.Plane retainedPlane(
