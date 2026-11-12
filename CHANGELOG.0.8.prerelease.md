@@ -12,7 +12,10 @@ under the matching area heading; see the
   The floor is now in front at every width. Wide views also lost the planet
   beside the robot: live play greyed out both margins, and wide trace captures
   ended the planet with a black band on the right. The planet and floor now
-  reach the screen edges. This shipped in 0.7.
+  reach the screen edges. In wide views the robot also vanished once the
+  emerald-beam chase carried the camera past the end of the level layout, and
+  black patches appeared at the bottom of the extended planet while the screen
+  shook. Both are fixed. This shipped in 0.7.
 
 - **Sonic 1's Sonic on Sonic 3&K tumble objects:** Sonic 1 has no tumble frames,
   so a donated Sonic 1 Sonic riding a Flying Battery wire cage or another tumble
