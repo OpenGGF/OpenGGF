@@ -202,13 +202,13 @@ public final class S3kBlueSpheresScreen implements NativeMenuScreen {
     }
 
     /** The stage's exit fade left the palette white; cleared stages go to the results. */
-    private void stageFinished(boolean cleared, int ringsLeft) {
+    private GameMode stageFinished(boolean cleared, int ringsLeft) {
         session.ringsLeft = ringsLeft;
         palette.fillWhite();
         if (!cleared) {
             // loc_978E: a failed Blue Spheres stage writes Game_mode $2C.
             beginTitle();
-            return;
+            return mode();
         }
         audio.fadeOutMusic();
         try {
@@ -226,6 +226,7 @@ public final class S3kBlueSpheresScreen implements NativeMenuScreen {
         audio.playMusic(Sonic3kMusic.ACT_CLEAR.id);
         palette.fillWhite();
         enter(Phase.RESULTS_FADE_IN);
+        return mode();
     }
 
     /**

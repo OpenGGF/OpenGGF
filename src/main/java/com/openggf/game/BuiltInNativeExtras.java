@@ -1,12 +1,14 @@
 package com.openggf.game;
 
+import com.openggf.architecture.CompositionRoot;
 import com.openggf.data.RomManager;
 import com.openggf.game.nativemenu.NativeExtra;
 import com.openggf.game.sonic3k.bluespheres.S3kBlueSpheresExtra;
 
 import java.util.List;
 
-/** The engine's built-in Extras, in display order. */
+/** The engine's built-in Extras, in display order; assembles the concrete game extras. */
+@CompositionRoot
 public final class BuiltInNativeExtras {
     private static final List<NativeExtra> ALL = List.of(new S3kBlueSpheresExtra());
 

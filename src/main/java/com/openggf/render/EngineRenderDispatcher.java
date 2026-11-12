@@ -14,6 +14,35 @@ public final class EngineRenderDispatcher {
      * frame is what the display shows, so the level's clear colour applies.
      * The title's entry fade keeps the level's last frame in the same way.
      */
+    /**
+     * What an entry fade shows: nothing special, the level's last frame, or the
+     * native screen that launched the special stage.
+     */
+    public enum EntryPicture {
+        NONE, LEVEL, NATIVE_MENU;
+
+        public static EntryPicture of(boolean entryShowsLevel, boolean launchedFromNativeMenu) {
+            return !entryShowsLevel ? NONE : launchedFromNativeMenu ? NATIVE_MENU : LEVEL;
+        }
+    }
+
+    public void applyClearColor(GameMode mode, EntryPicture entry, ClearActions actions) {
+        if (entry == EntryPicture.NATIVE_MENU) {
+            Objects.requireNonNull(actions, "actions").nativeMenu();
+            return;
+        }
+        applyClearColor(mode, entry == EntryPicture.LEVEL, actions);
+    }
+
+    public void draw(GameMode mode, EntryPicture entry, boolean debugViewEnabled,
+                     DebugState debugState, DrawActions actions) {
+        if (entry == EntryPicture.NATIVE_MENU) {
+            Objects.requireNonNull(actions, "actions").nativeMenu();
+            return;
+        }
+        draw(mode, entry == EntryPicture.LEVEL, debugViewEnabled, debugState, actions);
+    }
+
     public void applyClearColor(GameMode mode, boolean entryShowsLevel,
                                 ClearActions actions) {
         Objects.requireNonNull(actions, "actions");

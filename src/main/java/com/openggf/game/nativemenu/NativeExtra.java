@@ -12,8 +12,8 @@ public interface NativeExtra {
     /** Stable identifier. */
     String id();
 
-    /** UI message key for the Extras list label. */
-    String labelKey();
+    /** The Extras list label, in the current UI language. */
+    String label();
 
     /** {@code MasterTitleScreen.GameEntry} game id of the game that hosts the extra. */
     String hostGameId();

@@ -35,7 +35,7 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider, com.op
 
     /** Receives a Blue Spheres stage's outcome: cleared, and {@code Special_stage_rings_left}. */
     public interface BlueSpheresReturn {
-        void finished(boolean cleared, int ringsLeft);
+        com.openggf.game.GameMode finished(boolean cleared, int ringsLeft);
     }
 
     private record BlueSpheresEntry(com.openggf.game.sonic3k.bluespheres.S3kBlueSpheresStage stage,
@@ -192,12 +192,11 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider, com.op
     }
 
     @Override
-    public void finishNativeMenuStage(boolean cleared) {
-        BlueSpheresEntry entry = blueSpheres;
-        if (entry == null) return;
+    public com.openggf.game.GameMode finishNativeMenuStage(boolean cleared) {
+        BlueSpheresEntry entry = java.util.Objects.requireNonNull(blueSpheres, "no native stage is running");
         int ringsLeft = manager.getRingsLeft();
         disarmBlueSpheres();
-        entry.onReturn().finished(cleared, ringsLeft);
+        return entry.onReturn().finished(cleared, ringsLeft);
     }
 
     @Override

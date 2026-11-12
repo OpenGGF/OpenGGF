@@ -2303,7 +2303,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		List<com.openggf.mods.code.OwnedTitleEntry> titleEntries =
 				modsAtBoot ? modRuntime.titleEntries() : List.of();
 		List<String> extraLabels = new ArrayList<>();
-		for (var extra : extras) extraLabels.add(com.openggf.i18n.UiMessages.text(extra.labelKey()));
+		for (var extra : extras) extraLabels.add(extra.label());
 		for (var entry : titleEntries) extraLabels.add(entry.label());
 		if (!extraLabels.isEmpty()) {
 			screen.setTitleEntries(extraLabels, !extras.isEmpty(), (games, index) -> {
@@ -3146,12 +3146,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		projectionMatrix.identity().ortho2D(0, (float) projectionWidth, 0, (float) realHeight);
 		projectionMatrix.get(matrixBuffer);
 
-		if (entryShowsNativeMenu()) {
-			clearActions.nativeMenu();
-		} else {
-			renderDispatcher.applyClearColor(getCurrentGameMode(), entryShowsLevel(),
-					clearActions);
-		}
+		renderDispatcher.applyClearColor(getCurrentGameMode(), entryPresentation(),
+				clearActions);
 		glScissor(viewportX, viewportY, viewportWidth, viewportHeight);
 		glEnable(GL_SCISSOR_TEST);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -4165,16 +4161,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	public void draw() {
-		if (entryShowsNativeMenu()) {
-			drawActions.nativeMenu();
-			return;
-		}
-		renderDispatcher.draw(getCurrentGameMode(), entryShowsLevel(), debugViewEnabled, debugState, drawActions);
+		renderDispatcher.draw(getCurrentGameMode(), entryPresentation(), debugViewEnabled, debugState, drawActions);
 	}
 
 	/** A stage launched from a native screen fades to white over that screen, not a level. */
-	private boolean entryShowsNativeMenu() {
-		return entryShowsLevel() && gameLoop.specialStageEntryShowsNativeMenu();
+	private EngineRenderDispatcher.EntryPicture entryPresentation() {
+		return EngineRenderDispatcher.EntryPicture.of(entryShowsLevel(), GameLoopNativeMenus.entryShowsNativeMenu(
+				gameLoop.getNativeMenuScreen(), gameLoop.getActiveSpecialStageProvider()));
 	}
 
 	/**

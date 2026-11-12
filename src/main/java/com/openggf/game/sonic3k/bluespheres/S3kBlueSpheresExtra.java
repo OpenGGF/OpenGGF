@@ -23,8 +23,8 @@ public final class S3kBlueSpheresExtra implements NativeExtra {
     }
 
     @Override
-    public String labelKey() {
-        return "hub.extras.blue_spheres";
+    public String label() {
+        return com.openggf.i18n.UiMessages.text("hub.extras.blue_spheres");
     }
 
     @Override

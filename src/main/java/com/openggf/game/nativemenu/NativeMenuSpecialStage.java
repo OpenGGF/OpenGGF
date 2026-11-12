@@ -14,6 +14,7 @@ public interface NativeMenuSpecialStage {
      * route. Called once, after the stage's exit fade, before the mode changes.
      *
      * @param cleared the stage ended on its goal rather than a failure
+     * @return the mode of the screen that resumes
      */
-    void finishNativeMenuStage(boolean cleared);
+    com.openggf.game.GameMode finishNativeMenuStage(boolean cleared);
 }

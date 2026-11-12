@@ -1072,15 +1072,7 @@ public class GameLoop {
     }
 
     private void finishMasterTitleFrame() {
-        if (pendingNativeExtra != null && !resolveFadeManager().isActive()) {
-            var extra = pendingNativeExtra;
-            pendingNativeExtra = null;
-            var host = java.util.Arrays.stream(MasterTitleScreen.GameEntry.values())
-                    .filter(entry -> entry.gameId.equals(extra.hostGameId())).findFirst()
-                    .orElseThrow(() -> new IllegalStateException("Unknown extra host " + extra.hostGameId()));
-            launchGameByEntry(host, () -> openNativeExtra(extra));
-            return;
-        }
+        if (nativeMenuFlow.launchPendingExtra()) return;
         if (pendingTitleEntryOpen != null && !resolveFadeManager().isActive()) {
             Runnable open = pendingTitleEntryOpen;
             pendingTitleEntryOpen = null;
@@ -1977,17 +1969,8 @@ public class GameLoop {
     private Runnable pendingHostedRunLaunch;
     private Runnable pendingTitleEntryOpen;
 
-    private com.openggf.game.nativemenu.NativeExtra pendingNativeExtra;
-
-    /** Shows a built-in extra's first screen; its host game must already be loaded. */
-    void openNativeExtra(com.openggf.game.nativemenu.NativeExtra extra) {
-        nativeMenuFlow.openNativeExtra(extra);
-    }
-
-    /** Launches a built-in extra's host game once the master title's update has returned. */
-    void requestNativeExtraOpen(com.openggf.game.nativemenu.NativeExtra extra) {
-        pendingNativeExtra = Objects.requireNonNull(extra, "extra");
-    }
+    void openNativeExtra(com.openggf.game.nativemenu.NativeExtra extra) { nativeMenuFlow.openNativeExtra(extra); }
+    void requestNativeExtraOpen(com.openggf.game.nativemenu.NativeExtra extra) { nativeMenuFlow.requestExtra(extra); }
 
     /** Opens a mod title entry once the master title's update has returned, behind a fade. */
     void requestTitleEntryOpen(Runnable open) {
@@ -2721,43 +2704,12 @@ public class GameLoop {
         return nativeMenuFlow.resolveTitleActionRoute(titleScreen);
     }
 
-    private DataSelectPresentationResolution resolveDataSelectPresentation() {
-        return nativeMenuFlow.resolveDataSelectPresentation();
-    }
-
-
-    private void executeTitleActionRoute(TitleActionRoute route, int zone, int act) {
-        nativeMenuFlow.executeTitleActionRoute(route, zone, act);
-    }
-
-    private void openNativeTitleMode(boolean options) {
-        nativeMenuFlow.openNativeTitleMode(options);
-    }
-
     void openHostedArenaScreen(com.openggf.game.nativemenu.NativeMenuScreen screen) {
         nativeMenus.open(screen);
     }
 
     com.openggf.game.nativemenu.NativeMenuScreen getNativeMenuScreen() {
         return nativeMenus.screen();
-    }
-
-    /** Starts the special stage the open native screen armed on the module's provider. */
-    void enterNativeMenuSpecialStage() {
-        var module = GameServices.module();
-        SpecialStageProvider provider = module == null ? null : module.getSpecialStageProvider();
-        if (!(provider instanceof com.openggf.game.nativemenu.NativeMenuSpecialStage nativeStage)
-                || !nativeStage.returnsToNativeMenu() || nativeMenus.screen() == null) {
-            throw new IllegalStateException("Native special-stage launch requires an armed provider and screen");
-        }
-        specialStageLifecycle.enterNativeMenuSpecialStage(provider);
-    }
-
-    /** True while a native-launched stage's entry fade still shows the launching screen. */
-    boolean specialStageEntryShowsNativeMenu() {
-        return nativeMenus.screen() != null
-                && getActiveSpecialStageProvider() instanceof com.openggf.game.nativemenu.NativeMenuSpecialStage stage
-                && stage.returnsToNativeMenu();
     }
 
     void setNativeGameplayModePublisher(Consumer<GameplayModeContext> publisher) {
@@ -2787,7 +2739,7 @@ public class GameLoop {
         userRecordingSessionLauncher.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
         pendingHostedRunLaunch = null;
         pendingTitleEntryOpen = null;
-        pendingNativeExtra = null;
+        nativeMenuFlow.requestExtra(null);
         hostedRunReturn = ignored -> { };
         hostedRuns.end(RunEndReason.ABORTED);
         specialStageLifecycle.retireForSessionReset();
@@ -3396,11 +3348,6 @@ public class GameLoop {
             GameLoop.this.doEnterSpecialStage(provider, stage, black);
         }
         @Override public void doEnterResultsScreen() { GameLoop.this.doEnterResultsScreen(); }
-        @Override public GameMode resumeNativeMenu() {
-            var screen = nativeMenus.screen();
-            if (screen == null) throw new IllegalStateException("Native special stage lost its launching screen");
-            return changeGameModeForBoundary(screen.mode());
-        }
         @Override public void lockTitleControls(boolean locked) { applyTitleCardControlLock(locked); }
         @Override public void restoreBigRingReturn(AbstractPlayableSprite playable) { GameLoop.this.restoreBigRingReturn(playable); }
         @Override public void notifyModeChanged(GameMode oldMode) {

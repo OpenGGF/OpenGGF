@@ -58,8 +58,6 @@ final class GameLoopSpecialStageLifecycle {
         Runnable debugCompletionCallback(); Runnable debugFailureCallback(); void deregisterSpecialStageAdapter();
         void doEnterSpecialStage(SpecialStageProvider provider, int stage, boolean black);
         void doEnterResultsScreen(); void lockTitleControls(boolean locked);
-        /** Returns to the open native screen's mode; the old mode is returned. */
-        GameMode resumeNativeMenu();
         void restoreBigRingReturn(AbstractPlayableSprite playable); void notifyModeChanged(GameMode oldMode);
         void requestSessionSave(SaveReason reason);
     }
@@ -316,19 +314,6 @@ final class GameLoopSpecialStageLifecycle {
     }
 
     /**
-     * Enters a stage armed by a native screen. The screen wrote the special
-     * stage's game mode itself, so there is no level, ring entry flash, power-up
-     * clear or entry sound; the stage's own fade-to-white runs over the screen.
-     */
-    void enterNativeMenuSpecialStage(SpecialStageProvider provider) {
-        if (host.fade().isActive()) {
-            return;
-        }
-        activeSpecialStageRewardKind = EmeraldRewardKind.CHAOS_EMERALD;
-        host.doEnterSpecialStage(provider, 0, false);
-    }
-
-    /**
      * Ordinary startup leaves entry-load presentation with the provider. A
      * BK2 session supplies recorded row admission instead, so it selects
      * TRACE_ACCURATE and the provider must not add another load hold. This
@@ -552,14 +537,14 @@ final class GameLoopSpecialStageLifecycle {
      */
     private void returnToNativeMenu(SpecialStageProvider ssProvider,
                                     com.openggf.game.nativemenu.NativeMenuSpecialStage nativeStage) {
-        nativeStage.finishNativeMenuStage(ssEmeraldCollected);
+        GameMode resume = nativeStage.finishNativeMenuStage(ssEmeraldCollected);
         // The stage's exit white-out may still hold the engine overlay; the
         // screen's own palette is already white and owns the fade from here.
         host.fade().cancel();
         ssProvider.reset();
         host.deregisterSpecialStageAdapter();
         activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
-        GameMode oldMode = host.resumeNativeMenu();
+        GameMode oldMode = host.changeMode(resume);
         host.notifyModeChanged(oldMode);
         LOGGER.info("Native special stage finished (cleared=" + ssEmeraldCollected + ")");
     }
