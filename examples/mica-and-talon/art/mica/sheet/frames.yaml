@@ -465,12 +465,12 @@
       "order": 8,
       "file": "frames/walk-up45-00.png",
       "hotspot": [
-        12,
+        11,
         15
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-00; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-00; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "walk-up45-01",
@@ -483,7 +483,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-01; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-01; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "walk-up45-02",
@@ -496,7 +496,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-02; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-02; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "walk-up45-03",
@@ -509,7 +509,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-03; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-03; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "walk-up45-04",
@@ -522,7 +522,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-04; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-04; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "walk-up45-05",
@@ -535,7 +535,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-05; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-05; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "walk-up45-06",
@@ -543,12 +543,12 @@
       "order": 14,
       "file": "frames/walk-up45-06.png",
       "hotspot": [
-        18,
+        19,
         20
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-06; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-06; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "walk-up45-07",
@@ -561,7 +561,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-07; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-07; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "walk-steep-00",
@@ -678,7 +678,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-00; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-00; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "walk-inverted-01",
@@ -691,7 +691,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-01; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-01; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "walk-inverted-02",
@@ -704,7 +704,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-02; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-02; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "walk-inverted-03",
@@ -717,7 +717,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-03; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-03; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "walk-inverted-04",
@@ -730,7 +730,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-04; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-04; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "walk-inverted-05",
@@ -743,7 +743,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-05; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-05; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "walk-inverted-06",
@@ -751,12 +751,12 @@
       "order": 30,
       "file": "frames/walk-inverted-06.png",
       "hotspot": [
-        19,
+        20,
         18
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-06; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-06; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "walk-inverted-07",
@@ -769,7 +769,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Deterministic Scale2x slope from walk-07; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from walk-07; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "run-up45-00",
@@ -777,12 +777,12 @@
       "order": 4,
       "file": "frames/run-up45-00.png",
       "hotspot": [
-        12,
+        11,
         18
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-00; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from run-00; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "run-up45-01",
@@ -791,11 +791,11 @@
       "file": "frames/run-up45-01.png",
       "hotspot": [
         10,
-        17
+        16
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-01; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from run-01; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "run-up45-02",
@@ -808,7 +808,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-02; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from run-02; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "run-up45-03",
@@ -821,7 +821,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-03; +45 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from run-03; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "run-steep-00",
@@ -886,7 +886,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-00; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from run-00; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "run-inverted-01",
@@ -894,12 +894,12 @@
       "order": 13,
       "file": "frames/run-inverted-01.png",
       "hotspot": [
-        17,
+        16,
         17
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-01; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from run-01; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "run-inverted-02",
@@ -908,11 +908,11 @@
       "file": "frames/run-inverted-02.png",
       "hotspot": [
         18,
-        20
+        19
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-02; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from run-02; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "run-inverted-03",
@@ -925,7 +925,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 4,
-      "notes": "Deterministic Scale2x slope from run-03; +135 degrees CCW, native support, integer contact alignment."
+      "notes": "Deterministic Scale2x slope from run-03; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
     },
     {
       "id": "roll-blur",
@@ -1445,7 +1445,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_forward-01",
@@ -1458,7 +1458,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_forward-02",
@@ -1471,7 +1471,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_forward-03",
@@ -1484,7 +1484,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_forward_up-00",
@@ -1549,7 +1549,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_up-01",
@@ -1562,7 +1562,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_up-02",
@@ -1575,7 +1575,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_up-03",
@@ -1588,7 +1588,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_down-00",
@@ -1601,7 +1601,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_down-01",
@@ -1614,7 +1614,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_down-02",
@@ -1627,7 +1627,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_down-03",
@@ -1640,7 +1640,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "variant-s1-33",

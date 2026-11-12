@@ -27,7 +27,7 @@
       "order": 0,
       "file": "../frames/s2-walk-up45-0.png",
       "hotspot": [
-        18,
+        19,
         20
       ],
       "angle_set": "up45",
@@ -51,7 +51,7 @@
       "order": 0,
       "file": "../frames/s2-walk-inverted-0.png",
       "hotspot": [
-        19,
+        20,
         20
       ],
       "angle_set": "inverted",
@@ -77,7 +77,7 @@
       "file": "../frames/s2-walk-up45-1.png",
       "hotspot": [
         20,
-        20
+        19
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -100,7 +100,7 @@
       "order": 1,
       "file": "../frames/s2-walk-inverted-1.png",
       "hotspot": [
-        20,
+        19,
         23
       ],
       "angle_set": "inverted",
@@ -150,7 +150,7 @@
       "file": "../frames/s2-walk-inverted-2.png",
       "hotspot": [
         19,
-        18
+        19
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -199,7 +199,7 @@
       "file": "../frames/s2-walk-inverted-3.png",
       "hotspot": [
         18,
-        18
+        19
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -224,7 +224,7 @@
       "file": "../frames/s2-walk-up45-4.png",
       "hotspot": [
         20,
-        20
+        19
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -247,7 +247,7 @@
       "order": 4,
       "file": "../frames/s2-walk-inverted-4.png",
       "hotspot": [
-        20,
+        19,
         22
       ],
       "angle_set": "inverted",
@@ -371,7 +371,7 @@
       "file": "../frames/s2-walk-up45-7.png",
       "hotspot": [
         21,
-        20
+        19
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -394,7 +394,7 @@
       "order": 7,
       "file": "../frames/s2-walk-inverted-7.png",
       "hotspot": [
-        20,
+        19,
         20
       ],
       "angle_set": "inverted",
@@ -419,7 +419,7 @@
       "order": 0,
       "file": "../frames/s2-run-up45-0.png",
       "hotspot": [
-        18,
+        19,
         15
       ],
       "angle_set": "up45",
@@ -443,7 +443,7 @@
       "order": 0,
       "file": "../frames/s2-run-inverted-0.png",
       "hotspot": [
-        14,
+        15,
         7
       ],
       "angle_set": "inverted",
@@ -468,7 +468,7 @@
       "order": 1,
       "file": "../frames/s2-run-up45-1.png",
       "hotspot": [
-        20,
+        19,
         16
       ],
       "angle_set": "up45",
@@ -492,7 +492,7 @@
       "order": 1,
       "file": "../frames/s2-run-inverted-1.png",
       "hotspot": [
-        17,
+        16,
         6
       ],
       "angle_set": "inverted",

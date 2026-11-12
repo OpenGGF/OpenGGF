@@ -1,27 +1,30 @@
 #!/usr/bin/env python3
 """Purpose: derive indexed slope cycles from corrected flat art, without native pixels.
-Inputs: MICA recipe/manifest and native support distances in native-pose-core.json.
+Inputs: a flat indexed frame, its hotspot, the angle and the support distance to keep.
 Origin: owner slope correction, 2026-11-08. Python + Pillow; no Java or ROM needed.
 SAnim_WalkRun (docs/s2disasm/s2.asm:38453-38502) selects offsets 0/2/4/6,
 with 8 WALK or 4 RUN phases per set. Native run mappings $35-$38 are exact
 quarter turns of $2D-$30; $39-$3C are quarter turns of $31-$34.
 Thus up45/steep/inverted are +45/+90/+135 visual counterclockwise, before
-engine facing/vertical flips. Scale2x x3, nearest rotate and decimate is a
+engine facing/vertical flips. Scale2x x3, nearest rotate and reduce is a
 RotSprite-style indexed rotation: never interpolate palette or alpha values.
 
-Two reductions exist. "nearest" (the default; MICA's shipped slopes) keeps one
-sample of each 8x8 block of the rotated master. "mode" (TALON's WALK/RUN slopes
-since 2026-11-12) first lifts the flat's silhouette ink off, so no stale outline
-is rotated into the body, keeps the most common index of each block, lets the
-caller run its material cleanup, and only then draws the 1 px ink silhouette.
+Two reductions exist. "mode" (the default, and every shipped 45 degree frame since
+2026-11-12) first lifts the flat's silhouette contour, so no stale outline is
+rotated into the body, keeps the most common index of each 8x8 block of the
+rotated master, lets the caller run its material cleanup (`finish`), and only
+then draws the 1 px ink silhouette. `ring` names the indices that form the flat's
+contour: ink for normal sheets, plus the contour slot of a powered bank, whose
+caller moves the new ink back onto that slot. "nearest" keeps one sample of each
+block; it is the superseded 2026-11-08 reduction, kept selectable for comparison.
+
+examples/mica-and-talon/production/slope_sets.py derives every shipped set
+(TALON's normal WALK/RUN through production/talon/walk_cleanup.py).
 """
-import argparse
-import json
 import math
 from collections import Counter
-from pathlib import Path
 from PIL import Image
-from pipeline import outline, build
+from pipeline import outline
 
 ANGLES = {'up45':45, 'steep':90, 'inverted':135}
 
@@ -43,20 +46,22 @@ def scale2x(im):
     return out
 
 
-def lift_ring(im):
-    """Give each silhouette ink pixel the material beside it, so the outline is redrawn after a turn."""
+def lift_ring(im, ring=(1,)):
+    """Give each silhouette contour pixel the material beside it, so the outline is redrawn after a turn."""
     out = im.copy()
     px, dst = im.load(), out.load()
     def at(x, y):
         return px[x,y] if 0 <= x < im.width and 0 <= y < im.height else 0
+    def body(v):
+        return v and v not in ring
     for y in range(im.height):
         for x in range(im.width):
-            if px[x,y] != 1 or all(at(x+a,y+b) for a,b in ((-1,0),(1,0),(0,-1),(0,1))):
+            if px[x,y] not in ring or all(at(x+a,y+b) for a,b in ((-1,0),(1,0),(0,-1),(0,1))):
                 continue
-            near = [at(x+a,y+b) for a,b in ((-1,0),(1,0),(0,-1),(0,1)) if at(x+a,y+b) > 1]
+            near = [at(x+a,y+b) for a,b in ((-1,0),(1,0),(0,-1),(0,1)) if body(at(x+a,y+b))]
             if not near:
-                near = [at(x+a,y+b) for a in (-1,0,1) for b in (-1,0,1) if at(x+a,y+b) > 1]
-            if near:  # an all-ink limb stays ink
+                near = [at(x+a,y+b) for a in (-1,0,1) for b in (-1,0,1) if body(at(x+a,y+b))]
+            if near:  # an all-contour limb keeps its index
                 counts = Counter(near); top = max(counts.values())
                 dst[x,y] = min(k for k,n in counts.items() if n == top)
     return out
@@ -78,17 +83,17 @@ def mode_reduce(big, size, factor=8):
     return out
 
 
-def rotate(im, angle, method='nearest', finish=None):
+def rotate(im, angle, method='mode', finish=None, ring=(1,)):
     """finish (mode only) takes and returns the 45 degree image before it is inked; quarter turns never see it."""
     if method not in ('nearest', 'mode'):
         raise ValueError('Unknown reduction: ' + str(method))
     if angle == 90:
         return im.transpose(Image.Transpose.ROTATE_90)
     if angle == 135:
-        return rotate(im,45,method,finish).transpose(Image.Transpose.ROTATE_90)
+        return rotate(im,45,method,finish,ring).transpose(Image.Transpose.ROTATE_90)
     if angle != 45:
         raise ValueError('Expected 45, 90 or 135')
-    big = lift_ring(im) if method == 'mode' else im
+    big = lift_ring(im, ring) if method == 'mode' else im
     for _ in range(3):
         big = scale2x(big)
     big = big.rotate(45, resample=Image.Resampling.NEAREST,
@@ -100,10 +105,10 @@ def rotate(im, angle, method='nearest', finish=None):
     return outline(finish(small) if finish else small)
 
 
-def derive(flat, hotspot, angle, support, method='nearest', finish=None):
+def derive(flat, hotspot, angle, support, method='mode', finish=None, ring=(1,)):
     canvas = Image.new('P',(128,128)); canvas.putpalette(flat.getpalette())
     canvas.paste(flat,(64-hotspot[0],64-hotspot[1]))
-    rotated = rotate(canvas,angle,method,finish)
+    rotated = rotate(canvas,angle,method,finish,ring)
     sn, cs = math.sin(math.radians(angle)), math.cos(math.radians(angle))
     def distance(x,y): return (x-64)*sn+(y-64)*cs
     actual = max(distance(x,y) for y in range(128) for x in range(128) if rotated.getpixel((x,y)))
@@ -117,31 +122,3 @@ def derive(flat, hotspot, angle, support, method='nearest', finish=None):
     if box is None or min(box[:2])==0 or max(box[2:])==128:
         raise ValueError('Slope exceeds work canvas')
     return moved.crop(box), [64-box[0],64-box[1]]
-
-
-def regenerate(root):
-    recipe=json.loads((root/'recipe.json').read_text())
-    manifest=json.loads((root/'frames.yaml').read_text())
-    meta=json.loads((root/'native-pose-core.json').read_text())
-    flats={f['id']:f for f in manifest['frames'] if f['angle_set']=='flat'}
-    for f in recipe['frames']:
-        if f['animation'] not in ('WALK','RUN') or f['angle_set']=='flat': continue
-        key=f['id']; group, slope, phase=key.split('-');base=f'{group}-{phase}'
-        origin=flats[base];source=meta['frames'][key];angle=ANGLES[slope]
-        with Image.open(root/origin['file']) as flat:
-            im,hot=derive(flat,origin['hotspot'],angle,source['native_support'])
-        for field in list(f):
-            if field not in ('id','animation','order','angle_set','ticks'): del f[field]
-        f['notes']=f'Deterministic Scale2x slope from {base}; +{angle} degrees CCW, native support, integer contact alignment.'
-        f['native_pixels']={'rows':[''.join(format(im.getpixel((x,y)),'x') for x in range(im.width)) for y in range(im.height)],'anchor':hot}
-        source.update(geometry_reference={'size':list(im.size),'hotspot':hot},native_size=list(im.size),hotspot=hot,
-                      owner_fix=f['notes'],derived_from=base,rotation_degrees=angle)
-    (root/'recipe.json').write_text(json.dumps(recipe,indent=2)+'\n')
-    (root/'native-pose-core.json').write_text(json.dumps(meta,indent=2)+'\n')
-    build(root/'recipe.json')
-
-
-if __name__=='__main__':
-    parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('root',type=Path)
-    regenerate(parser.parse_args().root)

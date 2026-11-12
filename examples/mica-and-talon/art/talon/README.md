@@ -105,6 +105,15 @@ change size or hotspot by one pixel. Flat WALK now scores 0.22 on the audit's no
 [`walk-cleanup.json`](../../production/talon/walk-cleanup.json). The rest of the sheet was measured
 and left as it is: WAIT and most other poses score what WALK did before.
 
+**Solar slopes on the mode reduction (2026-11-12).** The 48 up45/inverted Solar WALK and RUN
+frames (S2 and S3K banks) are re-derived from their unchanged flats with the same reduction, by
+`production/slope_sets.py`. Bronze slot 2 (contour, bars, moustache) is lifted from the silhouette
+before the turn and the new outline goes back on it; white-gold plumage and cream/white are
+despeckled within their own material, and the bars, flame tips, goggles and shoes pass through
+untouched. They previously carried the fixed ink of the pre-remap flat inside the body. Each frame
+keeps the support distance of the frame it replaces, now recorded as `support_kept` in
+`powered-concepts-generation.json`. The audit's noise measure goes from 0.19 to 0.17–0.18.
+
 `production/talon/feedback_art.py` reproduces every selected/converted image from
 original indexed rows; raw generations and decoded native references stay outside
 Git. `production/talon/PoweredFeedbackCapture.java` is the maintained native-clock

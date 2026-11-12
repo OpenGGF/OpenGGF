@@ -36,7 +36,6 @@ inverted the quarter turn of up45. Each frame keeps the support distance of the 
 import argparse
 import json
 import sys
-from collections import Counter
 from pathlib import Path
 from PIL import Image
 
@@ -46,6 +45,7 @@ PROD = ROOT / 'examples/mica-and-talon/production/talon'
 RECORD = PROD / 'walk-cleanup.json'
 sys.path.insert(0, str(ROOT / 'tools/modding/playable_art'))
 from derive_slopes import ANGLES, derive  # noqa: E402
+from despeckle import despeckle  # noqa: E402
 
 N4 = ((-1, 0), (1, 0), (0, -1), (0, 1))
 MATERIAL = {2: 'plumage', 3: 'plumage', 4: 'plumage', 5: 'plumage',
@@ -61,77 +61,9 @@ RESCALE_NOTE = '2026-11-12: walk_cleanup.py, see walk-cleanup.json.'
 
 
 def clean(grid, lum):
+    """Rules 1-3 are tools/modding/playable_art/despeckle.py; rule 4 is his plumage band."""
+    grid = despeckle(grid, lum, MATERIAL, protect=('light',), rounds=ROUNDS)
     height, width = len(grid), len(grid[0])
-    grid = [row[:] for row in grid]
-
-    def pick(value, candidates):
-        counts = Counter(candidates)
-        top = max(counts.values())
-        return min((k for k, n in counts.items() if n == top), key=lambda k: (abs(lum[k] - lum[value]), k))
-
-    def allowed(value, target):
-        return MATERIAL[value] != 'light' or lum[target] >= lum[value]
-
-    for _ in range(ROUNDS):
-        def at(x, y):
-            return grid[y][x] if 0 <= x < width and 0 <= y < height else 0
-
-        changed = 0
-        after = [row[:] for row in grid]
-        for y in range(height):
-            for x in range(width):
-                value = grid[y][x]
-                material = MATERIAL.get(value)
-                if not material or any(at(x + a, y + b) == value for a, b in N4):
-                    continue
-                own = [at(x + a, y + b) for a, b in N4 if MATERIAL.get(at(x + a, y + b)) == material]
-                if len(own) >= 2:  # rule 1
-                    target = pick(value, own)
-                    if allowed(value, target):
-                        after[y][x] = target
-                        changed += 1
-                    continue
-                for a, b in ((1, 0), (0, 1)):  # rule 2
-                    p, q = at(x - a, y - b), at(x + a, y + b)
-                    if p < 2 or q < 2 or p == q or not (lum[p] < lum[value] < lum[q] or lum[p] > lum[value] > lum[q]):
-                        continue
-                    near = [k for k in (p, q) if MATERIAL.get(k) == material and allowed(value, k)]
-                    if near:
-                        after[y][x] = min(near, key=lambda k: (abs(lum[k] - lum[value]), k))
-                        changed += 1
-                        break
-        grid = after
-        after = [row[:] for row in grid]
-        seen = set()
-        for y in range(height):
-            for x in range(width):
-                value = grid[y][x]
-                material = MATERIAL.get(value)
-                if not material or (x, y) in seen:
-                    continue
-                patch, todo = [(x, y)], [(x, y)]
-                seen.add((x, y))
-                while todo:
-                    cx, cy = todo.pop()
-                    for a, b in N4:
-                        near = (cx + a, cy + b)
-                        if near not in seen and at(*near) == value:
-                            seen.add(near)
-                            patch.append(near)
-                            todo.append(near)
-                if len(patch) != 2:
-                    continue
-                ring = [at(cx + a, cy + b) for cx, cy in patch for a, b in N4 if (cx + a, cy + b) not in patch]
-                own = [k for k in ring if MATERIAL.get(k) == material]
-                if len(own) >= 4 and len(own) >= 0.6 * len([k for k in ring if k]):  # rule 3
-                    target = pick(value, own)
-                    if allowed(value, target):
-                        for cx, cy in patch:
-                            after[cy][cx] = target
-                        changed += 2
-        grid = after
-        if not changed:
-            break
 
     def at(x, y):
         return grid[y][x] if 0 <= x < width and 0 <= y < height else 0

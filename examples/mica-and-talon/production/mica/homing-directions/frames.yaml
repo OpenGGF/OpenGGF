@@ -15,7 +15,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_forward-01",
@@ -28,7 +28,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_forward-02",
@@ -41,7 +41,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_forward-03",
@@ -54,7 +54,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_forward_up-00",
@@ -119,7 +119,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_up-01",
@@ -132,7 +132,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_up-02",
@@ -145,7 +145,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_up-03",
@@ -158,7 +158,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_forward_down-00",
@@ -223,7 +223,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_down-01",
@@ -236,7 +236,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_down-02",
@@ -249,7 +249,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     },
     {
       "id": "homing_dive_down-03",
@@ -262,7 +262,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
     }
   ],
   "aliases": {

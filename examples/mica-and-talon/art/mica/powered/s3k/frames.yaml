@@ -125,7 +125,7 @@
       "order": 2,
       "file": "../frames/s3k-walk-up45-2.png",
       "hotspot": [
-        20,
+        21,
         14
       ],
       "angle_set": "up45",
@@ -149,7 +149,7 @@
       "order": 2,
       "file": "../frames/s3k-walk-inverted-2.png",
       "hotspot": [
-        15,
+        16,
         20
       ],
       "angle_set": "inverted",
@@ -248,7 +248,7 @@
       "file": "../frames/s3k-walk-inverted-4.png",
       "hotspot": [
         20,
-        18
+        19
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -273,7 +273,7 @@
       "file": "../frames/s3k-walk-up45-5.png",
       "hotspot": [
         20,
-        17
+        16
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -296,7 +296,7 @@
       "order": 5,
       "file": "../frames/s3k-walk-inverted-5.png",
       "hotspot": [
-        18,
+        17,
         24
       ],
       "angle_set": "inverted",
@@ -321,7 +321,7 @@
       "order": 6,
       "file": "../frames/s3k-walk-up45-6.png",
       "hotspot": [
-        25,
+        26,
         15
       ],
       "angle_set": "up45",
@@ -345,7 +345,7 @@
       "order": 6,
       "file": "../frames/s3k-walk-inverted-6.png",
       "hotspot": [
-        17,
+        18,
         17
       ],
       "angle_set": "inverted",
@@ -395,7 +395,7 @@
       "file": "../frames/s3k-walk-inverted-7.png",
       "hotspot": [
         17,
-        17
+        16
       ],
       "angle_set": "inverted",
       "duration_ticks": 1
@@ -420,7 +420,7 @@
       "file": "../frames/s3k-run-up45-0.png",
       "hotspot": [
         20,
-        13
+        12
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -443,7 +443,7 @@
       "order": 0,
       "file": "../frames/s3k-run-inverted-0.png",
       "hotspot": [
-        17,
+        16,
         9
       ],
       "angle_set": "inverted",
@@ -469,7 +469,7 @@
       "file": "../frames/s3k-run-up45-1.png",
       "hotspot": [
         24,
-        13
+        12
       ],
       "angle_set": "up45",
       "duration_ticks": 1
@@ -492,7 +492,7 @@
       "order": 1,
       "file": "../frames/s3k-run-inverted-1.png",
       "hotspot": [
-        21,
+        20,
         9
       ],
       "angle_set": "inverted",

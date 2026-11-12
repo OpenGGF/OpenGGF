@@ -1719,6 +1719,16 @@ frames with a new mode-reduced rotation in `derive_slopes.py`. Flat WALK is now 
 the 45° sets 0.13–0.14. The route-2 flats (`walk-00`..`02`, `run-02`) are cleaner but still drawn
 more coarsely than their neighbours; matching the flight set's line quality there needs new art.
 WAIT and the other poses were measured and deliberately left.
+The owner then asked whether the new slope method should serve every set; it now does.
+`production/slope_sets.py` derives MICA's WALK/RUN slopes, her homing-dive directions, her Open Cone
+slopes and Solar TALON's slopes with `derive_slopes.derive(method='mode')` and the shared
+`despeckle.py`, each from its unchanged flat at its recorded support distance: 124 frames, plus the
+twelve homing-direction mirror copies under `production/`. `mode` is the tool's default, and
+`ring` lets a powered bank lift and redraw its silhouette on contour slot 2. MICA's re-derivation
+test is re-pinned to the new method and fails when a frame is reverted. No flat pose was despeckled
+in this step. Left alone because they are not turned by this tool: the special-stage sets
+(`locked_stage.py`, per-part rotation with its own `--check`) and the S3K title hand
+(`titles/s3k_hand_anatomy.py`); steep frames and other quarter turns are lossless either way.
 
 **Powered-form owner feedback, 2026-11-11:** powered binding selects the creator’s
 movement archetype; native Tails families retain Tails clocks instead of consuming

@@ -3205,16 +3205,16 @@
       },
       "geometry_reference": {
         "size": [
-          29,
+          28,
           34
         ],
         "hotspot": [
-          12,
+          11,
           15
         ]
       },
       "native_size": [
-        29,
+        28,
         34
       ],
       "previous_size": [
@@ -3226,12 +3226,12 @@
         16
       ],
       "hotspot": [
-        12,
+        11,
         15
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.091883092036785,
-      "owner_fix": "Deterministic Scale2x slope from walk-00; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-00; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-00",
       "rotation_degrees": 45
     },
@@ -3277,7 +3277,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.091883092036785,
-      "owner_fix": "Deterministic Scale2x slope from walk-01; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-01; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-01",
       "rotation_degrees": 45
     },
@@ -3323,7 +3323,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 17.677669529663692,
-      "owner_fix": "Deterministic Scale2x slope from walk-02; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-02; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-02",
       "rotation_degrees": 45
     },
@@ -3369,7 +3369,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 17.67766952966369,
-      "owner_fix": "Deterministic Scale2x slope from walk-03; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-03; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-03",
       "rotation_degrees": 45
     },
@@ -3415,7 +3415,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.091883092036785,
-      "owner_fix": "Deterministic Scale2x slope from walk-04; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-04; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-04",
       "rotation_degrees": 45
     },
@@ -3461,7 +3461,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.091883092036785,
-      "owner_fix": "Deterministic Scale2x slope from walk-05; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-05; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-05",
       "rotation_degrees": 45
     },
@@ -3485,7 +3485,7 @@
           44
         ],
         "hotspot": [
-          18,
+          19,
           20
         ]
       },
@@ -3502,12 +3502,12 @@
         16
       ],
       "hotspot": [
-        18,
+        19,
         20
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 16.263455967290597,
-      "owner_fix": "Deterministic Scale2x slope from walk-06; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-06; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-06",
       "rotation_degrees": 45
     },
@@ -3553,7 +3553,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 17.67766952966369,
-      "owner_fix": "Deterministic Scale2x slope from walk-07; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-07; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-07",
       "rotation_degrees": 45
     },
@@ -3942,7 +3942,7 @@
       "geometry_reference": {
         "size": [
           34,
-          29
+          28
         ],
         "hotspot": [
           15,
@@ -3951,7 +3951,7 @@
       },
       "native_size": [
         34,
-        29
+        28
       ],
       "previous_size": [
         43,
@@ -3967,7 +3967,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79898987322333,
-      "owner_fix": "Deterministic Scale2x slope from walk-00; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-00; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-00",
       "rotation_degrees": 135
     },
@@ -4013,7 +4013,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79898987322333,
-      "owner_fix": "Deterministic Scale2x slope from walk-01; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-01; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-01",
       "rotation_degrees": 135
     },
@@ -4059,7 +4059,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 18.38477631085024,
-      "owner_fix": "Deterministic Scale2x slope from walk-02; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-02; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-02",
       "rotation_degrees": 135
     },
@@ -4105,7 +4105,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 18.384776310850235,
-      "owner_fix": "Deterministic Scale2x slope from walk-03; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-03; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-03",
       "rotation_degrees": 135
     },
@@ -4151,7 +4151,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79898987322333,
-      "owner_fix": "Deterministic Scale2x slope from walk-04; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-04; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-04",
       "rotation_degrees": 135
     },
@@ -4197,7 +4197,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79898987322333,
-      "owner_fix": "Deterministic Scale2x slope from walk-05; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-05; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-05",
       "rotation_degrees": 135
     },
@@ -4221,7 +4221,7 @@
           37
         ],
         "hotspot": [
-          19,
+          20,
           18
         ]
       },
@@ -4238,12 +4238,12 @@
         16
       ],
       "hotspot": [
-        19,
+        20,
         18
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 16.970562748477143,
-      "owner_fix": "Deterministic Scale2x slope from walk-06; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-06; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-06",
       "rotation_degrees": 135
     },
@@ -4289,7 +4289,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 18.384776310850235,
-      "owner_fix": "Deterministic Scale2x slope from walk-07; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from walk-07; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "walk-07",
       "rotation_degrees": 135
     },
@@ -4309,16 +4309,16 @@
       },
       "geometry_reference": {
         "size": [
-          30,
+          29,
           38
         ],
         "hotspot": [
-          12,
+          11,
           18
         ]
       },
       "native_size": [
-        30,
+        29,
         38
       ],
       "previous_size": [
@@ -4330,12 +4330,12 @@
         18
       ],
       "hotspot": [
-        12,
+        11,
         18
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.091883092036785,
-      "owner_fix": "Deterministic Scale2x slope from run-00; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from run-00; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "run-00",
       "rotation_degrees": 45
     },
@@ -4356,16 +4356,16 @@
       "geometry_reference": {
         "size": [
           27,
-          36
+          35
         ],
         "hotspot": [
           10,
-          17
+          16
         ]
       },
       "native_size": [
         27,
-        36
+        35
       ],
       "previous_size": [
         41,
@@ -4377,11 +4377,11 @@
       ],
       "hotspot": [
         10,
-        17
+        16
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.091883092036785,
-      "owner_fix": "Deterministic Scale2x slope from run-01; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from run-01; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "run-01",
       "rotation_degrees": 45
     },
@@ -4401,7 +4401,7 @@
       },
       "geometry_reference": {
         "size": [
-          31,
+          30,
           34
         ],
         "hotspot": [
@@ -4410,7 +4410,7 @@
         ]
       },
       "native_size": [
-        31,
+        30,
         34
       ],
       "previous_size": [
@@ -4427,7 +4427,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.091883092036785,
-      "owner_fix": "Deterministic Scale2x slope from run-02; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from run-02; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "run-02",
       "rotation_degrees": 45
     },
@@ -4473,7 +4473,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.091883092036785,
-      "owner_fix": "Deterministic Scale2x slope from run-03; +45 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from run-03; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "run-03",
       "rotation_degrees": 45
     },
@@ -4678,7 +4678,7 @@
       "geometry_reference": {
         "size": [
           38,
-          30
+          29
         ],
         "hotspot": [
           18,
@@ -4687,7 +4687,7 @@
       },
       "native_size": [
         38,
-        30
+        29
       ],
       "previous_size": [
         42,
@@ -4703,7 +4703,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79898987322333,
-      "owner_fix": "Deterministic Scale2x slope from run-00; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from run-00; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "run-00",
       "rotation_degrees": 135
     },
@@ -4723,16 +4723,16 @@
       },
       "geometry_reference": {
         "size": [
-          36,
+          35,
           27
         ],
         "hotspot": [
-          17,
+          16,
           17
         ]
       },
       "native_size": [
-        36,
+        35,
         27
       ],
       "previous_size": [
@@ -4744,12 +4744,12 @@
         19
       ],
       "hotspot": [
-        17,
+        16,
         17
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79898987322333,
-      "owner_fix": "Deterministic Scale2x slope from run-01; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from run-01; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "run-01",
       "rotation_degrees": 135
     },
@@ -4770,16 +4770,16 @@
       "geometry_reference": {
         "size": [
           34,
-          31
+          30
         ],
         "hotspot": [
           18,
-          20
+          19
         ]
       },
       "native_size": [
         34,
-        31
+        30
       ],
       "previous_size": [
         42,
@@ -4791,11 +4791,11 @@
       ],
       "hotspot": [
         18,
-        20
+        19
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79898987322333,
-      "owner_fix": "Deterministic Scale2x slope from run-02; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from run-02; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "run-02",
       "rotation_degrees": 135
     },
@@ -4841,7 +4841,7 @@
       ],
       "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
       "native_support": 19.79898987322333,
-      "owner_fix": "Deterministic Scale2x slope from run-03; +135 degrees CCW, native support, integer contact alignment.",
+      "owner_fix": "Deterministic Scale2x slope from run-03; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment.",
       "derived_from": "run-03",
       "rotation_degrees": 135
     },

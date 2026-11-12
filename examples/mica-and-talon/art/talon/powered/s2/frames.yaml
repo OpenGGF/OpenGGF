@@ -209,7 +209,7 @@
       "order": 3,
       "file": "frames/run-up45-3.png",
       "hotspot": [
-        16,
+        15,
         22
       ],
       "angle_set": "up45",
@@ -366,7 +366,7 @@
       "file": "frames/walk-inverted-0.png",
       "hotspot": [
         20,
-        18
+        19
       ],
       "angle_set": "inverted",
       "duration_ticks": 2,
@@ -391,8 +391,8 @@
       "order": 1,
       "file": "frames/walk-up45-1.png",
       "hotspot": [
-        21,
-        18
+        20,
+        17
       ],
       "angle_set": "up45",
       "duration_ticks": 2,
@@ -417,7 +417,7 @@
       "order": 1,
       "file": "frames/walk-inverted-1.png",
       "hotspot": [
-        20,
+        19,
         19
       ],
       "angle_set": "inverted",
@@ -443,7 +443,7 @@
       "order": 2,
       "file": "frames/walk-up45-2.png",
       "hotspot": [
-        20,
+        19,
         20
       ],
       "angle_set": "up45",
@@ -547,7 +547,7 @@
       "order": 4,
       "file": "frames/walk-up45-4.png",
       "hotspot": [
-        21,
+        20,
         18
       ],
       "angle_set": "up45",
@@ -599,7 +599,7 @@
       "order": 5,
       "file": "frames/walk-up45-5.png",
       "hotspot": [
-        21,
+        20,
         21
       ],
       "angle_set": "up45",
@@ -651,7 +651,7 @@
       "order": 6,
       "file": "frames/walk-up45-6.png",
       "hotspot": [
-        22,
+        23,
         19
       ],
       "angle_set": "up45",
@@ -677,7 +677,7 @@
       "order": 6,
       "file": "frames/walk-inverted-6.png",
       "hotspot": [
-        20,
+        21,
         16
       ],
       "angle_set": "inverted",

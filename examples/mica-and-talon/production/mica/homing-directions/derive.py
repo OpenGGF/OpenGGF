@@ -1,4 +1,7 @@
-"""Use the owner-approved indexed rotation tool, no generated directional art."""
+"""Use the owner-approved indexed rotation tool, no generated directional art.
+Superseded 2026-11-12: this recorded the first derivation (nearest reduction, pre-refactor paths).
+production/slope_sets.py now derives the same directions with the mode reduction and keeps this
+directory's frames, frames.yaml and recipe.json in step; run that instead."""
 import sys,json,shutil
 from pathlib import Path
 from PIL import Image

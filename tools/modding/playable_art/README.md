@@ -611,14 +611,24 @@ Speckle that is uniform across a sheet still shows most in loops, because it boi
 python3 tools/modding/playable_art/noise_audit.py examples/mica-and-talon/art/talon/sheet --summary
 ```
 
-`derive_slopes.derive(..., method='mode', finish=...)` is the second 45° reduction. The default
-`nearest` keeps one sample of each 8×8 block of the rotated Scale2x master and re-inks the edge,
-which leaves the flat's old outline scattered inside the body. `mode` lifts the silhouette ink
-first, keeps the commonest index of each block, hands the uninked 45° image to `finish` for the
-caller's material cleanup, then draws the 1 px ink silhouette. Quarter turns stay exact in both.
-MICA's shipped slopes remain `nearest` (her re-derivation test pins them); TALON's WALK/RUN slopes
-use `mode` through `examples/mica-and-talon/production/talon/walk_cleanup.py`, which is also the
-worked example of a material-aware despeckle that never crosses a material or touches ink.
+`derive_slopes.derive(..., method='mode', finish=..., ring=...)` is the 45° reduction every shipped
+set uses. It lifts the flat's silhouette contour, enlarges with Scale2x three times, turns, keeps the
+commonest index of each 8×8 block, hands the uninked 45° image to `finish` for the caller's material
+cleanup, then draws the 1 px ink silhouette. `ring` names the indices that form the flat's contour:
+ink on a normal sheet, plus the contour slot of a powered bank, whose caller moves the new ink back
+onto that slot. Quarter turns stay exact. The older `nearest` reduction (one sample per block, edge
+re-inked) left the flat's outline scattered inside the body, about four points more ink than the
+flat; it stays selectable for comparison but nothing ships with it.
+
+`despeckle.py` is the shared cleanup: isolated pixels, one-pixel anti-alias steps and two-pixel flecks
+fold into the surrounding shade of their own material. The caller supplies the index-to-material map,
+so nothing crosses a material, and unmapped detail and ink pass through untouched; protected materials
+(white, cream) are never darkened.
+
+`examples/mica-and-talon/production/slope_sets.py --check` derives MICA's WALK/RUN slopes and
+homing-dive directions, her Open Cone slopes and Solar TALON's slopes; TALON's normal WALK/RUN set is
+`production/talon/walk_cleanup.py`, which also cleans its flats. `test_playable_art_slopes.py`
+re-derives MICA's 36 slope frames from her flats and runs both scripts.
 
 ## Production special-stage character probe
 

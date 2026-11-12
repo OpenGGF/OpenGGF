@@ -29,6 +29,22 @@ The remaining scripts record individual production steps and may require externa
 raw generations or ROM references; the ordinary build never runs them. Changes
 to approved drawings need the native-style and render checks described above.
 
+## Slope sets on the mode reduction, 2026-11-12
+
+Every frame of hers that is turned from a flat drawing rather than drawn now uses the reduction
+TALON's walk slopes introduced (`derive_slopes.derive(method='mode')`): the flat's outline is lifted
+before the turn, each pixel is the commonest index of its 8×8 block of the rotated Scale2x master,
+speckle folds into the surrounding shade of its own material (scales, sand, white; coral, pink,
+brown and ink untouched), and the silhouette is inked last. That covers the 24 up45/inverted WALK
+and RUN slopes, the 12 homing-dive frames turned ±45° and 135° (FORWARD, UP, DOWN), and the 40
+up45/inverted Open Cone slopes of the S2 and S3K banks, which Gilded and Hyper share and which keep
+their silhouette on contour slot 2. Steep frames and HOMING_DIVE_FORWARD_UP are exact quarter turns
+and did not change; no flat drawing changed. Each frame keeps its recorded support distance; sizes or
+hotspots move by a pixel on some frames. On the noise audit the normal slopes go from 0.23–0.24 to
+0.13–0.14, the homing dives from 0.23 to 0.11 and Open Cone from 0.15–0.18 to 0.12–0.14.
+`production/slope_sets.py --check` rebuilds all of them and keeps `recipe.json`,
+`native-pose-core.json`, the homing-directions mirror and `powered-concepts-generation.json` in step.
+
 ## Carried frames tonal re-shade, 2026-11-12
 
 `hang-00`..`02` (HANG, HANG2 and the `TAILS_CARRIED` script) kept the selective material
