@@ -4166,7 +4166,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	/** A stage launched from a native screen fades to white over that screen, not a level. */
 	private EngineRenderDispatcher.EntryPicture entryPresentation() {
-		return EngineRenderDispatcher.EntryPicture.of(entryShowsLevel(), GameLoopNativeMenus.entryShowsNativeMenu(
+		boolean level = entryShowsLevel(); // Only a live stage entry may resolve the active provider.
+		return EngineRenderDispatcher.EntryPicture.of(level, level && GameLoopNativeMenus.entryShowsNativeMenu(
 				gameLoop.getNativeMenuScreen(), gameLoop.getActiveSpecialStageProvider()));
 	}
 
