@@ -255,9 +255,13 @@ Read the Stageplay first-creator lesson before choosing the teaching sequence.
 - Prefer one take across a natural chain over cutting it up. Good chains are
   menu → title card → level, or map → node → fight → victory.
 - Preserve lossless source frames where the capture workflow supports them.
-  `GameplayCaptureTool --audio` records music and SFX as one mix, and there is
-  no SFX-only stem. Under an editorial bed, capture silently and add ROM
-  stingers rendered with `FmSfxRenderTool --sfx <id> --paced`.
+  `GameplayCaptureTool --audio` records music and SFX as one mix at full level.
+  `--audio --no-music` records the game's own SFX with the music silenced: a
+  genuine SFX-only stem, timed to the picture by the game itself. Under an
+  editorial bed, prefer that stem for clip audio; for punctuation the clip
+  never produced, add ROM stingers rendered with
+  `FmSfxRenderTool --sfx <id> --paced`. Silencing scales output only, so the
+  driver state, gameplay and state CSV match the `--audio` take.
   Stageplay exports combine authored cues with native world SFX; avoid mixing that soundtrack
   with a second unplanned bed in the compositor.
 - Gameplay start positions must be real for the act; disclose debug jumps and
@@ -531,15 +535,16 @@ signature move is what makes it a brand.
   ring. A draft that used `$33` alone put every ring "stuck on the right channel".
   Alternate the pair as the game does, or centre a lone stinger. `check` warns about a
   one-sided stinger that is not part of an alternating run.
-- Under an editorial bed, clip audio is SFX only, with one owner for each intended
-  music/effect layer. Keep speech intelligible and avoid duplicating Stageplay's
+- Under an editorial bed, clip audio is SFX only (capture with `--audio --no-music`),
+  with one owner for each intended music/effect layer. Keep speech intelligible and avoid duplicating Stageplay's
   authored audio in the edit. Duck menu
   stretches. Keep genuine native audio when it is the subject, for example a
   speed effect or an announcer.
 - `master()` targets about −16 dBFS RMS, not measured −16 LUFS. Measure integrated
   and sectional loudness across story/tutorial boundaries and the true peak of the
   AAC-encoded file, not only the PCM. A whole-film average can hide an abrupt level
-  step; continuous music needs genuine SFX-only stems beneath it.
+  step; continuous music needs genuine SFX-only stems beneath it, which
+  `--audio --no-music` provides.
 
 ## Editorial review before delivery
 

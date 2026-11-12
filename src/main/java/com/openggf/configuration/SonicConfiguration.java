@@ -177,6 +177,10 @@ public enum SonicConfiguration {
 	 * Whether to enable Audio (Music/SFX)
 	 */
 	AUDIO_ENABLED,
+    /** Music volume from 0 to 100 percent; 0 silences music and keeps sound effects. */
+    AUDIO_MUSIC_VOLUME,
+    /** Sound-effect volume from 0 to 100 percent. */
+    AUDIO_SFX_VOLUME,
     AUDIO_HUB_MUSIC_ENABLED,
     AUDIO_HUB_MUSIC_VOLUME,
     /** Personal display filter for multiplayer player names and chat messages. */

@@ -53,7 +53,9 @@ live OpenAL/device backend and rely on volume zero or desktop mute.
   `HeadlessSmpsAudioBackend`, whose device hooks are no-ops and whose presentation
   sink is `NoDeviceAudioSink`. `HeadlessGameBoot` installs it before level music
   when `AUDIO_ENABLED=true`; gameplay capture's `--audio` enables that path before
-  boot. Drain the production capture lease to the output file using the capture
+  boot. Gameplay, trace and Stageplay captures pin `audio.musicVolume` and
+  `audio.sfxVolume` to 100 so a player's saved mix never reaches evidence;
+  gameplay capture's `--no-music` sets music to 0 for an SFX-only take. Drain the production capture lease to the output file using the capture
   tool's existing cadence. Captured PCM does not require speaker playback.
 - Component GL contexts do not configure audio. If a component test also boots
   audio/gameplay, apply the same no-device ownership rule. Clean up owned audio

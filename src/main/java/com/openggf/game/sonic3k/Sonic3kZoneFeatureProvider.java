@@ -201,6 +201,48 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
                     .orElse(false);
     }
 
+    /**
+     * The final DEZ arena draws its own widescreen margins: the planet extension
+     * ({@link com.openggf.game.sonic3k.render.DezPlanetBackground}), the floor ring and the
+     * robot's authored body. Its native camera bounds lock to the 320px window for most of
+     * the fight, so the shared bounds mask would otherwise grey out that extension.
+     */
+    @Override public boolean ownsWidescreenMargins() {
+        return GameServices.hasRuntime() && getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA
+                && GameServices.level().getFeatureActId() == 0
+                && GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState;
+    }
+
+    /**
+     * Width of the raster being drawn. Gameplay uses its camera width, but trace capture keeps
+     * the native 320px camera and widens only the raster to the camera's right.
+     */
+    private static int presentationWidth() {
+        return Math.max(GameServices.camera().getWidth(),
+                GameServices.configuration().getInt(com.openggf.configuration.SonicConfiguration.SCREEN_WIDTH_PIXELS));
+    }
+
+    /** Draw_TileColumn keeps $150 pixels of the band current behind its leading column. */
+    private static final int DEZ_FINAL_BAND_DRAWN = 0x150;
+
+    /**
+     * End, as an offset from the native band's draw position, of the wide right margin whose
+     * floor has not yet been drawn; 0 when there is none. The 512px ring also holds the left
+     * margin, so the presented span stops short of it (528/800 keep the ring's own cells).
+     */
+    private static int dezFinalFloorAheadEnd(com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state) {
+        int width = presentationWidth();
+        if (width <= 320 || !state.screenInitApplied()) return 0;
+        var camera = GameServices.camera();
+        int inset = com.openggf.camera.NativeViewportFraming.inset(camera.getWidth());
+        int nativeOffset = (com.openggf.game.sonic3k.runtime.DezFinalCamera.nativeCopyX(camera)
+                - state.arenaPlane().drawnX()) & 0x1FF;
+        // Visible right edge, and the first whole cell before the left margin's ring offset.
+        int end = Math.min(nativeOffset + width - inset, (0x200 - inset + nativeOffset) & ~7);
+        return end > DEZ_FINAL_BAND_DRAWN ? end : 0;
+    }
+
     @Override public java.util.OptionalInt presentationNativeHorizontalOrigin() {
         if (!GameServices.hasRuntime()) return java.util.OptionalInt.empty();
         var state = GameServices.zoneRuntimeState();
@@ -451,8 +493,16 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
             // The tile pass starts at the aligned scroll Y; the column-remap
             // cutoff is measured in that FBO, not in the original name table.
             int tileHeight = com.openggf.level.LevelConstants.CHUNK_HEIGHT;
-            int originY = Math.floorDiv(state.screenY(), tileHeight) * tileHeight;
-            return dezPlanetBackground.columns(manager, GameServices.camera().getWidth(), 0xE0 - originY);
+            // Measure the split in the FBO being drawn: the shake alternates the live
+            // word each frame, and a stale origin moves the cutoff by a whole 16px row.
+            var displayed = com.openggf.level.LevelSpritePresentation.backgroundScrollForDraw(manager);
+            int scrollY = displayed != null ? Math.round(displayed.y()) : state.screenY();
+            int originY = Math.floorDiv(scrollY, tileHeight) * tileHeight;
+            // The native window starts at the camera's own inset: centred in a wide
+            // camera, at the left of a native camera drawn into a wider raster.
+            return dezPlanetBackground.columns(manager, presentationWidth(),
+                    com.openggf.camera.NativeViewportFraming.inset(GameServices.camera().getWidth()),
+                    0xE0 - originY);
         }
         return manager.getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ && manager.getFeatureActId() == 1
                 ? dezPlanetBackground.columns(manager, GameServices.camera().getWidth()) : null;
@@ -559,7 +609,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
         int firstX = state.displayedWindowBase() & ~0x1FF;
         if (sourceX < firstX || sourceX >= firstX + 512) return 0;
         int nativeLeft = state.retainedPlaneX() != 0 ? state.retainedPlaneX() : state.planeX();
-        if (GameServices.camera().getWidth() > 320
+        if (presentationWidth() > 320
                 && (sourceX + 8 <= nativeLeft || sourceX >= nativeLeft + 320)) {
             // DrawBGAsYouMove only refreshes the ROM's 320px view plus its
             // leading column. Newly exposed widescreen margins otherwise show
@@ -672,8 +722,12 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
                     | GameServices.camera().getWidth();
         }
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
-                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state)
-            return state.arenaPlane().revision();
+                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state) {
+            int ahead = dezFinalFloorAheadEnd(state);
+            // Presented floor cells ahead of the native band move with its draw position.
+            return ahead == 0 ? state.arenaPlane().revision()
+                    : ((long) state.arenaPlane().revision() << 32) | ((long) ahead << 16) | state.arenaPlane().drawnX();
+        }
         if (GameServices.hasRuntime() && GameServices.level().getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ
                 && GameServices.level().getFeatureActId() == 1) {
             return S3kRuntimeStates.currentDez(GameServices.zoneRuntimeRegistry())
@@ -724,8 +778,22 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
             return sszIslandBackgroundDescriptor(ssz, sourceX, sourceY);
         }
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
-                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state)
+                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state) {
+            int row = sourceY & 0xFF;
+            int ahead = dezFinalFloorAheadEnd(state);
+            int offset = (sourceX - state.arenaPlane().drawnX()) & 0x1FF;
+            if (ahead != 0 && (row >= 0xE0 || row < 0x10)
+                    && offset >= DEZ_FINAL_BAND_DRAWN && offset < ahead) {
+                // Draw_BGNoVert writes the floor's leading column only as it enters the 320px
+                // view; until then a wide margin would show ring cells that broke up 512px
+                // earlier. Present what that leading-edge draw will write there: it reads the
+                // unwrapped layout column drawnX + offset, not the ring index.
+                return com.openggf.game.sonic3k.events.DezFinalScreenEvents.arenaDescriptor(
+                        GameServices.level(), state.arenaPlane().drawnX() + offset,
+                        row < 0x10 ? row + 0x100 : row);
+            }
             return state.arenaPlane().descriptor(sourceX, sourceY);
+        }
         if (GameServices.level().getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ
                 && GameServices.level().getFeatureActId() == 1) {
             var state = S3kRuntimeStates.currentDez(GameServices.zoneRuntimeRegistry()).orElseThrow();
@@ -1314,6 +1382,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
             registry.register(new com.openggf.game.sonic3k.render.SszAct2BackgroundPriorityEffect(false));
             registry.register(new com.openggf.game.sonic3k.render.SszAct2BackgroundPriorityEffect(true));
         }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && actIndex == 0)
+            registry.register(new com.openggf.game.sonic3k.render.DezFinalBackgroundPriorityEffect());
         if (zoneIndex == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && actIndex == 0) {
             registry.register(new com.openggf.game.sonic3k.render.LrzBossBackgroundPriorityEffect(false));
             registry.register(new com.openggf.game.sonic3k.render.LrzBossBackgroundPriorityEffect(true));

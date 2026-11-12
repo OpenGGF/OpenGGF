@@ -41,6 +41,8 @@ port of Nuked OPN2, a cycle-accurate Yamaha YM3438 / YM2612 emulator.
   `LICENSES/LGPL-2.1.txt`
 - Modified 2026-08 by the OpenGGF contributors: translated from C to Java;
   chip type made per instance; state copy helpers and value equality added.
+  Modified 2026-11: `NukedOpn2.clocks`, which runs several cycles of
+  `OPN2_Clock` in one loop, added beside the per-cycle port.
   Each modified file records this in its header (LGPL-2.1 section 2(b)).
 
 The ported files are conveyed under LGPL-2.1-or-later and are not converted to

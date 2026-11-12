@@ -73,6 +73,22 @@ class TestAudioPresentationMixer {
     }
 
     @Test
+    void scalesMusicAndSoundEffectVoicesByTheirOwnGains() {
+        AudioPresentationMixer mixer = new AudioPresentationMixer(1);
+        PresentationVoice sfx = voice(1, 1_000, -1_000);
+        PresentationVoice music = musicVoice(2, 400, 400);
+
+        assertArrayEquals(new short[] {1_400, -600}, mixer.mix(fixedVoices(sfx, music), 1));
+
+        mixer.setGains(0, AudioPresentationMixer.UNITY_GAIN);
+        assertArrayEquals(new short[] {1_000, -1_000}, mixer.mix(fixedVoices(sfx, music), 1),
+                "music at zero leaves the sound effects untouched");
+
+        mixer.setGains(AudioPresentationMixer.UNITY_GAIN, AudioPresentationMixer.UNITY_GAIN / 2);
+        assertArrayEquals(new short[] {900, -100}, mixer.mix(fixedVoices(sfx, music), 1));
+    }
+
+    @Test
     void rejectsFramesBeyondDeclaredCapacity() {
         assertThrows(IllegalArgumentException.class,
                 () -> new AudioPresentationMixer(2).mix(fixedVoices(), 3));
@@ -108,6 +124,21 @@ class TestAudioPresentationMixer {
                     accumulation[sample] += left;
                     accumulation[sample + 1] += right;
                 }
+            }
+        };
+    }
+
+    private static PresentationVoice musicVoice(long id, long left, long right) {
+        PresentationVoice inner = voice(id, left, right);
+        return new TestVoice(id) {
+            @Override
+            public void mixInto(long[] accumulation, int stereoFrames) {
+                inner.mixInto(accumulation, stereoFrames);
+            }
+
+            @Override
+            public boolean music() {
+                return true;
             }
         };
     }

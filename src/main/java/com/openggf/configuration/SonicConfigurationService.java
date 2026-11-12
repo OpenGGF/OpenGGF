@@ -761,6 +761,8 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DAC_INTERPOLATE, false);
 		putDefault(SonicConfiguration.FM6_DAC_OFF, true); // Default true for Sonic 2 parity
 		putDefault(SonicConfiguration.AUDIO_ENABLED, true);
+        putDefault(SonicConfiguration.AUDIO_MUSIC_VOLUME, 100);
+        putDefault(SonicConfiguration.AUDIO_SFX_VOLUME, 100);
         putDefault(SonicConfiguration.AUDIO_HUB_MUSIC_ENABLED, false);
         putDefault(SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME, 20);
         putDefault(SonicConfiguration.MULTIPLAYER_CENSOR_PROFANITY, true);

@@ -72,6 +72,11 @@ public final class StreamedMusicVoice implements PcmPresentationVoice {
     }
 
     @Override
+    public boolean music() {
+        return true;
+    }
+
+    @Override
     public long voiceId() {
         return voiceId;
     }

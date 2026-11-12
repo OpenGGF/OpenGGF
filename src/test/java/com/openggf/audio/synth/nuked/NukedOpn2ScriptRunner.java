@@ -37,6 +37,12 @@ import java.util.zip.GZIPInputStream;
  *
  * <p>Nothing in this runner touches the engine facade: it is the port alone,
  * at the pin level, with no resampler, mixer or write queue in the path.
+ *
+ * <p>A second chip shadows the first: it receives every write and read, and
+ * is advanced by {@link NukedOpn2#clocks(int, int[])} over each stretch the
+ * first chip covers one {@link NukedOpn2#clock(int[])} at a time. The two
+ * must agree in summed pins and in complete state after every stretch, which
+ * ties the run path to the same scripts the C build certifies.
  */
 public final class NukedOpn2ScriptRunner {
 
@@ -50,7 +56,9 @@ public final class NukedOpn2ScriptRunner {
     }
 
     private final NukedOpn2 chip = new NukedOpn2();
+    private final NukedOpn2 shadow = new NukedOpn2();
     private final int[] buffer = new int[2];
+    private final int[] shadowSums = new int[2];
     private final OutputStream pcm;
     private final List<String> side = new ArrayList<>();
     private long checksum = FNV_OFFSET;
@@ -61,6 +69,7 @@ public final class NukedOpn2ScriptRunner {
     private NukedOpn2ScriptRunner(OutputStream pcm) {
         this.pcm = pcm;
         chip.setChipType(NukedOpn2.MODE_YM2612 | NukedOpn2.MODE_READMODE);
+        shadow.setChipType(NukedOpn2.MODE_YM2612 | NukedOpn2.MODE_READMODE);
     }
 
     /** Runs a script from {@code reader}; {@code pcm} may be null to skip the sample stream. */
@@ -101,36 +110,51 @@ public final class NukedOpn2ScriptRunner {
         }
         String[] fields = trimmed.split("\\s+");
         switch (fields[0]) {
-            case "type" -> chip.setChipType(Integer.parseInt(fields[1]));
+            case "type" -> {
+                chip.setChipType(Integer.parseInt(fields[1]));
+                shadow.setChipType(Integer.parseInt(fields[1]));
+            }
             case "pace" -> {
                 paceAddress = Integer.parseInt(fields[1]);
                 paceData = Integer.parseInt(fields[2]);
             }
-            case "write" -> chip.write(Integer.parseInt(fields[1]), Integer.parseInt(fields[2]));
+            case "write" -> write(Integer.parseInt(fields[1]), Integer.parseInt(fields[2]));
             case "reg" -> {
                 int part = Integer.parseInt(fields[1]);
-                chip.write(part * 2, Integer.parseInt(fields[2]));
+                write(part * 2, Integer.parseInt(fields[2]));
                 clock(paceAddress);
-                chip.write(part * 2 + 1, Integer.parseInt(fields[3]));
+                write(part * 2 + 1, Integer.parseInt(fields[3]));
                 clock(paceData);
             }
             case "clock" -> clock(Long.parseLong(fields[1]));
             case "at" -> {
                 long target = Long.parseLong(fields[1]) * NukedOpn2.CYCLES_PER_FRAME;
-                while (cycles < target) {
-                    clock(1);
+                if (cycles < target) {
+                    clock(target - cycles);
                 }
             }
-            case "status" -> side.add("STATUS " + cycles + " " + chip.read(Integer.parseInt(fields[1])));
+            case "status" -> {
+                shadow.read(Integer.parseInt(fields[1]));
+                side.add("STATUS " + cycles + " " + chip.read(Integer.parseInt(fields[1])));
+            }
             case "irq" -> side.add("IRQ " + cycles + " " + chip.readIrqPin());
             case "dump" -> dump();
             default -> throw new IllegalStateException("unknown script line: " + line);
         }
     }
 
+    private void write(int port, int data) {
+        chip.write(port, data);
+        shadow.write(port, data);
+    }
+
     private void clock(long count) throws IOException {
+        int sumLeft = 0;
+        int sumRight = 0;
         for (long i = 0; i < count; i++) {
             chip.clock(buffer);
+            sumLeft += buffer[0];
+            sumRight += buffer[1];
             int left = buffer[0] & 0xffff;
             int right = buffer[1] & 0xffff;
             if (pcm != null) {
@@ -144,6 +168,13 @@ public final class NukedOpn2ScriptRunner {
             checksum ^= right;
             checksum *= FNV_PRIME;
             cycles++;
+        }
+        shadowSums[0] = 0;
+        shadowSums[1] = 0;
+        shadow.clocks((int) count, shadowSums);
+        if (shadowSums[0] != sumLeft || shadowSums[1] != sumRight || !shadow.state().equals(chip.state())) {
+            throw new IllegalStateException("clocks(" + count + ") differs from " + count
+                    + " single clocks ending at cycle " + cycles);
         }
     }
 

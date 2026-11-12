@@ -256,6 +256,9 @@ public final class TraceCaptureTool {
         // capture has no desync, so ghosts are off by default.
         GameServices.configuration().setConfigValue(
                 SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS, args.showGhosts());
+        // Evidence records at full level whatever volumes the player saved.
+        GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_MUSIC_VOLUME, 100);
+        GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_SFX_VOLUME, 100);
 
         // --- resolve trace -------------------------------------------------
         TraceEntry entry = resolveTrace(args.trace());
