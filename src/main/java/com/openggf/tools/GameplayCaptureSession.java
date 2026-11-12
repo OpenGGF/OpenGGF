@@ -143,7 +143,18 @@ public final class GameplayCaptureSession implements AutoCloseable {
     /** Capture production title initialization and its ordinary GameLoop launch transition. */
     public void startAtTitle() { startAtTitle = true; boot.setBootToTitle(true); }
     /** Enable the existing ROM-backed SMPS presentation producer before boot. */
-    public void enableAudio() { GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_ENABLED, true); }
+    /** Turns synthesis on at full music and sound-effect volume, whatever the player's saved volumes are. */
+    public void enableAudio() {
+        SonicConfigurationService config = GameServices.configuration();
+        config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, true);
+        config.setSessionOverride(SonicConfiguration.AUDIO_MUSIC_VOLUME, 100);
+        config.setSessionOverride(SonicConfiguration.AUDIO_SFX_VOLUME, 100);
+    }
+
+    /** Keeps sound effects and silences music in the captured audio. */
+    public void silenceMusic() {
+        GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_MUSIC_VOLUME, 0);
+    }
 
     private boolean showTitleCard;
     private boolean completeSpecialStage;

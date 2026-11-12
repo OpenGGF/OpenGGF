@@ -48,6 +48,16 @@ public interface FmChip {
 
     void setMute(int ch, boolean mute);
 
+    /**
+     * Presentation-only output gain for one channel, {@link #UNITY_GAIN} = 1.0.
+     * It is not chip state: snapshots, backups and resets neither capture nor
+     * clear it, and unity leaves the output bit-identical.
+     */
+    void setOutputGain(int ch, int gain);
+
+    /** Fixed-point unity for {@link #setOutputGain(int, int)}. */
+    int UNITY_GAIN = 256;
+
     void playDac(int note);
 
     void stopDac();

@@ -33,7 +33,8 @@
 package com.openggf.audio.synth.nuked;
 
 /**
- * The constant ROM tables of {@code ym3438.c}, reproduced byte for byte.
+ * The constant ROM tables of {@code ym3438.c}, reproduced byte for byte,
+ * plus derived lookup tables that fold their runtime indexing arithmetic.
  *
  * <p>Every table carries a {@code // ym3438.c:NNN} citation naming the line of
  * the pinned upstream source it was copied from. The tables are read-only and
@@ -335,5 +336,18 @@ final class NukedOpn2Tables {
             detune = PG_DETUNE[(sumL << 2) | note] >> (9 - sumH);
         }
         return (dt & 0x04) != 0 ? -detune : detune;
+    }
+
+    // Derived only from the pinned Nuked ROM entries; no synthesis-state or clock changes.
+    /** Half-wave reflection from OPN2_FMGenerate (ym3438.c:1029). */
+    static final int[] LOG_SIN_HALF = new int[512];
+    /** Complemented fraction and scaled mantissa from OPN2_FMGenerate (ym3438.c:1029). */
+    static final int[] EXP_MANTISSA = new int[256];
+    static {
+        for (int i = 0; i < 256; i++) {
+            LOG_SIN_HALF[i] = LOGSINROM[i];
+            LOG_SIN_HALF[0x1ff - i] = LOGSINROM[i];
+            EXP_MANTISSA[i] = (EXPROM[i ^ 0xff] | 0x400) << 2;
+        }
     }
 }

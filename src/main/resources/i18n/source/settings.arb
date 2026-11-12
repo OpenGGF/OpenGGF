@@ -360,6 +360,22 @@
   "@settings.key.audio_enabled.help": {
     "description": "Settings help for stable configuration key AUDIO_ENABLED. Technical YAML documentation remains separate."
   },
+  "settings.key.audio_music_volume.label": "Music volume",
+  "@settings.key.audio_music_volume.label": {
+    "description": "Settings label for stable configuration key AUDIO_MUSIC_VOLUME (audio.musicVolume)."
+  },
+  "settings.key.audio_music_volume.help": "Game music volume. At 0% music is silent and sound effects still play, which suits recording.",
+  "@settings.key.audio_music_volume.help": {
+    "description": "Settings help for stable configuration key AUDIO_MUSIC_VOLUME. Technical YAML documentation remains separate."
+  },
+  "settings.key.audio_sfx_volume.label": "Sound effects volume",
+  "@settings.key.audio_sfx_volume.label": {
+    "description": "Settings label for stable configuration key AUDIO_SFX_VOLUME (audio.sfxVolume)."
+  },
+  "settings.key.audio_sfx_volume.help": "Game sound effects volume.",
+  "@settings.key.audio_sfx_volume.help": {
+    "description": "Settings help for stable configuration key AUDIO_SFX_VOLUME. Technical YAML documentation remains separate."
+  },
   "settings.key.audio_hub_music_enabled.label": "Hub music",
   "@settings.key.audio_hub_music_enabled.label": {
     "description": "Settings label for stable configuration key AUDIO_HUB_MUSIC_ENABLED (audio.hubMusicEnabled)."

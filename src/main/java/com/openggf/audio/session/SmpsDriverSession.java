@@ -374,6 +374,12 @@ public final class SmpsDriverSession implements AutoCloseable {
             }
             withDirectPort(capability ->
                     capability.writeFm(port, reg, val));
+            if (source instanceof SmpsSequencer sequencer) {
+                int channel = SmpsDriver.fmWriteChannel(port, reg, val);
+                if (channel >= 0) {
+                    device.markFmChannelRole(channel, sequencer.isSfx());
+                }
+            }
         }
 
         @Override
@@ -382,6 +388,9 @@ public final class SmpsDriverSession implements AutoCloseable {
                 return;
             }
             withDirectPort(port -> port.writePsg(val));
+            if ((val & 0x80) != 0 && source instanceof SmpsSequencer sequencer) {
+                device.markPsgChannelRole((val >> 5) & 0x03, sequencer.isSfx());
+            }
         }
 
         @Override
@@ -400,6 +409,9 @@ public final class SmpsDriverSession implements AutoCloseable {
                 return;
             }
             withDirectPort(port -> port.playDac(note));
+            if (source instanceof SmpsSequencer sequencer) {
+                device.markFmChannelRole(5, sequencer.isSfx());
+            }
         }
 
         @Override
@@ -923,6 +935,16 @@ public final class SmpsDriverSession implements AutoCloseable {
         requireInstalled();
         var output = device.nativeCompatibleOutputForInspection();
         return output == null ? -1 : output.framesEnded();
+    }
+
+    /**
+     * Presentation-only music/SFX balance, {@code FmChip.UNITY_GAIN} = 1.0.
+     * Each chip channel takes the gain of the track kind that last wrote to
+     * it; logical state, snapshots and diagnostics are unaffected.
+     */
+    public void setMixGains(int musicGain, int sfxGain) {
+        requireInstalled();
+        device.setMixGains(musicGain, sfxGain);
     }
 
     public int renderFrames(

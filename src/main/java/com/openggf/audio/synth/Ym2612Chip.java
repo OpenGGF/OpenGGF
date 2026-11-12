@@ -45,6 +45,14 @@ import java.util.Objects;
  * {@code 72 << OUTPUT_SHIFT = 576} per side at chip scale; that is the model's
  * own resting level and is not adjusted here.
  *
+ * <p>Most cycles need nothing from this class but the clock and the pin sum:
+ * no strobe to present, no DAC sample due, no frame to close. Those stretches
+ * go to the core as one {@link NukedOpn2#clocks(int, int[])} run
+ * ({@code clockRun}); the cycle that ends a stretch goes through
+ * {@code clockOnce}, which is also the path for every cycle while a channel
+ * is muted or the native-compatible stage is attached. The two paths leave
+ * the same chip, queue and resampler state.
+ *
  * <h2>Register writes</h2>
  * {@link #write(int, int, int)} resolves the port, masks the register and
  * value to eight bits, reports the resolved write to the
@@ -212,6 +220,9 @@ public class Ym2612Chip implements FmChip {
     private final int[] pinBuffer = new int[2];
     private final BlipResampler resampler = new BlipResampler(INTERNAL_RATE, DEFAULT_OUTPUT_RATE);
     private final boolean[] mutes = new boolean[6];
+    /** Presentation gains ({@link FmChip#setOutputGain}); never part of a snapshot or backup. */
+    private final int[] outputGains = {UNITY_GAIN, UNITY_GAIN, UNITY_GAIN, UNITY_GAIN, UNITY_GAIN, UNITY_GAIN};
+    private boolean unityOutputGain = true;
     private ChipWriteObserver writeObserver = ChipWriteObserver.NONE;
     private DacData dacData;
 
@@ -222,12 +233,22 @@ public class Ym2612Chip implements FmChip {
     /* Frame accumulation and the 1:1 frame queue used when no resampling is needed. */
     private int frameSumLeft;
     private int frameSumRight;
+    /* The same sums after the presentation gains; equal to the raw sums at unity. */
+    private int gainedSumLeft;
+    private int gainedSumRight;
     private int[] directFrames = new int[2 * 256];
     private int directFrameHead;
     private int directFrameCount;
 
     /* Bus pacing. */
     private int busHold;
+    /**
+     * Whether quiet stretches are clocked in runs ({@link #clockRun(int)});
+     * off, every cycle goes through {@link #clockOnce()}. Output and state
+     * are the same either way; the switch exists so a test can hold the two
+     * against each other.
+     */
+    private boolean batchClocking = true;
 
     /* Pending operations. */
     private int[] pendingOps = new int[OP_STRIDE * 256];
@@ -325,6 +346,11 @@ public class Ym2612Chip implements FmChip {
                 ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
     }
 
+    /** Test seam for {@link #batchClocking}; not part of the snapshot. */
+    void setBatchClocking(boolean enabled) {
+        batchClocking = enabled;
+    }
+
     public void setDacData(DacData data) {
         dacData = data;
     }
@@ -388,6 +414,8 @@ public class Ym2612Chip implements FmChip {
         busHold = 0;
         frameSumLeft = 0;
         frameSumRight = 0;
+        gainedSumLeft = 0;
+        gainedSumRight = 0;
         directFrameHead = 0;
         directFrameCount = 0;
         dacSampleId = NO_DAC_VALUE;
@@ -513,6 +541,24 @@ public class Ym2612Chip implements FmChip {
         }
     }
 
+    /**
+     * Scales the channel's pin values about the silent resting level, so a
+     * zero gain sounds like a mute. The native-compatible stage keeps the raw
+     * sums: it is a parity oracle, not a listening path.
+     */
+    @Override
+    public void setOutputGain(int ch, int gain) {
+        if (ch < 0 || ch >= 6) {
+            return;
+        }
+        outputGains[ch] = Math.clamp(gain, 0, UNITY_GAIN);
+        boolean unity = true;
+        for (int g : outputGains) {
+            unity &= g == UNITY_GAIN;
+        }
+        unityOutputGain = unity;
+    }
+
     // ------------------------------------------------------------------ DAC
 
     /** Starts streaming the sample mapped to {@code note} through the live {@link DacData}. */
@@ -572,7 +618,7 @@ public class Ym2612Chip implements FmChip {
         if (isDirectOutput()) {
             for (int i = 0; i < frames; i++) {
                 while (directFrameCount == 0) {
-                    clockOnce();
+                    clockRun(Integer.MAX_VALUE);
                 }
                 int position = directFrameHead * 2;
                 left[i] += directFrames[position];
@@ -584,7 +630,7 @@ public class Ym2612Chip implements FmChip {
         }
         for (int i = 0; i < frames; i++) {
             while (!resampler.hasOutputSample()) {
-                clockOnce();
+                clockRun(Integer.MAX_VALUE);
             }
             long packed = resampler.getOutputStereoPacked();
             left[i] += (int) (packed >> 32);
@@ -595,6 +641,71 @@ public class Ym2612Chip implements FmChip {
 
     private boolean isDirectOutput() {
         return outputRate == INTERNAL_RATE;
+    }
+
+    /**
+     * Advances by at least one and at most {@code limit} internal cycles,
+     * never past the end of the output frame, with the state and output of
+     * that many {@link #clockOnce()} calls. Cycles on which this adapter has
+     * nothing of its own to do ({@link #quietCycles(int)}) are handed to the
+     * core in one {@link NukedOpn2#clocks(int, int[])} run; the cycle that
+     * ends such a stretch goes through {@link #clockOnce()}.
+     */
+    private void clockRun(int limit) {
+        int quiet = batchClocking ? quietCycles(limit) : 0;
+        if (quiet <= 1) {
+            clockOnce();
+            return;
+        }
+        if (dacSampleId != NO_DAC_VALUE && dacPendingValue == NO_DAC_VALUE) {
+            dacAccumulator += DAC_TICK_UNITS * quiet;
+        }
+        pinBuffer[0] = 0;
+        pinBuffer[1] = 0;
+        core.clocks(quiet, pinBuffer);
+        frameSumLeft += pinBuffer[0];
+        frameSumRight += pinBuffer[1];
+        busHold = Math.max(0, busHold - quiet);
+        physicalCycle += quiet;
+        if (state.cycles == 0) {
+            emitFrame(frameSumLeft << OUTPUT_SHIFT, frameSumRight << OUTPUT_SHIFT);
+            frameSumLeft = 0;
+            frameSumRight = 0;
+        }
+    }
+
+    /**
+     * How many of the coming cycles, up to {@code limit} and the end of the
+     * frame, {@link #clockOnce()} would spend doing nothing but clock the
+     * core and add its pins: {@link #serviceDac(int)} neither reaches the next
+     * sample of the cadence nor finds the bus free for a waiting strobe, no
+     * channel is muted and no per-cycle output stage is attached. Zero when
+     * the very next cycle is not such a cycle.
+     */
+    private int quietCycles(int limit) {
+        if (nativeOutput != null) {
+            return 0;
+        }
+        for (boolean mute : mutes) {
+            if (mute) {
+                return 0;
+            }
+        }
+        int cycle = state.cycles;
+        int quiet = Math.min(limit, NukedOpn2.CYCLES_PER_FRAME - cycle);
+        boolean streaming = dacSampleId != NO_DAC_VALUE;
+        if (streaming && dacPendingValue == NO_DAC_VALUE) {
+            /* the cadence steps on the cycle that brings the accumulator to the period */
+            quiet = Math.min(quiet, Math.max(0, dacPeriod - 1 - dacAccumulator) / DAC_TICK_UNITS);
+        }
+        if (dacWritePhase == 1 || dacPendingValue != NO_DAC_VALUE) {
+            /* a strobe is waiting: it goes out on the cycle the hold reaches zero */
+            quiet = Math.min(quiet, busHold);
+        } else if (dacInterpolate && streaming && cycle == 0) {
+            /* the interpolated write is considered on the first cycle of a frame */
+            return 0;
+        }
+        return quiet;
     }
 
     /**
@@ -615,16 +726,26 @@ public class Ym2612Chip implements FmChip {
         }
         frameSumLeft += leftPin;
         frameSumRight += rightPin;
+        int gain = unityOutputGain ? UNITY_GAIN : outputGains[PIN_WINDOW_CHANNEL[cycle >> 2]];
+        if (gain != UNITY_GAIN) {
+            int silent = (core.chipType() & NukedOpn2.MODE_YM2612) != 0 ? YM2612_SILENT_PIN_VALUE : 0;
+            leftPin = silent + (((leftPin - silent) * gain) >> 8);
+            rightPin = silent + (((rightPin - silent) * gain) >> 8);
+        }
+        gainedSumLeft += leftPin;
+        gainedSumRight += rightPin;
         if (busHold > 0) {
             busHold--;
         }
         if (state.cycles == 0) {
-            emitFrame(frameSumLeft << OUTPUT_SHIFT, frameSumRight << OUTPUT_SHIFT);
+            emitFrame(gainedSumLeft << OUTPUT_SHIFT, gainedSumRight << OUTPUT_SHIFT);
             if (nativeOutput != null) {
                 nativeOutput.latchFmFrame(frameSumLeft, frameSumRight);
             }
             frameSumLeft = 0;
             frameSumRight = 0;
+            gainedSumLeft = 0;
+            gainedSumRight = 0;
         }
         if (nativeOutput != null) {
             nativeOutput.clockFm();
@@ -818,7 +939,7 @@ public class Ym2612Chip implements FmChip {
 
     private void waitBusIdle() {
         while (busHold > 0 || dacWritePhase != 0) {
-            clockOnce();
+            clockRun(busHold > 0 ? busHold : 1);
         }
     }
 
@@ -981,6 +1102,8 @@ public class Ym2612Chip implements FmChip {
         chipType = backup.chipType;
         frameSumLeft = backup.frameSumLeft;
         frameSumRight = backup.frameSumRight;
+        gainedSumLeft = frameSumLeft;
+        gainedSumRight = frameSumRight;
         directFrameCount = backup.directFrameCount;
         busHold = backup.busHold;
         pendingCount = backup.pendingCount;
@@ -1091,6 +1214,8 @@ public class Ym2612Chip implements FmChip {
         state.copyFrom(snapshot.coreRef());
         frameSumLeft = snapshot.frameSumLeft();
         frameSumRight = snapshot.frameSumRight();
+        gainedSumLeft = frameSumLeft;
+        gainedSumRight = frameSumRight;
         int[] direct = snapshot.directFramesRef();
         if (directFrames.length < direct.length) {
             directFrames = new int[Math.max(direct.length, directFrames.length * 2)];

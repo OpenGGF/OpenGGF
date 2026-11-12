@@ -17,6 +17,16 @@ under the matching area heading; see the
   black patches appeared at the bottom of the extended planet while the screen
   shook. Both are fixed. This shipped in 0.7.
 
+- **Separate music and sound-effect volumes:** Settings → Audio has Music
+  volume and Sound effects volume sliders (`audio.musicVolume`,
+  `audio.sfxVolume`, 0–100%, applied on save). Each sound-chip channel takes
+  the volume of whichever track last wrote to it, so a sound effect that
+  borrows a music channel keeps the sound-effect volume. Music at 0% gives
+  game audio with only sound effects, for example for recordings; the
+  headless gameplay capture tool has `--no-music` for the same. The volumes
+  only scale the output: the sound driver, gameplay, rewind and traces are
+  unchanged, and at 100% the output is bit-identical to before.
+
 - **Sonic 1's Sonic on Sonic 3&K tumble objects:** Sonic 1 has no tumble frames,
   so a donated Sonic 1 Sonic riding a Flying Battery wire cage or another tumble
   object vanished. He now keeps his own walk and run frames there, and a donor's
@@ -229,6 +239,16 @@ under the matching area heading; see the
   instead of S3K's placeholders.
 
 ## Maintenance and release preparation
+
+- **Accurate FM performance:** fold the Nuked sine and exponential lookup arithmetic
+  into derived tables while preserving cycle-level output. A paired six-voice
+  core benchmark measured 3.9% less rendering time; this is not a gameplay FPS claim.
+  The accurate core also clocks quiet stretches of cycles in runs
+  (`NukedOpn2.clocks`), with identical PCM, status and snapshots: paired
+  benchmarks measured 43% less time in the six-voice core and 46% less for
+  S3K AIZ1 and HCZ1 music rendered end to end, once HotSpot has compiled the
+  run loop. A JVM pays about three times the old per-frame cost for its first
+  second of FM sound while that compile runs.
 
 - **Engine quality and contributions:** the README and contributor entry point now
   acknowledge maintainability weaknesses and invite focused improvements to object
