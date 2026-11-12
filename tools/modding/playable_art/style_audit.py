@@ -12,12 +12,15 @@ Absolute thresholds cannot tell a deliberate style from a damaged one; the sheet
 can. Each measure is compared with its median over the reference frames, in units of their
 spread (1.4826 x the median absolute deviation, floored so a tight reference set does not flag
 noise), and a frame is flagged when a measure is more than LIMIT spreads off on its bad side.
+A reference frame can be flagged too (the references are not identical); that is shown, and is
+never a --check failure, because the references are the standard.
 
-Measures, over a frame's opaque pixels (index 0 transparent, `ink` the contour index):
+Measures, over a frame's opaque pixels (index 0 transparent, `ink` the contour index or indices):
   gap      share of the silhouette (opaque beside transparency) that is not ink: outline breaks.
   weight   share of the body pixels touching ink that are the darkest shade of their ramp: a dark
            rim inside the outline reads as a heavier line.
-  bands    shades of the largest ramp holding at least a tenth of it: how many bands survived.
+  bands    shades holding at least a tenth of their ramp, averaged over the ramps by size: how many
+           shading bands survived.
   ramp     distance between the frame's use of each ramp's shades and the references' mean use
            (total variation, weighted by ramp size): the same palette shaded another way.
   cluster  mean size of a same-index patch, in pixels.
@@ -57,19 +60,21 @@ def shares(grid, ramps):
 
 
 def measure(grid, lum, ramps, ink=1, reference=None):
-    """One frame's measures; `ramp` needs the reference shares and is None without them."""
+    """One frame's measures; `ramp` needs the reference shares and is None without them.
+    ink is the contour index, or several (a powered bank outlines on ink and on its cycling contour slot)."""
     height, width = len(grid), len(grid[0])
+    inks = {ink} if isinstance(ink, int) else set(ink)
 
     def at(x, y):
         return grid[y][x] if 0 <= x < width and 0 <= y < height else 0
 
     opaque = [(x, y) for y in range(height) for x in range(width) if grid[y][x]]
-    body = [(x, y) for x, y in opaque if grid[y][x] != ink]
+    body = [(x, y) for x, y in opaque if grid[y][x] not in inks]
     if not body:
         return None
     darkest = {i: min(indices, key=lambda k: lum[k]) for indices in ramps.values() for i in indices}
     silhouette = [(x, y) for x, y in opaque if any(at(x + a, y + b) == 0 for a, b in N4)]
-    beside = [(x, y) for x, y in body if any(at(x + a, y + b) == ink for a, b in N4)]
+    beside = [(x, y) for x, y in body if any(at(x + a, y + b) in inks for a, b in N4)]
     rim = sum(1 for x, y in beside if darkest.get(grid[y][x]) == grid[y][x] and len(
         next(v for v in ramps.values() if grid[y][x] in v)) > 1)
     seen, patches = set(), 0
@@ -87,10 +92,13 @@ def measure(grid, lum, ramps, ink=1, reference=None):
                     seen.add(near)
                     todo.append(near)
     used = shares(grid, ramps)
-    largest = max(used.values(), key=lambda item: item[0])[1]
+    shaded = {name: item for name, item in used.items() if len(ramps[name]) > 1 and item[0]}
+    weight_total = sum(pixels for pixels, _ in shaded.values()) or 1
+    bands = sum(pixels / weight_total * sum(1 for share in have.values() if share >= 0.1)
+                for pixels, have in shaded.values())
     noise = noise_audit.metrics(grid, lum)
-    result = dict(gap=sum(grid[y][x] != ink for x, y in silhouette) / len(silhouette),
-                  weight=rim / (len(beside) or 1), bands=sum(1 for share in largest.values() if share >= 0.1),
+    result = dict(gap=sum(grid[y][x] not in inks for x, y in silhouette) / len(silhouette),
+                  weight=rim / (len(beside) or 1), bands=bands,
                   cluster=len(body) / patches, iso=noise['iso'], step=noise['ramp'], ramp=None, pixels=len(opaque))
     if reference:
         total = sum(pixels for pixels, _ in used.values()) or 1
@@ -146,6 +154,8 @@ def audit(profile_path, name):
         if measured:
             rows[fid] = dict(animation=animation, reference=is_reference[fid], **measured)
     centre, spread = {}, {}
+    if not any(row['reference'] for row in rows.values()):
+        raise SystemExit(f'{name}: no frame matches the reference animations or ids {sheet["reference"]}')
     for key in MEASURES:
         values = [row[key] for row in rows.values() if row['reference']]
         centre[key] = statistics.median(values)
@@ -175,7 +185,7 @@ def main(argv=None):
         flagged = {fid: row for fid, row in rows.items() if row['flags']}
         accepted = sheet.get('accepted', {})
         unexpected += [f'{name}/{fid} ({", ".join(row["flags"])})' for fid, row in flagged.items()
-                       if fid not in accepted and row['animation'] not in accepted]
+                       if not row['reference'] and fid not in accepted and row['animation'] not in accepted]
         if args.check:
             continue
         references = sum(row['reference'] for row in rows.values())

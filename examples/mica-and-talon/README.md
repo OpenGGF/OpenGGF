@@ -214,6 +214,8 @@ python3 examples/mica-and-talon/production/talon/lineart_pass.py --check
 python3 tools/modding/playable_art/style_audit.py examples/mica-and-talon/production/style-audit.json --check
 python3 examples/mica-and-talon/production/slope_sets.py --check
 python3 examples/mica-and-talon/production/mica/carried_reshade.py --check
+python3 examples/mica-and-talon/production/mica/sheet_despeckle.py --check
+python3 examples/mica-and-talon/production/mica/titles/s1_despeckle.py --check
 python3 examples/mica-and-talon/production/powered_palettes.py --check
 python3 tools/modding/playable_art/gilded_java.py --check
 python3 tools/modding/playable_art/solar_java.py --check

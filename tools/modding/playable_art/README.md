@@ -623,7 +623,9 @@ flat; it stays selectable for comparison but nothing ships with it.
 `despeckle.py` is the shared cleanup: isolated pixels, one-pixel anti-alias steps and two-pixel flecks
 fold into the surrounding shade of their own material. The caller supplies the index-to-material map,
 so nothing crosses a material, and unmapped detail and ink pass through untouched; protected materials
-(white, cream) are never darkened.
+(white, cream) are never darkened. `lines=True` keeps a pixel or fleck that continues diagonally into
+its own index: art whose detail is one-pixel diagonal lines (MICA's scale edges, her title portrait)
+loses its shapes to the plain rules.
 
 `examples/mica-and-talon/production/slope_sets.py --check` derives MICA's WALK/RUN slopes and
 homing-dive directions, her Open Cone slopes and Solar TALON's slopes; TALON's normal WALK/RUN set is

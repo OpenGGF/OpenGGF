@@ -1761,6 +1761,14 @@ only the old goggles and beak are removed now), turning the 24 px head with Scal
 goggles; turned heads are reduced from WAIT's source instead), thinning the whole rim (it left
 the poses lighter than WAIT; only lit edges are thinned), and placing heads on tumbles, dives and
 front or back views (no reference part exists for them; they keep their own and are listed).
+The same audit scored the other sets. Solar TALON and Gilded MICA were each drawn as one design
+and read as one; neither was changed, and their outliers are accepted or deferred in the profile.
+MICA's normal sheet has one face throughout and differed from TALON's by speckle (0.33 against
+0.19), so `production/mica/sheet_despeckle.py` cleans 203 flats with a line-preserving option of the
+shared despeckle (0.23); the plain rules were rejected because they erase her one-pixel diagonal
+scale edges. Her Sonic 1 title portrait gets the same cleanup (`titles/s1_despeckle.py`). Her idle
+is kept as drawn and cleaned with the rest; TALON's idle frames other than `wait-00`, his BLINK,
+both VICTORY sets and the signposts belong to another lane.
 
 **Powered-form owner feedback, 2026-11-11:** powered binding selects the creator’s
 movement archetype; native Tails families retain Tails clocks instead of consuming
