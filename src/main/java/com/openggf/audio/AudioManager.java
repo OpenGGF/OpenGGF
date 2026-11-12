@@ -621,6 +621,11 @@ public class AudioManager implements MusicRestoreSink {
         return PcmHistoryRing.capacityFramesFor(sampleRate, limitType, seconds, sizeMB);
     }
 
+    /** A 0-100 volume setting as a 256 = unity presentation gain. */
+    static int volumeGain(int percent) {
+        return Math.clamp(percent, 0, 100) * AudioPresentationMixer.UNITY_GAIN / 100;
+    }
+
     private static com.openggf.configuration.SonicConfigurationService configuredServicesOrNull() {
         try {
             return GameServices.configuration();
@@ -1241,6 +1246,7 @@ public class AudioManager implements MusicRestoreSink {
 
     public void presentFrame(PresentationMode mode) {
         presentationBinding.ensureShadowPresentation();
+        presentationBinding.applyMixVolumes();
         AudioPresentationProducer.PresentationResult result =
                 presentationBinding.shadowProducer.present(commandTimeline.currentFrame(), mode);
         if (result == AudioPresentationProducer.PresentationResult
@@ -3363,6 +3369,21 @@ public class AudioManager implements MusicRestoreSink {
                 shadowSmpsSession.applyCommand(
                         new com.openggf.audio.session.SmpsSessionCommand.SetMusicTempoPercent(musicTempoPercent));
             }
+        }
+
+        /**
+         * Pushes the configured music and sound-effect volumes when they change.
+         * They are presentation-only: what the driver plays, and therefore
+         * gameplay, rewind and traces, never depends on them.
+         */
+        private void applyMixVolumes() {
+            if (shadowProducer == null) {
+                return;
+            }
+            SonicConfigurationService config = configuredServicesOrNull();
+            int music = config == null ? 100 : config.getInt(SonicConfiguration.AUDIO_MUSIC_VOLUME);
+            int sfx = config == null ? 100 : config.getInt(SonicConfiguration.AUDIO_SFX_VOLUME);
+            shadowProducer.setMixGains(volumeGain(music), volumeGain(sfx));
         }
 
         private void closeShadowPresentation() {

@@ -3203,8 +3203,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         }
     }
 
-    @Override
-    public void writeFm(Object source, int port, int reg, int val) {
+    /** The linear FM channel (0-5) a register write addresses, or -1 for global registers. */
+    public static int fmWriteChannel(int port, int reg, int val) {
         int ch = -1;
         int rawReg = reg & 0xFF;
 
@@ -3231,6 +3231,12 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                 c -= 1;
             ch = c;
         }
+        return ch;
+    }
+
+    @Override
+    public void writeFm(Object source, int port, int reg, int val) {
+        int ch = fmWriteChannel(port, reg, val);
 
         if (ch >= 0 && ch < 6) {
             if (isSfx(source)) {

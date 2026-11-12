@@ -11,6 +11,11 @@ public final class AudioPresentationMixer {
     private final long[] voiceScratch;
     private final short[] output;
     private final Consumer<PresentationVoice> failedVoice;
+    /* Presentation-only music/SFX balance, 256 = unity. */
+    private int musicGain = UNITY_GAIN;
+    private int sfxGain = UNITY_GAIN;
+
+    public static final int UNITY_GAIN = 256;
 
     public AudioPresentationMixer(int maxStereoFrames) {
         this(maxStereoFrames, voice -> {
@@ -27,6 +32,12 @@ public final class AudioPresentationMixer {
         voiceScratch = new long[samples];
         output = new short[samples];
         this.failedVoice = Objects.requireNonNull(failedVoice, "failedVoice");
+    }
+
+    /** Scales music and sound-effect PCM voices; {@link #UNITY_GAIN} leaves the mix bit-identical. */
+    public void setGains(int musicGain, int sfxGain) {
+        this.musicGain = Math.clamp(musicGain, 0, UNITY_GAIN);
+        this.sfxGain = Math.clamp(sfxGain, 0, UNITY_GAIN);
     }
 
     public short[] mix(PresentationVoiceSource voices, int stereoFrames) {
@@ -88,8 +99,15 @@ public final class AudioPresentationMixer {
                 failedVoice.accept(voice);
                 continue;
             }
-            for (int sample = 0; sample < samples; sample++) {
-                accumulation[sample] += voiceScratch[sample];
+            int gain = voice.music() ? musicGain : sfxGain;
+            if (gain == UNITY_GAIN) {
+                for (int sample = 0; sample < samples; sample++) {
+                    accumulation[sample] += voiceScratch[sample];
+                }
+            } else {
+                for (int sample = 0; sample < samples; sample++) {
+                    accumulation[sample] += (voiceScratch[sample] * gain) >> 8;
+                }
             }
         }
 
