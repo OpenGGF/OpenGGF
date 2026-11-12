@@ -62,8 +62,9 @@ sessions in both live playback and capture.
 
 Audio uses the no-device `HeadlessSmpsAudioBackend`, fixed at 48 kHz stereo.
 The capture runtime must be the sole PCM consumer: a live device backend draining
-the same FIFO causes fast/out-of-sync audio. For silence, check `AUDIO_ENABLED`
-and backend installation; inspect the output with
+the same FIFO causes fast/out-of-sync audio. The capture pins the music and SFX
+volume settings to 100, so saved player volumes do not reach the evidence. For
+silence, check `AUDIO_ENABLED` and backend installation; inspect the output with
 `ffmpeg -i <mkv> -af volumedetect -f null -`. Unexpected speaker output likewise
 indicates that the wrong backend was installed.
 
