@@ -153,12 +153,15 @@ placed on the pose's goggle lens, turned to the pose's head pitch (from WAIT's s
 turned head is as crisp as a straight one), mirrored where the pose faces left, with an open-beak
 variant for the gasp and shout poses. Bodies keep their pose and size and lose the lit side of the
 dark rim. A loop takes the head on every frame or on none, 16 turned object poses are redrawn
-from their source pose, and the flagged frames fell from 27 to 12, all accepted with a reason in
+from their source pose, and the flagged frames fell from 25 to 11, all accepted with a reason in
 [`style-audit.json`](../../production/style-audit.json). Drawings with no head to match keep their
 own and are listed with the reason in [`lineart-pass.json`](../../production/talon/lineart-pass.json):
 front and back views, balls, hidden beaks, heads turned past 42° (tumbles and dives) and DUCK. The
 other idle frames, BLINK and VICTORY belong to another lane and are not touched. `pose_cleanup.py`
 applies the pass as its second stage, so `pose_cleanup.py --check` reproduces it.
+Solar TALON was scored with the same audit (`talon-solar-s2`, `talon-solar-s3k`) and not changed:
+the Corona Crest set was drawn as one design and reads as one, with three accepted outliers (the
+white flash and the two busiest poses, HURT and SPRING), and the cleanup rules leave it as it is.
 The pose cleanup also corrected the shared rule: a white or cream patch with no plumage beside it that
 touches amber, brown or red is a goggle glint, beak shine or shoe white, and is now put back exactly
 as drawn. The walk cleanup had rewritten seven such pixels on `walk-04`, `walk-05`, `walk-07`,

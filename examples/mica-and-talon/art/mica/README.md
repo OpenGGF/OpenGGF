@@ -60,6 +60,33 @@ unchanged. `production/mica/carried_reshade.py --check` rebuilds them from the o
 sheet found no other un-inked frame; the remaining statistical outliers are intended drawings and
 are listed in that record.
 
+**Line-art pass (2026-11-12).** On the owner's line-art feedback her sheet was scored against her
+own references (WAIT, WALK and RUN; `tools/modding/playable_art/style_audit.py`, profile
+`production/style-audit.json`). Unlike TALON she does not have a different face per source sheet:
+her poses were already brought to one skull and face (`consistency-landmarks.json`). What set her
+apart from his cleaned sheet was speckle, a noise median of 0.33 against his 0.19.
+`production/mica/sheet_despeckle.py` folds lone pixels and two-pixel flecks into their own material
+on 203 flat drawings with `despeckle.py`'s `lines=True`, which keeps one-pixel diagonal lines: her
+scale edges. The plain sprite cleanup reads those as isolated pixels and flattens her scales into
+one jade mass (0.17, and no pangolin left), so it was rejected; with the edges kept the sheet median
+is 0.23. Alpha, ink, sizes and hotspots are identical, and `production/slope_sets.py` re-derives her
+WALK/RUN slopes and homing-dive directions from the cleaned flats. Left alone, with reasons in
+[`sheet-despeckle.json`](../../production/mica/sheet-despeckle.json): her VICTORY frames (another
+lane's), the three carried frames (`carried_reshade.py`) and the ball drawings. Her idle, `wait-00`
+to `wait-08`, is kept exactly as drawn, hand-on-chin beat included, and cleaned like any other pose.
+Against those cleaned references the audit still flags object, variant and dive poses whose scales
+use a different mix of the jade ramp (two-tone shading, or a curled or back view that is nearly all
+scales); a cleanup cannot re-band them and she has no source landmarks to redraw from, so they are
+listed as deferred in the profile. Gilded MICA was scored and not changed: one Open Cone
+design throughout, with the frames whose gloves, shoes and plate tips sit on the silhouette without
+the contour slot listed as deferred.
+
+**Sonic 1 title (2026-11-12).** `production/mica/titles/s1_despeckle.py` applies the same
+line-preserving cleanup to the eight BODY frames of her Sonic 1 title portrait (`titles/s1-0..7.png`):
+noise 0.15-0.20 before, 0.09-0.14 after, scale edges kept. `s1-frames.txt`, its bank, selectors and
+hotspots are untouched, and no pixel changes its alpha or ink.
+
+
 ## Powered-form feedback, 2026-11-11
 
 Fresh native-pose generations and selected indexed rows live in

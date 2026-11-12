@@ -14,13 +14,16 @@ Rules, repeated for at most `rounds` rounds until nothing changes:
      commonest of them.
 Materials named in `protect` are never darkened: a lone lighter pixel there is a highlight, and the
 speckle to remove is the darker fringe. A pixel alone in its material is a feature and stays.
+`lines=True` is for larger art whose detail is drawn in one-pixel diagonal lines (scale edges on a
+title portrait): a pixel or fleck that continues diagonally into its own index is a line, not speckle.
 """
 from collections import Counter
 
 N4 = ((-1, 0), (1, 0), (0, -1), (0, 1))
+DIAGONAL = ((-1, -1), (1, -1), (-1, 1), (1, 1))
 
 
-def despeckle(grid, lum, material, protect=(), rounds=3):
+def despeckle(grid, lum, material, protect=(), rounds=3, lines=False):
     height, width = len(grid), len(grid[0])
     grid = [row[:] for row in grid]
 
@@ -43,6 +46,8 @@ def despeckle(grid, lum, material, protect=(), rounds=3):
                 value = grid[y][x]
                 kind = material.get(value)
                 if not kind or any(at(x + a, y + b) == value for a, b in N4):
+                    continue
+                if lines and any(at(x + a, y + b) == value for a, b in DIAGONAL):
                     continue
                 own = [at(x + a, y + b) for a, b in N4 if material.get(at(x + a, y + b)) == kind]
                 if len(own) >= 2:  # rule 1
@@ -80,6 +85,9 @@ def despeckle(grid, lum, material, protect=(), rounds=3):
                             patch.append(near)
                             todo.append(near)
                 if len(patch) != 2:
+                    continue
+                if lines and any(at(cx + a, cy + b) == value for cx, cy in patch for a, b in DIAGONAL
+                                 if (cx + a, cy + b) not in patch):
                     continue
                 ring = [at(cx + a, cy + b) for cx, cy in patch for a, b in N4 if (cx + a, cy + b) not in patch]
                 own = [k for k in ring if material.get(k) == kind]
