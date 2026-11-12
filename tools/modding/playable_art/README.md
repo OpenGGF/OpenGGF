@@ -630,6 +630,27 @@ homing-dive directions, her Open Cone slopes and Solar TALON's slopes; TALON's n
 `production/talon/walk_cleanup.py`, which also cleans its flats. `test_playable_art_slopes.py`
 re-derives MICA's 36 slope frames from her flats and runs both scripts.
 
+## Style audit against a sheet's own reference poses
+
+`style_audit.py PROFILE` answers "which frames look like another artist drew them, and why". Poses
+reduced one by one from separately drawn sources differ in line weight and in how many shading
+bands survive, and an absolute threshold cannot tell a deliberate style from a damaged one. The
+profile names, per sheet, its ramps (dark to light), the crisp reference animations, the animations
+with no comparable drawing and the frames accepted as they are. Each frame is measured for outline
+gaps, dark rim inside the ink (line weight), surviving bands, distance from the references' use of
+each ramp, mean same-index patch size, isolated pixels and one-pixel steps; a measure more than three
+reference spreads off on its bad side flags the frame. `--summary` groups by animation, `--json`
+writes every row, and `--check` fails on a flagged frame the profile does not accept.
+
+```bash
+python3 tools/modding/playable_art/style_audit.py examples/mica-and-talon/production/style-audit.json --summary
+```
+
+The audit cannot see a different face or beak design; it found TALON's heavy rims and merged bands,
+and `examples/mica-and-talon/production/talon/lineart_pass.py` fixed both those and the heads by
+redrawing each off-style pose's head from WAIT's (placed on the pose's own goggle lens and beak,
+turned from WAIT's source where the head is pitched) instead of reducing each pose's source again.
+
 ## Production special-stage character probe
 
 `tools/modding/SpecialStageCharacterProbe.java` records real capture PNGs and a

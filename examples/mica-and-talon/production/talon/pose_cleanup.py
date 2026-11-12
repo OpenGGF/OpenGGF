@@ -19,11 +19,17 @@ darkened; slate-light 5 that does not touch white or cream becomes slate 4. Ink,
 strap, satchel and shoes are never rewritten, so alpha, ink, size and hotspot are identical.
 Hand patches from the record, x,y,index inside one material, are applied last.
 
+Second stage, since the owner's line-art feedback of 2026-11-12: lineart_pass.restyle takes the
+cleaned drawings and gives the off-style ones WAIT's head and line weight (see lineart_pass.py and
+lineart-pass.json). `cleaned()` is the first stage alone; a redrawn frame's hotspot moves with its
+origin when the head overhangs the old frame. WAIT, BLINK and VICTORY are the first stage only.
+
 Not touched here: WALK/RUN and their slopes (walk_cleanup.py), the flight and carry sets
 (tonal_reshade.py, already clean), and the drawings listed under left_alone in the record.
 No slope frame derives from these flats, so slope_sets.py has nothing to re-derive. Sixteen object
-poses are another one turned or mirrored; each has its own rows here, and scale_audit.py turns them
-again when it rebuilds their source at a new size.
+poses are another one turned or mirrored; each has its own rows here, scale_audit.py turns them
+again when it rebuilds their source at a new size, and the second stage turns them from their
+redrawn source.
 """
 import argparse
 import json
@@ -34,15 +40,23 @@ from PIL import Image
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from walk_cleanup import MATERIAL, PROD, ROOT, SHEET, clean, rows_of, to_image  # noqa: E402
+from lineart_pass import restyle  # noqa: E402
 
 RECORD = PROD / 'pose-cleanup.json'
+LINEART = PROD / 'lineart-pass.json'
+LINEART_STAMP = 'Line art 2026-11-12'
+LINEART_HEAD = (' Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT\'s on this pose\'s lens and '
+                'beak; dark plumage rim thinned to his line weight.')
+LINEART_BODY = ' Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT\'s line weight.'
+LINEART_COPY = ' Line art 2026-11-12 (lineart_pass.py): turned again from its redrawn source pose.'
 STAMP = 'Cleanup 2026-11-12'
 NOTE = (' Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, '
         'three plumage bands; silhouette, ink and hotspot unchanged.')
 RESCALE_NOTE = '2026-11-12: pose_cleanup.py, see pose-cleanup.json.'
 
 
-def build(record, colors):
+def cleaned(record, colors):
+    """id -> rows after the cleanup rules alone (before lineart_pass.restyle)."""
     lum = [0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2] for c in colors]
     wanted = {}
     for drawing in record['drawings']:
@@ -55,6 +69,14 @@ def build(record, colors):
         if [[min(v, 2) for v in row] for row in grid] != [[min(v, 2) for v in row] for row in source]:
             raise SystemExit('Silhouette or ink changed: ' + drawing['id'])
         wanted[drawing['id']] = rows_of(grid)
+    return wanted
+
+
+def build(record, colors):
+    """id -> (rows, hotspot or None): the cleanup rules, then the reference head and body rule of lineart_pass.
+    A hotspot is given only for the drawings that pass redraws."""
+    wanted = {name: (rows, None) for name, rows in cleaned(record, colors).items()}
+    wanted.update(restyle({name: rows for name, (rows, _) in wanted.items()}, colors, clean))
     return wanted
 
 
@@ -71,9 +93,11 @@ def main():
     colors = json.loads((SHEET / 'palette.yaml').read_text())['colors']
     wanted = build(record, colors)
     files = {f['id']: f['file'] for f in json.loads((SHEET / 'frames.yaml').read_text())['frames']}
+    styled = json.loads(LINEART.read_text())['frames']
+    hotspots = {name: hot for name, (_, hot) in wanted.items() if hot}
 
     stale = []
-    for frame, rows in wanted.items():
+    for frame, (rows, _) in wanted.items():
         path = SHEET / files[frame]
         with Image.open(path) as actual:
             same = actual.mode == 'P' and actual.size == (len(rows[0]), len(rows)) and \
@@ -94,21 +118,35 @@ def main():
             if not args.check:
                 path.write_text(fresh)
 
+    def styled_note(frame, old):
+        old = note(old)
+        if frame not in styled or LINEART_STAMP in old:
+            return old
+        return old + (LINEART_HEAD if styled[frame]['head'] else LINEART_COPY if 'copy' in styled[frame] else LINEART_BODY)
+
     def recipe(data):
         for frame in data['frames']:
             if frame['id'] in wanted:
-                frame['native_pixels']['rows'] = wanted[frame['id']]
-                frame['notes'] = note(frame.get('notes'))
+                frame['native_pixels']['rows'] = wanted[frame['id']][0]
+                if frame['id'] in hotspots:
+                    frame['native_pixels']['anchor'] = hotspots[frame['id']]
+                frame['notes'] = styled_note(frame['id'], frame.get('notes'))
 
     def handoff(data):
         for frame in data['frames']:
             if frame['id'] in wanted:
-                frame['notes'] = note(frame.get('notes'))
+                if frame['id'] in hotspots:
+                    frame['hotspot'] = hotspots[frame['id']]
+                frame['notes'] = styled_note(frame['id'], frame.get('notes'))
 
     def rescale(data):
         for frame in data['frames']:
             if frame['id'] in wanted:
                 frame['cleanup'] = RESCALE_NOTE
+                if frame['id'] in styled:
+                    rows = wanted[frame['id']][0]
+                    frame['lineart'] = dict(size=[len(rows[0]), len(rows)], hotspot=hotspots[frame['id']],
+                                            note='2026-11-12: lineart_pass.py')
 
     sync(PROD / 'recipe.json', 2, recipe)
     sync(SHEET / 'frames.yaml', 2, handoff)

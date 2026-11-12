@@ -210,6 +210,8 @@ python3 examples/mica-and-talon/production/talon/tonal_reshade.py --check
 python3 examples/mica-and-talon/production/talon/walk_cleanup.py --check
 python3 examples/mica-and-talon/production/talon/pose_cleanup.py --check
 python3 examples/mica-and-talon/production/talon/scale_audit.py --check
+python3 examples/mica-and-talon/production/talon/lineart_pass.py --check
+python3 tools/modding/playable_art/style_audit.py examples/mica-and-talon/production/style-audit.json --check
 python3 examples/mica-and-talon/production/slope_sets.py --check
 python3 examples/mica-and-talon/production/mica/carried_reshade.py --check
 python3 examples/mica-and-talon/production/powered_palettes.py --check

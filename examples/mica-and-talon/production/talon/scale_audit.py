@@ -738,16 +738,22 @@ def check():
     stale, count = [], 0
     rebuilt = {fid: row['rebuilt'] for fid, row in record['frames'].items() if row['decision'] == 'rebuild'}
     rebuilt.update(record.get('derived', {}))
+    # lineart_pass.py redraws heads after this rebuild and may move a drawing's origin: it keeps the hotspot
+    # this rebuild gave as hotspot_before, and a turned copy is turned again from its redrawn source.
+    lineart = PROD / 'lineart-pass.json'
+    redrawn = json.loads(lineart.read_text())['frames'] if lineart.exists() else {}
     for fid, made in rebuilt.items():
         count += 1
         rows = held.get(fid) or pinned[fid]['native_pixels']['rows']
-        if digest(rows) != made['uncleaned_sha256']:
+        if digest(rows) != made['uncleaned_sha256'] or [len(rows[0]), len(rows)] != made['size']:
             stale.append(fid + ' rows')
         for name in made['frames']:
-            with Image.open(SHEET / listed[name]['file']) as image:
-                if list(image.size) != made['size'] or listed[name]['hotspot'] != made['hotspot'] or \
-                        pinned[name]['native_pixels']['anchor'] != made['hotspot']:
-                    stale.append(name)
+            if 'copy' in redrawn.get(name, {}):
+                continue
+            hotspot = redrawn[name]['hotspot_before'] if name in redrawn else listed[name]['hotspot']
+            if hotspot != made['hotspot'] or (name not in redrawn and
+                                              pinned[name]['native_pixels']['anchor'] != made['hotspot']):
+                stale.append(name)
     if stale:
         raise SystemExit('Stale scale rebuild: ' + ', '.join(stale))
     print(f'{count} rebuilt drawings match')

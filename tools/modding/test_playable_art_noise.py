@@ -104,15 +104,27 @@ class TalonPoseCleanupTests(unittest.TestCase):
     def test_cleanup_stays_inside_a_material_and_leaves_goggles_beak_and_shoes_as_drawn(self):
         spec=importlib.util.spec_from_file_location('walk_cleanup',self.PROD/'walk_cleanup.py')
         walk_cleanup=importlib.util.module_from_spec(spec);spec.loader.exec_module(walk_cleanup)
+        sys.path.insert(0,str(self.PROD))
+        import pose_cleanup
         from PIL import Image
         plumage,light={2,3,4,5},{6,7,8,12,13}
         walk,poses=self.records()
+        colors=json.loads((self.SHEET/'palette.yaml').read_text())['colors']
+        # The cleanup stage alone: lineart_pass.py redraws heads on top of it, and has its own tests.
+        staged=pose_cleanup.cleaned(json.loads((self.PROD/'pose-cleanup.json').read_text()),colors)
+        redrawn=json.loads((self.PROD/'lineart-pass.json').read_text())['frames']
         protected=0
         for drawing in walk+poses:
             with self.subTest(frame=drawing['id']), Image.open(self.SHEET/'frames'/(drawing['id']+'.png')) as image:
                 rows=drawing['source_rows'];width=len(rows[0])
-                was=[int(v,16) for row in rows for v in row];now=list(image.get_flattened_data())
-                self.assertEqual(image.size,(width,len(rows)))
+                was=[int(v,16) for row in rows for v in row]
+                if drawing['id'] in staged:
+                    now=[int(v,16) for row in staged[drawing['id']] for v in row]
+                    if drawing['id'] not in redrawn:                     # WAIT, BLINK, VICTORY: the stage is the frame
+                        self.assertEqual(now,list(image.get_flattened_data()))
+                else:
+                    now=list(image.get_flattened_data())
+                self.assertEqual(len(was),len(now))
                 for a,b in zip(was,now):
                     if a!=b:self.assertTrue({a,b}<=plumage or {a,b}<=light,(a,b))
                 # A white/cream patch with no plumage beside it that touches amber, brown or red is a goggle

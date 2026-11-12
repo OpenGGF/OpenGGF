@@ -142,6 +142,23 @@ for every drawing, the ones still outside 8% (a standing object pose with a larg
 BALANCE and DEATH read small but stand the right height, 44 object poses hide the lens or beak) and
 MICA's audit. `scale_audit.py --check` needs no source drawings; `measure` and `rebuild` need the
 external ones its header names.
+**Line-art pass (2026-11-12).** The owner's remaining complaint was line art: standing and flying
+read crisp while balancing and the air bubble "look like a completely different artist drew them".
+Each pose had been reduced from its own separately drawn source, so each sheet arrived with its own
+face (a plain white mask where WAIT has a cream cheek, brow and eye stripe), goggles and beak, and a
+dark rim inside the ink that reads as a heavier outline. `tools/modding/playable_art/style_audit.py`
+scores every frame against WAIT, WALK, RUN and TAILS_FLY, and `production/talon/lineart_pass.py`
+redraws instead of cleaning: 87 drawings now carry WAIT's own head, cut from cleaned `wait-00`,
+placed on the pose's goggle lens, turned to the pose's head pitch (from WAIT's source drawing, so a
+turned head is as crisp as a straight one), mirrored where the pose faces left, with an open-beak
+variant for the gasp and shout poses. Bodies keep their pose and size and lose the lit side of the
+dark rim. A loop takes the head on every frame or on none, 16 turned object poses are redrawn
+from their source pose, and the flagged frames fell from 27 to 12, all accepted with a reason in
+[`style-audit.json`](../../production/style-audit.json). Drawings with no head to match keep their
+own and are listed with the reason in [`lineart-pass.json`](../../production/talon/lineart-pass.json):
+front and back views, balls, hidden beaks, heads turned past 42° (tumbles and dives) and DUCK. The
+other idle frames, BLINK and VICTORY belong to another lane and are not touched. `pose_cleanup.py`
+applies the pass as its second stage, so `pose_cleanup.py --check` reproduces it.
 The pose cleanup also corrected the shared rule: a white or cream patch with no plumage beside it that
 touches amber, brown or red is a goggle glint, beak shine or shoe white, and is now put back exactly
 as drawn. The walk cleanup had rewritten seven such pixels on `walk-04`, `walk-05`, `walk-07`,

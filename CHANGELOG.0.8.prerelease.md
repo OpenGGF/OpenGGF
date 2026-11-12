@@ -224,7 +224,8 @@ under the matching area heading; see the
   profile-facing flight art matches his carry identity, and his flight and carry
   frames, like MICA's carried frames, share the ink outline and shading of their
   other poses; his normal sheet is despeckled, his flight, carry, victory and
-  other oversized poses are redrawn to the head scale of his idle, and every slope and
+  other oversized poses are redrawn to the head scale of his idle, most of his poses now
+  share his idle's head and line weight instead of each drawing's own, and every slope and
   homing-dive frame of both characters, powered forms included, is re-derived
   with a cleaner rotation. S1 creator
   forms play animated transformations. Joint native-pose carry redraws now

@@ -1749,6 +1749,18 @@ scale (their figures differ per cell; only frames whose own head also reads larg
 enlarging on a small reading (both measures fail low, so DEATH came out a head too tall). MICA was
 audited from her hand-marked skull widths and not changed: 107 of 123 readable flats are within 8%,
 and the 16 outside (0.78–1.11) are object poses.
+The owner's last complaint was line art: balancing and the air bubble "look like a completely
+different artist drew them" beside standing and flying, and "we constantly have to perform
+cleanups". The cause is structural: every pose is its own reduction of its own drawing. So the
+fix redraws from the reference pose instead of cleaning again. `style_audit.py` scores each frame
+against the sheet's reference animations (outline gaps, dark rim, surviving bands, ramp mix, patch
+size, speckle); `production/talon/lineart_pass.py` gives 87 of TALON's poses WAIT's own head
+on the pose's lens and beak and thins the lit side of their dark rim. Rejected, with evidence in
+the tool's header and record: clearing a ring round the new head (it ate raised wings and arms;
+only the old goggles and beak are removed now), turning the 24 px head with Scale2x (blurred
+goggles; turned heads are reduced from WAIT's source instead), thinning the whole rim (it left
+the poses lighter than WAIT; only lit edges are thinned), and placing heads on tumbles, dives and
+front or back views (no reference part exists for them; they keep their own and are listed).
 
 **Powered-form owner feedback, 2026-11-11:** powered binding selects the creator’s
 movement archetype; native Tails families retain Tails clocks instead of consuming
