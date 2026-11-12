@@ -1729,6 +1729,14 @@ test is re-pinned to the new method and fails when a frame is reverted. No flat 
 in this step. Left alone because they are not turned by this tool: the special-stage sets
 (`locked_stage.py`, per-part rotation with its own `--check`) and the S3K title hand
 (`titles/s3k_hand_anatomy.py`); steep frames and other quarter turns are lossless either way.
+The owner's answer on the remaining poses was to clean them too. `production/talon/pose_cleanup.py`
+runs the walk cleanup's rules over TALON's other 203 flat drawings (noise 0.34 → 0.19 on average;
+sheet median 0.32 → 0.19). ROLL, the SPINDASH blur ball and the white transformation flash stay as
+drawn: they already score 0.10–0.18 and their one-pixel steps are curve shading, motion streaks or
+a deliberate flat silhouette. The flight and carry sets, Solar, the other surfaces and MICA were not
+touched; MICA's flat poses still score a median of 0.34, where TALON's stood before. The same step
+tightened the shared rule so that white pixels belonging to goggles, beak or shoes are restored
+exactly; seven such pixels on five walk/run flats, and their slope frames, were rebuilt.
 
 **Powered-form owner feedback, 2026-11-11:** powered binding selects the creator’s
 movement archetype; native Tails families retain Tails clocks instead of consuming

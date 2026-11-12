@@ -223,7 +223,7 @@ under the matching area heading; see the
   Solar pose keeps one gloved wing-arm per side; new
   profile-facing flight art matches his carry identity, and his flight and carry
   frames, like MICA's carried frames, share the ink outline and shading of their
-  other poses; his walk and run frames are despeckled, and every slope and
+  other poses; his normal sheet is despeckled, and every slope and
   homing-dive frame of both characters, powered forms included, is re-derived
   with a cleaner rotation. S1 creator
   forms play animated transformations. Joint native-pose carry redraws now

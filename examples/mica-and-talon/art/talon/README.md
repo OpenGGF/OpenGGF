@@ -16,7 +16,7 @@ the repository root. `assemble.py` is `tools/modding/playable_art/assemble.py`.
 | `hud-and-screens/` | 29 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `portrait/` | `*-frames.txt`; 1 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `reels/` | 2 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
-| `sheet/` | 282 PNGs | Approved native-pose drawings and deterministic slopes | `assemble.py art/talon/sheet <target-output>` packages the handoff; it does not redraw approved frames. `production/talon/tonal_reshade.py --check` covers the 24 flight and carry frames and `production/talon/walk_cleanup.py --check` the 48 WALK/RUN frames. |
+| `sheet/` | 282 PNGs | Approved native-pose drawings and deterministic slopes | `assemble.py art/talon/sheet <target-output>` packages the handoff; it does not redraw approved frames. `production/talon/tonal_reshade.py --check` covers the 24 flight and carry frames `production/talon/walk_cleanup.py --check` the 48 WALK/RUN frames and `production/talon/pose_cleanup.py --check` the other 203 flat poses. |
 | `special-stage/` | `frames.txt` (per host for MICA endings); 72 PNGs | Canonical indexed parts, native body motion and joint placements | `python3 tools/modding/playable_art/locked_stage.py examples/mica-and-talon/production/talon/consistent-stage --check` (omit `--check` to rebuild). |
 | `stage-poses/` | `frames.txt` (per host for MICA endings); 36 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `titles/` | `*-frames.txt`; 50 PNGs; masks and clear mask | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
@@ -104,6 +104,25 @@ change size or hotspot by one pixel. Flat WALK now scores 0.22 on the audit's no
 0.37. `walk_cleanup.py --check` rebuilds all 48 frames from
 [`walk-cleanup.json`](../../production/talon/walk-cleanup.json). The rest of the sheet was measured
 and left as it is: WAIT and most other poses score what WALK did before.
+
+**Pose cleanup (2026-11-12).** The owner then asked for the rest of the sheet to match the cleaned
+walk and run. `production/talon/pose_cleanup.py` applies the same rules (`walk_cleanup.clean`) to
+the other 203 flat drawings: WAIT, BLINK, LOOK_UP, DUCK, SKID, PUSH, the BALANCE sets, SPRING, HURT,
+HURT_FALL, DEATH, DROWN, GET_UP, VICTORY, HANG, HANG2, BUBBLE, FLOAT2, SPINDASH 00–02, SUPER_TRANSFORM
+00/01/03/04, TAILS_CARRIED, the tired and swim sets and the 113 object poses. Speckle folds into
+the surrounding shade inside plumage and inside white/cream only; white is never darkened; alpha,
+ink, sizes and hotspots are identical, and there are no hand pixels. These drawings averaged 0.34 on
+the audit's noise measure (0.25–0.41 by animation) and now average 0.19 (0.13–0.26); the sheet
+median falls from 0.32 to 0.19, with the cleaned WALK/RUN flats at 0.20–0.22 and the flight set at
+0.15. Left as drawn, and listed with reasons in
+[`pose-cleanup.json`](../../production/talon/pose-cleanup.json): the four ROLL frames and the
+SPINDASH blur ball, whose one-pixel steps are curve shading and motion streaks and which already
+score 0.10–0.18, and the white transformation flash. `pose_cleanup.py --check` rebuilds the 203
+drawings from their original rows.
+The pass also corrected the shared rule: a white or cream patch with no plumage beside it that
+touches amber, brown or red is a goggle glint, beak shine or shoe white, and is now put back exactly
+as drawn. The walk cleanup had rewritten seven such pixels on `walk-04`, `walk-05`, `walk-07`,
+`run-01` and `run-03`; those five flats and their fifteen slope frames are rebuilt.
 
 **Solar slopes on the mode reduction (2026-11-12).** The 48 up45/inverted Solar WALK and RUN
 frames (S2 and S3K banks) are re-derived from their unchanged flats with the same reduction, by

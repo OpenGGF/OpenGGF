@@ -29,7 +29,8 @@
    "new_hotspot": [
     12,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "wait-01",
@@ -52,7 +53,8 @@
    "new_hotspot": [
     12,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "wait-02",
@@ -75,7 +77,8 @@
    "new_hotspot": [
     12,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "wait-03",
@@ -98,7 +101,8 @@
    "new_hotspot": [
     12,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "wait-04",
@@ -121,7 +125,8 @@
    "new_hotspot": [
     11,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "wait-05",
@@ -144,7 +149,8 @@
    "new_hotspot": [
     12,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "wait-06",
@@ -167,7 +173,8 @@
    "new_hotspot": [
     12,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "walk-00",
@@ -570,7 +577,8 @@
    "new_hotspot": [
     16,
     14
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "spindash-01",
@@ -593,7 +601,8 @@
    "new_hotspot": [
     16,
     15
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "spindash-02",
@@ -616,7 +625,8 @@
    "new_hotspot": [
     16,
     12
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "spindash-03",
@@ -662,7 +672,8 @@
    "new_hotspot": [
     16,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "hurt-00",
@@ -685,7 +696,8 @@
    "new_hotspot": [
     17,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "death-00",
@@ -708,7 +720,8 @@
    "new_hotspot": [
     17,
     20
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "duck-00",
@@ -731,7 +744,8 @@
    "new_hotspot": [
     19,
     4
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "look_up-00",
@@ -754,7 +768,8 @@
    "new_hotspot": [
     13,
     21
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "skid-00",
@@ -777,7 +792,8 @@
    "new_hotspot": [
     26,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "skid-01",
@@ -800,7 +816,8 @@
    "new_hotspot": [
     25,
     19
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "fly-00",
@@ -967,7 +984,8 @@
    "new_hotspot": [
     21,
     20
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "fly_tired-01",
@@ -990,7 +1008,8 @@
    "new_hotspot": [
     21,
     20
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "fly_tired-02",
@@ -1013,7 +1032,8 @@
    "new_hotspot": [
     22,
     20
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "fly_tired-03",
@@ -1036,7 +1056,8 @@
    "new_hotspot": [
     18,
     20
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "fly_tired-04",
@@ -1059,7 +1080,8 @@
    "new_hotspot": [
     21,
     20
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "fly_tired-05",
@@ -1082,7 +1104,8 @@
    "new_hotspot": [
     20,
     20
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-push-00",
@@ -1106,7 +1129,8 @@
     25,
     17
    ],
-   "anchor": "push: hand-side edge keeps its native distance from the hotspot"
+   "anchor": "push: hand-side edge keeps its native distance from the hotspot",
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-push-01",
@@ -1130,7 +1154,8 @@
     15,
     18
    ],
-   "anchor": "push: hand-side edge keeps its native distance from the hotspot"
+   "anchor": "push: hand-side edge keeps its native distance from the hotspot",
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-push-02",
@@ -1154,7 +1179,8 @@
     17,
     19
    ],
-   "anchor": "push: hand-side edge keeps its native distance from the hotspot"
+   "anchor": "push: hand-side edge keeps its native distance from the hotspot",
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-push-03",
@@ -1178,7 +1204,8 @@
     19,
     19
    ],
-   "anchor": "push: hand-side edge keeps its native distance from the hotspot"
+   "anchor": "push: hand-side edge keeps its native distance from the hotspot",
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-balance-00",
@@ -1201,7 +1228,8 @@
    "new_hotspot": [
     15,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-balance-01",
@@ -1224,7 +1252,8 @@
    "new_hotspot": [
     14,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-balance2-00",
@@ -1247,7 +1276,8 @@
    "new_hotspot": [
     18,
     19
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-balance2-01",
@@ -1270,7 +1300,8 @@
    "new_hotspot": [
     18,
     22
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-balance2-02",
@@ -1293,7 +1324,8 @@
    "new_hotspot": [
     17,
     19
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-balance3-00",
@@ -1316,7 +1348,8 @@
    "new_hotspot": [
     19,
     23
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-balance3-01",
@@ -1339,7 +1372,8 @@
    "new_hotspot": [
     20,
     19
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-balance4-00",
@@ -1362,7 +1396,8 @@
    "new_hotspot": [
     13,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-balance4-01",
@@ -1385,7 +1420,8 @@
    "new_hotspot": [
     22,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-balance4-02",
@@ -1408,7 +1444,8 @@
    "new_hotspot": [
     23,
     22
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-balance4-03",
@@ -1431,7 +1468,8 @@
    "new_hotspot": [
     24,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-balance4-04",
@@ -1454,7 +1492,8 @@
    "new_hotspot": [
     17,
     19
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-hang-00",
@@ -1477,7 +1516,8 @@
    "new_hotspot": [
     26,
     12
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-hang-01",
@@ -1500,7 +1540,8 @@
    "new_hotspot": [
     26,
     12
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-hang2-00",
@@ -1523,7 +1564,8 @@
    "new_hotspot": [
     16,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-hang2-01",
@@ -1546,7 +1588,8 @@
    "new_hotspot": [
     15,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-bubble-00",
@@ -1569,7 +1612,8 @@
    "new_hotspot": [
     24,
     26
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-bubble-01",
@@ -1592,7 +1636,8 @@
    "new_hotspot": [
     24,
     26
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-bubble-02",
@@ -1615,7 +1660,8 @@
    "new_hotspot": [
     24,
     26
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-hurt-fall-00",
@@ -1638,7 +1684,8 @@
    "new_hotspot": [
     20,
     28
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-hurt-fall-01",
@@ -1661,7 +1708,8 @@
    "new_hotspot": [
     23,
     26
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-drown-00",
@@ -1684,7 +1732,8 @@
    "new_hotspot": [
     19,
     27
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-float2-00",
@@ -1707,7 +1756,8 @@
    "new_hotspot": [
     22,
     13
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-float2-01",
@@ -1730,7 +1780,8 @@
    "new_hotspot": [
     19,
     13
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-float2-02",
@@ -1753,7 +1804,8 @@
    "new_hotspot": [
     19,
     14
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-float2-03",
@@ -1776,7 +1828,8 @@
    "new_hotspot": [
     19,
     13
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-float2-04",
@@ -1799,7 +1852,8 @@
    "new_hotspot": [
     22,
     12
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-float2-05",
@@ -1822,7 +1876,8 @@
    "new_hotspot": [
     18,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-float2-06",
@@ -1845,7 +1900,8 @@
    "new_hotspot": [
     18,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-float2-07",
@@ -1868,7 +1924,8 @@
    "new_hotspot": [
     18,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-blink-00",
@@ -1891,7 +1948,8 @@
    "new_hotspot": [
     12,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-blink-01",
@@ -1914,7 +1972,8 @@
    "new_hotspot": [
     11,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-blink-02",
@@ -1937,7 +1996,8 @@
    "new_hotspot": [
     12,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-get-up-00",
@@ -1960,7 +2020,8 @@
    "new_hotspot": [
     24,
     6
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-get-up-01",
@@ -1983,7 +2044,8 @@
    "new_hotspot": [
     11,
     19
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-victory-00",
@@ -2006,7 +2068,8 @@
    "new_hotspot": [
     14,
     27
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-victory-01",
@@ -2029,7 +2092,8 @@
    "new_hotspot": [
     15,
     25
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-victory-02",
@@ -2052,7 +2116,8 @@
    "new_hotspot": [
     17,
     25
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-victory-03",
@@ -2075,7 +2140,8 @@
    "new_hotspot": [
     15,
     27
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-carried-00",
@@ -2098,7 +2164,8 @@
    "new_hotspot": [
     18,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-carried-01",
@@ -2121,7 +2188,8 @@
    "new_hotspot": [
     19,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-carried-02",
@@ -2144,7 +2212,8 @@
    "new_hotspot": [
     23,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-super-transform-00",
@@ -2167,7 +2236,8 @@
    "new_hotspot": [
     24,
     23
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-super-transform-01",
@@ -2190,7 +2260,8 @@
    "new_hotspot": [
     27,
     27
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-super-transform-02",
@@ -2236,7 +2307,8 @@
    "new_hotspot": [
     26,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-super-transform-04",
@@ -2259,7 +2331,8 @@
    "new_hotspot": [
     24,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-fly-ascend-00",
@@ -2714,7 +2787,8 @@
    "new_hotspot": [
     27,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-swim-01",
@@ -2737,7 +2811,8 @@
    "new_hotspot": [
     27,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-swim-02",
@@ -2760,7 +2835,8 @@
    "new_hotspot": [
     33,
     23
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-swim-03",
@@ -2783,7 +2859,8 @@
    "new_hotspot": [
     28,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-swim-04",
@@ -2806,7 +2883,8 @@
    "new_hotspot": [
     28,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-swim-ascend-00",
@@ -2829,7 +2907,8 @@
    "new_hotspot": [
     26,
     21
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-swim-ascend-01",
@@ -2852,7 +2931,8 @@
    "new_hotspot": [
     30,
     20
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-swim-ascend-02",
@@ -2875,7 +2955,8 @@
    "new_hotspot": [
     24,
     21
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-swim-ascend-03",
@@ -2898,7 +2979,8 @@
    "new_hotspot": [
     26,
     20
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-swim-ascend-04",
@@ -2921,7 +3003,8 @@
    "new_hotspot": [
     25,
     21
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-swim-carry-00",
@@ -2944,7 +3027,8 @@
    "new_hotspot": [
     28,
     28
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-swim-carry-01",
@@ -2967,7 +3051,8 @@
    "new_hotspot": [
     29,
     28
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-swim-tired-00",
@@ -2990,7 +3075,8 @@
    "new_hotspot": [
     25,
     26
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-swim-tired-01",
@@ -3013,7 +3099,8 @@
    "new_hotspot": [
     24,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-tails-swim-tired-02",
@@ -3036,7 +3123,8 @@
    "new_hotspot": [
     25,
     23
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-blank-00",
@@ -3082,7 +3170,8 @@
    "new_hotspot": [
     12,
     23
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "family-blink-04",
@@ -3105,7 +3194,8 @@
    "new_hotspot": [
     16,
     15
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object4-s3k-82",
@@ -3128,7 +3218,8 @@
    "new_hotspot": [
     19,
     26
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object4-s3k-8d",
@@ -3151,7 +3242,8 @@
    "new_hotspot": [
     18,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-31",
@@ -3174,7 +3266,8 @@
    "new_hotspot": [
     15,
     19
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-32",
@@ -3197,7 +3290,8 @@
    "new_hotspot": [
     16,
     15
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-33",
@@ -3220,7 +3314,8 @@
    "new_hotspot": [
     14,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-34",
@@ -3243,7 +3338,8 @@
    "new_hotspot": [
     15,
     8
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-35",
@@ -3266,7 +3362,8 @@
    "new_hotspot": [
     15,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-36",
@@ -3289,7 +3386,8 @@
    "new_hotspot": [
     15,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-37",
@@ -3312,7 +3410,8 @@
    "new_hotspot": [
     13,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-38",
@@ -3335,7 +3434,8 @@
    "new_hotspot": [
     14,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-39",
@@ -3358,7 +3458,8 @@
    "new_hotspot": [
     15,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-3a",
@@ -3381,7 +3482,8 @@
    "new_hotspot": [
     14,
     13
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-3b",
@@ -3404,7 +3506,8 @@
    "new_hotspot": [
     15,
     13
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-3c",
@@ -3427,7 +3530,8 @@
    "new_hotspot": [
     14,
     15
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-3d",
@@ -3450,7 +3554,8 @@
    "new_hotspot": [
     14,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-3e",
@@ -3473,7 +3578,8 @@
    "new_hotspot": [
     16,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-3f",
@@ -3496,7 +3602,8 @@
    "new_hotspot": [
     14,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-40",
@@ -3519,7 +3626,8 @@
    "new_hotspot": [
     15,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-41",
@@ -3542,7 +3650,8 @@
    "new_hotspot": [
     16,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-42",
@@ -3565,7 +3674,8 @@
    "new_hotspot": [
     19,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-43",
@@ -3588,7 +3698,8 @@
    "new_hotspot": [
     14,
     15
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-44",
@@ -3611,7 +3722,8 @@
    "new_hotspot": [
     15,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-45",
@@ -3634,7 +3746,8 @@
    "new_hotspot": [
     17,
     14
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-46",
@@ -3657,7 +3770,8 @@
    "new_hotspot": [
     15,
     12
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-47",
@@ -3680,7 +3794,8 @@
    "new_hotspot": [
     12,
     19
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-48",
@@ -3703,7 +3818,8 @@
    "new_hotspot": [
     13,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-49",
@@ -3726,7 +3842,8 @@
    "new_hotspot": [
     20,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-4a",
@@ -3749,7 +3866,8 @@
    "new_hotspot": [
     18,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-4b",
@@ -3772,7 +3890,8 @@
    "new_hotspot": [
     17,
     13
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-4c",
@@ -3795,7 +3914,8 @@
    "new_hotspot": [
     13,
     14
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-4d",
@@ -3818,7 +3938,8 @@
    "new_hotspot": [
     14,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-4e",
@@ -3841,7 +3962,8 @@
    "new_hotspot": [
     19,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-4f",
@@ -3864,7 +3986,8 @@
    "new_hotspot": [
     19,
     22
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-50",
@@ -3887,7 +4010,8 @@
    "new_hotspot": [
     16,
     21
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-51",
@@ -3910,7 +4034,8 @@
    "new_hotspot": [
     17,
     19
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-52",
@@ -3933,7 +4058,8 @@
    "new_hotspot": [
     17,
     12
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-53",
@@ -3956,7 +4082,8 @@
    "new_hotspot": [
     19,
     13
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-54",
@@ -3979,7 +4106,8 @@
    "new_hotspot": [
     21,
     14
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-58",
@@ -4002,7 +4130,8 @@
    "new_hotspot": [
     11,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-59",
@@ -4025,7 +4154,8 @@
    "new_hotspot": [
     12,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-5a",
@@ -4048,7 +4178,8 @@
    "new_hotspot": [
     10,
     15
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-5b",
@@ -4071,7 +4202,8 @@
    "new_hotspot": [
     10,
     14
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-5c",
@@ -4094,7 +4226,8 @@
    "new_hotspot": [
     16,
     12
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-5d",
@@ -4117,7 +4250,8 @@
    "new_hotspot": [
     1,
     13
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-5e",
@@ -4140,7 +4274,8 @@
    "new_hotspot": [
     19,
     13
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-5f",
@@ -4163,7 +4298,8 @@
    "new_hotspot": [
     26,
     13
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-60",
@@ -4186,7 +4322,8 @@
    "new_hotspot": [
     13,
     13
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-61",
@@ -4209,7 +4346,8 @@
    "new_hotspot": [
     29,
     12
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-62",
@@ -4232,7 +4370,8 @@
    "new_hotspot": [
     22,
     14
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-69",
@@ -4255,7 +4394,8 @@
    "new_hotspot": [
     19,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-6a",
@@ -4278,7 +4418,8 @@
    "new_hotspot": [
     21,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-6b",
@@ -4301,7 +4442,8 @@
    "new_hotspot": [
     15,
     19
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-6c",
@@ -4324,7 +4466,8 @@
    "new_hotspot": [
     20,
     14
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-6d",
@@ -4347,7 +4490,8 @@
    "new_hotspot": [
     20,
     11
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-6e",
@@ -4370,7 +4514,8 @@
    "new_hotspot": [
     14,
     10
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-6f",
@@ -4393,7 +4538,8 @@
    "new_hotspot": [
     12,
     11
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-70",
@@ -4416,7 +4562,8 @@
    "new_hotspot": [
     17,
     11
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-71",
@@ -4439,7 +4586,8 @@
    "new_hotspot": [
     17,
     11
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-72",
@@ -4462,7 +4610,8 @@
    "new_hotspot": [
     18,
     12
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-73",
@@ -4485,7 +4634,8 @@
    "new_hotspot": [
     18,
     12
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-74",
@@ -4508,7 +4658,8 @@
    "new_hotspot": [
     14,
     13
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-75",
@@ -4531,7 +4682,8 @@
    "new_hotspot": [
     13,
     11
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-76",
@@ -4554,7 +4706,8 @@
    "new_hotspot": [
     16,
     13
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-77",
@@ -4577,7 +4730,8 @@
    "new_hotspot": [
     17,
     14
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-78",
@@ -4600,7 +4754,8 @@
    "new_hotspot": [
     17,
     30
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-79",
@@ -4623,7 +4778,8 @@
    "new_hotspot": [
     31,
     32
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-7e",
@@ -4646,7 +4802,8 @@
    "new_hotspot": [
     8,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-80",
@@ -4669,7 +4826,8 @@
    "new_hotspot": [
     20,
     27
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-81",
@@ -4692,7 +4850,8 @@
    "new_hotspot": [
     30,
     28
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-83",
@@ -4715,7 +4874,8 @@
    "new_hotspot": [
     23,
     29
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-84",
@@ -4738,7 +4898,8 @@
    "new_hotspot": [
     26,
     27
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-85",
@@ -4761,7 +4922,8 @@
    "new_hotspot": [
     23,
     27
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-90",
@@ -4784,7 +4946,8 @@
    "new_hotspot": [
     13,
     27
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-92",
@@ -4807,7 +4970,8 @@
    "new_hotspot": [
     11,
     27
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-93",
@@ -4830,7 +4994,8 @@
    "new_hotspot": [
     9,
     27
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-94",
@@ -4853,7 +5018,8 @@
    "new_hotspot": [
     19,
     27
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-95",
@@ -4876,7 +5042,8 @@
    "new_hotspot": [
     16,
     29
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-ca",
@@ -4899,7 +5066,8 @@
    "new_hotspot": [
     24,
     7
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-df",
@@ -4922,7 +5090,8 @@
    "new_hotspot": [
     17,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-e0",
@@ -4945,7 +5114,8 @@
    "new_hotspot": [
     12,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-e1",
@@ -4968,7 +5138,8 @@
    "new_hotspot": [
     12,
     20
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-e2",
@@ -4991,7 +5162,8 @@
    "new_hotspot": [
     12,
     23
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-e3",
@@ -5014,7 +5186,8 @@
    "new_hotspot": [
     17,
     23
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-e4",
@@ -5037,7 +5210,8 @@
    "new_hotspot": [
     15,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-e5",
@@ -5060,7 +5234,8 @@
    "new_hotspot": [
     14,
     20
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-e6",
@@ -5083,7 +5258,8 @@
    "new_hotspot": [
     11,
     22
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-e7",
@@ -5106,7 +5282,8 @@
    "new_hotspot": [
     12,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-e8",
@@ -5129,7 +5306,8 @@
    "new_hotspot": [
     14,
     23
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-e9",
@@ -5152,7 +5330,8 @@
    "new_hotspot": [
     11,
     20
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-ea",
@@ -5175,7 +5354,8 @@
    "new_hotspot": [
     10,
     24
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-ef",
@@ -5198,7 +5378,8 @@
    "new_hotspot": [
     17,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-f0",
@@ -5221,7 +5402,8 @@
    "new_hotspot": [
     15,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-f1",
@@ -5244,7 +5426,8 @@
    "new_hotspot": [
     18,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-f2",
@@ -5267,7 +5450,8 @@
    "new_hotspot": [
     18,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-f6",
@@ -5290,7 +5474,8 @@
    "new_hotspot": [
     14,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-f7",
@@ -5313,7 +5498,8 @@
    "new_hotspot": [
     13,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-f8",
@@ -5336,7 +5522,8 @@
    "new_hotspot": [
     18,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-63",
@@ -5359,7 +5546,8 @@
    "new_hotspot": [
     14,
     16
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-64",
@@ -5382,7 +5570,8 @@
    "new_hotspot": [
     12,
     1
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-65",
@@ -5405,7 +5594,8 @@
    "new_hotspot": [
     14,
     19
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-66",
@@ -5428,7 +5618,8 @@
    "new_hotspot": [
     14,
     26
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-67",
@@ -5451,7 +5642,8 @@
    "new_hotspot": [
     14,
     13
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-68",
@@ -5474,7 +5666,8 @@
    "new_hotspot": [
     13,
     29
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-7a",
@@ -5497,7 +5690,8 @@
    "new_hotspot": [
     30,
     20
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-7b",
@@ -5520,7 +5714,8 @@
    "new_hotspot": [
     32,
     14
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-7c",
@@ -5543,7 +5738,8 @@
    "new_hotspot": [
     20,
     12
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-7d",
@@ -5566,7 +5762,8 @@
    "new_hotspot": [
     14,
     11
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-7f",
@@ -5589,7 +5786,8 @@
    "new_hotspot": [
     11,
     31
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-f3",
@@ -5612,7 +5810,8 @@
    "new_hotspot": [
     13,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-f4",
@@ -5635,7 +5834,8 @@
    "new_hotspot": [
     15,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-f5",
@@ -5658,7 +5858,8 @@
    "new_hotspot": [
     18,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-f9",
@@ -5681,7 +5882,8 @@
    "new_hotspot": [
     14,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "object5-fa",
@@ -5704,7 +5906,8 @@
    "new_hotspot": [
     16,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
   },
   {
    "id": "walk-up45-00",
