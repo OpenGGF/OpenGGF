@@ -219,6 +219,16 @@ under the matching area heading; see the
 
 ## Maintenance and release preparation
 
+- **Accurate FM performance:** fold the Nuked sine and exponential lookup arithmetic
+  into derived tables while preserving cycle-level output. A paired six-voice
+  core benchmark measured 3.9% less rendering time; this is not a gameplay FPS claim.
+  The accurate core also clocks quiet stretches of cycles in runs
+  (`NukedOpn2.clocks`), with identical PCM, status and snapshots: paired
+  benchmarks measured 43% less time in the six-voice core and 46% less for
+  S3K AIZ1 and HCZ1 music rendered end to end, once HotSpot has compiled the
+  run loop. A JVM pays about three times the old per-frame cost for its first
+  second of FM sound while that compile runs.
+
 - **Engine quality and contributions:** the README and contributor entry point now
   acknowledge maintainability weaknesses and invite focused improvements to object
   lifetime, collision contact, rewind reconstruction, trace diagnosis and navigation.
