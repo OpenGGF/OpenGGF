@@ -93,16 +93,15 @@ class TestSonic1PlcProducerCoverage {
     }
 
     @Test
-    void titleScreenRetriesRejectedClearWithoutPublishingMainAtSegaEntry() throws Exception {
+    void titleScreenCancelsActiveClearWithoutPublishingMainAtSegaEntry() throws Exception {
         Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
         queue.append(0);
         queue.prepare();
-        assertNotNull(queue.capture().activeEntry(), "setup must reject a native ClearPLC");
-        NemesisPlcQueueSnapshot before = queue.capture();
+        assertNotNull(queue.capture().activeEntry(), "setup must exercise an active native ClearPLC");
         Sonic1TitleScreenManager manager = Sonic1TitleScreenManager.getInstance();
         manager.initialize();
-        assertEquals(before, queue.capture(), "a rejected clear must preserve active and waiting work");
-        drainActive(queue);
+        assertEquals(new NemesisPlcQueueSnapshot(null, List.of()), queue.capture(),
+                "ClearPLC cancels both active decoding and waiting work");
         manager.update(new com.openggf.control.InputHandler());
         assertEquals(List.of(), queue.capture().queuedEntries(),
                 "the pending operation is ClearPLC, not the later NewPLC(Main)");
@@ -113,20 +112,19 @@ class TestSonic1PlcProducerCoverage {
     }
 
     @Test
-    void mainTitleRetriesOnlyMainWithoutReplayingObjectsOrMusic() throws Exception {
+    void mainTitleReplacesActiveWorkWithoutReplayingObjectsOrMusic() throws Exception {
         Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
         Sonic1TitleScreenManager manager = Sonic1TitleScreenManager.getInstance();
         manager.initialize();
         queue.append(2);
         queue.prepare();
-        NemesisPlcQueueSnapshot before = queue.capture();
         com.openggf.audio.AudioManager audio = org.mockito.Mockito.mock(com.openggf.audio.AudioManager.class);
         try (var services = org.mockito.Mockito.mockStatic(GameServices.class,
                 org.mockito.Mockito.CALLS_REAL_METHODS)) {
             services.when(GameServices::audio).thenReturn(audio);
             enterMainTitle(manager);
-            assertEquals(before, queue.capture(), "rejected Main must not mutate the active decoder");
-            drainActive(queue);
+            assertEquals(expectedDescriptors(0), queue.capture().queuedEntries());
+            assertEquals(null, queue.capture().activeEntry(), "NewPLC cancels the active decoder");
             manager.update(new com.openggf.control.InputHandler());
             assertEquals(expectedDescriptors(0), queue.capture().queuedEntries());
             queue.append(1);
@@ -310,7 +308,7 @@ class TestSonic1PlcProducerCoverage {
 
         signpost.update(1, player);
 
-        verify(player).setAnimationId(Sonic1AnimationIds.NULL.id());
+        verify(player).setAnimationId(Sonic1AnimationIds.NULL);
         verify(player).setForcedAnimationId(Sonic1AnimationIds.NULL.id());
 
         Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
@@ -327,7 +325,7 @@ class TestSonic1PlcProducerCoverage {
     }
 
     @Test
-    void rejectedResultsReplacementKeepsFixedCardUncommittedUntilSingleRetry()
+    void resultsReplacementCancelsActiveWorkAndCommitsSingleFixedCard()
             throws Exception {
         Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
         queue.append(0);
@@ -358,11 +356,9 @@ class TestSonic1PlcProducerCoverage {
                 .filter(Sonic1ResultsScreenObjectInstance.class::isInstance)
                 .map(Sonic1ResultsScreenObjectInstance.class::cast)
                 .findFirst().orElseThrow();
-        assertEquals(false, pending.isResultsPlcCommitted());
-        assertNotNull(queue.capture().activeEntry(),
-                "rejected NewPLC must leave the existing decoder untouched");
+        assertTrue(pending.isResultsPlcCommitted());
+        assertEquals(null, queue.capture().activeEntry(), "NewPLC cancels active work");
 
-        drainActive(queue);
         handoff.invoke(signpost, player);
 
         assertTrue(pending.isResultsPlcCommitted());
@@ -381,46 +377,36 @@ class TestSonic1PlcProducerCoverage {
     }
 
     @Test
-    void specialStageResultsRetriesRejectedBatchExactlyOnceAfterActiveDecode() throws Exception {
+    void specialStageResultsReplacesActiveBatchExactlyOnce() throws Exception {
         Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
         queue.append(0);
         queue.prepare();
-        assertNotNull(queue.capture().activeEntry(), "fixture must force a native transaction rejection");
+        assertNotNull(queue.capture().activeEntry(), "fixture must contain an active decoder");
 
         Sonic1SpecialStageProvider provider = new Sonic1SpecialStageProvider();
         provider.resetForResults();
-        drainActive(queue);
+        assertEquals(null, queue.capture().activeEntry());
         provider.onEnterResults();
 
         List<NemesisPlcQueueSnapshot.Entry> expected = expectedDescriptors(0, 27);
         assertEquals(expected, queue.capture().queuedEntries(),
-                "S1 results retry must publish Main then result art once idle");
+                "S1 results replacement must publish Main then result art");
         provider.onEnterResults();
         assertEquals(expected, queue.capture().queuedEntries(),
-                "S1 results retry must not duplicate its successful batch");
+                "S1 results entry must not duplicate its successful batch");
     }
 
     @Test
     @SuppressWarnings({"rawtypes", "unchecked"})
-    void specialStageResultsRewindRestoresPendingRetryAndCompletedNoDuplicateDirection() throws Exception {
+    void specialStageResultsRewindRestoresCompletedNoDuplicateDirection() throws Exception {
         Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
         queue.append(0);
         queue.prepare();
         Sonic1SpecialStageProvider provider = new Sonic1SpecialStageProvider();
         provider.resetForResults();
         RewindSnapshottable adapter = (RewindSnapshottable) provider.rewindAdapter().orElseThrow();
-        Object pending = adapter.capture();
-
-        drainActive(queue);
-        provider.onEnterResults();
         List<NemesisPlcQueueSnapshot.Entry> expected = expectedDescriptors(0, 27);
-        assertEquals(expected, queue.capture().queuedEntries(), "retry must succeed after the pending capture");
-
-        adapter.restore(pending);
-        queue.clearQueued();
-        provider.onEnterResults();
-        assertEquals(expected, queue.capture().queuedEntries(),
-                "restoring pending state must re-arm the provider-owned results retry");
+        assertEquals(expected, queue.capture().queuedEntries(), "replacement commits despite active decode");
 
         Object completed = adapter.capture();
         queue.clearQueued();

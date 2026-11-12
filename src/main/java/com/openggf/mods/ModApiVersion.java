@@ -6,9 +6,24 @@ import java.util.List;
 import java.util.Objects;
 
 public final class ModApiVersion {
+    // Candidate 0.7 includes final-plane pilot banks with per-frame binary native clear masks.
     // Candidate 0.7: race observations/events/monitor policy are game.arena-owned.
     // Rebuild matching creator artifacts after this intentional package migration.
     /**
+     * Optional final-orientation stage drawings preserve native selectors, timing, priority and fades.
+     * Sidekick-owned S2/S3K Tornado cockpit crops and explicit solo companion banks extend the unpublished candidate.
+     * Optional S3K Competition player/record portrait surfaces extend the unpublished candidate.
+     * Optional per-host title mascot banks include hotspots, independent palettes and plane masks.
+     * Title mascot pairs may exchange native S2 presentation slots without moving paths.
+     * Title plane masks select native opaque or transparent replacement indices per owned pixel.
+     * Optional per-host normal/powered 32x32 reel portraits extend the unpublished candidate.
+     * S3K Competition miniature body/tail surfaces extend indexed presentation frames.
+     * Host-independent powered canonical-script addresses support creator flight/transform cycles.
+     * Optional per-form powered GGFP banks and explicit normal aliases extend the unpublished candidate.
+     * Host-aware character presentation suppliers extend the unpublished 0.7 candidate.
+     * Optional directional canonical homing strike sheet keys extend this same 0.7 candidate.
+     * Creator strike trail colours (StrikeTrailStyle), per-form powered particles and emitters
+     * (PoweredEffects) and the powered-tier query extend the unpublished candidate.
      * Current unpublished compiled-mod API candidate, including the grouped landing animation rule,
      * saved rewind budget scope,
      * allowance and stage/life-loss controls, plus the saved sprite scanline-limit
@@ -183,6 +198,9 @@ public final class ModApiVersion {
      * are reopened by controlled title requests and relaunch sessions with a team;
      * controllers supply the native step's pad; scenes and controllers read typed text
      * while claiming the keyboard from host shortcuts.
+     * Powered forms can hold a strike palette while a strike flies (PoweredEffects.strikePalette),
+     * and strike trails can tint each after-image with its spawn-time cycle phase
+     * (StrikeTrailStyle.echoPhaseSlot); both add compatibility constructors within candidate 0.7.0.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

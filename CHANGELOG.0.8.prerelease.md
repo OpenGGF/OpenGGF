@@ -4,6 +4,7 @@ Unreleased. Development since the [0.7.20261105](CHANGELOG.0.7.md) release. Add 
 under the matching area heading; see the
 [documentation policy](docs/guide/contributing/documentation-policy.md#release-note-destination).
 
+
 ## Gameplay and presentation
 
 - **Blue Spheres:** new under **Extras** when the Sonic 3&K and Sonic 1 ROMs
@@ -15,6 +16,10 @@ under the matching area heading; see the
   where the cartridge needs A, B and C together. The single fixed stage other
   cartridges unlock is not offered. Blue Spheres is an extra of Sonic 3&K, not a
   separate game.
+
+- **Sonic 1 end-of-act PLC replacement:** NewPLC and ClearPLC cancel the active
+  decoder as well as waiting cues, matching the ROM. Positioned GHZ starts near
+  the signpost no longer fail when the signpost art replaces unfinished work.
 
 - **Final Death Egg boss floor and wide views:** in the giant robot fight that
   ends Sonic 3 & Knuckles, the robot's lower body covered the girder floor. The
@@ -212,6 +217,192 @@ under the matching area heading; see the
 
 ## Modding and tools
 
+- **MICA, an original character framework example:** TALON’s S3K lives label now
+  spells his full name using native glyph pixels with tighter blank padding; S1,
+  S2 and MICA retain their existing words and portraits. Creator S3K lives names
+  preserve the native × beside the counter, as S1/S2 already do. TALON now joins as her
+  default sidekick and is selectable solo. Powered banks now keep each movement
+  archetype's native clocks and expose host-independent authored flight and
+  transformation scripts. Powered forms follow the owner-picked concepts: Open
+  Cone Gilded MICA (lifted gold plates; Hyper flashes Prism Gilt gold, white-hot,
+  a pale pastel jade and rose-gold) and Corona Crest Solar TALON (flame crest, goggles down,
+  flame-tipped wings), with new wait, run, roll and transformation art. Powered
+  forms can hold a strike palette while a strike flies and tint each strike echo
+  with its spawn-time cycle phase (`PoweredEffects.strikePalette`,
+  `StrikeTrailStyle.echoPhaseSlot`). Normal TALON now stands 37 px, and every
+  Solar pose keeps one gloved wing-arm per side; new
+  profile-facing flight art matches his carry identity, and his flight and carry
+  frames, like MICA's carried frames, share the ink outline and shading of their
+  other poses; his walk and run frames are despeckled, and every slope and
+  homing-dive frame of both characters, powered forms included, is re-derived
+  with a cleaner rotation. S1 creator
+  forms play animated transformations. Joint native-pose carry redraws now
+  keep MICA’s raised gloves against TALON’s shoes throughout his wingbeat,
+  with native-style material contours and the complete S3K hanging sequence.
+  S3K title wag sprites now own the complete glove and backing context,
+  removing doubled thumbs and the cutout halo while retaining native timing.
+  TALON's S2/S3K native mapping namespaces now bind all declared poses through
+  archetype-owned NFRM aliases, including S2 object tumble, S3K gravity loops,
+  corkscrews, swing/grip/chain/carry and later object turns. The audit exposes
+  per-ID results; native Tails remains unchanged and unknown bytes use WAIT.
+  TALON ending assets now cover solo S2/Tails poses, sidekick search photos,
+  goggles-down ending/SCZ/WFZ cockpit crops, a shared S3K reunion pilot and solo S3K reunion poses. Native-cell, locally paletted reel
+  portraits now cover S2 CNZ and S3K Slots lead/sidekick symbols, TALON solo
+  and Gilded/Solar symbols through optional candidate character presentation;
+  slot rewards and other symbols remain native. MICA’s S3K title now
+  adds baked jade roll-in smears and heavy radial/turn ghosts through the large
+  close-ups while preserving the settling pose, ring and final portrait, and keeps a coral-pink ear, a wink owning her whole continuous eyelash group,
+  short gloved finger poses with one five-digit master rotated through native wag angles and a rounded lower glove, with an unperforated silhouette over the ring. Optional per-host title mascot banks
+  now supply native-selector body/hand frames and masked S3K plane art, with
+  independent role palettes and native fallback; MICA and TALON supply all three
+  hosts while title timing, branding and occlusion remain native. The S2 duo
+  keeps MICA centre-right in the Sonic slot with a separately animated palm-facing
+  thumbs-up and TALON left in the Tails slot with connected wings, no glove, and
+  a three-quarter face looking at the camera through the rise and settled smile; all S1
+  poses follow native geometry, and MICA's S3K bank uses baked3D shading. Native
+  opaque palette clearing prevents sky holes around animated patches. S3K Competition wheel, arena selection, results panels and record icons now
+  use original MICA/TALON portraits with independent palettes and native origins;
+  absent portraits retain native art; failed creator loads propagate through the
+  registered owner fault boundary. Intro renderer inputs are prepared during update,
+  and Tornado pilot art is re-derived after rewind recreation. S2 title bodies
+  now obey the native emblem masking rows through the rise without changing
+  approved settled poses. Explicit solo companion cockpit banks let MICA pilot
+  for solo TALON and TALON pilot for MICA; ending and SCZ/WFZ support both native
+  pilot mapping families, and Tails-role ending art binds its own animation families.
+  The separate final front-view cockpit now selects the companion too, using
+  bounded native clear masks and independent ending-surface pattern residency. Native Competition has no character-name
+  strings. S3K Competition renders MICA/TALON with
+  independent native-ID miniature banks and hotspots, per-frame native fallback
+  and private palettes; configured creator team members occupy their native
+  archetype wheel slots while the miniature simulation stays native. His Tails archetype uses native S3K
+  flight and explicitly declared S1/S2 flight; Solar doubles flap acceleration
+  without Flickies. His own 282-frame sheet and palette replace the placeholder;
+  generated Solar tables use white-gold plumage and flame wingtips. Shared family
+  art adds ledge, hanging, tumble, air pickup, recoil, recovery and flight/swim
+  variants; TALON's private flight scripts select the native pose branch and
+  preserve relocated mapping indices. Airborne
+  down previews targets; down+jump divebombs, while ordinary
+  jump retains flight/flaps. TALON owns HUD/1-up portraits, signs, continue and save portraits,
+  half-pipe and Blue Sphere body sprites independently as solo lead or follower. MICA’s
+  Blue Sphere rear-view bank follows native special-stage shading, colour budgets
+  and run/jump contact phases, with readable ears, face edges and scaled tail.
+  Blue Sphere creator bodies share native pixel ownership before spheres and
+  shadows, preserving their colours and stage fades; real stock/creator captures
+  verify native mapping selections and timing.
+  Dedicated final-orientation special-stage drawings keep both characters'
+  highlights and asymmetric features from jumping sides. The additive candidate
+  API selects explicit mirrored phases in Blue Sphere and H/V/HV phases in the
+  S2 half-pipe while preserving native selectors, clocks and draw ownership.
+  Missing Blue Sphere orientation drawings retain native flips. Character strike-style
+  callbacks use owner fault containment, and underwater-palette and super-form
+  suppliers retain their publishing owner's callback provenance.
+  Both special-stage banks now reuse locked generated head/torso layers across
+  upright phases, posed with native-measured hip-pivot lean, sway and bob,
+  screen-space lighting, reattached limbs and separately locked curl/glint phases.
+  Real 60 Hz captures verify body motion, colours, shadows and fades.
+  S1 supplements spell TALON; S3K uses the longest native-cell prefix TALO;
+  results retain his full name. The candidate API adds default sidekick
+  selection, flight declarations and the native Tails respawn factory.
+  Optional directional homing
+  previews airborne homing targets, locks the reticle during strikes, and draws
+  native ROM spindash/skid dust for canonical-sheet characters. A fault-bounded
+  `onMovementTick()` character hook supports per-tick preview requests. Directional
+  strike sheet poses follow current velocity with phase-preserving turns, normal
+  facing mirrors and generic/native fallbacks. The maintained
+  `examples/mica-and-talon` demo groups runtime art by surface, separates production
+  records, documents its class map, and builds generated sheets only under `target/`.
+  Native selector, filename, hotspot and palette-cycle tables live beside the art
+  and load through one example helper; formatted Java retains gameplay and native presentation decisions.
+  Its paired `micaandtalon` package keeps the same mod/character IDs. The demo plays in all three stock games with Sonic's
+  single-player physics, native S2/S3K spindash (disabled in S1), character-owned
+  homing (including an untargeted forward
+  dash), a four-frame HOMING_DIVE pose, and Hyper-only Instagib strikes. Creator
+  strike colours (`StrikeTrailStyle`) and per-form particles (`PoweredEffects`) give
+  MICA a jade trail, Gilded gold glints and trail, Hyper echoes and strike flashes,
+  and Solar TALON sun-ember motes and a heat trail, instead of hue-rotated blue. Its
+  rerunnable original sheet has 274 frames, 52 canonical animations, slope cycles,
+  a shared palette and a breathing/fidget idle. Canonical sheets preserve native
+  partial-loop WAIT tails and finite hold/next endings. Shared module animation
+  families bind MICA and TALON phase art at host ROM timing, using separate
+  Sonic/Tails archetype vocabularies. TALON families share the approved core
+  character scale, with distinct S3K yawning/stretch poses and transformation
+  flash phases. The profiles supply equivalent missing
+  cross-game Sonic donation scripts; 18 redundant drawings are removed without
+  generating art. Ordinary art bindings keep donated animation profiles stable
+  across native-scene rewind. Flight carry keeps creator leaders on their own
+  carried-family sheet while native Sonic retains the ROM carry frames. MICA and TALON skip
+  their idle intros after the first pass. Native object mapping bytes can
+  bind semantic sheet poses; MICA supplies three native-reference hang poses for
+  vines and grapples, reuses fourteen existing native mapping poses for turns, rolls, riding,
+  bar release and crane release. Forty additional native-pose aliases cover early
+  S3K vine swings, hollow-tree tumbles, twist front/back views, poles and bars;
+  33 generated drawings and seven verified quarter-turns retain the shared palette.
+  Sixty further generated object poses and three approved-art aliases close the
+  remaining 63 S3K direct mappings, including gravity loops, cage entry,
+  parachutes and corkscrews. Six rare/normal-transformation drawings and two TALON
+  legacy poses close the requested rare scripts; tail-only TALON dummy frames
+  bind blank. Complete authored tumble banks enable native rotation selection;
+  partial sheets retain canonical fallbacks. Other raw poses keep named canonical
+  fallbacks. The
+  AIZ intro retains MICA's own art and powered palette. The 36 rotated WALK/RUN poses
+  use native phase coordinates and pixel-edited contact edges; all 12 steep
+  WALK/RUN hood contours are completed without changing sole support. S3K transformation
+  art uses clustered gold scales and a clearer face, and the second dive shell
+  has rounded scale rows. Gilded Super/Hyper forms cycle
+  jade to gold and expose host settings for their gates. Optional per-form GGFP
+  banks now combine normal/powered tiles once, retain exact host script timing
+  and movement selection, and reconcile transformation/active rewind and art
+  refresh. MICA supplies 34 generated powered base poses with deterministic
+  slopes; explicit normal animation/phase aliases avoid duplicate normal PNGs,
+  and Hyper shares Super geometry. S1's
+  donor-free six-emerald form is explicitly mod-defined. MICA supplies HUD/name,
+  act and special-stage results (including S2's Super announcement, with tally
+  logic independent of ROM presentation availability), 1-up faces,
+  semantic sign faces/spins/backings, special/bonus-stage player art, continue
+  poses, data-select solo/team portraits and counters, thirteen ICZ snowboard
+  rider frames, and endings in all three games. S1 uses eight native-timed ending
+  poses; S2 retains native monochrome photos and supplies Float2 and normal/Super
+  poses; S3K supplies rescue Float2/ride, reunion, transformation, tiny passengers
+  and trio-eyecatch art.
+  S2 photo replacements belong to the active sidekick; the first panel always
+  remains native. Native art references now use the photo scene palette, S1
+  continue piece palette lines and S3K transformation palette phases.
+  HUD life icons and 1-up faces share her private character palette in all three
+  games; save-slot life icons retain their private frontend bank.
+  Private palettes preserve native stage colours, text, board/spray, companions
+  and vehicles; powered ending poses use her Gilded cycle. Acceptance covers
+  launch/save/rewind/disabled-owner fallback and session-owned S2 HUD/1-up art,
+  with three-game headless footage
+  of movement, springs, normal/powered strikes and a GHZ airborne chain. A
+  [nine-part tutorial](docs/modding/guides/original-character/README.md) builds an
+  original character from design to every surface, with a part 2 checkpoint mod.
+  TALON is included as a playable leader and follower; this is not a released mod or full-route certification.
+
+
+- **Character API on the 0.7 candidate:** canonical playable animation tables
+  share host speed timing, slope cycles, explicit end actions and fallbacks across
+  S1/S2/S3K. Owner-bound underwater palette suppliers complement zone-aware water
+  derivation. Optional `CharacterPresentation` provides immutable indexed images,
+  per-host names and supplementary glyphs, native-frame stage/screen/ending sets,
+  and bounded PNG loading. Font readers inventory all three small HUD fonts and
+  S3K per-zone title/results letters with pixel-level glyph coverage/composition.
+  GGFP presentation sections remain pending. `SuperFormProfile` supplies per-game
+  tiers, palettes, physics, animations and rewind state; scene-form operations
+  support authored controllers while preserving stock ending dispatch.
+  The world-session `HomingAttack` facade exposes per-call homing/Instagib,
+  target-only admission, requested reticles and flight divebomb with a steep
+  forward-down fallback. Mutator Lab retains its character selection and native
+  air-move fallback; characters need no mutator activation.
+
+- **Character routing and presentation:** explicitly loaded development
+  characters remain available in headless native Data Select. Custom team
+  archetypes use the solo Sonic route without a follower. Stock S2 Tails-alone
+  results now select Miles/Tails with the native graphics-region setting.
+  Data-select save life counters use the character HUD icon; miniature continue
+  counters reuse its continue pose. NO SAVE refreshes custom solo/team portraits
+  immediately, and the S2 half-pipe ring HUD composes names from its native
+  SONIC/MILES/TAILS alphabet with supplements for missing glyphs. Stock fallbacks
+  and native screen/stage/ending choreography remain intact.
 - **Simpler creator examples:** decoded native-level patches can add registered
   objects with engine-assigned placement identities while retaining native level
   services. Scene menus share the engine's menu theme and public drawing helpers;
@@ -323,8 +514,6 @@ under the matching area heading; see the
   `--resume-from` and `--skip-rows`, so a shot's input can be derived from a
   level inside a complete-run movie, with one change and the recording's own
   rows after it.
-
-  frame ranges) beside each reel.
 
 - **Trace coverage and canonical fixtures:** independent strict replay covers all
   163 segments of the Knuckles super-emerald, Mega, Sonic+Tails and KiS2 chains,

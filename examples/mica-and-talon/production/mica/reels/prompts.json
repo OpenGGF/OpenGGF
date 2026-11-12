@@ -1,0 +1,8 @@
+{
+  "tool": "built-in GPT Image",
+  "date": "2026-11-10",
+  "normal": "Create a single slot-machine portrait sprite replacing the native Sonic portrait in reference 1 with MICA the jade pangolin from references 2/3. Exact same native 32x32 cell, enlarged 8x nearest pixel art, head only facing left in 3/4 view, same head scale and occupancy as reference 1; warm cream muzzle, rounded ear, large eye, overlapping rounded jade armour scales, no quills. Bold pixel outline. No body, hands, tail, rings or lettering. Produce two alternatives side by side in equal square cells, on plain magenta background. Portrait silhouette must fill about 28x26 native pixels, not a tiny head. Native-pose transformation, original character identity. Keep pixels crisp.",
+  "alternatives": 2,
+  "selection": "left closed-mouth portrait; right open-mouth portrait rejected for reduced-size legibility",
+  "powered": "Native-pose transformation. Single 32x32 native slot reel portrait enlarged 8x: replace Super Sonic reference head with GILDED MICA original pangolin from golden powered form on model sheet. Head only looking LEFT 3/4, same large portrait footprint as reference. Rounded overlapping GOLD armour scales around head, rounded ear, pale cream muzzle with long small snout, large brown eyes. No quills, no hedgehog ears, no body, hands, text. Two alternatives side by side in equal square cells on solid magenta. Flat 16-bit pixel sprite with thick dark outline, gold shaded plates not spikes, bright pale muzzle. Fill each cell at native 28x28 equivalent."
+}

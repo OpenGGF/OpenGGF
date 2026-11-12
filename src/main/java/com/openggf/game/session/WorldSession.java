@@ -40,6 +40,12 @@ public final class WorldSession {
     // construction.
     private Level currentLevel;
     PatternWindowState patternWindowState = PatternWindowState.EMPTY;
+    final com.openggf.game.mutators.HomingAttackRuntime homing =
+            new com.openggf.game.mutators.HomingAttackRuntime(() -> {
+                var policy = WorldSessionPolicyAccess.getService(this,
+                        com.openggf.game.mutators.HomingAttackRuntime.Policy.class);
+                return policy == null ? com.openggf.game.mutators.HomingAttackRuntime.Policy.STOCK : policy;
+            });
     final WorldSessionPolicyState policies;
     final WorldPolicyHistory policyHistory = new WorldPolicyHistory();
 

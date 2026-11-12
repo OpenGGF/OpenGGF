@@ -68,6 +68,24 @@ class TestSonic3kSpecialStageManagerSnapshot {
     }
 
     @Test
+    void customPlayerPaletteParticipatesInNativeWhiteFadeAndRewind() {
+        var owner=new Sonic3kSpecialStagePalette();
+        var context=com.openggf.graphics.RenderContext.createSidekickContext(com.openggf.game.GameId.S3K);
+        var custom=new com.openggf.level.Palette();
+        custom.setColor(1,new com.openggf.level.Palette.Color((byte)30,(byte)80,(byte)120));
+        context.setPalette(0,custom);
+        owner.bindCharacterContext(context);
+        var snapshot=owner.captureRewindSnapshot();
+        owner.fadeTowardWhiteOneStep(37);
+        assertEquals(67,context.getPalette(0).getColor(1).r & 255);
+        assertEquals(80,context.getPalette(0).getColor(1).g & 255);
+        owner.restoreRewindSnapshot(snapshot);
+        assertEquals(30,context.getPalette(0).getColor(1).r & 255);
+        owner.fadeTowardWhiteOneStep(37);
+        assertEquals(30,snapshot.characterPalette().getColor(1).r & 255);
+    }
+
+    @Test
     void managerSnapshotRestoresScalarsAndSubsystemsWithoutInitializationReload() {
         Sonic3kSpecialStageManager manager = new Sonic3kSpecialStageManager();
         seedManagerWithDistinctScalars(manager);

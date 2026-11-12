@@ -369,6 +369,8 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.ProfileSuperHostRules.class)
+            return type.cast(new com.openggf.game.internal.ProfileSuperHostRules(false, false, 0, com.openggf.game.GameId.S2));
         if (type == com.openggf.game.internal.BadnikChainPolicy.class) return type.cast(badnikChain);
         if (type == com.openggf.game.arena.RaceSwapApplier.class) return type.cast(raceSwaps);
         if (type == com.openggf.game.resources.PlayerArtTransferPlan.class) {
@@ -634,12 +636,41 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     private static final class Sonic2DonorCapabilities implements DonorCapabilities {
 
         static final Sonic2DonorCapabilities INSTANCE = new Sonic2DonorCapabilities();
+        private static final Sonic2DonorCapabilities TAILS = new Sonic2DonorCapabilities(true);
+        private final boolean tails;
+        private Sonic2DonorCapabilities() { this(false); }
+        private Sonic2DonorCapabilities(boolean tails) { this.tails = tails; }
+        @Override public DonorCapabilities forPlayableCharacter(PlayerCharacter archetype) {
+            return archetype == PlayerCharacter.TAILS_ALONE ? TAILS : INSTANCE;
+        }
+        private static final java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> TAILS_FAMILIES =
+                com.openggf.game.AnimationFamilies.load("/animation-families/s2-tails.json");
+        private static final java.util.Map<Integer, NativeFramePose> TAILS_POSES = loadTailsPoses();
+        private static java.util.Map<Integer, NativeFramePose> loadTailsPoses() {
+            try (var input = Sonic2GameModule.class.getResourceAsStream("/animation-families/s2-tails-poses.json")) {
+                return java.util.Map.copyOf(new com.fasterxml.jackson.databind.ObjectMapper().readValue(input,
+                        new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<Integer, NativeFramePose>>() { }));
+            } catch (java.io.IOException e) { throw new IllegalStateException(e); }
+        }
+
+
+        @Override public java.util.Map<Integer, NativeFramePose> getNativeFramePoses() {
+            if (tails) return TAILS_POSES;
+            return java.util.Map.of(1, new NativeFramePose("wait/stand", CanonicalAnimation.WAIT));
+        }
 
         private static final java.util.Set<PlayerCharacter> CHARACTERS =
                 java.util.Set.of(
                         PlayerCharacter.SONIC_ALONE,
                         PlayerCharacter.SONIC_AND_TAILS,
                         PlayerCharacter.TAILS_ALONE);
+
+        private static final java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> FAMILIES =
+                com.openggf.game.AnimationFamilies.load("/animation-families/s2.json");
+
+        @Override public java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> getAnimationFamilies() {
+            return tails ? TAILS_FAMILIES : FAMILIES;
+        }
 
         private static final java.util.Map<CanonicalAnimation, CanonicalAnimation> FALLBACKS =
                 buildFallbacks();
@@ -700,12 +731,14 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
 
         @Override
         public java.util.Map<CanonicalAnimation, CanonicalAnimation> getAnimationFallbacks() {
-            return FALLBACKS;
+            return com.openggf.game.AnimationFamilies.fallbacks(getAnimationFamilies(), FALLBACKS);
         }
 
         @Override
         public int resolveNativeId(CanonicalAnimation canonical) {
-            return Sonic2AnimationIds.fromCanonical(canonical);
+            int familyId = com.openggf.game.AnimationFamilies.resolve(getAnimationFamilies(), canonical);
+            if (familyId >= 0) return familyId;
+            return tails ? -1 : Sonic2AnimationIds.fromCanonical(canonical);
         }
 
         @Override

@@ -1,0 +1,2270 @@
+format: openggf-ending-art-inventory-1
+scope:
+  base_branch: feature/ai-original-character
+  routes:
+  - SONIC_ALONE
+  - SONIC_AND_TAILS
+  games:
+  - s1
+  - s2
+  - s3k_locked_on
+  purpose: Research and drawing estimate only; no art, runtime replacement or pixel certification.
+  counting: Native bespoke character-bearing mapping slots plus photo panels; shared route uses counted once. Full
+    playable banks are listed separately, NOT added to bespoke totals. Native frame means artwork selector, not
+    elapsed video ticks.
+  sizes: bounds_px = [left, top, width, height] from sprite pieces in pinned sources; includes composite plane where
+    applicable; tile bounds can include transparent pixels. Photo bounds are full panels.
+  estimate: Conservative drawing slots, no cross-game deduplication; mirrored/confused S1 pair counted separately.
+    Playable reuse is a pose approximation, not a pixel-identical native replacement.
+  excluded:
+  - Tails-alone and Knuckles routes
+  - standalone Sonic 3 Launch Base ending (not reached in locked-on S3K)
+  - title lettering without a character picture
+  - Eggman, Egg Robo, Mecha Sonic, animals and emeralds (not MICA)
+references:
+  s1_art: Nem_EndSonic (docs/s1disasm/sonic.asm:4809)
+  s1_map: Map_ESon (docs/s1disasm/_incObj/87, 88, 89 Ending Sequence Sonic, Emeralds, Logo.asm:299)
+  s1_anim: Ani_ESon (docs/s1disasm/_anim/Ending Sequence Sonic.asm:5-23)
+  s1_player: Map_Sonic / SonicDynPLC / Art_Sonic (docs/s1disasm/sonic.asm:4408-4412)
+  s1_entry: End_LoadSonic (docs/s1disasm/sonic.asm:3624-3633)
+  s1_demos: EndDemo_Levels (docs/s1disasm/sonic.asm:3941-3950)
+  s2_art: EndingSequence_LoadCharacterArt (docs/s2disasm/s2.asm:14269-14300)
+  s2_assets: ArtNem_EndingPics / ArtNem_EndingSonic / ArtNem_EndingSuperSonic (docs/s2disasm/s2.asm:90923-90932)
+  s2_map: ObjCF_MapUnc_ADA2 (docs/s2disasm/s2.asm:14374)
+  s2_player: ArtUnc_Sonic / MapUnc_Sonic / MapRUnc_Sonic (docs/s2disasm/s2.asm:90473-90480)
+  s2_photos: off_A29C (docs/s2disasm/s2.asm:13414-13418)
+  s2_pal: Pal_AC7E / Pal_AD1E / Pal_AD3E (docs/s2disasm/s2.asm:14332-14336)
+  s2_rotation: byte_A602 (docs/s2disasm/s2.asm:13739-13744)
+  s2_depart: byte_A748 (docs/s2disasm/s2.asm:13803-13806)
+  s2_final: loc_A83E (docs/s2disasm/s2.asm:13883-13910)
+  s2_float: SonAni_Float2 (docs/s2disasm/s2.asm:38734)
+  s2_jump: ObjCE_Init (docs/s2disasm/s2.asm:13928-14004)
+  s3_art: ArtKosM_SonicEndPose / ArtKosM_SuperSonicEndPose / ArtKosM_SonicPlaneEnding (docs/skdisasm/sonic3k.asm:201742-201749)
+  s3_map: Map_SonicTailsEndPoses (docs/skdisasm/sonic3k.asm:127399-127400)
+  s3_extra: Map_SonicPlaneEnding (docs/skdisasm/sonic3k.asm:127389-127390)
+  s3_player: ArtUnc_Sonic / Map_Sonic / PLC_Sonic (docs/skdisasm/sonic3k.asm:201532-201548)
+  s3_pose: off_5E328 (docs/skdisasm/sonic3k.asm:124513-124516)
+  s3_ride: sub_5FD88 (docs/skdisasm/sonic3k.asm:126788-126802)
+  s3_rescue: loc_5D8BC (docs/skdisasm/sonic3k.asm:123676-123728)
+  s3_post: off_5EFB6 (docs/skdisasm/sonic3k.asm:125557-125576)
+  s3_eye: loc_5F31C (docs/skdisasm/sonic3k.asm:125868-125886)
+  s3_scripts: AniRaw_6025C / AniRaw_60260 (docs/skdisasm/sonic3k.asm:127345-127353)
+  s3_float: AniSonic0F (docs/skdisasm/General/Sprites/Sonic/Anim - Sonic.asm:60)
+  s3_transform: AniSonic1F (docs/skdisasm/General/Sprites/Sonic/Anim - Sonic.asm:119)
+  s3_eye_assets: Map_S3EndingGraphics / ArtNem_S3EndingGraphics (docs/skdisasm/Lockon S3/LockOn Data.asm:246-249)
+totals:
+  s1:
+    sequences: 11
+    native_bespoke_frames: 8
+    playable_bank_frames: 88
+    new_drawing_slots_estimate: 8
+  s2:
+    sequences: 10
+    native_bespoke_frames: 18
+    playable_bank_frames: 214
+    new_drawing_slots_estimate: 23
+  s3k:
+    sequences: 7
+    native_bespoke_frames: 11
+    playable_bank_frames: 251
+    new_drawing_slots_estimate: 25
+sequences:
+- id: s1-ghz-approach
+  game: s1
+  route: both emerald outcomes; either archetype
+  frame_sets:
+  - s1_playable
+  engine_owner: src/main/java/com/openggf/game/sonic1/events/Sonic1EndingEvents.java
+  character_selection_today: Uses current main player until unconditionally spawning Sonic1EndingSonicObjectInstance;
+    no character string check.
+  animation_timing: Scripted left run, brake and stand at native position gates; ordinary playable animation timing.
+  reuse_mica_playable: RUN/WALK/SKID/WAIT
+  new_drawing_slots: 0
+  references:
+  - End_LoadSonic (docs/s1disasm/sonic.asm:3624-3633)
+  - Map_Sonic / SonicDynPLC / Art_Sonic (docs/s1disasm/sonic.asm:4408-4412)
+  notes: ''
+- id: s1-good-celebration
+  game: s1
+  route: six emeralds
+  frame_sets:
+  - s1_celebration
+  engine_owner: src/main/java/com/openggf/game/sonic1/objects/Sonic1EndingSonicObjectInstance.java
+  character_selection_today: Hard-wired ObjectArtKeys.END_SONIC renderer; no presentation lookup.
+  animation_timing: 80-tick pre-hold; anim0 [1,0,1,0,1,0,1,0,1,0,1,2] at 4 ticks; wait emerald radius; 90-tick flash,
+    60-tick logo wait; anim1 [3,4,3,4,3,4,3] at 6 ticks; anim2 [5,5,5,6,7] at 4 ticks, hold7. Blocking flower fade
+    pauses object updates.
+  reuse_mica_playable: No exact matches; LOOK_UP approximates 2 and WAIT approximates 0/3/4, but hands, glow and
+    leap require scene art.
+  new_drawing_slots: 8
+  references:
+  - Nem_EndSonic (docs/s1disasm/sonic.asm:4809)
+  - Map_ESon (docs/s1disasm/_incObj/87, 88, 89 Ending Sequence Sonic, Emeralds, Logo.asm:299)
+  - Ani_ESon (docs/s1disasm/_anim/Ending Sequence Sonic.asm:5-23)
+  notes: ''
+- id: s1-bad-celebration
+  game: s1
+  route: fewer than six emeralds
+  frame_sets:
+  - s1_celebration
+  engine_owner: src/main/java/com/openggf/game/sonic1/objects/Sonic1EndingSonicObjectInstance.java
+  character_selection_today: Hard-wired END_SONIC, same sheet as good.
+  animation_timing: 216-tick wait, leap [5,5,5,6,7] at 4 ticks; hold7.
+  reuse_mica_playable: Shares good frames0,5,6,7; no additional art.
+  new_drawing_slots: 0
+  references:
+  - Map_ESon (docs/s1disasm/_incObj/87, 88, 89 Ending Sequence Sonic, Emeralds, Logo.asm:299)
+  - Ani_ESon (docs/s1disasm/_anim/Ending Sequence Sonic.asm:5-23)
+  notes: ''
+- id: s1-credit-demo-0-ghz1-first
+  game: s1
+  route: good and bad; either archetype
+  frame_sets:
+  - s1_playable
+  engine_owner: src/main/java/com/openggf/game/sonic1/credits/Sonic1CreditsManager.java + Sonic1CreditsDemoBootstrap.java;
+    AbstractPlayableSprite renderer
+  character_selection_today: Current main-character roster through native demo assembly, not END_SONIC.
+  animation_timing: 540 gameplay ticks except LZ3 510; 60-tick fade continues demo input; native speed-driven animation.
+  reuse_mica_playable: Existing WALK/RUN/ROLL/SPRING/PUSH/WAIT/LOOK_UP/DUCK/BALANCE/SKID/HURT as requested by gameplay;
+    shared 88-frame bank, not 88 new drawings per demo.
+  new_drawing_slots: 0
+  references:
+  - EndDemo_Levels (docs/s1disasm/sonic.asm:3941-3950)
+  - Map_Sonic / SonicDynPLC / Art_Sonic (docs/s1disasm/sonic.asm:4408-4412)
+  notes: ''
+- id: s1-credit-demo-1-mz2
+  game: s1
+  route: good and bad; either archetype
+  frame_sets:
+  - s1_playable
+  engine_owner: src/main/java/com/openggf/game/sonic1/credits/Sonic1CreditsManager.java + Sonic1CreditsDemoBootstrap.java;
+    AbstractPlayableSprite renderer
+  character_selection_today: Current main-character roster through native demo assembly, not END_SONIC.
+  animation_timing: 540 gameplay ticks except LZ3 510; 60-tick fade continues demo input; native speed-driven animation.
+  reuse_mica_playable: Existing WALK/RUN/ROLL/SPRING/PUSH/WAIT/LOOK_UP/DUCK/BALANCE/SKID/HURT as requested by gameplay;
+    shared 88-frame bank, not 88 new drawings per demo.
+  new_drawing_slots: 0
+  references:
+  - EndDemo_Levels (docs/s1disasm/sonic.asm:3941-3950)
+  - Map_Sonic / SonicDynPLC / Art_Sonic (docs/s1disasm/sonic.asm:4408-4412)
+  notes: ''
+- id: s1-credit-demo-2-syz3
+  game: s1
+  route: good and bad; either archetype
+  frame_sets:
+  - s1_playable
+  engine_owner: src/main/java/com/openggf/game/sonic1/credits/Sonic1CreditsManager.java + Sonic1CreditsDemoBootstrap.java;
+    AbstractPlayableSprite renderer
+  character_selection_today: Current main-character roster through native demo assembly, not END_SONIC.
+  animation_timing: 540 gameplay ticks except LZ3 510; 60-tick fade continues demo input; native speed-driven animation.
+  reuse_mica_playable: Existing WALK/RUN/ROLL/SPRING/PUSH/WAIT/LOOK_UP/DUCK/BALANCE/SKID/HURT as requested by gameplay;
+    shared 88-frame bank, not 88 new drawings per demo.
+  new_drawing_slots: 0
+  references:
+  - EndDemo_Levels (docs/s1disasm/sonic.asm:3941-3950)
+  - Map_Sonic / SonicDynPLC / Art_Sonic (docs/s1disasm/sonic.asm:4408-4412)
+  notes: ''
+- id: s1-credit-demo-3-lz3
+  game: s1
+  route: good and bad; either archetype
+  frame_sets:
+  - s1_playable
+  engine_owner: src/main/java/com/openggf/game/sonic1/credits/Sonic1CreditsManager.java + Sonic1CreditsDemoBootstrap.java;
+    AbstractPlayableSprite renderer
+  character_selection_today: Current main-character roster through native demo assembly, not END_SONIC.
+  animation_timing: 540 gameplay ticks except LZ3 510; 60-tick fade continues demo input; native speed-driven animation.
+  reuse_mica_playable: Existing WALK/RUN/ROLL/SPRING/PUSH/WAIT/LOOK_UP/DUCK/BALANCE/SKID/HURT as requested by gameplay;
+    shared 88-frame bank, not 88 new drawings per demo.
+  new_drawing_slots: 0
+  references:
+  - EndDemo_Levels (docs/s1disasm/sonic.asm:3941-3950)
+  - Map_Sonic / SonicDynPLC / Art_Sonic (docs/s1disasm/sonic.asm:4408-4412)
+  notes: ''
+- id: s1-credit-demo-4-slz3
+  game: s1
+  route: good and bad; either archetype
+  frame_sets:
+  - s1_playable
+  engine_owner: src/main/java/com/openggf/game/sonic1/credits/Sonic1CreditsManager.java + Sonic1CreditsDemoBootstrap.java;
+    AbstractPlayableSprite renderer
+  character_selection_today: Current main-character roster through native demo assembly, not END_SONIC.
+  animation_timing: 540 gameplay ticks except LZ3 510; 60-tick fade continues demo input; native speed-driven animation.
+  reuse_mica_playable: Existing WALK/RUN/ROLL/SPRING/PUSH/WAIT/LOOK_UP/DUCK/BALANCE/SKID/HURT as requested by gameplay;
+    shared 88-frame bank, not 88 new drawings per demo.
+  new_drawing_slots: 0
+  references:
+  - EndDemo_Levels (docs/s1disasm/sonic.asm:3941-3950)
+  - Map_Sonic / SonicDynPLC / Art_Sonic (docs/s1disasm/sonic.asm:4408-4412)
+  notes: ''
+- id: s1-credit-demo-5-sbz1
+  game: s1
+  route: good and bad; either archetype
+  frame_sets:
+  - s1_playable
+  engine_owner: src/main/java/com/openggf/game/sonic1/credits/Sonic1CreditsManager.java + Sonic1CreditsDemoBootstrap.java;
+    AbstractPlayableSprite renderer
+  character_selection_today: Current main-character roster through native demo assembly, not END_SONIC.
+  animation_timing: 540 gameplay ticks except LZ3 510; 60-tick fade continues demo input; native speed-driven animation.
+  reuse_mica_playable: Existing WALK/RUN/ROLL/SPRING/PUSH/WAIT/LOOK_UP/DUCK/BALANCE/SKID/HURT as requested by gameplay;
+    shared 88-frame bank, not 88 new drawings per demo.
+  new_drawing_slots: 0
+  references:
+  - EndDemo_Levels (docs/s1disasm/sonic.asm:3941-3950)
+  - Map_Sonic / SonicDynPLC / Art_Sonic (docs/s1disasm/sonic.asm:4408-4412)
+  notes: ''
+- id: s1-credit-demo-6-sbz2
+  game: s1
+  route: good and bad; either archetype
+  frame_sets:
+  - s1_playable
+  engine_owner: src/main/java/com/openggf/game/sonic1/credits/Sonic1CreditsManager.java + Sonic1CreditsDemoBootstrap.java;
+    AbstractPlayableSprite renderer
+  character_selection_today: Current main-character roster through native demo assembly, not END_SONIC.
+  animation_timing: 540 gameplay ticks except LZ3 510; 60-tick fade continues demo input; native speed-driven animation.
+  reuse_mica_playable: Existing WALK/RUN/ROLL/SPRING/PUSH/WAIT/LOOK_UP/DUCK/BALANCE/SKID/HURT as requested by gameplay;
+    shared 88-frame bank, not 88 new drawings per demo.
+  new_drawing_slots: 0
+  references:
+  - EndDemo_Levels (docs/s1disasm/sonic.asm:3941-3950)
+  - Map_Sonic / SonicDynPLC / Art_Sonic (docs/s1disasm/sonic.asm:4408-4412)
+  notes: ''
+- id: s1-credit-demo-7-ghz1-second
+  game: s1
+  route: good and bad; either archetype
+  frame_sets:
+  - s1_playable
+  engine_owner: src/main/java/com/openggf/game/sonic1/credits/Sonic1CreditsManager.java + Sonic1CreditsDemoBootstrap.java;
+    AbstractPlayableSprite renderer
+  character_selection_today: Current main-character roster through native demo assembly, not END_SONIC.
+  animation_timing: 540 gameplay ticks except LZ3 510; 60-tick fade continues demo input; native speed-driven animation.
+  reuse_mica_playable: Existing WALK/RUN/ROLL/SPRING/PUSH/WAIT/LOOK_UP/DUCK/BALANCE/SKID/HURT as requested by gameplay;
+    shared 88-frame bank, not 88 new drawings per demo.
+  new_drawing_slots: 0
+  references:
+  - EndDemo_Levels (docs/s1disasm/sonic.asm:3941-3950)
+  - Map_Sonic / SonicDynPLC / Art_Sonic (docs/s1disasm/sonic.asm:4408-4412)
+  notes: ''
+- id: s2-photo-1
+  game: s2
+  route: normal and all-seven-emerald endings; both archetypes
+  frame_sets:
+  - s2_photos
+  engine_owner: src/main/java/com/openggf/game/sonic2/credits/Sonic2EndingCutsceneManager.java
+  character_selection_today: Hard-wired PHOTO_MAP_ADDRS and ArtNem_EndingPics; Presentation does not replace photo
+    maps or picture tiles.
+  animation_timing: Static 96x72 panel; native fade loop waits $180 NTSC/$100 PAL then $80; fourth panel shares
+    same loop.
+  reuse_mica_playable: 'No playable reuse: illustrated scene composition.'
+  new_drawing_slots: 1
+  references:
+  - off_A29C (docs/s2disasm/s2.asm:13414-13418)
+  - ArtNem_EndingPics / ArtNem_EndingSonic / ArtNem_EndingSuperSonic (docs/s2disasm/s2.asm:90923-90932)
+  - Pal_AC7E / Pal_AD1E / Pal_AD3E (docs/s2disasm/s2.asm:14332-14336)
+  notes: ''
+- id: s2-photo-2
+  game: s2
+  route: normal and all-seven-emerald endings; both archetypes
+  frame_sets:
+  - s2_photos
+  engine_owner: src/main/java/com/openggf/game/sonic2/credits/Sonic2EndingCutsceneManager.java
+  character_selection_today: Hard-wired PHOTO_MAP_ADDRS and ArtNem_EndingPics; Presentation does not replace photo
+    maps or picture tiles.
+  animation_timing: Static 96x72 panel; native fade loop waits $180 NTSC/$100 PAL then $80; fourth panel shares
+    same loop.
+  reuse_mica_playable: 'No playable reuse: illustrated scene composition.'
+  new_drawing_slots: 1
+  references:
+  - off_A29C (docs/s2disasm/s2.asm:13414-13418)
+  - ArtNem_EndingPics / ArtNem_EndingSonic / ArtNem_EndingSuperSonic (docs/s2disasm/s2.asm:90923-90932)
+  - Pal_AC7E / Pal_AD1E / Pal_AD3E (docs/s2disasm/s2.asm:14332-14336)
+  notes: ''
+- id: s2-photo-3
+  game: s2
+  route: normal and all-seven-emerald endings; both archetypes
+  frame_sets:
+  - s2_photos
+  engine_owner: src/main/java/com/openggf/game/sonic2/credits/Sonic2EndingCutsceneManager.java
+  character_selection_today: Hard-wired PHOTO_MAP_ADDRS and ArtNem_EndingPics; Presentation does not replace photo
+    maps or picture tiles.
+  animation_timing: Static 96x72 panel; native fade loop waits $180 NTSC/$100 PAL then $80; fourth panel shares
+    same loop.
+  reuse_mica_playable: 'No playable reuse: illustrated scene composition.'
+  new_drawing_slots: 1
+  references:
+  - off_A29C (docs/s2disasm/s2.asm:13414-13418)
+  - ArtNem_EndingPics / ArtNem_EndingSonic / ArtNem_EndingSuperSonic (docs/s2disasm/s2.asm:90923-90932)
+  - Pal_AC7E / Pal_AD1E / Pal_AD3E (docs/s2disasm/s2.asm:14332-14336)
+  notes: ''
+- id: s2-photo-4
+  game: s2
+  route: normal and all-seven-emerald endings; both archetypes
+  frame_sets:
+  - s2_photos
+  engine_owner: src/main/java/com/openggf/game/sonic2/credits/Sonic2EndingCutsceneManager.java
+  character_selection_today: Hard-wired PHOTO_MAP_ADDRS and ArtNem_EndingPics; Presentation does not replace photo
+    maps or picture tiles.
+  animation_timing: Static 96x72 panel; native fade loop waits $180 NTSC/$100 PAL then $80; fourth panel shares
+    same loop.
+  reuse_mica_playable: 'No playable reuse: illustrated scene composition.'
+  new_drawing_slots: 1
+  references:
+  - off_A29C (docs/s2disasm/s2.asm:13414-13418)
+  - ArtNem_EndingPics / ArtNem_EndingSonic / ArtNem_EndingSuperSonic (docs/s2disasm/s2.asm:90923-90932)
+  - Pal_AC7E / Pal_AD1E / Pal_AD3E (docs/s2disasm/s2.asm:14332-14336)
+  notes: ''
+- id: s2-normal-sky-fall
+  game: s2
+  route: fewer than seven emeralds
+  frame_sets:
+  - s2_float
+  engine_owner: src/main/java/com/openggf/game/sonic2/credits/Sonic2EndingCutsceneManager.java
+  character_selection_today: EndingRoutine from PlayerCharacter.TAILS_ALONE exclusion and emerald count; hard-wired
+    Sonic art unless injected internal Presentation.
+  animation_timing: Float2 $54..$58 at 8 ticks each; 64-tick appear, 192-tick camera scroll.
+  reuse_mica_playable: No FLOAT2 in current mica-sheet.yaml. HANG/SPRING may approximate; budget five new float
+    poses.
+  new_drawing_slots: 5
+  references:
+  - ArtUnc_Sonic / MapUnc_Sonic / MapRUnc_Sonic (docs/s2disasm/s2.asm:90473-90480)
+  - SonAni_Float2 (docs/s2disasm/s2.asm:38734)
+  notes: ''
+- id: s2-super-sky-fall
+  game: s2
+  route: seven emeralds
+  frame_sets:
+  - s2_super_walk
+  engine_owner: src/main/java/com/openggf/game/sonic2/credits/Sonic2EndingCutsceneManager.java
+  character_selection_today: EndingRoutine.SUPER_SONIC; native player art selected by routine; Presentation currently
+    chooses Float2 instead.
+  animation_timing: Native walking animation; engine cycles frames0..5 every4 ticks (explicit approximation).
+  reuse_mica_playable: Reuse MICA WALK with Gilded palette; verify native super mapping translations.
+  new_drawing_slots: 0
+  references:
+  - ArtUnc_Sonic / MapUnc_Sonic / MapRUnc_Sonic (docs/s2disasm/s2.asm:90473-90480)
+  notes: ''
+- id: s2-normal-tornado-turn
+  game: s2
+  route: normal
+  frame_sets:
+  - s2_normal_turn
+  engine_owner: src/main/java/com/openggf/game/sonic2/credits/Sonic2EndingCutsceneManager.java
+  character_selection_today: Hard-wired routine tables or Presentation.objectFrames; ordinary standing player uses
+    waitingFrame seam.
+  animation_timing: WAIT frame1 during plane hold $480 NTSC/$3D0 PAL; rotation byte_A602 has28 steps at3 ticks.
+  reuse_mica_playable: WAIT for standing; composite miniatures7..11 need five new draws; pilot remains Tails even
+    for Sonic-alone.
+  new_drawing_slots: 5
+  references:
+  - byte_A602 (docs/s2disasm/s2.asm:13739-13744)
+  - ObjCF_MapUnc_ADA2 (docs/s2disasm/s2.asm:14374)
+  - EndingSequence_LoadCharacterArt (docs/s2disasm/s2.asm:14269-14300)
+  notes: ''
+- id: s2-super-tornado-and-flight
+  game: s2
+  route: all seven
+  frame_sets:
+  - s2_super_depart
+  engine_owner: src/main/java/com/openggf/game/sonic2/credits/Sonic2EndingCutsceneManager.java
+  character_selection_today: SUPER_SONIC; Presentation substitutes normal rotation frames and bypasses native super
+    launch setup in places.
+  animation_timing: Rotation uses plane-only0..4 while real Super player is separate; departure byte_A748 uses $12..$16
+    then0, 3-tick path cadence.
+  reuse_mica_playable: WALK/WAIT for full-size real player; five dedicated miniature flight poses18..22.
+  new_drawing_slots: 5
+  references:
+  - byte_A748 (docs/s2disasm/s2.asm:13803-13806)
+  - EndingSequence_LoadCharacterArt (docs/s2disasm/s2.asm:14269-14300)
+  notes: Do not replace plane-only0..4 with MICA; the character is a separate playable object until departure. Preserve
+    Super branch when wiring custom art.
+- id: s2-normal-final-leap
+  game: s2
+  route: normal
+  frame_sets:
+  - s2_normal_leap
+  engine_owner: src/main/java/com/openggf/game/sonic2/credits/Sonic2EndingCutsceneManager.java
+  character_selection_today: ObjCE emulation, frames12..14 from hard-wired composite bank or Presentation.objectFrames.
+  animation_timing: Initial12, then13 and14 at native timer reload4 with negative expiry (5 ticks); final enlarged14
+    held.
+  reuse_mica_playable: Three bespoke frames including enlarged hero image; SPRING is only an approximation.
+  new_drawing_slots: 3
+  references:
+  - ObjCE_Init (docs/s2disasm/s2.asm:13928-14004)
+  - ObjCF_MapUnc_ADA2 (docs/s2disasm/s2.asm:14374)
+  notes: ''
+- id: s2-super-final-flight-closeup
+  game: s2
+  route: all seven
+  frame_sets:
+  - s2_super_hero
+  engine_owner: src/main/java/com/openggf/game/sonic2/credits/Sonic2EndingCutsceneManager.java
+  character_selection_today: Hard-wired Super final selector23 (stock mapping); needs custom composite art retained
+    through Super flow.
+  animation_timing: Frame23 held; eight position steps at3 ticks; no separate frame cycle.
+  reuse_mica_playable: One enlarged Gilded MICA flight image.
+  new_drawing_slots: 1
+  references:
+  - loc_A83E (docs/s2disasm/s2.asm:13883-13910)
+  - ObjCF_MapUnc_ADA2 (docs/s2disasm/s2.asm:14374)
+  notes: ''
+- id: s3k-rescue-bad
+  game: s3k
+  route: no complete Chaos Emerald set
+  frame_sets:
+  - s3k_rescue_float
+  - s3k_ride
+  - s3k_tiny_passenger
+  engine_owner: src/main/java/com/openggf/game/sonic3k/ending/EndingRescueDirectorObjectInstance.java + EndingKnucklesFlightChildObjectInstance.java
+  character_selection_today: PlayerCharacter archetype excludes Tails/Knuckles; raw native frame IDs; PASSENGER
+    uses fixed ROM map/art.
+  animation_timing: Float anim0F $C8..$CF at8 ticks; ride $BA held; tiny passenger22/23 selected by V_int_run_count
+    bit1 (2 ticks each); plane perspective AniRaw_60253 uses per-frame delays15,15,127.
+  reuse_mica_playable: No FLOAT2 or plane-ride animation in current MICA sheet; eight float + one ride needed; two
+    tiny passenger draws.
+  new_drawing_slots: 11
+  references:
+  - loc_5D8BC (docs/skdisasm/sonic3k.asm:123676-123728)
+  - sub_5FD88 (docs/skdisasm/sonic3k.asm:126788-126802)
+  - AniSonic0F (docs/skdisasm/General/Sprites/Sonic/Anim - Sonic.asm:60)
+  - Map_SonicPlaneEnding (docs/skdisasm/sonic3k.asm:127389-127390)
+  notes: PlaneExtra1..3 and5 are vehicle bodies, not replacements for P1; Tails pilot stays native. Tiny passenger
+    needs isolated replacement, not recoloring all plane tiles.
+- id: s3k-rescue-super
+  game: s3k
+  route: seven Chaos Emeralds; Doomsday completed
+  frame_sets:
+  - s3k_super_rescue_float
+  - s3k_rescue_float
+  - s3k_ride
+  - s3k_tiny_passenger
+  engine_owner: src/main/java/com/openggf/game/sonic3k/ending/EndingRescueDirectorObjectInstance.java + EndingNativePlayerBinding.java
+  character_selection_today: instanceof Sonic3kSuperStateController for ending initialization/revert; ProfileSuperStateController
+    is deliberately not rebound by EndingNativePlayerBinding.
+  animation_timing: Initialize Super, independent Obj_Ending_RevertSuperSonic continuation reverts, then same ride
+    and tiny passenger sequence.
+  reuse_mica_playable: Gilded palette over shared float poses, same normal ride/passenger; no extra bespoke art.
+  new_drawing_slots: 0
+  references:
+  - loc_5D8BC (docs/skdisasm/sonic3k.asm:123676-123728)
+  - ArtUnc_Sonic / Map_Sonic / PLC_Sonic (docs/skdisasm/sonic3k.asm:201532-201548)
+  notes: ''
+- id: s3k-rescue-hyper
+  game: s3k
+  route: seven Super Emeralds; Doomsday completed
+  frame_sets:
+  - s3k_super_rescue_float
+  - s3k_rescue_float
+  - s3k_ride
+  - s3k_tiny_passenger
+  engine_owner: src/main/java/com/openggf/game/sonic3k/ending/EndingRescueDirectorObjectInstance.java
+  character_selection_today: instanceof native super controller; Hyper initializer then explicit revert at plane
+    catch.
+  animation_timing: Hyper held through initial flight; same native object/timing path after catch.
+  reuse_mica_playable: Same drawing slots as Super, alternate profile palette.
+  new_drawing_slots: 0
+  references:
+  - loc_5D8BC (docs/skdisasm/sonic3k.asm:123676-123728)
+  notes: ''
+- id: s3k-credits-reunion-flight
+  game: s3k
+  route: all three progress states; both archetypes
+  frame_sets:
+  - s3k_ride
+  - s3k_reunion_player
+  engine_owner: src/main/java/com/openggf/game/sonic3k/ending/EndingRescueDirectorObjectInstance.java (REUNION)
+    + S3kCreditsState.java
+  character_selection_today: Archetype controls layout; full-size P1 raw mapping $BA, later $58; native controller
+    type checks for powered branch.
+  animation_timing: Ride held during ROM credits scroll; at completion $58 for32 ticks, then jump/roll at scene
+    velocity until downward crossing y=$E0.
+  reuse_mica_playable: Ride shares new rescue pose; $58 can use WAIT; jump uses ROLL; normal WALK/RUN for good reunion
+    departure.
+  new_drawing_slots: 0
+  references:
+  - off_5E328 (docs/skdisasm/sonic3k.asm:124513-124516)
+  - sub_5FD88 (docs/skdisasm/sonic3k.asm:126788-126802)
+  - ArtUnc_Sonic / Map_Sonic / PLC_Sonic (docs/skdisasm/sonic3k.asm:201532-201548)
+  notes: ''
+- id: s3k-bad-reunion-pose
+  game: s3k
+  route: negative progress
+  frame_sets:
+  - s3k_normal_pose
+  engine_owner: src/main/java/com/openggf/game/sonic3k/ending/EndingRescueDirectorObjectInstance.java
+  character_selection_today: Hard-wired ArtKosM_SonicEndPose and Map_SonicTailsEndPoses; zero-based palette2.
+  animation_timing: Frame0 for6 ticks (timer5, negative expiry), then enlarged1 held into post-credits.
+  reuse_mica_playable: Two bespoke poses; no exact playable match.
+  new_drawing_slots: 2
+  references:
+  - ArtKosM_SonicEndPose / ArtKosM_SuperSonicEndPose / ArtKosM_SonicPlaneEnding (docs/skdisasm/sonic3k.asm:201742-201749)
+  - Map_SonicTailsEndPoses (docs/skdisasm/sonic3k.asm:127399-127400)
+  - off_5E328 (docs/skdisasm/sonic3k.asm:124513-124516)
+  notes: ''
+- id: s3k-good-super-hyper-reunion-pose
+  game: s3k
+  route: Chaos complete or Super complete
+  frame_sets:
+  - s3k_super_pose
+  - s3k_transform
+  engine_owner: src/main/java/com/openggf/game/sonic3k/ending/EndingRescueDirectorObjectInstance.java + Sonic3kSuperStateController
+  character_selection_today: Hard-wired Super pose ROM art + instanceof native controller startEndingReunionTransformation;
+    profile controller misses native methods.
+  animation_timing: Native transform animation1F at3 ticks; run offscreen;32-tick pause; enlarged pose2 slides left8px/tick
+    to x=$160. Mapping0/1 retained as conservative source-art coverage even though current powered path displays
+    playable transform before2.
+  reuse_mica_playable: WALK/RUN reuse; budget five distinct transform indices D2..D6; five unique, plus repeated
+    entries are not new drawings.
+  new_drawing_slots: 8
+  references:
+  - AniSonic1F (docs/skdisasm/General/Sprites/Sonic/Anim - Sonic.asm:119)
+  - ArtKosM_SonicEndPose / ArtKosM_SuperSonicEndPose / ArtKosM_SonicPlaneEnding (docs/skdisasm/sonic3k.asm:201742-201749)
+  - off_5E328 (docs/skdisasm/sonic3k.asm:124513-124516)
+  notes: Budget here = three Super pose slots + five unique transform frames; shared pose mappings have different
+    art from normal.
+- id: s3k-post-credits-trio-eyecatch
+  game: s3k
+  route: Hyper/Super-Emerald progress +2
+  frame_sets:
+  - s3k_eyecatch_sonic
+  engine_owner: src/main/java/com/openggf/game/sonic3k/ending/S3kPostCreditsObjectInstance.java
+  character_selection_today: Hard-wired S3_GRAPHICS art; PlayerCharacter reorders trio, Sonic child always uses
+    ROM frames.
+  animation_timing: AniRaw_6025C frames1/2 at16 ticks; AniRaw_60260 [1,1,3,4] at8 ticks then4 held via jump; no
+    Sonic in bad Eggman or ordinary-good Egg Robo eyecatches.
+  reuse_mica_playable: Four new Sonic-child draws; Tails/Knuckles and banner remain separate.
+  new_drawing_slots: 4
+  references:
+  - off_5EFB6 (docs/skdisasm/sonic3k.asm:125557-125576)
+  - loc_5F31C (docs/skdisasm/sonic3k.asm:125868-125886)
+  - AniRaw_6025C / AniRaw_60260 (docs/skdisasm/sonic3k.asm:127345-127353)
+  - Map_S3EndingGraphics / ArtNem_S3EndingGraphics (docs/skdisasm/Lockon S3/LockOn Data.asm:246-249)
+  notes: ''
+frame_sets:
+  s1_celebration:
+    native_art: Nem_EndSonic
+    native_mapping: Map_ESon
+    native_dplc: null
+    dplc_note: Static loaded scene art; no per-frame DPLC.
+    palette_line: 0
+    frame_count: 8
+    frames:
+    - index: 0
+      label: .eSon_Hold1
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: .eSon_Hold1 (docs/s1disasm/_maps/Ending Sequence Sonic.asm:14-16)
+    - index: 1
+      label: .eSon_Hold2
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: .eSon_Hold2 (docs/s1disasm/_maps/Ending Sequence Sonic.asm:19-22)
+    - index: 2
+      label: .eSon_Up
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: .eSon_Up (docs/s1disasm/_maps/Ending Sequence Sonic.asm:25-27)
+    - index: 3
+      label: .eSon_Conf1
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: .eSon_Conf1 (docs/s1disasm/_maps/Ending Sequence Sonic.asm:30-32)
+    - index: 4
+      label: .eSon_Conf2
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: .eSon_Conf2 (docs/s1disasm/_maps/Ending Sequence Sonic.asm:35-37)
+    - index: 5
+      label: .eSon_Leap1
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: .eSon_Leap1 (docs/s1disasm/_maps/Ending Sequence Sonic.asm:40-43)
+    - index: 6
+      label: .eSon_Leap2
+      bounds_px:
+      - -16
+      - -78
+      - 48
+      - 72
+      palette_lines:
+      - 0
+      citation: .eSon_Leap2 (docs/s1disasm/_maps/Ending Sequence Sonic.asm:46-53)
+    - index: 7
+      label: .eSon_Leap3
+      bounds_px:
+      - -56
+      - -128
+      - 176
+      - 136
+      palette_lines:
+      - 0
+      citation: .eSon_Leap3 (docs/s1disasm/_maps/Ending Sequence Sonic.asm:56-80)
+  s1_playable:
+    native_art: Art_Sonic
+    native_mapping: Map_Sonic
+    native_dplc: SonicDynPLC
+    dplc_note: Playable dynamic art; translate indices through canonical profile, never apply native indices directly
+      to MICA.
+    palette_line: 0
+    frame_count: 88
+    frames:
+    - index: 0
+      label: MS_Null
+      bounds_px:
+      - 0
+      - 0
+      - 0
+      - 0
+      palette_lines: []
+      citation: MS_Null (docs/s1disasm/_maps/Sonic.asm:94-94)
+    - index: 1
+      label: MS_Stand
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Stand (docs/s1disasm/_maps/Sonic.asm:97-101)
+    - index: 2
+      label: MS_Wait1
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Wait1 (docs/s1disasm/_maps/Sonic.asm:104-107)
+    - index: 3
+      label: MS_Wait2
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Wait2 (docs/s1disasm/_maps/Sonic.asm:110-113)
+    - index: 4
+      label: MS_Wait3
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Wait3 (docs/s1disasm/_maps/Sonic.asm:116-119)
+    - index: 5
+      label: MS_LookUp
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_LookUp (docs/s1disasm/_maps/Sonic.asm:122-125)
+    - index: 6
+      label: MS_Walk11
+      bounds_px:
+      - -20
+      - -21
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk11 (docs/s1disasm/_maps/Sonic.asm:128-132)
+    - index: 7
+      label: MS_Walk12
+      bounds_px:
+      - -19
+      - -20
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk12 (docs/s1disasm/_maps/Sonic.asm:135-137)
+    - index: 8
+      label: MS_Walk13
+      bounds_px:
+      - -13
+      - -19
+      - 24
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk13 (docs/s1disasm/_maps/Sonic.asm:140-142)
+    - index: 9
+      label: MS_Walk14
+      bounds_px:
+      - -20
+      - -21
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk14 (docs/s1disasm/_maps/Sonic.asm:145-149)
+    - index: 10
+      label: MS_Walk15
+      bounds_px:
+      - -21
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk15 (docs/s1disasm/_maps/Sonic.asm:152-154)
+    - index: 11
+      label: MS_Walk16
+      bounds_px:
+      - -20
+      - -19
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk16 (docs/s1disasm/_maps/Sonic.asm:157-160)
+    - index: 12
+      label: MS_Walk21
+      bounds_px:
+      - -21
+      - -21
+      - 40
+      - 48
+      palette_lines:
+      - 0
+      citation: MS_Walk21 (docs/s1disasm/_maps/Sonic.asm:163-168)
+    - index: 13
+      label: MS_Walk22
+      bounds_px:
+      - -20
+      - -20
+      - 48
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk22 (docs/s1disasm/_maps/Sonic.asm:171-177)
+    - index: 14
+      label: MS_Walk23
+      bounds_px:
+      - -19
+      - -19
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk23 (docs/s1disasm/_maps/Sonic.asm:180-184)
+    - index: 15
+      label: MS_Walk24
+      bounds_px:
+      - -21
+      - -21
+      - 40
+      - 48
+      palette_lines:
+      - 0
+      citation: MS_Walk24 (docs/s1disasm/_maps/Sonic.asm:187-192)
+    - index: 16
+      label: MS_Walk25
+      bounds_px:
+      - -20
+      - -20
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk25 (docs/s1disasm/_maps/Sonic.asm:195-199)
+    - index: 17
+      label: MS_Walk26
+      bounds_px:
+      - -19
+      - -19
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk26 (docs/s1disasm/_maps/Sonic.asm:202-207)
+    - index: 18
+      label: MS_Walk31
+      bounds_px:
+      - -21
+      - -20
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk31 (docs/s1disasm/_maps/Sonic.asm:210-214)
+    - index: 19
+      label: MS_Walk32
+      bounds_px:
+      - -20
+      - -20
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk32 (docs/s1disasm/_maps/Sonic.asm:217-219)
+    - index: 20
+      label: MS_Walk33
+      bounds_px:
+      - -19
+      - -12
+      - 40
+      - 24
+      palette_lines:
+      - 0
+      citation: MS_Walk33 (docs/s1disasm/_maps/Sonic.asm:222-224)
+    - index: 21
+      label: MS_Walk34
+      bounds_px:
+      - -21
+      - -20
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk34 (docs/s1disasm/_maps/Sonic.asm:227-231)
+    - index: 22
+      label: MS_Walk35
+      bounds_px:
+      - -20
+      - -12
+      - 40
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Walk35 (docs/s1disasm/_maps/Sonic.asm:234-236)
+    - index: 23
+      label: MS_Walk36
+      bounds_px:
+      - -19
+      - -20
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk36 (docs/s1disasm/_maps/Sonic.asm:239-242)
+    - index: 24
+      label: MS_Walk41
+      bounds_px:
+      - -21
+      - -19
+      - 48
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk41 (docs/s1disasm/_maps/Sonic.asm:245-251)
+    - index: 25
+      label: MS_Walk42
+      bounds_px:
+      - -20
+      - -28
+      - 40
+      - 48
+      palette_lines:
+      - 0
+      citation: MS_Walk42 (docs/s1disasm/_maps/Sonic.asm:254-260)
+    - index: 26
+      label: MS_Walk43
+      bounds_px:
+      - -19
+      - -21
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk43 (docs/s1disasm/_maps/Sonic.asm:263-267)
+    - index: 27
+      label: MS_Walk44
+      bounds_px:
+      - -21
+      - -19
+      - 48
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk44 (docs/s1disasm/_maps/Sonic.asm:270-275)
+    - index: 28
+      label: MS_Walk45
+      bounds_px:
+      - -20
+      - -20
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk45 (docs/s1disasm/_maps/Sonic.asm:278-282)
+    - index: 29
+      label: MS_Walk46
+      bounds_px:
+      - -19
+      - -21
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Walk46 (docs/s1disasm/_maps/Sonic.asm:285-290)
+    - index: 30
+      label: MS_Run11
+      bounds_px:
+      - -20
+      - -18
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Run11 (docs/s1disasm/_maps/Sonic.asm:293-295)
+    - index: 31
+      label: MS_Run12
+      bounds_px:
+      - -20
+      - -18
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Run12 (docs/s1disasm/_maps/Sonic.asm:298-300)
+    - index: 32
+      label: MS_Run13
+      bounds_px:
+      - -20
+      - -18
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Run13 (docs/s1disasm/_maps/Sonic.asm:303-305)
+    - index: 33
+      label: MS_Run14
+      bounds_px:
+      - -20
+      - -18
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Run14 (docs/s1disasm/_maps/Sonic.asm:308-310)
+    - index: 34
+      label: MS_Run21
+      bounds_px:
+      - -18
+      - -18
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Run21 (docs/s1disasm/_maps/Sonic.asm:313-317)
+    - index: 35
+      label: MS_Run22
+      bounds_px:
+      - -18
+      - -18
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Run22 (docs/s1disasm/_maps/Sonic.asm:320-323)
+    - index: 36
+      label: MS_Run23
+      bounds_px:
+      - -18
+      - -18
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Run23 (docs/s1disasm/_maps/Sonic.asm:326-330)
+    - index: 37
+      label: MS_Run24
+      bounds_px:
+      - -18
+      - -18
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Run24 (docs/s1disasm/_maps/Sonic.asm:333-336)
+    - index: 38
+      label: MS_Run31
+      bounds_px:
+      - -18
+      - -12
+      - 40
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Run31 (docs/s1disasm/_maps/Sonic.asm:339-341)
+    - index: 39
+      label: MS_Run32
+      bounds_px:
+      - -18
+      - -12
+      - 40
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Run32 (docs/s1disasm/_maps/Sonic.asm:344-346)
+    - index: 40
+      label: MS_Run33
+      bounds_px:
+      - -18
+      - -12
+      - 40
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Run33 (docs/s1disasm/_maps/Sonic.asm:349-351)
+    - index: 41
+      label: MS_Run34
+      bounds_px:
+      - -18
+      - -12
+      - 40
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Run34 (docs/s1disasm/_maps/Sonic.asm:354-356)
+    - index: 42
+      label: MS_Run41
+      bounds_px:
+      - -18
+      - -22
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Run41 (docs/s1disasm/_maps/Sonic.asm:359-363)
+    - index: 43
+      label: MS_Run42
+      bounds_px:
+      - -18
+      - -22
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Run42 (docs/s1disasm/_maps/Sonic.asm:366-368)
+    - index: 44
+      label: MS_Run43
+      bounds_px:
+      - -18
+      - -22
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Run43 (docs/s1disasm/_maps/Sonic.asm:371-375)
+    - index: 45
+      label: MS_Run44
+      bounds_px:
+      - -18
+      - -22
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Run44 (docs/s1disasm/_maps/Sonic.asm:378-380)
+    - index: 46
+      label: MS_Roll1
+      bounds_px:
+      - -16
+      - -16
+      - 32
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Roll1 (docs/s1disasm/_maps/Sonic.asm:383-384)
+    - index: 47
+      label: MS_Roll2
+      bounds_px:
+      - -16
+      - -16
+      - 32
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Roll2 (docs/s1disasm/_maps/Sonic.asm:387-388)
+    - index: 48
+      label: MS_Roll3
+      bounds_px:
+      - -16
+      - -16
+      - 32
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Roll3 (docs/s1disasm/_maps/Sonic.asm:391-392)
+    - index: 49
+      label: MS_Roll4
+      bounds_px:
+      - -16
+      - -16
+      - 32
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Roll4 (docs/s1disasm/_maps/Sonic.asm:395-396)
+    - index: 50
+      label: MS_Roll5
+      bounds_px:
+      - -16
+      - -16
+      - 32
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Roll5 (docs/s1disasm/_maps/Sonic.asm:399-400)
+    - index: 51
+      label: MS_Warp1
+      bounds_px:
+      - -20
+      - -12
+      - 40
+      - 24
+      palette_lines:
+      - 0
+      citation: MS_Warp1 (docs/s1disasm/_maps/Sonic.asm:403-405)
+    - index: 52
+      label: MS_Warp2
+      bounds_px:
+      - -16
+      - -16
+      - 32
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Warp2 (docs/s1disasm/_maps/Sonic.asm:408-409)
+    - index: 53
+      label: MS_Warp3
+      bounds_px:
+      - -12
+      - -20
+      - 24
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Warp3 (docs/s1disasm/_maps/Sonic.asm:412-414)
+    - index: 54
+      label: MS_Warp4
+      bounds_px:
+      - -16
+      - -16
+      - 32
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Warp4 (docs/s1disasm/_maps/Sonic.asm:417-418)
+    - index: 55
+      label: MS_Stop1
+      bounds_px:
+      - -16
+      - -19
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Stop1 (docs/s1disasm/_maps/Sonic.asm:421-423)
+    - index: 56
+      label: MS_Stop2
+      bounds_px:
+      - -24
+      - -19
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Stop2 (docs/s1disasm/_maps/Sonic.asm:426-430)
+    - index: 57
+      label: MS_Duck
+      bounds_px:
+      - -20
+      - -12
+      - 40
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Duck (docs/s1disasm/_maps/Sonic.asm:433-437)
+    - index: 58
+      label: MS_Balance1
+      bounds_px:
+      - -32
+      - -20
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Balance1 (docs/s1disasm/_maps/Sonic.asm:440-443)
+    - index: 59
+      label: MS_Balance2
+      bounds_px:
+      - -32
+      - -20
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Balance2 (docs/s1disasm/_maps/Sonic.asm:446-449)
+    - index: 60
+      label: MS_Float1
+      bounds_px:
+      - -20
+      - -12
+      - 48
+      - 24
+      palette_lines:
+      - 0
+      citation: MS_Float1 (docs/s1disasm/_maps/Sonic.asm:452-455)
+    - index: 61
+      label: MS_Float2
+      bounds_px:
+      - -24
+      - -12
+      - 48
+      - 24
+      palette_lines:
+      - 0
+      citation: MS_Float2 (docs/s1disasm/_maps/Sonic.asm:458-460)
+    - index: 62
+      label: MS_Float3
+      bounds_px:
+      - -28
+      - -12
+      - 40
+      - 24
+      palette_lines:
+      - 0
+      citation: MS_Float3 (docs/s1disasm/_maps/Sonic.asm:463-466)
+    - index: 63
+      label: MS_Float4
+      bounds_px:
+      - -20
+      - -12
+      - 48
+      - 24
+      palette_lines:
+      - 0
+      citation: MS_Float4 (docs/s1disasm/_maps/Sonic.asm:469-472)
+    - index: 64
+      label: MS_Spring
+      bounds_px:
+      - -16
+      - -24
+      - 24
+      - 48
+      palette_lines:
+      - 0
+      citation: MS_Spring (docs/s1disasm/_maps/Sonic.asm:475-478)
+    - index: 65
+      label: MS_Hang1
+      bounds_px:
+      - -24
+      - -16
+      - 48
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Hang1 (docs/s1disasm/_maps/Sonic.asm:481-485)
+    - index: 66
+      label: MS_Hang2
+      bounds_px:
+      - -24
+      - -16
+      - 48
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Hang2 (docs/s1disasm/_maps/Sonic.asm:488-492)
+    - index: 67
+      label: MS_Leap1
+      bounds_px:
+      - -20
+      - -24
+      - 40
+      - 48
+      palette_lines:
+      - 0
+      citation: MS_Leap1 (docs/s1disasm/_maps/Sonic.asm:495-500)
+    - index: 68
+      label: MS_Leap2
+      bounds_px:
+      - -20
+      - -24
+      - 40
+      - 48
+      palette_lines:
+      - 0
+      citation: MS_Leap2 (docs/s1disasm/_maps/Sonic.asm:503-508)
+    - index: 69
+      label: MS_Push1
+      bounds_px:
+      - -21
+      - -19
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Push1 (docs/s1disasm/_maps/Sonic.asm:511-513)
+    - index: 70
+      label: MS_Push2
+      bounds_px:
+      - -13
+      - -20
+      - 24
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Push2 (docs/s1disasm/_maps/Sonic.asm:516-519)
+    - index: 71
+      label: MS_Push3
+      bounds_px:
+      - -21
+      - -19
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Push3 (docs/s1disasm/_maps/Sonic.asm:522-524)
+    - index: 72
+      label: MS_Push4
+      bounds_px:
+      - -13
+      - -20
+      - 24
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Push4 (docs/s1disasm/_maps/Sonic.asm:527-530)
+    - index: 73
+      label: MS_Surf
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Surf (docs/s1disasm/_maps/Sonic.asm:533-535)
+    - index: 74
+      label: MS_BubStand
+      bounds_px:
+      - -16
+      - -28
+      - 24
+      - 48
+      palette_lines:
+      - 0
+      citation: MS_BubStand (docs/s1disasm/_maps/Sonic.asm:538-541)
+    - index: 75
+      label: MS_Burnt
+      bounds_px:
+      - -20
+      - -24
+      - 40
+      - 48
+      palette_lines:
+      - 0
+      citation: MS_Burnt (docs/s1disasm/_maps/Sonic.asm:544-547)
+    - index: 76
+      label: MS_Drown
+      bounds_px:
+      - -20
+      - -24
+      - 40
+      - 48
+      palette_lines:
+      - 0
+      citation: MS_Drown (docs/s1disasm/_maps/Sonic.asm:550-555)
+    - index: 77
+      label: MS_Death
+      bounds_px:
+      - -20
+      - -24
+      - 40
+      - 48
+      palette_lines:
+      - 0
+      citation: MS_Death (docs/s1disasm/_maps/Sonic.asm:558-563)
+    - index: 78
+      label: MS_Shrink1
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Shrink1 (docs/s1disasm/_maps/Sonic.asm:566-568)
+    - index: 79
+      label: MS_Shrink2
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_Shrink2 (docs/s1disasm/_maps/Sonic.asm:571-574)
+    - index: 80
+      label: MS_Shrink3
+      bounds_px:
+      - -12
+      - -16
+      - 24
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Shrink3 (docs/s1disasm/_maps/Sonic.asm:577-578)
+    - index: 81
+      label: MS_Shrink4
+      bounds_px:
+      - -8
+      - -12
+      - 16
+      - 24
+      palette_lines:
+      - 0
+      citation: MS_Shrink4 (docs/s1disasm/_maps/Sonic.asm:581-582)
+    - index: 82
+      label: MS_Shrink5
+      bounds_px:
+      - -4
+      - -8
+      - 8
+      - 16
+      palette_lines:
+      - 0
+      citation: MS_Shrink5 (docs/s1disasm/_maps/Sonic.asm:585-586)
+    - index: 83
+      label: MS_Float5
+      bounds_px:
+      - -28
+      - -12
+      - 48
+      - 24
+      palette_lines:
+      - 0
+      citation: MS_Float5 (docs/s1disasm/_maps/Sonic.asm:589-592)
+    - index: 84
+      label: MS_Float6
+      bounds_px:
+      - -12
+      - -12
+      - 40
+      - 24
+      palette_lines:
+      - 0
+      citation: MS_Float6 (docs/s1disasm/_maps/Sonic.asm:595-598)
+    - index: 85
+      label: MS_Injury
+      bounds_px:
+      - -20
+      - -16
+      - 40
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_Injury (docs/s1disasm/_maps/Sonic.asm:601-604)
+    - index: 86
+      label: MS_GetAir
+      bounds_px:
+      - -20
+      - -21
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: MS_GetAir (docs/s1disasm/_maps/Sonic.asm:607-610)
+    - index: 87
+      label: MS_WaterSlide
+      bounds_px:
+      - -20
+      - -16
+      - 40
+      - 32
+      palette_lines:
+      - 0
+      citation: MS_WaterSlide (docs/s1disasm/_maps/Sonic.asm:613-615)
+  s2_normal_turn:
+    native_art: ArtNem_EndingSonic + ArtNem_EndingMiniTornado
+    native_mapping: ObjCF_MapUnc_ADA2
+    native_dplc: null
+    dplc_note: Static loaded scene art; no per-frame DPLC.
+    palette_line: 0 plane / 1 character
+    frame_count: 5
+    frames:
+    - index: 7
+      label: Map_objCF_0132
+      bounds_px:
+      - -32
+      - -32
+      - 64
+      - 48
+      palette_lines:
+      - 0
+      - 1
+      citation: Map_objCF_0132 (docs/s2disasm/mappings/sprite/objCF.asm:80-88)
+    - index: 8
+      label: Map_objCF_0174
+      bounds_px:
+      - -24
+      - -25
+      - 48
+      - 37
+      palette_lines:
+      - 0
+      - 1
+      citation: Map_objCF_0174 (docs/s2disasm/mappings/sprite/objCF.asm:91-96)
+    - index: 9
+      label: Map_objCF_019E
+      bounds_px:
+      - -20
+      - -19
+      - 40
+      - 31
+      palette_lines:
+      - 0
+      - 1
+      citation: Map_objCF_019E (docs/s2disasm/mappings/sprite/objCF.asm:99-103)
+    - index: 10
+      label: Map_objCF_01C0
+      bounds_px:
+      - -20
+      - -19
+      - 40
+      - 31
+      palette_lines:
+      - 0
+      - 1
+      citation: Map_objCF_01C0 (docs/s2disasm/mappings/sprite/objCF.asm:106-110)
+    - index: 11
+      label: Map_objCF_01E2
+      bounds_px:
+      - -20
+      - -15
+      - 40
+      - 27
+      palette_lines:
+      - 0
+      - 1
+      citation: Map_objCF_01E2 (docs/s2disasm/mappings/sprite/objCF.asm:113-117)
+  s2_normal_leap:
+    native_art: ArtNem_EndingSonic
+    native_mapping: ObjCF_MapUnc_ADA2
+    native_dplc: null
+    dplc_note: Static loaded scene art; no per-frame DPLC.
+    palette_line: 0
+    frame_count: 3
+    frames:
+    - index: 12
+      label: Map_objCF_0204
+      bounds_px:
+      - 0
+      - 0
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: Map_objCF_0204 (docs/s2disasm/mappings/sprite/objCF.asm:120-123)
+    - index: 13
+      label: Map_objCF_021E
+      bounds_px:
+      - 0
+      - 0
+      - 32
+      - 48
+      palette_lines:
+      - 0
+      citation: Map_objCF_021E (docs/s2disasm/mappings/sprite/objCF.asm:126-130)
+    - index: 14
+      label: Map_objCF_0240
+      bounds_px:
+      - 0
+      - 0
+      - 80
+      - 104
+      palette_lines:
+      - 0
+      citation: Map_objCF_0240 (docs/s2disasm/mappings/sprite/objCF.asm:133-145)
+  s2_super_depart:
+    native_art: ArtNem_EndingSuperSonic
+    native_mapping: ObjCF_MapUnc_ADA2
+    native_dplc: null
+    dplc_note: Static loaded scene art; no per-frame DPLC.
+    palette_line: 0
+    frame_count: 5
+    frames:
+    - index: 18
+      label: Map_objCF_0378
+      bounds_px:
+      - -12
+      - -8
+      - 24
+      - 16
+      palette_lines:
+      - 0
+      citation: Map_objCF_0378 (docs/s2disasm/mappings/sprite/objCF.asm:183-185)
+    - index: 19
+      label: Map_objCF_038A
+      bounds_px:
+      - -8
+      - -8
+      - 16
+      - 16
+      palette_lines:
+      - 0
+      citation: Map_objCF_038A (docs/s2disasm/mappings/sprite/objCF.asm:188-189)
+    - index: 20
+      label: Map_objCF_0394
+      bounds_px:
+      - -8
+      - -8
+      - 16
+      - 16
+      palette_lines:
+      - 0
+      citation: Map_objCF_0394 (docs/s2disasm/mappings/sprite/objCF.asm:192-193)
+    - index: 21
+      label: Map_objCF_039E
+      bounds_px:
+      - -8
+      - -8
+      - 16
+      - 16
+      palette_lines:
+      - 0
+      citation: Map_objCF_039E (docs/s2disasm/mappings/sprite/objCF.asm:196-197)
+    - index: 22
+      label: Map_objCF_03A8
+      bounds_px:
+      - -8
+      - -8
+      - 16
+      - 16
+      palette_lines:
+      - 0
+      citation: Map_objCF_03A8 (docs/s2disasm/mappings/sprite/objCF.asm:200-201)
+  s2_super_hero:
+    native_art: ArtNem_EndingSuperSonic
+    native_mapping: ObjCF_MapUnc_ADA2
+    native_dplc: null
+    dplc_note: Static loaded scene art; no per-frame DPLC.
+    palette_line: 0
+    frame_count: 1
+    frames:
+    - index: 23
+      label: Map_objCF_03B2
+      bounds_px:
+      - 0
+      - 0
+      - 112
+      - 96
+      palette_lines:
+      - 0
+      citation: Map_objCF_03B2 (docs/s2disasm/mappings/sprite/objCF.asm:204-219)
+  s2_float:
+    native_art: ArtUnc_Sonic
+    native_mapping: MapUnc_Sonic
+    native_dplc: MapRUnc_Sonic
+    dplc_note: Playable dynamic art; translate indices through canonical profile, never apply native indices directly
+      to MICA.
+    palette_line: 0
+    frame_count: 5
+    frames:
+    - index: 84
+      label: Map_Sonic_099C
+      bounds_px:
+      - -20
+      - -12
+      - 48
+      - 32
+      palette_lines:
+      - 0
+      citation: Map_Sonic_099C (docs/s2disasm/mappings/sprite/Sonic.asm:702-705)
+    - index: 85
+      label: Map_Sonic_09B6
+      bounds_px:
+      - -24
+      - -12
+      - 48
+      - 32
+      palette_lines:
+      - 0
+      citation: Map_Sonic_09B6 (docs/s2disasm/mappings/sprite/Sonic.asm:708-712)
+    - index: 86
+      label: Map_Sonic_09D8
+      bounds_px:
+      - -28
+      - -12
+      - 48
+      - 32
+      palette_lines:
+      - 0
+      citation: Map_Sonic_09D8 (docs/s2disasm/mappings/sprite/Sonic.asm:715-718)
+    - index: 87
+      label: Map_Sonic_09F2
+      bounds_px:
+      - -28
+      - -12
+      - 40
+      - 32
+      palette_lines:
+      - 0
+      citation: Map_Sonic_09F2 (docs/s2disasm/mappings/sprite/Sonic.asm:721-724)
+    - index: 88
+      label: Map_Sonic_0A0C
+      bounds_px:
+      - -12
+      - -12
+      - 40
+      - 32
+      palette_lines:
+      - 0
+      citation: Map_Sonic_0A0C (docs/s2disasm/mappings/sprite/Sonic.asm:727-730)
+  s2_super_walk:
+    native_art: ArtUnc_Sonic
+    native_mapping: MapUnc_Sonic
+    native_dplc: MapRUnc_Sonic
+    dplc_note: Playable dynamic art; translate indices through canonical profile, never apply native indices directly
+      to MICA.
+    palette_line: 0
+    frame_count: 6
+    frames:
+    - index: 0
+      label: Map_Sonic_01AC
+      bounds_px:
+      - 0
+      - 0
+      - 0
+      - 0
+      palette_lines: []
+      citation: Map_Sonic_01AC (docs/s2disasm/mappings/sprite/Sonic.asm:217-217)
+    - index: 1
+      label: Map_Sonic_01AE
+      bounds_px:
+      - -16
+      - -28
+      - 32
+      - 48
+      palette_lines:
+      - 0
+      citation: Map_Sonic_01AE (docs/s2disasm/mappings/sprite/Sonic.asm:220-224)
+    - index: 2
+      label: Map_Sonic_01D0
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 48
+      palette_lines:
+      - 0
+      citation: Map_Sonic_01D0 (docs/s2disasm/mappings/sprite/Sonic.asm:227-229)
+    - index: 3
+      label: Map_Sonic_01E2
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 48
+      palette_lines:
+      - 0
+      citation: Map_Sonic_01E2 (docs/s2disasm/mappings/sprite/Sonic.asm:232-236)
+    - index: 4
+      label: Map_Sonic_0204
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 48
+      palette_lines:
+      - 0
+      citation: Map_Sonic_0204 (docs/s2disasm/mappings/sprite/Sonic.asm:239-243)
+    - index: 5
+      label: Map_Sonic_0226
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 48
+      palette_lines:
+      - 0
+      citation: Map_Sonic_0226 (docs/s2disasm/mappings/sprite/Sonic.asm:246-251)
+  s3k_normal_pose:
+    native_art: ArtKosM_SonicEndPose
+    native_mapping: Map_SonicTailsEndPoses
+    native_dplc: null
+    dplc_note: Static loaded scene art; no per-frame DPLC.
+    palette_line: 2
+    frame_count: 2
+    frames:
+    - &id001
+      index: 0
+      label: word_607F0
+      bounds_px:
+      - 0
+      - 0
+      - 48
+      - 72
+      palette_lines:
+      - 0
+      citation: word_607F0 (docs/skdisasm/General/Ending/Map - Sonic Tails Ending Poses.asm:7-13)
+    - &id002
+      index: 1
+      label: word_60816
+      bounds_px:
+      - -44
+      - -64
+      - 88
+      - 128
+      palette_lines:
+      - 0
+      citation: word_60816 (docs/skdisasm/General/Ending/Map - Sonic Tails Ending Poses.asm:14-27)
+  s3k_super_pose:
+    native_art: ArtKosM_SuperSonicEndPose
+    native_mapping: Map_SonicTailsEndPoses
+    native_dplc: null
+    dplc_note: Static loaded scene art; no per-frame DPLC.
+    palette_line: 2
+    frame_count: 3
+    frames:
+    - *id001
+    - *id002
+    - index: 2
+      label: word_60866
+      bounds_px:
+      - -64
+      - -68
+      - 128
+      - 136
+      palette_lines:
+      - 0
+      citation: word_60866 (docs/skdisasm/General/Ending/Map - Sonic Tails Ending Poses.asm:28-46)
+  s3k_tiny_passenger:
+    native_art: ArtKosM_SonicPlaneEnding
+    native_mapping: Map_SonicPlaneEnding
+    native_dplc: null
+    dplc_note: Static loaded scene art; no per-frame DPLC.
+    palette_line: 0
+    frame_count: 2
+    frames:
+    - index: 22
+      label: word_6061C
+      bounds_px:
+      - -12
+      - -4
+      - 16
+      - 8
+      palette_lines:
+      - 0
+      citation: word_6061C (docs/skdisasm/General/Ending/Map - Sonic Plane Ending.asm:101-102)
+    - index: 23
+      label: word_60624
+      bounds_px:
+      - -4
+      - -4
+      - 8
+      - 8
+      palette_lines:
+      - 0
+      citation: word_60624 (docs/skdisasm/General/Ending/Map - Sonic Plane Ending.asm:103-104)
+  s3k_eyecatch_sonic:
+    native_art: ArtNem_S3EndingGraphics
+    native_mapping: Map_S3EndingGraphics
+    native_dplc: null
+    dplc_note: Static loaded scene art; no per-frame DPLC.
+    palette_line: 0
+    frame_count: 4
+    frames:
+    - index: 1
+      label: Frame_24180E
+      bounds_px:
+      - -12
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: Frame_24180E (docs/skdisasm/General/Ending/Map - S3 Ending Graphics.asm:36-39)
+    - index: 2
+      label: Frame_241822
+      bounds_px:
+      - -12
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: Frame_241822 (docs/skdisasm/General/Ending/Map - S3 Ending Graphics.asm:40-43)
+    - index: 3
+      label: Frame_241836
+      bounds_px:
+      - -20
+      - -20
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: Frame_241836 (docs/skdisasm/General/Ending/Map - S3 Ending Graphics.asm:44-48)
+    - index: 4
+      label: Frame_241850
+      bounds_px:
+      - -20
+      - -20
+      - 40
+      - 40
+      palette_lines:
+      - 0
+      citation: Frame_241850 (docs/skdisasm/General/Ending/Map - S3 Ending Graphics.asm:49-52)
+  s3k_rescue_float:
+    native_art: ArtUnc_Sonic
+    native_mapping: Map_Sonic / Map_SuperSonic
+    native_dplc: PLC_Sonic
+    dplc_note: Playable dynamic art; translate indices through canonical profile, never apply native indices directly
+      to MICA.
+    palette_line: 0
+    frame_count: 8
+    frames:
+    - index: 200
+      label: word_14797C
+      bounds_px:
+      - -29
+      - -12
+      - 48
+      - 24
+      palette_lines:
+      - 0
+      citation: word_14797C (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1298-1301)
+    - index: 201
+      label: word_147990
+      bounds_px:
+      - -20
+      - -12
+      - 40
+      - 24
+      palette_lines:
+      - 0
+      citation: word_147990 (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1302-1305)
+    - index: 202
+      label: word_1479A4
+      bounds_px:
+      - -17
+      - -12
+      - 32
+      - 24
+      palette_lines:
+      - 0
+      citation: word_1479A4 (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1306-1308)
+    - index: 203
+      label: word_1479B2
+      bounds_px:
+      - -21
+      - -12
+      - 40
+      - 24
+      palette_lines:
+      - 0
+      citation: word_1479B2 (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1309-1312)
+    - index: 204
+      label: word_1479C6
+      bounds_px:
+      - -18
+      - -12
+      - 48
+      - 24
+      palette_lines:
+      - 0
+      citation: word_1479C6 (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1313-1316)
+    - index: 205
+      label: word_1479DA
+      bounds_px:
+      - -22
+      - -12
+      - 40
+      - 24
+      palette_lines:
+      - 0
+      citation: word_1479DA (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1317-1319)
+    - index: 206
+      label: word_1479E8
+      bounds_px:
+      - -17
+      - -12
+      - 32
+      - 24
+      palette_lines:
+      - 0
+      citation: word_1479E8 (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1320-1322)
+    - index: 207
+      label: word_1479F6
+      bounds_px:
+      - -17
+      - -12
+      - 40
+      - 24
+      palette_lines:
+      - 0
+      citation: word_1479F6 (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1323-1325)
+  s3k_ride:
+    native_art: ArtUnc_Sonic
+    native_mapping: Map_Sonic
+    native_dplc: PLC_Sonic
+    dplc_note: Playable dynamic art; translate indices through canonical profile, never apply native indices directly
+      to MICA.
+    palette_line: 0
+    frame_count: 1
+    frames:
+    - index: 186
+      label: word_147828
+      bounds_px:
+      - -16
+      - -20
+      - 32
+      - 40
+      palette_lines:
+      - 0
+      citation: word_147828 (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1232-1236)
+  s3k_reunion_player:
+    native_art: ArtUnc_Sonic
+    native_mapping: Map_Sonic
+    native_dplc: PLC_Sonic
+    dplc_note: Playable dynamic art; translate indices through canonical profile, never apply native indices directly
+      to MICA.
+    palette_line: 0
+    frame_count: 1
+    frames:
+    - index: 88
+      label: word_1470CE
+      bounds_px:
+      - -13
+      - -20
+      - 24
+      - 40
+      palette_lines:
+      - 0
+      citation: word_1470CE (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:853-855)
+  s3k_super_rescue_float:
+    native_art: ArtUnc_Sonic
+    native_mapping: Map_SuperSonic
+    native_dplc: PLC_Sonic
+    dplc_note: Playable dynamic art; translate indices through canonical profile, never apply native indices directly
+      to MICA.
+    palette_line: 0
+    frame_count: 8
+    frames:
+    - index: 200
+      label: word_14797C
+      bounds_px:
+      - -29
+      - -12
+      - 48
+      - 24
+      palette_lines:
+      - 0
+      citation: word_14797C (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1298-1301)
+    - index: 201
+      label: word_147990
+      bounds_px:
+      - -20
+      - -12
+      - 40
+      - 24
+      palette_lines:
+      - 0
+      citation: word_147990 (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1302-1305)
+    - index: 202
+      label: word_1479A4
+      bounds_px:
+      - -17
+      - -12
+      - 32
+      - 24
+      palette_lines:
+      - 0
+      citation: word_1479A4 (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1306-1308)
+    - index: 203
+      label: word_1479B2
+      bounds_px:
+      - -21
+      - -12
+      - 40
+      - 24
+      palette_lines:
+      - 0
+      citation: word_1479B2 (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1309-1312)
+    - index: 204
+      label: word_1479C6
+      bounds_px:
+      - -18
+      - -12
+      - 48
+      - 24
+      palette_lines:
+      - 0
+      citation: word_1479C6 (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1313-1316)
+    - index: 205
+      label: word_1479DA
+      bounds_px:
+      - -22
+      - -12
+      - 40
+      - 24
+      palette_lines:
+      - 0
+      citation: word_1479DA (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1317-1319)
+    - index: 206
+      label: word_1479E8
+      bounds_px:
+      - -17
+      - -12
+      - 32
+      - 24
+      palette_lines:
+      - 0
+      citation: word_1479E8 (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1320-1322)
+    - index: 207
+      label: word_1479F6
+      bounds_px:
+      - -17
+      - -12
+      - 40
+      - 24
+      palette_lines:
+      - 0
+      citation: word_1479F6 (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1323-1325)
+  s3k_transform:
+    native_art: ArtUnc_Sonic
+    native_mapping: Map_Sonic / Map_SuperSonic
+    native_dplc: PLC_Sonic
+    dplc_note: Playable dynamic art; translate indices through canonical profile, never apply native indices directly
+      to MICA.
+    palette_line: 0
+    frame_count: 5
+    frames:
+    - index: 210
+      label: word_148130
+      bounds_px:
+      - -12
+      - -16
+      - 24
+      - 32
+      palette_lines:
+      - 0
+      citation: word_148130 (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1693-1694)
+    - index: 211
+      label: word_148138
+      bounds_px:
+      - -13
+      - -24
+      - 32
+      - 48
+      palette_lines:
+      - 0
+      citation: word_148138 (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1695-1698)
+    - index: 212
+      label: word_14814C
+      bounds_px:
+      - -16
+      - -24
+      - 32
+      - 48
+      palette_lines:
+      - 0
+      citation: word_14814C (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1699-1701)
+    - index: 213
+      label: word_14815A
+      bounds_px:
+      - -16
+      - -24
+      - 32
+      - 48
+      palette_lines:
+      - 0
+      citation: word_14815A (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1702-1705)
+    - index: 214
+      label: word_14816E
+      bounds_px:
+      - -16
+      - -24
+      - 32
+      - 48
+      palette_lines:
+      - 0
+      citation: word_14816E (docs/skdisasm/General/Sprites/Sonic/Map - Sonic.asm:1707-1710)
+  s2_photos:
+    native_art: ArtNem_EndingPics
+    native_mapping:
+    - MapEng_Ending1
+    - MapEng_Ending2
+    - MapEng_Ending3
+    - MapEng_Ending4
+    native_dplc: null
+    palette_line: 0
+    frame_count: 4
+    bounds_px:
+    - 0
+    - 0
+    - 96
+    - 72
+    note: Four scene panels counted as four drawings, not 432 individual tile frames; replace only character pixels,
+      retain scene composition.
+non_character_surfaces:
+- game: s1
+  sequence: TRY AGAIN / END after credits
+  owner: src/main/java/com/openggf/game/sonic1/credits/TryAgainEndManager.java
+  note: Eggman plus missing emeralds or END text; no Sonic portrait. Zero MICA frames.
+- game: s2
+  sequence: 21 credit text slides and post-credits flashing wordmark
+  owner: src/main/java/com/openggf/game/sonic2/credits/Sonic2CreditsTextRenderer.java + Sonic2LogoFlashManager.java
+  note: Text and 128x48 wordmark, no character portrait; zero ending character drawings. W4 name/branding scope
+    separate.
+- game: s3k
+  sequence: post-credits bad Eggman / ordinary-good Egg Robo
+  owner: src/main/java/com/openggf/game/sonic3k/ending/S3kPostCreditsObjectInstance.java
+  note: No main-player character; Super-Emerald +2 alone selects trio. Logos have separate branding scope.
+engine_changes_required:
+- owner: src/main/java/com/openggf/game/sonic1/objects/Sonic1EndingSonicObjectInstance.java
+  reason: Supply character-owned END_SONIC scene sheet and palette rather than fixed renderer; preserve good/bad
+    sequencing.
+- owner: src/main/java/com/openggf/game/sonic2/credits/Sonic2EndingCutsceneManager.java + Sonic2EndingArt.java
+  reason: Wire mod presentation from CharacterDefinition, add picture tiles/maps replacement, preserve actual Super
+    rotation/departure/final23 path and powered playable art. Existing internal seam is not a complete custom-art
+    contract.
+- owner: src/main/java/com/openggf/game/sonic3k/ending/EndingRescueDirectorObjectInstance.java + EndingKnucklesFlightChildObjectInstance.java
+  reason: Replace raw frame IDs with canonical pose selectors, supply tiny-passenger and pose scene sheets; replace
+    hard-wired pose palettes. Use form capability operations instead of native-controller instanceof checks.
+- owner: src/main/java/com/openggf/game/sonic3k/ending/S3kPostCreditsObjectInstance.java
+  reason: Override only Sonic child frames1..4 in S3_GRAPHICS; preserve independent companions, priorities and native
+    timing.
+- owner: src/main/java/com/openggf/game/sonic3k/ending/EndingNativePlayerBinding.java
+  reason: ProfileSuperStateController bypasses native binding, while director expects native ending methods. Bridge
+    ending operations to profile without loading Sonic art by mod code.

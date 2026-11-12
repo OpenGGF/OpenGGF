@@ -37,6 +37,22 @@ public final class EndingNativePlayerBinding {
     public void ensure(ObjectServices services){
         if(!(services.playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite player))return;
         if(active&&bound==player)return;
+        if(player.getSuperStateController() instanceof com.openggf.sprites.playable.ProfileSuperStateController profile) {
+            if (!(player.getSpriteRenderer() instanceof EndingPlayerSpriteRenderer))
+                player.setSpriteRenderer(new EndingPlayerSpriteRenderer(player.getSpriteRenderer(), player, services));
+            // AniSonic0F and AniSonic1F retain native script timing and mapping IDs.
+            // AniSonic1F (docs/skdisasm/General/Sprites/Sonic/Anim - Sonic.asm:119).
+            try {
+                var art = new Sonic3kPlayerArt(services.romReader());
+                var nativeArt = art.loadForCharacter("sonic");
+                var animations = new SpriteAnimationSet();
+                player.getAnimationSet().getAllScripts().forEach(animations::addScript);
+                animations.addScript(0xF,nativeArt.animationSet().getScript(0xF));
+                animations.addScript(0x1F,nativeArt.animationSet().getScript(0x1F));
+                profile.bindEndingAnimations(animations);
+            } catch(IOException failure) { throw new UncheckedIOException(failure); }
+            return;
+        }
         if(player.getSuperStateController() instanceof Sonic3kSuperStateController)return;
         prepare(services,player);active=true;bindNormal();
         // The controller is a cached resource while unbound, not an inactive RAM owner.

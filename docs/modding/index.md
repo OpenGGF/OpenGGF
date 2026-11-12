@@ -57,7 +57,7 @@ records the licence assessment, qualification limits and promotion decision.
 |---|---|---|
 | Music | Data-only WAV/Ogg stock overrides | No MP3 or base-game streamed SFX overrides |
 | Object reskin | Baked sheet over exact stock provider key | Preserve host palette indices and all consumed mapping frames; no playable-character reskin |
-| Object/character | Owned factories, injected services, character specifications, landing/reset hooks, saves and rewind | JVM; no arbitrary static gameplay state or mod super form |
+| Object/character | Owned factories, injected services, character specifications, landing/reset hooks, saves and rewind | JVM; no arbitrary static gameplay state; authored mod super forms are supported |
 | Stock-level edits | Immutable decoded placement operations, including owned object bindings | JVM; preserves the stock load pipeline; live editor application is separate |
 | New zone or campaign | Flat S1/S2 v1 and bounded S3K v2 adapters, ordered acts and owned runtime providers | S1/S3K validate stock-object compatibility; native stock zone scripts are not inherited |
 | Scene/whole-screen game | Startup scene with input, audio, storage and canvas | JVM; ROM-backed scenes require the relevant supplied ROM |
@@ -68,6 +68,10 @@ records the licence assessment, qualification limits and promotion decision.
 See the detailed guides for narrower contracts; roadmap entries do not imply implementation.
 
 ## Follow-along guides
+
+- [MICA and TALON: an original character in nine parts](guides/original-character/README.md) —
+  build MICA from a design to a first playable, then draw, animate and present her and
+  TALON on every screen of all three games, with a checkpoint mod and real captures.
 
 - [Second Strike](../../examples/second-strike/README.md) — a normal-campaign S3K
   difficulty prototype using native placement bindings, original-ring retention,

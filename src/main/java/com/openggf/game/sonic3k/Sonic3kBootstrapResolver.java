@@ -41,10 +41,7 @@ public final class Sonic3kBootstrapResolver {
         // A run whose policy starts acts without their intro takes the same skip-intros start.
         boolean skipIntros = config.getBoolean(SonicConfiguration.S3K_SKIP_INTROS)
                 || !com.openggf.game.session.GameplayRunRouting.currentPolicy().zoneIntros();
-        String mainCharacter = resolveActiveMainCharacter(config);
-        boolean nonSonicMain = mainCharacter != null
-                && !mainCharacter.isBlank()
-                && !"sonic".equalsIgnoreCase(mainCharacter.trim());
+        boolean nonSonicMain = !isSonicMain(config);
 
         if (skipIntros || (nonSonicMain && zone != Sonic3kZoneIds.ZONE_SOZ)) {
             return new Sonic3kLoadBootstrap(Sonic3kLoadBootstrap.Mode.SKIP_INTRO, null);
@@ -61,6 +58,22 @@ public final class Sonic3kBootstrapResolver {
         if (zone == Sonic3kZoneIds.ZONE_SOZ && act == 0) return new int[]{0xC0, 0x400};
         // Future zones: add entries here
         return null;
+    }
+
+    /** Native intro eligibility follows the registered movement archetype. */
+    static boolean isSonicMain(SonicConfigurationService config) {
+        String code = resolveActiveMainCharacter(config);
+        if (code == null || code.isBlank() || "sonic".equalsIgnoreCase(code.trim())) return true;
+        var world = SessionManager.getCurrentWorldSession();
+        if (world == null) return false;
+        try {
+            return world.getPlayableCharacterRegistry().find(com.openggf.game.CharacterKey.parsePersisted(code))
+                    .map(definition -> definition.behavesLike() == com.openggf.game.PlayerCharacter.SONIC_ALONE
+                            || definition.behavesLike() == com.openggf.game.PlayerCharacter.SONIC_AND_TAILS)
+                    .orElse(false);
+        } catch (IllegalArgumentException invalidKey) {
+            return false;
+        }
     }
 
     private static String resolveActiveMainCharacter(SonicConfigurationService config) {

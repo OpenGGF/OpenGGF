@@ -1,0 +1,90 @@
+package micaandtalon;
+
+import com.openggf.game.*;
+import com.openggf.level.objects.PlayableSheetMaterializer;
+import com.openggf.sprites.playable.*;
+
+import java.util.Set;
+
+/**
+ * CharacterDefinition and AbstractPlayableSprite for MICA; binds Sonic physics, spindash, homing
+ * and Gilded form.
+ */
+public final class MicaCharacter extends AbstractPlayableSprite {
+    private StrikeTrailStyle trail;
+
+    public MicaCharacter(String code, int x, int y) {
+        super(code, (short) x, (short) y, physicsSpec());
+    }
+
+    static CharacterDefinition definition(
+            String owner,
+            PlayableSheetMaterializer.MaterializedArt materialized,
+            CharacterPresentation presentation,
+            SuperFormProfile gilded,
+            StrikeTrailStyle trail) {
+        CharacterKey key = CharacterKey.mod(owner, "mica");
+        return new CharacterDefinition(
+                key,
+                "MICA",
+                (code, x, y) -> {
+                    var mica = new MicaCharacter(code, x, y);
+                    mica.trail = trail;
+                    return mica;
+                },
+                null,
+                PlayerCharacter.SONIC_AND_TAILS,
+                SecondaryAbility.NONE,
+                true,
+                ignored -> materialized.art(),
+                ignored -> materialized.palette(),
+                Set.of(CharacterDefinition.MovementAbility.SPINDASH),
+                null,
+                ignored -> presentation,
+                ignored -> gilded,
+                CharacterKey.mod(owner, "talon"));
+    }
+
+    static CharacterPhysicsSpec physicsSpec() {
+        // Sonic1/2/3kPhysicsProvider all use this profile for single-player Sonic.
+        // S3K's Character_Speeds init table belongs to Competition mode only.
+        return new CharacterPhysicsSpec(PhysicsProfile.SONIC_2_SONIC);
+    }
+
+    @Override
+    protected void onMovementTick() {
+        // The world runtime gates free air movement and the spent-air-action latch,
+        // and retains the selected target while a homing strike is in progress.
+        HomingAttack.requestReticle(this, getAir());
+    }
+
+    @Override
+    protected boolean onAbilityActivate(boolean up, boolean down, boolean left, boolean right) {
+        // The S3K form gate owns an eligible transformation press before her strike.
+        if (getSuperStateController() != null && getSuperStateController().activateFromAirAbility())
+            return true;
+        // Homing is MICA's own move: an empty target set still gives the forward dash.
+        // Only Hyper Gilded strikes are Instagib; Super Gilded homes like her normal form.
+        return HomingAttack.start(
+                this,
+                poweredTier() == SuperFormProfile.Tier.HYPER
+                        ? HomingAttack.Mode.INSTAGIB
+                        : HomingAttack.Mode.HOMING);
+    }
+
+    /** Jade normal trail; Gilded forms supply their own gold through the effects table. */
+    @Override
+    public StrikeTrailStyle strikeTrailStyle() {
+        return trail;
+    }
+
+    @Override
+    public SecondaryAbility getSecondaryAbility() {
+        return SecondaryAbility.NONE;
+    }
+
+    @Override
+    public void draw() {
+        drawStandardArt();
+    }
+}

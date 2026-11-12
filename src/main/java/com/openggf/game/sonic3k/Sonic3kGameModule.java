@@ -582,9 +582,19 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
         return true;
     }
 
+    // Stable callback identities: owner-bounded module decorators cache service wrappers.
+    // Allocating a bound method reference per query exhausts that bounded cache in long credits scenes.
+    private final com.openggf.game.internal.NativeLevelInputOwner nativeLevelInputOwner = this::handleNativeLevelInput;
+    private final com.openggf.game.LevelInputOverlay nativeLevelInputOverlay = this::handleNativeLevelInput;
+
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.sonic3k.objects.IczSnowboardArtLoader.CustomArt.class)
+            return type.cast(levelEventManager.snowboardCustomArt());
+        if (type == com.openggf.game.internal.ProfileSuperHostRules.class)
+            return type.cast(new com.openggf.game.internal.ProfileSuperHostRules(true, false, 60, com.openggf.game.GameId.S3K));
+        if (type == com.openggf.game.internal.ProfileSuperEffects.class) return type.cast(new Sonic3kProfileSuperEffects());
         if (type == com.openggf.game.arena.HostedArenaProvider.class)
             return type.cast(new com.openggf.game.sonic3k.competition.S3kHostedArenaProvider());
         if (type == com.openggf.game.internal.StandingInputPolicy.class)
@@ -638,9 +648,9 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
                 || type == com.openggf.game.resources.PlcLifecycleService.class)
             return null;
         if (type == com.openggf.game.internal.NativeLevelInputOwner.class)
-            return type.cast((com.openggf.game.internal.NativeLevelInputOwner) this::handleNativeLevelInput);
+            return type.cast(nativeLevelInputOwner);
         if (type == com.openggf.game.LevelInputOverlay.class)
-            return type.cast((com.openggf.game.LevelInputOverlay) this::handleNativeLevelInput);
+            return type.cast(nativeLevelInputOverlay);
         if (type == com.openggf.game.internal.LevelEntryPresentation.class) {
             // Level loc_5FFC selects PaletteWhiteOut for the ending scene.
             return (T) (com.openggf.game.internal.LevelEntryPresentation)
@@ -725,6 +735,51 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
     private static final class Sonic3kDonorCapabilities implements DonorCapabilities {
 
         static final Sonic3kDonorCapabilities INSTANCE = new Sonic3kDonorCapabilities();
+        private static final Sonic3kDonorCapabilities TAILS = new Sonic3kDonorCapabilities(true);
+        private final boolean tails;
+        private Sonic3kDonorCapabilities() { this(false); }
+        private Sonic3kDonorCapabilities(boolean tails) { this.tails = tails; }
+        @Override public DonorCapabilities forPlayableCharacter(PlayerCharacter archetype) {
+            return archetype == PlayerCharacter.TAILS_ALONE ? TAILS : INSTANCE;
+        }
+        private static final java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> TAILS_FAMILIES =
+                com.openggf.game.AnimationFamilies.load("/animation-families/s3k-tails.json");
+        private static final java.util.Map<Integer, NativeFramePose> TAILS_POSES = loadTailsPoses();
+        private static java.util.Map<Integer, NativeFramePose> loadTailsPoses() {
+            try (var input = Sonic3kGameModule.class.getResourceAsStream("/animation-families/s3k-tails-poses.json")) {
+                return java.util.Map.copyOf(new com.fasterxml.jackson.databind.ObjectMapper().readValue(input,
+                        new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<Integer, NativeFramePose>>() { }));
+            } catch (java.io.IOException e) { throw new IllegalStateException(e); }
+        }
+
+
+        @Override public java.util.Map<Integer, NativeFramePose> getNativeFramePoses() {
+            if (tails) return TAILS_POSES;
+            var poses = new java.util.LinkedHashMap<Integer, NativeFramePose>();
+            for (int f = 0x55; f <= 0x5B; f++) poses.put(f, new NativeFramePose("twist/" + (f - 0x55), CanonicalAnimation.WAIT));
+            for (int f = 0x69; f <= 0x77; f++) poses.put(f, new NativeFramePose("tumble/" + (f - 0x69), CanonicalAnimation.ROLL));
+            for (int f = 0x78; f <= 0x7F; f++) poses.put(f, new NativeFramePose("swing/" + (f - 0x78), CanonicalAnimation.HANG));
+            for (int f = 0x8A; f <= 0x8D; f++) poses.put(f, new NativeFramePose("carry/" + (f - 0x8A), CanonicalAnimation.ROLL));
+            for (int f = 0x90; f <= 0x93; f++) poses.put(f, new NativeFramePose("hang/" + (f - 0x90), CanonicalAnimation.HANG));
+            for (int f = 0x96; f <= 0x9A; f++) poses.put(f, new NativeFramePose("roll/" + (f - 0x96), CanonicalAnimation.ROLL));
+            for (int f = 0x31; f <= 0x3C; f++) poses.put(f, new NativeFramePose("gravity-loop/" + (f - 0x31), CanonicalAnimation.ROLL));
+            for (int f = 0x49; f <= 0x54; f++) poses.put(f, new NativeFramePose("cage-entry/" + (f - 0x49), CanonicalAnimation.RUN));
+            for (int f = 0x5C; f <= 0x62; f++) poses.put(f, new NativeFramePose("pole/" + (f - 0x5C), CanonicalAnimation.HANG));
+            for (int f = 0x63; f <= 0x68; f++) poses.put(f, new NativeFramePose("bar/" + (f - 0x63), CanonicalAnimation.HANG));
+            for (int f = 0x80; f <= 0x85; f++) poses.put(f, new NativeFramePose("chain/" + (f - 0x80), CanonicalAnimation.HANG));
+            for (int f = 0x94; f <= 0x95; f++) poses.put(f, new NativeFramePose("bar-end/" + (f - 0x94), CanonicalAnimation.HANG));
+            for (int f = 0xB4; f <= 0xB5; f++) poses.put(f, new NativeFramePose("cutscene-hurt/" + (f - 0xB4), CanonicalAnimation.HURT));
+            for (int f = 0xDF; f <= 0xE3; f++) poses.put(f, new NativeFramePose("wall-run/" + (f - 0xDF), CanonicalAnimation.RUN));
+            for (int f = 0xE4; f <= 0xEA; f++) poses.put(f, new NativeFramePose("parachute/" + (f - 0xE4), CanonicalAnimation.HANG));
+            for (int f = 0xEF; f <= 0xFA; f++) poses.put(f, new NativeFramePose("corkscrew/" + (f - 0xEF), CanonicalAnimation.ROLL));
+            poses.put(0x24, new NativeFramePose("bar/release", CanonicalAnimation.WALK));
+            poses.put(0xC4, new NativeFramePose("emerald/look", CanonicalAnimation.LOOK_UP));
+            poses.put(0xBA, new NativeFramePose("ride/stand", CanonicalAnimation.WAIT));
+            poses.put(0xC0, new NativeFramePose("crane/release", CanonicalAnimation.WAIT));
+            poses.put(0xCA, new NativeFramePose("crane/fall", CanonicalAnimation.HURT));
+            poses.put(0xCB, new NativeFramePose("hang/crane", CanonicalAnimation.HANG));
+            return java.util.Map.copyOf(poses);
+        }
 
         private static final java.util.Set<PlayerCharacter> CHARACTERS =
                 java.util.Set.of(
@@ -732,6 +787,13 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
                         PlayerCharacter.SONIC_AND_TAILS,
                         PlayerCharacter.TAILS_ALONE,
                         PlayerCharacter.KNUCKLES);
+
+        private static final java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> FAMILIES =
+                com.openggf.game.AnimationFamilies.load("/animation-families/s3k.json");
+
+        @Override public java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> getAnimationFamilies() {
+            return tails ? TAILS_FAMILIES : FAMILIES;
+        }
 
         private static final java.util.Map<CanonicalAnimation, CanonicalAnimation> FALLBACKS =
                 buildFallbacks();
@@ -788,12 +850,14 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
 
         @Override
         public java.util.Map<CanonicalAnimation, CanonicalAnimation> getAnimationFallbacks() {
-            return FALLBACKS;
+            return com.openggf.game.AnimationFamilies.fallbacks(getAnimationFamilies(), FALLBACKS);
         }
 
         @Override
         public int resolveNativeId(CanonicalAnimation canonical) {
-            return Sonic3kAnimationIds.fromCanonical(canonical);
+            int familyId = com.openggf.game.AnimationFamilies.resolve(getAnimationFamilies(), canonical);
+            if (familyId >= 0) return familyId;
+            return tails ? -1 : Sonic3kAnimationIds.fromCanonical(canonical);
         }
 
         @Override

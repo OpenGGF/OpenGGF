@@ -1739,6 +1739,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return superSonic;
         }
 
+        /**
+         * The powered tier this character is in, including its transformation, or null in normal
+         * form. Native and authored forms answer alike, so abilities can differ between tiers.
+         */
+        public final com.openggf.game.SuperFormProfile.Tier poweredTier() {
+                var controller = getSuperStateController();
+                if (controller == null || !controller.isSuper()) return null;
+                return controller.isHyperFormActive() ? com.openggf.game.SuperFormProfile.Tier.HYPER
+                        : com.openggf.game.SuperFormProfile.Tier.SUPER;
+        }
+
         public final Camera currentCamera() { return PlayableSpriteRuntimeServices.camera(this); }
         public final LevelManager currentLevelManager() { return PlayableSpriteRuntimeServices.level(this); }
         public final LevelManager currentLevelManagerIfAvailable() { return PlayableSpriteRuntimeServices.levelOrNull(this); }
@@ -1747,6 +1758,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public final int resolveAnimationId(CanonicalAnimation animation) {
                 refreshRuntimeBoundStateIfNeeded();
+                var donation = currentCrossGameFeatures();
+                int family = donation != null && donation.isActive() && CharacterKey.SONIC.equals(characterKey())
+                        ? donation.resolveDonatedAnimation(animation) : -1;
+                if (family >= 0 && getAnimationSet() != null && getAnimationSet().getScript(family) != null) return family;
                 return PlayableSpriteRuntimeServices.resolveAnimationId(currentGameModule(), animation);
         }
 
@@ -1784,7 +1799,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         /** ROM dispatch hook for Tails' distinct rolling-speed routine. */
         public boolean usesTailsRollSpeedRoutine() {
-                return false;
+                return PlayableArchetype.isTails(this);
         }
 
         /**
@@ -1796,6 +1811,21 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         protected boolean onAbilityActivate(boolean up, boolean down, boolean left, boolean right) {
                 return false;
+        }
+
+        /** Once per live movement tick, before input dispatch and homing preview selection.
+         * Owner-fault-bounded; keep mutable subclass state in the rewind hooks.
+         */
+        protected void onMovementTick() { }
+
+        final void dispatchMovementTick() {
+                com.openggf.game.CharacterConstructionScope.invoke(characterCallbackInvoker,
+                        () -> { onMovementTick(); return null; });
+        }
+
+        final com.openggf.game.StrikeTrailStyle dispatchStrikeTrailStyle() {
+                return com.openggf.game.CharacterConstructionScope.invoke(characterCallbackInvoker,
+                        this::strikeTrailStyle);
         }
 
         final boolean hasConstructionCallbackInvoker(com.openggf.game.CharacterConstructionScope.CallbackInvoker invoker) {
@@ -1845,6 +1875,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         protected final void drawStandardArt() {
                 PlayableSpriteArtPresentation.drawStandardArt(this);
+        }
+
+        /**
+         * Normal-form homing and divebomb strike colours. A powered form's own
+         * {@link com.openggf.game.PoweredEffects#trail()} takes precedence while it is active;
+         * null keeps the stock look.
+         */
+        public com.openggf.game.StrikeTrailStyle strikeTrailStyle() {
+                return null;
         }
 
         public int getMappingFrame() {
@@ -1943,7 +1982,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void setAnimationId(AnimationId animationId) {
-                setAnimationId(animationId.id());
+                var donation = currentCrossGameFeatures();
+                int family = donation != null && donation.isActive() && CharacterKey.SONIC.equals(characterKey())
+                        && animationId.toCanonical() != null ? donation.resolveDonatedAnimation(animationId.toCanonical()) : -1;
+                setAnimationId(family >= 0 && getAnimationSet() != null && getAnimationSet().getScript(family) != null
+                        ? family : animationId.id());
         }
 
         public int getForcedAnimationId() {

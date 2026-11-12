@@ -1804,6 +1804,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             refreshObjectArtPatterns();
 
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
+            HudPaletteBridgeAccess.setCharacterLifeIcon(hudRenderManager,
+                    com.openggf.game.presentation.CharacterIconPalette.hasHudIcon());
             HudProfileAccess.install(hudRenderManager, activeHudProfile);
             HudProfileAccess.applyDisplaySettings(hudRenderManager, configService);
             hudRenderManager.setHudPalettes(provider.getHudTextPaletteLine(), provider.getHudFlashPaletteLine());

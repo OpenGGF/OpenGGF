@@ -232,6 +232,7 @@ public class PatternSpriteRenderer {
         int descIndex = fullPatternId & 0x7FF;
         descIndex |= (palette & 0x3) << 13;
         reusableDesc.set(descIndex);
+        reusableDesc.setPaletteIndex(palette);
         // Use full pattern ID for texture lookup (avoids 11-bit limit)
         GraphicsManager graphicsManager = this.graphicsManager;
         graphicsManager.renderPatternWithId(fullPatternId, reusableDesc, drawX, drawY);
@@ -306,6 +307,7 @@ public class PatternSpriteRenderer {
                     }
                     descIndex |= (palIdx & 0x3) << 13;
                     reusableDesc.set(descIndex);
+                    reusableDesc.setPaletteIndex(palIdx);
                     graphicsManager.renderPatternWithId(patternIdx, reusableDesc, drawX, drawY);
                 });
     }
@@ -392,6 +394,7 @@ public class PatternSpriteRenderer {
                         }
                         descIndex |= (palIdx & 0x3) << 13;
                         reusableDesc.set(descIndex);
+                    reusableDesc.setPaletteIndex(palIdx);
                         // Use full patternIndex for texture lookup (avoids 11-bit limit)
                         graphicsManager.renderPatternWithId(patternIdx, reusableDesc, drawX, drawY);
                     });
@@ -481,6 +484,7 @@ public class PatternSpriteRenderer {
                         if (pieceVFlip) descIndex |= 0x1000;
                         descIndex |= (palIdx & 0x3) << 13;
                         reusableDesc.set(descIndex);
+                    reusableDesc.setPaletteIndex(palIdx);
                         graphicsManager.renderPatternWithId(patternIdx, reusableDesc, drawX, drawY);
                     });
         }
@@ -584,6 +588,7 @@ public class PatternSpriteRenderer {
                         }
                         descIndex |= (palIdx & 0x3) << 13;
                         reusableDesc.set(descIndex);
+                    reusableDesc.setPaletteIndex(palIdx);
                         graphicsManager.renderPatternWithId(patternIdx, reusableDesc, drawX, drawY);
                     });
         }

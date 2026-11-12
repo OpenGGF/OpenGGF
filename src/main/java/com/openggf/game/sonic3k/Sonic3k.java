@@ -53,7 +53,7 @@ import java.util.logging.Logger;
  * palette providers, zone features, and bonus-stage coordination through the
  * shared runtime pipeline.
  */
-public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDustArtProvider,
+public class Sonic3k extends Game implements PlayerSpriteArtProvider, com.openggf.game.internal.PoweredAnimationProvider, SpindashDustArtProvider,
         DynamicStartPositionProvider, AnimatedPatternProvider, AnimatedPaletteProvider,
         LevelLoadPaletteOverrideProvider, DeferredLevelResourceLoader, PreparableLevelLoader {
     private static final Logger LOG = Logger.getLogger(Sonic3k.class.getName());
@@ -164,6 +164,26 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     @Override
     public Map<GameSound, Integer> getSoundMap() {
         return new Sonic3kAudioProfile().getSoundMap();
+    }
+
+    @Override
+    public com.openggf.game.internal.PoweredAnimationSource loadPoweredAnimations(com.openggf.game.PlayerCharacter archetype) throws IOException {
+        if (archetype != com.openggf.game.PlayerCharacter.TAILS_ALONE) return loadPoweredAnimations();
+        var nativeArt = loadPlayerSpriteArt("tails");
+        var profile = (com.openggf.sprites.animation.ScriptedVelocityAnimationProfile) nativeArt.animationProfile();
+        var families = new Sonic3kGameModule().getDonorCapabilities()
+                .forPlayableCharacter(archetype).getAnimationFamilies();
+        // Tails has no alternate Super Sonic movement table. Keep his own ROM clocks.
+        return new com.openggf.game.internal.PoweredAnimationSource(nativeArt.animationSet(), families,
+                profile.getWalkSlopeFrameStride() * 2, profile.getRunSlopeFrameStride() * 2, 0, 0, 0);
+    }
+
+    @Override
+    public com.openggf.game.internal.PoweredAnimationSource loadPoweredAnimations() throws IOException {
+        loadPlayerSpriteArt("sonic");
+        var families = new java.util.HashMap<>(new Sonic3kGameModule().getDonorCapabilities().getAnimationFamilies());
+        families.put(33, new com.openggf.game.AnimationFamilies.Binding(null, com.openggf.game.CanonicalAnimation.WAIT, java.util.List.of(6)));
+        return new com.openggf.game.internal.PoweredAnimationSource(playerArt.loadSuperSonicAnimationSet(), families, 8, 4, 0, 0, 0);
     }
 
     @Override

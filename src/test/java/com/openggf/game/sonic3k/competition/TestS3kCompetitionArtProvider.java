@@ -26,6 +26,21 @@ class TestS3kCompetitionArtProvider {
         provider=new S3kCompetitionArtProvider(assets);
     }
 
+    @Test void omittedNativeIdsRetainTheirArchetypeWhileTransparentIdsAreExplicitOverrides() {
+        var transparent=new com.openggf.game.StageSpriteSet.Frame(
+                new com.openggf.game.CharacterPresentation.Image(1,1,new byte[]{0}),0,0);
+        var sheet=S3kCompetitionCharacterArt.compile(new com.openggf.game.StageSpriteSet(Map.of(7,transparent)));
+        var custom=new S3kCompetitionArtProvider(assets,new S3kCompetitionCharacterArt.Banks(
+                Map.of("competition_sonic_creator",sheet,"competition_tails_tail_creator",sheet),
+                Map.of("competition_sonic_creator",java.util.Set.of(7),"competition_tails_tail_creator",java.util.Set.of(7)),Map.of()));
+        assertEquals("competition_sonic_creator",custom.resolveKey("competition_sonic",7));
+        assertEquals("competition_sonic",custom.resolveKey("competition_sonic",8));
+        assertEquals("competition_tails",custom.resolveKey("competition_tails",7));
+        assertEquals("competition_tails_tail_creator",custom.resolveKey("competition_tails_tail",7));
+        assertEquals("competition_tails_tail",custom.resolveKey("competition_tails_tail",8));
+        assertSame(assets.sheet("competition_sonic"),custom.getSheet("competition_sonic"));
+    }
+
     @Test void loadingAllFiveArenasAndQueryingSheetsNeverRequiresGraphics() {
         for (int zone=0xE;zone<=0x12;zone++) {
             provider.loadArtForZone(zone);

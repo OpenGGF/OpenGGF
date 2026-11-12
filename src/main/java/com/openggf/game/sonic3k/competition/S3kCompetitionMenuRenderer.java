@@ -28,7 +28,7 @@ public final class S3kCompetitionMenuRenderer implements AutoCloseable {
                         scene.horizontalScrollA(), scene.verticalScrollA()),
                 new NativeMenuRaster.Plane(scene.planeWidth(), scene.planeHeight(), scene.planeB(),
                         scene.horizontalScrollB(), scene.verticalScrollB()),
-                scene.patterns(), sat, scene.shadowHighlight(), scene.backdropColorIndex());
+                scene.patterns(), sat, scene.shadowHighlight(), scene.backdropColorIndex(), scene.portraitBanks(), scene.portraitPalettes());
     }
 
     public void draw(S3kCompetitionMenuScene.Scene scene) {

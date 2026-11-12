@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
@@ -16,7 +18,6 @@ import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-import com.openggf.sprites.playable.Tails;
 
 import java.util.List;
 
@@ -391,7 +392,7 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
 
     /** ROM {@code cmpi.b #1,character_id(a1)} (:95169, :95178, :95193): character 1 is Tails. */
     private static boolean isTails(AbstractPlayableSprite player) {
-        return player instanceof Tails;
+        return PlayableArchetype.isTails(player);
     }
 
     private static AbstractPlayableSprite asSprite(PlayableEntity entity) {

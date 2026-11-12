@@ -90,6 +90,34 @@ class TestNativeMenuRaster {
         assertEquals(5, frame.colorIndex(0, 0));
     }
 
+    @Test void independentPortraitColoursKeepPlaneOcclusionFadeAndNativeShadow() {
+        var colors=new int[16];java.util.Arrays.fill(colors,0xffffff);
+        var a=new NativeMenuRaster.Plane(1,1,new int[]{0},0,0);
+        var b=new NativeMenuRaster.Plane(1,1,new int[]{1},0,0);
+        var custom=NativeMenuRaster.compose(a,b,patterns(),List.of(sprite(3,1,false)),true,0,
+                java.util.Map.of(3,1),java.util.Map.of(1,colors));
+        colors[13]=0;
+        var detached=custom.portraitPalettes();detached.get(1)[13]=0;
+        PaletteView black=new PaletteView() {
+            public byte red(int i){return 0;}public byte green(int i){return 0;}public byte blue(int i){return 0;}
+        };
+        PaletteView[] nativePalettes={black,black,black,black};var fade=new PaletteFadePresentation();
+        assertTrue(custom.shadow(0,0));
+        assertEquals(0x808080,custom.rgb(nativePalettes,fade,DisplayColorProfile.RAW_RGB,DisplayColorExpansion.FULL)[0]);
+        fade.set(PaletteFadePresentation.Mode.FROM_BLACK,7,2);
+        assertEquals(0x000080,custom.rgb(nativePalettes,fade,DisplayColorProfile.RAW_RGB,DisplayColorExpansion.FULL)[0]);
+        var record=NativeMenuRaster.compose(a,b,patterns(),List.of(sprite(3,0,false)),true,0,
+                java.util.Map.of(3,1),java.util.Map.of(1,custom.portraitPalettes().get(1)));
+        assertEquals(0x808080,record.rgb(nativePalettes,fade,DisplayColorProfile.RAW_RGB,DisplayColorExpansion.FULL)[0],
+                "line-one-only fade must not fade a native line-zero record portrait");
+        fade.set(PaletteFadePresentation.Mode.FROM_BLACK,7,1);
+        assertEquals(0x000080,record.rgb(nativePalettes,fade,DisplayColorProfile.RAW_RGB,DisplayColorExpansion.FULL)[0]);
+        var hidden=NativeMenuRaster.compose(a,new NativeMenuRaster.Plane(1,1,new int[]{0x8001},0,0),patterns(),
+                List.of(sprite(3,1,false)),true,0,java.util.Map.of(3,1),java.util.Map.of(1,new int[16]));
+        assertEquals(5,hidden.colorIndex(0,0));
+        assertEquals(0,hidden.indexedPixels()[0]>>>8);
+    }
+
     private static NativeMenuRaster.Picture picture(int a, int b, Pattern[] patterns,
             List<SpriteSatEntry> entries, boolean intensity) {
         return NativeMenuRaster.compose(new NativeMenuRaster.Plane(1, 1, new int[]{a}, 0, 0),

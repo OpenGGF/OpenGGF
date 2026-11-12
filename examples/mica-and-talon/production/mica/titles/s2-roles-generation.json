@@ -1,0 +1,87 @@
+{
+  "origin": "Owner S2 role restoration, based on integration5278d637cd, 2026-11-10",
+  "method": "Fresh built-in GPT Image transformations of native title renders enlarged8x nearest, model sheets and approved WAIT frames. Independent alternatives, no chained edits. Binary alpha threshold128, largest connected component removes detached noise; native canvas and hotspot; fixed15colour palette quantization.",
+  "prompts": {
+    "bodies": {
+      "5": "Two independent alternatives side by side equal square cells. Transform native Sonic S2 title BODY selector 5 from reference1 into MICA original pangolin reference2 and approved sprite3. Keep native 1992 title pose, head torso glove locations and lighting; replace identity completely. Rounded dome of overlapping jade scales, never spikes/quills; cream long tapered pangolin snout, separate brown eyes with LONG black lashes, coral pink round ears, segmented cream chest. Dark single-native-pixel outlines, flat cel TWO shade steps per material, upper-left light,15colors. Bust only at native proportions facing screenLEFT as native, no feet. Profile head facing LEFT, arms low, no visible raised glove, native rising pose. Matching1992pixelcelstyle not modern vector. Two fresh alternatives, normal JADE only, no gold form, no rings, text, sparkles or shadows, transparent background.",
+      "6": "Two independent alternatives side by side equal square cells. Transform native Sonic S2 title BODY selector 6 from reference1 into MICA original pangolin reference2 and approved sprite3. Keep native 1992 title pose, head torso glove locations and lighting; replace identity completely. Rounded dome of overlapping jade scales, never spikes/quills; cream long tapered pangolin snout, separate brown eyes with LONG black lashes, coral pink round ears, segmented cream chest. Dark single-native-pixel outlines, flat cel TWO shade steps per material, upper-left light,15colors. Bust only at native proportions facing screenLEFT as native, no feet. Head looks left then toward viewer, HER LEFT ARM crosses forward across chest to LOW screenLEFT. White glove palm faces viewer, visible curled finger pads, no back-of-hand; follow native lowered reach. Matching1992pixelcelstyle not modern vector. Two fresh alternatives, normal JADE only, no gold form, no rings, text, sparkles or shadows, transparent background.",
+      "7": "Two independent alternatives side by side equal square cells. Transform native Sonic S2 title BODY selector 7 from reference1 into MICA original pangolin reference2 and approved sprite3. Keep native 1992 title pose, head torso glove locations and lighting; replace identity completely. Rounded dome of overlapping jade scales, never spikes/quills; cream long tapered pangolin snout, separate brown eyes with LONG black lashes, coral pink round ears, segmented cream chest. Dark single-native-pixel outlines, flat cel TWO shade steps per material, upper-left light,15colors. Bust only at native proportions facing screenLEFT as native, no feet. Head looks LEFT, her LEFT arm bends across her chest toward screenRIGHT, gloved palm forward and in FRONT of body/hood at native glove position; curled finger pads visible, thumb anatomically on viewerLEFT of palm. Matching1992pixelcelstyle not modern vector. Two fresh alternatives, normal JADE only, no gold form, no rings, text, sparkles or shadows, transparent background.",
+      "18": "Two independent alternatives side by side equal square cells. Transform native Sonic S2 title BODY selector 18 from reference1 into MICA original pangolin reference2 and approved sprite3. Keep native 1992 title pose, head torso glove locations and lighting; replace identity completely. Rounded dome of overlapping jade scales, never spikes/quills; cream long tapered pangolin snout, separate brown eyes with LONG black lashes, coral pink round ears, segmented cream chest. Dark single-native-pixel outlines, flat cel TWO shade steps per material, upper-left light,15colors. Bust only at native proportions facing screenLEFT as native, no feet. Final settled head looking LEFT; NO GLOVE OR HAND in this BODY image. Her LEFT forearm rises on screenRIGHT, wrist stops at native wrist/cuff position near right cheek; independent native HAND9 will attach there. Preserve long upper forearm towards topRIGHT, do NOT fold it down. Matching1992pixelcelstyle not modern vector. Two fresh alternatives, normal JADE only, no gold form, no rings, text, sparkles or shadows, transparent background."
+    },
+    "hand": "Create two independent alternatives side by side of MICA's LEFT white glove, palm toward viewer, raised thumbs-up. Separate glove plus cuff and short jade forearm only; no head/body. Transform native S2 Sonic title HAND9 reference1, with model sheet2 as identity. Crucial anatomy: this is HER LEFT HAND on SCREEN RIGHT of her face. PALM VIEW means thumb rises on VIEWER LEFT of curled fingers. Four curled FINGER PADS face viewer with three horizontal curved crease lines on viewerRIGHT of fist, not a smooth back-of-hand oval. Rounded upright thumb sits above-left of finger pads, visible thumb web/palm crease. Cuff at bottom and short jade forearm leads DOWN LEFT to connect native body. Native HAND9 canvas32x48, native glove-and-arm occupies30x43; roughly glove upper30px, cuff and forearm lower13px. Match native outer proportions and hotspot; no extra long wrist. Native1992pixelcelstyle dark1pixel outline, two grey glove shade steps, upper left white highlight,15colors. Transparent background, no shadows or text, two identical scale alternatives.",
+    "talon": "Five columns x2rows sprite atlas. Top row5poses and bottom row5independent alternatives. Transform native Tails S2 title poses0,1,2,3,4 from reference1 (tails removed) into TALON slate peregrine falcon from model sheet2 and approved sprite3. Head/torso native landmarks and poses only, no fox identity: swept slate feather crest, amber aviator goggles above eyes, yellow hooked beak, dark falcon moustache stripe, brown eyes, cream barred chest and courier strap. NO GLOVES, no hands, no fist, no rotor, no fox tails or detached appendages. His OWN body-connected WINGS replace Tails tail motion, visible on screenLEFT of bust: col0wings folded and head bowed; col1head lifts eyesclosed and leftwing folded outward; col2eyes opening wing half open; col3head toward viewer wings tucked beside torso; col4smiling with leftwing halfopen feather tips. Native Tails main pose faces SCREEN RIGHT, since he peeks in from LEFT behind Sonic: keep reference facing, do not make all poses left-facing. Keep native compact head+torso scale across5poses; wings occupy former tail footprint, never scale down head to fit spread wing bounds. Cel pixelart matching native1992Sega title darkonepixel outlines,2shade steps per material, upper-left light,15colors. Bust only native bottomedge, no legs, no text, no logos, no sparkle marks. Transparent, no shadow. Same5poses perrow independent attempts.",
+    "corrections": {
+      "correct6": "Two independent alternatives side by side equal square cells. Fresh native-pose transformation of Sonic S2 title BODY6 reference1, into MICA pangolin approvedmodel2 and coreframe3. MICA rounded overlapping jade scales dome no quills, long black eyelashes, two SEPARATE brown eyes on cream face, a tapered PANGOLIN snout with tiny nostrils, coral ears, cream ribbed belly. Face looks LEFT but THREE QUARTER view with visible smaller far eye. Friendly OPEN MOUTH with tiny pink tongue, never Sonic smirk or huge joined Sonic eye. Native1992title pixel cel style darkonepixeloutline15colors2shadestepsupperleftlight. Native head/torso scale. Her LEFT arm crosses chest and reaches DOWN LEFT as native. CRITICAL: white glove PALM faces viewer. Draw FOUR CURLED FINGER PADS facing viewer, with THREE horizontal curved dark separators, large thumb pad beside them on VIEWERLEFT. Not the back of a smooth hand, not four straight fingers pointed down. Forearm/cuff joins glove from UPPERRIGHT. Keep glove at native lowered screenLEFT location below chest. Transparent background, no text, no goldform, no shadows or sparkles. Same normal jade identity in both alternatives.",
+      "rejected18": "Two independent alternatives side by side equal square cells. Fresh native-pose transformation of Sonic S2 title BODY18 reference1, into MICA pangolin approvedmodel2 and coreframe3. MICA rounded overlapping jade scales dome no quills, long black eyelashes, two SEPARATE brown eyes on cream face, a tapered PANGOLIN snout with tiny nostrils, coral ears, cream ribbed belly. Face looks LEFT but THREE QUARTER view with visible smaller far eye. Friendly OPEN MOUTH with tiny pink tongue, never Sonic smirk or huge joined Sonic eye. Native1992title pixel cel style darkonepixeloutline15colors2shadestepsupperleftlight. Native head/torso scale. NO GLOVE OR HAND in body image. LEFT forearm RISES on screenRIGHT, wrist ends at the native wrist height around her cheek (near original Sonic ear), so independent raised HAND9 can attach. Wrist exposed as small jade tip. Keep full native head height/dome and torso bottom edge. Separate HAND9 will be composed in front of hood. Transparent background, no text, no goldform, no shadows or sparkles. Same normal jade identity in both alternatives.",
+      "final18": "Two alternatives side by side, fresh transformation of native Sonic S2 TITLE BODY18 in ref1 into MICA pangolin model sheet2. Match native pose landmarks exactly: head looking LEFT, torso below, bare upper-arm on screenRIGHT angles DOWN RIGHT to bottomedge. NO HAND, NO GLOVE, NO RAISED FOREARM beside cheek in this body frame. The hand and forearm come from separate native HAND9 drawn later. Keep body arm low as in native reference, ending at native bottomRIGHT elbow. Do not invent raised wrist. MICA round overlapping jade scale dome, cream pointed pangolin snout and cheeks, small black nostrils, long black eyelashes, separated brown eyes with small far eye, soft coral-pink round ear, cream segmented belly. Friendly open smile with small pink tongue NOT Sonic smirk. Native1992pixelcelart, dark1nativepixel outlines,2shade steps per material, upperleftlight,15colors. Native head/torso proportions, bust only same box. No quills, no joined Sonic eyes, no gold, no text or shadows. Transparent. Both alternatives same native composition, jade upper-arm angles DOWNRIGHT as native while all hands are absent."
+    }
+  },
+  "native_refs": "S2 title Sonic BODY5/6/7/18 and HAND9 at real title palette; 8x nearest reference per selector",
+  "selections": "Left candidate. First BODY6 rejected for back-of-hand view; corrected6 shows curled palm pads. Both first BODY18 generations rejected for smirk or raised body wrist; final18 follows native down-right upper-arm with no glove. Independent HAND9 is left palm, thumb viewerLEFT and finger pads viewerRIGHT.",
+  "frames": [
+    {
+      "character": "mica",
+      "selector": 5,
+      "native_area": 3605,
+      "authored_area": 3562,
+      "native_canvas": [
+        80,
+        72
+      ],
+      "source_sha256": "f0306491e00bed5f9705e4aeef194389c4040c58a4e3130363d26da6aed18c4f",
+      "selection": "left option; independent right alternative retained in scratch"
+    },
+    {
+      "character": "mica",
+      "selector": 6,
+      "native_area": 4161,
+      "authored_area": 4107,
+      "native_canvas": [
+        80,
+        88
+      ],
+      "source_sha256": "76bbc5ac9525137f1fee21b0d2d9914bcfc1d5572d2349623d9b69b7412d5992",
+      "selection": "left option; independent right alternative retained in scratch"
+    },
+    {
+      "character": "mica",
+      "selector": 7,
+      "native_area": 3798,
+      "authored_area": 4150,
+      "native_canvas": [
+        80,
+        80
+      ],
+      "source_sha256": "93c9cd0e8f04639db4de6496bb82b7e685382af0a2906b63f1f7fd7989a24674",
+      "selection": "left option; independent right alternative retained in scratch"
+    },
+    {
+      "character": "mica",
+      "selector": 18,
+      "native_area": 3744,
+      "authored_area": 3932,
+      "native_canvas": [
+        72,
+        80
+      ],
+      "source_sha256": "0cebb7dbfbcd04e7bfd6701ea9f723adff1c225223f9d565ee662a7ab399da17",
+      "selection": "left option; independent right alternative retained in scratch"
+    },
+    {
+      "character": "mica",
+      "selector": 9,
+      "native_area": 724,
+      "authored_area": 744,
+      "native_canvas": [
+        32,
+        48
+      ],
+      "source_sha256": "06d3f414e43480bec9b96273627560eb3c15340a60d4bfcd183eba30f5b19c94",
+      "selection": "left option; independent right alternative retained in scratch"
+    }
+  ],
+  "sqrt_mean_opaque_area_ratio": 1.0143370941254992,
+  "scratch": "$HOME/scratch/agent-tmp/title-s2-roles/",
+  "presentation": "swapS2Slots=false; native own roles, origins, rise and HAND clocks. Option retained in API; no engine/API changes.",
+  "limits": "Pair title visual acceptance; alternate-role banks inherited. S1/S3K unchanged."
+}

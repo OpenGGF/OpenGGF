@@ -340,6 +340,12 @@ public class GraphicsManager {
 	/** Internal post-SAT picture bridge: source row crop/flips stay native; only the final quad/colour changes. */
 	void renderPresentationPattern(int patternId, int paletteIndex, boolean hFlip, boolean vFlip, boolean priority,
 	                               int rowStart, int rowEnd, float[] quad, float hue, float opacity) {
+		renderPresentationPattern(patternId, paletteIndex, hFlip, vFlip, priority, rowStart, rowEnd, quad, hue, opacity, 0);
+	}
+
+	/** {@code tint} is 0xAARRGGBB; alpha 0 keeps the hue-rotated native colour. */
+	void renderPresentationPattern(int patternId, int paletteIndex, boolean hFlip, boolean vFlip, boolean priority,
+	                               int rowStart, int rowEnd, float[] quad, float hue, float opacity, int tint) {
 		if(quad.length!=8||!Float.isFinite(hue)||!Float.isFinite(opacity))throw new IllegalArgumentException("Invalid presentation geometry or colour");
 		for(float value:quad)if(!Float.isFinite(value))throw new IllegalArgumentException("Nonfinite picture vertex");
 		if(headlessMode) return;
@@ -349,7 +355,7 @@ public class GraphicsManager {
 		if(entry==null||palette==null||rowStart>=rowEnd) return;
 		flushPatternBatch();
 		var command=PatternRenderCommand.obtainRows(entry,palette,paletteIndex,hFlip,vFlip,priority,0,0,rowStart,rowEnd,this);
-		command.presentation(quad,hue,opacity);
+		command.presentation(quad,hue,opacity,tint);
         // The queue is the painter-order boundary, including captured commands.
         // Never merge across a primitive, normal instance batch, or state command.
         List<GLCommandable> target = commandCaptureTarget != null ? commandCaptureTarget : commands;

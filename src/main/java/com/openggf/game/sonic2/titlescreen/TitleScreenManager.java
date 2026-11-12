@@ -1,5 +1,9 @@
 package com.openggf.game.sonic2.titlescreen;
 
+import com.openggf.game.presentation.TitleCharacterPresentation;
+import com.openggf.game.CharacterPresentation.Host;
+import com.openggf.game.CharacterPresentation.TitlePart;
+
 import com.openggf.control.InputHandler;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -52,6 +56,22 @@ import static com.openggf.control.InputHandlerInternalAccess.nativeMenuKeyPresse
  * </ul>
  */
 public class TitleScreenManager implements TitleScreenProvider {
+    private TitleCharacterPresentation titleLead;
+    private TitleCharacterPresentation titleSidekick;
+    private boolean titleCharactersResolved;
+    private void resolveTitleCharacters() {
+        if (titleCharactersResolved) return;
+        titleCharactersResolved = true;
+        titleLead = TitleCharacterPresentation.configured(Host.S2, false);
+        titleSidekick = TitleCharacterPresentation.configured(Host.S2, true);
+        // Exchange presentation owners, never object state or native drawing passes.
+        if (titleLead != null && titleSidekick != null && titleLead.swapsS2Slots()) {
+            var originalLead = titleLead;
+            titleLead = titleSidekick;
+            titleSidekick = originalLead;
+        }
+    }
+
     private static final Logger LOGGER = Logger.getLogger(TitleScreenManager.class.getName());
 
     private static TitleScreenManager instance;
@@ -339,6 +359,7 @@ public class TitleScreenManager implements TitleScreenProvider {
 
     @Override
     public void initialize() {
+        titleCharactersResolved = false; titleLead = null; titleSidekick = null;
         clearCompetitionExitPalette();
         LOGGER.info("Initializing title screen");
 
@@ -1549,7 +1570,31 @@ public class TitleScreenManager implements TitleScreenProvider {
     private void drawSprite(AnimatedSprite sprite) {
         int screenX = sprite.x - 128 + xOffset(); // centre with the logo (0 at native)
         int screenY = sprite.y - 128;
-        spriteRenderer.drawFrameIndex(sprite.mappingFrame, screenX, screenY);
+        resolveTitleCharacters();
+        var owner = sprite == sonicSprite || sprite == sonicHandSprite ? titleLead
+                : sprite == tailsSprite || sprite == tailsHandSprite ? titleSidekick : null;
+        var part = sprite == sonicHandSprite || sprite == tailsHandSprite ? TitlePart.HAND : TitlePart.BODY;
+        if (sprite == sonicSprite || sprite == tailsSprite) {
+            // Obj0E_MaskingSprite_Init (s2.asm:26688-26702), TitleScreen_Loop
+            // (s2.asm:4462-4490): the emblem's mask suppresses body rows 112..175.
+            // Translate that output into clipping, including transparent emblem gaps;
+            // repainting Plane A alone cannot mask a creator's different silhouette.
+            var gm = GameServices.graphics();
+            gm.flushPatternBatch();
+            gm.flushScreenSpace();
+            for (int[] band : new int[][] {{0, 112}, {176, SCREEN_HEIGHT - 176}}) {
+                if (!enableMdScissorRect(gm, 0, band[0], viewportWidth(), band[1])) continue;
+                gm.beginPatternBatch();
+                if (owner == null || !owner.draw(part, sprite.mappingFrame, screenX, screenY))
+                    spriteRenderer.drawFrameIndex(sprite.mappingFrame, screenX, screenY);
+                gm.flushPatternBatch();
+                gm.flushScreenSpace();
+                gm.disableScissor();
+            }
+            gm.beginPatternBatch();
+        } else if (owner == null || !owner.draw(part, sprite.mappingFrame, screenX, screenY)) {
+            spriteRenderer.drawFrameIndex(sprite.mappingFrame, screenX, screenY);
+        }
     }
 
     /**
@@ -1976,6 +2021,7 @@ public class TitleScreenManager implements TitleScreenProvider {
 
     @Override
     public void reset() {
+        titleCharactersResolved = false; titleLead = null; titleSidekick = null;
         clearCompetitionExitPalette();
         GameServices.audio().stopSegaPcm();
         state = State.INACTIVE;

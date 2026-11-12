@@ -53,10 +53,19 @@ public final class NativeMenuRaster {
         int scrollAt(int y) { return lineScroll == null ? horizontalScroll : lineScroll[y]; }
     }
 
-    public record Picture(int[] indexedPixels) {
+    public record Picture(int[] indexedPixels, java.util.Map<Integer, int[]> portraitPalettes) {
+        public Picture(int[] indexedPixels) { this(indexedPixels, java.util.Map.of()); }
         public Picture {
             if (indexedPixels.length != WIDTH * HEIGHT) throw new IllegalArgumentException("Native raster size");
             indexedPixels = indexedPixels.clone();
+            var copy = new java.util.HashMap<Integer, int[]>();
+            portraitPalettes.forEach((k,v) -> copy.put(k,v.clone()));
+            portraitPalettes = java.util.Map.copyOf(copy);
+        }
+        @Override public java.util.Map<Integer,int[]> portraitPalettes() {
+            var copy = new java.util.HashMap<Integer,int[]>();
+            portraitPalettes.forEach((k,v) -> copy.put(k,v.clone()));
+            return java.util.Map.copyOf(copy);
         }
         @Override public int[] indexedPixels() { return indexedPixels.clone(); }
         public int colorIndex(int x, int y) { return indexedPixels[y * WIDTH + x] & 0x3F; }
@@ -81,7 +90,16 @@ public final class NativeMenuRaster {
                         nativeChannel(r), nativeChannel(g), nativeChannel(b), profile, expansion);
             }
             int[] result = new int[indexedPixels.length];
-            for (int i = 0; i < result.length; i++) result[i] = colors[indexedPixels[i]];
+            for (int i = 0; i < result.length; i++) {
+                int token = indexedPixels[i], bank = token >>> 8;
+                if (bank == 0) { result[i] = colors[token]; continue; }
+                int rgb = portraitPalettes.get(bank)[token & 15];
+                int r = rgb >>> 16 & 255, g = rgb >>> 8 & 255, b = rgb & 255;
+                if (fade.affects(token >>> 4 & 3)) { rgb = fade.fadeRgb(r,g,b); r=rgb>>>16&255; g=rgb>>>8&255; b=rgb&255; }
+                result[i] = (token & SHADOW) != 0
+                        ? DisplayColorConverter.toNativeShadowPackedRgb(nativeChannel(r),nativeChannel(g),nativeChannel(b),profile,expansion)
+                        : DisplayColorConverter.toPackedRgb(r,g,b,profile,expansion);
+            }
             return result;
         }
     }
@@ -90,9 +108,16 @@ public final class NativeMenuRaster {
 
     public static Picture compose(Plane a, Plane b, Pattern[] patterns, List<SpriteSatEntry> nativeSat,
                                   boolean shadowHighlight, int backdropColorIndex) {
+        return compose(a,b,patterns,nativeSat,shadowHighlight,backdropColorIndex,java.util.Map.of(),java.util.Map.of());
+    }
+
+    /** Pattern-local presentation colours retain the ordinary SAT and plane priority path. */
+    public static Picture compose(Plane a, Plane b, Pattern[] patterns, List<SpriteSatEntry> nativeSat,
+            boolean shadowHighlight, int backdropColorIndex, java.util.Map<Integer,Integer> patternBanks,
+            java.util.Map<Integer,int[]> portraitPalettes) {
         Objects.requireNonNull(a, "plane A"); Objects.requireNonNull(b, "plane B");
         if (backdropColorIndex < 0 || backdropColorIndex >= 64) throw new IllegalArgumentException("Backdrop CRAM index");
-        int[] sprites = spritePixels(patterns, nativeSat);
+        int[] sprites = spritePixels(patterns, nativeSat, patternBanks);
         int[] pixels = new int[WIDTH * HEIGHT];
         for (int y = 0; y < HEIGHT; y++) for (int x = 0; x < WIDTH; x++) {
             int planeA = planePixel(a, patterns, x, y), planeB = planePixel(b, patterns, x, y);
@@ -111,9 +136,9 @@ public final class NativeMenuRaster {
                 // Palette 0..2 color E is the native normal-intensity exception.
                 if ((sprite & 0x80) != 0 || (color & 15) == 14 && color < 0x30) shadow = false;
             }
-            pixels[y * WIDTH + x] = (background & 0x3F) | (shadow ? SHADOW : 0);
+            pixels[y * WIDTH + x] = (background & 0x3F) | (background & ~255) | (shadow ? SHADOW : 0);
         }
-        return new Picture(pixels);
+        return new Picture(pixels, portraitPalettes);
     }
 
     private static int planePixel(Plane plane, Pattern[] patterns, int x, int y) {
@@ -125,7 +150,7 @@ public final class NativeMenuRaster {
         return pixel | ((word >>> 9) & 0x30) | ((word >>> 8) & 0x80);
     }
 
-    private static int[] spritePixels(Pattern[] patterns, List<SpriteSatEntry> entries) {
+    private static int[] spritePixels(Pattern[] patterns, List<SpriteSatEntry> entries, java.util.Map<Integer,Integer> patternBanks) {
         int[] result = new int[WIDTH * HEIGHT];
         Arrays.fill(result, -1);
         var admitted = SpriteSatMaskPostProcessor.process(List.copyOf(entries), false,
@@ -141,7 +166,8 @@ public final class NativeMenuRaster {
                             if (result[at] >= 0) continue;
                             int color = patternPixel(patterns, pattern & 0x7FF, col, row, hFlip, vFlip);
                             if (color != 0) result[at] = color | (palette & 3) * 16
-                                    | (entry.piece().effectiveHighPriority() ? 0x80 : 0);
+                                    | (entry.piece().effectiveHighPriority() ? 0x80 : 0)
+                                    | (patternBanks.getOrDefault(pattern & 0x7FF, 0) << 8);
                         }
                     });
         }

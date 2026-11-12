@@ -1,0 +1,4639 @@
+{
+  "format": "openggf-playable-art-handoff-1",
+  "palette": "palette.yaml",
+  "facing": "right",
+  "tick_rate": 60,
+  "frames": [
+    {
+      "id": "wait-00",
+      "animation": "WAIT",
+      "order": 0,
+      "file": "frames/wait-00.png",
+      "hotspot": [
+        14,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 100,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "wait-01",
+      "animation": "WAIT",
+      "order": 1,
+      "file": "frames/wait-01.png",
+      "hotspot": [
+        14,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 7,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "wait-02",
+      "animation": "WAIT",
+      "order": 2,
+      "file": "frames/wait-02.png",
+      "hotspot": [
+        12,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 12,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "wait-03",
+      "animation": "WAIT",
+      "order": 3,
+      "file": "frames/wait-03.png",
+      "hotspot": [
+        12,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 50,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "wait-04",
+      "animation": "WAIT",
+      "order": 4,
+      "file": "frames/wait-04.png",
+      "hotspot": [
+        13,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "wait-05",
+      "animation": "WAIT",
+      "order": 5,
+      "file": "frames/wait-05.png",
+      "hotspot": [
+        12,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "wait-06",
+      "animation": "WAIT",
+      "order": 6,
+      "file": "frames/wait-06.png",
+      "hotspot": [
+        15,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 100,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "wait-07",
+      "animation": "WAIT",
+      "order": 7,
+      "file": "frames/wait-07.png",
+      "hotspot": [
+        19,
+        4
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 100,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "wait-08",
+      "animation": "WAIT",
+      "order": 8,
+      "file": "frames/wait-08.png",
+      "hotspot": [
+        18,
+        4
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 100,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "roll-00",
+      "animation": "ROLL",
+      "order": 0,
+      "file": "frames/roll-00.png",
+      "hotspot": [
+        15,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "roll-01",
+      "animation": "ROLL",
+      "order": 1,
+      "file": "frames/roll-01.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "roll-02",
+      "animation": "ROLL",
+      "order": 2,
+      "file": "frames/roll-02.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "roll-03",
+      "animation": "ROLL",
+      "order": 3,
+      "file": "frames/roll-03.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "walk-00",
+      "animation": "WALK",
+      "order": 0,
+      "file": "frames/walk-00.png",
+      "hotspot": [
+        13,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "walk-01",
+      "animation": "WALK",
+      "order": 1,
+      "file": "frames/walk-01.png",
+      "hotspot": [
+        15,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "walk-02",
+      "animation": "WALK",
+      "order": 2,
+      "file": "frames/walk-02.png",
+      "hotspot": [
+        17,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "walk-03",
+      "animation": "WALK",
+      "order": 3,
+      "file": "frames/walk-03.png",
+      "hotspot": [
+        18,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "walk-04",
+      "animation": "WALK",
+      "order": 4,
+      "file": "frames/walk-04.png",
+      "hotspot": [
+        13,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "walk-05",
+      "animation": "WALK",
+      "order": 5,
+      "file": "frames/walk-05.png",
+      "hotspot": [
+        14,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "walk-06",
+      "animation": "WALK",
+      "order": 6,
+      "file": "frames/walk-06.png",
+      "hotspot": [
+        19,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "walk-07",
+      "animation": "WALK",
+      "order": 7,
+      "file": "frames/walk-07.png",
+      "hotspot": [
+        16,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "run-00",
+      "animation": "RUN",
+      "order": 0,
+      "file": "frames/run-00.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Round3 generated native pose; chosen B2; native aspect padded, no repainting."
+    },
+    {
+      "id": "run-01",
+      "animation": "RUN",
+      "order": 1,
+      "file": "frames/run-01.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Round3 generated native pose; chosen 3; native aspect padded, no repainting."
+    },
+    {
+      "id": "run-02",
+      "animation": "RUN",
+      "order": 2,
+      "file": "frames/run-02.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Round3 generated native pose; chosen B2; native aspect padded, no repainting."
+    },
+    {
+      "id": "run-03",
+      "animation": "RUN",
+      "order": 3,
+      "file": "frames/run-03.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Round3 generated native pose; chosen 1; native aspect padded, no repainting."
+    },
+    {
+      "id": "spring-00",
+      "animation": "SPRING",
+      "order": 0,
+      "file": "frames/spring-00.png",
+      "hotspot": [
+        12,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 48,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+    },
+    {
+      "id": "hurt-00",
+      "animation": "HURT",
+      "order": 0,
+      "file": "frames/hurt-00.png",
+      "hotspot": [
+        20,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+    },
+    {
+      "id": "homing_dive-00",
+      "animation": "HOMING_DIVE",
+      "order": 0,
+      "file": "frames/homing_dive-00.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+    },
+    {
+      "id": "homing_dive-01",
+      "animation": "HOMING_DIVE",
+      "order": 1,
+      "file": "frames/homing_dive-01.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+    },
+    {
+      "id": "homing_dive-02",
+      "animation": "HOMING_DIVE",
+      "order": 2,
+      "file": "frames/homing_dive-02.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 6; no painted pixel patches."
+    },
+    {
+      "id": "homing_dive-03",
+      "animation": "HOMING_DIVE",
+      "order": 3,
+      "file": "frames/homing_dive-03.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 4,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 2; no painted pixel patches."
+    },
+    {
+      "id": "spindash-00",
+      "animation": "SPINDASH",
+      "order": 0,
+      "file": "frames/spindash-00.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+    },
+    {
+      "id": "spindash-01",
+      "animation": "SPINDASH",
+      "order": 1,
+      "file": "frames/spindash-01.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 1; no painted pixel patches."
+    },
+    {
+      "id": "spindash-02",
+      "animation": "SPINDASH",
+      "order": 2,
+      "file": "frames/spindash-02.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+    },
+    {
+      "id": "spindash-03",
+      "animation": "SPINDASH",
+      "order": 3,
+      "file": "frames/spindash-03.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 3,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+    },
+    {
+      "id": "walk-up45-00",
+      "animation": "WALK",
+      "order": 8,
+      "file": "frames/walk-up45-00.png",
+      "hotspot": [
+        11,
+        15
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-00; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "walk-up45-01",
+      "animation": "WALK",
+      "order": 9,
+      "file": "frames/walk-up45-01.png",
+      "hotspot": [
+        17,
+        18
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-01; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "walk-up45-02",
+      "animation": "WALK",
+      "order": 10,
+      "file": "frames/walk-up45-02.png",
+      "hotspot": [
+        19,
+        20
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-02; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "walk-up45-03",
+      "animation": "WALK",
+      "order": 11,
+      "file": "frames/walk-up45-03.png",
+      "hotspot": [
+        18,
+        19
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-03; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "walk-up45-04",
+      "animation": "WALK",
+      "order": 12,
+      "file": "frames/walk-up45-04.png",
+      "hotspot": [
+        12,
+        15
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-04; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "walk-up45-05",
+      "animation": "WALK",
+      "order": 13,
+      "file": "frames/walk-up45-05.png",
+      "hotspot": [
+        15,
+        18
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-05; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "walk-up45-06",
+      "animation": "WALK",
+      "order": 14,
+      "file": "frames/walk-up45-06.png",
+      "hotspot": [
+        19,
+        20
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-06; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "walk-up45-07",
+      "animation": "WALK",
+      "order": 15,
+      "file": "frames/walk-up45-07.png",
+      "hotspot": [
+        17,
+        20
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-07; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-00",
+      "animation": "WALK",
+      "order": 16,
+      "file": "frames/walk-steep-00.png",
+      "hotspot": [
+        13,
+        13
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-00; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-01",
+      "animation": "WALK",
+      "order": 17,
+      "file": "frames/walk-steep-01.png",
+      "hotspot": [
+        18,
+        14
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-01; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-02",
+      "animation": "WALK",
+      "order": 18,
+      "file": "frames/walk-steep-02.png",
+      "hotspot": [
+        21,
+        20
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-02; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-03",
+      "animation": "WALK",
+      "order": 19,
+      "file": "frames/walk-steep-03.png",
+      "hotspot": [
+        20,
+        18
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-03; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-04",
+      "animation": "WALK",
+      "order": 20,
+      "file": "frames/walk-steep-04.png",
+      "hotspot": [
+        13,
+        13
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-04; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-05",
+      "animation": "WALK",
+      "order": 21,
+      "file": "frames/walk-steep-05.png",
+      "hotspot": [
+        17,
+        14
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-05; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-06",
+      "animation": "WALK",
+      "order": 22,
+      "file": "frames/walk-steep-06.png",
+      "hotspot": [
+        21,
+        18
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-06; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-steep-07",
+      "animation": "WALK",
+      "order": 23,
+      "file": "frames/walk-steep-07.png",
+      "hotspot": [
+        20,
+        16
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-07; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-00",
+      "animation": "WALK",
+      "order": 24,
+      "file": "frames/walk-inverted-00.png",
+      "hotspot": [
+        15,
+        17
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-00; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-01",
+      "animation": "WALK",
+      "order": 25,
+      "file": "frames/walk-inverted-01.png",
+      "hotspot": [
+        18,
+        21
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-01; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-02",
+      "animation": "WALK",
+      "order": 26,
+      "file": "frames/walk-inverted-02.png",
+      "hotspot": [
+        20,
+        19
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-02; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-03",
+      "animation": "WALK",
+      "order": 27,
+      "file": "frames/walk-inverted-03.png",
+      "hotspot": [
+        19,
+        22
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-03; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-04",
+      "animation": "WALK",
+      "order": 28,
+      "file": "frames/walk-inverted-04.png",
+      "hotspot": [
+        15,
+        18
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-04; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-05",
+      "animation": "WALK",
+      "order": 29,
+      "file": "frames/walk-inverted-05.png",
+      "hotspot": [
+        18,
+        19
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-05; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-06",
+      "animation": "WALK",
+      "order": 30,
+      "file": "frames/walk-inverted-06.png",
+      "hotspot": [
+        20,
+        18
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-06; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "walk-inverted-07",
+      "animation": "WALK",
+      "order": 31,
+      "file": "frames/walk-inverted-07.png",
+      "hotspot": [
+        20,
+        21
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 6,
+      "notes": "Deterministic Scale2x slope from walk-07; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "run-up45-00",
+      "animation": "RUN",
+      "order": 4,
+      "file": "frames/run-up45-00.png",
+      "hotspot": [
+        11,
+        18
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-00; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "run-up45-01",
+      "animation": "RUN",
+      "order": 5,
+      "file": "frames/run-up45-01.png",
+      "hotspot": [
+        10,
+        16
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-01; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "run-up45-02",
+      "animation": "RUN",
+      "order": 6,
+      "file": "frames/run-up45-02.png",
+      "hotspot": [
+        11,
+        18
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-02; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "run-up45-03",
+      "animation": "RUN",
+      "order": 7,
+      "file": "frames/run-up45-03.png",
+      "hotspot": [
+        11,
+        16
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-03; +45 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "run-steep-00",
+      "animation": "RUN",
+      "order": 8,
+      "file": "frames/run-steep-00.png",
+      "hotspot": [
+        15,
+        16
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-00; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-steep-01",
+      "animation": "RUN",
+      "order": 9,
+      "file": "frames/run-steep-01.png",
+      "hotspot": [
+        14,
+        16
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-01; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-steep-02",
+      "animation": "RUN",
+      "order": 10,
+      "file": "frames/run-steep-02.png",
+      "hotspot": [
+        15,
+        16
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-02; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-steep-03",
+      "animation": "RUN",
+      "order": 11,
+      "file": "frames/run-steep-03.png",
+      "hotspot": [
+        14,
+        16
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-03; +90 degrees CCW, native support, integer contact alignment."
+    },
+    {
+      "id": "run-inverted-00",
+      "animation": "RUN",
+      "order": 12,
+      "file": "frames/run-inverted-00.png",
+      "hotspot": [
+        18,
+        18
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-00; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "run-inverted-01",
+      "animation": "RUN",
+      "order": 13,
+      "file": "frames/run-inverted-01.png",
+      "hotspot": [
+        16,
+        17
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-01; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "run-inverted-02",
+      "animation": "RUN",
+      "order": 14,
+      "file": "frames/run-inverted-02.png",
+      "hotspot": [
+        18,
+        19
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-02; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "run-inverted-03",
+      "animation": "RUN",
+      "order": 15,
+      "file": "frames/run-inverted-03.png",
+      "hotspot": [
+        16,
+        17
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 4,
+      "notes": "Deterministic Scale2x slope from run-03; +135 degrees CCW, mode reduction with the silhouette ink lifted and material despeckle before inking (slope_sets.py, 2026-11-12); native support, integer contact alignment."
+    },
+    {
+      "id": "roll-blur",
+      "animation": "ROLL",
+      "order": 4,
+      "file": "frames/roll-blur.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+    },
+    {
+      "id": "spindash-04",
+      "animation": "SPINDASH",
+      "order": 4,
+      "file": "frames/spindash-04.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+    },
+    {
+      "id": "spindash-blur",
+      "animation": "SPINDASH",
+      "order": 5,
+      "file": "frames/spindash-blur.png",
+      "hotspot": [
+        11,
+        7
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+    },
+    {
+      "id": "death-00",
+      "animation": "DEATH",
+      "order": 0,
+      "file": "frames/death-00.png",
+      "hotspot": [
+        18,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 12,
+      "notes": ""
+    },
+    {
+      "id": "death-01",
+      "animation": "DEATH",
+      "order": 1,
+      "file": "frames/death-01.png",
+      "hotspot": [
+        18,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 12,
+      "notes": ""
+    },
+    {
+      "id": "push-00",
+      "animation": "PUSH",
+      "order": 0,
+      "file": "frames/push-00.png",
+      "hotspot": [
+        21,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Consistency: re-reduced; original source uniform 32.906667:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "push-01",
+      "animation": "PUSH",
+      "order": 1,
+      "file": "frames/push-01.png",
+      "hotspot": [
+        21,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Consistency: re-reduced; original source uniform 32.911790:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "duck-00",
+      "animation": "DUCK",
+      "order": 0,
+      "file": "frames/duck-00.png",
+      "hotspot": [
+        13,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": "Consistency: regenerated; original source uniform 20.370370:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "duck-01",
+      "animation": "DUCK",
+      "order": 1,
+      "file": "frames/duck-01.png",
+      "hotspot": [
+        8,
+        -2
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": "Consistency: regenerated; original source uniform 30.000000:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "look_up-00",
+      "animation": "LOOK_UP",
+      "order": 0,
+      "file": "frames/look_up-00.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 12,
+      "notes": "Consistency: re-reduced; original source uniform 36.954733:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "look_up-01",
+      "animation": "LOOK_UP",
+      "order": 1,
+      "file": "frames/look_up-01.png",
+      "hotspot": [
+        12,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 12,
+      "notes": "Consistency: re-reduced; original source uniform 42.057613:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "skid-00",
+      "animation": "SKID",
+      "order": 0,
+      "file": "frames/skid-00.png",
+      "hotspot": [
+        16,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "Consistency: re-reduced; original source uniform 33.742690:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "skid-01",
+      "animation": "SKID",
+      "order": 1,
+      "file": "frames/skid-01.png",
+      "hotspot": [
+        16,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "Consistency: re-reduced; original source uniform 33.304094:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "skid-02",
+      "animation": "SKID",
+      "order": 2,
+      "file": "frames/skid-02.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "Consistency: re-reduced; original source uniform 31.441441:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "skid-03",
+      "animation": "SKID",
+      "order": 3,
+      "file": "frames/skid-03.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": "Consistency: re-reduced; original source uniform 35.719373:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "balance-00",
+      "animation": "BALANCE",
+      "order": 0,
+      "file": "frames/balance-00.png",
+      "hotspot": [
+        14,
+        10
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Consistency: regenerated; original source uniform 15.111111:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "balance-01",
+      "animation": "BALANCE",
+      "order": 1,
+      "file": "frames/balance-01.png",
+      "hotspot": [
+        14,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Consistency: regenerated; original source uniform 16.111111:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "balance-02",
+      "animation": "BALANCE",
+      "order": 2,
+      "file": "frames/balance-02.png",
+      "hotspot": [
+        14,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Consistency: regenerated; original source uniform 15.000000:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "balance-03",
+      "animation": "BALANCE",
+      "order": 3,
+      "file": "frames/balance-03.png",
+      "hotspot": [
+        14,
+        10
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Consistency: regenerated; original source uniform 15.555556:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "drown-00",
+      "animation": "DROWN",
+      "order": 0,
+      "file": "frames/drown-00.png",
+      "hotspot": [
+        18,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": ""
+    },
+    {
+      "id": "drown-01",
+      "animation": "DROWN",
+      "order": 1,
+      "file": "frames/drown-01.png",
+      "hotspot": [
+        18,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": ""
+    },
+    {
+      "id": "drown-02",
+      "animation": "DROWN",
+      "order": 2,
+      "file": "frames/drown-02.png",
+      "hotspot": [
+        18,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": ""
+    },
+    {
+      "id": "get_air-00",
+      "animation": "GET_AIR",
+      "order": 0,
+      "file": "frames/get_air-00.png",
+      "hotspot": [
+        16,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 12,
+      "notes": "Consistency: re-reduced; original source uniform 34.722222:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "get_air-01",
+      "animation": "GET_AIR",
+      "order": 1,
+      "file": "frames/get_air-01.png",
+      "hotspot": [
+        16,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 12,
+      "notes": "Consistency: re-reduced; original source uniform 37.006173:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "hang-00",
+      "animation": "HANG",
+      "order": 0,
+      "file": "frames/hang-00.png",
+      "hotspot": [
+        17,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 3, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (carried_reshade.py): ink silhouette and scale separators, jade-shadow scale shade as the rest of her sheet; silhouette, hotspot and grip pixels unchanged."
+    },
+    {
+      "id": "hang-01",
+      "animation": "HANG",
+      "order": 1,
+      "file": "frames/hang-01.png",
+      "hotspot": [
+        17,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 0, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (carried_reshade.py): ink silhouette and scale separators, jade-shadow scale shade as the rest of her sheet; silhouette, hotspot and grip pixels unchanged."
+    },
+    {
+      "id": "hang-02",
+      "animation": "HANG",
+      "order": 2,
+      "file": "frames/hang-02.png",
+      "hotspot": [
+        18,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 10,
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 5, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (carried_reshade.py): ink silhouette and scale separators, jade-shadow scale shade as the rest of her sheet; silhouette, hotspot and grip pixels unchanged."
+    },
+    {
+      "id": "stop-00",
+      "animation": "STOP",
+      "order": 0,
+      "file": "frames/stop-00.png",
+      "hotspot": [
+        16,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": ""
+    },
+    {
+      "id": "stop-01",
+      "animation": "STOP",
+      "order": 1,
+      "file": "frames/stop-01.png",
+      "hotspot": [
+        16,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": ""
+    },
+    {
+      "id": "stop-02",
+      "animation": "STOP",
+      "order": 2,
+      "file": "frames/stop-02.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": ""
+    },
+    {
+      "id": "stop-03",
+      "animation": "STOP",
+      "order": 3,
+      "file": "frames/stop-03.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 5,
+      "notes": ""
+    },
+    {
+      "id": "native-pose-ca",
+      "animation": "NATIVE_POSE",
+      "order": 1,
+      "file": "frames/native-pose-ca.png",
+      "hotspot": [
+        17,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from endings/s3k/rescue_float-ca.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-cb",
+      "animation": "NATIVE_POSE",
+      "order": 2,
+      "file": "frames/native-pose-cb.png",
+      "hotspot": [
+        21,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from endings/s3k/rescue_float-cb.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-24",
+      "animation": "NATIVE_POSE",
+      "order": 8,
+      "file": "frames/native-pose-24.png",
+      "hotspot": [
+        16,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-24.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-55",
+      "animation": "NATIVE_POSE",
+      "order": 9,
+      "file": "frames/native-pose-55.png",
+      "hotspot": [
+        15,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-55.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-56",
+      "animation": "NATIVE_POSE",
+      "order": 10,
+      "file": "frames/native-pose-56.png",
+      "hotspot": [
+        14,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-56.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-57",
+      "animation": "NATIVE_POSE",
+      "order": 11,
+      "file": "frames/native-pose-57.png",
+      "hotspot": [
+        16,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-57.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-59",
+      "animation": "NATIVE_POSE",
+      "order": 12,
+      "file": "frames/native-pose-59.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-59.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "native-pose-5a",
+      "animation": "NATIVE_POSE",
+      "order": 13,
+      "file": "frames/native-pose-5a.png",
+      "hotspot": [
+        12,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-5a.png; no scaling or native pixel copying."
+    },
+    {
+      "id": "homing_dive_forward-00",
+      "animation": "HOMING_DIVE_FORWARD",
+      "order": 0,
+      "file": "frames/homing_dive_forward-00.png",
+      "hotspot": [
+        16,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
+    },
+    {
+      "id": "homing_dive_forward-01",
+      "animation": "HOMING_DIVE_FORWARD",
+      "order": 1,
+      "file": "frames/homing_dive_forward-01.png",
+      "hotspot": [
+        17,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
+    },
+    {
+      "id": "homing_dive_forward-02",
+      "animation": "HOMING_DIVE_FORWARD",
+      "order": 2,
+      "file": "frames/homing_dive_forward-02.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
+    },
+    {
+      "id": "homing_dive_forward-03",
+      "animation": "HOMING_DIVE_FORWARD",
+      "order": 3,
+      "file": "frames/homing_dive_forward-03.png",
+      "hotspot": [
+        15,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
+    },
+    {
+      "id": "homing_dive_forward_up-00",
+      "animation": "HOMING_DIVE_FORWARD_UP",
+      "order": 0,
+      "file": "frames/homing_dive_forward_up-00.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 90 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_forward_up-01",
+      "animation": "HOMING_DIVE_FORWARD_UP",
+      "order": 1,
+      "file": "frames/homing_dive_forward_up-01.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 90 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_forward_up-02",
+      "animation": "HOMING_DIVE_FORWARD_UP",
+      "order": 2,
+      "file": "frames/homing_dive_forward_up-02.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 90 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_forward_up-03",
+      "animation": "HOMING_DIVE_FORWARD_UP",
+      "order": 3,
+      "file": "frames/homing_dive_forward_up-03.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 90 degrees CCW with derive_slopes.rotate; no regeneration/painting."
+    },
+    {
+      "id": "homing_dive_up-00",
+      "animation": "HOMING_DIVE_UP",
+      "order": 0,
+      "file": "frames/homing_dive_up-00.png",
+      "hotspot": [
+        14,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
+    },
+    {
+      "id": "homing_dive_up-01",
+      "animation": "HOMING_DIVE_UP",
+      "order": 1,
+      "file": "frames/homing_dive_up-01.png",
+      "hotspot": [
+        13,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
+    },
+    {
+      "id": "homing_dive_up-02",
+      "animation": "HOMING_DIVE_UP",
+      "order": 2,
+      "file": "frames/homing_dive_up-02.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
+    },
+    {
+      "id": "homing_dive_up-03",
+      "animation": "HOMING_DIVE_UP",
+      "order": 3,
+      "file": "frames/homing_dive_up-03.png",
+      "hotspot": [
+        11,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose 135 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
+    },
+    {
+      "id": "homing_dive_down-00",
+      "animation": "HOMING_DIVE_DOWN",
+      "order": 0,
+      "file": "frames/homing_dive_down-00.png",
+      "hotspot": [
+        12,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
+    },
+    {
+      "id": "homing_dive_down-01",
+      "animation": "HOMING_DIVE_DOWN",
+      "order": 1,
+      "file": "frames/homing_dive_down-01.png",
+      "hotspot": [
+        10,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
+    },
+    {
+      "id": "homing_dive_down-02",
+      "animation": "HOMING_DIVE_DOWN",
+      "order": 2,
+      "file": "frames/homing_dive_down-02.png",
+      "hotspot": [
+        11,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
+    },
+    {
+      "id": "homing_dive_down-03",
+      "animation": "HOMING_DIVE_DOWN",
+      "order": 3,
+      "file": "frames/homing_dive_down-03.png",
+      "hotspot": [
+        10,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rotate A forward-down pose -45 degrees CCW with derive_slopes.rotate; no regeneration/painting. Mode reduction and material despeckle before inking since 2026-11-12 (slope_sets.py)."
+    },
+    {
+      "id": "variant-s1-33",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-33.png",
+      "hotspot": [
+        18,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-43",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-43.png",
+      "hotspot": [
+        16,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-44",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-44.png",
+      "hotspot": [
+        16,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-4b",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-4b.png",
+      "hotspot": [
+        14,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-49",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-49.png",
+      "hotspot": [
+        16,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-4e",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-4e.png",
+      "hotspot": [
+        16,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s2-6c",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s2-6c.png",
+      "hotspot": [
+        12,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-c5",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-c5.png",
+      "hotspot": [
+        14,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-c6",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-c6.png",
+      "hotspot": [
+        17,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-c7",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-c7.png",
+      "hotspot": [
+        13,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-8f",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-8f.png",
+      "hotspot": [
+        21,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-a1",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-a1.png",
+      "hotspot": [
+        21,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-a2",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-a2.png",
+      "hotspot": [
+        19,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Consistency: re-reduced; original source uniform 8.571429:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "variant-s3k-a3",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-a3.png",
+      "hotspot": [
+        19,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Consistency: re-reduced; original source uniform 8.611111:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "variant-s3k-c8",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-c8.png",
+      "hotspot": [
+        20,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Consistency: re-reduced; original source uniform 9.259259:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "variant-s3k-c9",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-c9.png",
+      "hotspot": [
+        14,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Consistency: re-reduced; original source uniform 9.259259:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "variant-s3k-ca",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-ca.png",
+      "hotspot": [
+        13,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-cb",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-cb.png",
+      "hotspot": [
+        20,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-cc",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-cc.png",
+      "hotspot": [
+        14,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Consistency: re-reduced; original source uniform 9.120370:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "variant-s3k-cd",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-cd.png",
+      "hotspot": [
+        15,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-ce",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-ce.png",
+      "hotspot": [
+        14,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-cf",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-cf.png",
+      "hotspot": [
+        17,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-b0",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-b0.png",
+      "hotspot": [
+        16,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-b2",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-b2.png",
+      "hotspot": [
+        16,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-b1",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-b1.png",
+      "hotspot": [
+        17,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-b3",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-b3.png",
+      "hotspot": [
+        17,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-ac",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-ac.png",
+      "hotspot": [
+        17,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-03",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-03.png",
+      "hotspot": [
+        12,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Consistency: re-reduced; original source uniform 8.859649:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "variant-s3k-04",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-04.png",
+      "hotspot": [
+        12,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Consistency: re-reduced; original source uniform 8.809524:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "variant-s3k-8c",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-8c.png",
+      "hotspot": [
+        17,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-8d",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-8d.png",
+      "hotspot": [
+        18,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-d0",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-d0.png",
+      "hotspot": [
+        17,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s3k-d1",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s3k-d1.png",
+      "hotspot": [
+        18,
+        8
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s2-0a",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s2-0a.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-33-rot52",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-33-rot52.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-33-rot53",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-33-rot53.png",
+      "hotspot": [
+        11,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-33-rot54",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-33-rot54.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-4e-scale79",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-4e-scale79.png",
+      "hotspot": [
+        14,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-4e-scale80",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-4e-scale80.png",
+      "hotspot": [
+        11,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-4e-scale81",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-4e-scale81.png",
+      "hotspot": [
+        7,
+        9
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-s1-4e-scale82",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-s1-4e-scale82.png",
+      "hotspot": [
+        4,
+        4
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "variant-blank",
+      "animation": "NATIVE_POSE",
+      "order": 191,
+      "file": "frames/variant-blank.png",
+      "hotspot": [
+        0,
+        0
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 8,
+      "notes": "Batch2 native-pose generation; no painted pixels."
+    },
+    {
+      "id": "object-pose-58",
+      "animation": "NATIVE_POSE",
+      "order": 14,
+      "file": "frames/object-pose-58.png",
+      "hotspot": [
+        12,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-5b",
+      "animation": "NATIVE_POSE",
+      "order": 15,
+      "file": "frames/object-pose-5b.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-5c",
+      "animation": "NATIVE_POSE",
+      "order": 16,
+      "file": "frames/object-pose-5c.png",
+      "hotspot": [
+        16,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-5d",
+      "animation": "NATIVE_POSE",
+      "order": 17,
+      "file": "frames/object-pose-5d.png",
+      "hotspot": [
+        3,
+        10
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-5e",
+      "animation": "NATIVE_POSE",
+      "order": 18,
+      "file": "frames/object-pose-5e.png",
+      "hotspot": [
+        28,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-5f",
+      "animation": "NATIVE_POSE",
+      "order": 19,
+      "file": "frames/object-pose-5f.png",
+      "hotspot": [
+        25,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-60",
+      "animation": "NATIVE_POSE",
+      "order": 20,
+      "file": "frames/object-pose-60.png",
+      "hotspot": [
+        9,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-61",
+      "animation": "NATIVE_POSE",
+      "order": 21,
+      "file": "frames/object-pose-61.png",
+      "hotspot": [
+        33,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-62",
+      "animation": "NATIVE_POSE",
+      "order": 22,
+      "file": "frames/object-pose-62.png",
+      "hotspot": [
+        20,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-63",
+      "animation": "NATIVE_POSE",
+      "order": 23,
+      "file": "frames/object-pose-63.png",
+      "hotspot": [
+        11,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-64",
+      "animation": "NATIVE_POSE",
+      "order": 24,
+      "file": "frames/object-pose-64.png",
+      "hotspot": [
+        11,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-65",
+      "animation": "NATIVE_POSE",
+      "order": 25,
+      "file": "frames/object-pose-65.png",
+      "hotspot": [
+        11,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-66",
+      "animation": "NATIVE_POSE",
+      "order": 26,
+      "file": "frames/object-pose-66.png",
+      "hotspot": [
+        12,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-67",
+      "animation": "NATIVE_POSE",
+      "order": 27,
+      "file": "frames/object-pose-67.png",
+      "hotspot": [
+        13,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-68",
+      "animation": "NATIVE_POSE",
+      "order": 28,
+      "file": "frames/object-pose-68.png",
+      "hotspot": [
+        13,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-69",
+      "animation": "NATIVE_POSE",
+      "order": 29,
+      "file": "frames/object-pose-69.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Consistency: re-reduced; original source uniform 10.349206:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "object-pose-6a",
+      "animation": "NATIVE_POSE",
+      "order": 30,
+      "file": "frames/object-pose-6a.png",
+      "hotspot": [
+        14,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Consistency: re-reduced; original source uniform 10.761905:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "object-pose-6b",
+      "animation": "NATIVE_POSE",
+      "order": 31,
+      "file": "frames/object-pose-6b.png",
+      "hotspot": [
+        15,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Consistency: re-reduced; original source uniform 10.793651:1; anatomical scale, never silhouette fit."
+    },
+    {
+      "id": "object-pose-6c",
+      "animation": "NATIVE_POSE",
+      "order": 32,
+      "file": "frames/object-pose-6c.png",
+      "hotspot": [
+        16,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-6d",
+      "animation": "NATIVE_POSE",
+      "order": 33,
+      "file": "frames/object-pose-6d.png",
+      "hotspot": [
+        17,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-6e",
+      "animation": "NATIVE_POSE",
+      "order": 34,
+      "file": "frames/object-pose-6e.png",
+      "hotspot": [
+        17,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-6f",
+      "animation": "NATIVE_POSE",
+      "order": 35,
+      "file": "frames/object-pose-6f.png",
+      "hotspot": [
+        16,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-70",
+      "animation": "NATIVE_POSE",
+      "order": 36,
+      "file": "frames/object-pose-70.png",
+      "hotspot": [
+        16,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-71",
+      "animation": "NATIVE_POSE",
+      "order": 37,
+      "file": "frames/object-pose-71.png",
+      "hotspot": [
+        16,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-72",
+      "animation": "NATIVE_POSE",
+      "order": 38,
+      "file": "frames/object-pose-72.png",
+      "hotspot": [
+        14,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-73",
+      "animation": "NATIVE_POSE",
+      "order": 39,
+      "file": "frames/object-pose-73.png",
+      "hotspot": [
+        17,
+        11
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-74",
+      "animation": "NATIVE_POSE",
+      "order": 40,
+      "file": "frames/object-pose-74.png",
+      "hotspot": [
+        16,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-75",
+      "animation": "NATIVE_POSE",
+      "order": 41,
+      "file": "frames/object-pose-75.png",
+      "hotspot": [
+        12,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-76",
+      "animation": "NATIVE_POSE",
+      "order": 42,
+      "file": "frames/object-pose-76.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-77",
+      "animation": "NATIVE_POSE",
+      "order": 43,
+      "file": "frames/object-pose-77.png",
+      "hotspot": [
+        16,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-78",
+      "animation": "NATIVE_POSE",
+      "order": 44,
+      "file": "frames/object-pose-78.png",
+      "hotspot": [
+        17,
+        25
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-79",
+      "animation": "NATIVE_POSE",
+      "order": 45,
+      "file": "frames/object-pose-79.png",
+      "hotspot": [
+        26,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-7a",
+      "animation": "NATIVE_POSE",
+      "order": 46,
+      "file": "frames/object-pose-7a.png",
+      "hotspot": [
+        26,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-7b",
+      "animation": "NATIVE_POSE",
+      "order": 47,
+      "file": "frames/object-pose-7b.png",
+      "hotspot": [
+        24,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-7c",
+      "animation": "NATIVE_POSE",
+      "order": 48,
+      "file": "frames/object-pose-7c.png",
+      "hotspot": [
+        18,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-7d",
+      "animation": "NATIVE_POSE",
+      "order": 49,
+      "file": "frames/object-pose-7d.png",
+      "hotspot": [
+        15,
+        13
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-7e",
+      "animation": "NATIVE_POSE",
+      "order": 50,
+      "file": "frames/object-pose-7e.png",
+      "hotspot": [
+        22,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-7f",
+      "animation": "NATIVE_POSE",
+      "order": 51,
+      "file": "frames/object-pose-7f.png",
+      "hotspot": [
+        13,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-94",
+      "animation": "NATIVE_POSE",
+      "order": 52,
+      "file": "frames/object-pose-94.png",
+      "hotspot": [
+        12,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object-pose-95",
+      "animation": "NATIVE_POSE",
+      "order": 53,
+      "file": "frames/object-pose-95.png",
+      "hotspot": [
+        10,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+    },
+    {
+      "id": "object4-s3k-80",
+      "animation": "NATIVE_POSE",
+      "order": 100,
+      "file": "frames/object4-s3k-80.png",
+      "hotspot": [
+        16,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-81",
+      "animation": "NATIVE_POSE",
+      "order": 101,
+      "file": "frames/object4-s3k-81.png",
+      "hotspot": [
+        16,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-82",
+      "animation": "NATIVE_POSE",
+      "order": 102,
+      "file": "frames/object4-s3k-82.png",
+      "hotspot": [
+        14,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-83",
+      "animation": "NATIVE_POSE",
+      "order": 103,
+      "file": "frames/object4-s3k-83.png",
+      "hotspot": [
+        15,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-84",
+      "animation": "NATIVE_POSE",
+      "order": 104,
+      "file": "frames/object4-s3k-84.png",
+      "hotspot": [
+        13,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-85",
+      "animation": "NATIVE_POSE",
+      "order": 105,
+      "file": "frames/object4-s3k-85.png",
+      "hotspot": [
+        14,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-8c",
+      "animation": "NATIVE_POSE",
+      "order": 108,
+      "file": "frames/object4-s3k-8c.png",
+      "hotspot": [
+        16,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-8d",
+      "animation": "NATIVE_POSE",
+      "order": 109,
+      "file": "frames/object4-s3k-8d.png",
+      "hotspot": [
+        17,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-93",
+      "animation": "NATIVE_POSE",
+      "order": 110,
+      "file": "frames/object4-s3k-93.png",
+      "hotspot": [
+        17,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Re-reduced 6% larger for independent area check."
+    },
+    {
+      "id": "object4-s3k-b4",
+      "animation": "NATIVE_POSE",
+      "order": 111,
+      "file": "frames/object4-s3k-b4.png",
+      "hotspot": [
+        10,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-b5",
+      "animation": "NATIVE_POSE",
+      "order": 112,
+      "file": "frames/object4-s3k-b5.png",
+      "hotspot": [
+        10,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Uniform 50\u219248px height reduction for current indexed atlas cell."
+    },
+    {
+      "id": "object4-s3k-c0",
+      "animation": "NATIVE_POSE",
+      "order": 113,
+      "file": "frames/object4-s3k-c0.png",
+      "hotspot": [
+        17,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-c4",
+      "animation": "NATIVE_POSE",
+      "order": 114,
+      "file": "frames/object4-s3k-c4.png",
+      "hotspot": [
+        18,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-df",
+      "animation": "NATIVE_POSE",
+      "order": 115,
+      "file": "frames/object4-s3k-df.png",
+      "hotspot": [
+        15,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e0",
+      "animation": "NATIVE_POSE",
+      "order": 116,
+      "file": "frames/object4-s3k-e0.png",
+      "hotspot": [
+        12,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e1",
+      "animation": "NATIVE_POSE",
+      "order": 117,
+      "file": "frames/object4-s3k-e1.png",
+      "hotspot": [
+        11,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e2",
+      "animation": "NATIVE_POSE",
+      "order": 118,
+      "file": "frames/object4-s3k-e2.png",
+      "hotspot": [
+        16,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e3",
+      "animation": "NATIVE_POSE",
+      "order": 119,
+      "file": "frames/object4-s3k-e3.png",
+      "hotspot": [
+        20,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e4",
+      "animation": "NATIVE_POSE",
+      "order": 120,
+      "file": "frames/object4-s3k-e4.png",
+      "hotspot": [
+        14,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e6",
+      "animation": "NATIVE_POSE",
+      "order": 122,
+      "file": "frames/object4-s3k-e6.png",
+      "hotspot": [
+        15,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e7",
+      "animation": "NATIVE_POSE",
+      "order": 123,
+      "file": "frames/object4-s3k-e7.png",
+      "hotspot": [
+        12,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e8",
+      "animation": "NATIVE_POSE",
+      "order": 124,
+      "file": "frames/object4-s3k-e8.png",
+      "hotspot": [
+        11,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-e9",
+      "animation": "NATIVE_POSE",
+      "order": 125,
+      "file": "frames/object4-s3k-e9.png",
+      "hotspot": [
+        9,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-ea",
+      "animation": "NATIVE_POSE",
+      "order": 126,
+      "file": "frames/object4-s3k-ea.png",
+      "hotspot": [
+        12,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-ef",
+      "animation": "NATIVE_POSE",
+      "order": 127,
+      "file": "frames/object4-s3k-ef.png",
+      "hotspot": [
+        16,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f0",
+      "animation": "NATIVE_POSE",
+      "order": 128,
+      "file": "frames/object4-s3k-f0.png",
+      "hotspot": [
+        15,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f1",
+      "animation": "NATIVE_POSE",
+      "order": 129,
+      "file": "frames/object4-s3k-f1.png",
+      "hotspot": [
+        12,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f2",
+      "animation": "NATIVE_POSE",
+      "order": 130,
+      "file": "frames/object4-s3k-f2.png",
+      "hotspot": [
+        10,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f3",
+      "animation": "NATIVE_POSE",
+      "order": 131,
+      "file": "frames/object4-s3k-f3.png",
+      "hotspot": [
+        11,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f4",
+      "animation": "NATIVE_POSE",
+      "order": 132,
+      "file": "frames/object4-s3k-f4.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f5",
+      "animation": "NATIVE_POSE",
+      "order": 133,
+      "file": "frames/object4-s3k-f5.png",
+      "hotspot": [
+        15,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f6",
+      "animation": "NATIVE_POSE",
+      "order": 134,
+      "file": "frames/object4-s3k-f6.png",
+      "hotspot": [
+        15,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f7",
+      "animation": "NATIVE_POSE",
+      "order": 135,
+      "file": "frames/object4-s3k-f7.png",
+      "hotspot": [
+        11,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f8",
+      "animation": "NATIVE_POSE",
+      "order": 136,
+      "file": "frames/object4-s3k-f8.png",
+      "hotspot": [
+        10,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-f9",
+      "animation": "NATIVE_POSE",
+      "order": 137,
+      "file": "frames/object4-s3k-f9.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-fa",
+      "animation": "NATIVE_POSE",
+      "order": 138,
+      "file": "frames/object4-s3k-fa.png",
+      "hotspot": [
+        15,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-31",
+      "animation": "NATIVE_POSE",
+      "order": 139,
+      "file": "frames/object4-s3k-31.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-32",
+      "animation": "NATIVE_POSE",
+      "order": 140,
+      "file": "frames/object4-s3k-32.png",
+      "hotspot": [
+        13,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-33",
+      "animation": "NATIVE_POSE",
+      "order": 141,
+      "file": "frames/object4-s3k-33.png",
+      "hotspot": [
+        14,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-34",
+      "animation": "NATIVE_POSE",
+      "order": 142,
+      "file": "frames/object4-s3k-34.png",
+      "hotspot": [
+        15,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-35",
+      "animation": "NATIVE_POSE",
+      "order": 143,
+      "file": "frames/object4-s3k-35.png",
+      "hotspot": [
+        12,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-36",
+      "animation": "NATIVE_POSE",
+      "order": 144,
+      "file": "frames/object4-s3k-36.png",
+      "hotspot": [
+        14,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-37",
+      "animation": "NATIVE_POSE",
+      "order": 145,
+      "file": "frames/object4-s3k-37.png",
+      "hotspot": [
+        15,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-38",
+      "animation": "NATIVE_POSE",
+      "order": 146,
+      "file": "frames/object4-s3k-38.png",
+      "hotspot": [
+        12,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-39",
+      "animation": "NATIVE_POSE",
+      "order": 147,
+      "file": "frames/object4-s3k-39.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-3a",
+      "animation": "NATIVE_POSE",
+      "order": 148,
+      "file": "frames/object4-s3k-3a.png",
+      "hotspot": [
+        15,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-3b",
+      "animation": "NATIVE_POSE",
+      "order": 149,
+      "file": "frames/object4-s3k-3b.png",
+      "hotspot": [
+        12,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-3c",
+      "animation": "NATIVE_POSE",
+      "order": 150,
+      "file": "frames/object4-s3k-3c.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-49",
+      "animation": "NATIVE_POSE",
+      "order": 151,
+      "file": "frames/object4-s3k-49.png",
+      "hotspot": [
+        19,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-4a",
+      "animation": "NATIVE_POSE",
+      "order": 152,
+      "file": "frames/object4-s3k-4a.png",
+      "hotspot": [
+        13,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-4b",
+      "animation": "NATIVE_POSE",
+      "order": 153,
+      "file": "frames/object4-s3k-4b.png",
+      "hotspot": [
+        13,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-4c",
+      "animation": "NATIVE_POSE",
+      "order": 154,
+      "file": "frames/object4-s3k-4c.png",
+      "hotspot": [
+        13,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-4d",
+      "animation": "NATIVE_POSE",
+      "order": 155,
+      "file": "frames/object4-s3k-4d.png",
+      "hotspot": [
+        11,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-4e",
+      "animation": "NATIVE_POSE",
+      "order": 156,
+      "file": "frames/object4-s3k-4e.png",
+      "hotspot": [
+        18,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-4f",
+      "animation": "NATIVE_POSE",
+      "order": 157,
+      "file": "frames/object4-s3k-4f.png",
+      "hotspot": [
+        18,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-50",
+      "animation": "NATIVE_POSE",
+      "order": 158,
+      "file": "frames/object4-s3k-50.png",
+      "hotspot": [
+        18,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-51",
+      "animation": "NATIVE_POSE",
+      "order": 159,
+      "file": "frames/object4-s3k-51.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-52",
+      "animation": "NATIVE_POSE",
+      "order": 160,
+      "file": "frames/object4-s3k-52.png",
+      "hotspot": [
+        13,
+        17
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-53",
+      "animation": "NATIVE_POSE",
+      "order": 161,
+      "file": "frames/object4-s3k-53.png",
+      "hotspot": [
+        19,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-54",
+      "animation": "NATIVE_POSE",
+      "order": 162,
+      "file": "frames/object4-s3k-54.png",
+      "hotspot": [
+        15,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-43",
+      "animation": "NATIVE_POSE",
+      "order": 163,
+      "file": "frames/object4-s3k-43.png",
+      "hotspot": [
+        10,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-d2",
+      "animation": "NATIVE_POSE",
+      "order": 164,
+      "file": "frames/object4-s3k-d2.png",
+      "hotspot": [
+        10,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-d3",
+      "animation": "NATIVE_POSE",
+      "order": 165,
+      "file": "frames/object4-s3k-d3.png",
+      "hotspot": [
+        13,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-d4",
+      "animation": "NATIVE_POSE",
+      "order": 166,
+      "file": "frames/object4-s3k-d4.png",
+      "hotspot": [
+        16,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-d5",
+      "animation": "NATIVE_POSE",
+      "order": 167,
+      "file": "frames/object4-s3k-d5.png",
+      "hotspot": [
+        16,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    },
+    {
+      "id": "object4-s3k-d6",
+      "animation": "NATIVE_POSE",
+      "order": 168,
+      "file": "frames/object4-s3k-d6.png",
+      "hotspot": [
+        16,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 1,
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+    }
+  ],
+  "scripts": {
+    "WAIT": {
+      "frames": [
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-00",
+        "wait-01",
+        "wait-02",
+        "wait-02",
+        "wait-02",
+        "wait-02",
+        "wait-02",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-03",
+        "wait-03",
+        "wait-03",
+        "wait-04",
+        "wait-04",
+        "wait-04",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-05",
+        "wait-06",
+        "wait-07",
+        "wait-07",
+        "wait-07",
+        "wait-08",
+        "wait-08",
+        "wait-08"
+      ],
+      "durations": [
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      "end": "loop-back",
+      "loopBackSteps": 6
+    },
+    "ROLL": {
+      "frames": [
+        "roll-00",
+        "roll-blur",
+        "roll-01",
+        "roll-blur",
+        "roll-02",
+        "roll-blur",
+        "roll-03",
+        "roll-blur"
+      ],
+      "end": "loop"
+    },
+    "SPINDASH": {
+      "frames": [
+        "spindash-blur",
+        "spindash-00",
+        "spindash-blur",
+        "spindash-01",
+        "spindash-blur",
+        "spindash-02",
+        "spindash-blur",
+        "spindash-03",
+        "spindash-blur",
+        "spindash-04"
+      ],
+      "end": "loop"
+    },
+    "ROLL2": {
+      "frames": [
+        "roll-00",
+        "roll-blur",
+        "roll-01",
+        "roll-blur",
+        "roll-02",
+        "roll-blur",
+        "roll-03",
+        "roll-blur"
+      ],
+      "end": "loop",
+      "speedDriven": true
+    },
+    "WARP1": {
+      "frames": [
+        "variant-s1-33"
+      ],
+      "end": "loop",
+      "durations": [
+        64
+      ]
+    },
+    "WARP2": {
+      "frames": [
+        "variant-s1-33-rot52"
+      ],
+      "end": "loop",
+      "durations": [
+        64
+      ]
+    },
+    "WARP3": {
+      "frames": [
+        "variant-s1-33-rot53"
+      ],
+      "end": "loop",
+      "durations": [
+        64
+      ]
+    },
+    "WARP4": {
+      "frames": [
+        "variant-s1-33-rot54"
+      ],
+      "end": "loop",
+      "durations": [
+        64
+      ]
+    },
+    "FLOAT": {
+      "frames": [
+        "variant-s3k-c9",
+        "variant-s3k-c8"
+      ],
+      "end": "loop",
+      "durations": [
+        8,
+        8
+      ]
+    },
+    "FLOAT2": {
+      "frames": [
+        "variant-s3k-c9",
+        "variant-s3k-ca",
+        "variant-s3k-cc",
+        "variant-s3k-ce",
+        "variant-s3k-cf"
+      ],
+      "end": "loop",
+      "durations": [
+        8,
+        8,
+        8,
+        8,
+        8
+      ]
+    },
+    "LEAP1": {
+      "frames": [
+        "variant-s1-43",
+        "variant-s1-43",
+        "variant-s1-43"
+      ],
+      "end": "loop-back",
+      "durations": [
+        16,
+        16,
+        16
+      ],
+      "loopBackSteps": 1
+    },
+    "LEAP2": {
+      "frames": [
+        "variant-s1-43",
+        "variant-s1-44"
+      ],
+      "end": "loop-back",
+      "durations": [
+        16,
+        16
+      ],
+      "loopBackSteps": 1
+    },
+    "SURF": {
+      "frames": [
+        "variant-s1-49"
+      ],
+      "end": "loop",
+      "durations": [
+        64
+      ]
+    },
+    "BURNT": {
+      "frames": [
+        "variant-s1-4b"
+      ],
+      "end": "loop",
+      "durations": [
+        33
+      ]
+    },
+    "SHRINK": {
+      "frames": [
+        "variant-s1-4e",
+        "variant-s1-4e-scale79",
+        "variant-s1-4e-scale80",
+        "variant-s1-4e-scale81",
+        "variant-s1-4e-scale82",
+        "variant-blank"
+      ],
+      "end": "loop-back",
+      "durations": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "loopBackSteps": 1
+    },
+    "WATER_SLIDE": {
+      "frames": [
+        "variant-s3k-8d",
+        "variant-s3k-8c"
+      ],
+      "end": "loop",
+      "durations": [
+        8,
+        8
+      ]
+    },
+    "NULL_ANIM": {
+      "frames": [
+        "variant-blank"
+      ],
+      "end": "next",
+      "durations": [
+        120
+      ],
+      "next": "WALK"
+    },
+    "FLOAT3": {
+      "frames": [
+        "variant-s3k-c9",
+        "variant-s3k-ca",
+        "variant-s3k-cc",
+        "variant-s3k-ce",
+        "variant-s3k-cf"
+      ],
+      "end": "loop",
+      "durations": [
+        4,
+        4,
+        4,
+        4,
+        4
+      ]
+    },
+    "FLOAT4": {
+      "frames": [
+        "variant-s3k-c9"
+      ],
+      "end": "next",
+      "durations": [
+        4
+      ],
+      "next": "WALK"
+    },
+    "BLINK": {
+      "frames": [
+        "wait-00"
+      ],
+      "end": "next",
+      "durations": [
+        2
+      ],
+      "next": "WALK"
+    },
+    "GET_UP": {
+      "frames": [
+        "variant-s2-0a"
+      ],
+      "end": "next",
+      "durations": [
+        4
+      ],
+      "next": "WALK"
+    },
+    "BALANCE2": {
+      "frames": [
+        "variant-s3k-c8",
+        "variant-s3k-c9",
+        "variant-s3k-ca",
+        "variant-s3k-cb"
+      ],
+      "end": "loop",
+      "durations": [
+        4,
+        4,
+        4,
+        4
+      ]
+    },
+    "VICTORY": {
+      "frames": [
+        "variant-s3k-b0",
+        "variant-s3k-b2",
+        "variant-s3k-b2",
+        "variant-s3k-b2",
+        "variant-s3k-b2",
+        "variant-s3k-b2",
+        "variant-s3k-b2",
+        "variant-s3k-b1",
+        "variant-s3k-b2",
+        "variant-s3k-b3",
+        "variant-s3k-b2"
+      ],
+      "end": "loop-back",
+      "durations": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ],
+      "loopBackSteps": 4
+    },
+    "HANG2": {
+      "frames": [
+        "hang-01",
+        "variant-s2-6c"
+      ],
+      "end": "loop",
+      "durations": [
+        20,
+        20
+      ]
+    },
+    "BUBBLE": {
+      "frames": [
+        "variant-s3k-ac",
+        "variant-s3k-ac",
+        "variant-s3k-03",
+        "variant-s3k-04"
+      ],
+      "end": "next",
+      "durations": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "next": "WALK"
+    },
+    "HURT_FALL": {
+      "frames": [
+        "variant-s3k-8c",
+        "variant-s3k-8d"
+      ],
+      "end": "loop",
+      "durations": [
+        10,
+        10
+      ]
+    },
+    "BALANCE3": {
+      "frames": [
+        "variant-s3k-d0",
+        "variant-s3k-d1"
+      ],
+      "end": "loop",
+      "durations": [
+        20,
+        20
+      ]
+    },
+    "BALANCE4": {
+      "frames": [
+        "variant-s3k-cf",
+        "variant-s3k-c8",
+        "variant-s3k-c9",
+        "variant-s3k-ca",
+        "variant-s3k-cb"
+      ],
+      "end": "loop-back",
+      "durations": [
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "loopBackSteps": 4
+    },
+    "TAILS_CARRIED": {
+      "frames": [
+        "hang-01",
+        "hang-01",
+        "hang-00",
+        "hang-00",
+        "hang-00",
+        "hang-00",
+        "hang-00",
+        "hang-00",
+        "hang-02",
+        "hang-02",
+        "hang-02",
+        "hang-02",
+        "hang-02",
+        "hang-02",
+        "hang-01",
+        "hang-01"
+      ],
+      "durations": [
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12
+      ],
+      "end": "loop"
+    },
+    "BLANK": {
+      "frames": [
+        "variant-blank"
+      ],
+      "end": "loop",
+      "durations": [
+        120
+      ]
+    },
+    "HURT2": {
+      "frames": [
+        "variant-s3k-8d"
+      ],
+      "end": "loop",
+      "durations": [
+        65
+      ]
+    },
+    "SLIDE": {
+      "frames": [
+        "variant-s3k-8d",
+        "variant-s3k-8c"
+      ],
+      "end": "loop",
+      "durations": [
+        10,
+        10
+      ]
+    },
+    "FLY": {
+      "frames": [
+        "wait-07",
+        "wait-08"
+      ],
+      "end": "loop",
+      "durations": [
+        10,
+        10
+      ]
+    },
+    "DUCK": {
+      "frames": [
+        "duck-00",
+        "duck-01"
+      ],
+      "durations": [
+        6,
+        6
+      ],
+      "end": "loop-back",
+      "loopBackSteps": 1
+    },
+    "LOOK_UP": {
+      "frames": [
+        "look_up-00",
+        "look_up-01"
+      ],
+      "durations": [
+        6,
+        6
+      ],
+      "end": "loop-back",
+      "loopBackSteps": 1
+    },
+    "GLIDE_SLIDE": {
+      "frames": [
+        "hang-00",
+        "hang-01",
+        "hang-02",
+        "hang-01"
+      ],
+      "durations": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "end": "loop"
+    }
+  },
+  "nativeFrames": {
+    "hang/0": "hang-00",
+    "hang/1": "hang-01",
+    "hang/2": "hang-02",
+    "wait/stand": "wait-00",
+    "wait/fidget": "wait-03",
+    "roll/0": "roll-00",
+    "roll/1": "roll-01",
+    "roll/2": "roll-02",
+    "roll/3": "roll-03",
+    "roll/4": "roll-blur",
+    "ride/stand": "wait-00",
+    "crane/fall": "native-pose-ca",
+    "hang/crane": "native-pose-cb",
+    "bar/release": "native-pose-24",
+    "twist/0": "native-pose-55",
+    "twist/1": "native-pose-56",
+    "twist/2": "native-pose-57",
+    "twist/4": "native-pose-59",
+    "twist/5": "native-pose-5a",
+    "twist/3": "object-pose-58",
+    "twist/6": "object-pose-5b",
+    "pole/0": "object-pose-5c",
+    "pole/1": "object-pose-5d",
+    "pole/2": "object-pose-5e",
+    "pole/3": "object-pose-5f",
+    "pole/4": "object-pose-60",
+    "pole/5": "object-pose-61",
+    "pole/6": "object-pose-62",
+    "bar/0": "object-pose-63",
+    "bar/1": "object-pose-64",
+    "bar/2": "object-pose-65",
+    "bar/3": "object-pose-66",
+    "bar/4": "object-pose-67",
+    "bar/5": "object-pose-68",
+    "tumble/0": "object-pose-69",
+    "tumble/1": "object-pose-6a",
+    "tumble/2": "object-pose-6b",
+    "tumble/3": "object-pose-6c",
+    "tumble/4": "object-pose-6d",
+    "tumble/5": "object-pose-6e",
+    "tumble/6": "object-pose-6f",
+    "tumble/7": "object-pose-70",
+    "tumble/8": "object-pose-71",
+    "tumble/9": "object-pose-72",
+    "tumble/10": "object-pose-73",
+    "tumble/11": "object-pose-74",
+    "tumble/12": "object-pose-75",
+    "tumble/13": "object-pose-76",
+    "tumble/14": "object-pose-77",
+    "swing/0": "object-pose-78",
+    "swing/1": "object-pose-79",
+    "swing/2": "object-pose-7a",
+    "swing/3": "object-pose-7b",
+    "swing/4": "object-pose-7c",
+    "swing/5": "object-pose-7d",
+    "swing/6": "object-pose-7e",
+    "swing/7": "object-pose-7f",
+    "bar-end/0": "object-pose-94",
+    "bar-end/1": "object-pose-95",
+    "family-roll/0": "roll-blur",
+    "family-roll/1": "roll-00",
+    "family-roll/4": "roll-03",
+    "family-roll/2": "roll-01",
+    "family-roll/3": "roll-02",
+    "family-warp1/0": "variant-s1-33",
+    "family-warp2/0": "variant-s1-33-rot52",
+    "family-warp3/0": "variant-s1-33-rot53",
+    "family-warp4/0": "variant-s1-33-rot54",
+    "family-float2/1": "variant-s3k-c9",
+    "family-float2/0": "variant-s3k-c8",
+    "family-float2/2": "variant-s3k-ca",
+    "family-float2/4": "variant-s3k-cc",
+    "family-float2/6": "variant-s3k-ce",
+    "family-float2/7": "variant-s3k-cf",
+    "family-leap1/0": "variant-s1-43",
+    "family-leap1/1": "variant-s1-44",
+    "family-surf/0": "variant-s1-49",
+    "family-burnt/0": "variant-s1-4b",
+    "family-shrink/0": "variant-s1-4e",
+    "family-shrink/1": "variant-s1-4e-scale79",
+    "family-shrink/2": "variant-s1-4e-scale80",
+    "family-shrink/3": "variant-s1-4e-scale81",
+    "family-shrink/4": "variant-s1-4e-scale82",
+    "family-shrink/5": "variant-blank",
+    "family-hurt-fall/1": "variant-s3k-8d",
+    "family-hurt-fall/0": "variant-s3k-8c",
+    "family-blank/0": "variant-blank",
+    "family-blink/0": "wait-00",
+    "family-get-up/1": "variant-s2-0a",
+    "family-balance2/0": "variant-s3k-a1",
+    "family-balance2/1": "variant-s3k-a2",
+    "family-balance2/2": "variant-s3k-a3",
+    "family-hang2/0": "hang-01",
+    "family-hang2/1": "variant-s2-6c",
+    "family-bubble/0": "variant-s3k-ac",
+    "family-bubble/1": "variant-s3k-03",
+    "family-bubble/2": "variant-s3k-04",
+    "family-hurt/0": "hurt-00",
+    "family-balance3/0": "variant-s3k-d0",
+    "family-balance3/1": "variant-s3k-d1",
+    "family-balance4/0": "variant-s3k-cf",
+    "family-balance4/1": "variant-s3k-c8",
+    "family-balance4/2": "variant-s3k-c9",
+    "family-balance4/3": "variant-s3k-ca",
+    "family-balance4/4": "variant-s3k-cb",
+    "family-blink/1": "variant-s3k-c5",
+    "family-blink/2": "variant-s3k-c6",
+    "family-blink/3": "variant-s3k-c7",
+    "family-get-up/0": "variant-s3k-8f",
+    "family-float2/3": "variant-s3k-cb",
+    "family-float2/5": "variant-s3k-cd",
+    "family-victory/0": "variant-s3k-b0",
+    "family-victory/1": "variant-s3k-b2",
+    "family-victory/2": "variant-s3k-b1",
+    "family-victory/3": "variant-s3k-b3",
+    "family-wait/7": "wait-07",
+    "family-wait/8": "wait-08",
+    "family-wait/0": "wait-00",
+    "family-wait/1": "wait-01",
+    "family-wait/2": "wait-02",
+    "family-wait/3": "wait-03",
+    "family-wait/4": "wait-04",
+    "family-wait/5": "wait-05",
+    "family-wait/6": "wait-06",
+    "family-death/0": "death-00",
+    "family-drown/0": "drown-00",
+    "family-spring/0": "spring-00",
+    "family-look-up/0": "look_up-00",
+    "family-look-up/1": "look_up-01",
+    "family-duck/0": "duck-00",
+    "family-duck/1": "duck-01",
+    "family-push/0": "push-00",
+    "family-push/1": "push-01",
+    "family-push/2": "push-00",
+    "family-push/3": "push-01",
+    "family-hang/0": "hang-00",
+    "family-hang/1": "hang-01",
+    "family-skid/0": "skid-00",
+    "family-skid/1": "skid-01",
+    "family-skid/2": "skid-02",
+    "family-skid/3": "skid-03",
+    "family-balance/0": "balance-00",
+    "family-balance/1": "balance-01",
+    "family-balance/2": "balance-02",
+    "family-spindash/0": "spindash-blur",
+    "family-spindash/1": "spindash-00",
+    "family-spindash/2": "spindash-01",
+    "family-spindash/3": "spindash-02",
+    "family-spindash/4": "spindash-03",
+    "family-spindash/5": "spindash-04",
+    "family-walk/0": "walk-00",
+    "family-walk/1": "walk-01",
+    "family-walk/2": "walk-02",
+    "family-walk/3": "walk-03",
+    "family-walk/4": "walk-04",
+    "family-walk/5": "walk-05",
+    "family-walk/6": "walk-06",
+    "family-walk/7": "walk-07",
+    "family-run/0": "run-00",
+    "family-run/1": "run-01",
+    "family-run/2": "run-02",
+    "family-run/3": "run-03",
+    "chain/0": "object4-s3k-80",
+    "chain/1": "object4-s3k-81",
+    "chain/2": "object4-s3k-82",
+    "chain/3": "object4-s3k-83",
+    "chain/4": "object4-s3k-84",
+    "chain/5": "object4-s3k-85",
+    "carry/0": "spindash-00",
+    "carry/1": "spindash-01",
+    "carry/2": "object4-s3k-8c",
+    "carry/3": "object4-s3k-8d",
+    "hang/3": "object4-s3k-93",
+    "cutscene-hurt/0": "object4-s3k-b4",
+    "cutscene-hurt/1": "object4-s3k-b5",
+    "crane/release": "object4-s3k-c0",
+    "emerald/look": "object4-s3k-c4",
+    "wall-run/0": "object4-s3k-df",
+    "wall-run/1": "object4-s3k-e0",
+    "wall-run/2": "object4-s3k-e1",
+    "wall-run/3": "object4-s3k-e2",
+    "wall-run/4": "object4-s3k-e3",
+    "parachute/0": "object4-s3k-e4",
+    "parachute/1": "hang-00",
+    "parachute/2": "object4-s3k-e6",
+    "parachute/3": "object4-s3k-e7",
+    "parachute/4": "object4-s3k-e8",
+    "parachute/5": "object4-s3k-e9",
+    "parachute/6": "object4-s3k-ea",
+    "corkscrew/0": "object4-s3k-ef",
+    "corkscrew/1": "object4-s3k-f0",
+    "corkscrew/2": "object4-s3k-f1",
+    "corkscrew/3": "object4-s3k-f2",
+    "corkscrew/4": "object4-s3k-f3",
+    "corkscrew/5": "object4-s3k-f4",
+    "corkscrew/6": "object4-s3k-f5",
+    "corkscrew/7": "object4-s3k-f6",
+    "corkscrew/8": "object4-s3k-f7",
+    "corkscrew/9": "object4-s3k-f8",
+    "corkscrew/10": "object4-s3k-f9",
+    "corkscrew/11": "object4-s3k-fa",
+    "gravity-loop/0": "object4-s3k-31",
+    "gravity-loop/1": "object4-s3k-32",
+    "gravity-loop/2": "object4-s3k-33",
+    "gravity-loop/3": "object4-s3k-34",
+    "gravity-loop/4": "object4-s3k-35",
+    "gravity-loop/5": "object4-s3k-36",
+    "gravity-loop/6": "object4-s3k-37",
+    "gravity-loop/7": "object4-s3k-38",
+    "gravity-loop/8": "object4-s3k-39",
+    "gravity-loop/9": "object4-s3k-3a",
+    "gravity-loop/10": "object4-s3k-3b",
+    "gravity-loop/11": "object4-s3k-3c",
+    "cage-entry/0": "object4-s3k-49",
+    "cage-entry/1": "object4-s3k-4a",
+    "cage-entry/2": "object4-s3k-4b",
+    "cage-entry/3": "object4-s3k-4c",
+    "cage-entry/4": "object4-s3k-4d",
+    "cage-entry/5": "object4-s3k-4e",
+    "cage-entry/6": "object4-s3k-4f",
+    "cage-entry/7": "object4-s3k-50",
+    "cage-entry/8": "object4-s3k-51",
+    "cage-entry/9": "object4-s3k-52",
+    "cage-entry/10": "object4-s3k-53",
+    "cage-entry/11": "object4-s3k-54",
+    "family-leap1/2": "object4-s3k-43",
+    "family-super-transform/0": "object4-s3k-d2",
+    "family-super-transform/1": "object4-s3k-d3",
+    "family-super-transform/2": "object4-s3k-d4",
+    "family-super-transform/3": "object4-s3k-d5",
+    "family-super-transform/4": "object4-s3k-d6"
+  }
+}

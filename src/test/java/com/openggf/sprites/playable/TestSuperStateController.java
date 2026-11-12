@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Tests for {@link SuperStateController#isSuper()} classification.
@@ -18,8 +19,10 @@ public class TestSuperStateController {
      * and calls reset(); it never dereferences the player, so null is fine. */
     private static final class TestableController extends SuperStateController {
         TestableController() {
-            super(null);
+            this(null);
         }
+        TestableController(AbstractPlayableSprite player) { super(player); }
+        void restoreNormalPresentation() { reconcileRewindPhysicsAndAnimationProfile(false); }
 
         @Override protected int getRingDrainInterval() { return 0; }
         @Override protected int getMinRingsToTransform() { return 0; }
@@ -88,5 +91,29 @@ public class TestSuperStateController {
     @Test
     public void genericControllersDoNotExposeHyperCapability() {
         assertFalse(new TestableController().isHyperFormActive());
+    }
+
+    @Test
+    public void rewindAfterBorrowedNativeArtRestoresTheBoundOrdinaryProfileIncludingRefresh() {
+        var borrowed = new com.openggf.sprites.animation.ScriptedVelocityAnimationProfile();
+        borrowed.setIdleAnimId(5);
+        var current = new java.util.concurrent.atomic.AtomicReference<com.openggf.sprites.animation.SpriteAnimationProfile>();
+        var player = mock(AbstractPlayableSprite.class);
+        when(player.getAnimationProfile()).thenAnswer(ignored -> current.get());
+        doAnswer(call -> { current.set(call.getArgument(0)); return null; })
+                .when(player).setAnimationProfile(any());
+        var controller = new TestableController(player);
+        for (int ordinaryId : new int[]{517, 600}) {
+            var ordinary = new com.openggf.sprites.animation.ScriptedVelocityAnimationProfile();
+            ordinary.setIdleAnimId(ordinaryId);
+            controller.bindNormalAnimationProfile(ordinary);
+            current.set(borrowed);
+            controller.restoreNormalPresentation();
+            // The scene's post-restore callback reapplies its borrowed view;
+            // ordinary publication later returns the configured profile.
+            current.set(ordinary);
+            controller.restoreNormalPresentation();
+            assertSame(ordinary, current.get(), "released ordinary art survives rewind and art refresh");
+        }
     }
 }
