@@ -592,7 +592,10 @@ measured surface style and `outline_mode` in the frame's native-pose provenance;
 alongside the unchanged palette, binary alpha, geometry and rebuild checks.
 Do not use the option to bypass visual comparison: native real-palette 8×
 references, fresh generations, locked anatomy scale and an unlabelled per-frame
-side-by-side remain required. MICA/TALON carry provenance is a worked example.
+side-by-side remain required. MICA/TALON carry provenance is a worked example of the
+measurements; those frames returned to the ink silhouette on 2026-11-12, when the owner found
+them washed out beside ink-outlined gameplay frames, so no shipped frame currently uses the option
+(`production/talon/tonal_reshade.py`, `production/mica/carried_reshade.py`).
 
 ## Production special-stage character probe
 

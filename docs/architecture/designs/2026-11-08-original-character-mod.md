@@ -1692,8 +1692,21 @@ contours and read washed out beside the 37 px rung set (mean luminance 126 and 1
 sheet mean of 88; no ink on the carry silhouette). `production/talon/tonal_reshade.py` rebuilds
 them from their original rows with the sheet's ink silhouette, darker slate plumage, grey-white
 feather tips and brown satchel; silhouettes, hotspots and all 36 carry pairings are unchanged.
-The guide images `carry.png`, `talon-flight-divebomb.png` and `gilded-instagib.png` predate both
-corrections and still show the earlier art.
+MICA's three carried drawings (`hang-00`..`02`) came from the same joint redraw and were the only
+frames of her sheet without a full ink silhouette (ink on a third of it, mean luminance 107–109
+against a sheet median of 88). `production/mica/carried_reshade.py` gives them the ink silhouette,
+ink scale separators and jade-shadow scale shade of her other frames, again by index remap from the
+original rows; no other frame of her sheet was un-inked.
+The guide images `carry.png`, `talon-flight-divebomb.png` and `gilded-instagib.png` were recaptured
+with their original recipes, so they also show TALON at the 37 px rung for the first time. All are
+`GameplayCaptureTool` on S3K AIZ act 1 at 320 px with the built mod jar. Carry: `--x 6040 --y 1040`,
+rings 34, MICA with TALON as sidekick (stock half: Sonic with Tails), input
+`30 -; 22 - / R; 1 - / A; 2 -; 1 - / A; repeat 15 { 8 -; 1 - / A }; 120 -`, frame 140, a 120×120 crop
+24 px above the player at ×2. Flight: TALON as main at `--x 7100 --y 900`, rings 38, input
+`30 -; 1 A; 20 -; repeat 5 { 1 A; 8 - }; 18 D; 1 D+A; 120 R; 60 -`, frames 20–168 in steps of 2.
+Hyper: MICA at the same position, rings 70, `--emeralds 3333333`, input
+`30 -; 1 A; 20 -; 1 A; 40 -; repeat 8 { 1 R+A; 16 R }; 120 R`, frames 120–238 in steps of 2. Both
+animations are 160×112 player-centred crops at ×2, 33 ms a frame, quantised to 255 colours.
 
 **Powered-form owner feedback, 2026-11-11:** powered binding selects the creator’s
 movement archetype; native Tails families retain Tails clocks instead of consuming

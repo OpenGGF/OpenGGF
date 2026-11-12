@@ -111,5 +111,6 @@
     "S3K Tails mappings $A2/$A1, same real palette; no separate rotor",
     "First two attempts used $A0 as initial posture; final style attempts use the $A2 carrier pair."
   ],
-  "contactMeasurements": "carry-contact-check.json"
+  "contactMeasurements": "carry-contact-check.json",
+  "tonal_reshade": "2026-11-12: the selective material contours and shading measured here were superseded by carried_reshade.py (ink silhouette, the sheet's index usage). Sizes, hotspots, areas and the contact measurements still hold; the boundary colour counts and charcoal fractions describe the 2026-11-10 pixels."
 }

@@ -201,7 +201,8 @@ under the matching area heading; see the
   `StrikeTrailStyle.echoPhaseSlot`). Normal TALON now stands 37 px, and every
   Solar pose keeps one gloved wing-arm per side; new
   profile-facing flight art matches his carry identity, and his flight and carry
-  frames share the ink outline and slate plumage of his other poses. S1 creator
+  frames, like MICA's carried frames, share the ink outline and shading of their
+  other poses. S1 creator
   forms play animated transformations. Joint native-pose carry redraws now
   keep MICA’s raised gloves against TALON’s shoes throughout his wingbeat,
   with native-style material contours and the complete S3K hanging sequence.

@@ -17,7 +17,7 @@ the repository root. `assemble.py` is `tools/modding/playable_art/assemble.py`.
 | `portrait/` | `*-frames.txt`; 1 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `powered/` | `palettes.txt`; 111 PNGs | Host-specific native-pose powered sheets | Run `assemble.py` for each `powered/s2` and `powered/s3k` handoff into a target directory. |
 | `reels/` | 2 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
-| `sheet/` | 274 PNGs | Approved native-pose drawings and deterministic slopes | `assemble.py art/mica/sheet <target-output>` packages the handoff; it does not redraw approved frames. |
+| `sheet/` | 274 PNGs | Approved native-pose drawings and deterministic slopes | `assemble.py art/mica/sheet <target-output>` packages the handoff; it does not redraw approved frames. `production/mica/carried_reshade.py --check` covers the three carried frames. |
 | `snowboard/` | `*-frames.txt`; 13 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `special-stage/` | `frames.txt` (per host for MICA endings); 72 PNGs | Canonical indexed parts, native body motion and joint placements | `python3 tools/modding/playable_art/locked_stage.py examples/mica-and-talon/production/mica/consistent-stage --check` (omit `--check` to rebuild). |
 | `stage-poses/` | `frames.txt` (per host for MICA endings); 35 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
@@ -28,6 +28,21 @@ The final special-stage manifests point from that tree to these approved PNGs.
 The remaining scripts record individual production steps and may require external
 raw generations or ROM references; the ordinary build never runs them. Changes
 to approved drawings need the native-style and render checks described above.
+
+## Carried frames tonal re-shade, 2026-11-12
+
+`hang-00`..`02` (HANG, HANG2 and the `TAILS_CARRIED` script) kept the selective material
+contours of the 2026-11-10 joint carry redraw: ink on a third of the silhouette, jade-deep scale
+lines and no jade-shadow, at mean luminance 107–109 against a sheet median of 88. Once TALON's
+carry frames were re-shaded (see [his README](../talon/README.md)) they were the only un-inked
+sprites in the carry shot. They now have the pipeline's 1 px ink silhouette (`recipe.json` and
+`native-pose-core.json` no longer mark them `outline_mode: material`), ink scale separators and
+jade-shadow scale shade, and average 98–100; all 273 drawn frames of the sheet have a full ink
+silhouette. No pixel was added, removed or moved, so sizes, hotspots and the 36 carry pairings are
+unchanged. `production/mica/carried_reshade.py --check` rebuilds them from the original rows in
+[`carried-reshade.json`](../../production/mica/carried-reshade.json). An audit of the whole
+sheet found no other un-inked frame; the remaining statistical outliers are intended drawings and
+are listed in that record.
 
 ## Powered-form feedback, 2026-11-11
 

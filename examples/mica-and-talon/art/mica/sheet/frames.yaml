@@ -1250,7 +1250,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 3, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 3, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (carried_reshade.py): ink silhouette and scale separators, jade-shadow scale shade as the rest of her sheet; silhouette, hotspot and grip pixels unchanged."
     },
     {
       "id": "hang-01",
@@ -1263,7 +1263,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 0, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 0, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (carried_reshade.py): ink silhouette and scale separators, jade-shadow scale shade as the rest of her sheet; silhouette, hotspot and grip pixels unchanged."
     },
     {
       "id": "hang-02",
@@ -1276,7 +1276,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 5, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours, native selective material outlines; palette quantization only. Contact at native +28 centre offset."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 5, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (carried_reshade.py): ink silhouette and scale separators, jade-shadow scale shade as the rest of her sheet; silhouette, hotspot and grip pixels unchanged."
     },
     {
       "id": "stop-00",

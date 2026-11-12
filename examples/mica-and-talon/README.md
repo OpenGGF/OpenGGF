@@ -206,6 +206,7 @@ Check or rebuild the selected images without native pixels or raw generations:
 ```bash
 python3 examples/mica-and-talon/production/talon/feedback_art.py --check
 python3 examples/mica-and-talon/production/talon/tonal_reshade.py --check
+python3 examples/mica-and-talon/production/mica/carried_reshade.py --check
 python3 examples/mica-and-talon/production/powered_palettes.py --check
 python3 tools/modding/playable_art/gilded_java.py --check
 python3 tools/modding/playable_art/solar_java.py --check

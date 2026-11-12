@@ -81,7 +81,8 @@ silhouette. No pixel was added, removed or moved, so sizes, hotspots and the 36 
 unchanged. `production/talon/tonal_reshade.py --check` rebuilds the 24 frames from the original rows
 and per-drawing wing-tip boxes in
 [`tonal-reshade.json`](../../production/talon/tonal-reshade.json), and keeps `recipe.json`,
-`feedback-generation.json` and `rescale-37.json` in step. Titles, special-stage, ending and other
+`feedback-generation.json` and `rescale-37.json` in step. MICA's three carried frames received the
+same treatment (`production/mica/carried_reshade.py`). Titles, special-stage, ending and other
 native-scene surfaces keep their host's selective contours and were not changed. Under Solar the
 aliased carry frames pick up the bank's flame-tip slot on their feather tips, as his other aliased
 wing poses already do.
