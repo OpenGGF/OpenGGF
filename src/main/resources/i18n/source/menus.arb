@@ -727,6 +727,14 @@
   "@hub.ui.recordings": {
     "description": "OpenGGF host UI: hub.ui.recordings. Translate the complete message; preserve named arguments."
   },
+  "hub.extras.blue_spheres": "Blue Spheres",
+  "@hub.extras.blue_spheres": {
+    "description": "OpenGGF host UI: Extras list entry for the S&K Blue Spheres lock-on game. Keep the game's name as players know it."
+  },
+  "hub.ui.extra_modes": "Extra modes",
+  "@hub.ui.extra_modes": {
+    "description": "OpenGGF host UI: hub.ui.extra_modes. Subtitle of the Extras list when it holds built-in modes. Translate the complete message; preserve named arguments."
+  },
   "hub.ui.extras": "Extras",
   "@hub.ui.extras": {
     "description": "OpenGGF host UI: hub.ui.extras. Translate the complete message; preserve named arguments."

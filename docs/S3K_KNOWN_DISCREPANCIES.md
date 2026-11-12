@@ -263,6 +263,7 @@ See the [Competition swap design](architecture/designs/2026-11-07-s3k-competitio
 16. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation)
 17. [SOZ Background Event Modes and Torch Animation](#soz-background-event-modes-and-torch-animation)
 18. [SSZ Act 2 Widescreen Background Columns](#ssz-act-2-widescreen-background-columns)
+19. [Blue Spheres NO WAY! Accepts Any Button](#blue-spheres-no-way-accepts-any-button)
 
 ---
 
@@ -2189,3 +2190,32 @@ Sonic_Move, rather than the campaign Knuckles animation reset. Tails retains
 its four-pixel object margin and single pose. See the
 [arena balance qualification](architecture/validation/2026-10-28-tas-support-competition.md#native-miniature-idle-balance-qualification-2026-11-09)
 for bounded route evidence and remaining arena gaps.
+
+---
+
+## Blue Spheres NO WAY! Accepts Any Button
+
+**Location:** `S3kBlueSpheresTitle.waitForAbc`
+
+### Original Implementation
+
+With Sonic 1 locked on, S&K first shows the NO WAY! banner. Obj_SpheresTitle_4CEAA's
+`loc_4CEB6` (`sonic3k.asm:100632-100645`) opens the menu only when `Ctrl_1` equals
+`button_A_mask|button_B_mask|button_C_mask` exactly: A, B and C held together with no
+direction or Start.
+
+### Our Implementation
+
+Any newly pressed button opens the menu. Everything after the press is the ROM's
+`loc_4CEC8`: the pressed byte is cleared, `sfx_Starpost` plays, the banner becomes GET
+BLUE SPHERES and the menu slides in.
+
+### Rationale
+
+Requested by the project owner. The three-button chord is a cartridge easter-egg
+gesture that keyboard players rarely discover, and it gates nothing but the menu.
+
+### Verification
+
+`TestS3kBlueSpheresRom.titleOpensTheMenuOnAbcAndAcceptsItsOwnCode` holds a button
+(no menu), then presses B alone and checks the menu opens with `sfx_Starpost`.

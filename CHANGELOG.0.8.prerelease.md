@@ -6,6 +6,16 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Blue Spheres:** new under **Extras** when the Sonic 3&K and Sonic 1 ROMs
+  are both present. It is the game Sonic & Knuckles starts with Sonic 1 locked
+  on, rebuilt from the S&K ROM: the title and menu, endless generated stages,
+  12-digit level codes, Sonic or Knuckles, the results screen and the perfect
+  showcase. Stages run on the Sonic 3&K special stage. Sonic 1 is read only for
+  its header. One intentional difference: any button opens the menu from NO WAY!,
+  where the cartridge needs A, B and C together. The single fixed stage other
+  cartridges unlock is not offered. Blue Spheres is an extra of Sonic 3&K, not a
+  separate game.
+
 - **Separate music and sound-effect volumes:** Settings → Audio has Music
   volume and Sound effects volume sliders (`audio.musicVolume`,
   `audio.sfxVolume`, 0–100%, applied on save). Each sound-chip channel takes

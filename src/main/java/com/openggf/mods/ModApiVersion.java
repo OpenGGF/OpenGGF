@@ -174,6 +174,7 @@ public final class ModApiVersion {
      * shared dialogue layout keep creator styling portable between both editors.
      * Native retail options and competition screens have explicit host game modes;
      * competition participant and session services remain engine internals.
+     * S&K Blue Spheres has its own native host game mode; its session is internal.
      * Stageplay's required voices list adds per-speaker PSG tone/rhythm/pitch/variation/length/level,
      * object dialogue speakers, cast identity on native object observations and bounded transient PCM.
      * Stageplay v8 also adds the required per-speaker voices list. These unpublished format and

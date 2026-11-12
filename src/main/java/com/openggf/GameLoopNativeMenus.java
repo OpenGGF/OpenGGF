@@ -245,6 +245,20 @@ final class GameLoopNativeMenus {
                 input.get(), publisher);
     }
 
+    /**
+     * Shows a built-in extra's first screen in place of its freshly loaded host
+     * game's title. The screen runs its own palette fades, so the launch's
+     * fade-in is dropped.
+     */
+    void openNativeExtra(com.openggf.game.nativemenu.NativeExtra extra) {
+        var screen = extra.open(nativeMenuHostContext());
+        loop.resolveFadeManager().cancel();
+        if (!nativeMenus.open(screen)) return;
+        loop.camera.setX((short) 0);
+        loop.camera.setY((short) 0);
+        loop.setGameMode(screen.mode());
+    }
+
     void openNativeTitleMode(boolean options) {
         var module = GameServices.module();
         var provider = module == null ? null : module.getGameService(
@@ -297,6 +311,9 @@ final class GameLoopNativeMenus {
                 }
             }
             case LEVEL -> startNativeMenuLevel(exit);
+            // The screen stays open: its last frame shows under the stage's
+            // entry fade, and the stage hands control back to it.
+            case SPECIAL_STAGE -> loop.enterNativeMenuSpecialStage();
         }
     }
 

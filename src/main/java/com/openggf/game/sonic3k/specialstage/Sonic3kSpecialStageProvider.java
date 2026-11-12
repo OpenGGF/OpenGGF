@@ -29,8 +29,21 @@ import java.util.Optional;
  * S3K special stages are accessed via giant rings hidden in levels.
  * Each stage awards one of seven Chaos Emeralds upon successful completion.
  */
-public class Sonic3kSpecialStageProvider implements SpecialStageProvider, com.openggf.game.internal.NativeSpecialStagePacing, SpecialStageResultsEntry, S3kSpecialStageWorldAccess.ContextualResults {
+public class Sonic3kSpecialStageProvider implements SpecialStageProvider, com.openggf.game.internal.NativeSpecialStagePacing, SpecialStageResultsEntry, S3kSpecialStageWorldAccess.ContextualResults,
+        com.openggf.game.nativemenu.NativeMenuSpecialStage {
     private final Sonic3kSpecialStageManager manager;
+
+    /** Receives a Blue Spheres stage's outcome: cleared, and {@code Special_stage_rings_left}. */
+    public interface BlueSpheresReturn {
+        void finished(boolean cleared, int ringsLeft);
+    }
+
+    private record BlueSpheresEntry(com.openggf.game.sonic3k.bluespheres.S3kBlueSpheresStage stage,
+                                    com.openggf.game.PlayerCharacter character, BlueSpheresReturn onReturn) { }
+
+    // Armed by the Blue Spheres screen; consumed by the next stage start and
+    // retained until that stage hands control back.
+    private BlueSpheresEntry blueSpheres;
     private SpecialStageViewport viewport = SpecialStageViewport.nativeViewport();
 
     // Results entry clears the stage manager before constructing its screen. The
@@ -150,7 +163,41 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider, com.op
         java.util.Objects.requireNonNull(policy, "policy");
         resultsRingsRemaining = -1;
         manager.reset();
+        if (blueSpheres != null) {
+            manager.initializeBlueSpheres(blueSpheres.stage(), blueSpheres.character());
+            return;
+        }
         manager.initialize(stageIndex);
+    }
+
+    /**
+     * Arms the next stage start as a Blue Spheres stage. The screen that arms it
+     * stays open and is resumed through {@code onReturn}.
+     */
+    public void armBlueSpheres(com.openggf.game.sonic3k.bluespheres.S3kBlueSpheresStage stage,
+                               com.openggf.game.PlayerCharacter character, BlueSpheresReturn onReturn) {
+        blueSpheres = new BlueSpheresEntry(java.util.Objects.requireNonNull(stage, "stage"),
+                java.util.Objects.requireNonNull(character, "character"),
+                java.util.Objects.requireNonNull(onReturn, "onReturn"));
+    }
+
+    /** Drops an armed or running Blue Spheres route (the visit closed). */
+    public void disarmBlueSpheres() {
+        blueSpheres = null;
+    }
+
+    @Override
+    public boolean returnsToNativeMenu() {
+        return blueSpheres != null;
+    }
+
+    @Override
+    public void finishNativeMenuStage(boolean cleared) {
+        BlueSpheresEntry entry = blueSpheres;
+        if (entry == null) return;
+        int ringsLeft = manager.getRingsLeft();
+        disarmBlueSpheres();
+        entry.onReturn().finished(cleared, ringsLeft);
     }
 
     @Override
@@ -171,6 +218,10 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider, com.op
         java.util.Objects.requireNonNull(rewardKind, "rewardKind");
         resultsRingsRemaining = -1;
         manager.reset();
+        if (blueSpheres != null) {
+            manager.initializeBlueSpheres(blueSpheres.stage(), blueSpheres.character());
+            return;
+        }
         manager.initialize(stageIndex, rewardKind);
     }
 
