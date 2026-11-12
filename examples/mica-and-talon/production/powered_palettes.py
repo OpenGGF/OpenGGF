@@ -49,9 +49,12 @@ GOLD = [
 GOLD_CYCLE = [0, 1, 2, 3, 4, 3, 2, 1, 0]
 WHITE_HOT = [0x0AE, 0x6CE, 0xAEE, 0xCEE, 0xEEE]
 GOLD_TO_WHITE = [0x08E, 0x2CE, 0x6EE, 0xAEE, 0xEEE]
-GOLD_TO_JADE = [0x460, 0x6A2, 0x6C4, 0xAE6, 0xCEA]
+# Jade is a pale pastel mint (owner feedback 2026-11-12; the first jade was a deep teal that read as
+# a dark flash). Slot 2 is still the darkest plate shade, a mid jade rather than a near-black teal.
+# The step in from gold is a pastel pistachio at the same brightness, so the phase changes hue only.
+GOLD_TO_JADE = [0x484, 0x6A8, 0x6CA, 0x8EC, 0xCEE]
 GOLD_TO_ROSE = [0x26A, 0x48C, 0x6AE, 0x8CE, 0xCEE]
-JADE = [0x440, 0x660, 0x680, 0x8A2, 0xAC6]
+JADE = [0x684, 0x8A6, 0xAC8, 0xCEA, 0xCEC]
 ROSE = [0x248, 0x46C, 0x68E, 0x8AE, 0xCCE]
 
 # TALON: slot 2 stays dark bronze (bars, moustache, feather breaks), 3-5 white-gold plumage,
@@ -80,7 +83,8 @@ def prism(base):
     # white-hot and jade are always separated by gold (photosensitivity rule in design.md).
     # Transition rows are authored, not RGB blends: a blend of gold and white-hot or jade passes
     # through brown/olive, which read as dirt on the plates. White-hot keeps the deep plate gap
-    # (slot 2) in the gold family so the dark rims stay without brown mid-tones.
+    # (slot 2) in the gold family so the dark rims stay without brown mid-tones. Pastel jade stays
+    # clearly green (never as pale as white-hot), so the two remain distinct phases.
     return [at(w) for w in (
         GOLD[0], GOLD[1], GOLD[2], GOLD_TO_WHITE, WHITE_HOT, WHITE_HOT, GOLD_TO_WHITE,
         GOLD[0], GOLD[1], GOLD_TO_JADE, JADE, GOLD_TO_JADE,

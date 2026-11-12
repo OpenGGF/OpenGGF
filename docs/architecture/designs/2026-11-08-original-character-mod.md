@@ -1678,6 +1678,23 @@ fallback rows remain. Normal TALON was rescaled to the owner's 37 px rung (see
 `production/talon/rescale-37.json`); the carry contact check still touches in all 36 pairings.
 New creator API: `PoweredEffects.strikePalette` and `StrikeTrailStyle.echoPhaseSlot`.
 
+**Promo owner feedback, 2026-11-12:** two art corrections, no engine or API change.
+Hyper MICA's jade phase was a deep teal (`440 660 680 8A2 AC6`) that read as a dark flash; it
+is now a pale pastel mint (`684 8A6 AC8 CEA CEC`) entered through a pastel pistachio step
+(`484 6A8 6CA 8EC CEE`) at the gold rows' brightness, so the phase changes hue, not value. Slot 2
+remains the darkest plate shade. The strike palette, cool ember and heat-front fringe in
+`effects.txt` take the same row. White-hot and jade are still separated by gold on both sides;
+`test_powered_character_glow.py` now recognises jade by a green-led hue with a saturation floor
+(brightness cannot separate a pastel from white-hot), pins the pastel ramp and the strike row, and
+proves the rule fails when white-hot meets jade, including at the loop seam.
+TALON's twelve carry and twelve free-flight frames kept the 2026-11-10 selective material
+contours and read washed out beside the 37 px rung set (mean luminance 126 and 112 against a
+sheet mean of 88; no ink on the carry silhouette). `production/talon/tonal_reshade.py` rebuilds
+them from their original rows with the sheet's ink silhouette, darker slate plumage, grey-white
+feather tips and brown satchel; silhouettes, hotspots and all 36 carry pairings are unchanged.
+The guide images `carry.png`, `talon-flight-divebomb.png` and `gilded-instagib.png` predate both
+corrections and still show the earlier art.
+
 **Powered-form owner feedback, 2026-11-11:** powered binding selects the creator’s
 movement archetype; native Tails families retain Tails clocks instead of consuming
 Super Sonic’s movement table. Authored powered scripts have relocated canonical

@@ -30,10 +30,12 @@ front super FFFFE8 14 3 240 4
 # keeps the plate colour (slot 4) of her running cycle when it spawned, beneath the jade strike palette,
 # so the echoes band gold, white, jade and rose.
 # The strike itself holds her jade phase (the design's forced jade beat), matching the jade fringe.
-trail hyper FFFFFF FFDB49 49DBB6 none 200 4
-strike-palette hyper 000 222 440 660 680 8A2 AC6 8CE 6AC 68A 44E 22A EEE CCC 88E 024
+# Jade is the pale pastel mint of the Prism Gilt cycle (production/powered_palettes.py JADE): the
+# strike palette is that row, the cool ember its slot 4 (92DBB6) and the fringe its slot 3 (6DB692).
+trail hyper FFFFFF FFDB49 92DBB6 none 200 4
+strike-palette hyper 000 222 684 8A6 AC8 CEA CEC 8CE 6AC 68A 44E 22A EEE CCC 88E 024
 front hyper DB6D92 27 2 150 9
-front hyper 24B692 23 4 170 8
+front hyper 6DB692 23 4 170 8
 front hyper FFDB49 19 4 230 7
 front hyper FFF6B6 16 4 255 6
 front hyper FFFFFF 14 3 255 4

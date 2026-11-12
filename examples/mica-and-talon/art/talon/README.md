@@ -16,7 +16,7 @@ the repository root. `assemble.py` is `tools/modding/playable_art/assemble.py`.
 | `hud-and-screens/` | 29 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `portrait/` | `*-frames.txt`; 1 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `reels/` | 2 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
-| `sheet/` | 282 PNGs | Approved native-pose drawings and deterministic slopes | `assemble.py art/talon/sheet <target-output>` packages the handoff; it does not redraw approved frames. |
+| `sheet/` | 282 PNGs | Approved native-pose drawings and deterministic slopes | `assemble.py art/talon/sheet <target-output>` packages the handoff; it does not redraw approved frames. `production/talon/tonal_reshade.py --check` covers the 24 flight and carry frames. |
 | `special-stage/` | `frames.txt` (per host for MICA endings); 72 PNGs | Canonical indexed parts, native body motion and joint placements | `python3 tools/modding/playable_art/locked_stage.py examples/mica-and-talon/production/talon/consistent-stage --check` (omit `--check` to rebuild). |
 | `stage-poses/` | `frames.txt` (per host for MICA endings); 36 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `titles/` | `*-frames.txt`; 50 PNGs; masks and clear mask | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
@@ -68,6 +68,23 @@ contours. [`rescale-37.json`](../../production/talon/rescale-37.json) lists ever
 and reason. Titles, the settled S2 title poses, lives icons, special-stage and slot poses,
 ending close-ups, far shots and cockpit heads keep their native scene scale. The carry grip
 still touches in all 36 pairings.
+
+**Flight and carry tonal re-shade (2026-11-12).** The owner found the carry frames washed out
+beside the 37 px rung set. Measured over opaque pixels the sheet averaged luminance 88 with ink
+on every silhouette pixel; the twelve carry frames averaged 126 with no ink at all, and the twelve
+free-flight frames drawn to match them 112 with a slate-deep silhouette. Both sets now follow the
+rung set's index usage: the pipeline's 1 px ink silhouette (`recipe.json` no longer opts them out
+with `outline_mode: material`), ink separator lines, plumage one step darker (slate-shadow base,
+slate-deep shade), grey-white feather tips instead of chest cream, and a brown satchel instead of
+stray shoe red. They now average 91–100 and every one of the 282 sheet frames has a full ink
+silhouette. No pixel was added, removed or moved, so sizes, hotspots and the 36 carry pairings are
+unchanged. `production/talon/tonal_reshade.py --check` rebuilds the 24 frames from the original rows
+and per-drawing wing-tip boxes in
+[`tonal-reshade.json`](../../production/talon/tonal-reshade.json), and keeps `recipe.json`,
+`feedback-generation.json` and `rescale-37.json` in step. Titles, special-stage, ending and other
+native-scene surfaces keep their host's selective contours and were not changed. Under Solar the
+aliased carry frames pick up the bank's flame-tip slot on their feather tips, as his other aliased
+wing poses already do.
 
 `production/talon/feedback_art.py` reproduces every selected/converted image from
 original indexed rows; raw generations and decoded native references stay outside

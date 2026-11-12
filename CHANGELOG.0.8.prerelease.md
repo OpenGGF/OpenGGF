@@ -194,13 +194,14 @@ under the matching area heading; see the
   archetype's native clocks and expose host-independent authored flight and
   transformation scripts. Powered forms follow the owner-picked concepts: Open
   Cone Gilded MICA (lifted gold plates; Hyper flashes Prism Gilt gold, white-hot,
-  jade and rose-gold) and Corona Crest Solar TALON (flame crest, goggles down,
+  a pale pastel jade and rose-gold) and Corona Crest Solar TALON (flame crest, goggles down,
   flame-tipped wings), with new wait, run, roll and transformation art. Powered
   forms can hold a strike palette while a strike flies and tint each strike echo
   with its spawn-time cycle phase (`PoweredEffects.strikePalette`,
   `StrikeTrailStyle.echoPhaseSlot`). Normal TALON now stands 37 px, and every
   Solar pose keeps one gloved wing-arm per side; new
-  profile-facing flight art matches his carry identity. S1 creator
+  profile-facing flight art matches his carry identity, and his flight and carry
+  frames share the ink outline and slate plumage of his other poses. S1 creator
   forms play animated transformations. Joint native-pose carry redraws now
   keep MICA’s raised gloves against TALON’s shoes throughout his wingbeat,
   with native-style material contours and the complete S3K hanging sequence.

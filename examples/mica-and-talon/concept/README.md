@@ -29,7 +29,7 @@ her own move is the airborne homing attack.
 | Hands and feet | White gloves. Coral-red boots with tan treaded soles and jade laces. |
 | Spin-ball | A closed ball of scale armour. In motion the plates are simplified so the spin reads; the solid blur frame keeps a specular highlight. |
 | Homing dive | Scales first, like a spinning shell. In game it is a missile shape, rotated per direction. |
-| Gilded form | **Open Cone** (owner pick, 2026-11-11). Every plate lifts on its hinge like an opening pine cone: a sawtooth of broad gold plates over a deep amber underside, the crown plates rising straight with no curl, the roll a saw-toothed ball. Face, belly, gloves and coral boots keep their colours. **Hyper** uses the same drawings and flashes Prism Gilt (gold, white-hot, jade, rose-gold), with matching echoes, trail and denser glints; only Hyper strikes are Instagib. |
+| Gilded form | **Open Cone** (owner pick, 2026-11-11). Every plate lifts on its hinge like an opening pine cone: a sawtooth of broad gold plates over a deep amber underside, the crown plates rising straight with no curl, the roll a saw-toothed ball. Face, belly, gloves and coral boots keep their colours. **Hyper** uses the same drawings and flashes Prism Gilt (gold, white-hot, jade, rose-gold; the jade is a pale pastel mint since owner feedback on 2026-11-12), with matching echoes, trail and denser glints; only Hyper strikes are Instagib. |
 
 In-game palette, `../art/mica/palette.yaml` (index 0 is transparent):
 

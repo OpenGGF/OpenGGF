@@ -193,7 +193,7 @@ contours. Carry geometry and MICA’s hand-to-feet registration are unchanged.
 The owner-picked concepts (2026-11-11) are rolled out: Open Cone Gilded MICA redraws
 every powered pose, and Corona Crest Solar TALON every common pose, for S2 and S3K.
 Normal TALON stands 37 px (owner rung); Solar's crest rises above that body. Gilded plates breathe from a deep amber underside to a pale-gold edge; Hyper
-reuses that bank and flashes Prism Gilt (gold, white-hot, jade, rose-gold). Solar
+reuses that bank and flashes Prism Gilt (gold, white-hot, a pale pastel jade, rose-gold). Solar
 keeps a dark bronze slot for TALON's bars and moustache, with fixed amber/red
 flame tips. Powered silhouettes use the cycling contour slot, retaining only
 interior eye, glove and shoe separators. Normal-bank aliases remain explicit.
@@ -205,6 +205,7 @@ Check or rebuild the selected images without native pixels or raw generations:
 
 ```bash
 python3 examples/mica-and-talon/production/talon/feedback_art.py --check
+python3 examples/mica-and-talon/production/talon/tonal_reshade.py --check
 python3 examples/mica-and-talon/production/powered_palettes.py --check
 python3 tools/modding/playable_art/gilded_java.py --check
 python3 tools/modding/playable_art/solar_java.py --check
