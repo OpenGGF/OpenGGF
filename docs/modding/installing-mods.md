@@ -70,9 +70,11 @@ hangs and routes that become impossible are not certified compatible.
 ## Mods bundled with OpenGGF
 
 Some first-party mods ship inside the JVM distribution and appear in **MODS** with a
-**BUNDLED** badge. They are enabled and trusted by default, with no trust prompt, because
+**BUNDLED** badge. They are trusted by default, with no trust prompt, because
 the engine build itself pins their exact jar hashes; they are still validated like any
-other code mod (see [trust](concepts/trust.md#first-party-bundled-mods-a-deliberate-narrowing)).
+other code mod. Time Attack starts enabled; MICA and TALON starts disabled.
+Enable either mod in the manager and Apply; saved choices survive upgrades
+(see [trust](concepts/trust.md#first-party-bundled-mods-a-deliberate-narrowing)).
 
 - Disable or re-enable one like any mod, then Apply and restart. Your choice is kept in
   `mods/modstate.json` and survives engine upgrades. A bundled mod cannot be uninstalled
@@ -118,3 +120,8 @@ Standalone game saves live under `saves/<mod-id>/`; scene storage is under
 `saves/mods/<mod-id>/`. A missing or incompatible standalone game has no playable
 Continue route. Keep those files for reinstalls; do not assume a different mod with
 the same display name shares its identity or save format.
+
+Building distributions now requires Python 3 with Pillow (CI uses 11.3.0) to
+assemble the bundled character art. Override the Python executable with
+`-Dbundled.python=/path/to/python` or omit bundled packaging with
+`-Dopenggf.bundled.skip=true` for development-only builds.

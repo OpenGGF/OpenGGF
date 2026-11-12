@@ -34,6 +34,33 @@ class TestBundledModPackager {
 
     @TempDir Path temp;
 
+    @Test void projectDefaultsAreWrittenIntoThePinnedManifest() throws Exception {
+        Path checkout = temp.resolve("checkout");
+        Path project = checkout.resolve("examples/hello-scene");
+        try (var files = Files.walk(BASEDIR.resolve("examples/hello-scene/src"))) {
+            for (Path source : files.toList()) {
+                Path destination = project.resolve("src").resolve(
+                        BASEDIR.resolve("examples/hello-scene/src").relativize(source));
+                if (Files.isDirectory(source)) Files.createDirectories(destination);
+                else Files.copy(source, destination);
+            }
+        }
+        Files.writeString(project.resolve("bundled.properties"), "enabledByDefault=false\n");
+        Path generated = Files.createDirectories(checkout.resolve(
+                "target/bundled-mod-resources/examples/hello-scene"));
+        Files.writeString(generated.resolve("bundled-art.txt"), "prepared art");
+        Path output = temp.resolve("out");
+        BundledModManifest manifest = BundledModPackager.packageProjects(checkout, output,
+                temp.resolve("manifest.json"), List.of("examples/hello-scene"),
+                System.getProperty("java.class.path"), System.out);
+        assertFalse(manifest.mods().getFirst().enabledByDefault());
+        try (java.util.jar.JarFile jar = new java.util.jar.JarFile(
+                output.resolve(manifest.mods().getFirst().file()).toFile())) {
+            assertEquals("prepared art", new String(jar.getInputStream(
+                    jar.getJarEntry("bundled-art.txt")).readAllBytes(), StandardCharsets.UTF_8));
+        }
+    }
+
     @Test void examplePayloadPackagesBootsTrustedAndLoadsFromAnInstallDirectory() throws Exception {
         Path install = temp.resolve("install");
         Path classes = Files.createDirectories(temp.resolve("engine-classes"));

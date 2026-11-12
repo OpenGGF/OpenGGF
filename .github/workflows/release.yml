@@ -294,6 +294,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install bundled character art tooling
+        run: python -m pip install Pillow==11.3.0
+
       # Community 25.4.4.1.1+1.1: pinned archives/digests for all three targets.
       - name: Set up GraalVM Community 25.4.4.1.1+1.1
         shell: bash
@@ -303,7 +306,7 @@ jobs:
       # The upstream test job owns suite execution; packaging need not compile tests again.
       - name: Prepare native image
         shell: bash
-        run: mvn -Dmse=off package -Pnative -Dmaven.test.skip=true -Dnative.python=python -Dnative.stage=prepare -Dnative.macos.package.skip=true -B -Dopenggf.multiplayer.channel=master
+        run: mvn -Dmse=off package -Pnative -Dmaven.test.skip=true -Dnative.python=python -Dbundled.python=python -Dnative.stage=prepare -Dnative.macos.package.skip=true -B -Dopenggf.multiplayer.channel=master
 
       - name: Build native image
         shell: bash
@@ -542,6 +545,13 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
           cache: maven
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install bundled character art tooling
+        run: python -m pip install Pillow==11.3.0
 
       - name: Build universal JVM jar
         shell: bash

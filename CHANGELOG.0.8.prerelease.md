@@ -217,7 +217,9 @@ under the matching area heading; see the
 
 ## Modding and tools
 
-- **MICA, an original character framework example:** TALON’s S3K lives label now
+- **MICA, an original character framework example:** The complete MICA and TALON
+  mod now ships bundled with JVM and native distributions, disabled by default.
+  Enable it in the mod manager; saved enable/disable choices survive upgrades. TALON’s S3K lives label now
   spells his full name using native glyph pixels with tighter blank padding; S1,
   S2 and MICA retain their existing words and portraits. Creator S3K lives names
   preserve the native × beside the counter, as S1/S2 already do. TALON now joins as her

@@ -1,5 +1,8 @@
 # MICA and TALON
 
+MICA and TALON ships with OpenGGF as a bundled mod, turned off by default.
+Enable it in the mod manager to use the characters; your choice is saved.
+
 An official character-mod example for Sonic 1, Sonic 2 and Sonic 3 & Knuckles.
 MICA is an original jade pangolin with Sonic physics, spindash and a homing
 strike. TALON is an original falcon with Tails physics, flight and a targeted
