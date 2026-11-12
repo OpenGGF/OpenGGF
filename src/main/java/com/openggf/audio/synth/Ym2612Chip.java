@@ -665,12 +665,17 @@ public class Ym2612Chip implements FmChip {
         core.clocks(quiet, pinBuffer);
         frameSumLeft += pinBuffer[0];
         frameSumRight += pinBuffer[1];
+        /* quiet runs happen only at unity gain, so the gained sums take the raw pins */
+        gainedSumLeft += pinBuffer[0];
+        gainedSumRight += pinBuffer[1];
         busHold = Math.max(0, busHold - quiet);
         physicalCycle += quiet;
         if (state.cycles == 0) {
-            emitFrame(frameSumLeft << OUTPUT_SHIFT, frameSumRight << OUTPUT_SHIFT);
+            emitFrame(gainedSumLeft << OUTPUT_SHIFT, gainedSumRight << OUTPUT_SHIFT);
             frameSumLeft = 0;
             frameSumRight = 0;
+            gainedSumLeft = 0;
+            gainedSumRight = 0;
         }
     }
 
@@ -679,11 +684,12 @@ public class Ym2612Chip implements FmChip {
      * frame, {@link #clockOnce()} would spend doing nothing but clock the
      * core and add its pins: {@link #serviceDac(int)} neither reaches the next
      * sample of the cadence nor finds the bus free for a waiting strobe, no
-     * channel is muted and no per-cycle output stage is attached. Zero when
+     * channel is muted or below unity gain and no per-cycle output stage is
+     * attached. Zero when
      * the very next cycle is not such a cycle.
      */
     private int quietCycles(int limit) {
-        if (nativeOutput != null) {
+        if (nativeOutput != null || !unityOutputGain) {
             return 0;
         }
         for (boolean mute : mutes) {

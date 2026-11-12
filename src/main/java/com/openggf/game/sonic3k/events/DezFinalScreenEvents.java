@@ -124,7 +124,8 @@ public final class DezFinalScreenEvents {
         state.screenShake().setup(levelFrameCounter, player != null && player.getDead());
     }
 
-    private static int arenaDescriptor(LevelManager level, int x, int y) {
+    /** The Plane B source cell DEZ3_ScreenInit/Draw_BGNoVert read for arena column x, row y. */
+    public static int arenaDescriptor(LevelManager level, int x, int y) {
         // The same ScreenInit pointer writes alias BG rows 4 and 31 to FG row 0.
         int sourceY = y & 0xFFF;
         if ((sourceY >>> 7) == 4 || (sourceY >>> 7) == 31)
