@@ -190,7 +190,8 @@
    "new_hotspot": [
     12,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json."
   },
   {
    "id": "walk-01",
@@ -213,7 +214,8 @@
    "new_hotspot": [
     14,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json."
   },
   {
    "id": "walk-02",
@@ -236,7 +238,8 @@
    "new_hotspot": [
     15,
     19
-   ]
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json."
   },
   {
    "id": "walk-03",
@@ -259,7 +262,8 @@
    "new_hotspot": [
     15,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json."
   },
   {
    "id": "walk-04",
@@ -282,7 +286,8 @@
    "new_hotspot": [
     12,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json."
   },
   {
    "id": "walk-05",
@@ -305,7 +310,8 @@
    "new_hotspot": [
     13,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json."
   },
   {
    "id": "walk-06",
@@ -328,7 +334,8 @@
    "new_hotspot": [
     17,
     19
-   ]
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json."
   },
   {
    "id": "walk-07",
@@ -351,7 +358,8 @@
    "new_hotspot": [
     16,
     18
-   ]
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json."
   },
   {
    "id": "run-00",
@@ -374,7 +382,8 @@
    "new_hotspot": [
     13,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json."
   },
   {
    "id": "run-01",
@@ -397,7 +406,8 @@
    "new_hotspot": [
     18,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json."
   },
   {
    "id": "run-02",
@@ -420,7 +430,8 @@
    "new_hotspot": [
     17,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json."
   },
   {
    "id": "run-03",
@@ -443,7 +454,8 @@
    "new_hotspot": [
     18,
     17
-   ]
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json."
   },
   {
    "id": "roll-00",
@@ -5711,6 +5723,15 @@
    "new_hotspot": [
     18,
     16
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    35,
+    35
+   ],
+   "cleanup_hotspot": [
+    18,
+    16
    ]
   },
   {
@@ -5728,6 +5749,15 @@
     37
    ],
    "new_hotspot": [
+    19,
+    16
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    36,
+    37
+   ],
+   "cleanup_hotspot": [
     19,
     16
    ]
@@ -5749,6 +5779,15 @@
    "new_hotspot": [
     17,
     18
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    34,
+    41
+   ],
+   "cleanup_hotspot": [
+    17,
+    18
    ]
   },
   {
@@ -5766,6 +5805,15 @@
     41
    ],
    "new_hotspot": [
+    16,
+    18
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    38,
+    41
+   ],
+   "cleanup_hotspot": [
     16,
     18
    ]
@@ -5787,6 +5835,15 @@
    "new_hotspot": [
     18,
     16
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    34,
+    35
+   ],
+   "cleanup_hotspot": [
+    18,
+    16
    ]
   },
   {
@@ -5804,6 +5861,15 @@
     38
    ],
    "new_hotspot": [
+    18,
+    18
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    35,
+    39
+   ],
+   "cleanup_hotspot": [
     18,
     18
    ]
@@ -5825,6 +5891,15 @@
    "new_hotspot": [
     18,
     17
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    34,
+    40
+   ],
+   "cleanup_hotspot": [
+    19,
+    17
    ]
   },
   {
@@ -5842,6 +5917,15 @@
     41
    ],
    "new_hotspot": [
+    17,
+    17
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    38,
+    41
+   ],
+   "cleanup_hotspot": [
     17,
     17
    ]
@@ -5863,6 +5947,15 @@
    "new_hotspot": [
     17,
     11
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    37,
+    23
+   ],
+   "cleanup_hotspot": [
+    17,
+    11
    ]
   },
   {
@@ -5880,6 +5973,15 @@
     26
    ],
    "new_hotspot": [
+    18,
+    12
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    38,
+    26
+   ],
+   "cleanup_hotspot": [
     18,
     12
    ]
@@ -5901,6 +6003,15 @@
    "new_hotspot": [
     19,
     17
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    38,
+    32
+   ],
+   "cleanup_hotspot": [
+    19,
+    17
    ]
   },
   {
@@ -5918,6 +6029,15 @@
     32
    ],
    "new_hotspot": [
+    18,
+    17
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    37,
+    32
+   ],
+   "cleanup_hotspot": [
     18,
     17
    ]
@@ -5939,6 +6059,15 @@
    "new_hotspot": [
     17,
     11
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    37,
+    23
+   ],
+   "cleanup_hotspot": [
+    17,
+    11
    ]
   },
   {
@@ -5956,6 +6085,15 @@
     26
    ],
    "new_hotspot": [
+    18,
+    13
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    38,
+    26
+   ],
+   "cleanup_hotspot": [
     18,
     13
    ]
@@ -5977,6 +6115,15 @@
    "new_hotspot": [
     19,
     15
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    36,
+    32
+   ],
+   "cleanup_hotspot": [
+    19,
+    15
    ]
   },
   {
@@ -5994,6 +6141,15 @@
     31
    ],
    "new_hotspot": [
+    18,
+    15
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    37,
+    31
+   ],
+   "cleanup_hotspot": [
     18,
     15
    ]
@@ -6015,6 +6171,15 @@
    "new_hotspot": [
     18,
     18
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    35,
+    35
+   ],
+   "cleanup_hotspot": [
+    18,
+    18
    ]
   },
   {
@@ -6032,6 +6197,15 @@
     36
    ],
    "new_hotspot": [
+    18,
+    18
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    37,
+    36
+   ],
+   "cleanup_hotspot": [
     18,
     18
    ]
@@ -6053,6 +6227,15 @@
    "new_hotspot": [
     19,
     17
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    41,
+    34
+   ],
+   "cleanup_hotspot": [
+    19,
+    17
    ]
   },
   {
@@ -6070,6 +6253,15 @@
     38
    ],
    "new_hotspot": [
+    19,
+    22
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    41,
+    38
+   ],
+   "cleanup_hotspot": [
     19,
     22
    ]
@@ -6091,6 +6283,15 @@
    "new_hotspot": [
     18,
     17
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    35,
+    34
+   ],
+   "cleanup_hotspot": [
+    18,
+    17
    ]
   },
   {
@@ -6108,6 +6309,15 @@
     35
    ],
    "new_hotspot": [
+    20,
+    18
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    39,
+    35
+   ],
+   "cleanup_hotspot": [
     20,
     18
    ]
@@ -6129,6 +6339,15 @@
    "new_hotspot": [
     18,
     16
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    40,
+    34
+   ],
+   "cleanup_hotspot": [
+    19,
+    16
    ]
   },
   {
@@ -6148,6 +6367,15 @@
    "new_hotspot": [
     18,
     22
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    41,
+    38
+   ],
+   "cleanup_hotspot": [
+    18,
+    21
    ]
   },
   {
@@ -6165,6 +6393,15 @@
     38
    ],
    "new_hotspot": [
+    17,
+    22
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    38,
+    38
+   ],
+   "cleanup_hotspot": [
     17,
     22
    ]
@@ -6186,6 +6423,15 @@
    "new_hotspot": [
     15,
     22
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    35,
+    40
+   ],
+   "cleanup_hotspot": [
+    15,
+    22
    ]
   },
   {
@@ -6205,6 +6451,15 @@
    "new_hotspot": [
     13,
     22
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    32,
+    40
+   ],
+   "cleanup_hotspot": [
+    12,
+    22
    ]
   },
   {
@@ -6222,6 +6477,15 @@
     40
    ],
    "new_hotspot": [
+    15,
+    22
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    35,
+    40
+   ],
+   "cleanup_hotspot": [
     15,
     22
    ]
@@ -6243,6 +6507,15 @@
    "new_hotspot": [
     17,
     20
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    36,
+    33
+   ],
+   "cleanup_hotspot": [
+    17,
+    20
    ]
   },
   {
@@ -6260,6 +6533,15 @@
     37
    ],
    "new_hotspot": [
+    17,
+    19
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    37,
+    37
+   ],
+   "cleanup_hotspot": [
     17,
     19
    ]
@@ -6281,6 +6563,15 @@
    "new_hotspot": [
     17,
     19
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    37,
+    36
+   ],
+   "cleanup_hotspot": [
+    17,
+    19
    ]
   },
   {
@@ -6298,6 +6589,15 @@
     37
    ],
    "new_hotspot": [
+    17,
+    19
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    37,
+    37
+   ],
+   "cleanup_hotspot": [
     17,
     19
    ]
@@ -6319,6 +6619,15 @@
    "new_hotspot": [
     23,
     21
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    38,
+    38
+   ],
+   "cleanup_hotspot": [
+    23,
+    21
    ]
   },
   {
@@ -6336,6 +6645,15 @@
     35
    ],
    "new_hotspot": [
+    24,
+    21
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    40,
+    35
+   ],
+   "cleanup_hotspot": [
     24,
     21
    ]
@@ -6357,6 +6675,15 @@
    "new_hotspot": [
     24,
     21
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    40,
+    32
+   ],
+   "cleanup_hotspot": [
+    24,
+    21
    ]
   },
   {
@@ -6374,6 +6701,15 @@
     35
    ],
    "new_hotspot": [
+    24,
+    21
+   ],
+   "cleanup": "2026-11-12: walk_cleanup.py, see walk-cleanup.json.",
+   "cleanup_size": [
+    40,
+    35
+   ],
+   "cleanup_hotspot": [
     24,
     21
    ]

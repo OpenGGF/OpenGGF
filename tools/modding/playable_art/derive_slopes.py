@@ -8,10 +8,17 @@ quarter turns of $2D-$30; $39-$3C are quarter turns of $31-$34.
 Thus up45/steep/inverted are +45/+90/+135 visual counterclockwise, before
 engine facing/vertical flips. Scale2x x3, nearest rotate and decimate is a
 RotSprite-style indexed rotation: never interpolate palette or alpha values.
+
+Two reductions exist. "nearest" (the default; MICA's shipped slopes) keeps one
+sample of each 8x8 block of the rotated master. "mode" (TALON's WALK/RUN slopes
+since 2026-11-12) first lifts the flat's silhouette ink off, so no stale outline
+is rotated into the body, keeps the most common index of each block, lets the
+caller run its material cleanup, and only then draws the 1 px ink silhouette.
 """
 import argparse
 import json
 import math
+from collections import Counter
 from pathlib import Path
 from PIL import Image
 from pipeline import outline, build
@@ -36,26 +43,67 @@ def scale2x(im):
     return out
 
 
-def rotate(im, angle):
+def lift_ring(im):
+    """Give each silhouette ink pixel the material beside it, so the outline is redrawn after a turn."""
+    out = im.copy()
+    px, dst = im.load(), out.load()
+    def at(x, y):
+        return px[x,y] if 0 <= x < im.width and 0 <= y < im.height else 0
+    for y in range(im.height):
+        for x in range(im.width):
+            if px[x,y] != 1 or all(at(x+a,y+b) for a,b in ((-1,0),(1,0),(0,-1),(0,1))):
+                continue
+            near = [at(x+a,y+b) for a,b in ((-1,0),(1,0),(0,-1),(0,1)) if at(x+a,y+b) > 1]
+            if not near:
+                near = [at(x+a,y+b) for a in (-1,0,1) for b in (-1,0,1) if at(x+a,y+b) > 1]
+            if near:  # an all-ink limb stays ink
+                counts = Counter(near); top = max(counts.values())
+                dst[x,y] = min(k for k,n in counts.items() if n == top)
+    return out
+
+
+def mode_reduce(big, size, factor=8):
+    """Most common index of each block; a block that is mostly empty stays empty. Ties take the lower index."""
+    out = Image.new('P', size)
+    out.putpalette(big.getpalette())
+    px, dst = big.load(), out.load()
+    for y in range(size[1]):
+        for x in range(size[0]):
+            counts = Counter(px[x*factor+i,y*factor+j] for i in range(factor) for j in range(factor))
+            if counts[0]*2 > factor*factor:
+                continue
+            del counts[0]
+            top = max(counts.values())
+            dst[x,y] = min(k for k,n in counts.items() if n == top)
+    return out
+
+
+def rotate(im, angle, method='nearest', finish=None):
+    """finish (mode only) takes and returns the 45 degree image before it is inked; quarter turns never see it."""
+    if method not in ('nearest', 'mode'):
+        raise ValueError('Unknown reduction: ' + str(method))
     if angle == 90:
         return im.transpose(Image.Transpose.ROTATE_90)
     if angle == 135:
-        return rotate(im,45).transpose(Image.Transpose.ROTATE_90)
+        return rotate(im,45,method,finish).transpose(Image.Transpose.ROTATE_90)
     if angle != 45:
         raise ValueError('Expected 45, 90 or 135')
-    big = im
+    big = lift_ring(im) if method == 'mode' else im
     for _ in range(3):
         big = scale2x(big)
     big = big.rotate(45, resample=Image.Resampling.NEAREST,
                      center=(big.width/2,big.height/2), fillcolor=0)
     # No smoothing, dithering or learned palette. Inside-ink cleanup only.
-    return outline(big.resize(im.size, Image.Resampling.NEAREST))
+    if method == 'nearest':
+        return outline(big.resize(im.size, Image.Resampling.NEAREST))
+    small = mode_reduce(big, im.size)
+    return outline(finish(small) if finish else small)
 
 
-def derive(flat, hotspot, angle, support):
+def derive(flat, hotspot, angle, support, method='nearest', finish=None):
     canvas = Image.new('P',(128,128)); canvas.putpalette(flat.getpalette())
     canvas.paste(flat,(64-hotspot[0],64-hotspot[1]))
-    rotated = rotate(canvas,angle)
+    rotated = rotate(canvas,angle,method,finish)
     sn, cs = math.sin(math.radians(angle)), math.cos(math.radians(angle))
     def distance(x,y): return (x-64)*sn+(y-64)*cs
     actual = max(distance(x,y) for y in range(128) for x in range(128) if rotated.getpixel((x,y)))

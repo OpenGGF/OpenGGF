@@ -597,6 +597,29 @@ measurements; those frames returned to the ink silhouette on 2026-11-12, when th
 them washed out beside ink-outlined gameplay frames, so no shipped frame currently uses the option
 (`production/talon/tonal_reshade.py`, `production/mica/carried_reshade.py`).
 
+## Pixel noise audit and mode-reduced slopes
+
+`noise_audit.py <sheet dir>...` measures every drawn frame of an indexed sheet and ranks it:
+isolated pixels, one- and two-pixel flecks, short-run density, one-pixel anti-alias ramps,
+transition density, mean luminance step and ink-silhouette coverage, each as a share of the
+frame's non-ink body so sizes compare. `--summary` groups by animation and angle set; `--csv`
+writes every frame. Read it against a reference frame: on 2026-11-12 both example sheets had a
+median near 0.33 (reductions of generated drawings), while TALON's clean flight set scored 0.15.
+Speckle that is uniform across a sheet still shows most in loops, because it boils frame to frame.
+
+```bash
+python3 tools/modding/playable_art/noise_audit.py examples/mica-and-talon/art/talon/sheet --summary
+```
+
+`derive_slopes.derive(..., method='mode', finish=...)` is the second 45° reduction. The default
+`nearest` keeps one sample of each 8×8 block of the rotated Scale2x master and re-inks the edge,
+which leaves the flat's old outline scattered inside the body. `mode` lifts the silhouette ink
+first, keeps the commonest index of each block, hands the uninked 45° image to `finish` for the
+caller's material cleanup, then draws the 1 px ink silhouette. Quarter turns stay exact in both.
+MICA's shipped slopes remain `nearest` (her re-derivation test pins them); TALON's WALK/RUN slopes
+use `mode` through `examples/mica-and-talon/production/talon/walk_cleanup.py`, which is also the
+worked example of a material-aware despeckle that never crosses a material or touches ink.
+
 ## Production special-stage character probe
 
 `tools/modding/SpecialStageCharacterProbe.java` records real capture PNGs and a

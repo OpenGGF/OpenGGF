@@ -40,6 +40,37 @@ class DeterministicSlopeTests(unittest.TestCase):
         self.assertEqual(out.getpixel((2,2)),4)
         self.assertEqual(out.getpixel((3,2)),5)
 
+    def test_mode_reduction_redraws_the_outline_and_keeps_quarter_turns_exact(self):
+        # An inked 12x12 block of 4 with a 2x2 core of 10. "mode" lifts the ring before the turn and inks
+        # after it, so the diamond has one ring of ink and no stale outline pixels inside the body.
+        im=Image.new('P',(32,32));im.putpalette([i for i in range(256) for _ in range(3)])
+        for y in range(10,22):
+            for x in range(10,22):im.putpixel((x,y),1 if x in (10,21) or y in (10,21) else 4)
+        for y in (15,16):
+            for x in (15,16):im.putpixel((x,y),10)
+        self.assertEqual({0,4,10},set(slopes.lift_ring(im).get_flattened_data()))
+        turned=slopes.rotate(im,45,'mode')
+        self.assertEqual({0,1,4,10},set(turned.get_flattened_data()))
+        px=turned.load()
+        for y in range(32):
+            for x in range(32):
+                edge=px[x,y] and any(not (0<=a<32 and 0<=b<32) or px[a,b]==0 for a,b in ((x-1,y),(x+1,y),(x,y-1),(x,y+1)))
+                self.assertEqual(bool(edge),px[x,y]==1,(x,y))            # ink is exactly the silhouette
+        self.assertEqual(turned.transpose(Image.Transpose.ROTATE_90).tobytes(),slopes.rotate(im,135,'mode').tobytes())
+        self.assertEqual(slopes.rotate(im,90).tobytes(),slopes.rotate(im,90,'mode').tobytes())
+        seen=[]
+        finished=slopes.rotate(im,45,'mode',finish=lambda small:(seen.append(set(small.get_flattened_data())),small)[1])
+        self.assertEqual([{0,4,10}],seen)                                 # cleanup runs before the ink
+        self.assertEqual(turned.tobytes(),finished.tobytes())
+        with self.assertRaises(ValueError):slopes.rotate(im,45,'bilinear')
+
+    def test_mode_reduce_takes_the_commonest_index_and_drops_mostly_empty_blocks(self):
+        big=Image.new('P',(16,8));big.putpalette([i for i in range(256) for _ in range(3)])
+        for y in range(8):
+            for x in range(8):big.putpixel((x,y),5 if x<5 else 9)        # 40 of 5, 24 of 9
+            for x in range(8,11):big.putpixel((x,y),7)                    # 24 of 64 opaque
+        self.assertEqual([5,0],list(slopes.mode_reduce(big,(2,1)).get_flattened_data()))
+
     def test_every_shipped_slope_rederives_from_flat_pixels(self):
         root=HERE.parents[1]/'examples/mica-and-talon/art/mica/sheet'
         m=json.loads((root/'frames.yaml').read_text());meta=json.loads((root/'../../../production/mica/native-pose-core.json').read_text())['frames']

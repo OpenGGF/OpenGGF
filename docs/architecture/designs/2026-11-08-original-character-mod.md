@@ -1707,6 +1707,18 @@ rings 34, MICA with TALON as sidekick (stock half: Sonic with Tails), input
 Hyper: MICA at the same position, rings 70, `--emeralds 3333333`, input
 `30 -; 1 A; 20 -; 1 A; 40 -; repeat 8 { 1 R+A; 16 R }; 120 R`, frames 120–238 in steps of 2. Both
 animations are 160×112 player-centred crops at ×2, 33 ms a frame, quantised to 255 colours.
+A third owner note the same day, that TALON's walk looked blurry, was measured before it was
+changed. `tools/modding/playable_art/noise_audit.py` scores isolated pixels, short runs and
+one-pixel anti-alias ramps per frame: flat WALK scored 0.35 and RUN 0.31, beside WAIT at 0.37, a
+sheet median of 0.33 (MICA's sheet is the same) and 0.15 for the flight set. The 31 px sheet before
+the rung scored the same, so the speckle is the residue of reducing generated drawings, not of the
+rescale; it shows in WALK and RUN because a loop makes it boil. `production/talon/walk_cleanup.py`
+despeckles plumage and white/cream within their own material on the twelve flats (ink, goggles,
+beak, strap, satchel and shoes untouched; silhouettes identical) and re-derives the 36 slope
+frames with a new mode-reduced rotation in `derive_slopes.py`. Flat WALK is now 0.22, RUN 0.20 and
+the 45° sets 0.13–0.14. The route-2 flats (`walk-00`..`02`, `run-02`) are cleaner but still drawn
+more coarsely than their neighbours; matching the flight set's line quality there needs new art.
+WAIT and the other poses were measured and deliberately left.
 
 **Powered-form owner feedback, 2026-11-11:** powered binding selects the creator’s
 movement archetype; native Tails families retain Tails clocks instead of consuming

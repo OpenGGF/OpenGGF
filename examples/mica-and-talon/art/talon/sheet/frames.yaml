@@ -147,7 +147,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original walk attempt 3 cell 0, uniform factor 0.8; skull/torso scale; no painting."
+      "notes": "Consistency: original walk attempt 3 cell 0, uniform factor 0.8; skull/torso scale; no painting. Cleanup 2026-11-12 (walk_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "walk-01",
@@ -160,7 +160,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original walk attempt 3 cell 1, uniform factor 0.8; skull/torso scale; no painting."
+      "notes": "Consistency: original walk attempt 3 cell 1, uniform factor 0.8; skull/torso scale; no painting. Cleanup 2026-11-12 (walk_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "walk-02",
@@ -173,7 +173,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original walk attempt 3 cell 2, uniform factor 0.8; skull/torso scale; no painting."
+      "notes": "Consistency: original walk attempt 3 cell 2, uniform factor 0.8; skull/torso scale; no painting. Cleanup 2026-11-12 (walk_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "walk-03",
@@ -186,7 +186,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original walk attempt 3 cell 3, uniform factor 0.8; skull/torso scale; no painting."
+      "notes": "Consistency: original walk attempt 3 cell 3, uniform factor 0.8; skull/torso scale; no painting. Cleanup 2026-11-12 (walk_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "walk-04",
@@ -199,7 +199,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original walk attempt 3 cell 4, uniform factor 0.8; skull/torso scale; no painting."
+      "notes": "Consistency: original walk attempt 3 cell 4, uniform factor 0.8; skull/torso scale; no painting. Cleanup 2026-11-12 (walk_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "walk-05",
@@ -212,7 +212,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original walk attempt 3 cell 5, uniform factor 0.8; skull/torso scale; no painting."
+      "notes": "Consistency: original walk attempt 3 cell 5, uniform factor 0.8; skull/torso scale; no painting. Cleanup 2026-11-12 (walk_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "walk-06",
@@ -225,7 +225,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original walk attempt 3 cell 6, uniform factor 0.8; skull/torso scale; no painting."
+      "notes": "Consistency: original walk attempt 3 cell 6, uniform factor 0.8; skull/torso scale; no painting. Cleanup 2026-11-12 (walk_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "walk-07",
@@ -238,7 +238,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original walk attempt 3 cell 7, uniform factor 0.8; skull/torso scale; no painting."
+      "notes": "Consistency: original walk attempt 3 cell 7, uniform factor 0.8; skull/torso scale; no painting. Cleanup 2026-11-12 (walk_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "run-00",
@@ -251,7 +251,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Round 3: round 2 run-attempt-2 cell 0 uniformly re-reduced at 0.88 of original scale (27x30); goggle/beak alignment hotspot [11,11]; no pixel painting."
+      "notes": "Round 3: round 2 run-attempt-2 cell 0 uniformly re-reduced at 0.88 of original scale (27x30); goggle/beak alignment hotspot [11,11]; no pixel painting. Cleanup 2026-11-12 (walk_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "run-01",
@@ -264,7 +264,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Round 2 GPT Image strip run attempt 2 cell 1; S2 Sonic native pose; native aspect/box/hotspot. Far boot palette-only shading; swept-back up/mid/down/mid wing flutter."
+      "notes": "Round 2 GPT Image strip run attempt 2 cell 1; S2 Sonic native pose; native aspect/box/hotspot. Far boot palette-only shading; swept-back up/mid/down/mid wing flutter. Cleanup 2026-11-12 (walk_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "run-02",
@@ -277,7 +277,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Round 2 GPT Image strip run attempt 2 cell 2; S2 Sonic native pose; native aspect/box/hotspot. Far boot palette-only shading; swept-back up/mid/down/mid wing flutter."
+      "notes": "Round 2 GPT Image strip run attempt 2 cell 2; S2 Sonic native pose; native aspect/box/hotspot. Far boot palette-only shading; swept-back up/mid/down/mid wing flutter. Cleanup 2026-11-12 (walk_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "run-03",
@@ -290,7 +290,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Round 2 GPT Image strip run attempt 2 cell 3; S2 Sonic native pose; native aspect/box/hotspot. Far boot palette-only shading; swept-back up/mid/down/mid wing flutter."
+      "notes": "Round 2 GPT Image strip run attempt 2 cell 3; S2 Sonic native pose; native aspect/box/hotspot. Far boot palette-only shading; swept-back up/mid/down/mid wing flutter. Cleanup 2026-11-12 (walk_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "roll-00",
@@ -654,7 +654,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-00, 45 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-00, 45 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-up45-01",
@@ -667,7 +667,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-01, 45 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-01, 45 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-up45-02",
@@ -680,7 +680,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-02, 45 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-02, 45 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-up45-03",
@@ -693,7 +693,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-03, 45 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-03, 45 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-up45-04",
@@ -706,7 +706,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-04, 45 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-04, 45 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-up45-05",
@@ -719,7 +719,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-05, 45 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-05, 45 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-up45-06",
@@ -727,12 +727,12 @@
       "order": 14,
       "file": "frames/walk-up45-06.png",
       "hotspot": [
-        18,
+        19,
         17
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-06, 45 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-06, 45 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-up45-07",
@@ -745,7 +745,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-07, 45 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-07, 45 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-steep-00",
@@ -758,7 +758,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-00, 90 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-00, 90 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-steep-01",
@@ -771,7 +771,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-01, 90 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-01, 90 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-steep-02",
@@ -784,7 +784,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-02, 90 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-02, 90 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-steep-03",
@@ -797,7 +797,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-03, 90 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-03, 90 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-steep-04",
@@ -810,7 +810,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-04, 90 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-04, 90 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-steep-05",
@@ -823,7 +823,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-05, 90 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-05, 90 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-steep-06",
@@ -836,7 +836,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-06, 90 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-06, 90 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-steep-07",
@@ -849,7 +849,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-07, 90 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-07, 90 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-inverted-00",
@@ -862,7 +862,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-00, 135 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-00, 135 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-inverted-01",
@@ -875,7 +875,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-01, 135 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-01, 135 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-inverted-02",
@@ -888,7 +888,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-02, 135 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-02, 135 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-inverted-03",
@@ -901,7 +901,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-03, 135 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-03, 135 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-inverted-04",
@@ -914,7 +914,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-04, 135 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-04, 135 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-inverted-05",
@@ -927,7 +927,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-05, 135 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-05, 135 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-inverted-06",
@@ -935,12 +935,12 @@
       "order": 30,
       "file": "frames/walk-inverted-06.png",
       "hotspot": [
-        18,
+        19,
         16
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-06, 135 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-06, 135 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "walk-inverted-07",
@@ -949,11 +949,11 @@
       "file": "frames/walk-inverted-07.png",
       "hotspot": [
         18,
-        22
+        21
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: walk-07, 135 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned walk-07, 135 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "run-up45-00",
@@ -966,7 +966,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: run-00, 45 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned run-00, 45 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "run-up45-01",
@@ -979,7 +979,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: run-01, 45 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned run-01, 45 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "run-up45-02",
@@ -987,12 +987,12 @@
       "order": 6,
       "file": "frames/run-up45-02.png",
       "hotspot": [
-        13,
+        12,
         22
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: run-02, 45 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned run-02, 45 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "run-up45-03",
@@ -1005,7 +1005,7 @@
       ],
       "angle_set": "up45",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: run-03, 45 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned run-03, 45 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "run-steep-00",
@@ -1018,7 +1018,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: run-00, 90 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned run-00, 90 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "run-steep-01",
@@ -1031,7 +1031,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: run-01, 90 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned run-01, 90 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "run-steep-02",
@@ -1044,7 +1044,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: run-02, 90 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned run-02, 90 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "run-steep-03",
@@ -1057,7 +1057,7 @@
       ],
       "angle_set": "steep",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: run-03, 90 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned run-03, 90 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "run-inverted-00",
@@ -1070,7 +1070,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: run-00, 135 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned run-00, 135 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "run-inverted-01",
@@ -1083,7 +1083,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: run-01, 135 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned run-01, 135 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "run-inverted-02",
@@ -1096,7 +1096,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: run-02, 135 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned run-02, 135 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "run-inverted-03",
@@ -1109,7 +1109,7 @@
       ],
       "angle_set": "inverted",
       "duration_ticks": 6,
-      "notes": "Consistency derive_slopes.derive: run-03, 135 degrees CCW; integer support alignment."
+      "notes": "Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method=\"mode\") from cleaned run-03, 135 degrees CCW; silhouette ink lifted, Scale2x x3, mode reduction, material cleanup, then ink; integer support alignment."
     },
     {
       "id": "family-push-00",

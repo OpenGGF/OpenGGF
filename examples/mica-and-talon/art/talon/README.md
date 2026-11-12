@@ -16,7 +16,7 @@ the repository root. `assemble.py` is `tools/modding/playable_art/assemble.py`.
 | `hud-and-screens/` | 29 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `portrait/` | `*-frames.txt`; 1 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `reels/` | 2 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
-| `sheet/` | 282 PNGs | Approved native-pose drawings and deterministic slopes | `assemble.py art/talon/sheet <target-output>` packages the handoff; it does not redraw approved frames. `production/talon/tonal_reshade.py --check` covers the 24 flight and carry frames. |
+| `sheet/` | 282 PNGs | Approved native-pose drawings and deterministic slopes | `assemble.py art/talon/sheet <target-output>` packages the handoff; it does not redraw approved frames. `production/talon/tonal_reshade.py --check` covers the 24 flight and carry frames and `production/talon/walk_cleanup.py --check` the 48 WALK/RUN frames. |
 | `special-stage/` | `frames.txt` (per host for MICA endings); 72 PNGs | Canonical indexed parts, native body motion and joint placements | `python3 tools/modding/playable_art/locked_stage.py examples/mica-and-talon/production/talon/consistent-stage --check` (omit `--check` to rebuild). |
 | `stage-poses/` | `frames.txt` (per host for MICA endings); 36 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `titles/` | `*-frames.txt`; 50 PNGs; masks and clear mask | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
@@ -86,6 +86,24 @@ same treatment (`production/mica/carried_reshade.py`). Titles, special-stage, en
 native-scene surfaces keep their host's selective contours and were not changed. Under Solar the
 aliased carry frames pick up the bank's flame-tip slot on their feather tips, as his other aliased
 wing poses already do.
+
+**Walk and run cleanup (2026-11-12).** The owner found his walk blurry. Measured with
+`tools/modding/playable_art/noise_audit.py`, the flat WALK frames had 35% of their body pixels
+isolated (RUN 31%), the same as WAIT (38%) and the sheet median (30%), against 11% for the flight
+set; the 31 px sheet measured the same, so the rung rescale did not add speckle, though its route-2
+frames (`walk-00`..`02`, `run-02`) have softer edges. A loop makes that speckle boil, so
+`production/talon/walk_cleanup.py` cleans the twelve flat WALK/RUN drawings: isolated pixels,
+one-pixel anti-alias steps and two-pixel flecks are folded into the surrounding shade of their own
+material, for plumage and white/cream only, and plumage settles on three bands. Ink, goggles, beak,
+strap, satchel and shoes are untouched, white is never darkened, and the silhouette cannot change.
+Eleven recorded hand pixels restore the white cheek on the three route-2 walk frames. The 36 slope
+frames are re-derived from the cleaned flats with a mode-reduced rotation
+(`derive_slopes.derive(method='mode')`) at each frame's existing support distance; ten of them
+change size or hotspot by one pixel. Flat WALK now scores 0.22 on the audit's noise measure (was
+0.35), RUN 0.20 (0.31) and the 45° sets 0.13–0.14 (0.22–0.24); the flight set is 0.15 and WAIT
+0.37. `walk_cleanup.py --check` rebuilds all 48 frames from
+[`walk-cleanup.json`](../../production/talon/walk-cleanup.json). The rest of the sheet was measured
+and left as it is: WAIT and most other poses score what WALK did before.
 
 `production/talon/feedback_art.py` reproduces every selected/converted image from
 original indexed rows; raw generations and decoded native references stay outside
