@@ -21,7 +21,9 @@ Hand patches from the record, x,y,index inside one material, are applied last.
 
 Not touched here: WALK/RUN and their slopes (walk_cleanup.py), the flight and carry sets
 (tonal_reshade.py, already clean), and the drawings listed under left_alone in the record.
-No slope or rotated frame derives from these flats, so slope_sets.py has nothing to re-derive.
+No slope frame derives from these flats, so slope_sets.py has nothing to re-derive. Sixteen object
+poses are another one turned or mirrored; each has its own rows here, and scale_audit.py turns them
+again when it rebuilds their source at a new size.
 """
 import argparse
 import json

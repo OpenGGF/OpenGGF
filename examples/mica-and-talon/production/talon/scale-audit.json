@@ -1,0 +1,7297 @@
+{
+ "reference": {
+  "frames": "WAIT",
+  "band_31_rung_px": 2.684,
+  "span_31_rung_px": 11.113,
+  "object_set_band_px": 19.9,
+  "object_set_span_px": 70.2
+ },
+ "tolerance": 0.08,
+ "frames": {
+  "death-00": {
+   "group": "core/death",
+   "kind": "core",
+   "origin": "talon-art-20261109/poses-attempt-1.png figure 2",
+   "factor": 8.0345,
+   "band_source_px": 18.5,
+   "span_source_px": 87.8,
+   "band": 0.858,
+   "span": 0.983,
+   "head": 0.918,
+   "animation": "DEATH",
+   "before_size": [
+    35,
+    36
+   ],
+   "before_hotspot": [
+    17,
+    20
+   ],
+   "multiplier": 0.918,
+   "decision": "keep",
+   "why": "by eye: front view: the lens is drawn thin (band 0.86) while the span reads 0.98; beside WAIT the head already matches, and enlarged it stood a head taller",
+   "after": 0.918
+  },
+  "duck-00": {
+   "group": "core/duck",
+   "kind": "core",
+   "origin": "talon-art-20261109/poses-attempt-1.png figure 3",
+   "factor": 10.4118,
+   "band_source_px": 24.2,
+   "span_source_px": 85.8,
+   "band": 0.866,
+   "span": 0.742,
+   "head": 0.802,
+   "animation": "DUCK",
+   "before_size": [
+    30,
+    20
+   ],
+   "before_hotspot": [
+    19,
+    4
+   ],
+   "multiplier": 0.87,
+   "decision": "rebuild",
+   "why": "by eye: head tucked into the crouch, the beak points at the ground and reads short: the band alone",
+   "after": 0.922,
+   "rebuilt": {
+    "factor_37": 7.5893,
+    "resize": 1.149,
+    "size": [
+     34,
+     23
+    ],
+    "hotspot": [
+     22,
+     7
+    ],
+    "uncleaned_sha256": "7ec5151b8b27440b",
+    "frames": [
+     "duck-00"
+    ]
+   }
+  },
+  "family-balance-00": {
+   "group": "family/balance@fd892638",
+   "kind": "family",
+   "origin": "exec-3c93c88d-5ae1-4d1a-94bf-165efd892638.png cell 0,0 of 2x3; sha256 8d9e3837329a",
+   "factor": 8.6,
+   "band_source_px": 22.0,
+   "span_source_px": 83.3,
+   "band": 0.953,
+   "span": 0.872,
+   "head": 0.912,
+   "animation": "BALANCE",
+   "before_size": [
+    32,
+    37
+   ],
+   "before_hotspot": [
+    15,
+    18
+   ],
+   "multiplier": 0.886,
+   "decision": "keep",
+   "why": "upright at 37 px: standing height holds",
+   "after": 0.912
+  },
+  "family-balance-01": {
+   "group": "family/balance@fd892638",
+   "kind": "family",
+   "origin": "exec-3c93c88d-5ae1-4d1a-94bf-165efd892638.png cell 1,2 of 2x3; sha256 8d9e3837329a",
+   "factor": 8.7,
+   "band_source_px": 21.0,
+   "span_source_px": 79.6,
+   "band": 0.899,
+   "span": 0.823,
+   "head": 0.86,
+   "animation": "BALANCE",
+   "before_size": [
+    30,
+    35
+   ],
+   "before_hotspot": [
+    14,
+    16
+   ],
+   "multiplier": 0.886,
+   "decision": "keep",
+   "why": "upright at 35 px: standing height holds",
+   "after": 0.86
+  },
+  "family-balance2-00": {
+   "group": "family/balance2@a6a3e553",
+   "kind": "family",
+   "origin": "exec-8fe0e03f-caa3-433f-b075-eda0a6a3e553.png cell 0,1 of 3x3; sha256 223e32a675b3",
+   "factor": 6.6403,
+   "band_source_px": 24.6,
+   "span_source_px": 76.1,
+   "band": 1.38,
+   "span": 1.031,
+   "head": 1.193,
+   "animation": "BALANCE2",
+   "before_size": [
+    38,
+    39
+   ],
+   "before_hotspot": [
+    18,
+    19
+   ],
+   "multiplier": 1.259,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.948,
+   "rebuilt": {
+    "factor_37": 7.0045,
+    "resize": 0.794,
+    "size": [
+     31,
+     31
+    ],
+    "hotspot": [
+     15,
+     11
+    ],
+    "uncleaned_sha256": "4205f5a161df508e",
+    "frames": [
+     "family-balance2-00"
+    ]
+   }
+  },
+  "family-balance2-01": {
+   "group": "family/balance2@a6a3e553",
+   "kind": "family",
+   "origin": "exec-8fe0e03f-caa3-433f-b075-eda0a6a3e553.png cell 1,0 of 3x3; sha256 223e32a675b3",
+   "factor": 6.087,
+   "band_source_px": 23.6,
+   "span_source_px": 83.5,
+   "band": 1.444,
+   "span": 1.234,
+   "head": 1.335,
+   "animation": "BALANCE2",
+   "before_size": [
+    37,
+    42
+   ],
+   "before_hotspot": [
+    18,
+    22
+   ],
+   "multiplier": 1.259,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.06,
+   "rebuilt": {
+    "factor_37": 6.4208,
+    "resize": 0.794,
+    "size": [
+     29,
+     33
+    ],
+    "hotspot": [
+     14,
+     13
+    ],
+    "uncleaned_sha256": "01226f7d2eb307c6",
+    "frames": [
+     "family-balance2-01"
+    ]
+   }
+  },
+  "family-balance2-02": {
+   "group": "family/balance2@a6a3e553",
+   "kind": "family",
+   "origin": "exec-8fe0e03f-caa3-433f-b075-eda0a6a3e553.png cell 2,2 of 3x3; sha256 223e32a675b3",
+   "factor": 6.0909,
+   "band_source_px": 21.5,
+   "span_source_px": 77.8,
+   "band": 1.315,
+   "span": 1.149,
+   "head": 1.229,
+   "animation": "BALANCE2",
+   "before_size": [
+    36,
+    39
+   ],
+   "before_hotspot": [
+    17,
+    19
+   ],
+   "multiplier": 1.259,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.976,
+   "rebuilt": {
+    "factor_37": 6.4249,
+    "resize": 0.794,
+    "size": [
+     28,
+     32
+    ],
+    "hotspot": [
+     13,
+     12
+    ],
+    "uncleaned_sha256": "16f8a5fd31d39ae1",
+    "frames": [
+     "family-balance2-02"
+    ]
+   }
+  },
+  "family-balance3-00": {
+   "group": "family/balance3@e3eb0d49",
+   "kind": "family",
+   "origin": "exec-2d6efd07-3006-4be0-9b8d-bc05e3eb0d49.png cell 0,1 of 2x3; sha256 3240ead72dbb",
+   "factor": 10.2,
+   "band_source_px": 29.8,
+   "span_source_px": 126.3,
+   "band": 1.088,
+   "span": 1.114,
+   "head": 1.101,
+   "animation": "BALANCE3",
+   "before_size": [
+    39,
+    42
+   ],
+   "before_hotspot": [
+    19,
+    23
+   ],
+   "multiplier": 1.075,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.101
+  },
+  "family-balance3-01": {
+   "group": "family/balance3@e3eb0d49",
+   "kind": "family",
+   "origin": "exec-2d6efd07-3006-4be0-9b8d-bc05e3eb0d49.png cell 1,1 of 2x3; sha256 3240ead72dbb",
+   "factor": 10.5,
+   "band_source_px": 28.3,
+   "span_source_px": 127.8,
+   "band": 1.004,
+   "span": 1.095,
+   "head": 1.049,
+   "animation": "BALANCE3",
+   "before_size": [
+    42,
+    38
+   ],
+   "before_hotspot": [
+    20,
+    19
+   ],
+   "multiplier": 1.075,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.049
+  },
+  "family-balance4-00": {
+   "group": "family/balance4@3dea3aab",
+   "kind": "family",
+   "origin": "exec-a09acb58-8161-4b3e-8782-16503dea3aab.png cell 0,0 of 5x3; sha256 b3a776951284",
+   "factor": 6.0713,
+   "band_source_px": 15.0,
+   "span_source_px": null,
+   "band": 0.92,
+   "span": null,
+   "head": 0.92,
+   "animation": "BALANCE4",
+   "before_size": [
+    29,
+    38
+   ],
+   "before_hotspot": [
+    13,
+    18
+   ],
+   "multiplier": 0.92,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.92
+  },
+  "family-balance4-01": {
+   "group": "family/balance4@3dea3aab",
+   "kind": "family",
+   "origin": "exec-a09acb58-8161-4b3e-8782-16503dea3aab.png cell 1,1 of 5x3; sha256 b3a776951284",
+   "factor": 5.19,
+   "band_source_px": 17.2,
+   "span_source_px": null,
+   "band": 1.235,
+   "span": null,
+   "head": 1.235,
+   "animation": "BALANCE4",
+   "before_size": [
+    43,
+    44
+   ],
+   "before_hotspot": [
+    22,
+    24
+   ],
+   "multiplier": 1.235,
+   "decision": "rebuild",
+   "why": "own head",
+   "after": 1.0,
+   "rebuilt": {
+    "factor_37": 5.3702,
+    "resize": 0.81,
+    "size": [
+     34,
+     36
+    ],
+    "hotspot": [
+     17,
+     16
+    ],
+    "uncleaned_sha256": "a62bf111c25d67b2",
+    "frames": [
+     "family-balance4-01"
+    ]
+   }
+  },
+  "family-balance4-02": {
+   "group": "family/balance4@3dea3aab",
+   "kind": "family",
+   "origin": "exec-a09acb58-8161-4b3e-8782-16503dea3aab.png cell 2,2 of 5x3; sha256 b3a776951284",
+   "factor": 5.19,
+   "band_source_px": 16.9,
+   "span_source_px": 67.9,
+   "band": 1.213,
+   "span": 1.177,
+   "head": 1.195,
+   "animation": "BALANCE4",
+   "before_size": [
+    47,
+    42
+   ],
+   "before_hotspot": [
+    23,
+    22
+   ],
+   "multiplier": 1.195,
+   "decision": "rebuild",
+   "why": "own head",
+   "after": 1.0,
+   "rebuilt": {
+    "factor_37": 5.1963,
+    "resize": 0.837,
+    "size": [
+     39,
+     35
+    ],
+    "hotspot": [
+     19,
+     15
+    ],
+    "uncleaned_sha256": "a46fae96f11fcd26",
+    "frames": [
+     "family-balance4-02"
+    ]
+   }
+  },
+  "family-balance4-03": {
+   "group": "family/balance4@3dea3aab",
+   "kind": "family",
+   "origin": "exec-a09acb58-8161-4b3e-8782-16503dea3aab.png cell 3,1 of 5x3; sha256 b3a776951284",
+   "factor": 4.9941,
+   "band_source_px": 17.1,
+   "span_source_px": 73.3,
+   "band": 1.275,
+   "span": 1.321,
+   "head": 1.298,
+   "animation": "BALANCE4",
+   "before_size": [
+    50,
+    44
+   ],
+   "before_hotspot": [
+    24,
+    24
+   ],
+   "multiplier": 1.298,
+   "decision": "rebuild",
+   "why": "own head",
+   "after": 1.0,
+   "rebuilt": {
+    "factor_37": 5.4312,
+    "resize": 0.77,
+    "size": [
+     39,
+     34
+    ],
+    "hotspot": [
+     19,
+     14
+    ],
+    "uncleaned_sha256": "374dfbe3ccb631e7",
+    "frames": [
+     "family-balance4-03"
+    ]
+   }
+  },
+  "family-balance4-04": {
+   "group": "family/balance4@3dea3aab",
+   "kind": "family",
+   "origin": "exec-a09acb58-8161-4b3e-8782-16503dea3aab.png cell 4,2 of 5x3; sha256 b3a776951284",
+   "factor": 5.7775,
+   "band_source_px": 16.2,
+   "span_source_px": null,
+   "band": 1.045,
+   "span": null,
+   "head": 1.045,
+   "animation": "BALANCE4",
+   "before_size": [
+    36,
+    39
+   ],
+   "before_hotspot": [
+    17,
+    19
+   ],
+   "multiplier": 1.045,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.045
+  },
+  "family-blink-00": {
+   "group": "family/blink@d766b6fe",
+   "kind": "family",
+   "origin": "exec-beb6fcbe-f986-4f49-987a-451cd766b6fe.png cell 0,0 of 3x3; sha256 f27dc759ebe7",
+   "factor": 6.9,
+   "band_source_px": 18.9,
+   "span_source_px": 72.8,
+   "band": 1.02,
+   "span": 0.949,
+   "head": 0.984,
+   "animation": "BLINK",
+   "before_size": [
+    24,
+    37
+   ],
+   "before_hotspot": [
+    12,
+    18
+   ],
+   "multiplier": 0.972,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.984
+  },
+  "family-blink-01": {
+   "group": "family/blink@d766b6fe",
+   "kind": "family",
+   "origin": "exec-beb6fcbe-f986-4f49-987a-451cd766b6fe.png cell 1,1 of 3x3; sha256 f27dc759ebe7",
+   "factor": 7.3,
+   "band_source_px": 19.3,
+   "span_source_px": 74.2,
+   "band": 0.985,
+   "span": 0.915,
+   "head": 0.949,
+   "animation": "BLINK",
+   "before_size": [
+    23,
+    35
+   ],
+   "before_hotspot": [
+    11,
+    16
+   ],
+   "multiplier": 0.972,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.949
+  },
+  "family-blink-02": {
+   "group": "family/blink@d766b6fe",
+   "kind": "family",
+   "origin": "exec-beb6fcbe-f986-4f49-987a-451cd766b6fe.png cell 2,2 of 3x3; sha256 f27dc759ebe7",
+   "factor": 7.1,
+   "band_source_px": 19.2,
+   "span_source_px": 74.1,
+   "band": 1.007,
+   "span": 0.939,
+   "head": 0.972,
+   "animation": "BLINK",
+   "before_size": [
+    24,
+    36
+   ],
+   "before_hotspot": [
+    12,
+    17
+   ],
+   "multiplier": 0.972,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.972
+  },
+  "family-blink-03": {
+   "group": "family/blink@8df6a21d",
+   "kind": "family",
+   "origin": "exec-dae65ab0-ec5b-4f51-8aa5-136b8df6a21d.png cell 0,1 of 2x3; sha256 8f5d7a5680a6",
+   "factor": 13.5,
+   "band_source_px": 33.9,
+   "span_source_px": 123.0,
+   "band": 0.935,
+   "span": 0.82,
+   "head": 0.876,
+   "animation": "BLINK",
+   "before_size": [
+    25,
+    39
+   ],
+   "before_hotspot": [
+    12,
+    23
+   ],
+   "multiplier": 0.891,
+   "decision": "keep",
+   "why": "upright at 39 px: standing height holds",
+   "after": 0.876
+  },
+  "family-blink-04": {
+   "group": "family/blink@8df6a21d",
+   "kind": "family",
+   "origin": "exec-dae65ab0-ec5b-4f51-8aa5-136b8df6a21d.png cell 1,1 of 2x3; sha256 8f5d7a5680a6",
+   "factor": 13.5,
+   "band_source_px": 35.1,
+   "span_source_px": 127.2,
+   "band": 0.969,
+   "span": 0.848,
+   "head": 0.906,
+   "animation": "BLINK",
+   "before_size": [
+    33,
+    31
+   ],
+   "before_hotspot": [
+    16,
+    15
+   ],
+   "multiplier": 0.891,
+   "decision": "keep",
+   "why": "by eye: seated yawn with the head turned, so both readings run short; blink-03 beside it on the same sheet at the same factor stands 39 px, so the sheet is not small",
+   "after": 0.906
+  },
+  "family-bubble-00": {
+   "group": "family/bubble@8d6f9230",
+   "kind": "family",
+   "origin": "exec-dad3482b-3c61-4b37-8d07-f6f88d6f9230.png cell 0,0 of 3x3; sha256 aea5b9aa0258",
+   "factor": 5.6164,
+   "band_source_px": 20.9,
+   "span_source_px": 77.3,
+   "band": 1.386,
+   "span": 1.239,
+   "head": 1.31,
+   "animation": "BUBBLE",
+   "before_size": [
+    35,
+    44
+   ],
+   "before_hotspot": [
+    24,
+    26
+   ],
+   "multiplier": 1.321,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.992,
+   "rebuilt": {
+    "factor_37": 6.2161,
+    "resize": 0.757,
+    "size": [
+     26,
+     34
+    ],
+    "hotspot": [
+     18,
+     20
+    ],
+    "uncleaned_sha256": "d387ec696dbda39c",
+    "frames": [
+     "family-bubble-00"
+    ]
+   }
+  },
+  "family-bubble-01": {
+   "group": "family/bubble@8d6f9230",
+   "kind": "family",
+   "origin": "exec-dad3482b-3c61-4b37-8d07-f6f88d6f9230.png cell 1,1 of 3x3; sha256 aea5b9aa0258",
+   "factor": 5.5444,
+   "band_source_px": 21.6,
+   "span_source_px": 80.0,
+   "band": 1.451,
+   "span": 1.298,
+   "head": 1.372,
+   "animation": "BUBBLE",
+   "before_size": [
+    38,
+    43
+   ],
+   "before_hotspot": [
+    24,
+    26
+   ],
+   "multiplier": 1.321,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.039,
+   "rebuilt": {
+    "factor_37": 6.1364,
+    "resize": 0.757,
+    "size": [
+     29,
+     33
+    ],
+    "hotspot": [
+     18,
+     20
+    ],
+    "uncleaned_sha256": "209d03aa237adf53",
+    "frames": [
+     "family-bubble-01"
+    ]
+   }
+  },
+  "family-bubble-02": {
+   "group": "family/bubble@8d6f9230",
+   "kind": "family",
+   "origin": "exec-dad3482b-3c61-4b37-8d07-f6f88d6f9230.png cell 2,2 of 3x3; sha256 aea5b9aa0258",
+   "factor": 5.6884,
+   "band_source_px": 21.5,
+   "span_source_px": 78.1,
+   "band": 1.408,
+   "span": 1.235,
+   "head": 1.319,
+   "animation": "BUBBLE",
+   "before_size": [
+    35,
+    41
+   ],
+   "before_hotspot": [
+    24,
+    26
+   ],
+   "multiplier": 1.321,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.998,
+   "rebuilt": {
+    "factor_37": 6.2958,
+    "resize": 0.757,
+    "size": [
+     26,
+     30
+    ],
+    "hotspot": [
+     18,
+     19
+    ],
+    "uncleaned_sha256": "e531513bc64416be",
+    "frames": [
+     "family-bubble-02"
+    ]
+   }
+  },
+  "family-drown-00": {
+   "group": "family/drown@29c3ed90",
+   "kind": "family",
+   "origin": "exec-94563843-e6e0-4fcc-bcb1-276629c3ed90.png cell 0,2 of 1x3; sha256 970c19389e14",
+   "factor": 15.7967,
+   "band_source_px": 45.3,
+   "span_source_px": 167.4,
+   "band": 1.068,
+   "span": 0.954,
+   "head": 1.009,
+   "animation": "DROWN",
+   "before_size": [
+    37,
+    43
+   ],
+   "before_hotspot": [
+    19,
+    27
+   ],
+   "multiplier": 1.009,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.009
+  },
+  "family-float2-00": {
+   "group": "family/float2@2a45d6b1",
+   "kind": "family",
+   "origin": "exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png cell 0,0 of 8x3; sha256 810e75fa69f4",
+   "factor": 5.4422,
+   "band_source_px": 17.2,
+   "span_source_px": 56.7,
+   "band": 1.177,
+   "span": 0.938,
+   "head": 1.051,
+   "animation": "FLOAT2",
+   "before_size": [
+    45,
+    23
+   ],
+   "before_hotspot": [
+    22,
+    13
+   ],
+   "multiplier": 1.088,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.966,
+   "rebuilt": {
+    "factor_37": 4.9609,
+    "resize": 0.919,
+    "size": [
+     42,
+     21
+    ],
+    "hotspot": [
+     21,
+     12
+    ],
+    "uncleaned_sha256": "4d2e60cebc50952e",
+    "frames": [
+     "family-float2-00"
+    ]
+   }
+  },
+  "family-float2-01": {
+   "group": "family/float2@2a45d6b1",
+   "kind": "family",
+   "origin": "exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png cell 1,1 of 8x3; sha256 810e75fa69f4",
+   "factor": 5.4422,
+   "band_source_px": 17.1,
+   "span_source_px": 59.7,
+   "band": 1.17,
+   "span": 0.987,
+   "head": 1.075,
+   "animation": "FLOAT2",
+   "before_size": [
+    38,
+    23
+   ],
+   "before_hotspot": [
+    19,
+    13
+   ],
+   "multiplier": 1.088,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.988,
+   "rebuilt": {
+    "factor_37": 4.9609,
+    "resize": 0.919,
+    "size": [
+     35,
+     21
+    ],
+    "hotspot": [
+     18,
+     12
+    ],
+    "uncleaned_sha256": "79e44f89be9af5d4",
+    "frames": [
+     "family-float2-01"
+    ]
+   }
+  },
+  "family-float2-02": {
+   "group": "family/float2@2a45d6b1",
+   "kind": "family",
+   "origin": "exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png cell 2,0 of 8x3; sha256 810e75fa69f4",
+   "factor": 5.4422,
+   "band_source_px": 16.2,
+   "span_source_px": 62.7,
+   "band": 1.109,
+   "span": 1.037,
+   "head": 1.072,
+   "animation": "FLOAT2",
+   "before_size": [
+    38,
+    25
+   ],
+   "before_hotspot": [
+    19,
+    14
+   ],
+   "multiplier": 1.088,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.985,
+   "rebuilt": {
+    "factor_37": 4.9609,
+    "resize": 0.919,
+    "size": [
+     35,
+     23
+    ],
+    "hotspot": [
+     18,
+     13
+    ],
+    "uncleaned_sha256": "0d877f2ab9015f19",
+    "frames": [
+     "family-float2-02"
+    ]
+   }
+  },
+  "family-float2-03": {
+   "group": "family/float2@2a45d6b1",
+   "kind": "family",
+   "origin": "exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png cell 3,2 of 8x3; sha256 810e75fa69f4",
+   "factor": 5.4422,
+   "band_source_px": 16.6,
+   "span_source_px": 63.0,
+   "band": 1.136,
+   "span": 1.042,
+   "head": 1.088,
+   "animation": "FLOAT2",
+   "before_size": [
+    39,
+    24
+   ],
+   "before_hotspot": [
+    19,
+    13
+   ],
+   "multiplier": 1.088,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.0,
+   "rebuilt": {
+    "factor_37": 4.9609,
+    "resize": 0.919,
+    "size": [
+     36,
+     22
+    ],
+    "hotspot": [
+     18,
+     12
+    ],
+    "uncleaned_sha256": "200d4d1826e9242d",
+    "frames": [
+     "family-float2-03"
+    ]
+   }
+  },
+  "family-float2-04": {
+   "group": "family/float2@2a45d6b1",
+   "kind": "family",
+   "origin": "exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png cell 4,1 of 8x3; sha256 810e75fa69f4",
+   "factor": 5.4422,
+   "band_source_px": 18.3,
+   "span_source_px": null,
+   "band": 1.253,
+   "span": null,
+   "head": 1.253,
+   "animation": "FLOAT2",
+   "before_size": [
+    43,
+    21
+   ],
+   "before_hotspot": [
+    22,
+    12
+   ],
+   "multiplier": 1.088,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.152,
+   "rebuilt": {
+    "factor_37": 4.9609,
+    "resize": 0.919,
+    "size": [
+     40,
+     20
+    ],
+    "hotspot": [
+     20,
+     11
+    ],
+    "uncleaned_sha256": "a3598e5365a63fc3",
+    "frames": [
+     "family-float2-04"
+    ]
+   }
+  },
+  "family-float2-05": {
+   "group": "family/float2@2a45d6b1",
+   "kind": "family",
+   "origin": "exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png cell 5,2 of 8x3; sha256 810e75fa69f4",
+   "factor": 5.4422,
+   "band_source_px": null,
+   "span_source_px": null,
+   "hand": "back view: the blob is the strap buckle, no lens faces the viewer",
+   "band": null,
+   "span": null,
+   "head": 1.088,
+   "animation": "FLOAT2",
+   "before_size": [
+    37,
+    27
+   ],
+   "before_hotspot": [
+    18,
+    16
+   ],
+   "multiplier": 1.088,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.0,
+   "rebuilt": {
+    "factor_37": 4.9609,
+    "resize": 0.919,
+    "size": [
+     34,
+     25
+    ],
+    "hotspot": [
+     17,
+     15
+    ],
+    "uncleaned_sha256": "1d285a0499955747",
+    "frames": [
+     "family-float2-05"
+    ]
+   }
+  },
+  "family-float2-06": {
+   "group": "family/float2@2a45d6b1",
+   "kind": "family",
+   "origin": "exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png cell 6,0 of 8x3; sha256 810e75fa69f4",
+   "factor": 5.4422,
+   "band_source_px": null,
+   "span_source_px": null,
+   "hand": "back view: the blob is the strap buckle, no lens faces the viewer",
+   "band": null,
+   "span": null,
+   "head": 1.088,
+   "animation": "FLOAT2",
+   "before_size": [
+    36,
+    29
+   ],
+   "before_hotspot": [
+    18,
+    17
+   ],
+   "multiplier": 1.088,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.0,
+   "rebuilt": {
+    "factor_37": 4.9609,
+    "resize": 0.919,
+    "size": [
+     33,
+     26
+    ],
+    "hotspot": [
+     16,
+     15
+    ],
+    "uncleaned_sha256": "bf3ed74f0695c1a7",
+    "frames": [
+     "family-float2-06"
+    ]
+   }
+  },
+  "family-float2-07": {
+   "group": "family/float2@2a45d6b1",
+   "kind": "family",
+   "origin": "exec-e6dc705a-f145-495a-9e16-85c42a45d6b1.png cell 7,1 of 8x3; sha256 810e75fa69f4",
+   "factor": 5.4422,
+   "band_source_px": null,
+   "span_source_px": null,
+   "hand": "back view: the blob is the strap buckle, no lens faces the viewer",
+   "band": null,
+   "span": null,
+   "head": 1.088,
+   "animation": "FLOAT2",
+   "before_size": [
+    37,
+    27
+   ],
+   "before_hotspot": [
+    18,
+    16
+   ],
+   "multiplier": 1.088,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.0,
+   "rebuilt": {
+    "factor_37": 4.9609,
+    "resize": 0.919,
+    "size": [
+     34,
+     25
+    ],
+    "hotspot": [
+     17,
+     15
+    ],
+    "uncleaned_sha256": "c092609cc1cb4906",
+    "frames": [
+     "family-float2-07"
+    ]
+   }
+  },
+  "family-get-up-00": {
+   "group": "family/get-up@b54c3035",
+   "kind": "family",
+   "origin": "exec-eed82bbd-0d2a-4259-9dfb-42d5b54c3035.png cell 0,1 of 2x3; sha256 27d12165d378",
+   "factor": 9.4,
+   "band_source_px": 27.9,
+   "span_source_px": null,
+   "band": 1.106,
+   "span": null,
+   "head": 1.106,
+   "animation": "GET_UP",
+   "before_size": [
+    48,
+    25
+   ],
+   "before_hotspot": [
+    24,
+    6
+   ],
+   "multiplier": 1.042,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.106
+  },
+  "family-get-up-01": {
+   "group": "family/get-up@b54c3035",
+   "kind": "family",
+   "origin": "exec-eed82bbd-0d2a-4259-9dfb-42d5b54c3035.png cell 1,2 of 2x3; sha256 27d12165d378",
+   "factor": 11.0,
+   "band_source_px": 28.9,
+   "span_source_px": null,
+   "band": 0.979,
+   "span": null,
+   "head": 0.979,
+   "animation": "GET_UP",
+   "before_size": [
+    23,
+    38
+   ],
+   "before_hotspot": [
+    11,
+    19
+   ],
+   "multiplier": 1.042,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.979
+  },
+  "family-hang-00": {
+   "group": "family/hang@9b04ddfb",
+   "kind": "family",
+   "origin": "exec-f188dbf4-910f-4d3f-863c-2ba49b04ddfb.png cell 0,1 of 2x3; sha256 2bf138eab2ba",
+   "factor": 12.0,
+   "band_source_px": 38.9,
+   "span_source_px": 146.9,
+   "band": 1.208,
+   "span": 1.102,
+   "head": 1.154,
+   "animation": "HANG",
+   "before_size": [
+    53,
+    29
+   ],
+   "before_hotspot": [
+    26,
+    12
+   ],
+   "multiplier": 1.157,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.997,
+   "rebuilt": {
+    "factor_37": 11.6325,
+    "resize": 0.864,
+    "size": [
+     46,
+     24
+    ],
+    "hotspot": [
+     23,
+     12
+    ],
+    "uncleaned_sha256": "317c917bea35dfa1",
+    "frames": [
+     "family-hang-00"
+    ]
+   }
+  },
+  "family-hang-01": {
+   "group": "family/hang@9b04ddfb",
+   "kind": "family",
+   "origin": "exec-f188dbf4-910f-4d3f-863c-2ba49b04ddfb.png cell 1,2 of 2x3; sha256 2bf138eab2ba",
+   "factor": 11.8,
+   "band_source_px": 39.4,
+   "span_source_px": 141.7,
+   "band": 1.244,
+   "span": 1.081,
+   "head": 1.16,
+   "animation": "HANG",
+   "before_size": [
+    54,
+    30
+   ],
+   "before_hotspot": [
+    26,
+    12
+   ],
+   "multiplier": 1.157,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.003,
+   "rebuilt": {
+    "factor_37": 11.4387,
+    "resize": 0.864,
+    "size": [
+     46,
+     26
+    ],
+    "hotspot": [
+     22,
+     12
+    ],
+    "uncleaned_sha256": "6da05b5e49eea148",
+    "frames": [
+     "family-hang-01"
+    ]
+   }
+  },
+  "family-hang2-00": {
+   "group": "family/hang2@18b66b34",
+   "kind": "family",
+   "origin": "exec-50a08c83-89de-447c-be84-772f18b66b34.png cell 0,0 of 2x3; sha256 389173697500",
+   "factor": 11.0,
+   "band_source_px": 29.2,
+   "span_source_px": 118.6,
+   "band": 0.989,
+   "span": 0.97,
+   "head": 0.979,
+   "animation": "HANG2",
+   "before_size": [
+    31,
+    38
+   ],
+   "before_hotspot": [
+    16,
+    16
+   ],
+   "multiplier": 0.966,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.979
+  },
+  "family-hang2-01": {
+   "group": "family/hang2@18b66b34",
+   "kind": "family",
+   "origin": "exec-50a08c83-89de-447c-be84-772f18b66b34.png cell 1,1 of 2x3; sha256 389173697500",
+   "factor": 10.9,
+   "band_source_px": 27.0,
+   "span_source_px": 118.9,
+   "band": 0.923,
+   "span": 0.982,
+   "head": 0.952,
+   "animation": "HANG2",
+   "before_size": [
+    32,
+    39
+   ],
+   "before_hotspot": [
+    15,
+    16
+   ],
+   "multiplier": 0.966,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.952
+  },
+  "family-hurt-fall-00": {
+   "group": "family/hurt-fall@ba20afcf",
+   "kind": "family",
+   "origin": "exec-1437e090-e65c-4c79-b581-3613ba20afcf.png cell 0,1 of 2x3; sha256 99cc2c75ee0f",
+   "factor": 8.7901,
+   "band_source_px": 34.8,
+   "span_source_px": 127.4,
+   "band": 1.475,
+   "span": 1.304,
+   "head": 1.387,
+   "animation": "HURT_FALL",
+   "before_size": [
+    36,
+    43
+   ],
+   "before_hotspot": [
+    20,
+    28
+   ],
+   "multiplier": 1.376,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.008,
+   "rebuilt": {
+    "factor_37": 10.1338,
+    "resize": 0.727,
+    "size": [
+     26,
+     31
+    ],
+    "hotspot": [
+     14,
+     20
+    ],
+    "uncleaned_sha256": "2edfa328fb7faba6",
+    "frames": [
+     "family-hurt-fall-00"
+    ]
+   }
+  },
+  "family-hurt-fall-01": {
+   "group": "family/hurt-fall@ba20afcf",
+   "kind": "family",
+   "origin": "exec-1437e090-e65c-4c79-b581-3613ba20afcf.png cell 1,2 of 2x3; sha256 99cc2c75ee0f",
+   "factor": 8.9978,
+   "band_source_px": 35.8,
+   "span_source_px": 125.8,
+   "band": 1.482,
+   "span": 1.258,
+   "head": 1.365,
+   "animation": "HURT_FALL",
+   "before_size": [
+    41,
+    42
+   ],
+   "before_hotspot": [
+    23,
+    26
+   ],
+   "multiplier": 1.376,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.992,
+   "rebuilt": {
+    "factor_37": 10.3732,
+    "resize": 0.727,
+    "size": [
+     29,
+     30
+    ],
+    "hotspot": [
+     16,
+     19
+    ],
+    "uncleaned_sha256": "00242c97ace46a72",
+    "frames": [
+     "family-hurt-fall-01"
+    ]
+   }
+  },
+  "family-push-00": {
+   "group": "family/push@ed5d24af",
+   "kind": "family",
+   "origin": "exec-699853e1-356e-4004-92a9-28b1ed5d24af.png cell 0,0 of 4x3; sha256 e913137b3f37",
+   "factor": 7.5,
+   "band_source_px": 20.9,
+   "span_source_px": 74.9,
+   "band": 1.038,
+   "span": 0.899,
+   "head": 0.966,
+   "animation": "PUSH",
+   "before_size": [
+    41,
+    36
+   ],
+   "before_hotspot": [
+    25,
+    17
+   ],
+   "multiplier": 0.958,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.966
+  },
+  "family-push-01": {
+   "group": "family/push@ed5d24af",
+   "kind": "family",
+   "origin": "exec-699853e1-356e-4004-92a9-28b1ed5d24af.png cell 1,0 of 4x3; sha256 e913137b3f37",
+   "factor": 7.5,
+   "band_source_px": 20.0,
+   "span_source_px": 74.3,
+   "band": 0.993,
+   "span": 0.891,
+   "head": 0.941,
+   "animation": "PUSH",
+   "before_size": [
+    31,
+    37
+   ],
+   "before_hotspot": [
+    15,
+    18
+   ],
+   "multiplier": 0.958,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.941
+  },
+  "family-push-02": {
+   "group": "family/push@ed5d24af",
+   "kind": "family",
+   "origin": "exec-699853e1-356e-4004-92a9-28b1ed5d24af.png cell 2,0 of 4x3; sha256 e913137b3f37",
+   "factor": 7.3,
+   "band_source_px": 19.2,
+   "span_source_px": 73.8,
+   "band": 0.98,
+   "span": 0.91,
+   "head": 0.944,
+   "animation": "PUSH",
+   "before_size": [
+    33,
+    38
+   ],
+   "before_hotspot": [
+    17,
+    19
+   ],
+   "multiplier": 0.958,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.944
+  },
+  "family-push-03": {
+   "group": "family/push@ed5d24af",
+   "kind": "family",
+   "origin": "exec-699853e1-356e-4004-92a9-28b1ed5d24af.png cell 3,0 of 4x3; sha256 e913137b3f37",
+   "factor": 7.1,
+   "band_source_px": 20.6,
+   "span_source_px": 76.2,
+   "band": 1.081,
+   "span": 0.966,
+   "head": 1.022,
+   "animation": "PUSH",
+   "before_size": [
+    35,
+    38
+   ],
+   "before_hotspot": [
+    19,
+    19
+   ],
+   "multiplier": 0.958,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.022
+  },
+  "family-super-transform-00": {
+   "group": "family/super-transform@cfa75563",
+   "kind": "family",
+   "origin": "exec-59094ff4-11f4-476e-a664-2170cfa75563.png cell 0,1 of 5x3; sha256 553c7474b7b6",
+   "factor": 4.7423,
+   "band_source_px": 21.0,
+   "span_source_px": 65.5,
+   "band": 1.65,
+   "span": 1.243,
+   "head": 1.432,
+   "animation": "SUPER_TRANSFORM",
+   "before_size": [
+    36,
+    38
+   ],
+   "before_hotspot": [
+    24,
+    23
+   ],
+   "multiplier": 1.432,
+   "decision": "rebuild",
+   "why": "own head",
+   "after": 1.0,
+   "rebuilt": {
+    "factor_37": 5.6897,
+    "resize": 0.698,
+    "size": [
+     25,
+     27
+    ],
+    "hotspot": [
+     17,
+     16
+    ],
+    "uncleaned_sha256": "3cd1cd42cde54154",
+    "frames": [
+     "family-super-transform-00"
+    ]
+   }
+  },
+  "family-super-transform-01": {
+   "group": "family/super-transform@cfa75563",
+   "kind": "family",
+   "origin": "exec-59094ff4-11f4-476e-a664-2170cfa75563.png cell 1,2 of 5x3; sha256 553c7474b7b6",
+   "factor": 4.8031,
+   "band_source_px": 18.2,
+   "span_source_px": 69.0,
+   "band": 1.412,
+   "span": 1.293,
+   "head": 1.351,
+   "animation": "SUPER_TRANSFORM",
+   "before_size": [
+    38,
+    51
+   ],
+   "before_hotspot": [
+    27,
+    27
+   ],
+   "multiplier": 1.351,
+   "decision": "rebuild",
+   "why": "own head",
+   "after": 1.0,
+   "rebuilt": {
+    "factor_37": 5.4368,
+    "resize": 0.74,
+    "size": [
+     28,
+     38
+    ],
+    "hotspot": [
+     20,
+     20
+    ],
+    "uncleaned_sha256": "3530bc5f98a954d2",
+    "frames": [
+     "family-super-transform-01"
+    ]
+   }
+  },
+  "family-super-transform-02": {
+   "group": "family/super-transform@cfa75563",
+   "kind": "family",
+   "origin": "exec-59094ff4-11f4-476e-a664-2170cfa75563.png cell 2,0 of 5x3; sha256 553c7474b7b6",
+   "factor": 5.3018,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "head": 1.23,
+   "animation": "SUPER_TRANSFORM",
+   "before_size": [
+    41,
+    45
+   ],
+   "before_hotspot": [
+    20,
+    26
+   ],
+   "multiplier": 1.23,
+   "decision": "rebuild",
+   "why": "own head",
+   "after": 1.0,
+   "rebuilt": {
+    "factor_37": 5.4638,
+    "resize": 0.813,
+    "size": [
+     33,
+     37
+    ],
+    "hotspot": [
+     16,
+     21
+    ],
+    "uncleaned_sha256": "e43f43366fd502f6",
+    "frames": [
+     "family-super-transform-02"
+    ]
+   }
+  },
+  "family-super-transform-03": {
+   "group": "family/super-transform@cfa75563",
+   "kind": "family",
+   "origin": "exec-59094ff4-11f4-476e-a664-2170cfa75563.png cell 3,1 of 5x3; sha256 553c7474b7b6",
+   "factor": 5.5993,
+   "band_source_px": 18.0,
+   "span_source_px": 65.8,
+   "band": 1.198,
+   "span": 1.057,
+   "head": 1.125,
+   "animation": "SUPER_TRANSFORM",
+   "before_size": [
+    45,
+    45
+   ],
+   "before_hotspot": [
+    26,
+    24
+   ],
+   "multiplier": 1.125,
+   "decision": "rebuild",
+   "why": "own head",
+   "after": 1.0,
+   "rebuilt": {
+    "factor_37": 5.2777,
+    "resize": 0.889,
+    "size": [
+     40,
+     40
+    ],
+    "hotspot": [
+     23,
+     21
+    ],
+    "uncleaned_sha256": "ad4a7a16a6631c1a",
+    "frames": [
+     "family-super-transform-03"
+    ]
+   }
+  },
+  "family-super-transform-04": {
+   "group": "family/super-transform@cfa75563",
+   "kind": "family",
+   "origin": "exec-59094ff4-11f4-476e-a664-2170cfa75563.png cell 4,2 of 5x3; sha256 553c7474b7b6",
+   "factor": 5.6868,
+   "band_source_px": 17.2,
+   "span_source_px": 67.9,
+   "band": 1.127,
+   "span": 1.074,
+   "head": 1.1,
+   "animation": "SUPER_TRANSFORM",
+   "before_size": [
+    41,
+    45
+   ],
+   "before_hotspot": [
+    24,
+    24
+   ],
+   "multiplier": 1.1,
+   "decision": "rebuild",
+   "why": "own head",
+   "after": 1.0,
+   "rebuilt": {
+    "factor_37": 5.2411,
+    "resize": 0.909,
+    "size": [
+     37,
+     42
+    ],
+    "hotspot": [
+     22,
+     22
+    ],
+    "uncleaned_sha256": "afc6c669100ea77f",
+    "frames": [
+     "family-super-transform-04"
+    ]
+   }
+  },
+  "family-tails-carried-00": {
+   "group": "family/tails-carried@55a101f9",
+   "kind": "family",
+   "origin": "exec-7445efdf-4c1f-43fd-9b08-3f4f55a101f9.png cell 0,1 of 3x3; sha256 7354cb05ddc2",
+   "factor": 5.7759,
+   "band_source_px": 17.8,
+   "span_source_px": 65.8,
+   "band": 1.148,
+   "span": 1.025,
+   "head": 1.085,
+   "animation": "TAILS_CARRIED",
+   "before_size": [
+    36,
+    47
+   ],
+   "before_hotspot": [
+    18,
+    24
+   ],
+   "multiplier": 1.098,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.988,
+   "rebuilt": {
+    "factor_37": 5.3135,
+    "resize": 0.911,
+    "size": [
+     32,
+     42
+    ],
+    "hotspot": [
+     16,
+     24
+    ],
+    "uncleaned_sha256": "22c8659b955b728a",
+    "frames": [
+     "family-tails-carried-00"
+    ]
+   }
+  },
+  "family-tails-carried-01": {
+   "group": "family/tails-carried@55a101f9",
+   "kind": "family",
+   "origin": "exec-7445efdf-4c1f-43fd-9b08-3f4f55a101f9.png cell 1,0 of 3x3; sha256 7354cb05ddc2",
+   "factor": 5.6034,
+   "band_source_px": 17.7,
+   "span_source_px": 64.8,
+   "band": 1.177,
+   "span": 1.041,
+   "head": 1.107,
+   "animation": "TAILS_CARRIED",
+   "before_size": [
+    41,
+    45
+   ],
+   "before_hotspot": [
+    19,
+    24
+   ],
+   "multiplier": 1.098,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.008,
+   "rebuilt": {
+    "factor_37": 5.1549,
+    "resize": 0.911,
+    "size": [
+     37,
+     41
+    ],
+    "hotspot": [
+     17,
+     24
+    ],
+    "uncleaned_sha256": "6c7aadadf077fcff",
+    "frames": [
+     "family-tails-carried-01"
+    ]
+   }
+  },
+  "family-tails-carried-02": {
+   "group": "family/tails-carried@55a101f9",
+   "kind": "family",
+   "origin": "exec-7445efdf-4c1f-43fd-9b08-3f4f55a101f9.png cell 2,2 of 3x3; sha256 7354cb05ddc2",
+   "factor": 5.8621,
+   "band_source_px": 19.6,
+   "span_source_px": 64.8,
+   "band": 1.245,
+   "span": 0.995,
+   "head": 1.113,
+   "animation": "TAILS_CARRIED",
+   "before_size": [
+    44,
+    41
+   ],
+   "before_hotspot": [
+    23,
+    24
+   ],
+   "multiplier": 1.098,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.014,
+   "rebuilt": {
+    "factor_37": 5.3928,
+    "resize": 0.911,
+    "size": [
+     40,
+     37
+    ],
+    "hotspot": [
+     21,
+     24
+    ],
+    "uncleaned_sha256": "a759085a3df3de37",
+    "frames": [
+     "family-tails-carried-02"
+    ]
+   }
+  },
+  "family-tails-fly-carry-00": {
+   "group": "carry",
+   "kind": "carry",
+   "origin": "mt-carry-20261110/attempt5.png cell 0 above the sole line; sha256 bafda2745dee",
+   "factor": 6.5,
+   "band_source_px": 21.1,
+   "span_source_px": 69.6,
+   "band": 1.209,
+   "span": 0.964,
+   "head": 1.08,
+   "animation": "TAILS_FLY_CARRY",
+   "before_size": [
+    35,
+    44
+   ],
+   "before_hotspot": [
+    22,
+    36
+   ],
+   "multiplier": 1.123,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.962,
+   "rebuilt": {
+    "factor_37": 6.1158,
+    "resize": 0.89,
+    "size": [
+     31,
+     40
+    ],
+    "hotspot": [
+     19,
+     32
+    ],
+    "uncleaned_sha256": "1eb8d0936fb3c0df",
+    "frames": [
+     "family-tails-fly-carry-00",
+     "family-tails-fly-carry-ascend-00"
+    ]
+   }
+  },
+  "family-tails-fly-carry-01": {
+   "group": "carry",
+   "kind": "carry",
+   "origin": "mt-carry-20261110/attempt5.png cell 1 above the sole line; sha256 bafda2745dee",
+   "factor": 6.5,
+   "band_source_px": 24.1,
+   "span_source_px": 69.5,
+   "band": 1.381,
+   "span": 0.962,
+   "head": 1.153,
+   "animation": "TAILS_FLY_CARRY",
+   "before_size": [
+    41,
+    41
+   ],
+   "before_hotspot": [
+    28,
+    33
+   ],
+   "multiplier": 1.123,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.027,
+   "rebuilt": {
+    "factor_37": 6.1158,
+    "resize": 0.89,
+    "size": [
+     37,
+     36
+    ],
+    "hotspot": [
+     25,
+     28
+    ],
+    "uncleaned_sha256": "7d50c93edd9e3afc",
+    "frames": [
+     "family-tails-fly-carry-01",
+     "family-tails-fly-carry-ascend-01"
+    ]
+   }
+  },
+  "family-tails-fly-carry-02": {
+   "group": "carry",
+   "kind": "carry",
+   "origin": "mt-carry-20261110/attempt5.png cell 2 above the sole line; sha256 bafda2745dee",
+   "factor": 6.5,
+   "band_source_px": 22.5,
+   "span_source_px": 71.4,
+   "band": 1.289,
+   "span": 0.988,
+   "head": 1.129,
+   "animation": "TAILS_FLY_CARRY",
+   "before_size": [
+    58,
+    36
+   ],
+   "before_hotspot": [
+    33,
+    28
+   ],
+   "multiplier": 1.123,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.005,
+   "rebuilt": {
+    "factor_37": 6.1158,
+    "resize": 0.89,
+    "size": [
+     52,
+     33
+    ],
+    "hotspot": [
+     30,
+     25
+    ],
+    "uncleaned_sha256": "83bd4095515c7a88",
+    "frames": [
+     "family-tails-fly-carry-02",
+     "family-tails-fly-carry-ascend-02"
+    ]
+   }
+  },
+  "family-tails-fly-carry-03": {
+   "group": "carry",
+   "kind": "carry",
+   "origin": "mt-carry-20261110/attempt5.png cell 3 above the sole line; sha256 bafda2745dee",
+   "factor": 6.5,
+   "band_source_px": 24.2,
+   "span_source_px": 71.7,
+   "band": 1.387,
+   "span": 0.993,
+   "head": 1.174,
+   "animation": "TAILS_FLY_CARRY",
+   "before_size": [
+    41,
+    36
+   ],
+   "before_hotspot": [
+    23,
+    28
+   ],
+   "multiplier": 1.123,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.045,
+   "rebuilt": {
+    "factor_37": 6.1158,
+    "resize": 0.89,
+    "size": [
+     35,
+     32
+    ],
+    "hotspot": [
+     20,
+     24
+    ],
+    "uncleaned_sha256": "6022a93e4e42c27c",
+    "frames": [
+     "family-tails-fly-carry-03",
+     "family-tails-fly-carry-ascend-03"
+    ]
+   }
+  },
+  "family-tails-fly-carry-04": {
+   "group": "carry",
+   "kind": "carry",
+   "origin": "mt-carry-20261110/attempt5.png cell 4 above the sole line; sha256 bafda2745dee",
+   "factor": 6.5,
+   "band_source_px": 22.5,
+   "span_source_px": 64.2,
+   "band": 1.289,
+   "span": 0.889,
+   "head": 1.07,
+   "animation": "TAILS_FLY_CARRY",
+   "before_size": [
+    42,
+    36
+   ],
+   "before_hotspot": [
+    28,
+    28
+   ],
+   "multiplier": 1.123,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.953,
+   "rebuilt": {
+    "factor_37": 6.1158,
+    "resize": 0.89,
+    "size": [
+     37,
+     32
+    ],
+    "hotspot": [
+     25,
+     24
+    ],
+    "uncleaned_sha256": "c39ce834e1b58847",
+    "frames": [
+     "family-tails-fly-carry-04",
+     "family-tails-fly-carry-ascend-04"
+    ]
+   }
+  },
+  "family-tails-fly-carry-05": {
+   "group": "carry",
+   "kind": "carry",
+   "origin": "mt-carry-20261110/attempt5.png cell 5 above the sole line; sha256 bafda2745dee",
+   "factor": 6.5,
+   "band_source_px": 23.2,
+   "span_source_px": 68.3,
+   "band": 1.33,
+   "span": 0.946,
+   "head": 1.122,
+   "animation": "TAILS_FLY_CARRY",
+   "before_size": [
+    62,
+    36
+   ],
+   "before_hotspot": [
+    37,
+    28
+   ],
+   "multiplier": 1.123,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.999,
+   "rebuilt": {
+    "factor_37": 6.1158,
+    "resize": 0.89,
+    "size": [
+     56,
+     31
+    ],
+    "hotspot": [
+     33,
+     23
+    ],
+    "uncleaned_sha256": "eb1192a5667a659e",
+    "frames": [
+     "family-tails-fly-carry-05",
+     "family-tails-fly-carry-ascend-05"
+    ]
+   }
+  },
+  "family-tails-swim-00": {
+   "group": "family/tails-swim@ffcc4e82",
+   "kind": "family",
+   "origin": "exec-aa894fde-81a9-4ab7-9330-e9dbffcc4e82.png cell 0,0 of 5x3; sha256 a5cd2e713a87",
+   "factor": 6.1475,
+   "band_source_px": 19.5,
+   "span_source_px": 67.9,
+   "band": 1.182,
+   "span": 0.994,
+   "head": 1.084,
+   "animation": "TAILS_SWIM",
+   "before_size": [
+    41,
+    36
+   ],
+   "before_hotspot": [
+    27,
+    24
+   ],
+   "multiplier": 1.084,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.0,
+   "rebuilt": {
+    "factor_37": 5.5833,
+    "resize": 0.923,
+    "size": [
+     37,
+     33
+    ],
+    "hotspot": [
+     24,
+     22
+    ],
+    "uncleaned_sha256": "22e5b5d3e58e0377",
+    "frames": [
+     "family-tails-swim-00"
+    ]
+   }
+  },
+  "family-tails-swim-01": {
+   "group": "family/tails-swim@ffcc4e82",
+   "kind": "family",
+   "origin": "exec-aa894fde-81a9-4ab7-9330-e9dbffcc4e82.png cell 1,2 of 5x3; sha256 a5cd2e713a87",
+   "factor": 5.9016,
+   "band_source_px": 19.8,
+   "span_source_px": 65.6,
+   "band": 1.25,
+   "span": 1.0,
+   "head": 1.118,
+   "animation": "TAILS_SWIM",
+   "before_size": [
+    43,
+    35
+   ],
+   "before_hotspot": [
+    27,
+    24
+   ],
+   "multiplier": 1.084,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.031,
+   "rebuilt": {
+    "factor_37": 5.36,
+    "resize": 0.923,
+    "size": [
+     39,
+     32
+    ],
+    "hotspot": [
+     24,
+     22
+    ],
+    "uncleaned_sha256": "6e8fab8ba3e84bcd",
+    "frames": [
+     "family-tails-swim-01"
+    ]
+   }
+  },
+  "family-tails-swim-02": {
+   "group": "family/tails-swim@ffcc4e82",
+   "kind": "family",
+   "origin": "exec-aa894fde-81a9-4ab7-9330-e9dbffcc4e82.png cell 2,1 of 5x3; sha256 a5cd2e713a87",
+   "factor": 5.9836,
+   "band_source_px": 18.9,
+   "span_source_px": 65.7,
+   "band": 1.177,
+   "span": 0.988,
+   "head": 1.078,
+   "animation": "TAILS_SWIM",
+   "before_size": [
+    53,
+    33
+   ],
+   "before_hotspot": [
+    33,
+    23
+   ],
+   "multiplier": 1.084,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.994,
+   "rebuilt": {
+    "factor_37": 5.4344,
+    "resize": 0.923,
+    "size": [
+     48,
+     31
+    ],
+    "hotspot": [
+     30,
+     22
+    ],
+    "uncleaned_sha256": "f274898ceee84938",
+    "frames": [
+     "family-tails-swim-02"
+    ]
+   }
+  },
+  "family-tails-swim-03": {
+   "group": "family/tails-swim@ffcc4e82",
+   "kind": "family",
+   "origin": "exec-aa894fde-81a9-4ab7-9330-e9dbffcc4e82.png cell 3,2 of 5x3; sha256 a5cd2e713a87",
+   "factor": 5.9836,
+   "band_source_px": 19.0,
+   "span_source_px": 67.1,
+   "band": 1.183,
+   "span": 1.009,
+   "head": 1.093,
+   "animation": "TAILS_SWIM",
+   "before_size": [
+    41,
+    36
+   ],
+   "before_hotspot": [
+    28,
+    24
+   ],
+   "multiplier": 1.084,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.008,
+   "rebuilt": {
+    "factor_37": 5.4344,
+    "resize": 0.923,
+    "size": [
+     38,
+     33
+    ],
+    "hotspot": [
+     26,
+     22
+    ],
+    "uncleaned_sha256": "851b04e7c3f7a390",
+    "frames": [
+     "family-tails-swim-03"
+    ]
+   }
+  },
+  "family-tails-swim-04": {
+   "group": "family/tails-swim@ffcc4e82",
+   "kind": "family",
+   "origin": "exec-aa894fde-81a9-4ab7-9330-e9dbffcc4e82.png cell 4,1 of 5x3; sha256 a5cd2e713a87",
+   "factor": 5.9836,
+   "band_source_px": 19.9,
+   "span_source_px": 65.4,
+   "band": 1.239,
+   "span": 0.984,
+   "head": 1.104,
+   "animation": "TAILS_SWIM",
+   "before_size": [
+    45,
+    36
+   ],
+   "before_hotspot": [
+    28,
+    24
+   ],
+   "multiplier": 1.084,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.018,
+   "rebuilt": {
+    "factor_37": 5.4344,
+    "resize": 0.923,
+    "size": [
+     42,
+     33
+    ],
+    "hotspot": [
+     26,
+     22
+    ],
+    "uncleaned_sha256": "671a74f8e390d1ec",
+    "frames": [
+     "family-tails-swim-04"
+    ]
+   }
+  },
+  "family-tails-swim-ascend-00": {
+   "group": "family/tails-swim-ascend@88f3484f",
+   "kind": "family",
+   "origin": "exec-b8831b88-cf4d-4daa-a422-64d888f3484f.png cell 0,1 of 5x3; sha256 7fdfbed6cc14",
+   "factor": 6.3,
+   "band_source_px": 18.2,
+   "span_source_px": 64.0,
+   "band": 1.076,
+   "span": 0.914,
+   "head": 0.992,
+   "animation": "TAILS_SWIM_ASCEND",
+   "before_size": [
+    38,
+    36
+   ],
+   "before_hotspot": [
+    26,
+    21
+   ],
+   "multiplier": 0.988,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.992
+  },
+  "family-tails-swim-ascend-01": {
+   "group": "family/tails-swim-ascend@88f3484f",
+   "kind": "family",
+   "origin": "exec-b8831b88-cf4d-4daa-a422-64d888f3484f.png cell 1,0 of 5x3; sha256 7fdfbed6cc14",
+   "factor": 6.5,
+   "band_source_px": 19.0,
+   "span_source_px": 61.5,
+   "band": 1.089,
+   "span": 0.851,
+   "head": 0.963,
+   "animation": "TAILS_SWIM_ASCEND",
+   "before_size": [
+    48,
+    32
+   ],
+   "before_hotspot": [
+    30,
+    20
+   ],
+   "multiplier": 0.988,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.963
+  },
+  "family-tails-swim-ascend-02": {
+   "group": "family/tails-swim-ascend@88f3484f",
+   "kind": "family",
+   "origin": "exec-b8831b88-cf4d-4daa-a422-64d888f3484f.png cell 2,2 of 5x3; sha256 7fdfbed6cc14",
+   "factor": 6.4,
+   "band_source_px": 18.4,
+   "span_source_px": 64.2,
+   "band": 1.071,
+   "span": 0.903,
+   "head": 0.983,
+   "animation": "TAILS_SWIM_ASCEND",
+   "before_size": [
+    38,
+    35
+   ],
+   "before_hotspot": [
+    24,
+    21
+   ],
+   "multiplier": 0.988,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.983
+  },
+  "family-tails-swim-ascend-03": {
+   "group": "family/tails-swim-ascend@88f3484f",
+   "kind": "family",
+   "origin": "exec-b8831b88-cf4d-4daa-a422-64d888f3484f.png cell 3,1 of 5x3; sha256 7fdfbed6cc14",
+   "factor": 6.3,
+   "band_source_px": 18.3,
+   "span_source_px": 62.9,
+   "band": 1.082,
+   "span": 0.898,
+   "head": 0.986,
+   "animation": "TAILS_SWIM_ASCEND",
+   "before_size": [
+    39,
+    32
+   ],
+   "before_hotspot": [
+    26,
+    20
+   ],
+   "multiplier": 0.988,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.986
+  },
+  "family-tails-swim-ascend-04": {
+   "group": "family/tails-swim-ascend@88f3484f",
+   "kind": "family",
+   "origin": "exec-b8831b88-cf4d-4daa-a422-64d888f3484f.png cell 4,2 of 5x3; sha256 7fdfbed6cc14",
+   "factor": 6.4,
+   "band_source_px": 18.9,
+   "span_source_px": 64.6,
+   "band": 1.1,
+   "span": 0.908,
+   "head": 0.999,
+   "animation": "TAILS_SWIM_ASCEND",
+   "before_size": [
+    38,
+    36
+   ],
+   "before_hotspot": [
+    25,
+    21
+   ],
+   "multiplier": 0.988,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.999
+  },
+  "family-tails-swim-carry-00": {
+   "group": "family/tails-swim-carry@ed3bcb88",
+   "kind": "family",
+   "origin": "exec-7bbab6e2-11ac-4136-a889-a5eced3bcb88.png cell 0,1 of 2x3; sha256 7df12f7e7bf1",
+   "factor": 9.1,
+   "band_source_px": 28.4,
+   "span_source_px": 84.1,
+   "band": 1.163,
+   "span": 0.832,
+   "head": 0.984,
+   "animation": "TAILS_SWIM_CARRY",
+   "before_size": [
+    48,
+    41
+   ],
+   "before_hotspot": [
+    28,
+    28
+   ],
+   "multiplier": 0.976,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.984
+  },
+  "family-tails-swim-carry-01": {
+   "group": "family/tails-swim-carry@ed3bcb88",
+   "kind": "family",
+   "origin": "exec-7bbab6e2-11ac-4136-a889-a5eced3bcb88.png cell 1,2 of 2x3; sha256 7df12f7e7bf1",
+   "factor": 9.2,
+   "band_source_px": 28.7,
+   "span_source_px": 82.6,
+   "band": 1.162,
+   "span": 0.808,
+   "head": 0.969,
+   "animation": "TAILS_SWIM_CARRY",
+   "before_size": [
+    49,
+    41
+   ],
+   "before_hotspot": [
+    29,
+    28
+   ],
+   "multiplier": 0.976,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.969
+  },
+  "family-tails-swim-tired-00": {
+   "group": "family/tails-swim-tired@b539b2ed",
+   "kind": "family",
+   "origin": "exec-d1691db4-a478-46b4-951c-268db539b2ed.png cell 0,1 of 3x3; sha256 454813711a6a",
+   "factor": 8.3846,
+   "band_source_px": 25.6,
+   "span_source_px": 95.8,
+   "band": 1.137,
+   "span": 1.028,
+   "head": 1.081,
+   "animation": "TAILS_SWIM_TIRED",
+   "before_size": [
+    42,
+    37
+   ],
+   "before_hotspot": [
+    25,
+    26
+   ],
+   "multiplier": 1.086,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.995,
+   "rebuilt": {
+    "factor_37": 7.6291,
+    "resize": 0.921,
+    "size": [
+     39,
+     34
+    ],
+    "hotspot": [
+     23,
+     24
+    ],
+    "uncleaned_sha256": "8e46c6c0d9fef240",
+    "frames": [
+     "family-tails-swim-tired-00"
+    ]
+   }
+  },
+  "family-tails-swim-tired-01": {
+   "group": "family/tails-swim-tired@b539b2ed",
+   "kind": "family",
+   "origin": "exec-d1691db4-a478-46b4-951c-268db539b2ed.png cell 1,0 of 3x3; sha256 454813711a6a",
+   "factor": 8.7692,
+   "band_source_px": 27.0,
+   "span_source_px": 99.6,
+   "band": 1.147,
+   "span": 1.022,
+   "head": 1.083,
+   "animation": "TAILS_SWIM_TIRED",
+   "before_size": [
+    41,
+    37
+   ],
+   "before_hotspot": [
+    24,
+    24
+   ],
+   "multiplier": 1.086,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.997,
+   "rebuilt": {
+    "factor_37": 7.9791,
+    "resize": 0.921,
+    "size": [
+     38,
+     34
+    ],
+    "hotspot": [
+     22,
+     22
+    ],
+    "uncleaned_sha256": "2bf37cc56be2761f",
+    "frames": [
+     "family-tails-swim-tired-01"
+    ]
+   }
+  },
+  "family-tails-swim-tired-02": {
+   "group": "family/tails-swim-tired@b539b2ed",
+   "kind": "family",
+   "origin": "exec-d1691db4-a478-46b4-951c-268db539b2ed.png cell 2,2 of 3x3; sha256 454813711a6a",
+   "factor": 8.6154,
+   "band_source_px": 26.6,
+   "span_source_px": 101.3,
+   "band": 1.15,
+   "span": 1.058,
+   "head": 1.103,
+   "animation": "TAILS_SWIM_TIRED",
+   "before_size": [
+    43,
+    36
+   ],
+   "before_hotspot": [
+    25,
+    23
+   ],
+   "multiplier": 1.086,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.016,
+   "rebuilt": {
+    "factor_37": 7.8391,
+    "resize": 0.921,
+    "size": [
+     40,
+     33
+    ],
+    "hotspot": [
+     23,
+     21
+    ],
+    "uncleaned_sha256": "07b364e63f54c15c",
+    "frames": [
+     "family-tails-swim-tired-02"
+    ]
+   }
+  },
+  "family-victory-00": {
+   "group": "family/victory@57087963",
+   "kind": "family",
+   "origin": "exec-18976a5b-4615-41a3-8bb9-a70757087963.png cell 0,0 of 4x3; sha256 058c64a6cb23",
+   "factor": 6.5385,
+   "band_source_px": 21.1,
+   "span_source_px": 83.6,
+   "band": 1.202,
+   "span": 1.151,
+   "head": 1.176,
+   "animation": "VICTORY",
+   "before_size": [
+    29,
+    47
+   ],
+   "before_hotspot": [
+    14,
+    27
+   ],
+   "multiplier": 1.171,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.004,
+   "rebuilt": {
+    "factor_37": 6.4149,
+    "resize": 0.854,
+    "size": [
+     24,
+     40
+    ],
+    "hotspot": [
+     12,
+     20
+    ],
+    "uncleaned_sha256": "9bbabea34a483cd5",
+    "frames": [
+     "family-victory-00"
+    ]
+   }
+  },
+  "family-victory-01": {
+   "group": "family/victory@57087963",
+   "kind": "family",
+   "origin": "exec-18976a5b-4615-41a3-8bb9-a70757087963.png cell 1,1 of 4x3; sha256 058c64a6cb23",
+   "factor": 6.6154,
+   "band_source_px": 21.8,
+   "span_source_px": 81.4,
+   "band": 1.228,
+   "span": 1.107,
+   "head": 1.166,
+   "animation": "VICTORY",
+   "before_size": [
+    33,
+    45
+   ],
+   "before_hotspot": [
+    15,
+    25
+   ],
+   "multiplier": 1.171,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.996,
+   "rebuilt": {
+    "factor_37": 6.4904,
+    "resize": 0.854,
+    "size": [
+     28,
+     39
+    ],
+    "hotspot": [
+     13,
+     19
+    ],
+    "uncleaned_sha256": "73d5bc4a3ee8f5d1",
+    "frames": [
+     "family-victory-01"
+    ]
+   }
+  },
+  "family-victory-02": {
+   "group": "family/victory@57087963",
+   "kind": "family",
+   "origin": "exec-18976a5b-4615-41a3-8bb9-a70757087963.png cell 2,2 of 4x3; sha256 058c64a6cb23",
+   "factor": 6.6923,
+   "band_source_px": 21.0,
+   "span_source_px": 84.5,
+   "band": 1.169,
+   "span": 1.136,
+   "head": 1.152,
+   "animation": "VICTORY",
+   "before_size": [
+    35,
+    45
+   ],
+   "before_hotspot": [
+    17,
+    25
+   ],
+   "multiplier": 1.171,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.984,
+   "rebuilt": {
+    "factor_37": 6.5659,
+    "resize": 0.854,
+    "size": [
+     29,
+     39
+    ],
+    "hotspot": [
+     14,
+     19
+    ],
+    "uncleaned_sha256": "52269d8db0b2ebbe",
+    "frames": [
+     "family-victory-02"
+    ]
+   }
+  },
+  "family-victory-03": {
+   "group": "family/victory@57087963",
+   "kind": "family",
+   "origin": "exec-18976a5b-4615-41a3-8bb9-a70757087963.png cell 3,1 of 4x3; sha256 058c64a6cb23",
+   "factor": 6.5385,
+   "band_source_px": 21.7,
+   "span_source_px": 81.4,
+   "band": 1.236,
+   "span": 1.12,
+   "head": 1.177,
+   "animation": "VICTORY",
+   "before_size": [
+    33,
+    47
+   ],
+   "before_hotspot": [
+    15,
+    27
+   ],
+   "multiplier": 1.171,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.005,
+   "rebuilt": {
+    "factor_37": 6.4149,
+    "resize": 0.854,
+    "size": [
+     28,
+     40
+    ],
+    "hotspot": [
+     13,
+     20
+    ],
+    "uncleaned_sha256": "b563bfc91b42972c",
+    "frames": [
+     "family-victory-03"
+    ]
+   }
+  },
+  "fly-00": {
+   "group": "flight",
+   "kind": "flight",
+   "origin": "exec-6fb3a262-5311-420d-82f0-513dea56ab59.png cell 0 crop [94, 49, 416, 443]; sha256 f6edad74c99c",
+   "factor": 9.5,
+   "band_source_px": 35.4,
+   "span_source_px": 112.7,
+   "band": 1.388,
+   "span": 1.068,
+   "head": 1.218,
+   "animation": "TAILS_FLY",
+   "before_size": [
+    40,
+    50
+   ],
+   "before_hotspot": [
+    25,
+    35
+   ],
+   "multiplier": 1.218,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.0,
+   "rebuilt": {
+    "factor_37": 9.6946,
+    "resize": 0.821,
+    "size": [
+     33,
+     41
+    ],
+    "hotspot": [
+     21,
+     29
+    ],
+    "uncleaned_sha256": "dd35969511456365",
+    "frames": [
+     "fly-00",
+     "family-tails-fly-ascend-00"
+    ]
+   }
+  },
+  "fly-01": {
+   "group": "flight",
+   "kind": "flight",
+   "origin": "exec-6fb3a262-5311-420d-82f0-513dea56ab59.png cell 1 crop [42, 127, 387, 442]; sha256 f6edad74c99c",
+   "factor": 9.5,
+   "band_source_px": 35.6,
+   "span_source_px": 113.5,
+   "band": 1.396,
+   "span": 1.075,
+   "head": 1.225,
+   "animation": "TAILS_FLY",
+   "before_size": [
+    43,
+    40
+   ],
+   "before_hotspot": [
+    29,
+    25
+   ],
+   "multiplier": 1.218,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.006,
+   "rebuilt": {
+    "factor_37": 9.6946,
+    "resize": 0.821,
+    "size": [
+     36,
+     32
+    ],
+    "hotspot": [
+     24,
+     20
+    ],
+    "uncleaned_sha256": "0f0740f6b24cf1f3",
+    "frames": [
+     "fly-01",
+     "family-tails-fly-ascend-01"
+    ]
+   }
+  },
+  "fly-02": {
+   "group": "flight",
+   "kind": "flight",
+   "origin": "exec-6fb3a262-5311-420d-82f0-513dea56ab59.png cell 2 crop [0, 127, 486, 441]; sha256 f6edad74c99c",
+   "factor": 9.5,
+   "band_source_px": 34.6,
+   "span_source_px": 113.2,
+   "band": 1.357,
+   "span": 1.072,
+   "head": 1.206,
+   "animation": "TAILS_FLY",
+   "before_size": [
+    61,
+    39
+   ],
+   "before_hotspot": [
+    35,
+    24
+   ],
+   "multiplier": 1.218,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.99,
+   "rebuilt": {
+    "factor_37": 9.6946,
+    "resize": 0.821,
+    "size": [
+     50,
+     32
+    ],
+    "hotspot": [
+     29,
+     20
+    ],
+    "uncleaned_sha256": "8d1ffa1fced5a9d9",
+    "frames": [
+     "fly-02",
+     "family-tails-fly-ascend-02"
+    ]
+   }
+  },
+  "fly-03": {
+   "group": "flight",
+   "kind": "flight",
+   "origin": "exec-6fb3a262-5311-420d-82f0-513dea56ab59.png cell 3 crop [125, 95, 412, 463]; sha256 f6edad74c99c",
+   "factor": 9.5,
+   "band_source_px": 35.7,
+   "span_source_px": 114.5,
+   "band": 1.4,
+   "span": 1.085,
+   "head": 1.232,
+   "animation": "TAILS_FLY",
+   "before_size": [
+    36,
+    46
+   ],
+   "before_hotspot": [
+    20,
+    25
+   ],
+   "multiplier": 1.218,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.011,
+   "rebuilt": {
+    "factor_37": 9.6946,
+    "resize": 0.821,
+    "size": [
+     30,
+     38
+    ],
+    "hotspot": [
+     17,
+     21
+    ],
+    "uncleaned_sha256": "c7e41aee46f5eafc",
+    "frames": [
+     "fly-03",
+     "family-tails-fly-ascend-03"
+    ]
+   }
+  },
+  "fly-04": {
+   "group": "flight",
+   "kind": "flight",
+   "origin": "exec-6fb3a262-5311-420d-82f0-513dea56ab59.png cell 4 crop [61, 96, 393, 407]; sha256 f6edad74c99c",
+   "factor": 9.5,
+   "band_source_px": 35.1,
+   "span_source_px": 113.1,
+   "band": 1.376,
+   "span": 1.071,
+   "head": 1.214,
+   "animation": "TAILS_FLY",
+   "before_size": [
+    42,
+    39
+   ],
+   "before_hotspot": [
+    28,
+    24
+   ],
+   "multiplier": 1.218,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 0.997,
+   "rebuilt": {
+    "factor_37": 9.6946,
+    "resize": 0.821,
+    "size": [
+     34,
+     32
+    ],
+    "hotspot": [
+     23,
+     20
+    ],
+    "uncleaned_sha256": "8754045e55420bf9",
+    "frames": [
+     "fly-04",
+     "family-tails-fly-ascend-04"
+    ]
+   }
+  },
+  "fly-05": {
+   "group": "flight",
+   "kind": "flight",
+   "origin": "exec-6fb3a262-5311-420d-82f0-513dea56ab59.png cell 5 crop [34, 95, 391, 409]; sha256 f6edad74c99c",
+   "factor": 9.5,
+   "band_source_px": 35.0,
+   "span_source_px": 114.2,
+   "band": 1.372,
+   "span": 1.082,
+   "head": 1.218,
+   "animation": "TAILS_FLY",
+   "before_size": [
+    45,
+    39
+   ],
+   "before_hotspot": [
+    30,
+    24
+   ],
+   "multiplier": 1.218,
+   "decision": "rebuild",
+   "why": "group",
+   "after": 1.0,
+   "rebuilt": {
+    "factor_37": 9.6946,
+    "resize": 0.821,
+    "size": [
+     37,
+     32
+    ],
+    "hotspot": [
+     25,
+     20
+    ],
+    "uncleaned_sha256": "05aa56bd0116a60f",
+    "frames": [
+     "fly-05",
+     "family-tails-fly-ascend-05"
+    ]
+   }
+  },
+  "fly_tired-00": {
+   "group": "hand/fly_tired",
+   "kind": "hand",
+   "factor": null,
+   "band_source_px": null,
+   "span_source_px": null,
+   "origin": "no usable source drawing: read by hand on the installed frame",
+   "hand": "goggle span 11 px, near lens 5x3 px as WAIT; stands 37-38 px",
+   "before_rows": [
+    "00000000000000011100000000000000000",
+    "00000000000000012211100000000000000",
+    "00000000000001122233210000000000000",
+    "00000000000112223333321100000000000",
+    "00000000011222333333399910111100000",
+    "000000011112222333339f88911f9100000",
+    "000000000011122233399fd6f99f8100000",
+    "00000000000112232199ffeef29ff100000",
+    "0000000000112222199939ff22221100000",
+    "00000000001112229993239223321100000",
+    "00000000000001229332233333339110000",
+    "0000000000000012233334544339ff91000",
+    "0000000000000011233d68445ffeeef1000",
+    "0000000000000001224d768888f9fff1100",
+    "00000000000000012245d88888f99911000",
+    "00000000000000011223488554911100000",
+    "00000011111111121122248442111000000",
+    "00011123333333332122466891122111000",
+    "00114333333333333322566491123331100",
+    "01224433333333332224d68991222333310",
+    "125d444344443332122d689993134445531",
+    "135545dd54443211223d899953135555411",
+    "112235dd532321112344999d41113432100",
+    "00111343111111991239998811001111000",
+    "00000111000019999199f88310000000000",
+    "0000000000001999919f884110000000000",
+    "00000000000019999138842100000000000",
+    "00000000000001111113321100000000000",
+    "00000000000001112211121000000000000",
+    "00000000000001222111121000000000000",
+    "00000000000011991001991000000000000",
+    "000000000000199910019b1000000000000",
+    "000000000000144310019f1000000000000",
+    "00000000000014d410014d1000000000000",
+    "000000000000014410014d1000000000000",
+    "00000000000001210000110000000000000",
+    "00000000000001110000110000000000000"
+   ],
+   "band": null,
+   "span": null,
+   "head": 1.0,
+   "animation": "TAILS_FLY_TIRED",
+   "before_size": [
+    35,
+    37
+   ],
+   "before_hotspot": [
+    21,
+    20
+   ],
+   "multiplier": 1.0,
+   "decision": "keep",
+   "why": "by hand: goggle span 11 px, near lens 5x3 px as WAIT; stands 37-38 px",
+   "after": 1.0
+  },
+  "fly_tired-01": {
+   "group": "hand/fly_tired",
+   "kind": "hand",
+   "factor": null,
+   "band_source_px": null,
+   "span_source_px": null,
+   "origin": "no usable source drawing: read by hand on the installed frame",
+   "hand": "goggle span 11 px, near lens 5x3 px as WAIT; stands 37-38 px",
+   "before_rows": [
+    "00000000000000000011000000000000000000",
+    "00000000000000000122110000000000000000",
+    "00000000000000111223321100000000000000",
+    "00000000000001222333322110000000000000",
+    "00000000000112233333329991011110000000",
+    "0000000000112222333329f88f19f910000000",
+    "0000000000011112333229fd689ff510000000",
+    "0000000000000122332199ffef29ff10000000",
+    "000000000000122222999399f2239210000000",
+    "00000000000011222999333322332210000000",
+    "00000000000000122933333333333210000000",
+    "0000000000000001223333455439ff91000000",
+    "00000000000000001233588445fffeef100000",
+    "00000000000000001223d788d68f9fff100000",
+    "000000000000000001234d66668f9191100000",
+    "00000000000000011112245d88491111000000",
+    "00000000001111122212224884211100000000",
+    "0000000111333333332223d884111100000000",
+    "000001123333333333322566f9111211000000",
+    "000012333333333322223dcd99111232100000",
+    "00012333333333221122566993312333211000",
+    "00134333333333321223889935312333322100",
+    "11443333333344311224499445223333333210",
+    "134434433444531991239934d3244333443210",
+    "124d654dd545311999999358511344544d6410",
+    "014651464211119999914885310124d654dd41",
+    "01111011110011199912584310001135d32111",
+    "00000000000000119922932100000011111000",
+    "00000000000000111221122100000000000000",
+    "00000000000000111211122100000000000000",
+    "00000000000000199910199100000000000000",
+    "0000000000000019b1001b9100000000000000",
+    "000000000000001ff100144100000000000000",
+    "00000000000000155100155100000000000000",
+    "00000000000000155100155100000000000000",
+    "00000000000000011000011000000000000000",
+    "00000000000000011000011000000000000000"
+   ],
+   "band": null,
+   "span": null,
+   "head": 1.0,
+   "animation": "TAILS_FLY_TIRED",
+   "before_size": [
+    38,
+    37
+   ],
+   "before_hotspot": [
+    21,
+    20
+   ],
+   "multiplier": 1.0,
+   "decision": "keep",
+   "why": "by hand: goggle span 11 px, near lens 5x3 px as WAIT; stands 37-38 px",
+   "after": 1.0
+  },
+  "fly_tired-02": {
+   "group": "hand/fly_tired",
+   "kind": "hand",
+   "factor": null,
+   "band_source_px": null,
+   "span_source_px": null,
+   "origin": "no usable source drawing: read by hand on the installed frame",
+   "hand": "goggle span 11 px, near lens 5x3 px as WAIT; stands 37-38 px",
+   "before_rows": [
+    "000000000000000111110000000000000000",
+    "000000000000000122211000000000000000",
+    "000000000000011222332110000000000000",
+    "000000000001122233332211100000000000",
+    "0000000001122233333329f9101111000000",
+    "000000011122222333329f88f19f91000000",
+    "00000000011112233321ff88ef9f81000000",
+    "00000000000012333299feeee99f91000000",
+    "0000000000012332299939ff933911000000",
+    "000000000001122299933331333211000000",
+    "000000000000012199333333323321000000",
+    "000000000000001193333444433fff100000",
+    "0000000000000012333488445feeeef10000",
+    "0000000000000001224d78888ff9fff10000",
+    "00000000000000012234dd88884219110000",
+    "000000000000000111234d88843411100000",
+    "0000000000001112112235d8421100000000",
+    "000000000011123332233568911100000000",
+    "00000000111233333323577f911110000000",
+    "00000001223333332333dc89911221000000",
+    "000000122333333212356899911232100000",
+    "0000012233333321133d8993421232210000",
+    "000011233333321123449945421233221000",
+    "000112333333211923399948322333322100",
+    "001233333333219991999554223333333210",
+    "0133333333342199919f8d52134333343210",
+    "134433333444199991388431014444345310",
+    "12444334554111111113321000145d555541",
+    "11454445d51001112211221000013dd4d641",
+    "01555d5dd100011121112210000014535651",
+    "1454d5343100019f91019910000001112531",
+    "011353211000019910019910000000001110",
+    "00011110000001ff10014410000000000000",
+    "000000000000015510015510000000000000",
+    "000000000000015510015510000000000000",
+    "000000000000001100001100000000000000",
+    "000000000000001100001100000000000000"
+   ],
+   "band": null,
+   "span": null,
+   "head": 1.0,
+   "animation": "TAILS_FLY_TIRED",
+   "before_size": [
+    36,
+    37
+   ],
+   "before_hotspot": [
+    22,
+    20
+   ],
+   "multiplier": 1.0,
+   "decision": "keep",
+   "why": "by hand: goggle span 11 px, near lens 5x3 px as WAIT; stands 37-38 px",
+   "after": 1.0
+  },
+  "fly_tired-03": {
+   "group": "hand/fly_tired",
+   "kind": "hand",
+   "factor": null,
+   "band_source_px": null,
+   "span_source_px": null,
+   "origin": "no usable source drawing: read by hand on the installed frame",
+   "hand": "goggle span 11 px, near lens 5x3 px as WAIT; stands 37-38 px",
+   "before_rows": [
+    "00000000000000111000000000000000",
+    "00000000000001222100000000000000",
+    "00000000000012222311000000000000",
+    "00000000001122333331111000000000",
+    "00000000112233333399991111100000",
+    "0000001122222333339f88f99f110000",
+    "0000000111122223399868ff98810000",
+    "0000000001112339999ffff99ff10000",
+    "00000000011222299339993339100000",
+    "00000000011211992333222233110000",
+    "00000000000111933323333223911000",
+    "0000000000001133334454449fff9100",
+    "00000000000001333d7d4554feeef910",
+    "000000000000012348778888999ff910",
+    "000000000000011234d8888899911100",
+    "0000000000001112334d88f431100000",
+    "0000000000011222233588f111000000",
+    "0000000001113332234d6df911000000",
+    "00000001133333322357659911000000",
+    "00000013333333222367599912100000",
+    "0000013333333222257d499312210000",
+    "00001333333321223554994313211000",
+    "00012333333211124499954112321000",
+    "00123333333119999999853122332100",
+    "012333333331999999f8841233332100",
+    "01333333331199911988511223333210",
+    "01333333321199911444112223333310",
+    "12333333321111111222111233333210",
+    "13333333321111221111111233333341",
+    "14433333210012211111100133333431",
+    "15544333100199100199100133334541",
+    "15d4434310019910011b100133444d51",
+    "13d5443210015410001d100123545d41",
+    "11555641000155100016100014655d11",
+    "01345641000123100015100012654310",
+    "00134641000011000013100001642100",
+    "00011421000010000001000001421000",
+    "00001110000000000000000001110000"
+   ],
+   "band": null,
+   "span": null,
+   "head": 1.0,
+   "animation": "TAILS_FLY_TIRED",
+   "before_size": [
+    32,
+    38
+   ],
+   "before_hotspot": [
+    18,
+    20
+   ],
+   "multiplier": 1.0,
+   "decision": "keep",
+   "why": "by hand: goggle span 11 px, near lens 5x3 px as WAIT; stands 37-38 px",
+   "after": 1.0
+  },
+  "fly_tired-04": {
+   "group": "hand/fly_tired",
+   "kind": "hand",
+   "factor": null,
+   "band_source_px": null,
+   "span_source_px": null,
+   "origin": "no usable source drawing: read by hand on the installed frame",
+   "hand": "goggle span 11 px, near lens 5x3 px as WAIT; stands 37-38 px",
+   "before_rows": [
+    "0000000000000000111000000000000000000",
+    "0000000000000000122110000000000000000",
+    "0000000000000011222321100000000000000",
+    "0000000000001122233332111000000000000",
+    "0000000000112223333329999101110000000",
+    "000000001112332233329ff88919910000000",
+    "000000000111112333319ff68f9ff91000000",
+    "000000000000122333999ffeff99f91000000",
+    "00000000000113332999339f9932210000000",
+    "0000000000011122199323211333210000000",
+    "0000000000000012133323333322391000000",
+    "00000000000000012333334d443ffff100000",
+    "0000000000000001133466444fffeee910000",
+    "00000000000000001235778888f99fff10000",
+    "000000000000000112235d888889999110000",
+    "0000000000000001112345888449911000000",
+    "0000000000000011222334d84211100000000",
+    "0000000000001123322235665111100000000",
+    "000000001111333333223d764911100000000",
+    "0000000123333333322246789911210000000",
+    "00000012233333332123d7899921221000000",
+    "00001123333333311124d8999422332100000",
+    "000123333333332112354999d313333210000",
+    "0012333333333219923399f85123333321000",
+    "012333333333319991199f852133333332100",
+    "01333333333429999919f8831344333344310",
+    "0123333334441199992354321134443344310",
+    "0145433445411111122332211113445455421",
+    "12d544455410001122211210000134d54d641",
+    "14d55d56410000112211111000001346446d1",
+    "1dddd54510000199910199910000011443531",
+    "1345d43110000199910019b10000000111110",
+    "0113411000000143100019f10000000000000",
+    "00011000000001d510012dd10000000000000",
+    "0000000000000155210125510000000000000",
+    "0000000000000013100013100000000000000",
+    "0000000000000011100011100000000000000"
+   ],
+   "band": null,
+   "span": null,
+   "head": 1.0,
+   "animation": "TAILS_FLY_TIRED",
+   "before_size": [
+    37,
+    37
+   ],
+   "before_hotspot": [
+    21,
+    20
+   ],
+   "multiplier": 1.0,
+   "decision": "keep",
+   "why": "by hand: goggle span 11 px, near lens 5x3 px as WAIT; stands 37-38 px",
+   "after": 1.0
+  },
+  "fly_tired-05": {
+   "group": "hand/fly_tired",
+   "kind": "hand",
+   "factor": null,
+   "band_source_px": null,
+   "span_source_px": null,
+   "origin": "no usable source drawing: read by hand on the installed frame",
+   "hand": "goggle span 11 px, near lens 5x3 px as WAIT; stands 37-38 px",
+   "before_rows": [
+    "0000000000000001111000000000000000000",
+    "0000000000000001222110000000000000000",
+    "0000000000000112223321000000000000000",
+    "0000000000011222333321110000000000000",
+    "0000000001122233333229991011110000000",
+    "00000001112222233333f888919f910000000",
+    "00000000011122223329ff6df9f8410000000",
+    "00000000000112332299fffef29f910000000",
+    "0000000000112222299939ff2339110000000",
+    "0000000000112222999333323332110000000",
+    "0000000000001112933333333233210000000",
+    "000000000000011233333454439fff1000000",
+    "0000000000000012334668444feeee9100000",
+    "0000000000000001335668888f99fff100000",
+    "00000000000000012235d8888899191100000",
+    "000000000000000111234885f491111000000",
+    "000000111111111211223d849111110000000",
+    "0001112333321233322246689112331111000",
+    "01113333333333333322d76f9112333332110",
+    "1454333333333333222367899112333333321",
+    "0133333333333322122d8899412233335d531",
+    "114d543333333211233889945123444445411",
+    "13d6544444343211234f99454133445433100",
+    "1254456d44421199133994d82111113111000",
+    "0111155111111999119948841000001000000",
+    "0000111000011999919f88321000000000000",
+    "0000000000001999913883210000000000000",
+    "0000000000000199912332100000000000000",
+    "0000000000000199221122100000000000000",
+    "0000000000000122211121100000000000000",
+    "00000000000001f9101999100000000000000",
+    "00000000000001b91001b9100000000000000",
+    "00000000000001431001f9100000000000000",
+    "00000000000001541001d4100000000000000",
+    "0000000000000144100154100000000000000",
+    "0000000000000131000011000000000000000",
+    "0000000000000111000011000000000000000"
+   ],
+   "band": null,
+   "span": null,
+   "head": 1.0,
+   "animation": "TAILS_FLY_TIRED",
+   "before_size": [
+    37,
+    37
+   ],
+   "before_hotspot": [
+    20,
+    20
+   ],
+   "multiplier": 1.0,
+   "decision": "keep",
+   "why": "by hand: goggle span 11 px, near lens 5x3 px as WAIT; stands 37-38 px",
+   "after": 1.0
+  },
+  "hurt-00": {
+   "group": "core/hurt",
+   "kind": "core",
+   "origin": "talon-art-20261109/poses-attempt-1.png figure 1",
+   "factor": 8.069,
+   "band_source_px": 21.9,
+   "span_source_px": 78.6,
+   "band": 1.011,
+   "span": 0.877,
+   "head": 0.942,
+   "animation": "HURT",
+   "before_size": [
+    35,
+    33
+   ],
+   "before_hotspot": [
+    17,
+    17
+   ],
+   "multiplier": 0.942,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.942
+  },
+  "look_up-00": {
+   "group": "core/look_up",
+   "kind": "core",
+   "origin": "talon-art-20261109/poses-attempt-1.png figure 4",
+   "factor": 7.6129,
+   "band_source_px": 21.8,
+   "span_source_px": 74.6,
+   "band": 1.067,
+   "span": 0.882,
+   "head": 0.97,
+   "animation": "LOOK_UP",
+   "before_size": [
+    27,
+    37
+   ],
+   "before_hotspot": [
+    13,
+    21
+   ],
+   "multiplier": 0.97,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.97
+  },
+  "object5-31": {
+   "group": "object/attempt2-0",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-0.png cell 0; sha256 e54b3789527d",
+   "factor": 7.125,
+   "band_source_px": 15.1,
+   "span_source_px": null,
+   "band": 0.789,
+   "span": null,
+   "set": 0.962,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    25,
+    38
+   ],
+   "before_hotspot": [
+    15,
+    19
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-32": {
+   "group": "object/attempt2-0",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-0.png cell 1; sha256 e54b3789527d",
+   "factor": 6.7826,
+   "band_source_px": 14.4,
+   "span_source_px": null,
+   "band": 0.791,
+   "span": null,
+   "set": 1.011,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    27,
+    39
+   ],
+   "before_hotspot": [
+    16,
+    15
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-33": {
+   "group": "object/attempt2-0",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-0.png cell 2; sha256 e54b3789527d",
+   "factor": 7.4643,
+   "band_source_px": 8.4,
+   "span_source_px": null,
+   "band": 0.419,
+   "span": null,
+   "set": 0.918,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    26,
+    33
+   ],
+   "before_hotspot": [
+    14,
+    18
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-34": {
+   "group": "object/attempt2-0",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-0.png cell 3; sha256 e54b3789527d",
+   "factor": 7.8095,
+   "band_source_px": 20.1,
+   "span_source_px": null,
+   "band": 0.959,
+   "span": null,
+   "set": 0.878,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    25,
+    24
+   ],
+   "before_hotspot": [
+    15,
+    8
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-35": {
+   "group": "object/attempt2-0",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-0.png cell 4; sha256 e54b3789527d",
+   "factor": 7.0435,
+   "band_source_px": 25.1,
+   "span_source_px": null,
+   "band": 1.327,
+   "span": null,
+   "set": 0.973,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    27,
+    31
+   ],
+   "before_hotspot": [
+    15,
+    16
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-36": {
+   "group": "object/attempt2-0",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-0.png cell 5; sha256 e54b3789527d",
+   "factor": 6.7391,
+   "band_source_px": 24.3,
+   "span_source_px": null,
+   "band": 1.343,
+   "span": null,
+   "set": 1.017,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    27,
+    35
+   ],
+   "before_hotspot": [
+    15,
+    17
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-37": {
+   "group": "object/attempt2-0",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-0.png cell 6; sha256 e54b3789527d",
+   "factor": 6.8571,
+   "band_source_px": 24.6,
+   "span_source_px": null,
+   "band": 1.336,
+   "span": null,
+   "set": 1.0,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    25,
+    36
+   ],
+   "before_hotspot": [
+    13,
+    16
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-38": {
+   "group": "object/attempt2-0",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-0.png cell 7; sha256 e54b3789527d",
+   "factor": 7.0,
+   "band_source_px": 24.1,
+   "span_source_px": null,
+   "band": 1.282,
+   "span": null,
+   "set": 0.979,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    25,
+    36
+   ],
+   "before_hotspot": [
+    14,
+    18
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-39": {
+   "group": "object/attempt2-0",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-0.png cell 8; sha256 e54b3789527d",
+   "factor": 8.1579,
+   "band_source_px": 24.2,
+   "span_source_px": null,
+   "band": 1.105,
+   "span": null,
+   "set": 0.84,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    23,
+    31
+   ],
+   "before_hotspot": [
+    15,
+    17
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-3a": {
+   "group": "object/attempt2-0",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-0.png cell 9; sha256 e54b3789527d",
+   "factor": 7.1905,
+   "band_source_px": 9.6,
+   "span_source_px": null,
+   "band": 0.497,
+   "span": null,
+   "set": 0.953,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    24,
+    25
+   ],
+   "before_hotspot": [
+    14,
+    13
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-3b": {
+   "group": "object/attempt2-0",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-0.png cell 10; sha256 e54b3789527d",
+   "factor": 7.619,
+   "band_source_px": 9.5,
+   "span_source_px": null,
+   "band": 0.464,
+   "span": null,
+   "set": 0.9,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    25,
+    30
+   ],
+   "before_hotspot": [
+    15,
+    13
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-3c": {
+   "group": "object/attempt2-0",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-0.png cell 11; sha256 e54b3789527d",
+   "factor": 7.7,
+   "band_source_px": 14.8,
+   "span_source_px": null,
+   "band": 0.716,
+   "span": null,
+   "set": 0.89,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    24,
+    33
+   ],
+   "before_hotspot": [
+    14,
+    15
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-3d": {
+   "group": "object/attempt2-1",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-1.png cell 0; sha256 c9b28a34a934",
+   "factor": 5.7419,
+   "band_source_px": 21.4,
+   "span_source_px": 67.5,
+   "band": 1.388,
+   "span": 1.058,
+   "set": 1.194,
+   "head": 1.212,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    26,
+    37
+   ],
+   "before_hotspot": [
+    14,
+    17
+   ],
+   "multiplier": 1.203,
+   "decision": "keep",
+   "why": "by eye: standing pose 37 px tall: the standing height already holds and the head is drawn large for the body (head 1.21), so shrinking it left a 31 px bird; only a new drawing fixes both",
+   "after": 1.212
+  },
+  "object5-3e": {
+   "group": "object/attempt2-1",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-1.png cell 1; sha256 c9b28a34a934",
+   "factor": 6.3462,
+   "band_source_px": 21.8,
+   "span_source_px": 63.9,
+   "band": 1.28,
+   "span": 0.906,
+   "set": 1.08,
+   "head": 1.077,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    27,
+    31
+   ],
+   "before_hotspot": [
+    16,
+    16
+   ],
+   "multiplier": 1.078,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.077
+  },
+  "object5-3f": {
+   "group": "object/attempt1-1",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-1.png cell 2; sha256 bd8c7addf0f3",
+   "factor": 6.9583,
+   "band_source_px": 24.8,
+   "span_source_px": 71.8,
+   "band": 1.328,
+   "span": 0.929,
+   "set": 0.985,
+   "head": 1.111,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    26,
+    29
+   ],
+   "before_hotspot": [
+    14,
+    16
+   ],
+   "multiplier": 1.046,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.111
+  },
+  "object5-40": {
+   "group": "object/attempt1-1",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-1.png cell 3; sha256 bd8c7addf0f3",
+   "factor": 7.1304,
+   "band_source_px": 18.8,
+   "span_source_px": 55.2,
+   "band": 0.982,
+   "span": 0.697,
+   "set": 0.961,
+   "head": 0.827,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    27,
+    32
+   ],
+   "before_hotspot": [
+    15,
+    17
+   ],
+   "multiplier": 0.891,
+   "decision": "keep",
+   "why": "small reading: both measures fail low (part-hidden lens, foreshortened beak), so a drawing is enlarged only by hand",
+   "after": 0.827
+  },
+  "object5-41": {
+   "group": "object/attempt2-1",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-1.png cell 4; sha256 c9b28a34a934",
+   "factor": 6.3333,
+   "band_source_px": 17.6,
+   "span_source_px": null,
+   "band": 1.035,
+   "span": null,
+   "set": 1.082,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    27,
+    36
+   ],
+   "before_hotspot": [
+    16,
+    17
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-42": {
+   "group": "object/attempt2-1",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-1.png cell 5; sha256 c9b28a34a934",
+   "factor": 6.625,
+   "band_source_px": 14.4,
+   "span_source_px": null,
+   "band": 0.81,
+   "span": null,
+   "set": 1.035,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    29,
+    35
+   ],
+   "before_hotspot": [
+    19,
+    16
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-43": {
+   "group": "object/attempt2-1",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-1.png cell 6; sha256 c9b28a34a934",
+   "factor": 7.05,
+   "band_source_px": 11.1,
+   "span_source_px": null,
+   "band": 0.587,
+   "span": null,
+   "set": 0.972,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    24,
+    32
+   ],
+   "before_hotspot": [
+    14,
+    15
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-44": {
+   "group": "object/attempt1-1",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-1.png cell 7; sha256 bd8c7addf0f3",
+   "factor": 6.9615,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "set": 0.985,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    25,
+    31
+   ],
+   "before_hotspot": [
+    15,
+    17
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-45": {
+   "group": "object/attempt2-1",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-1.png cell 8; sha256 c9b28a34a934",
+   "factor": 6.7727,
+   "band_source_px": 20.5,
+   "span_source_px": null,
+   "band": 1.128,
+   "span": null,
+   "set": 1.012,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    26,
+    26
+   ],
+   "before_hotspot": [
+    17,
+    14
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-46": {
+   "group": "object/attempt2-1",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-1.png cell 9; sha256 c9b28a34a934",
+   "factor": 7.4737,
+   "band_source_px": 16.5,
+   "span_source_px": null,
+   "band": 0.822,
+   "span": null,
+   "set": 0.917,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    23,
+    24
+   ],
+   "before_hotspot": [
+    15,
+    12
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-47": {
+   "group": "object/attempt2-1",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-1.png cell 10; sha256 c9b28a34a934",
+   "factor": 6.6897,
+   "band_source_px": 21.3,
+   "span_source_px": 68.2,
+   "band": 1.186,
+   "span": 0.917,
+   "set": 1.025,
+   "head": 1.043,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    23,
+    35
+   ],
+   "before_hotspot": [
+    12,
+    19
+   ],
+   "multiplier": 1.034,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.043
+  },
+  "object5-48": {
+   "group": "object/attempt2-1",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-1.png cell 11; sha256 c9b28a34a934",
+   "factor": 7.3,
+   "band_source_px": 21.7,
+   "span_source_px": 69.5,
+   "band": 1.107,
+   "span": 0.857,
+   "set": 0.939,
+   "head": 0.974,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    24,
+    33
+   ],
+   "before_hotspot": [
+    13,
+    18
+   ],
+   "multiplier": 0.956,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.974
+  },
+  "object5-49": {
+   "group": "object/attempt2-2",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-2.png cell 0; sha256 3a151e8abd99",
+   "factor": 6.6667,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "set": 1.028,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    37,
+    29
+   ],
+   "before_hotspot": [
+    20,
+    17
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-4a": {
+   "group": "object/attempt2-2",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-2.png cell 1; sha256 3a151e8abd99",
+   "factor": 6.5833,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "set": 1.041,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    37,
+    29
+   ],
+   "before_hotspot": [
+    18,
+    17
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-4b": {
+   "group": "object/attempt2-2",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-2.png cell 2; sha256 3a151e8abd99",
+   "factor": 6.6207,
+   "band_source_px": 10.0,
+   "span_source_px": 60.0,
+   "band": 0.563,
+   "span": 0.816,
+   "set": 1.035,
+   "head": 0.678,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    35,
+    25
+   ],
+   "before_hotspot": [
+    17,
+    13
+   ],
+   "multiplier": 0.838,
+   "decision": "keep",
+   "why": "small reading: both measures fail low (part-hidden lens, foreshortened beak), so a drawing is enlarged only by hand",
+   "after": 0.678
+  },
+  "object5-4c": {
+   "group": "object/attempt2-2",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-2.png cell 3; sha256 3a151e8abd99",
+   "factor": 7.7727,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "set": 0.882,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    26,
+    26
+   ],
+   "before_hotspot": [
+    13,
+    14
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-4d": {
+   "group": "object/attempt2-2",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-2.png cell 4; sha256 3a151e8abd99",
+   "factor": 6.4167,
+   "band_source_px": 10.1,
+   "span_source_px": null,
+   "band": 0.586,
+   "span": null,
+   "set": 1.068,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    29,
+    35
+   ],
+   "before_hotspot": [
+    14,
+    16
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-4e": {
+   "group": "object/attempt2-2",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-2.png cell 5; sha256 3a151e8abd99",
+   "factor": 6.6923,
+   "band_source_px": 11.0,
+   "span_source_px": null,
+   "band": 0.612,
+   "span": null,
+   "set": 1.024,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    31,
+    35
+   ],
+   "before_hotspot": [
+    19,
+    16
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-4f": {
+   "group": "object/attempt2-2",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-2.png cell 6; sha256 3a151e8abd99",
+   "factor": 6.0,
+   "band_source_px": 6.6,
+   "span_source_px": null,
+   "band": 0.41,
+   "span": null,
+   "set": 1.142,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    33,
+    41
+   ],
+   "before_hotspot": [
+    19,
+    22
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-50": {
+   "group": "object/attempt2-2",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-2.png cell 7; sha256 3a151e8abd99",
+   "factor": 6.76,
+   "band_source_px": 6.8,
+   "span_source_px": null,
+   "band": 0.375,
+   "span": null,
+   "set": 1.014,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    30,
+    39
+   ],
+   "before_hotspot": [
+    16,
+    21
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-51": {
+   "group": "object/attempt2-2",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-2.png cell 8; sha256 3a151e8abd99",
+   "factor": 7.375,
+   "band_source_px": 8.3,
+   "span_source_px": null,
+   "band": 0.419,
+   "span": null,
+   "set": 0.929,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    29,
+    37
+   ],
+   "before_hotspot": [
+    17,
+    19
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-52": {
+   "group": "object/attempt2-2",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-2.png cell 9; sha256 3a151e8abd99",
+   "factor": 7.4737,
+   "band_source_px": 10.1,
+   "span_source_px": 48.9,
+   "band": 0.503,
+   "span": 0.589,
+   "set": 0.917,
+   "head": 0.544,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    30,
+    23
+   ],
+   "before_hotspot": [
+    17,
+    12
+   ],
+   "multiplier": 0.706,
+   "decision": "keep",
+   "why": "small reading: both measures fail low (part-hidden lens, foreshortened beak), so a drawing is enlarged only by hand",
+   "after": 0.544
+  },
+  "object5-53": {
+   "group": "object/attempt2-2",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-2.png cell 10; sha256 3a151e8abd99",
+   "factor": 6.6207,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "set": 1.035,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    35,
+    26
+   ],
+   "before_hotspot": [
+    19,
+    13
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-54": {
+   "group": "object/attempt2-2",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-2.png cell 11; sha256 3a151e8abd99",
+   "factor": 6.7812,
+   "band_source_px": 20.4,
+   "span_source_px": 75.3,
+   "band": 1.121,
+   "span": 0.999,
+   "set": 1.011,
+   "head": 1.058,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    38,
+    26
+   ],
+   "before_hotspot": [
+    21,
+    14
+   ],
+   "multiplier": 1.034,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.058
+  },
+  "object5-58": {
+   "group": "object/attempt2-3",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-3.png cell 3; sha256 679d9597ce09",
+   "factor": 6.3871,
+   "band_source_px": 19.7,
+   "span_source_px": 70.6,
+   "band": 1.149,
+   "span": 0.995,
+   "set": 1.073,
+   "head": 1.069,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    23,
+    37
+   ],
+   "before_hotspot": [
+    11,
+    18
+   ],
+   "multiplier": 1.071,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.069
+  },
+  "object5-59": {
+   "group": "object/attempt2-3",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-3.png cell 4; sha256 679d9597ce09",
+   "factor": 6.4516,
+   "band_source_px": 21.0,
+   "span_source_px": 69.9,
+   "band": 1.213,
+   "span": 0.975,
+   "set": 1.062,
+   "head": 1.088,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    25,
+    37
+   ],
+   "before_hotspot": [
+    12,
+    18
+   ],
+   "multiplier": 1.075,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.088
+  },
+  "object5-5a": {
+   "group": "object/attempt2-3",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-3.png cell 5; sha256 679d9597ce09",
+   "factor": 7.5,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "set": 0.914,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    21,
+    32
+   ],
+   "before_hotspot": [
+    10,
+    15
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-5b": {
+   "group": "object/attempt2-3",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-3.png cell 6; sha256 679d9597ce09",
+   "factor": 7.7222,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "set": 0.888,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    21,
+    31
+   ],
+   "before_hotspot": [
+    10,
+    14
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-5c": {
+   "group": "object/attempt2-3",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-3.png cell 7; sha256 679d9597ce09",
+   "factor": 6.6364,
+   "band_source_px": 19.6,
+   "span_source_px": 69.7,
+   "band": 1.1,
+   "span": 0.945,
+   "set": 1.033,
+   "head": 1.02,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    43,
+    26
+   ],
+   "before_hotspot": [
+    16,
+    12
+   ],
+   "multiplier": 1.026,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.02
+  },
+  "object5-5d": {
+   "group": "object/attempt2-3",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-3.png cell 8; sha256 679d9597ce09",
+   "factor": 6.8095,
+   "band_source_px": 21.2,
+   "span_source_px": 65.7,
+   "band": 1.16,
+   "span": 0.868,
+   "set": 1.007,
+   "head": 1.003,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    30,
+    25
+   ],
+   "before_hotspot": [
+    1,
+    13
+   ],
+   "multiplier": 1.005,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.003
+  },
+  "object5-5e": {
+   "group": "object/attempt2-3",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-3.png cell 9; sha256 679d9597ce09",
+   "factor": 6.5652,
+   "band_source_px": 20.5,
+   "span_source_px": 60.4,
+   "band": 1.163,
+   "span": 0.828,
+   "set": 1.044,
+   "head": 0.981,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    38,
+    27
+   ],
+   "before_hotspot": [
+    19,
+    13
+   ],
+   "multiplier": 1.012,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.981
+  },
+  "object5-5f": {
+   "group": "object/attempt2-3",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-3.png cell 10; sha256 679d9597ce09",
+   "factor": 6.6087,
+   "band_source_px": 20.2,
+   "span_source_px": 57.8,
+   "band": 1.139,
+   "span": 0.787,
+   "set": 1.037,
+   "head": 0.947,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    43,
+    27
+   ],
+   "before_hotspot": [
+    26,
+    13
+   ],
+   "multiplier": 0.991,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.947
+  },
+  "object5-60": {
+   "group": "object/attempt1-3",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-3.png cell 11; sha256 875382127fa7",
+   "factor": 6.913,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "set": 0.991,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    36,
+    27
+   ],
+   "before_hotspot": [
+    13,
+    13
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-61": {
+   "group": "object/attempt2-4",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-4.png cell 0; sha256 6bf4411b5175",
+   "factor": 6.3,
+   "band_source_px": 21.0,
+   "span_source_px": 61.2,
+   "band": 1.242,
+   "span": 0.874,
+   "set": 1.088,
+   "head": 1.042,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    36,
+    25
+   ],
+   "before_hotspot": [
+    29,
+    12
+   ],
+   "multiplier": 1.065,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.042
+  },
+  "object5-62": {
+   "group": "object/attempt1-4",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-4.png cell 1; sha256 2d1a2955ddb1",
+   "factor": 7.125,
+   "band_source_px": 20.4,
+   "span_source_px": 75.5,
+   "band": 1.067,
+   "span": 0.954,
+   "set": 0.962,
+   "head": 1.009,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    43,
+    29
+   ],
+   "before_hotspot": [
+    22,
+    14
+   ],
+   "multiplier": 0.985,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.009
+  },
+  "object5-69": {
+   "group": "object/attempt2-4",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-4.png cell 2; sha256 6bf4411b5175",
+   "factor": 6.0333,
+   "band_source_px": 21.5,
+   "span_source_px": 69.1,
+   "band": 1.327,
+   "span": 1.031,
+   "set": 1.136,
+   "head": 1.17,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    39,
+    36
+   ],
+   "before_hotspot": [
+    19,
+    18
+   ],
+   "multiplier": 1.153,
+   "decision": "rebuild",
+   "why": "own head and the set",
+   "after": 1.015,
+   "rebuilt": {
+    "factor_37": 5.8284,
+    "resize": 0.867,
+    "size": [
+     35,
+     31
+    ],
+    "hotspot": [
+     17,
+     16
+    ],
+    "uncleaned_sha256": "6fefc008f4d0d0a2",
+    "frames": [
+     "object5-69"
+    ]
+   }
+  },
+  "object5-6a": {
+   "group": "object/attempt1-4",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-4.png cell 3; sha256 2d1a2955ddb1",
+   "factor": 7.0345,
+   "band_source_px": 21.4,
+   "span_source_px": 74.9,
+   "band": 1.133,
+   "span": 0.958,
+   "set": 0.974,
+   "head": 1.042,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    35,
+    31
+   ],
+   "before_hotspot": [
+    21,
+    16
+   ],
+   "multiplier": 1.007,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.042
+  },
+  "object5-6b": {
+   "group": "object/attempt1-4",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-4.png cell 4; sha256 2d1a2955ddb1",
+   "factor": 7.5455,
+   "band_source_px": 20.6,
+   "span_source_px": 77.6,
+   "band": 1.017,
+   "span": 0.925,
+   "set": 0.908,
+   "head": 0.97,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    26,
+    33
+   ],
+   "before_hotspot": [
+    15,
+    19
+   ],
+   "multiplier": 0.938,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.97
+  },
+  "object5-6c": {
+   "group": "object/attempt2-4",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-4.png cell 5; sha256 6bf4411b5175",
+   "factor": 6.7143,
+   "band_source_px": 20.5,
+   "span_source_px": 63.6,
+   "band": 1.137,
+   "span": 0.852,
+   "set": 1.021,
+   "head": 0.984,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    36,
+    25
+   ],
+   "before_hotspot": [
+    20,
+    14
+   ],
+   "multiplier": 1.002,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.984
+  },
+  "object5-6d": {
+   "group": "object/attempt2-4",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-4.png cell 6; sha256 6bf4411b5175",
+   "factor": 6.3438,
+   "band_source_px": 19.9,
+   "span_source_px": 87.6,
+   "band": 1.169,
+   "span": 1.243,
+   "set": 1.08,
+   "head": 1.205,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    38,
+    24
+   ],
+   "before_hotspot": [
+    20,
+    11
+   ],
+   "multiplier": 1.141,
+   "decision": "rebuild",
+   "why": "own head and the set",
+   "after": 1.056,
+   "rebuilt": {
+    "factor_37": 6.0645,
+    "resize": 0.876,
+    "size": [
+     33,
+     21
+    ],
+    "hotspot": [
+     17,
+     10
+    ],
+    "uncleaned_sha256": "21b818d5beceebe0",
+    "frames": [
+     "object5-6d"
+    ]
+   }
+  },
+  "object5-6e": {
+   "group": "object/attempt1-4",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-4.png cell 7; sha256 2d1a2955ddb1",
+   "factor": 7.8947,
+   "band_source_px": 13.5,
+   "span_source_px": null,
+   "band": 0.637,
+   "span": null,
+   "set": 0.868,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    32,
+    23
+   ],
+   "before_hotspot": [
+    14,
+    10
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-6f": {
+   "group": "object/attempt2-4",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-4.png cell 8; sha256 6bf4411b5175",
+   "factor": 7.0952,
+   "band_source_px": 10.6,
+   "span_source_px": null,
+   "band": 0.557,
+   "span": null,
+   "set": 0.966,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    25,
+    25
+   ],
+   "before_hotspot": [
+    12,
+    11
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-70": {
+   "group": "object/attempt2-4",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-4.png cell 9; sha256 6bf4411b5175",
+   "factor": 7.7143,
+   "band_source_px": 15.3,
+   "span_source_px": null,
+   "band": 0.739,
+   "span": null,
+   "set": 0.888,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    30,
+    25
+   ],
+   "before_hotspot": [
+    17,
+    11
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-71": {
+   "group": "object/attempt2-4",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-4.png cell 10; sha256 6bf4411b5175",
+   "factor": 7.85,
+   "band_source_px": 13.4,
+   "span_source_px": null,
+   "band": 0.636,
+   "span": null,
+   "set": 0.873,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    32,
+    24
+   ],
+   "before_hotspot": [
+    17,
+    11
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-72": {
+   "group": "object/attempt2-4",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-4.png cell 11; sha256 6bf4411b5175",
+   "factor": 7.25,
+   "band_source_px": 20.2,
+   "span_source_px": null,
+   "band": 1.038,
+   "span": null,
+   "set": 0.945,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    35,
+    29
+   ],
+   "before_hotspot": [
+    18,
+    12
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-73": {
+   "group": "object/attempt2-5",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-5.png cell 0; sha256 deb2bbe92bd3",
+   "factor": 6.3043,
+   "band_source_px": 20.0,
+   "span_source_px": 63.2,
+   "band": 1.182,
+   "span": 0.902,
+   "set": 1.087,
+   "head": 1.033,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    36,
+    27
+   ],
+   "before_hotspot": [
+    18,
+    12
+   ],
+   "multiplier": 1.06,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.033
+  },
+  "object5-74": {
+   "group": "object/attempt2-5",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-5.png cell 1; sha256 deb2bbe92bd3",
+   "factor": 6.1739,
+   "band_source_px": 18.8,
+   "span_source_px": 62.0,
+   "band": 1.134,
+   "span": 0.904,
+   "set": 1.11,
+   "head": 1.012,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    30,
+    27
+   ],
+   "before_hotspot": [
+    14,
+    13
+   ],
+   "multiplier": 1.06,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.012
+  },
+  "object5-75": {
+   "group": "object/attempt2-5",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-5.png cell 2; sha256 deb2bbe92bd3",
+   "factor": 7.0476,
+   "band_source_px": 19.3,
+   "span_source_px": 62.4,
+   "band": 1.02,
+   "span": 0.797,
+   "set": 0.973,
+   "head": 0.902,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    25,
+    25
+   ],
+   "before_hotspot": [
+    13,
+    11
+   ],
+   "multiplier": 0.937,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.902
+  },
+  "object5-76": {
+   "group": "object/attempt1-5",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-5.png cell 3; sha256 d9abeed24f4a",
+   "factor": 6.3478,
+   "band_source_px": 17.3,
+   "span_source_px": 54.9,
+   "band": 1.015,
+   "span": 0.778,
+   "set": 1.08,
+   "head": 0.889,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    30,
+    27
+   ],
+   "before_hotspot": [
+    16,
+    13
+   ],
+   "multiplier": 0.98,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.889
+  },
+  "object5-77": {
+   "group": "object/attempt1-5",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-5.png cell 4; sha256 d9abeed24f4a",
+   "factor": 6.7391,
+   "band_source_px": 20.4,
+   "span_source_px": 74.0,
+   "band": 1.128,
+   "span": 0.988,
+   "set": 1.017,
+   "head": 1.056,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    36,
+    27
+   ],
+   "before_hotspot": [
+    17,
+    14
+   ],
+   "multiplier": 1.036,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.056
+  },
+  "object5-78": {
+   "group": "object/attempt2-5",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-5.png cell 5; sha256 deb2bbe92bd3",
+   "factor": 5.9032,
+   "band_source_px": 20.8,
+   "span_source_px": 72.2,
+   "band": 1.313,
+   "span": 1.101,
+   "set": 1.161,
+   "head": 1.202,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    37,
+    42
+   ],
+   "before_hotspot": [
+    17,
+    30
+   ],
+   "multiplier": 1.181,
+   "decision": "rebuild",
+   "why": "own head and the set",
+   "after": 1.018,
+   "rebuilt": {
+    "factor_37": 5.8412,
+    "resize": 0.847,
+    "size": [
+     31,
+     36
+    ],
+    "hotspot": [
+     14,
+     26
+    ],
+    "uncleaned_sha256": "c96863825830060d",
+    "frames": [
+     "object5-78"
+    ]
+   }
+  },
+  "object5-79": {
+   "group": "object/attempt2-5",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-5.png cell 6; sha256 deb2bbe92bd3",
+   "factor": 5.75,
+   "band_source_px": 19.7,
+   "span_source_px": 67.6,
+   "band": 1.276,
+   "span": 1.058,
+   "set": 1.192,
+   "head": 1.162,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    45,
+    43
+   ],
+   "before_hotspot": [
+    31,
+    32
+   ],
+   "multiplier": 1.177,
+   "decision": "rebuild",
+   "why": "own head and the set",
+   "after": 0.987,
+   "rebuilt": {
+    "factor_37": 5.6703,
+    "resize": 0.85,
+    "size": [
+     38,
+     37
+    ],
+    "hotspot": [
+     26,
+     28
+    ],
+    "uncleaned_sha256": "16d53f256aedc44b",
+    "frames": [
+     "object5-79"
+    ]
+   }
+  },
+  "object5-7e": {
+   "group": "object/attempt1-5",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-5.png cell 7; sha256 d9abeed24f4a",
+   "factor": 6.129,
+   "band_source_px": 21.7,
+   "span_source_px": 87.5,
+   "band": 1.319,
+   "span": 1.285,
+   "set": 1.118,
+   "head": 1.302,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    42,
+    37
+   ],
+   "before_hotspot": [
+    8,
+    17
+   ],
+   "multiplier": 1.206,
+   "decision": "rebuild",
+   "why": "own head and the set",
+   "after": 1.08,
+   "rebuilt": {
+    "factor_37": 6.193,
+    "resize": 0.829,
+    "size": [
+     34,
+     31
+    ],
+    "hotspot": [
+     6,
+     14
+    ],
+    "uncleaned_sha256": "c13bee7872305323",
+    "frames": [
+     "object5-7e"
+    ]
+   }
+  },
+  "object5-80": {
+   "group": "object/attempt2-5",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-5.png cell 8; sha256 deb2bbe92bd3",
+   "factor": 6.0938,
+   "band_source_px": 18.7,
+   "span_source_px": 72.4,
+   "band": 1.143,
+   "span": 1.069,
+   "set": 1.125,
+   "head": 1.105,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    38,
+    45
+   ],
+   "before_hotspot": [
+    20,
+    27
+   ],
+   "multiplier": 1.115,
+   "decision": "rebuild",
+   "why": "own head and the set",
+   "after": 0.991,
+   "rebuilt": {
+    "factor_37": 5.6927,
+    "resize": 0.897,
+    "size": [
+     34,
+     41
+    ],
+    "hotspot": [
+     18,
+     25
+    ],
+    "uncleaned_sha256": "116a68e0a11243a8",
+    "frames": [
+     "object5-80"
+    ]
+   }
+  },
+  "object5-81": {
+   "group": "object/attempt2-5",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-5.png cell 9; sha256 deb2bbe92bd3",
+   "factor": 5.8182,
+   "band_source_px": 20.0,
+   "span_source_px": 72.8,
+   "band": 1.28,
+   "span": 1.126,
+   "set": 1.178,
+   "head": 1.201,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    38,
+    53
+   ],
+   "before_hotspot": [
+    30,
+    28
+   ],
+   "multiplier": 1.189,
+   "decision": "rebuild",
+   "why": "own head and the set",
+   "after": 1.01,
+   "rebuilt": {
+    "factor_37": 5.796,
+    "resize": 0.841,
+    "size": [
+     32,
+     44
+    ],
+    "hotspot": [
+     25,
+     23
+    ],
+    "uncleaned_sha256": "f04d144a78d08d7a",
+    "frames": [
+     "object5-81"
+    ]
+   }
+  },
+  "object5-83": {
+   "group": "object/attempt2-5",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-5.png cell 11; sha256 deb2bbe92bd3",
+   "factor": 5.85,
+   "band_source_px": 20.5,
+   "span_source_px": 69.6,
+   "band": 1.305,
+   "span": 1.071,
+   "set": 1.172,
+   "head": 1.182,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    41,
+    48
+   ],
+   "before_hotspot": [
+    23,
+    29
+   ],
+   "multiplier": 1.177,
+   "decision": "rebuild",
+   "why": "own head and the set",
+   "after": 1.004,
+   "rebuilt": {
+    "factor_37": 5.7689,
+    "resize": 0.85,
+    "size": [
+     34,
+     41
+    ],
+    "hotspot": [
+     19,
+     25
+    ],
+    "uncleaned_sha256": "e09db5ec4e670944",
+    "frames": [
+     "object5-83"
+    ]
+   }
+  },
+  "object5-84": {
+   "group": "object/attempt2-6",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-6.png cell 0; sha256 f41925428fae",
+   "factor": 5.8605,
+   "band_source_px": 20.5,
+   "span_source_px": 73.8,
+   "band": 1.303,
+   "span": 1.133,
+   "set": 1.17,
+   "head": 1.215,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    38,
+    51
+   ],
+   "before_hotspot": [
+    26,
+    27
+   ],
+   "multiplier": 1.192,
+   "decision": "rebuild",
+   "why": "own head and the set",
+   "after": 1.019,
+   "rebuilt": {
+    "factor_37": 5.8529,
+    "resize": 0.839,
+    "size": [
+     32,
+     43
+    ],
+    "hotspot": [
+     22,
+     23
+    ],
+    "uncleaned_sha256": "c94c5aece9b36e98",
+    "frames": [
+     "object5-84"
+    ]
+   }
+  },
+  "object5-85": {
+   "group": "object/attempt2-6",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-6.png cell 1; sha256 f41925428fae",
+   "factor": 5.8438,
+   "band_source_px": 20.1,
+   "span_source_px": 79.6,
+   "band": 1.281,
+   "span": 1.226,
+   "set": 1.173,
+   "head": 1.253,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    38,
+    51
+   ],
+   "before_hotspot": [
+    23,
+    27
+   ],
+   "multiplier": 1.212,
+   "decision": "rebuild",
+   "why": "own head and the set",
+   "after": 1.034,
+   "rebuilt": {
+    "factor_37": 5.9341,
+    "resize": 0.825,
+    "size": [
+     32,
+     42
+    ],
+    "hotspot": [
+     19,
+     22
+    ],
+    "uncleaned_sha256": "bb3b6b504e23f2c6",
+    "frames": [
+     "object5-85"
+    ]
+   }
+  },
+  "object5-ca": {
+   "group": "object/attempt2-6",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-6.png cell 8; sha256 f41925428fae",
+   "factor": 6.1538,
+   "band_source_px": 19.3,
+   "span_source_px": null,
+   "band": 1.168,
+   "span": null,
+   "set": 1.114,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    47,
+    32
+   ],
+   "before_hotspot": [
+    24,
+    7
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-df": {
+   "group": "object/attempt2-6",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-6.png cell 9; sha256 f41925428fae",
+   "factor": 6.4167,
+   "band_source_px": 20.1,
+   "span_source_px": 79.2,
+   "band": 1.167,
+   "span": 1.111,
+   "set": 1.068,
+   "head": 1.139,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    30,
+    43
+   ],
+   "before_hotspot": [
+    17,
+    24
+   ],
+   "multiplier": 1.103,
+   "decision": "rebuild",
+   "why": "own head and the set",
+   "after": 1.033,
+   "rebuilt": {
+    "factor_37": 5.9299,
+    "resize": 0.907,
+    "size": [
+     27,
+     39
+    ],
+    "hotspot": [
+     15,
+     22
+    ],
+    "uncleaned_sha256": "ab38594341fbe240",
+    "frames": [
+     "object5-df"
+    ]
+   }
+  },
+  "object5-e0": {
+   "group": "object/attempt2-6",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-6.png cell 10; sha256 f41925428fae",
+   "factor": 7.2727,
+   "band_source_px": 20.4,
+   "span_source_px": 65.2,
+   "band": 1.045,
+   "span": 0.807,
+   "set": 0.942,
+   "head": 0.918,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    26,
+    33
+   ],
+   "before_hotspot": [
+    12,
+    18
+   ],
+   "multiplier": 0.93,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.918
+  },
+  "object5-e1": {
+   "group": "object/attempt1-6",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-6.png cell 11; sha256 de5b1bebca1b",
+   "factor": 7.4783,
+   "band_source_px": 22.9,
+   "span_source_px": 79.0,
+   "band": 1.141,
+   "span": 0.951,
+   "set": 0.917,
+   "head": 1.042,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    27,
+    41
+   ],
+   "before_hotspot": [
+    12,
+    20
+   ],
+   "multiplier": 0.978,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.042
+  },
+  "object5-e2": {
+   "group": "object/attempt1-7",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-7.png cell 0; sha256 f189e44a8050",
+   "factor": 6.6364,
+   "band_source_px": 23.4,
+   "span_source_px": 75.0,
+   "band": 1.313,
+   "span": 1.017,
+   "set": 1.033,
+   "head": 1.156,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    26,
+    43
+   ],
+   "before_hotspot": [
+    12,
+    23
+   ],
+   "multiplier": 1.093,
+   "decision": "rebuild",
+   "why": "own head and the set",
+   "after": 1.058,
+   "rebuilt": {
+    "factor_37": 6.0773,
+    "resize": 0.915,
+    "size": [
+     24,
+     39
+    ],
+    "hotspot": [
+     11,
+     21
+    ],
+    "uncleaned_sha256": "5d8568d222690372",
+    "frames": [
+     "object5-e2"
+    ]
+   }
+  },
+  "object5-e3": {
+   "group": "object/attempt2-7",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-7.png cell 1; sha256 68f58a743d22",
+   "factor": 6.1379,
+   "band_source_px": 22.4,
+   "span_source_px": 74.5,
+   "band": 1.359,
+   "span": 1.092,
+   "set": 1.117,
+   "head": 1.218,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    35,
+    42
+   ],
+   "before_hotspot": [
+    17,
+    23
+   ],
+   "multiplier": 1.166,
+   "decision": "rebuild",
+   "why": "own head and the set",
+   "after": 1.045,
+   "rebuilt": {
+    "factor_37": 5.9963,
+    "resize": 0.858,
+    "size": [
+     30,
+     36
+    ],
+    "hotspot": [
+     15,
+     20
+    ],
+    "uncleaned_sha256": "252e49db643ac748",
+    "frames": [
+     "object5-e3"
+    ]
+   }
+  },
+  "object5-e4": {
+   "group": "object/attempt2-7",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-7.png cell 2; sha256 68f58a743d22",
+   "factor": 6.1,
+   "band_source_px": 16.1,
+   "span_source_px": 74.6,
+   "band": 0.983,
+   "span": 1.1,
+   "set": 1.124,
+   "head": 1.04,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    32,
+    48
+   ],
+   "before_hotspot": [
+    15,
+    24
+   ],
+   "multiplier": 1.081,
+   "decision": "keep",
+   "why": "its own head is within 8%; only the set reading is large",
+   "after": 1.04
+  },
+  "object5-e5": {
+   "group": "object/attempt2-7",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-7.png cell 3; sha256 68f58a743d22",
+   "factor": 6.6667,
+   "band_source_px": 15.8,
+   "span_source_px": 75.2,
+   "band": 0.883,
+   "span": 1.015,
+   "set": 1.028,
+   "head": 0.947,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    32,
+    41
+   ],
+   "before_hotspot": [
+    14,
+    20
+   ],
+   "multiplier": 0.987,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.947
+  },
+  "object5-e6": {
+   "group": "object/attempt2-7",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-7.png cell 4; sha256 68f58a743d22",
+   "factor": 6.619,
+   "band_source_px": 16.4,
+   "span_source_px": 75.8,
+   "band": 0.923,
+   "span": 1.031,
+   "set": 1.036,
+   "head": 0.976,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    25,
+    43
+   ],
+   "before_hotspot": [
+    11,
+    22
+   ],
+   "multiplier": 1.006,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.976
+  },
+  "object5-e7": {
+   "group": "object/attempt2-7",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-7.png cell 5; sha256 68f58a743d22",
+   "factor": 6.0,
+   "band_source_px": 12.1,
+   "span_source_px": 41.2,
+   "band": 0.751,
+   "span": 0.618,
+   "set": 1.142,
+   "head": 0.681,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    26,
+    48
+   ],
+   "before_hotspot": [
+    12,
+    24
+   ],
+   "multiplier": 0.882,
+   "decision": "keep",
+   "why": "small reading: both measures fail low (part-hidden lens, foreshortened beak), so a drawing is enlarged only by hand",
+   "after": 0.681
+  },
+  "object5-e8": {
+   "group": "object/attempt2-7",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-7.png cell 6; sha256 68f58a743d22",
+   "factor": 6.7083,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "set": 1.022,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    29,
+    44
+   ],
+   "before_hotspot": [
+    14,
+    23
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-e9": {
+   "group": "object/attempt2-7",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-7.png cell 7; sha256 68f58a743d22",
+   "factor": 7.2105,
+   "band_source_px": 15.7,
+   "span_source_px": null,
+   "band": 0.811,
+   "span": null,
+   "set": 0.951,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    23,
+    41
+   ],
+   "before_hotspot": [
+    11,
+    20
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-ea": {
+   "group": "object/attempt1-7",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-7.png cell 8; sha256 f189e44a8050",
+   "factor": 6.35,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "set": 1.079,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    24,
+    48
+   ],
+   "before_hotspot": [
+    10,
+    24
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-ef": {
+   "group": "object/attempt2-7",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-7.png cell 9; sha256 68f58a743d22",
+   "factor": 6.7333,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "set": 1.018,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    36,
+    36
+   ],
+   "before_hotspot": [
+    17,
+    18
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-f0": {
+   "group": "object/attempt2-7",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-7.png cell 10; sha256 68f58a743d22",
+   "factor": 6.8,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "set": 1.008,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    32,
+    36
+   ],
+   "before_hotspot": [
+    15,
+    18
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-f1": {
+   "group": "object/attempt2-7",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-7.png cell 11; sha256 68f58a743d22",
+   "factor": 6.8519,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "set": 1.0,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    32,
+    37
+   ],
+   "before_hotspot": [
+    18,
+    18
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-f2": {
+   "group": "object/attempt1-8",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-8.png cell 0; sha256 b1b8c33763f8",
+   "factor": 7.3226,
+   "band_source_px": 20.6,
+   "span_source_px": 77.7,
+   "band": 1.048,
+   "span": 0.955,
+   "set": 0.936,
+   "head": 1.0,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    36,
+    37
+   ],
+   "before_hotspot": [
+    18,
+    18
+   ],
+   "multiplier": 0.967,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.0
+  },
+  "object5-f6": {
+   "group": "object/attempt2-8",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-8.png cell 1; sha256 9040efce70fd",
+   "factor": 8.0,
+   "band_source_px": 28.6,
+   "span_source_px": 79.8,
+   "band": 1.332,
+   "span": 0.898,
+   "set": 0.857,
+   "head": 1.094,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    31,
+    36
+   ],
+   "before_hotspot": [
+    14,
+    18
+   ],
+   "multiplier": 0.968,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.094
+  },
+  "object5-f7": {
+   "group": "object/attempt2-8",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt2-8.png cell 2; sha256 9040efce70fd",
+   "factor": 8.1333,
+   "band_source_px": 11.3,
+   "span_source_px": null,
+   "band": 0.518,
+   "span": null,
+   "set": 0.843,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    29,
+    36
+   ],
+   "before_hotspot": [
+    13,
+    18
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "object5-f8": {
+   "group": "object/attempt1-8",
+   "kind": "object",
+   "origin": "talon-object-poses-20261110/attempt1-8.png cell 3; sha256 b1b8c33763f8",
+   "factor": 7.1667,
+   "band_source_px": 12.4,
+   "span_source_px": null,
+   "band": 0.645,
+   "span": null,
+   "set": 0.956,
+   "head": null,
+   "animation": "NATIVE_POSE",
+   "before_size": [
+    36,
+    37
+   ],
+   "before_hotspot": [
+    18,
+    18
+   ],
+   "multiplier": null,
+   "decision": "keep",
+   "why": "no clean view of both lens and beak",
+   "after": null
+  },
+  "roll-00": {
+   "group": "core/roll",
+   "kind": "core",
+   "origin": "talon-art-20261109/roll-attempt-2.png figure 0",
+   "factor": 12.3793,
+   "band_source_px": 56.1,
+   "span_source_px": null,
+   "band": 1.688,
+   "span": null,
+   "head": 1.688,
+   "animation": "ROLL",
+   "before_size": [
+    35,
+    35
+   ],
+   "before_hotspot": [
+    17,
+    20
+   ],
+   "multiplier": 1.69,
+   "decision": "keep",
+   "why": "ball drawing: no comparable head",
+   "after": 1.688
+  },
+  "roll-01": {
+   "group": "core/roll",
+   "kind": "core",
+   "origin": "talon-art-20261109/roll-attempt-2.png figure 1",
+   "factor": 12.4483,
+   "band_source_px": 57.2,
+   "span_source_px": 89.5,
+   "band": 1.712,
+   "span": null,
+   "span_rejected": "not a beak in profile: the span is out of proportion to the lens",
+   "head": 1.712,
+   "animation": "ROLL",
+   "before_size": [
+    35,
+    35
+   ],
+   "before_hotspot": [
+    17,
+    20
+   ],
+   "multiplier": 1.69,
+   "decision": "keep",
+   "why": "ball drawing: no comparable head",
+   "after": 1.712
+  },
+  "roll-02": {
+   "group": "core/roll",
+   "kind": "core",
+   "origin": "talon-art-20261109/roll-attempt-2.png figure 2",
+   "factor": 12.5172,
+   "band_source_px": 56.8,
+   "span_source_px": null,
+   "band": 1.69,
+   "span": null,
+   "head": 1.69,
+   "animation": "ROLL",
+   "before_size": [
+    35,
+    35
+   ],
+   "before_hotspot": [
+    17,
+    20
+   ],
+   "multiplier": 1.69,
+   "decision": "keep",
+   "why": "ball drawing: no comparable head",
+   "after": 1.69
+  },
+  "roll-03": {
+   "group": "core/roll",
+   "kind": "core",
+   "origin": "talon-art-20261109/roll-attempt-2.png figure 3",
+   "factor": 12.3793,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "head": 1.69,
+   "animation": "ROLL",
+   "before_size": [
+    35,
+    35
+   ],
+   "before_hotspot": [
+    17,
+    20
+   ],
+   "multiplier": 1.69,
+   "decision": "keep",
+   "why": "ball drawing: no comparable head",
+   "after": 1.69
+  },
+  "run-00": {
+   "group": "core/run",
+   "kind": "core",
+   "origin": "talon-art-r2-20261109/run-attempt-2.png figure 0",
+   "factor": 13.4815,
+   "band_source_px": 37.0,
+   "span_source_px": 143.1,
+   "band": 1.022,
+   "span": 0.955,
+   "head": 0.988,
+   "animation": "RUN",
+   "before_size": [
+    33,
+    36
+   ],
+   "before_hotspot": [
+    13,
+    17
+   ],
+   "multiplier": 1.027,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.988
+  },
+  "run-01": {
+   "group": "core/run",
+   "kind": "core",
+   "origin": "talon-art-r2-20261109/run-attempt-2.png figure 1",
+   "factor": 12.9355,
+   "band_source_px": 36.8,
+   "span_source_px": 143.4,
+   "band": 1.06,
+   "span": 0.998,
+   "head": 1.029,
+   "animation": "RUN",
+   "before_size": [
+    37,
+    37
+   ],
+   "before_hotspot": [
+    18,
+    17
+   ],
+   "multiplier": 1.027,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.029
+  },
+  "run-02": {
+   "group": "core/run",
+   "kind": "core",
+   "origin": "talon-art-r2-20261109/run-attempt-2.png figure 2",
+   "factor": 12.9355,
+   "band_source_px": 36.5,
+   "span_source_px": 143.8,
+   "band": 1.051,
+   "span": 1.0,
+   "head": 1.025,
+   "animation": "RUN",
+   "before_size": [
+    36,
+    37
+   ],
+   "before_hotspot": [
+    17,
+    17
+   ],
+   "multiplier": 1.027,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.025
+  },
+  "run-03": {
+   "group": "core/run",
+   "kind": "core",
+   "origin": "talon-art-r2-20261109/run-attempt-2.png figure 3",
+   "factor": 12.9032,
+   "band_source_px": 36.9,
+   "span_source_px": 143.3,
+   "band": 1.065,
+   "span": 0.999,
+   "head": 1.031,
+   "animation": "RUN",
+   "before_size": [
+    37,
+    37
+   ],
+   "before_hotspot": [
+    18,
+    17
+   ],
+   "multiplier": 1.027,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.031
+  },
+  "skid-00": {
+   "group": "core/skid",
+   "kind": "core",
+   "origin": "talon-art-20261109/poses-attempt-1.png figure 5",
+   "factor": 8.0909,
+   "band_source_px": 22.8,
+   "span_source_px": 78.5,
+   "band": 1.05,
+   "span": 0.873,
+   "head": 0.957,
+   "animation": "SKID",
+   "before_size": [
+    39,
+    33
+   ],
+   "before_hotspot": [
+    26,
+    18
+   ],
+   "multiplier": 0.948,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.957
+  },
+  "skid-01": {
+   "group": "core/skid",
+   "kind": "core",
+   "origin": "talon-art-20261109/poses-attempt-1.png figure 6",
+   "factor": 8.0312,
+   "band_source_px": 22.0,
+   "span_source_px": 77.1,
+   "band": 1.02,
+   "span": 0.864,
+   "head": 0.939,
+   "animation": "SKID",
+   "before_size": [
+    38,
+    35
+   ],
+   "before_hotspot": [
+    25,
+    19
+   ],
+   "multiplier": 0.948,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.939
+  },
+  "spindash-00": {
+   "group": "core/spindash",
+   "kind": "core",
+   "origin": "talon-art-20261109/spindash-attempt-2.png figure 0",
+   "factor": 14.7308,
+   "band_source_px": 58.6,
+   "span_source_px": 182.4,
+   "band": 1.482,
+   "span": 1.114,
+   "head": 1.285,
+   "animation": "SPINDASH",
+   "before_size": [
+    31,
+    29
+   ],
+   "before_hotspot": [
+    16,
+    14
+   ],
+   "multiplier": 1.211,
+   "decision": "keep",
+   "why": "ball drawing: no comparable head",
+   "after": 1.285
+  },
+  "spindash-01": {
+   "group": "core/spindash",
+   "kind": "core",
+   "origin": "talon-art-20261109/spindash-attempt-2.png figure 1",
+   "factor": 15.1154,
+   "band_source_px": 60.7,
+   "span_source_px": 151.1,
+   "band": 1.496,
+   "span": 0.9,
+   "head": 1.16,
+   "animation": "SPINDASH",
+   "before_size": [
+    31,
+    30
+   ],
+   "before_hotspot": [
+    16,
+    15
+   ],
+   "multiplier": 1.211,
+   "decision": "keep",
+   "why": "ball drawing: no comparable head",
+   "after": 1.16
+  },
+  "spindash-02": {
+   "group": "core/spindash",
+   "kind": "core",
+   "origin": "talon-art-20261109/spindash-attempt-2.png figure 2",
+   "factor": 16.2174,
+   "band_source_px": 59.8,
+   "span_source_px": 178.4,
+   "band": 1.374,
+   "span": 0.99,
+   "head": 1.166,
+   "animation": "SPINDASH",
+   "before_size": [
+    31,
+    27
+   ],
+   "before_hotspot": [
+    16,
+    12
+   ],
+   "multiplier": 1.211,
+   "decision": "keep",
+   "why": "ball drawing: no comparable head",
+   "after": 1.166
+  },
+  "spindash-03": {
+   "group": "core/spindash",
+   "kind": "core",
+   "origin": "talon-art-20261109/spindash-attempt-2.png figure 3",
+   "factor": 15.1538,
+   "band_source_px": null,
+   "span_source_px": null,
+   "band": null,
+   "span": null,
+   "head": 1.211,
+   "animation": "SPINDASH",
+   "before_size": [
+    31,
+    29
+   ],
+   "before_hotspot": [
+    16,
+    14
+   ],
+   "multiplier": 1.211,
+   "decision": "keep",
+   "why": "ball drawing: no comparable head",
+   "after": 1.211
+  },
+  "spring-00": {
+   "group": "hand/spring",
+   "kind": "hand",
+   "factor": null,
+   "band_source_px": null,
+   "span_source_px": null,
+   "origin": "no usable source drawing: read by hand on the installed frame",
+   "hand": "goggle span 10 px, eye 3 px, beak 5 px (pointing up, so it reads short): about 0.87",
+   "before_rows": [
+    "000000011000000000000000000000000",
+    "000000141000000000000000000100000",
+    "0000013d1000000000000000001310000",
+    "000013641000000000000000001d41000",
+    "0000164310000000000000000014d1000",
+    "0001353310000000000000000013d4100",
+    "001254331000000000000000001343100",
+    "001453331000000001000000012334100",
+    "114443321000000112100000012234511",
+    "144433331000011233111000012233541",
+    "1d5433331001123333231111012333451",
+    "145333331001332299f8ffe9113333451",
+    "01453333100133329eee9211993323431",
+    "12343333100123339ff9939ff91223411",
+    "1443332331112229913d63fef91233310",
+    "13d53322331111112236c5fe922333310",
+    "01564332232111123346cc8f323335100",
+    "0014433223321122333d777d322344100",
+    "00136d432233212233d77774123331000",
+    "00013dd42223321213577432234521000",
+    "00001134d533322244454432243110000",
+    "000000115d5332246d439dd4221000000",
+    "000000001331223dc64996c5110000000",
+    "000000000110114dd99935d2100000000",
+    "000000000000192339932111000000000",
+    "0000000000019f9198d51100000000000",
+    "000000000001f9914c611000000000000",
+    "000000000001991135910000000000000",
+    "000000000000111112100000000000000",
+    "000000000000011001100000000000000",
+    "000000000000011001b10000000000000",
+    "000000000000011001810000000000000",
+    "000000000000011001d10000000000000",
+    "000000000000011001100000000000000",
+    "000000000000011001100000000000000",
+    "000000000000001001100000000000000"
+   ],
+   "band": null,
+   "span": null,
+   "head": 0.87,
+   "animation": "SPRING",
+   "before_size": [
+    33,
+    36
+   ],
+   "before_hotspot": [
+    16,
+    17
+   ],
+   "multiplier": 0.87,
+   "decision": "rebuild",
+   "why": "by hand: goggle span 10 px, eye 3 px, beak 5 px (pointing up, so it reads short): about 0.87",
+   "after": 1.0,
+   "rebuilt": {
+    "route": 2,
+    "resize": 1.149,
+    "size": [
+     38,
+     41
+    ],
+    "hotspot": [
+     18,
+     19
+    ],
+    "uncleaned_sha256": "4ea8c8351606929f",
+    "frames": [
+     "spring-00"
+    ]
+   }
+  },
+  "wait-00": {
+   "group": "core/wait",
+   "kind": "core",
+   "origin": "talon-art-20261109/wait-attempt-2.png figure 0",
+   "factor": 9.35,
+   "band_source_px": 25.1,
+   "span_source_px": 102.2,
+   "band": 1.0,
+   "span": 0.984,
+   "head": 0.992,
+   "animation": "WAIT",
+   "before_size": [
+    24,
+    37
+   ],
+   "before_hotspot": [
+    12,
+    18
+   ],
+   "multiplier": 1.0,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.992
+  },
+  "wait-01": {
+   "group": "core/wait",
+   "kind": "core",
+   "origin": "talon-art-20261109/wait-attempt-2.png figure 1",
+   "factor": 9.3226,
+   "band_source_px": 28.1,
+   "span_source_px": 103.6,
+   "band": 1.123,
+   "span": 1.0,
+   "head": 1.06,
+   "animation": "WAIT",
+   "before_size": [
+    24,
+    37
+   ],
+   "before_hotspot": [
+    12,
+    18
+   ],
+   "multiplier": 1.0,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.06
+  },
+  "wait-02": {
+   "group": "core/wait",
+   "kind": "core",
+   "origin": "talon-art-20261109/wait-attempt-2.png figure 2",
+   "factor": 9.2903,
+   "band_source_px": 25.2,
+   "span_source_px": 104.5,
+   "band": 1.01,
+   "span": 1.012,
+   "head": 1.011,
+   "animation": "WAIT",
+   "before_size": [
+    24,
+    37
+   ],
+   "before_hotspot": [
+    12,
+    18
+   ],
+   "multiplier": 1.0,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.011
+  },
+  "wait-03": {
+   "group": "core/wait",
+   "kind": "core",
+   "origin": "talon-art-20261109/wait-attempt-2.png figure 3",
+   "factor": 9.3226,
+   "band_source_px": 24.3,
+   "span_source_px": 96.6,
+   "band": 0.971,
+   "span": 0.932,
+   "head": 0.951,
+   "animation": "WAIT",
+   "before_size": [
+    24,
+    37
+   ],
+   "before_hotspot": [
+    12,
+    18
+   ],
+   "multiplier": 1.0,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.951
+  },
+  "wait-04": {
+   "group": "core/wait",
+   "kind": "core",
+   "origin": "talon-art-20261109/wait-attempt-2.png figure 4",
+   "factor": 9.6316,
+   "band_source_px": 25.0,
+   "span_source_px": 107.0,
+   "band": 0.967,
+   "span": 1.0,
+   "head": 0.983,
+   "animation": "WAIT",
+   "before_size": [
+    23,
+    37
+   ],
+   "before_hotspot": [
+    11,
+    18
+   ],
+   "multiplier": 1.0,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 0.983
+  },
+  "wait-05": {
+   "group": "core/wait",
+   "kind": "core",
+   "origin": "talon-art-20261109/wait-attempt-2.png figure 5",
+   "factor": 9.3226,
+   "band_source_px": 24.4,
+   "span_source_px": 107.0,
+   "band": 0.975,
+   "span": 1.033,
+   "head": 1.004,
+   "animation": "WAIT",
+   "before_size": [
+    24,
+    37
+   ],
+   "before_hotspot": [
+    12,
+    18
+   ],
+   "multiplier": 1.0,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.004
+  },
+  "wait-06": {
+   "group": "core/wait",
+   "kind": "core",
+   "origin": "talon-art-20261109/wait-attempt-2.png figure 6",
+   "factor": 9.3226,
+   "band_source_px": 25.4,
+   "span_source_px": 106.0,
+   "band": 1.015,
+   "span": 1.023,
+   "head": 1.019,
+   "animation": "WAIT",
+   "before_size": [
+    25,
+    37
+   ],
+   "before_hotspot": [
+    12,
+    18
+   ],
+   "multiplier": 1.0,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.019
+  },
+  "walk-00": {
+   "group": "core/walk",
+   "kind": "core",
+   "origin": "talon-art-r2-20261109/walk-attempt-3.png figure 0",
+   "factor": 8.4211,
+   "band_source_px": 25.0,
+   "span_source_px": 89.2,
+   "band": 1.106,
+   "span": 0.953,
+   "head": 1.027,
+   "animation": "WALK",
+   "before_size": [
+    23,
+    37
+   ],
+   "before_hotspot": [
+    12,
+    17
+   ],
+   "multiplier": 1.047,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.027
+  },
+  "walk-01": {
+   "group": "core/walk",
+   "kind": "core",
+   "origin": "talon-art-r2-20261109/walk-attempt-3.png figure 1",
+   "factor": 8.1364,
+   "band_source_px": 25.0,
+   "span_source_px": 89.4,
+   "band": 1.145,
+   "span": 0.989,
+   "head": 1.064,
+   "animation": "WALK",
+   "before_size": [
+    26,
+    38
+   ],
+   "before_hotspot": [
+    14,
+    18
+   ],
+   "multiplier": 1.047,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.064
+  },
+  "walk-02": {
+   "group": "core/walk",
+   "kind": "core",
+   "origin": "talon-art-r2-20261109/walk-attempt-3.png figure 2",
+   "factor": 8.1481,
+   "band_source_px": 25.1,
+   "span_source_px": 89.0,
+   "band": 1.148,
+   "span": 0.983,
+   "head": 1.062,
+   "animation": "WALK",
+   "before_size": [
+    32,
+    38
+   ],
+   "before_hotspot": [
+    15,
+    19
+   ],
+   "multiplier": 1.047,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.062
+  },
+  "walk-03": {
+   "group": "core/walk",
+   "kind": "core",
+   "origin": "talon-art-r2-20261109/walk-attempt-3.png figure 3",
+   "factor": 8.2903,
+   "band_source_px": 25.0,
+   "span_source_px": 89.4,
+   "band": 1.123,
+   "span": 0.97,
+   "head": 1.044,
+   "animation": "WALK",
+   "before_size": [
+    32,
+    37
+   ],
+   "before_hotspot": [
+    15,
+    18
+   ],
+   "multiplier": 1.047,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.044
+  },
+  "walk-04": {
+   "group": "core/walk",
+   "kind": "core",
+   "origin": "talon-art-r2-20261109/walk-attempt-3.png figure 4",
+   "factor": 8.3684,
+   "band_source_px": 25.0,
+   "span_source_px": 89.8,
+   "band": 1.113,
+   "span": 0.966,
+   "head": 1.037,
+   "animation": "WALK",
+   "before_size": [
+    23,
+    37
+   ],
+   "before_hotspot": [
+    12,
+    17
+   ],
+   "multiplier": 1.047,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.037
+  },
+  "walk-05": {
+   "group": "core/walk",
+   "kind": "core",
+   "origin": "talon-art-r2-20261109/walk-attempt-3.png figure 5",
+   "factor": 8.0312,
+   "band_source_px": 25.2,
+   "span_source_px": 89.0,
+   "band": 1.169,
+   "span": 0.997,
+   "head": 1.08,
+   "animation": "WALK",
+   "before_size": [
+    26,
+    38
+   ],
+   "before_hotspot": [
+    13,
+    18
+   ],
+   "multiplier": 1.047,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.08
+  },
+  "walk-06": {
+   "group": "core/walk",
+   "kind": "core",
+   "origin": "talon-art-r2-20261109/walk-attempt-3.png figure 6",
+   "factor": 8.5667,
+   "band_source_px": 25.1,
+   "span_source_px": 87.5,
+   "band": 1.091,
+   "span": 0.919,
+   "head": 1.001,
+   "animation": "WALK",
+   "before_size": [
+    32,
+    36
+   ],
+   "before_hotspot": [
+    17,
+    19
+   ],
+   "multiplier": 1.047,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.001
+  },
+  "walk-07": {
+   "group": "core/walk",
+   "kind": "core",
+   "origin": "talon-art-r2-20261109/walk-attempt-3.png figure 7",
+   "factor": 8.3077,
+   "band_source_px": 25.2,
+   "span_source_px": 90.3,
+   "band": 1.13,
+   "span": 0.978,
+   "head": 1.051,
+   "animation": "WALK",
+   "before_size": [
+    31,
+    37
+   ],
+   "before_hotspot": [
+    16,
+    18
+   ],
+   "multiplier": 1.047,
+   "decision": "keep",
+   "why": "within 8%",
+   "after": 1.051
+  }
+ },
+ "derived": {
+  "object5-7a": {
+   "source": "object5-78",
+   "angle": 90,
+   "flip": false,
+   "size": [
+    36,
+    31
+   ],
+   "hotspot": [
+    26,
+    16
+   ],
+   "uncleaned_sha256": "c4a09763bb338f09",
+   "frames": [
+    "object5-7a"
+   ]
+  },
+  "object5-7b": {
+   "source": "object5-79",
+   "angle": 90,
+   "flip": false,
+   "size": [
+    37,
+    38
+   ],
+   "hotspot": [
+    28,
+    11
+   ],
+   "uncleaned_sha256": "009289b4b515b3eb",
+   "frames": [
+    "object5-7b"
+   ]
+  },
+  "object5-7c": {
+   "source": "object5-78",
+   "angle": 180,
+   "flip": false,
+   "size": [
+    31,
+    36
+   ],
+   "hotspot": [
+    16,
+    9
+   ],
+   "uncleaned_sha256": "aee34391873db62a",
+   "frames": [
+    "object5-7c"
+   ]
+  },
+  "object5-7d": {
+   "source": "object5-79",
+   "angle": 180,
+   "flip": false,
+   "size": [
+    38,
+    37
+   ],
+   "hotspot": [
+    11,
+    8
+   ],
+   "uncleaned_sha256": "6a4e2da4c367c081",
+   "frames": [
+    "object5-7d"
+   ]
+  },
+  "object5-7f": {
+   "source": "object5-79",
+   "angle": 270,
+   "flip": false,
+   "size": [
+    37,
+    38
+   ],
+   "hotspot": [
+    8,
+    26
+   ],
+   "uncleaned_sha256": "153181e6e15371a4",
+   "frames": [
+    "object5-7f"
+   ]
+  }
+ },
+ "animations": {
+  "BALANCE": {
+   "drawings": 2,
+   "read": 2,
+   "rebuilt": 0,
+   "before": [
+    0.86,
+    0.886,
+    0.912
+   ],
+   "after": [
+    0.86,
+    0.886,
+    0.912
+   ]
+  },
+  "BALANCE2": {
+   "drawings": 3,
+   "read": 3,
+   "rebuilt": 3,
+   "before": [
+    1.193,
+    1.229,
+    1.335
+   ],
+   "after": [
+    0.948,
+    0.976,
+    1.06
+   ]
+  },
+  "BALANCE3": {
+   "drawings": 2,
+   "read": 2,
+   "rebuilt": 0,
+   "before": [
+    1.049,
+    1.075,
+    1.101
+   ],
+   "after": [
+    1.049,
+    1.075,
+    1.101
+   ]
+  },
+  "BALANCE4": {
+   "drawings": 5,
+   "read": 5,
+   "rebuilt": 3,
+   "before": [
+    0.92,
+    1.195,
+    1.298
+   ],
+   "after": [
+    0.92,
+    1.0,
+    1.045
+   ]
+  },
+  "BLINK": {
+   "drawings": 5,
+   "read": 5,
+   "rebuilt": 0,
+   "before": [
+    0.876,
+    0.949,
+    0.984
+   ],
+   "after": [
+    0.876,
+    0.949,
+    0.984
+   ]
+  },
+  "BUBBLE": {
+   "drawings": 3,
+   "read": 3,
+   "rebuilt": 3,
+   "before": [
+    1.31,
+    1.319,
+    1.372
+   ],
+   "after": [
+    0.992,
+    0.998,
+    1.039
+   ]
+  },
+  "DEATH": {
+   "drawings": 1,
+   "read": 1,
+   "rebuilt": 0,
+   "before": [
+    0.918,
+    0.918,
+    0.918
+   ],
+   "after": [
+    0.918,
+    0.918,
+    0.918
+   ]
+  },
+  "DROWN": {
+   "drawings": 1,
+   "read": 1,
+   "rebuilt": 0,
+   "before": [
+    1.009,
+    1.009,
+    1.009
+   ],
+   "after": [
+    1.009,
+    1.009,
+    1.009
+   ]
+  },
+  "DUCK": {
+   "drawings": 1,
+   "read": 1,
+   "rebuilt": 1,
+   "before": [
+    0.802,
+    0.802,
+    0.802
+   ],
+   "after": [
+    0.922,
+    0.922,
+    0.922
+   ]
+  },
+  "FLOAT2": {
+   "drawings": 8,
+   "read": 8,
+   "rebuilt": 8,
+   "before": [
+    1.051,
+    1.088,
+    1.253
+   ],
+   "after": [
+    0.966,
+    1.0,
+    1.152
+   ]
+  },
+  "GET_UP": {
+   "drawings": 2,
+   "read": 2,
+   "rebuilt": 0,
+   "before": [
+    0.979,
+    1.042,
+    1.106
+   ],
+   "after": [
+    0.979,
+    1.042,
+    1.106
+   ]
+  },
+  "HANG": {
+   "drawings": 2,
+   "read": 2,
+   "rebuilt": 2,
+   "before": [
+    1.154,
+    1.157,
+    1.16
+   ],
+   "after": [
+    0.997,
+    1.0,
+    1.003
+   ]
+  },
+  "HANG2": {
+   "drawings": 2,
+   "read": 2,
+   "rebuilt": 0,
+   "before": [
+    0.952,
+    0.966,
+    0.979
+   ],
+   "after": [
+    0.952,
+    0.966,
+    0.979
+   ]
+  },
+  "HURT": {
+   "drawings": 1,
+   "read": 1,
+   "rebuilt": 0,
+   "before": [
+    0.942,
+    0.942,
+    0.942
+   ],
+   "after": [
+    0.942,
+    0.942,
+    0.942
+   ]
+  },
+  "HURT_FALL": {
+   "drawings": 2,
+   "read": 2,
+   "rebuilt": 2,
+   "before": [
+    1.365,
+    1.376,
+    1.387
+   ],
+   "after": [
+    0.992,
+    1.0,
+    1.008
+   ]
+  },
+  "LOOK_UP": {
+   "drawings": 1,
+   "read": 1,
+   "rebuilt": 0,
+   "before": [
+    0.97,
+    0.97,
+    0.97
+   ],
+   "after": [
+    0.97,
+    0.97,
+    0.97
+   ]
+  },
+  "NATIVE_POSE": {
+   "drawings": 90,
+   "read": 46,
+   "rebuilt": 13,
+   "before": [
+    0.544,
+    1.042,
+    1.302
+   ],
+   "after": [
+    0.544,
+    1.016,
+    1.212
+   ]
+  },
+  "PUSH": {
+   "drawings": 4,
+   "read": 4,
+   "rebuilt": 0,
+   "before": [
+    0.941,
+    0.955,
+    1.022
+   ],
+   "after": [
+    0.941,
+    0.955,
+    1.022
+   ]
+  },
+  "ROLL": {
+   "drawings": 4,
+   "read": 4,
+   "rebuilt": 0,
+   "before": [
+    1.688,
+    1.69,
+    1.712
+   ],
+   "after": [
+    1.688,
+    1.69,
+    1.712
+   ]
+  },
+  "RUN": {
+   "drawings": 4,
+   "read": 4,
+   "rebuilt": 0,
+   "before": [
+    0.988,
+    1.027,
+    1.031
+   ],
+   "after": [
+    0.988,
+    1.027,
+    1.031
+   ]
+  },
+  "SKID": {
+   "drawings": 2,
+   "read": 2,
+   "rebuilt": 0,
+   "before": [
+    0.939,
+    0.948,
+    0.957
+   ],
+   "after": [
+    0.939,
+    0.948,
+    0.957
+   ]
+  },
+  "SPINDASH": {
+   "drawings": 4,
+   "read": 4,
+   "rebuilt": 0,
+   "before": [
+    1.16,
+    1.188,
+    1.285
+   ],
+   "after": [
+    1.16,
+    1.188,
+    1.285
+   ]
+  },
+  "SPRING": {
+   "drawings": 1,
+   "read": 1,
+   "rebuilt": 1,
+   "before": [
+    0.87,
+    0.87,
+    0.87
+   ],
+   "after": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  "SUPER_TRANSFORM": {
+   "drawings": 5,
+   "read": 5,
+   "rebuilt": 5,
+   "before": [
+    1.1,
+    1.23,
+    1.432
+   ],
+   "after": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  "TAILS_CARRIED": {
+   "drawings": 3,
+   "read": 3,
+   "rebuilt": 3,
+   "before": [
+    1.085,
+    1.107,
+    1.113
+   ],
+   "after": [
+    0.988,
+    1.008,
+    1.014
+   ]
+  },
+  "TAILS_FLY": {
+   "drawings": 6,
+   "read": 6,
+   "rebuilt": 6,
+   "before": [
+    1.206,
+    1.218,
+    1.232
+   ],
+   "after": [
+    0.99,
+    1.0,
+    1.011
+   ]
+  },
+  "TAILS_FLY_CARRY": {
+   "drawings": 6,
+   "read": 6,
+   "rebuilt": 6,
+   "before": [
+    1.07,
+    1.126,
+    1.174
+   ],
+   "after": [
+    0.953,
+    1.002,
+    1.045
+   ]
+  },
+  "TAILS_FLY_TIRED": {
+   "drawings": 6,
+   "read": 6,
+   "rebuilt": 0,
+   "before": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "after": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  "TAILS_SWIM": {
+   "drawings": 5,
+   "read": 5,
+   "rebuilt": 5,
+   "before": [
+    1.078,
+    1.093,
+    1.118
+   ],
+   "after": [
+    0.994,
+    1.008,
+    1.031
+   ]
+  },
+  "TAILS_SWIM_ASCEND": {
+   "drawings": 5,
+   "read": 5,
+   "rebuilt": 0,
+   "before": [
+    0.963,
+    0.986,
+    0.999
+   ],
+   "after": [
+    0.963,
+    0.986,
+    0.999
+   ]
+  },
+  "TAILS_SWIM_CARRY": {
+   "drawings": 2,
+   "read": 2,
+   "rebuilt": 0,
+   "before": [
+    0.969,
+    0.976,
+    0.984
+   ],
+   "after": [
+    0.969,
+    0.976,
+    0.984
+   ]
+  },
+  "TAILS_SWIM_TIRED": {
+   "drawings": 3,
+   "read": 3,
+   "rebuilt": 3,
+   "before": [
+    1.081,
+    1.083,
+    1.103
+   ],
+   "after": [
+    0.995,
+    0.997,
+    1.016
+   ]
+  },
+  "VICTORY": {
+   "drawings": 4,
+   "read": 4,
+   "rebuilt": 4,
+   "before": [
+    1.152,
+    1.171,
+    1.177
+   ],
+   "after": [
+    0.984,
+    1.0,
+    1.005
+   ]
+  },
+  "WAIT": {
+   "drawings": 7,
+   "read": 7,
+   "rebuilt": 0,
+   "before": [
+    0.951,
+    1.004,
+    1.06
+   ],
+   "after": [
+    0.951,
+    1.004,
+    1.06
+   ]
+  },
+  "WALK": {
+   "drawings": 8,
+   "read": 8,
+   "rebuilt": 0,
+   "before": [
+    1.001,
+    1.047,
+    1.08
+   ],
+   "after": [
+    1.001,
+    1.047,
+    1.08
+   ]
+  }
+ },
+ "unmeasured": {
+  "family-tails-fly-ascend-00": "the same drawing as fly-00",
+  "family-tails-fly-ascend-01": "the same drawing as fly-01",
+  "family-tails-fly-ascend-02": "the same drawing as fly-02",
+  "family-tails-fly-ascend-03": "the same drawing as fly-03",
+  "family-tails-fly-ascend-04": "the same drawing as fly-04",
+  "family-tails-fly-ascend-05": "the same drawing as fly-05",
+  "family-tails-fly-carry-ascend-00": "the same drawing as family-tails-fly-carry-00",
+  "family-tails-fly-carry-ascend-01": "the same drawing as family-tails-fly-carry-01",
+  "family-tails-fly-carry-ascend-02": "the same drawing as family-tails-fly-carry-02",
+  "family-tails-fly-carry-ascend-03": "the same drawing as family-tails-fly-carry-03",
+  "family-tails-fly-carry-ascend-04": "the same drawing as family-tails-fly-carry-04",
+  "family-tails-fly-carry-ascend-05": "the same drawing as family-tails-fly-carry-05",
+  "family-blank-00": "empty frame",
+  "object4-s3k-82": "object pose reduced outside the 4x3 sheets: no source cell to read",
+  "object4-s3k-8d": "object pose reduced outside the 4x3 sheets: no source cell to read",
+  "object5-90": "object pose reduced outside the 4x3 sheets: no source cell to read",
+  "object5-92": "object pose reduced outside the 4x3 sheets: no source cell to read",
+  "object5-93": "object pose reduced outside the 4x3 sheets: no source cell to read",
+  "object5-94": "object pose reduced outside the 4x3 sheets: no source cell to read",
+  "object5-95": "object pose reduced outside the 4x3 sheets: no source cell to read",
+  "object5-63": "object5-5c turned 270 degrees; follows it",
+  "object5-64": "object5-5d turned 270 degrees; follows it",
+  "object5-65": "object5-5e turned 270 degrees; follows it",
+  "object5-66": "object5-5f turned 270 degrees; follows it",
+  "object5-67": "object5-60 turned 270 degrees; follows it",
+  "object5-68": "object5-61 turned 270 degrees; follows it",
+  "object5-7a": "object5-78 turned 90 degrees; follows it",
+  "object5-7b": "object5-79 turned 90 degrees; follows it",
+  "object5-7c": "object5-78 turned 180 degrees; follows it",
+  "object5-7d": "object5-79 turned 180 degrees; follows it",
+  "object5-7f": "object5-79 turned 270 degrees; follows it",
+  "object5-f3": "object5-f1 turned 0 degrees and mirrored; follows it",
+  "object5-f4": "object5-f0 turned 0 degrees and mirrored; follows it",
+  "object5-f5": "object5-ef turned 0 degrees and mirrored; follows it",
+  "object5-f9": "object5-f7 turned 0 degrees and mirrored; follows it",
+  "object5-fa": "object5-f6 turned 0 degrees and mirrored; follows it"
+ },
+ "mica": {
+  "method": "hood/skull width in px from production/mica/consistency-landmarks.json (hand-marked, about 1 px, so one step is 5.6%), over wait-00's 18 px. Her frames are not changed.",
+  "flats": 238,
+  "read": 123,
+  "spread": [
+   0.778,
+   1.0,
+   1.111
+  ],
+  "within_tolerance": 107,
+  "animations": {
+   "BALANCE": [
+    1.0,
+    1.0,
+    4
+   ],
+   "DEATH": [
+    1.0,
+    1.0,
+    2
+   ],
+   "DROWN": [
+    1.0,
+    1.0,
+    3
+   ],
+   "DUCK": [
+    1.0,
+    1.0,
+    2
+   ],
+   "GET_AIR": [
+    1.0,
+    1.0,
+    2
+   ],
+   "HANG": [
+    1.0,
+    1.0,
+    3
+   ],
+   "HURT": [
+    1.0,
+    1.0,
+    1
+   ],
+   "LOOK_UP": [
+    1.0,
+    1.0,
+    2
+   ],
+   "NATIVE_POSE": [
+    0.778,
+    1.111,
+    72
+   ],
+   "PUSH": [
+    1.0,
+    1.0,
+    2
+   ],
+   "RUN": [
+    1.0,
+    1.0,
+    4
+   ],
+   "SKID": [
+    1.0,
+    1.0,
+    4
+   ],
+   "SPRING": [
+    1.0,
+    1.0,
+    1
+   ],
+   "STOP": [
+    1.0,
+    1.0,
+    4
+   ],
+   "WAIT": [
+    0.944,
+    1.0,
+    9
+   ],
+   "WALK": [
+    1.0,
+    1.0,
+    8
+   ]
+  },
+  "beyond_tolerance": {
+   "object-pose-5d": 0.778,
+   "object-pose-58": 0.889,
+   "object-pose-5e": 0.889,
+   "object-pose-60": 0.889,
+   "object-pose-61": 0.889,
+   "object-pose-63": 0.889,
+   "object-pose-65": 0.889,
+   "object-pose-66": 0.889,
+   "variant-s3k-8f": 1.111,
+   "object-pose-6c": 1.111,
+   "object-pose-6d": 1.111,
+   "object-pose-6e": 1.111,
+   "object-pose-6f": 1.111,
+   "object-pose-75": 1.111,
+   "object-pose-76": 1.111,
+   "object-pose-77": 1.111
+  },
+  "landmarks_hidden": 49,
+  "unmarked": {
+   "count": 66,
+   "families": [
+    "object4-s3k"
+   ],
+   "note": "added after the landmark pass; an eye-white check at native size reads 3-6 px on them, the range of her own WAIT (4-6 px), which rules out a gross error but cannot resolve 8%"
+  }
+ }
+}

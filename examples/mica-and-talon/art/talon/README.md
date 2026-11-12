@@ -119,7 +119,30 @@ median falls from 0.32 to 0.19, with the cleaned WALK/RUN flats at 0.20–0.22 a
 SPINDASH blur ball, whose one-pixel steps are curve shading and motion streaks and which already
 score 0.10–0.18, and the white transformation flash. `pose_cleanup.py --check` rebuilds the 203
 drawings from their original rows.
-The pass also corrected the shared rule: a white or cream patch with no plumage beside it that
+**Scale rebuild (2026-11-12).** The owner still saw his poses at varying sizes. Frame height cannot
+tell (a spread wing or a crouch changes it without changing the bird), so
+`production/talon/scale_audit.py` measures two rigid head parts on each frame's high-resolution
+source drawing, the thickness of the largest goggle lens and that lens's centre to the beak tip,
+divides each by the frame's own reduction factor and by WAIT, and takes their geometric mean as the
+head scale. The band alone reads WALK at 1.09–1.17 although WALK stands exactly the reference
+height, and the span alone shortens when the beak turns to the viewer; their mean reads WALK 1.05
+and RUN 1.03, so one frame is good to roughly 8%. The cause was the 2026-11-10 area-matching
+enlargements (×1.10–1.47 per family), a flight set drawn to a larger skull, and object poses each
+fitted to its own native box. 68 drawings beyond 8% are rebuilt at the corrected factor, 67 reduced
+again from their source and SPRING by the route 2 fallback: the flight set ×0.82, carry ×0.89,
+VICTORY ×0.85 (it stood 45–47 px, now 38–40), BUBBLE ×0.76, HURT_FALL ×0.73, BALANCE2 ×0.79,
+BALANCE4 01–03 ×0.77–0.84, HANG ×0.86, SUPER_TRANSFORM ×0.70–0.91, TAILS_CARRIED ×0.91, TAILS_SWIM and
+its tired set ×0.92, FLOAT2 ×0.92, thirteen object poses ×0.83–0.92 (and the five turned from them),
+with DUCK and SPRING enlarged ×1.15 by hand. Hotspots follow the rung's anchors: the sole's distance
+for grounded and carrying frames, the top for hanging and carried ones, about the hotspot otherwise,
+so MICA's gloves still meet his shoes in all 36 pairings. The rebuilt drawings then pass through
+`pose_cleanup.py` and `tonal_reshade.py` like the rest of the sheet.
+[`scale-audit.json`](../../production/talon/scale-audit.json) holds the reading, decision and reason
+for every drawing, the ones still outside 8% (a standing object pose with a large head for its body,
+BALANCE and DEATH read small but stand the right height, 44 object poses hide the lens or beak) and
+MICA's audit. `scale_audit.py --check` needs no source drawings; `measure` and `rebuild` need the
+external ones its header names.
+The pose cleanup also corrected the shared rule: a white or cream patch with no plumage beside it that
 touches amber, brown or red is a goggle glint, beak shine or shoe white, and is now put back exactly
 as drawn. The walk cleanup had rewritten seven such pixels on `walk-04`, `walk-05`, `walk-07`,
 `run-01` and `run-03`; those five flats and their fifteen slope frames are rebuilt.

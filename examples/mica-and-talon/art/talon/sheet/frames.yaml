@@ -402,12 +402,12 @@
       "order": 0,
       "file": "frames/spring-00.png",
       "hotspot": [
-        16,
-        17
+        18,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency built-in image generation: spring-2.png, cell 1; uniform 18:1 reduction; no contour painting. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "Consistency built-in image generation: spring-2.png, cell 1; uniform 18:1 reduction; no contour painting. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x1.15 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "hurt-00",
@@ -441,12 +441,12 @@
       "order": 3,
       "file": "frames/duck-00.png",
       "hotspot": [
-        19,
-        4
+        22,
+        7
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original poses attempt 1 cell 3, uniform factor 0.85; skull/torso scale; no painting. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "Consistency: original poses attempt 1 cell 3, uniform factor 0.85; skull/torso scale; no painting. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x1.15 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "look_up-00",
@@ -493,12 +493,12 @@
       "order": 0,
       "file": "frames/fly-00.png",
       "hotspot": [
-        25,
-        35
+        21,
+        29
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "fly-01",
@@ -506,12 +506,12 @@
       "order": 1,
       "file": "frames/fly-01.png",
       "hotspot": [
-        29,
-        25
+        24,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "fly-02",
@@ -519,12 +519,12 @@
       "order": 2,
       "file": "frames/fly-02.png",
       "hotspot": [
-        35,
-        24
+        29,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "fly-03",
@@ -532,12 +532,12 @@
       "order": 3,
       "file": "frames/fly-03.png",
       "hotspot": [
-        20,
-        25
+        17,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "fly-04",
@@ -545,12 +545,12 @@
       "order": 4,
       "file": "frames/fly-04.png",
       "hotspot": [
-        28,
-        24
+        23,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "fly-05",
@@ -558,12 +558,12 @@
       "order": 5,
       "file": "frames/fly-05.png",
       "hotspot": [
-        30,
-        24
+        25,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "fly_tired-00",
@@ -1195,12 +1195,12 @@
       "order": 0,
       "file": "frames/family-balance2-00.png",
       "hotspot": [
-        18,
-        19
+        15,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE2: attempt row 2, phase 0; uniform anatomical/goggle scale 8.4000:1. No painted contours. Landmark review uniform correction 1.15. 2026-11-10: re-reduced original generation at 6.640316 source pixels/native pixel; uniform anatomy correction 1.1; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image BALANCE2: attempt row 2, phase 0; uniform anatomical/goggle scale 8.4000:1. No painted contours. Landmark review uniform correction 1.15. 2026-11-10: re-reduced original generation at 6.640316 source pixels/native pixel; uniform anatomy correction 1.1; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.79 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-balance2-01",
@@ -1208,12 +1208,12 @@
       "order": 1,
       "file": "frames/family-balance2-01.png",
       "hotspot": [
-        18,
-        22
+        14,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE2: attempt row 1, phase 1; uniform anatomical/goggle scale 7.7000:1. No painted contours. Landmark review uniform correction 1.15. 2026-11-10: re-reduced original generation at 6.086957 source pixels/native pixel; uniform anatomy correction 1.1; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image BALANCE2: attempt row 1, phase 1; uniform anatomical/goggle scale 7.7000:1. No painted contours. Landmark review uniform correction 1.15. 2026-11-10: re-reduced original generation at 6.086957 source pixels/native pixel; uniform anatomy correction 1.1; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.79 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-balance2-02",
@@ -1221,12 +1221,12 @@
       "order": 2,
       "file": "frames/family-balance2-02.png",
       "hotspot": [
-        17,
-        19
+        13,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE2: attempt row 3, phase 2; uniform anatomical/goggle scale 6.7000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.090909 source pixels/native pixel; uniform anatomy correction 1.1; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image BALANCE2: attempt row 3, phase 2; uniform anatomical/goggle scale 6.7000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.090909 source pixels/native pixel; uniform anatomy correction 1.1; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.79 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-balance3-00",
@@ -1273,12 +1273,12 @@
       "order": 1,
       "file": "frames/family-balance4-01.png",
       "hotspot": [
-        22,
-        24
+        17,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE4: attempt row 2, phase 1; uniform anatomical/goggle scale 5.3000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 5.189973 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image BALANCE4: attempt row 2, phase 1; uniform anatomical/goggle scale 5.3000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 5.189973 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.81 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-balance4-02",
@@ -1286,12 +1286,12 @@
       "order": 2,
       "file": "frames/family-balance4-02.png",
       "hotspot": [
-        23,
-        22
+        19,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE4: attempt row 3, phase 2; uniform anatomical/goggle scale 5.3000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 5.189973 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image BALANCE4: attempt row 3, phase 2; uniform anatomical/goggle scale 5.3000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 5.189973 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.84 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-balance4-03",
@@ -1299,12 +1299,12 @@
       "order": 3,
       "file": "frames/family-balance4-03.png",
       "hotspot": [
-        24,
-        24
+        19,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE4: attempt row 2, phase 3; uniform anatomical/goggle scale 5.1000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 4.994125 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image BALANCE4: attempt row 2, phase 3; uniform anatomical/goggle scale 5.1000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 4.994125 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.77 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-balance4-04",
@@ -1325,12 +1325,12 @@
       "order": 0,
       "file": "frames/family-hang-00.png",
       "hotspot": [
-        26,
+        23,
         12
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image HANG: attempt row 2, phase 0; uniform anatomical/goggle scale 12.0000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image HANG: attempt row 2, phase 0; uniform anatomical/goggle scale 12.0000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.86 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-hang-01",
@@ -1338,12 +1338,12 @@
       "order": 1,
       "file": "frames/family-hang-01.png",
       "hotspot": [
-        26,
+        22,
         12
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image HANG: attempt row 3, phase 1; uniform anatomical/goggle scale 11.8000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image HANG: attempt row 3, phase 1; uniform anatomical/goggle scale 11.8000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.86 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-hang2-00",
@@ -1377,12 +1377,12 @@
       "order": 0,
       "file": "frames/family-bubble-00.png",
       "hotspot": [
-        24,
-        26
+        18,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BUBBLE: attempt row 1, phase 0; uniform anatomical/goggle scale 7.8000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 5.616359 source pixels/native pixel; uniform anatomy correction 1.24; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image BUBBLE: attempt row 1, phase 0; uniform anatomical/goggle scale 7.8000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 5.616359 source pixels/native pixel; uniform anatomy correction 1.24; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.76 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-bubble-01",
@@ -1390,12 +1390,12 @@
       "order": 1,
       "file": "frames/family-bubble-01.png",
       "hotspot": [
-        24,
-        26
+        18,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BUBBLE: attempt row 2, phase 1; uniform anatomical/goggle scale 7.7000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 5.544355 source pixels/native pixel; uniform anatomy correction 1.24; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image BUBBLE: attempt row 2, phase 1; uniform anatomical/goggle scale 7.7000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 5.544355 source pixels/native pixel; uniform anatomy correction 1.24; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.76 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-bubble-02",
@@ -1403,12 +1403,12 @@
       "order": 2,
       "file": "frames/family-bubble-02.png",
       "hotspot": [
-        24,
-        26
+        18,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BUBBLE: attempt row 3, phase 2; uniform anatomical/goggle scale 7.9000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 5.688364 source pixels/native pixel; uniform anatomy correction 1.24; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image BUBBLE: attempt row 3, phase 2; uniform anatomical/goggle scale 7.9000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 5.688364 source pixels/native pixel; uniform anatomy correction 1.24; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.76 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-hurt-fall-00",
@@ -1416,12 +1416,12 @@
       "order": 0,
       "file": "frames/family-hurt-fall-00.png",
       "hotspot": [
-        20,
-        28
+        14,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image HURT_FALL: attempt row 2, phase 0; uniform anatomical/goggle scale 12.7000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 8.790144 source pixels/native pixel; uniform anatomy correction 1.29; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image HURT_FALL: attempt row 2, phase 0; uniform anatomical/goggle scale 12.7000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 8.790144 source pixels/native pixel; uniform anatomy correction 1.29; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.73 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-hurt-fall-01",
@@ -1429,12 +1429,12 @@
       "order": 1,
       "file": "frames/family-hurt-fall-01.png",
       "hotspot": [
-        23,
-        26
+        16,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image HURT_FALL: attempt row 3, phase 1; uniform anatomical/goggle scale 13.0000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 8.997785 source pixels/native pixel; uniform anatomy correction 1.29; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image HURT_FALL: attempt row 3, phase 1; uniform anatomical/goggle scale 13.0000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 8.997785 source pixels/native pixel; uniform anatomy correction 1.29; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.73 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-drown-00",
@@ -1455,12 +1455,12 @@
       "order": 0,
       "file": "frames/family-float2-00.png",
       "hotspot": [
-        22,
-        13
+        21,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 1, phase 0; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image FLOAT2: attempt row 1, phase 0; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-float2-01",
@@ -1468,12 +1468,12 @@
       "order": 1,
       "file": "frames/family-float2-01.png",
       "hotspot": [
-        19,
-        13
+        18,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 2, phase 1; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image FLOAT2: attempt row 2, phase 1; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-float2-02",
@@ -1481,12 +1481,12 @@
       "order": 2,
       "file": "frames/family-float2-02.png",
       "hotspot": [
-        19,
-        14
+        18,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 1, phase 2; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image FLOAT2: attempt row 1, phase 2; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-float2-03",
@@ -1494,12 +1494,12 @@
       "order": 3,
       "file": "frames/family-float2-03.png",
       "hotspot": [
-        19,
-        13
+        18,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 3, phase 3; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image FLOAT2: attempt row 3, phase 3; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-float2-04",
@@ -1507,12 +1507,12 @@
       "order": 4,
       "file": "frames/family-float2-04.png",
       "hotspot": [
-        22,
-        12
+        20,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 2, phase 4; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image FLOAT2: attempt row 2, phase 4; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-float2-05",
@@ -1520,12 +1520,12 @@
       "order": 5,
       "file": "frames/family-float2-05.png",
       "hotspot": [
-        18,
-        16
+        17,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 3, phase 5; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image FLOAT2: attempt row 3, phase 5; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-float2-06",
@@ -1533,12 +1533,12 @@
       "order": 6,
       "file": "frames/family-float2-06.png",
       "hotspot": [
-        18,
-        17
+        16,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 1, phase 6; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image FLOAT2: attempt row 1, phase 6; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-float2-07",
@@ -1546,12 +1546,12 @@
       "order": 7,
       "file": "frames/family-float2-07.png",
       "hotspot": [
-        18,
-        16
+        17,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 2, phase 7; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image FLOAT2: attempt row 2, phase 7; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-blink-00",
@@ -1624,12 +1624,12 @@
       "order": 0,
       "file": "frames/family-victory-00.png",
       "hotspot": [
-        14,
-        27
+        12,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image VICTORY: attempt row 1, phase 0; uniform anatomical/goggle scale 8.5000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.538462 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image VICTORY: attempt row 1, phase 0; uniform anatomical/goggle scale 8.5000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.538462 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-victory-01",
@@ -1637,12 +1637,12 @@
       "order": 1,
       "file": "frames/family-victory-01.png",
       "hotspot": [
-        15,
-        25
+        13,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image VICTORY: attempt row 2, phase 1; uniform anatomical/goggle scale 8.6000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.615385 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image VICTORY: attempt row 2, phase 1; uniform anatomical/goggle scale 8.6000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.615385 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-victory-02",
@@ -1650,12 +1650,12 @@
       "order": 2,
       "file": "frames/family-victory-02.png",
       "hotspot": [
-        17,
-        25
+        14,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image VICTORY: attempt row 3, phase 2; uniform anatomical/goggle scale 8.7000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.692308 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image VICTORY: attempt row 3, phase 2; uniform anatomical/goggle scale 8.7000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.692308 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-victory-03",
@@ -1663,12 +1663,12 @@
       "order": 3,
       "file": "frames/family-victory-03.png",
       "hotspot": [
-        15,
-        27
+        13,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image VICTORY: attempt row 2, phase 3; uniform anatomical/goggle scale 8.5000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.538462 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image VICTORY: attempt row 2, phase 3; uniform anatomical/goggle scale 8.5000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.538462 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-carried-00",
@@ -1676,12 +1676,12 @@
       "order": 0,
       "file": "frames/family-tails-carried-00.png",
       "hotspot": [
-        18,
+        16,
         24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_CARRIED: attempt row 2, phase 0; uniform anatomical/goggle scale 6.7000:1. No painted contours. Raised feather hands registered to native carried grip plane at centre-24. 2026-11-10: re-reduced original generation at 5.775862 source pixels/native pixel; uniform anatomy correction 1.16; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image TAILS_CARRIED: attempt row 2, phase 0; uniform anatomical/goggle scale 6.7000:1. No painted contours. Raised feather hands registered to native carried grip plane at centre-24. 2026-11-10: re-reduced original generation at 5.775862 source pixels/native pixel; uniform anatomy correction 1.16; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.91 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-carried-01",
@@ -1689,12 +1689,12 @@
       "order": 1,
       "file": "frames/family-tails-carried-01.png",
       "hotspot": [
-        19,
+        17,
         24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_CARRIED: attempt row 1, phase 1; uniform anatomical/goggle scale 5.2000:1. No painted contours. Landmark review uniform correction 0.8. Raised feather hands registered to native carried grip plane at centre-24. 2026-11-10: re-reduced original generation at 5.603448 source pixels/native pixel; uniform anatomy correction 1.16; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image TAILS_CARRIED: attempt row 1, phase 1; uniform anatomical/goggle scale 5.2000:1. No painted contours. Landmark review uniform correction 0.8. Raised feather hands registered to native carried grip plane at centre-24. 2026-11-10: re-reduced original generation at 5.603448 source pixels/native pixel; uniform anatomy correction 1.16; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.91 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-carried-02",
@@ -1702,12 +1702,12 @@
       "order": 2,
       "file": "frames/family-tails-carried-02.png",
       "hotspot": [
-        23,
+        21,
         24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_CARRIED: attempt row 3, phase 2; uniform anatomical/goggle scale 5.1000:1. No painted contours. Landmark review uniform correction 0.75. Raised feather hands registered to native carried grip plane at centre-24. 2026-11-10: re-reduced original generation at 5.862069 source pixels/native pixel; uniform anatomy correction 1.16; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image TAILS_CARRIED: attempt row 3, phase 2; uniform anatomical/goggle scale 5.1000:1. No painted contours. Landmark review uniform correction 0.75. Raised feather hands registered to native carried grip plane at centre-24. 2026-11-10: re-reduced original generation at 5.862069 source pixels/native pixel; uniform anatomy correction 1.16; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.91 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-super-transform-00",
@@ -1715,12 +1715,12 @@
       "order": 0,
       "file": "frames/family-super-transform-00.png",
       "hotspot": [
-        24,
-        23
+        17,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image SUPER_TRANSFORM: attempt row 2, phase 0; uniform anatomical/goggle scale 5.3000:1. No painted contours. Landmark review uniform correction 0.88. 2026-11-10: re-reduced original generation at 4.742305 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image SUPER_TRANSFORM: attempt row 2, phase 0; uniform anatomical/goggle scale 5.3000:1. No painted contours. Landmark review uniform correction 0.88. 2026-11-10: re-reduced original generation at 4.742305 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.70 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-super-transform-01",
@@ -1728,12 +1728,12 @@
       "order": 1,
       "file": "frames/family-super-transform-01.png",
       "hotspot": [
-        27,
-        27
+        20,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image SUPER_TRANSFORM: attempt row 3, phase 1; uniform anatomical/goggle scale 6.1000:1. No painted contours. 2026-11-10: re-reduced original generation at 4.803150 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image SUPER_TRANSFORM: attempt row 3, phase 1; uniform anatomical/goggle scale 6.1000:1. No painted contours. 2026-11-10: re-reduced original generation at 4.803150 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.74 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-super-transform-02",
@@ -1741,12 +1741,12 @@
       "order": 2,
       "file": "frames/family-super-transform-02.png",
       "hotspot": [
-        20,
-        26
+        16,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image SUPER_TRANSFORM: attempt row 1, phase 2; uniform anatomical/goggle scale 6.7333:1. No painted contours. 2026-11-10: re-reduced original generation at 5.301837 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours."
+      "notes": "GPT Image SUPER_TRANSFORM: attempt row 1, phase 2; uniform anatomical/goggle scale 6.7333:1. No painted contours. 2026-11-10: re-reduced original generation at 5.301837 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.81 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-super-transform-03",
@@ -1754,12 +1754,12 @@
       "order": 3,
       "file": "frames/family-super-transform-03.png",
       "hotspot": [
-        26,
-        24
+        23,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image SUPER_TRANSFORM: attempt row 2, phase 3; uniform anatomical/goggle scale 6.4000:1. No painted contours. Landmark review uniform correction 0.9. 2026-11-10: re-reduced original generation at 5.599300 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image SUPER_TRANSFORM: attempt row 2, phase 3; uniform anatomical/goggle scale 6.4000:1. No painted contours. Landmark review uniform correction 0.9. 2026-11-10: re-reduced original generation at 5.599300 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-super-transform-04",
@@ -1767,12 +1767,12 @@
       "order": 4,
       "file": "frames/family-super-transform-04.png",
       "hotspot": [
-        24,
-        24
+        22,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image SUPER_TRANSFORM: attempt row 3, phase 4; uniform anatomical/goggle scale 6.5000:1. No painted contours. Landmark review uniform correction 0.9. 2026-11-10: re-reduced original generation at 5.686789 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image SUPER_TRANSFORM: attempt row 3, phase 4; uniform anatomical/goggle scale 6.5000:1. No painted contours. Landmark review uniform correction 0.9. 2026-11-10: re-reduced original generation at 5.686789 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.91 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-ascend-00",
@@ -1780,12 +1780,12 @@
       "order": 0,
       "file": "frames/family-tails-fly-ascend-00.png",
       "hotspot": [
-        25,
-        35
+        21,
+        29
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-ascend-01",
@@ -1793,12 +1793,12 @@
       "order": 1,
       "file": "frames/family-tails-fly-ascend-01.png",
       "hotspot": [
-        29,
-        25
+        24,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-ascend-02",
@@ -1806,12 +1806,12 @@
       "order": 2,
       "file": "frames/family-tails-fly-ascend-02.png",
       "hotspot": [
-        35,
-        24
+        29,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-ascend-03",
@@ -1819,12 +1819,12 @@
       "order": 3,
       "file": "frames/family-tails-fly-ascend-03.png",
       "hotspot": [
-        20,
-        25
+        17,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-ascend-04",
@@ -1832,12 +1832,12 @@
       "order": 4,
       "file": "frames/family-tails-fly-ascend-04.png",
       "hotspot": [
-        28,
-        24
+        23,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-ascend-05",
@@ -1845,12 +1845,12 @@
       "order": 5,
       "file": "frames/family-tails-fly-ascend-05.png",
       "hotspot": [
-        30,
-        24
+        25,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-00",
@@ -1858,12 +1858,12 @@
       "order": 0,
       "file": "frames/family-tails-fly-carry-00.png",
       "hotspot": [
-        22,
-        36
+        19,
+        32
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 0, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 0, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-01",
@@ -1871,12 +1871,12 @@
       "order": 1,
       "file": "frames/family-tails-fly-carry-01.png",
       "hotspot": [
-        28,
-        33
+        25,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 1, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 1, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-02",
@@ -1884,12 +1884,12 @@
       "order": 2,
       "file": "frames/family-tails-fly-carry-02.png",
       "hotspot": [
-        33,
-        28
+        30,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 2, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 2, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-03",
@@ -1897,12 +1897,12 @@
       "order": 3,
       "file": "frames/family-tails-fly-carry-03.png",
       "hotspot": [
-        23,
-        28
+        20,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 3, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 3, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-04",
@@ -1910,12 +1910,12 @@
       "order": 4,
       "file": "frames/family-tails-fly-carry-04.png",
       "hotspot": [
-        28,
-        28
+        25,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 4, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 4, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-05",
@@ -1923,12 +1923,12 @@
       "order": 5,
       "file": "frames/family-tails-fly-carry-05.png",
       "hotspot": [
-        37,
-        28
+        33,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 5, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 5, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-ascend-00",
@@ -1936,12 +1936,12 @@
       "order": 0,
       "file": "frames/family-tails-fly-carry-ascend-00.png",
       "hotspot": [
-        22,
-        36
+        19,
+        32
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 0, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 0, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-ascend-01",
@@ -1949,12 +1949,12 @@
       "order": 1,
       "file": "frames/family-tails-fly-carry-ascend-01.png",
       "hotspot": [
-        28,
-        33
+        25,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 1, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 1, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-ascend-02",
@@ -1962,12 +1962,12 @@
       "order": 2,
       "file": "frames/family-tails-fly-carry-ascend-02.png",
       "hotspot": [
-        33,
-        28
+        30,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 2, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 2, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-ascend-03",
@@ -1975,12 +1975,12 @@
       "order": 3,
       "file": "frames/family-tails-fly-carry-ascend-03.png",
       "hotspot": [
-        23,
-        28
+        20,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 3, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 3, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-ascend-04",
@@ -1988,12 +1988,12 @@
       "order": 4,
       "file": "frames/family-tails-fly-carry-ascend-04.png",
       "hotspot": [
-        28,
-        28
+        25,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 4, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 4, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-ascend-05",
@@ -2001,12 +2001,12 @@
       "order": 5,
       "file": "frames/family-tails-fly-carry-ascend-05.png",
       "hotspot": [
-        37,
-        28
+        33,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 5, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 5, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-swim-00",
@@ -2014,12 +2014,12 @@
       "order": 0,
       "file": "frames/family-tails-swim-00.png",
       "hotspot": [
-        27,
-        24
+        24,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM: attempt row 1, phase 0; uniform anatomical/goggle scale 7.5000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.147541 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image TAILS_SWIM: attempt row 1, phase 0; uniform anatomical/goggle scale 7.5000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.147541 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-swim-01",
@@ -2027,12 +2027,12 @@
       "order": 1,
       "file": "frames/family-tails-swim-01.png",
       "hotspot": [
-        27,
-        24
+        24,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM: attempt row 3, phase 1; uniform anatomical/goggle scale 7.2000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.901639 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image TAILS_SWIM: attempt row 3, phase 1; uniform anatomical/goggle scale 7.2000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.901639 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-swim-02",
@@ -2040,12 +2040,12 @@
       "order": 2,
       "file": "frames/family-tails-swim-02.png",
       "hotspot": [
-        33,
-        23
+        30,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM: attempt row 2, phase 2; uniform anatomical/goggle scale 7.3000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.983607 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image TAILS_SWIM: attempt row 2, phase 2; uniform anatomical/goggle scale 7.3000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.983607 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-swim-03",
@@ -2053,12 +2053,12 @@
       "order": 3,
       "file": "frames/family-tails-swim-03.png",
       "hotspot": [
-        28,
-        24
+        26,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM: attempt row 3, phase 3; uniform anatomical/goggle scale 7.3000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.983607 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image TAILS_SWIM: attempt row 3, phase 3; uniform anatomical/goggle scale 7.3000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.983607 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-swim-04",
@@ -2066,12 +2066,12 @@
       "order": 4,
       "file": "frames/family-tails-swim-04.png",
       "hotspot": [
-        28,
-        24
+        26,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM: attempt row 2, phase 4; uniform anatomical/goggle scale 7.3000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.983607 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image TAILS_SWIM: attempt row 2, phase 4; uniform anatomical/goggle scale 7.3000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.983607 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-swim-ascend-00",
@@ -2170,12 +2170,12 @@
       "order": 0,
       "file": "frames/family-tails-swim-tired-00.png",
       "hotspot": [
-        25,
-        26
+        23,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM_TIRED: attempt row 2, phase 0; uniform anatomical/goggle scale 10.9000:1. No painted contours. 2026-11-10: re-reduced original generation at 8.384615 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image TAILS_SWIM_TIRED: attempt row 2, phase 0; uniform anatomical/goggle scale 10.9000:1. No painted contours. 2026-11-10: re-reduced original generation at 8.384615 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-swim-tired-01",
@@ -2183,12 +2183,12 @@
       "order": 1,
       "file": "frames/family-tails-swim-tired-01.png",
       "hotspot": [
-        24,
-        24
+        22,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM_TIRED: attempt row 1, phase 1; uniform anatomical/goggle scale 11.4000:1. No painted contours. 2026-11-10: re-reduced original generation at 8.769231 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image TAILS_SWIM_TIRED: attempt row 1, phase 1; uniform anatomical/goggle scale 11.4000:1. No painted contours. 2026-11-10: re-reduced original generation at 8.769231 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-swim-tired-02",
@@ -2196,12 +2196,12 @@
       "order": 2,
       "file": "frames/family-tails-swim-tired-02.png",
       "hotspot": [
-        25,
-        23
+        23,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM_TIRED: attempt row 3, phase 2; uniform anatomical/goggle scale 11.2000:1. No painted contours. 2026-11-10: re-reduced original generation at 8.615385 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image TAILS_SWIM_TIRED: attempt row 3, phase 2; uniform anatomical/goggle scale 11.2000:1. No painted contours. 2026-11-10: re-reduced original generation at 8.615385 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-blank-00",
@@ -2885,12 +2885,12 @@
       "order": 405,
       "file": "frames/object5-69.png",
       "hotspot": [
-        19,
-        18
+        17,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.87 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-6a",
@@ -2937,12 +2937,12 @@
       "order": 409,
       "file": "frames/object5-6d.png",
       "hotspot": [
-        20,
-        11
+        17,
+        10
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.88 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-6e",
@@ -3080,12 +3080,12 @@
       "order": 420,
       "file": "frames/object5-78.png",
       "hotspot": [
-        17,
-        30
+        14,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-79",
@@ -3093,12 +3093,12 @@
       "order": 421,
       "file": "frames/object5-79.png",
       "hotspot": [
-        31,
-        32
+        26,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-7e",
@@ -3106,12 +3106,12 @@
       "order": 426,
       "file": "frames/object5-7e.png",
       "hotspot": [
-        8,
-        17
+        6,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.83 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-80",
@@ -3119,12 +3119,12 @@
       "order": 428,
       "file": "frames/object5-80.png",
       "hotspot": [
-        20,
-        27
+        18,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.90 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-81",
@@ -3132,12 +3132,12 @@
       "order": 429,
       "file": "frames/object5-81.png",
       "hotspot": [
-        30,
-        28
+        25,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.84 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-83",
@@ -3145,12 +3145,12 @@
       "order": 431,
       "file": "frames/object5-83.png",
       "hotspot": [
-        23,
-        29
+        19,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-84",
@@ -3158,12 +3158,12 @@
       "order": 432,
       "file": "frames/object5-84.png",
       "hotspot": [
-        26,
-        27
+        22,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.84 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-85",
@@ -3171,12 +3171,12 @@
       "order": 433,
       "file": "frames/object5-85.png",
       "hotspot": [
-        23,
-        27
+        19,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.83 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-90",
@@ -3262,12 +3262,12 @@
       "order": 523,
       "file": "frames/object5-df.png",
       "hotspot": [
-        17,
-        24
+        15,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.91 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-e0",
@@ -3301,12 +3301,12 @@
       "order": 526,
       "file": "frames/object5-e2.png",
       "hotspot": [
-        12,
-        23
+        11,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.91 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-e3",
@@ -3314,12 +3314,12 @@
       "order": 527,
       "file": "frames/object5-e3.png",
       "hotspot": [
-        17,
-        23
+        15,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.86 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-e4",
@@ -3587,12 +3587,12 @@
       "order": 422,
       "file": "frames/object5-7a.png",
       "hotspot": [
-        30,
-        20
+        26,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-7b",
@@ -3600,12 +3600,12 @@
       "order": 423,
       "file": "frames/object5-7b.png",
       "hotspot": [
-        32,
-        14
+        28,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-7c",
@@ -3613,12 +3613,12 @@
       "order": 424,
       "file": "frames/object5-7c.png",
       "hotspot": [
-        20,
-        12
+        16,
+        9
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-7d",
@@ -3626,12 +3626,12 @@
       "order": 425,
       "file": "frames/object5-7d.png",
       "hotspot": [
-        14,
-        11
+        11,
+        8
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-7f",
@@ -3639,12 +3639,12 @@
       "order": 427,
       "file": "frames/object5-7f.png",
       "hotspot": [
-        11,
-        31
+        8,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "object5-f3",

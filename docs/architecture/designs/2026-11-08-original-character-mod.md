@@ -1737,6 +1737,18 @@ a deliberate flat silhouette. The flight and carry sets, Solar, the other surfac
 touched; MICA's flat poses still score a median of 0.34, where TALON's stood before. The same step
 tightened the shared rule so that white pixels belonging to goggles, beak or shoes are restored
 exactly; seven such pixels on five walk/run flats, and their slope frames, were rebuilt.
+The owner then reported that the poses "still seem to have varying sizes".
+`production/talon/scale_audit.py` measures head scale on each frame's source drawing (goggle band
+thickness and lens-to-beak span, over the frame's reduction factor, against WAIT) and rebuilds the
+68 drawings more than 8% off at a corrected factor: flight ×0.82, carry ×0.89, VICTORY ×0.85 and
+the families the 2026-11-10 area-matching pass had enlarged, plus DUCK and SPRING enlarged by hand.
+Rejected on the way, with the evidence in `scale-audit.json` and the tool's header: the band alone
+(it over-shrinks sheets that draw the goggles thick, and reads the reference WALK at 1.13), a shoe
+measure (shoes merge and foreshorten), frame height, treating the object poses as one set at one
+scale (their figures differ per cell; only frames whose own head also reads large are rebuilt), and
+enlarging on a small reading (both measures fail low, so DEATH came out a head too tall). MICA was
+audited from her hand-marked skull widths and not changed: 107 of 123 readable flats are within 8%,
+and the 16 outside (0.78–1.11) are object poses.
 
 **Powered-form owner feedback, 2026-11-11:** powered binding selects the creator’s
 movement archetype; native Tails families retain Tails clocks instead of consuming
