@@ -1,0 +1,1376 @@
+{
+  "format": "openggf-playable-art-handoff-1",
+  "character": "talon_powered_s2",
+  "palette": "palette.yaml",
+  "facing": "right",
+  "tick_rate": 60,
+  "requiredAnimations": [
+    "WAIT"
+  ],
+  "frames": [
+    {
+      "id": "idle-0",
+      "animation": "WAIT",
+      "order": 0,
+      "file": "frames/idle-0.png",
+      "hotspot": [
+        13,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "idle-1",
+      "animation": "WAIT",
+      "order": 0,
+      "file": "frames/idle-1.png",
+      "hotspot": [
+        14,
+        25
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-0",
+      "animation": "RUN",
+      "order": 0,
+      "file": "frames/run-0.png",
+      "hotspot": [
+        14,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-up45-0",
+      "animation": "RUN",
+      "order": 0,
+      "file": "frames/run-up45-0.png",
+      "hotspot": [
+        16,
+        22
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-steep-0",
+      "animation": "RUN",
+      "order": 0,
+      "file": "frames/run-steep-0.png",
+      "hotspot": [
+        21,
+        21
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-inverted-0",
+      "animation": "RUN",
+      "order": 0,
+      "file": "frames/run-inverted-0.png",
+      "hotspot": [
+        23,
+        22
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-1",
+      "animation": "RUN",
+      "order": 1,
+      "file": "frames/run-1.png",
+      "hotspot": [
+        18,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-up45-1",
+      "animation": "RUN",
+      "order": 1,
+      "file": "frames/run-up45-1.png",
+      "hotspot": [
+        16,
+        22
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-steep-1",
+      "animation": "RUN",
+      "order": 1,
+      "file": "frames/run-steep-1.png",
+      "hotspot": [
+        20,
+        22
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-inverted-1",
+      "animation": "RUN",
+      "order": 1,
+      "file": "frames/run-inverted-1.png",
+      "hotspot": [
+        24,
+        21
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-2",
+      "animation": "RUN",
+      "order": 2,
+      "file": "frames/run-2.png",
+      "hotspot": [
+        16,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-up45-2",
+      "animation": "RUN",
+      "order": 2,
+      "file": "frames/run-up45-2.png",
+      "hotspot": [
+        14,
+        22
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-steep-2",
+      "animation": "RUN",
+      "order": 2,
+      "file": "frames/run-steep-2.png",
+      "hotspot": [
+        19,
+        22
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-inverted-2",
+      "animation": "RUN",
+      "order": 2,
+      "file": "frames/run-inverted-2.png",
+      "hotspot": [
+        24,
+        22
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-3",
+      "animation": "RUN",
+      "order": 3,
+      "file": "frames/run-3.png",
+      "hotspot": [
+        18,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-up45-3",
+      "animation": "RUN",
+      "order": 3,
+      "file": "frames/run-up45-3.png",
+      "hotspot": [
+        15,
+        22
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-steep-3",
+      "animation": "RUN",
+      "order": 3,
+      "file": "frames/run-steep-3.png",
+      "hotspot": [
+        20,
+        22
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "run-inverted-3",
+      "animation": "RUN",
+      "order": 3,
+      "file": "frames/run-inverted-3.png",
+      "hotspot": [
+        24,
+        21
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "transform-2",
+      "animation": "SUPER_TRANSFORM",
+      "order": 0,
+      "file": "frames/transform-2.png",
+      "hotspot": [
+        20,
+        30
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "transform-3",
+      "animation": "SUPER_TRANSFORM",
+      "order": 0,
+      "file": "frames/transform-3.png",
+      "hotspot": [
+        26,
+        28
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "transform-4",
+      "animation": "SUPER_TRANSFORM",
+      "order": 0,
+      "file": "frames/transform-4.png",
+      "hotspot": [
+        25,
+        27
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "duck",
+      "animation": "DUCK",
+      "order": 0,
+      "file": "frames/duck.png",
+      "hotspot": [
+        21,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "look_up",
+      "animation": "LOOK_UP",
+      "order": 0,
+      "file": "frames/look_up.png",
+      "hotspot": [
+        16,
+        31
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "hurt",
+      "animation": "HURT",
+      "order": 0,
+      "file": "frames/hurt.png",
+      "hotspot": [
+        17,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-0",
+      "animation": "WALK",
+      "order": 0,
+      "file": "frames/walk-0.png",
+      "hotspot": [
+        11,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-up45-0",
+      "animation": "WALK",
+      "order": 0,
+      "file": "frames/walk-up45-0.png",
+      "hotspot": [
+        20,
+        18
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-steep-0",
+      "animation": "WALK",
+      "order": 0,
+      "file": "frames/walk-steep-0.png",
+      "hotspot": [
+        22,
+        14
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-inverted-0",
+      "animation": "WALK",
+      "order": 0,
+      "file": "frames/walk-inverted-0.png",
+      "hotspot": [
+        20,
+        19
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-1",
+      "animation": "WALK",
+      "order": 1,
+      "file": "frames/walk-1.png",
+      "hotspot": [
+        16,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-up45-1",
+      "animation": "WALK",
+      "order": 1,
+      "file": "frames/walk-up45-1.png",
+      "hotspot": [
+        20,
+        17
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-steep-1",
+      "animation": "WALK",
+      "order": 1,
+      "file": "frames/walk-steep-1.png",
+      "hotspot": [
+        23,
+        14
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-inverted-1",
+      "animation": "WALK",
+      "order": 1,
+      "file": "frames/walk-inverted-1.png",
+      "hotspot": [
+        19,
+        19
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-2",
+      "animation": "WALK",
+      "order": 2,
+      "file": "frames/walk-2.png",
+      "hotspot": [
+        16,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-up45-2",
+      "animation": "WALK",
+      "order": 2,
+      "file": "frames/walk-up45-2.png",
+      "hotspot": [
+        19,
+        20
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-steep-2",
+      "animation": "WALK",
+      "order": 2,
+      "file": "frames/walk-steep-2.png",
+      "hotspot": [
+        24,
+        19
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-inverted-2",
+      "animation": "WALK",
+      "order": 2,
+      "file": "frames/walk-inverted-2.png",
+      "hotspot": [
+        21,
+        17
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-3",
+      "animation": "WALK",
+      "order": 3,
+      "file": "frames/walk-3.png",
+      "hotspot": [
+        16,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-up45-3",
+      "animation": "WALK",
+      "order": 3,
+      "file": "frames/walk-up45-3.png",
+      "hotspot": [
+        19,
+        19
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-steep-3",
+      "animation": "WALK",
+      "order": 3,
+      "file": "frames/walk-steep-3.png",
+      "hotspot": [
+        23,
+        18
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-inverted-3",
+      "animation": "WALK",
+      "order": 3,
+      "file": "frames/walk-inverted-3.png",
+      "hotspot": [
+        20,
+        23
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-4",
+      "animation": "WALK",
+      "order": 4,
+      "file": "frames/walk-4.png",
+      "hotspot": [
+        11,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-up45-4",
+      "animation": "WALK",
+      "order": 4,
+      "file": "frames/walk-up45-4.png",
+      "hotspot": [
+        20,
+        18
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-steep-4",
+      "animation": "WALK",
+      "order": 4,
+      "file": "frames/walk-steep-4.png",
+      "hotspot": [
+        23,
+        14
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-inverted-4",
+      "animation": "WALK",
+      "order": 4,
+      "file": "frames/walk-inverted-4.png",
+      "hotspot": [
+        20,
+        18
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-5",
+      "animation": "WALK",
+      "order": 5,
+      "file": "frames/walk-5.png",
+      "hotspot": [
+        14,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-up45-5",
+      "animation": "WALK",
+      "order": 5,
+      "file": "frames/walk-up45-5.png",
+      "hotspot": [
+        20,
+        21
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-steep-5",
+      "animation": "WALK",
+      "order": 5,
+      "file": "frames/walk-steep-5.png",
+      "hotspot": [
+        24,
+        16
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-inverted-5",
+      "animation": "WALK",
+      "order": 5,
+      "file": "frames/walk-inverted-5.png",
+      "hotspot": [
+        23,
+        18
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-6",
+      "animation": "WALK",
+      "order": 6,
+      "file": "frames/walk-6.png",
+      "hotspot": [
+        18,
+        25
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-up45-6",
+      "animation": "WALK",
+      "order": 6,
+      "file": "frames/walk-up45-6.png",
+      "hotspot": [
+        23,
+        19
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-steep-6",
+      "animation": "WALK",
+      "order": 6,
+      "file": "frames/walk-steep-6.png",
+      "hotspot": [
+        25,
+        16
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-inverted-6",
+      "animation": "WALK",
+      "order": 6,
+      "file": "frames/walk-inverted-6.png",
+      "hotspot": [
+        21,
+        16
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-7",
+      "animation": "WALK",
+      "order": 7,
+      "file": "frames/walk-7.png",
+      "hotspot": [
+        18,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-up45-7",
+      "animation": "WALK",
+      "order": 7,
+      "file": "frames/walk-up45-7.png",
+      "hotspot": [
+        20,
+        19
+      ],
+      "angle_set": "up45",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-steep-7",
+      "animation": "WALK",
+      "order": 7,
+      "file": "frames/walk-steep-7.png",
+      "hotspot": [
+        23,
+        16
+      ],
+      "angle_set": "steep",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "walk-inverted-7",
+      "animation": "WALK",
+      "order": 7,
+      "file": "frames/walk-inverted-7.png",
+      "hotspot": [
+        20,
+        22
+      ],
+      "angle_set": "inverted",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "skid-0",
+      "animation": "SKID",
+      "order": 0,
+      "file": "frames/skid-0.png",
+      "hotspot": [
+        27,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "skid-1",
+      "animation": "SKID",
+      "order": 0,
+      "file": "frames/skid-1.png",
+      "hotspot": [
+        25,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "balance-0",
+      "animation": "BALANCE",
+      "order": 0,
+      "file": "frames/balance-0.png",
+      "hotspot": [
+        15,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "balance-1",
+      "animation": "BALANCE",
+      "order": 0,
+      "file": "frames/balance-1.png",
+      "hotspot": [
+        15,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "push-0",
+      "animation": "PUSH",
+      "order": 0,
+      "file": "frames/push-0.png",
+      "hotspot": [
+        23,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "push-1",
+      "animation": "PUSH",
+      "order": 0,
+      "file": "frames/push-1.png",
+      "hotspot": [
+        16,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "push-2",
+      "animation": "PUSH",
+      "order": 0,
+      "file": "frames/push-2.png",
+      "hotspot": [
+        18,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "push-3",
+      "animation": "PUSH",
+      "order": 0,
+      "file": "frames/push-3.png",
+      "hotspot": [
+        20,
+        24
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "fly-0",
+      "animation": "TAILS_FLY",
+      "order": 0,
+      "file": "frames/fly-0.png",
+      "hotspot": [
+        23,
+        33
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "fly-1",
+      "animation": "TAILS_FLY",
+      "order": 0,
+      "file": "frames/fly-1.png",
+      "hotspot": [
+        28,
+        27
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "fly-2",
+      "animation": "TAILS_FLY",
+      "order": 0,
+      "file": "frames/fly-2.png",
+      "hotspot": [
+        30,
+        25
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "fly-3",
+      "animation": "TAILS_FLY",
+      "order": 0,
+      "file": "frames/fly-3.png",
+      "hotspot": [
+        22,
+        27
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "fly-4",
+      "animation": "TAILS_FLY",
+      "order": 0,
+      "file": "frames/fly-4.png",
+      "hotspot": [
+        26,
+        25
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "fly-5",
+      "animation": "TAILS_FLY",
+      "order": 0,
+      "file": "frames/fly-5.png",
+      "hotspot": [
+        28,
+        25
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "spring",
+      "animation": "SPRING",
+      "order": 0,
+      "file": "frames/spring.png",
+      "hotspot": [
+        17,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "spindash-0",
+      "animation": "SPINDASH",
+      "order": 0,
+      "file": "frames/spindash-0.png",
+      "hotspot": [
+        16,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "spindash-1",
+      "animation": "SPINDASH",
+      "order": 0,
+      "file": "frames/spindash-1.png",
+      "hotspot": [
+        15,
+        15
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "spindash-2",
+      "animation": "SPINDASH",
+      "order": 0,
+      "file": "frames/spindash-2.png",
+      "hotspot": [
+        15,
+        12
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "spindash-3",
+      "animation": "SPINDASH",
+      "order": 0,
+      "file": "frames/spindash-3.png",
+      "hotspot": [
+        14,
+        14
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "transform-0",
+      "animation": "SUPER_TRANSFORM",
+      "order": 0,
+      "file": "frames/transform-0.png",
+      "hotspot": [
+        19,
+        29
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "transform-1",
+      "animation": "SUPER_TRANSFORM",
+      "order": 0,
+      "file": "frames/transform-1.png",
+      "hotspot": [
+        20,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "gold-roll-00",
+      "animation": "ROLL",
+      "order": 0,
+      "file": "frames/gold-roll-00.png",
+      "hotspot": [
+        16,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "gold-roll-01",
+      "animation": "ROLL",
+      "order": 0,
+      "file": "frames/gold-roll-01.png",
+      "hotspot": [
+        17,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "gold-roll-02",
+      "animation": "ROLL",
+      "order": 0,
+      "file": "frames/gold-roll-02.png",
+      "hotspot": [
+        17,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "gold-roll-03",
+      "animation": "ROLL",
+      "order": 0,
+      "file": "frames/gold-roll-03.png",
+      "hotspot": [
+        17,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "gold-roll2",
+      "animation": "ROLL2",
+      "order": 0,
+      "file": "frames/gold-roll-00.png",
+      "hotspot": [
+        16,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    },
+    {
+      "id": "fly-ascend",
+      "animation": "TAILS_FLY_ASCEND",
+      "order": 0,
+      "file": "frames/fly-0.png",
+      "hotspot": [
+        23,
+        33
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 2,
+      "notes": "Rung 37 Solar (skull rule); see powered-concepts-generation.json."
+    }
+  ],
+  "scripts": {
+    "WAIT": {
+      "frames": [
+        "idle-0",
+        "idle-1"
+      ],
+      "durations": [
+        8,
+        8
+      ],
+      "end": "loop"
+    },
+    "RUN": {
+      "frames": [
+        "run-0",
+        "run-1",
+        "run-2",
+        "run-3"
+      ],
+      "speedDriven": true,
+      "end": "loop"
+    },
+    "TAILS_FLY": {
+      "frames": [
+        "fly-0",
+        "fly-1",
+        "fly-2",
+        "fly-3",
+        "fly-4",
+        "fly-5"
+      ],
+      "durations": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "end": "loop"
+    },
+    "TAILS_FLY_ASCEND": {
+      "frames": [
+        "fly-0",
+        "fly-1",
+        "fly-2",
+        "fly-3",
+        "fly-4",
+        "fly-5"
+      ],
+      "durations": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "end": "loop"
+    },
+    "SUPER_TRANSFORM": {
+      "frames": [
+        "transform-0",
+        "transform-0",
+        "transform-1",
+        "transform-1",
+        "transform-2",
+        "transform-2",
+        "transform-2",
+        "transform-2",
+        "transform-3",
+        "transform-4",
+        "transform-3",
+        "transform-4",
+        "transform-3"
+      ],
+      "durations": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "end": "next",
+      "next": "WAIT"
+    },
+    "ROLL": {
+      "frames": [
+        "gold-roll-00",
+        "gold-roll-03",
+        "gold-roll-01",
+        "gold-roll-03",
+        "gold-roll-02",
+        "gold-roll-03"
+      ],
+      "end": "loop"
+    },
+    "ROLL2": {
+      "frames": [
+        "gold-roll-00",
+        "gold-roll-01",
+        "gold-roll-02"
+      ],
+      "end": "loop",
+      "speedDriven": true
+    },
+    "DUCK": {
+      "frames": [
+        "duck"
+      ],
+      "durations": [
+        64
+      ],
+      "end": "hold"
+    },
+    "LOOK_UP": {
+      "frames": [
+        "look_up"
+      ],
+      "durations": [
+        64
+      ],
+      "end": "hold"
+    },
+    "HURT": {
+      "frames": [
+        "hurt"
+      ],
+      "durations": [
+        4
+      ],
+      "end": "loop"
+    },
+    "SKID": {
+      "frames": [
+        "skid-0",
+        "skid-1",
+        "skid-0",
+        "skid-1"
+      ],
+      "durations": [
+        8,
+        8,
+        8,
+        8
+      ],
+      "end": "next",
+      "next": "WALK"
+    },
+    "BALANCE": {
+      "frames": [
+        "balance-0",
+        "balance-0",
+        "balance-1",
+        "balance-1",
+        "balance-0",
+        "balance-0",
+        "balance-1",
+        "balance-1",
+        "balance-0",
+        "balance-0",
+        "balance-1",
+        "balance-1",
+        "balance-0",
+        "balance-0",
+        "balance-1",
+        "balance-1",
+        "balance-0",
+        "balance-0",
+        "balance-1",
+        "balance-1",
+        "balance-0",
+        "balance-1"
+      ],
+      "end": "loop",
+      "durations": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ]
+    },
+    "PUSH": {
+      "frames": [
+        "push-0",
+        "push-1",
+        "push-2",
+        "push-3"
+      ],
+      "end": "loop",
+      "speedDriven": true
+    },
+    "SPRING": {
+      "frames": [
+        "spring"
+      ],
+      "durations": [
+        48
+      ],
+      "end": "next",
+      "next": "WALK"
+    },
+    "SPINDASH": {
+      "frames": [
+        "spindash-0",
+        "spindash-3",
+        "spindash-1",
+        "spindash-3",
+        "spindash-2",
+        "spindash-3"
+      ],
+      "end": "loop",
+      "durations": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "WALK": {
+      "frames": [
+        "walk-0",
+        "walk-1",
+        "walk-2",
+        "walk-3",
+        "walk-4",
+        "walk-5",
+        "walk-6",
+        "walk-7"
+      ],
+      "speedDriven": true,
+      "end": "loop"
+    }
+  },
+  "nativeFrames": {
+    "family-roll/0": "gold-roll-03",
+    "family-roll/1": "gold-roll-00",
+    "family-roll/2": "gold-roll-01",
+    "family-roll/3": "gold-roll-02",
+    "family-roll/4": "gold-roll-03",
+    "family-push/0": "push-0",
+    "family-push/1": "push-1",
+    "family-push/2": "push-2",
+    "family-push/3": "push-3",
+    "family-balance/0": "balance-0",
+    "family-balance/1": "balance-1",
+    "family-skid/0": "skid-0",
+    "family-skid/1": "skid-1",
+    "family-spindash/0": "spindash-3",
+    "family-spindash/1": "spindash-0",
+    "family-spindash/2": "spindash-1",
+    "family-spindash/3": "spindash-2",
+    "family-spindash/4": "spindash-0",
+    "family-spindash/5": "spindash-2",
+    "family-skid/2": "skid-0",
+    "family-skid/3": "skid-1"
+  }
+}

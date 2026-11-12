@@ -303,7 +303,19 @@ public class PlayableSpriteAnimation {
                 // entirely for object_control bit 1 (e.g. MGZ's spiral).
                 return;
             }
-            updateScriptedAnimation(frameCounter);
+            int nativeAnimation = sprite.getAnimationId();
+            int strikeId = HomingStrikePose.select(sprite.getAnimationSet(), sprite.getXSpeed(), sprite.getYSpeed());
+            var homing = com.openggf.sprites.playable.PlayableSpriteInternalAccess.homingAttack(sprite);
+            boolean strikePose = homing != null && homing.isStriking(sprite)
+                    && strikeId >= 0;
+            // Only script execution sees the creator pose. Touch/solids still see
+            // the native attacking Roll byte, including after rewind restores.
+            if (strikePose) sprite.setAnimationId(strikeId);
+            try {
+                updateScriptedAnimation(frameCounter);
+            } finally {
+                if (strikePose) sprite.setAnimationId(nativeAnimation);
+            }
             applyReverseGravityRenderFlipAfterAnimation();
             return;
         }
@@ -349,6 +361,18 @@ public class PlayableSpriteAnimation {
         var animationSet = sprite.getAnimationSet();
         if (animationSet == null) {
             return;
+        }
+        if (sprite.getAnimationId() != lastAnimationId
+                && HomingStrikePose.isStrike(sprite.getAnimationId()) && HomingStrikePose.isStrike(lastAnimationId)) {
+            // Direction changes retain the next-frame cursor and duration, including
+            // generic fallback transitions. Republish the current phase immediately
+            // even on timer-held ticks; shorter authored cycles wrap naturally.
+            var redirected = animationSet.getScript(sprite.getAnimationId());
+            if (redirected != null && !redirected.frames().isEmpty()) {
+                int current = Math.max(0, sprite.getAnimationFrameIndex() - 1) % redirected.frames().size();
+                publishMappingFrame(redirected.frames().get(current));
+            }
+            lastAnimationId = sprite.getAnimationId();
         }
         if (sprite.getAnimationId() != lastAnimationId) {
             SpriteAnimationProfile profile = sprite.getAnimationProfile();
@@ -896,6 +920,7 @@ public class PlayableSpriteAnimation {
     }
 
     private Integer resolveDesiredAnimationId(SpriteAnimationProfile profile, int frameCounter) {
+
         if (profile == null) {
             return null;
         }
@@ -971,6 +996,10 @@ public class PlayableSpriteAnimation {
         }
         d0 = (d0 >> 4) & 0x6;
 
+        // A synthesized fallback or fixed-pose sheet has no adjacent slope
+        // mappings. Negative explicitly disables offsets; zero retains native
+        // script-length-derived stride behavior.
+        if (configuredStride < 0) return 0;
         if (configuredStride > 0) {
             return d0 * configuredStride;
         }

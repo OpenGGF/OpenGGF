@@ -1,0 +1,547 @@
+{
+  "0": {
+    "animation": "WALK",
+    "family": "WALK",
+    "phases": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "1": {
+    "animation": "RUN",
+    "family": "RUN",
+    "phases": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "2": {
+    "animation": "ROLL",
+    "family": "ROLL",
+    "phases": [
+      1,
+      2,
+      3
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "3": {
+    "animation": "ROLL2",
+    "family": "ROLL",
+    "phases": [
+      1,
+      2,
+      3
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "4": {
+    "animation": "PUSH",
+    "family": "PUSH",
+    "phases": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "5": {
+    "animation": "WAIT",
+    "family": "WAIT",
+    "phases": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      2,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      2,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      4,
+      5,
+      6,
+      5,
+      6,
+      5,
+      6,
+      5,
+      6,
+      5,
+      6,
+      4
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "6": {
+    "animation": "BALANCE",
+    "family": "BALANCE",
+    "phases": [
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      1
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "7": {
+    "animation": "LOOK_UP",
+    "family": "LOOK_UP",
+    "phases": [
+      0
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "8": {
+    "animation": "DUCK",
+    "family": "DUCK",
+    "phases": [
+      0
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "9": {
+    "animation": "SPINDASH",
+    "family": "SPINDASH",
+    "phases": [
+      1,
+      2,
+      3
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "10": {
+    "animation": null,
+    "family": "HANG",
+    "phases": [
+      2
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "11": {
+    "animation": null,
+    "family": "ROLL",
+    "phases": [
+      5
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "12": {
+    "animation": "BALANCE2",
+    "family": "BALANCE",
+    "phases": [
+      2,
+      1
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "13": {
+    "animation": "SKID",
+    "family": "SKID",
+    "phases": [
+      0,
+      1,
+      0,
+      1
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "14": {
+    "animation": "FLOAT",
+    "family": "FLOAT2",
+    "phases": [
+      0
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "15": {
+    "animation": "FLOAT2",
+    "family": "FLOAT2",
+    "phases": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "16": {
+    "animation": "SPRING",
+    "family": "SPRING",
+    "phases": [
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "17": {
+    "animation": "HANG",
+    "family": "HANG",
+    "phases": [
+      0,
+      1
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "18": {
+    "animation": "BLINK",
+    "family": "BLINK",
+    "phases": [
+      5,
+      6,
+      7
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "19": {
+    "animation": null,
+    "family": "BLINK",
+    "phases": [
+      3,
+      4
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "20": {
+    "animation": "HANG2",
+    "family": "HANG2",
+    "phases": [
+      0
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "21": {
+    "animation": "BUBBLE",
+    "family": "BUBBLE",
+    "phases": [
+      0,
+      0,
+      1,
+      2
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "22": {
+    "animation": "BURNT",
+    "family": "BURNT",
+    "phases": [
+      0
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "23": {
+    "animation": "DROWN",
+    "family": "DROWN",
+    "phases": [
+      0
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "24": {
+    "animation": "DEATH",
+    "family": "DEATH",
+    "phases": [
+      0
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "25": {
+    "animation": null,
+    "family": "HURT_FALL",
+    "phases": [
+      0,
+      1
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "26": {
+    "animation": "HURT",
+    "family": "HURT",
+    "phases": [
+      0
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "27": {
+    "animation": "HURT_FALL",
+    "family": "HURT_FALL",
+    "phases": [
+      0,
+      1
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "28": {
+    "animation": "BLANK",
+    "family": "BLANK",
+    "phases": [
+      0
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "29": {
+    "animation": null,
+    "family": "WALK",
+    "phases": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      0,
+      1
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "30": {
+    "animation": null,
+    "family": "WALK",
+    "phases": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      0,
+      1
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "31": {
+    "animation": "RUN",
+    "family": "RUN",
+    "phases": [
+      0,
+      1
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "32": {
+    "animation": "TAILS_FLY",
+    "family": "TAILS_FLY",
+    "phases": [
+      0
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "33": {
+    "animation": "TAILS_FLY_ASCEND",
+    "family": "TAILS_FLY_ASCEND",
+    "phases": [
+      0
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "34": {
+    "animation": "TAILS_FLY_CARRY",
+    "family": "TAILS_FLY_CARRY",
+    "phases": [
+      0
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "35": {
+    "animation": "TAILS_FLY_CARRY_ASCEND",
+    "family": "TAILS_FLY_CARRY_ASCEND",
+    "phases": [
+      0
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "36": {
+    "animation": "TAILS_FLY_TIRED",
+    "family": "TAILS_FLY_TIRED",
+    "phases": [
+      0,
+      1
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "37": {
+    "animation": "TAILS_SWIM",
+    "family": "TAILS_SWIM",
+    "phases": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "38": {
+    "animation": "TAILS_SWIM_ASCEND",
+    "family": "TAILS_SWIM_ASCEND",
+    "phases": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "39": {
+    "animation": "TAILS_SWIM_CARRY",
+    "family": "TAILS_SWIM_CARRY",
+    "phases": [
+      0,
+      1
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "40": {
+    "animation": "TAILS_SWIM_TIRED",
+    "family": "TAILS_SWIM_TIRED",
+    "phases": [
+      0,
+      1,
+      2
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "41": {
+    "animation": "SUPER_TRANSFORM",
+    "family": "SUPER_TRANSFORM",
+    "phases": [
+      0,
+      0,
+      3,
+      2,
+      3,
+      2,
+      3,
+      2,
+      3,
+      2,
+      3,
+      2
+    ],
+    "offsetX": 0,
+    "offsetY": 0
+  }
+}

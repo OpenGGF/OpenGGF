@@ -11,6 +11,7 @@
       { "pattern": "titlescreen/.*\\.png" },
       { "pattern": "icon/.*\\.png" },
       { "pattern": "load-time-profiles/.*\\.json" },
+      { "pattern": "animation-families/.*\\.json" },
       { "pattern": "net/.*\\.json" },
       { "pattern": "net/track-rules\\.properties" },
       { "pattern": "net/chat/.*\\.txt" },

@@ -89,9 +89,12 @@ public final class ExampleModHarness implements AutoCloseable {
     static void generateResources(Path project, Path classes) throws Exception {
         Path generator = project.resolve("generate_resources.py").toAbsolutePath();
         if (!Files.isRegularFile(generator)) return;
-        Process process = new ProcessBuilder(System.getenv().getOrDefault("PYTHON_BIN", "python3"),
+        ProcessBuilder builder = new ProcessBuilder(System.getenv().getOrDefault("PYTHON_BIN", "python3"),
                 generator.toString(), classes.toAbsolutePath().toString())
-                .directory(project.toAbsolutePath().toFile()).inheritIO().start();
+                .directory(project.toAbsolutePath().toFile()).inheritIO();
+        // The launchers' converter classpath: this test JVM's own engine classes.
+        builder.environment().put("OPENGGF_CLI_CLASSPATH", System.getProperty("java.class.path"));
+        Process process = builder.start();
         if (process.waitFor() != 0) throw new IllegalStateException("Resource generation failed: " + project);
     }
 
@@ -136,7 +139,12 @@ public final class ExampleModHarness implements AutoCloseable {
 
     /** The module the engine would run with the mod applied on top of {@code base}. */
     public GameModule apply(GameModule base) {
-        return kit.launch(base, new GameplayLaunchRequest(base.getGameCode(), "sonic", List.of()));
+        return launch(base, "sonic");
+    }
+
+    /** The same, launched solo as {@code mainCharacter} (a persisted character key). */
+    public GameModule launch(GameModule base, String mainCharacter) {
+        return kit.launch(base, new GameplayLaunchRequest(base.getGameCode(), mainCharacter, List.of()));
     }
 
     /** Opens the startup scene with ROM art from the current session and storage under {@code saves}, silently. */

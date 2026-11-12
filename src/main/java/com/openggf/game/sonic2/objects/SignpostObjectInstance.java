@@ -84,6 +84,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements Sonic2N
     };
 
     private int routineState = STATE_IDLE;
+    private final transient com.openggf.game.presentation.CharacterSignRenderer characterSign = new com.openggf.game.presentation.CharacterSignRenderer();
     private int mappingFrame = FRAME_EGGMAN;
     private int competitionPreviousFrame = -1;
     private ObjectAnimationState animationState;
@@ -360,8 +361,8 @@ public class SignpostObjectInstance extends BoxObjectInstance implements Sonic2N
     }
 
     private int resolveFinalAnimId() {
-        String mainCharacter = ActiveGameplayTeamResolver.resolveMainCharacterCode(services().configuration());
-        return "tails".equalsIgnoreCase(mainCharacter) ? ANIM_FINAL_TAILS : ANIM_FINAL_SONIC;
+        return ActiveGameplayTeamResolver.resolvePlayerCharacter(services().configuration())
+                == PlayerCharacter.TAILS_ALONE ? ANIM_FINAL_TAILS : ANIM_FINAL_SONIC;
     }
 
     /**
@@ -473,6 +474,9 @@ public class SignpostObjectInstance extends BoxObjectInstance implements Sonic2N
             super.appendRenderCommands(commands);
             return;
         }
+        if (characterSign.draw(services(), com.openggf.game.CharacterPresentation.Host.S2,
+                renderManager.getSignpostSheet(), mappingFrame, 0, 1, 3, 4, 5,
+                spawn.x(), spawn.y())) return;
         renderer.drawFrameIndex(mappingFrame, spawn.x(), spawn.y(), false, false);
     }
 

@@ -1,0 +1,21 @@
+# bank selector image hotspotX hotspotY; image paths are relative to this table.
+continue/floor 1 s1-floor-01.png 20 12
+continue/floor 2 s1-floor-02.png 20 12
+continue/floor 3 s1-floor-03.png 20 12
+continue/icon 6 s1-icon-06.png 0 0
+continue/icon 7 s1-icon-07.png 0 0
+continue/player 6 s1-player-06.png 20 21
+continue/player 7 s1-player-07.png 19 20
+continue/player 8 s1-player-08.png 13 19
+continue/player 9 s1-player-09.png 20 21
+continue/player 10 s1-player-0a.png 21 20
+continue/player 11 s1-player-0b.png 20 19
+continue/player 30 s1-player-1e.png 20 18
+continue/player 31 s1-player-1f.png 20 18
+continue/player 32 s1-player-20.png 20 18
+continue/player 33 s1-player-21.png 20 18
+continue/player 60 s1-player-3c.png 20 12
+continue/player 61 s1-player-3d.png 24 12
+continue/player 62 s1-player-3e.png 28 12
+continue/player 83 s1-player-53.png 28 12
+continue/player 84 s1-player-54.png 12 12

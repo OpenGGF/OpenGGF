@@ -1,5 +1,7 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.CanonicalAnimation;
@@ -388,15 +390,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return sprite.currentLevelManager();
 	}
 
-	/** Homing and dash launches lag the camera exactly like the fire-shield dash below. */
-	private void applyHomingCameraLag() {
-		sprite.resetPositionAndStatTableHistory();
-		Camera camera = camera();
-		if (camera != null && camera.getFocusedSprite() == sprite) {
-			camera.setHorizScrollDelay(com.openggf.game.mutators.HomingAttackRuntime.CAMERA_LAG_FRAMES);
-		}
-	}
-
 	private com.openggf.game.mutators.HomingAttackRuntime homingAttack() {
 		return com.openggf.sprites.playable.PlayableSpriteInternalAccess.homingAttack(sprite);
 	}
@@ -657,6 +650,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (motionMutators != null) {
 			motionMutators.beforeMovement(sprite);
 		}
+		com.openggf.sprites.playable.PlayableSpriteInternalAccess.movementTick(sprite);
 		var homingAttack = homingAttack();
 		if (homingAttack != null) {
 			homingAttack.beforeMovement(sprite);
@@ -1517,8 +1511,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				// without one the native move runs and the forward air dash is the fallback.
 				var homingAttack = homingAttack();
 				if (homingAttack != null && homingAttack.tryLaunch(sprite)) {
-					com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_RELEASE, audioManager);
-					applyHomingCameraLag();
 					jumpReleasedSinceJump = false;
 					inputJumpPress = false;
 					return;
@@ -1554,8 +1546,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					return;
 				}
 				if (homingAttack != null && homingAttack.tryAirDash(sprite)) {
-					com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_RELEASE, audioManager);
-					applyHomingCameraLag();
 					jumpReleasedSinceJump = false;
 					inputJumpPress = false;
 					return;
@@ -1584,7 +1574,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean tryActivateTailsFlight() {
 		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
 		if (capabilityRules == null
-				|| !capabilityRules.tailsFlightEnabled()
+				|| !(capabilityRules.tailsFlightEnabled()
+					|| PlayableArchetype.declares(sprite,
+						com.openggf.game.CharacterDefinition.MovementAbility.CROSS_GAME_FLIGHT))
 				|| sprite.getSecondaryAbility() != SecondaryAbility.FLY
 				|| sprite.getTailsFlightController() == null
 				|| sprite.getTailsFlightController().isActive()) {
@@ -1606,6 +1598,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (tailsFlightActivatedThisFrame || !isManualTailsFlightActive()) {
 			return;
 		}
+		// Native flight consumes flap edges outside JumpHeight's double-jump gate.
+		// Offer mod characters that edge first; native Tails' default hook declines it.
+		if (inputJumpPress && com.openggf.sprites.playable.CharacterRuntimeHooks.activateAbility(
+				sprite, inputUp, inputDown, inputLeft, inputRight)) {
+			inputJumpPress = false;
+			return;
+		}
 		boolean carryingMainCharacter = sprite.getTailsCarryController() != null
 				&& sprite.getTailsCarryController().isCarryingMainCharacter();
 		sprite.getTailsFlightController().updateVertical(
@@ -1616,7 +1615,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean isManualTailsFlightActive() {
 		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
 		if (capabilityRules == null
-				|| !capabilityRules.tailsFlightEnabled()
+				|| !(capabilityRules.tailsFlightEnabled()
+					|| PlayableArchetype.declares(sprite,
+						com.openggf.game.CharacterDefinition.MovementAbility.CROSS_GAME_FLIGHT))
 				|| sprite.getSecondaryAbility() != SecondaryAbility.FLY
 				|| sprite.getTailsFlightController() == null
 				|| !sprite.getTailsFlightController().isActive()) {

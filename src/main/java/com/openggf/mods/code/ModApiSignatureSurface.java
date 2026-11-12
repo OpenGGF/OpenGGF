@@ -21,7 +21,7 @@ public final class ModApiSignatureSurface {
             com.fasterxml.jackson.annotation.JsonProperty.Access.class,
             com.fasterxml.jackson.annotation.OptBoolean.class,
             java.io.BufferedReader.class, java.io.IOException.class, java.io.InputStream.class,
-            AutoCloseable.class, Boolean.class, Class.class, Deprecated.class, Enum.class,
+            AutoCloseable.class, Boolean.class, Character.class, Class.class, Deprecated.class, Enum.class,
             Exception.class, RuntimeException.class, Float.class, Integer.class, Long.class, Object.class, Record.class,
             Runnable.class, String.class, StringBuilder.class, Throwable.class,
             FunctionalInterface.class, java.lang.annotation.Annotation.class,

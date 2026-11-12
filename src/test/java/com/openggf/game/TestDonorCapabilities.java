@@ -14,6 +14,28 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TestDonorCapabilities {
 
     @Test
+    void sonic3kDonationResolvesSharedFamiliesForEarlierHostVocabulary() {
+        var donor = new Sonic3kGameModule().getDonorCapabilities();
+        var expected = java.util.Map.ofEntries(
+                java.util.Map.entry(CanonicalAnimation.STOP, 0x0D),
+                java.util.Map.entry(CanonicalAnimation.FLOAT3, 0x0F),
+                java.util.Map.entry(CanonicalAnimation.FLOAT4, 0x0F),
+                java.util.Map.entry(CanonicalAnimation.GET_AIR, 0x15),
+                java.util.Map.entry(CanonicalAnimation.BURNT, 0x16),
+                java.util.Map.entry(CanonicalAnimation.WATER_SLIDE, 0x1B),
+                java.util.Map.entry(CanonicalAnimation.SLIDE, 0x1B),
+                java.util.Map.entry(CanonicalAnimation.NULL_ANIM, 0x1C),
+                java.util.Map.entry(CanonicalAnimation.HURT2, 0x1A));
+        for (GameModule host : java.util.List.of(new Sonic1GameModule(), new Sonic2GameModule())) {
+            for (var entry : expected.entrySet()) {
+                if (host.resolveAnimationId(entry.getKey()) < 0) continue;
+                assertEquals(entry.getValue(), donor.resolveNativeId(entry.getKey()), entry.getKey().name());
+                assertEquals(entry.getValue(), donor.resolveNativeId(donor.getAnimationFallbacks().get(entry.getKey())));
+            }
+        }
+    }
+
+    @Test
     void donorCapabilitiesInterfaceHasRequiredMethods() {
         DonorCapabilities caps = new DonorCapabilities() {
             public java.util.Set<PlayerCharacter> getPlayableCharacters() {

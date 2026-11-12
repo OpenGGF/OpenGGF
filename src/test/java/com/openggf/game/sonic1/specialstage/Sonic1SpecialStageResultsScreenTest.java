@@ -132,6 +132,8 @@ public class Sonic1SpecialStageResultsScreenTest {
         PatternSpriteRenderer continueRenderer = mock(PatternSpriteRenderer.class);
         setField(screen, "resultsRenderer", mock(PatternSpriteRenderer.class));
         setField(screen, "continueRenderer", continueRenderer);
+        // These prepared mock renderers replace both CPU preparation and GPU upload.
+        setField(screen, "artLoaded", true);
         setField(screen, "artCached", true);
         return continueRenderer;
     }

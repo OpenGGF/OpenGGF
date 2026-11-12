@@ -1,0 +1,734 @@
+{
+  "method": "Fresh built-in GPT Image attempts from real-palette native 8x references + model + approved art; uniform anatomical scale; nearest indexed reduction; generated material contours retained. No native pixels shipped.",
+  "scale": "MICA selected fresh generation4, uniform10.2 source px/native px from ~190px skull and82px torso thickness (18.6/8.0 native px), approved18–19/8. Independent area measured afterwards; derived slopes keep that same scale.",
+  "groups": [
+    {
+      "name": "mica",
+      "prompt": "Use case: identity-preserve. Four production 16-bit GILDED MICA running sprites in ONE HORIZONTAL ROW, transparent background. Ref1 native Super Sonic poses at REAL PALETTE 8x: S2 phase0, S2 phase1, S3K phase0, S3K phase1. Borrow ONLY the native forward hovering sprint posture: head right, body leaning forward, BOTH ARMS streaming back left, red boots trailing with exactly the shown alternating foot phase. Ref2 approved original MICA concept, use her gold form. Ref3 is the APPROVED IN-GAME MICA core at8x and MUST LOCK HER IDENTITY AND ANATOMY: same compact pangolin face, small pointed cream snout, big brown eye and tiny pink ear, rounded overlapping plates on her hood, long tapered scaly tail, small torso, coral boots and white gloves. Approved hood/skull is18 native pixels wide and torso8 high. Do not redesign her face or make her a hedgehog/armadillo. Draw GOLD scales with bright YELLOW-TO-IVORY highlights, not orange or brown armour; pale gold face/belly; red boots and white gloves. Keep the head/torso size and location constant within each two-frame native pair. Tail streams behind without covering the feet. S2 uses simple cel-shaded pixel clusters and S3K slightly richer native stepped upper-left highlights;15 flat colors, no dither, no smooth vector, no gradients. Material contours are darkest GOLD YELLOW rather than black; tiny eye/mouth separators may be dark. Scales remain legible gold plates, never spikes. Exactly4 full isolated sprites, hard pixels suitable reduction to native~40x34 boxes, complete tail/boots, generous transparent gaps. No text, labels, ground, halo, glow cloud or effects.",
+      "references": [
+        "native Super Sonic real-palette8x frames S2 b5/b9 and S3K21/22",
+        "concept/mica.png",
+        "approved wait-00/run-00/run-01 at8x"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "file": "exec-6873adb3-6570-4439-9233-8f8bd7100d97.png",
+          "sha256": "ee8fb6289f874be9aaaf4573637dcfd995c2d47b87f33b827372fb6ddaf1045e",
+          "prompt": "Use case: identity-preserve. Four production 16-bit GILDED MICA running sprites in ONE HORIZONTAL ROW, transparent background. Ref1 native Super Sonic poses at REAL PALETTE 8x: S2 phase0, S2 phase1, S3K phase0, S3K phase1. Borrow ONLY the native forward hovering sprint posture: head right, body leaning forward, BOTH ARMS streaming back left, red boots trailing with exactly the shown alternating foot phase. Ref2 approved original MICA concept, use her gold form. Ref3 is the APPROVED IN-GAME MICA core at8x and MUST LOCK HER IDENTITY AND ANATOMY: same compact pangolin face, small pointed cream snout, big brown eye and tiny pink ear, rounded overlapping plates on her hood, long tapered scaly tail, small torso, coral boots and white gloves. Approved hood/skull is18 native pixels wide and torso8 high. Do not redesign her face or make her a hedgehog/armadillo. Draw GOLD scales with bright YELLOW-TO-IVORY highlights, not orange or brown armour; pale gold face/belly; red boots and white gloves. Keep the head/torso size and location constant within each two-frame native pair. Tail streams behind without covering the feet. S2 uses simple cel-shaded pixel clusters and S3K slightly richer native stepped upper-left highlights;15 flat colors, no dither, no smooth vector, no gradients. Material contours are darkest GOLD YELLOW rather than black; tiny eye/mouth separators may be dark. Scales remain legible gold plates, never spikes. Exactly4 full isolated sprites, hard pixels suitable reduction to native~40x34 boxes, complete tail/boots, generous transparent gaps. No text, labels, ground, halo, glow cloud or effects.",
+          "selection": "rejected: oversized hood/short exposed torso or insufficient boot alternation"
+        },
+        {
+          "attempt": 2,
+          "file": "exec-5d301f4a-adfb-4921-82da-210fcb3c8d9d.png",
+          "sha256": "70e0f4df0f83008dc1220543a5b3e17f62c66468d8e5284a838ca0a9d5c4c89b",
+          "prompt": "Use case: identity-preserve. Four production 16-bit GILDED MICA running sprites in ONE HORIZONTAL ROW, transparent background. Ref1 native Super Sonic poses at REAL PALETTE 8x: S2 phase0, S2 phase1, S3K phase0, S3K phase1. Borrow ONLY the native forward hovering sprint posture: head right, body leaning forward, BOTH ARMS streaming back left, red boots trailing with exactly the shown alternating foot phase. Ref2 approved original MICA concept, use her gold form. Ref3 is the APPROVED IN-GAME MICA core at8x and MUST LOCK HER IDENTITY AND ANATOMY: same compact pangolin face, small pointed cream snout, big brown eye and tiny pink ear, rounded overlapping plates on her hood, long tapered scaly tail, small torso, coral boots and white gloves. Approved hood/skull is18 native pixels wide and torso8 high. Do not redesign her face or make her a hedgehog/armadillo. Draw GOLD scales with bright YELLOW-TO-IVORY highlights, not orange or brown armour; pale gold face/belly; red boots and white gloves. Keep the head/torso size and location constant within each two-frame native pair. Tail streams behind without covering the feet. S2 uses simple cel-shaded pixel clusters and S3K slightly richer native stepped upper-left highlights;15 flat colors, no dither, no smooth vector, no gradients. Material contours are darkest GOLD YELLOW rather than black; tiny eye/mouth separators may be dark. Scales remain legible gold plates, never spikes. Exactly4 full isolated sprites, hard pixels suitable reduction to native~40x34 boxes, complete tail/boots, generous transparent gaps. No text, labels, ground, halo, glow cloud or effects. Fresh independent attempt from these ORIGINAL native/model/approved-core references, not an edit of another generation. Strongly retain the approved core's low rounded pangolin hood and little angular snout; no puffed-up round helmet. The gold form is the SAME MICA at the SAME scale. Separate every gold scale plate with a saturated GOLD YELLOW contour, not brown or black. No glow haze. The arms must stay back while the red boots alternate; this is native Super running, not normal running's leg wheel.",
+          "selection": "rejected: oversized hood/short exposed torso or insufficient boot alternation"
+        },
+        {
+          "attempt": 3,
+          "file": "exec-2d5d8170-67db-4534-846b-de8564f99a57.png",
+          "sha256": "13ef1e61d34f897a005f39104bd1099baab6d0e07291ee59945229d905c40362",
+          "prompt": "Use case: identity-preserve. Four production 16-bit GILDED MICA running sprites in ONE HORIZONTAL ROW, transparent background. Ref1 native Super Sonic poses at REAL PALETTE 8x: S2 phase0, S2 phase1, S3K phase0, S3K phase1. Borrow ONLY the native forward hovering sprint posture: head right, body leaning forward, BOTH ARMS streaming back left, red boots trailing with exactly the shown alternating foot phase. Ref2 approved original MICA concept, use her gold form. Ref3 is the APPROVED IN-GAME MICA core at8x and MUST LOCK HER IDENTITY AND ANATOMY: same compact pangolin face, small pointed cream snout, big brown eye and tiny pink ear, rounded overlapping plates on her hood, long tapered scaly tail, small torso, coral boots and white gloves. Approved hood/skull is18 native pixels wide and torso8 high. Do not redesign her face or make her a hedgehog/armadillo. Draw GOLD scales with bright YELLOW-TO-IVORY highlights, not orange or brown armour; pale gold face/belly; red boots and white gloves. Keep the head/torso size and location constant within each two-frame native pair. Tail streams behind without covering the feet. S2 uses simple cel-shaded pixel clusters and S3K slightly richer native stepped upper-left highlights;15 flat colors, no dither, no smooth vector, no gradients. Material contours are darkest GOLD YELLOW rather than black; tiny eye/mouth separators may be dark. Scales remain legible gold plates, never spikes. Exactly4 full isolated sprites, hard pixels suitable reduction to native~40x34 boxes, complete tail/boots, generous transparent gaps. No text, labels, ground, halo, glow cloud or effects. Fresh third independent attempt from original references, no prior generation is an input. The FIRST native reference now has PINK and CYAN anatomy rectangles: the ENTIRE hood fits in the pink18x18 region, the exposed torso in cyan12x8. Match these proportions and relative registration EXACTLY. Hood width / exposed torso height must be 2.25, not 3 or4; do not make a giant head and tiny body. Approved normal core is the SAME character. Scales are broad flat rounded plates, not curled hair. Preserve native alternating left/right red boots. Render the four frames as isolated sprites in a single horizontal row on transparent, no rectangles or labels.",
+          "selection": "rejected: oversized hood/short exposed torso or insufficient boot alternation"
+        },
+        {
+          "attempt": 4,
+          "file": "exec-1301d612-63ea-43ea-a4be-4381d1fe653a.png",
+          "sha256": "1f744ccce030dd21e72caf59f0d159c4377852657377c564852303229ae2d696",
+          "prompt": "Fresh original production sprites from ORIGINAL references only. Reference1 is native Super Sonic S2 phase0/1 and S3K phase0/1 at real palette8x, with exact anatomy boxes. Reference2 MICA approved model. Reference3 MICA approved in-game wait and run sprites at8x. Draw exactly four GILDED MICA sprites in one horizontal row, copying native sprint POSE AND PROPORTIONS from reference1. Her HEAD MUST BE SMALLER than a typical chibi character: compact rounded scale-plate hood and cream pointed snout, head width18 native pixels, exposed torso12 wide8high, overall including tail38wide34high. Thus hood width is LESS THAN HALF of overall silhouette width, NOT two thirds. Keep visible elongated torso with arms stretched back like the native, not a tiny neck beneath giant head. Match reference3's small snout and broad plate scales. No hedgehog spikes, hair or rotor. Long tapered plate tail streams left, white gloves extend left. Two distinct leg phases: frames1/3 near red boot extends DOWN and back while far boot is lifted, frames2/4 far red boot extends DOWN and near boot lifts. Same head and torso in every frame, only legs alternate. GOLD YELLOW outline and scales, pale yellow-to-IVORY highlights, cream-gold face/belly, bright red boots, white gloves; no black external outline, no brown body. Tiny dark eye and mouth details permitted. S2 cel-shaded15colour hard pixel clusters; S3K richer stepped upperleft highlights within same15colour budget. Transparent background, generous gaps, isolated complete characters, no text, anatomy guides, ground, haze or decoration. This is a native40pixel sprite design, not illustration. Highest priority: NATIVE FULL BODY PROPORTIONS and ALTERNATING LEGS.",
+          "selection": "selected"
+        }
+      ]
+    }
+  ],
+  "frames": [],
+  "outline_remap": [
+    {
+      "file": "mica/powered/frames/s2-walk-0.png",
+      "remapped_ink_pixels": 228,
+      "retained_interior_separators": 23,
+      "source_sha256": "cf0d487a4e39ad27088a58263f3ae815603edb78303218da0581806fe197bea4",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-up45-0.png",
+      "remapped_ink_pixels": 244,
+      "retained_interior_separators": 28,
+      "source_sha256": "07f06d2eb68a99ca776c9f342a9da8fc8b08ad521005cb9c238e372516f50a44",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-steep-0.png",
+      "remapped_ink_pixels": 228,
+      "retained_interior_separators": 23,
+      "source_sha256": "74979defda0f32e3be72b697b64a4d3904c5200a2efa05ea1ada8a254f56e58f",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-inverted-0.png",
+      "remapped_ink_pixels": 244,
+      "retained_interior_separators": 28,
+      "source_sha256": "189cd2c7fc4bb19646e381854a1df66910675d4644493ffa823472febd43ab73",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-1.png",
+      "remapped_ink_pixels": 209,
+      "retained_interior_separators": 14,
+      "source_sha256": "ff66a34234275e85b083c8c60d0258ce2dbed79b26ff1716469fadfe75e0ac5a",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-up45-1.png",
+      "remapped_ink_pixels": 231,
+      "retained_interior_separators": 19,
+      "source_sha256": "a565678cc786e6f1ebf96b70af41530b61a6c5f10369d10780dd486f4b7567c9",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-steep-1.png",
+      "remapped_ink_pixels": 209,
+      "retained_interior_separators": 14,
+      "source_sha256": "21a76b313f3cf2361940c56552d7f8c9af3308c07c477c61349c6a6e2ed6ea45",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-inverted-1.png",
+      "remapped_ink_pixels": 231,
+      "retained_interior_separators": 19,
+      "source_sha256": "d8884d247e483e9f1e1e8e4d4527f96c9bdd983c682914f3970fd134f2d80060",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-2.png",
+      "remapped_ink_pixels": 170,
+      "retained_interior_separators": 13,
+      "source_sha256": "48b55f6f17e72ffa00a29d410f734e3c577bd3c1a217057b0cc7faa4a7bc85ab",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-up45-2.png",
+      "remapped_ink_pixels": 181,
+      "retained_interior_separators": 18,
+      "source_sha256": "9bd48f1ac57853d32bc34a94a632857915507e63975ffa86515371a21fcbfdfd",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-steep-2.png",
+      "remapped_ink_pixels": 170,
+      "retained_interior_separators": 13,
+      "source_sha256": "f7e54151bb65815bd94808d359d52ccf566d4d2985a06ae76309093e37955df8",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-inverted-2.png",
+      "remapped_ink_pixels": 181,
+      "retained_interior_separators": 18,
+      "source_sha256": "6da7a9735069eae95e56b53367f6f8724853bbae692386be580375b16cad9319",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-3.png",
+      "remapped_ink_pixels": 230,
+      "retained_interior_separators": 10,
+      "source_sha256": "2a249d47f38af0518e9d1a50abda298fa313cd3d455ac365798dbb0dc2533b1a",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-up45-3.png",
+      "remapped_ink_pixels": 246,
+      "retained_interior_separators": 16,
+      "source_sha256": "43c2c12bff2faf975e69728275f42676c6541dc3dbf9aee3380e085a6c2c0b15",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-steep-3.png",
+      "remapped_ink_pixels": 230,
+      "retained_interior_separators": 10,
+      "source_sha256": "441de6388cc9d669d60dbdfe72bbf9e2463f0859cbbfab78b28fe111f5e9d56c",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-inverted-3.png",
+      "remapped_ink_pixels": 246,
+      "retained_interior_separators": 16,
+      "source_sha256": "4492cc635b5c120c5a1987a85dc2faa72fc433b6b675529f7a6cf6bd1edb646b",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-4.png",
+      "remapped_ink_pixels": 224,
+      "retained_interior_separators": 26,
+      "source_sha256": "e411cf4e4b72b15bc95458f6693249bda0edfbec43c46d15b95bf26d0cd865ce",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-up45-4.png",
+      "remapped_ink_pixels": 239,
+      "retained_interior_separators": 32,
+      "source_sha256": "fee7f485da29d2bb7dc1ec4c1bbaa43751e751801251c4f456670c3ec23df2f1",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-steep-4.png",
+      "remapped_ink_pixels": 224,
+      "retained_interior_separators": 26,
+      "source_sha256": "edc4a5dc95d4371755dcc745557773ad57bcd70f09b491775d626225788135aa",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-inverted-4.png",
+      "remapped_ink_pixels": 239,
+      "retained_interior_separators": 32,
+      "source_sha256": "a01c3338321d8d6d791d9b66dce181e45a4ae94dd6e086a9cc330a3d78c932b9",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-5.png",
+      "remapped_ink_pixels": 210,
+      "retained_interior_separators": 15,
+      "source_sha256": "bb15b209a153278ade3565e17fcb4fd9614b0270d963511a2445f7d29453e10f",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-up45-5.png",
+      "remapped_ink_pixels": 226,
+      "retained_interior_separators": 22,
+      "source_sha256": "a213bf85e84b8e0e8ed8b54076c573838f5a5da56f43bc2d20eb754af95f64b4",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-steep-5.png",
+      "remapped_ink_pixels": 210,
+      "retained_interior_separators": 15,
+      "source_sha256": "169a769caf0ccdd4b463d49934b7dc8576f99e7fb6546a6d846f21a9c5b31eb3",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-inverted-5.png",
+      "remapped_ink_pixels": 226,
+      "retained_interior_separators": 22,
+      "source_sha256": "f74167883299589955d4fb1aa0ca364c36a6b6234f8947feca7d8d7a1fc17f07",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-6.png",
+      "remapped_ink_pixels": 179,
+      "retained_interior_separators": 16,
+      "source_sha256": "bc4dc600397fe71d28aa1ccd4ba9324dc71fd3760a4080de14b9ede51bcb97bb",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-up45-6.png",
+      "remapped_ink_pixels": 198,
+      "retained_interior_separators": 19,
+      "source_sha256": "e7bb15a68326c0503eefbc5a20a7089ffd873baf4945af648aee398343e3ee40",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-steep-6.png",
+      "remapped_ink_pixels": 179,
+      "retained_interior_separators": 16,
+      "source_sha256": "9847ad95237d9239f0735fca7fbfcf80b7b6ef5360427860e80212d9777c0fc0",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-inverted-6.png",
+      "remapped_ink_pixels": 198,
+      "retained_interior_separators": 19,
+      "source_sha256": "2ab8b30d9930179ba46eb69f585aea382f5419c7164cf9f5f436c08fc77e9283",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-7.png",
+      "remapped_ink_pixels": 185,
+      "retained_interior_separators": 18,
+      "source_sha256": "fbc1f1266d66033c2e23500f312124cd1e4332fb9cba24a75eb73324ec3c9252",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-up45-7.png",
+      "remapped_ink_pixels": 204,
+      "retained_interior_separators": 26,
+      "source_sha256": "40ae81badc0432a2adf2f7cda8c02e6c58e5d424aa9e7ea13d3a7182487b442e",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-steep-7.png",
+      "remapped_ink_pixels": 185,
+      "retained_interior_separators": 18,
+      "source_sha256": "a0fb910cdbd5a2d5c863ec72c9f30c3824bd10c4053bcc7dde765e72073ea4a4",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-walk-inverted-7.png",
+      "remapped_ink_pixels": 204,
+      "retained_interior_separators": 26,
+      "source_sha256": "24d5822d71b123b6c8cca10a13e79978d121f24f3e847ff38a38d8d4de194a6c",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/push-0.png",
+      "remapped_ink_pixels": 255,
+      "retained_interior_separators": 26,
+      "source_sha256": "64aeee3cdbd12f597e47090f303d9e28ec00dcbf7e26331224697e053cb7a239",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/push-1.png",
+      "remapped_ink_pixels": 225,
+      "retained_interior_separators": 19,
+      "source_sha256": "eb354c8923fce4e5b24c1ae9b89e3267c2414fc73f431f5981007b3ad418fcd0",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/push-2.png",
+      "remapped_ink_pixels": 236,
+      "retained_interior_separators": 22,
+      "source_sha256": "018c37aaf9a8bff5dc52c4316c446b5e5822f1324bfdba13800c6247ae277838",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/push-3.png",
+      "remapped_ink_pixels": 246,
+      "retained_interior_separators": 15,
+      "source_sha256": "b3918d475714db8882358d5cce767e17e0f0e009647348a8294a3932fdf830ea",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-wait-0.png",
+      "remapped_ink_pixels": 192,
+      "retained_interior_separators": 13,
+      "source_sha256": "b5aeedb8f472b6c6d3c7adcb6d94772911fa67013a0840bf76ca345685ec6e74",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-wait-1.png",
+      "remapped_ink_pixels": 190,
+      "retained_interior_separators": 22,
+      "source_sha256": "b30fd0efbc8fdb95ac39f0931f544e3f0061ce0fc557f2c54cf06c197d39234f",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s2-wait-2.png",
+      "remapped_ink_pixels": 193,
+      "retained_interior_separators": 16,
+      "source_sha256": "bbfa8e3a422a4a2d052ccb3d74e7c18ed49a89985fefed6286dc7d333badea9e",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/balance-0.png",
+      "remapped_ink_pixels": 161,
+      "retained_interior_separators": 27,
+      "source_sha256": "9046b88c440018575e99931a29673f4eedece858076a336fa3cfd17faa5095d1",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/balance-1.png",
+      "remapped_ink_pixels": 179,
+      "retained_interior_separators": 20,
+      "source_sha256": "de206d6fefbaa863f542d02ecd5ce2770bc9f38c942a9142c94db214f4872833",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/balance-2.png",
+      "remapped_ink_pixels": 175,
+      "retained_interior_separators": 12,
+      "source_sha256": "88922b6a1e62f6a162d43cbd411cd63caf4bb8fd653a41daf86b0aa3b1914db5",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/balance-3.png",
+      "remapped_ink_pixels": 201,
+      "retained_interior_separators": 20,
+      "source_sha256": "21c69782e66648e8fa925b791f2f099a2eea61cd861177681576a8295af99eac",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/balance-4.png",
+      "remapped_ink_pixels": 194,
+      "retained_interior_separators": 15,
+      "source_sha256": "4840f36ad74637ef48506664fcc8e847576bc0e03aaaa6be59bcc2a32ecddbc5",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/balance-5.png",
+      "remapped_ink_pixels": 213,
+      "retained_interior_separators": 15,
+      "source_sha256": "5099b526827c56e4f6d91ffdd8a7d8c8e4ae04c8dc21f858b47caf3072f42e52",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/duck-0.png",
+      "remapped_ink_pixels": 169,
+      "retained_interior_separators": 21,
+      "source_sha256": "ab37995dcb39255047e4e5bdc7a51af0c06978b8f8f26504657de54eddae972c",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/transform-0.png",
+      "remapped_ink_pixels": 128,
+      "retained_interior_separators": 19,
+      "source_sha256": "9f102a64ce989849a889b1ef2d038d9d6d7814629928de9e60755329de8edec3",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/transform-1.png",
+      "remapped_ink_pixels": 238,
+      "retained_interior_separators": 18,
+      "source_sha256": "a64c8407ec8d3da618563705bdb28dfbe950e0ab647ae26791c5a230826d063f",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/transform-2.png",
+      "remapped_ink_pixels": 156,
+      "retained_interior_separators": 0,
+      "source_sha256": "ba72d8898afb87fe7fedb7a265b7539959d74da44b7cec9b0fffa81bdea01bc5",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/transform-3.png",
+      "remapped_ink_pixels": 244,
+      "retained_interior_separators": 21,
+      "source_sha256": "abbaab3fa4f08307aaa289b2a68857c8b43e9bd258bd7a08ef87845428def5ee",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/transform-4.png",
+      "remapped_ink_pixels": 259,
+      "retained_interior_separators": 9,
+      "source_sha256": "b01968b395dc35e517e104ec239baeeb8146fa4dab4a173fa8cb0ab388fac08c",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/s2/frames/gold-roll-00.png",
+      "remapped_ink_pixels": 198,
+      "retained_interior_separators": 17,
+      "source_sha256": "ed92ff59f19c26bd6554c64a6d3d5668b07f8fc24b8767fab20a1d08b0970ce3",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/s2/frames/gold-roll-blur.png",
+      "remapped_ink_pixels": 106,
+      "retained_interior_separators": 0,
+      "source_sha256": "7664e3a3336204cfc54bed492c2a6d9615826f893e83a41207d042009d22b613",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/s2/frames/gold-roll-01.png",
+      "remapped_ink_pixels": 209,
+      "retained_interior_separators": 9,
+      "source_sha256": "f7639a4be3f75caf7cf02cdced4901aad68d0c7ebe80f4c41d8e275fd9b5c9a6",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/s2/frames/gold-roll-02.png",
+      "remapped_ink_pixels": 217,
+      "retained_interior_separators": 16,
+      "source_sha256": "b2415e71ce006a55b48402524149fc53011afc43068d01c0909d868600df7243",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/s2/frames/gold-roll-03.png",
+      "remapped_ink_pixels": 234,
+      "retained_interior_separators": 12,
+      "source_sha256": "f4bc91255badc9651caf077f652d8a1e6e331b42101ea118571027def7858adc",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-0.png",
+      "remapped_ink_pixels": 232,
+      "retained_interior_separators": 12,
+      "source_sha256": "61e2f8a12b23bcbd1edc15b0df4c4ab4bef3313b1a5c2273a70109175ffb76f5",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-up45-0.png",
+      "remapped_ink_pixels": 243,
+      "retained_interior_separators": 22,
+      "source_sha256": "0d8c154da7bb10048e58815d97fc37a6e7ef7222194916b7d886396327a1e8fe",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-steep-0.png",
+      "remapped_ink_pixels": 232,
+      "retained_interior_separators": 12,
+      "source_sha256": "cff1f0cc57152539376609370e9e9995f262ef1c7d418a2d228a9a78678f9617",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-inverted-0.png",
+      "remapped_ink_pixels": 243,
+      "retained_interior_separators": 22,
+      "source_sha256": "0a8eba8503fd5e96c7e0663388af48e66a308638c994dc0f32fd1216cf3a2e06",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-1.png",
+      "remapped_ink_pixels": 237,
+      "retained_interior_separators": 16,
+      "source_sha256": "d6e05547d65811429bfd9658b474953d6cf7375ffc780edd7ab7d3d42cac171b",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-up45-1.png",
+      "remapped_ink_pixels": 254,
+      "retained_interior_separators": 27,
+      "source_sha256": "2bdbf520d3ff13443fcdb320503744100f58543347377e4d1ece7711c8cd7b62",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-steep-1.png",
+      "remapped_ink_pixels": 237,
+      "retained_interior_separators": 16,
+      "source_sha256": "b4f8410445e2993109835be84511f6d94422162b403d089f5a9475447e77620e",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-inverted-1.png",
+      "remapped_ink_pixels": 254,
+      "retained_interior_separators": 27,
+      "source_sha256": "735cfe00404503cd1bc66046c9f498f18b973c3f37579a21ecf1f69abf04c025",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-2.png",
+      "remapped_ink_pixels": 208,
+      "retained_interior_separators": 18,
+      "source_sha256": "e68466e92955e168d1cd52f6b408958546a4c134fbaff2d282b169bd0a2755ff",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-up45-2.png",
+      "remapped_ink_pixels": 223,
+      "retained_interior_separators": 19,
+      "source_sha256": "080d1a46439581bfc1a3b5d05ec21a712f3aafb03a5b90d55005f2762696ed06",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-steep-2.png",
+      "remapped_ink_pixels": 208,
+      "retained_interior_separators": 18,
+      "source_sha256": "03bb902ea7ad2e6aeadf6b2ba5df9438d26014ac5244b366758cca2cad3e7c5f",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-inverted-2.png",
+      "remapped_ink_pixels": 223,
+      "retained_interior_separators": 19,
+      "source_sha256": "de8b55cfb10109496498e44220384b4fbf9a4dbd7469de8b3c57165c8e4b6929",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-3.png",
+      "remapped_ink_pixels": 246,
+      "retained_interior_separators": 12,
+      "source_sha256": "3cb0b66b229b9b884e9a2c4b5088f489c7ed233188dd3509c7b9455318affd78",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-up45-3.png",
+      "remapped_ink_pixels": 259,
+      "retained_interior_separators": 27,
+      "source_sha256": "234193e201a716c834dedbafe7cdd47432f7749b561e0d45099983a0417f56cb",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-steep-3.png",
+      "remapped_ink_pixels": 246,
+      "retained_interior_separators": 12,
+      "source_sha256": "8831e886125293ba62f874633cbbb1cbb65772307f8967a5ff790757c1379c0b",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-inverted-3.png",
+      "remapped_ink_pixels": 259,
+      "retained_interior_separators": 27,
+      "source_sha256": "7c8a8c20c317f81f8d93eb147ab38ed585e162d9210ac430d1869f67d1b6b67b",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-4.png",
+      "remapped_ink_pixels": 243,
+      "retained_interior_separators": 17,
+      "source_sha256": "8851d676c908cad7a1c06c88f59994b96ccf61bbbd8944ec1445683696da74cf",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-up45-4.png",
+      "remapped_ink_pixels": 263,
+      "retained_interior_separators": 27,
+      "source_sha256": "367218c4c95341e3d9108b78f7e121629a8279782c2eb68330c14aed3b70a7dc",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-steep-4.png",
+      "remapped_ink_pixels": 243,
+      "retained_interior_separators": 17,
+      "source_sha256": "a0da993b6368ff5cc6b3365d4f8a62f7c45e5bb9b3086dd78e1b90b0ccafbce6",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-inverted-4.png",
+      "remapped_ink_pixels": 263,
+      "retained_interior_separators": 27,
+      "source_sha256": "5538a764f599c28f3475d46f464b32082007f7bac2c5d9389e78b388b1d02e4d",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-5.png",
+      "remapped_ink_pixels": 235,
+      "retained_interior_separators": 18,
+      "source_sha256": "4e6e09db7b08a8f5e7896e17941e6c02c4a402646fb30e4215d1dab0088dc97f",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-up45-5.png",
+      "remapped_ink_pixels": 246,
+      "retained_interior_separators": 31,
+      "source_sha256": "96369843fe99872d24ec07a1a238f78d1daab0633aa1c7e673ca5a774c486b47",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-steep-5.png",
+      "remapped_ink_pixels": 235,
+      "retained_interior_separators": 18,
+      "source_sha256": "e2ae4aa16632e851c077600e7051edbe7818b44519e62bf4696820ecf9ec8aaf",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-inverted-5.png",
+      "remapped_ink_pixels": 246,
+      "retained_interior_separators": 31,
+      "source_sha256": "e3244f2b0a97e309851c320b017b71c4d45889ccd1e2c96808c61e9e240dbdad",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-6.png",
+      "remapped_ink_pixels": 202,
+      "retained_interior_separators": 14,
+      "source_sha256": "b2ba0f1b86d93a71ff9b4e40e019c6958d1ba7e053063a7950eecedc32a7891f",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-up45-6.png",
+      "remapped_ink_pixels": 207,
+      "retained_interior_separators": 20,
+      "source_sha256": "321f68cc0fe28d3f027569bd00e033fe05d0d25f7af5154cd7d1c125e56588ff",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-steep-6.png",
+      "remapped_ink_pixels": 202,
+      "retained_interior_separators": 14,
+      "source_sha256": "0a5930a1dfa589cda55659dfdef6a8bf907a0b3e55c80f2ec942f0c2d4cfe606",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-inverted-6.png",
+      "remapped_ink_pixels": 207,
+      "retained_interior_separators": 20,
+      "source_sha256": "2b0418d9c752bd8d3a08681164b9c1626801673850b9b34f4f0823ac67964214",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-7.png",
+      "remapped_ink_pixels": 232,
+      "retained_interior_separators": 24,
+      "source_sha256": "f649fc4abc8ba5a02a6ad9532b4c845201a9444c5e28d107a3747a4792c4b240",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-up45-7.png",
+      "remapped_ink_pixels": 254,
+      "retained_interior_separators": 31,
+      "source_sha256": "f3d7eca6043b16a086ba1a75db8935e90518b915e478a1cc0a0158a65f3f89b0",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-steep-7.png",
+      "remapped_ink_pixels": 232,
+      "retained_interior_separators": 24,
+      "source_sha256": "9792d0784f9a5fb0557039556a971d9b6ecbc8e59be238d2387a425801762381",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-walk-inverted-7.png",
+      "remapped_ink_pixels": 254,
+      "retained_interior_separators": 31,
+      "source_sha256": "c1ca60c8e90eae25bf2dc882b1a608b20353f21c5738f565c9f964a08549d52f",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-wait-0.png",
+      "remapped_ink_pixels": 203,
+      "retained_interior_separators": 18,
+      "source_sha256": "feef18b48cbfb0243894d2a87af26219c53028c8c1dba1ca32923967f2885192",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/frames/s3k-wait-1.png",
+      "remapped_ink_pixels": 205,
+      "retained_interior_separators": 11,
+      "source_sha256": "6b5df018fdb4bf70bd93e3a2d0350879d4cda4ce402446a02410e4742b14fb7e",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/s3k/frames/gold-roll-00.png",
+      "remapped_ink_pixels": 198,
+      "retained_interior_separators": 17,
+      "source_sha256": "ed92ff59f19c26bd6554c64a6d3d5668b07f8fc24b8767fab20a1d08b0970ce3",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/s3k/frames/gold-roll-blur.png",
+      "remapped_ink_pixels": 106,
+      "retained_interior_separators": 0,
+      "source_sha256": "7664e3a3336204cfc54bed492c2a6d9615826f893e83a41207d042009d22b613",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/s3k/frames/gold-roll-01.png",
+      "remapped_ink_pixels": 209,
+      "retained_interior_separators": 9,
+      "source_sha256": "f7639a4be3f75caf7cf02cdced4901aad68d0c7ebe80f4c41d8e275fd9b5c9a6",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/s3k/frames/gold-roll-02.png",
+      "remapped_ink_pixels": 217,
+      "retained_interior_separators": 16,
+      "source_sha256": "b2415e71ce006a55b48402524149fc53011afc43068d01c0909d868600df7243",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "mica/powered/s3k/frames/gold-roll-03.png",
+      "remapped_ink_pixels": 234,
+      "retained_interior_separators": 12,
+      "source_sha256": "f4bc91255badc9651caf077f652d8a1e6e331b42101ea118571027def7858adc",
+      "alpha_unchanged": true
+    }
+  ],
+  "gold_cycle": "MICA brightest yellow/white, darkest0CE/0EE; TALON warmer bright amber with orange tips;9-phase shimmer in S2/S3K and S1 uses the S2 cycle.",
+  "palette_preview": "Indexed PNG palettes now match the first live powered cycle (including pale-gold face slots), not the obsolete orange/brown ramp.",
+  "rejected_run_generations": [
+    {
+      "name": "mica",
+      "prompt": "Use case: identity-preserve. Production 16-bit pixel sprite sheet. Reference 1 is four native Super Sonic running poses rendered in their real game palettes at 8x, LEFT TO RIGHT S2 phase0, S2 phase1, S3K phase0, S3K phase1. Reference 2 is approved MICA pangolin model sheet: use GOLD form and compact round scale plates, never quills. Draw exactly FOUR separate Gilded MICA sprites in one horizontal row, one corresponding to each native pose. Native pose is a forward suspended sprint: head at right, slim horizontal torso, both arms streaming straight back left, red boots swept back, one boot slightly higher per phase. Keep one fixed head and torso scale and face direction across ALL four drawings, head about 13 native px, torso9, total native bbox ~40x32 including tail. Rounded overlapping gold pangolin scales and long tapering scaled tail stream left, pale gold cream snout/belly, small pink ear, brown eye, white gloves, coral red boots with tan soles. Follow exact native contact/limb phases. S2 style simple 3-tone cel pixel clusters; S3K native slightly richer material-shadow pixel clusters, upper-left highlights, NO thick all-black sticker outlines, NO dither, NO gradients. At most15 colors each, hard-edged pixels intended for ~40px sprite. All anatomy coherent, no separate floating boots or gloves, no glow, text, labels, shadow or floor. Equal 300x300 cells in a 1200x300 transparent sheet with padding, all sprites complete.",
+      "attempts": [
+        {
+          "attempt": 1,
+          "file": "exec-91b969d9-fd7e-4e40-aa6d-585c42c7295d.png",
+          "sha256": "d99ddd7c58916bc6235f5d28d45d8a2898bd7190753792a52f6def1f1379bd5b"
+        },
+        {
+          "attempt": 2,
+          "file": "exec-e533d75a-d326-40e1-b57a-62919fe1c6b6.png",
+          "sha256": "3e29132c50eadb93e17fad8ffed45449e1cbc2e62e9e0bfc80f747b3cbfdd281"
+        }
+      ]
+    }
+  ],
+  "rejected_run_reason": "Earlier native/model panel omitted approved core sprites. Superseded by fresh independent core-referenced generations; no edit chain."
+}

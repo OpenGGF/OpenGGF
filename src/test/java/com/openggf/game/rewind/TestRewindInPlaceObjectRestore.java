@@ -159,6 +159,8 @@ class TestRewindInPlaceObjectRestore {
             // Write-before-use scratch holders rebuilt each frame before any read.
             "com.openggf.level.PatternDesc",
             "com.openggf.level.objects.SubpixelMotion$State",
+            // Stateless sign compositor: no retained character, frame or session state.
+            "com.openggf.game.presentation.CharacterSignRenderer",
             // Stateless functional handles installed at construction. Explosion
             // factories now restore from typed state, so are not structural fallthrough.
             "java.util.function.BooleanSupplier",

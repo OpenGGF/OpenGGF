@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.debug.DebugColor;
@@ -31,7 +33,6 @@ import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-import com.openggf.sprites.playable.Tails;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -321,7 +322,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
             player.setRolling(false);
         }
 
-        int yRadius = (player instanceof Tails) ? GRAB_Y_RADIUS_TAILS : GRAB_Y_RADIUS_DEFAULT;
+        int yRadius = (PlayableArchetype.isTails(player)) ? GRAB_Y_RADIUS_TAILS : GRAB_Y_RADIUS_DEFAULT;
         player.applyCustomRadii(GRAB_X_RADIUS, yRadius);
         // ROM writes object_control=1: movement is suppressed, but the signed
         // bit-7 gates used by CPU/touch/solid helpers remain clear.

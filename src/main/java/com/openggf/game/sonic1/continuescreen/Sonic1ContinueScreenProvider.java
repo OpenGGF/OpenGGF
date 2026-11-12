@@ -23,6 +23,7 @@ import java.io.IOException;
 public final class Sonic1ContinueScreenProvider implements ContinueScreenProvider {
     // Verified ROM pointers: GM_Continue $4D42/$4D56; CSI_Main $4E68; Ani_CSon $5054.
     static final int ART_CONTINUE = 0x3B39A, ART_MINI = 0x3B64A, MAP = 0x5062, PALETTE = 0x28E0;
+    private com.openggf.game.presentation.ScreenFrameRenderer replacement;
     private ContinueScreenArtwork art;
     private ContinueScreenArtwork.Character sonic;
     private PatternSpriteRenderer icons;
@@ -55,6 +56,12 @@ public final class Sonic1ContinueScreenProvider implements ContinueScreenProvide
             lying = new ObjectAnimationState(CommonSpriteDataLoader.loadAnimationSet(reader, resolve(reader, 0x5054), 1), 0, 1);
             sonic = new ContinueScreenArtwork.Character(new Sonic1PlayerArt(reader).loadSonic(),
                     new Sonic("sonic", (short) 0, (short) 0), 0x400, 0x1D);
+            var frames = com.openggf.game.presentation.ScreenFrameRenderer.active(com.openggf.game.CharacterPresentation.Host.S1);
+            if (frames != null) {
+                replacement = new com.openggf.game.presentation.ScreenFrameRenderer(frames, GameServices.graphics(),
+                        com.openggf.graphics.PatternAtlasRange.CONTINUE_SCREEN.base() + 0xA00, 2);
+                sonic.setReplacement(replacement);
+            }
             // ExecuteObjects is called once before fade-in; CSon_Main falls through to ShowFall.
             y += 4;
             sonic.update(vint, 0);
@@ -93,13 +100,17 @@ public final class Sonic1ContinueScreenProvider implements ContinueScreenProvide
         if (art == null) return;
         int offset = (Math.max(320, GameServices.graphics().getProjectionWidth()) - 320) / 2;
         art.draw(4, 160 + offset, 64);
-        if (landed && !accepted) art.draw(lying.getMappingFrame(), x + offset, y - 256);
+        if (landed && !accepted) {
+            if (replacement == null || !replacement.draw("continue/floor", lying.getMappingFrame(), x + offset, y - 256, false))
+                art.draw(lying.getMappingFrame(), x + offset, y - 256);
+        }
         else sonic.draw(x + offset, y - 256);
         art.draw(0, 160 + offset, 64);
         int n = Math.min(15, Math.max(0, count - 1));
         for (int i = 0; i < n; i++) {
             if (i == n - 1 && count < 16 && accepted && (usedIconDeleted || (vint & 1) == 0)) continue;
             int iconX = 160 + (i % 2 == 0 ? -1 : 1) * (10 + i / 2 * 20) - ((n & 1) == 0 ? 10 : 0);
+            if (replacement != null && replacement.draw("continue/icon", iconFrame, iconX + offset, 80, false)) continue;
             icons.drawFrameIndexWithPaletteBase(iconFrame, iconX + offset, 80, false, false, 0);
         }
     }
@@ -108,6 +119,7 @@ public final class Sonic1ContinueScreenProvider implements ContinueScreenProvide
     @Override public boolean isAccepted() { return accepted; }
     @Override public boolean isFinished() { return finished; }
     @Override public void reset() {
+        replacement = null;
         art = null; sonic = null; icons = null; lying = null; digits = null;
         accepted = finished = landed = usedIconDeleted = false;
         timer = vint = x = y = inertia = count = 0;

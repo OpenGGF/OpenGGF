@@ -36,6 +36,33 @@ class TestLevelPlayableArtInitializerModArt {
     @AfterEach void resetContexts() { RenderContext.reset(); }
 
     @Test
+    void authoredModWaterIsInstalledAndPreventsEqualDryPaletteSharing() throws Exception {
+        CharacterKey mainKey = CharacterKey.mod("owner", "main");
+        CharacterKey sideKey = CharacterKey.mod("owner", "side");
+        Palette dry = new Palette(), mainWater = new Palette(), sideWater = new Palette();
+        mainWater.colors[2].b = (byte) 146;
+        sideWater.colors[2].r = (byte) 73;
+        var main = definition(mainKey, code -> art(4), code -> dry);
+        var side = definition(sideKey, code -> art(4), code -> dry);
+        var registry = PlayableCharacterRegistry.empty()
+                .register(mainKey, withWater(main, mainWater)).register(sideKey, withWater(side, sideWater));
+        var follower = sprite(sideKey, sideKey.persisted());
+        var fixture = fixture(registry, mainKey, List.of(follower));
+        fixture.initializer().initialize();
+        var mainContext = capturedRenderer(fixture.main()).getRenderContext();
+        var sideContext = capturedRenderer(follower).getRenderContext();
+        org.junit.jupiter.api.Assertions.assertNotSame(mainContext, sideContext);
+        org.junit.jupiter.api.Assertions.assertSame(mainWater, mainContext.getUnderwaterPalette(0));
+        org.junit.jupiter.api.Assertions.assertSame(sideWater, sideContext.getUnderwaterPalette(0));
+    }
+
+    private static CharacterDefinition withWater(CharacterDefinition d, Palette water) {
+        return new CharacterDefinition(d.key(), d.displayName(), d.spriteFactory(), d.respawnStrategyFactory(),
+                d.behavesLike(), d.secondaryAbility(), false, d.artSupplier(), d.paletteSupplier(),
+                d.movementAbilities(), code -> water);
+    }
+
+    @Test
     @RequiresRom(SonicGame.SONIC_1)
     void equalNormalModMainKeepsDerivedWaterBesideDonatedSonic() throws Exception {
         var source = new com.openggf.game.sonic1.Sonic1GameModule().getCrossGameDonorProvider();

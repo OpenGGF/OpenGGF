@@ -80,32 +80,8 @@ public class PlayerSpriteRenderer {
     }
 
     public void drawFrame(int frameIndex, int originX, int originY, boolean hFlip, boolean vFlip) {
-        ensureCached(graphicsManager);
-        if (frameIndex < 0 || frameIndex >= artSet.mappingFrames().size()) {
-            return;
-        }
-        if (!residentBankExternal && frameIndex != lastFrame) {
-            // ROM behavior: Only update lastFrame when tiles were actually loaded.
-            // Empty DPLCs mean "reuse previously loaded tiles", so we shouldn't
-            // update lastFrame in that case - otherwise a subsequent frame with
-            // a real DPLC would not reload its tiles.
-            boolean loaded = applyDplc(frameIndex);
-            if (loaded) {
-                lastFrame = frameIndex;
-            } else if (lastFrame == -1) {
-                // First draw and DPLC was empty - try to find the first non-empty DPLC
-                // to initialize the pattern bank (ROM initializes with frame 0 tiles
-                // before the main loop, but we need to do it here)
-                loaded = forceInitialDplc();
-                if (loaded) {
-                    lastFrame = frameIndex;
-                }
-            }
-        }
-
-        SpriteMappingFrame frame = artSet.mappingFrames().get(frameIndex);
-        com.openggf.level.render.SpritePresentationRenderer.bindPatternBank(graphicsManager,
-                patternBank.getBasePatternIndex(), patternBank.getPatterns(), frame);
+        SpriteMappingFrame frame = prepareFrame(frameIndex);
+        if (frame == null) return;
         var subject = com.openggf.graphics.SpritePresentation.subject(graphicsManager);
         PlayerHeadProfile.FrameHead mask = headPresentationStatus(frameIndex);
         boolean head = subject.part() == com.openggf.graphics.SpritePresentation.Part.BODY
@@ -138,6 +114,53 @@ public class PlayerSpriteRenderer {
                                 com.openggf.level.render.SpritePresentationRenderer.headSatReplay()), nativeDraw);
             } else nativeDraw.run();
         }
+    }
+
+    /** Engine-owned scenes supply their own sprite ownership/order sink. */
+    void drawNativeTiles(int frameIndex, int originX, int originY,
+                         SpritePieceRenderer.TileConsumer consumer) {
+        drawNativeTiles(frameIndex, originX, originY, false, false, consumer);
+    }
+
+    void drawNativeTiles(int frameIndex, int originX, int originY, boolean hFlip, boolean vFlip,
+                         SpritePieceRenderer.TileConsumer consumer) {
+        var frame = prepareFrame(frameIndex);
+        if (frame == null) return;
+        for (var piece : frame.pieces()) {
+            SpritePieceRenderer.renderPiece(piece, originX, originY,
+                    patternBank.getBasePatternIndex(), resolveRenderPaletteIndex(artSet.paletteIndex()),
+                    hFlip, vFlip, consumer);
+        }
+    }
+
+    private SpriteMappingFrame prepareFrame(int frameIndex) {
+        ensureCached(graphicsManager);
+        if (frameIndex < 0 || frameIndex >= artSet.mappingFrames().size()) {
+            return null;
+        }
+        if (!residentBankExternal && frameIndex != lastFrame) {
+            // ROM behavior: Only update lastFrame when tiles were actually loaded.
+            // Empty DPLCs mean "reuse previously loaded tiles", so we shouldn't
+            // update lastFrame in that case - otherwise a subsequent frame with
+            // a real DPLC would not reload its tiles.
+            boolean loaded = applyDplc(frameIndex);
+            if (loaded) {
+                lastFrame = frameIndex;
+            } else if (lastFrame == -1) {
+                // First draw and DPLC was empty - try to find the first non-empty DPLC
+                // to initialize the pattern bank (ROM initializes with frame 0 tiles
+                // before the main loop, but we need to do it here)
+                loaded = forceInitialDplc();
+                if (loaded) {
+                    lastFrame = frameIndex;
+                }
+            }
+        }
+
+        SpriteMappingFrame frame = artSet.mappingFrames().get(frameIndex);
+        com.openggf.level.render.SpritePresentationRenderer.bindPatternBank(graphicsManager,
+                patternBank.getBasePatternIndex(), patternBank.getPatterns(), frame);
+        return frame;
     }
 
     /** Useful current-pose fallback status; configuring a size never invents masks for unknown art. */

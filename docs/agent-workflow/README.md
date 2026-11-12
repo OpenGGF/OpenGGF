@@ -53,6 +53,9 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Rendered frame region comparison](../../tools/testing/compare_frame_regions.py) detects creator-coloured corruption outside independently declared regions as well as native remnants. Requires lockstep stock/clean-baseline/candidate PNGs and an authored-geometry region ledger; missing frames fail. Keep a corrupt negative control, capture hashes and full-resolution transition review. See the [usage](../../tools/testing/README.md#rendered-frame-region-comparisons). Origin: S2 final cockpit capture review, 2026-11-11.
+- [Character art coverage probe](../../src/test/java/com/openggf/level/objects/TestCharacterArtCoverageAudit.java) loads the verified ROM and example sheets through production binding. `-Dart.audit.output=<external-dir>` writes numeric inventories; [report generator](../../tools/modding/character_art_audit.py) joins them with creator provenance and native labels. Origin: MICA/TALON art audit, 2026-11-09. No native pixels are written; diagnostic TALON binding is not integrated Tails coverage.
+
 - [Native S1 ending initialization timing](../../tools/tracechaser/docs/capture-s1.md#ending-initialization-timing): observe actual ending/font/demo loads with fixed opcode cuts and fail-closed callback qualification, then compare independently encoded ROM fingerprints before publication. Reuse a saved native state near later probes and the unedited movie; retain strict full-run comparison. The [S1 chain audit](../architecture/audits/2026-11-06-s1-chain-plc-timing.md) records the bounded clock/RNG proof and limits (2026-11-07).
 
 - [Native S3K initialization timing](../../tools/tracechaser/docs/capture-s3k.md): `--initialization-timing` observes load-phase service and completion, with rejection diagnostics for unsupported interrupted routines and later callbacks; it exports no CPU/slot state. Origin: [2026-11-03 synchronous loading](../architecture/designs/2026-11-03-synchronous-load-vint-accounting.md).
@@ -530,6 +533,9 @@ part of what the project preserves, for future contributors and for anyone
 studying how it was done. Keep the record light and put things where they
 already belong; do not create new document types.
 
+- [Playable art preprocessing](../../tools/modding/playable_art/README.md) — generated pose atlases to shared 15-colour indexed frames, explicit native hotspots/pixel patches, deterministic verification and disposable animation reviews (MICA W7, 2026-11-08).
+- [Locked special-stage assembly](../../tools/modding/playable_art/locked_stage.py), [native body measurement](../../tools/modding/playable_art/measure_stage_body.py), [hip-pivot posing](../../tools/modding/playable_art/stage_body_motion.py) and [review sampler](../../tools/modding/playable_art/locked_stage_review.py) — generated identity/curl reuse, native PCA lean/sway/bob, screen-space relighting and independent limb/contact measurements (MICA/TALON correction, 2026-11-10).
+
 - **Scripts and probes.** A one-off diagnostic stays temporary. A probe,
   oracle, comparator, or sampler that answered a question likely to recur,
   or that took more than an hour to get right, is promoted: engine-facing
@@ -588,6 +594,11 @@ never preserved.
 - Next-line Mod API and multiplayer contracts: [subsystem reference](../architecture/next-line-subsystems.md),
   [creator handbook](../modding/index.md), and
   [API compatibility](../architecture/mod-api-compatibility.md).
+
+Animation-family review method: [`animation_family_review.py`](../../tools/modding/animation_family_review.py)
+joins the production art audit with module phase profiles, emits a cited native
+script inventory and exact-palette, full-frame native/MICA GIFs. Inputs and limits
+are documented in the [playable art guide](../../tools/modding/playable_art/README.md#shared-family-phases).
 
 - [Competition monitor route probe](../../tools/stageplay/S2CompetitionMonitorRouteProbe.java):
   replay-only per-row content/init/award/lives/rings/position CSV from a frozen

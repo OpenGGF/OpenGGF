@@ -1,0 +1,33 @@
+{
+  "surface": "record",
+  "file": "../../../art/mica/competition-menu/record.png",
+  "hotspot": [
+    11,
+    24
+  ],
+  "nativeSize": [
+    19,
+    24
+  ],
+  "nativeArea": 240,
+  "authoredArea": 285,
+  "ratio": 1.0897247358851685,
+  "attempts": 3,
+  "selected": "final refinement",
+  "source": "exec-95763816-248e-4cc4-b503-914739093dde.png",
+  "sourceSha256": "eb0927721f6e8c655ee655ca967f353e3fcf774f51d7aa4b16d3a9472ac9c6bc",
+  "method": "Built-in GPT Image native-pose transformation, magenta removal, uniform Lanczos reduction and fixed palette match; no painted contours.",
+  "nativeReference": {
+    "rom": "S3&K locked-on SHA-1 CFBF98C36C776677290A872547AC47C53D2761D6",
+    "mapping": "$2F26A, frame $29/$2A",
+    "palette": "$39D282 menu BG palette, record icon line 0",
+    "enlargement": "8x nearest-neighbour"
+  },
+  "promptSummary": "Two alternatives each of MICA and TALON in a 2x2 sheet on magenta. Transform the attached native full-body menu or record pose, keeping its miniature head/torso proportions. MICA uses jade overlapping scales, cream muzzle/belly, coral boots, white gloves and scaled tail; never quills. TALON uses slate feathers, amber goggles, hooked beak, moustache stripe, barred cream chest, satchel, integrated glove-wings and red/white shoes. Exclude fox ears, fox tails, rotor and mast. Flat limited-colour pixel art, no labels/logos/cast shadows. Attached native8x poses and approved concept sheets.",
+  "scratchReview": "$HOME/scratch/agent-tmp/mt-competition-wheel-20261110/review.html",
+  "approvedFrameReferences": [
+    "art/mica/frames/wait-00.png",
+    "art/talon/frames/wait-00.png"
+  ],
+  "rejected": "Initial record MICA missed overhead glove; initial TALON player alternative0 reduced too small. Final image uses approved WAIT landmarks and native pose/reference contact phases."
+}

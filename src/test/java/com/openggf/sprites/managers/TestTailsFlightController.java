@@ -342,6 +342,10 @@ class TestTailsFlightController {
         flight.updateVertical(false, carrying, 0);
 
         assertEquals(expected, tails.getAnimationId());
+        assertEquals(expected, new Sonic3kGameModule().getDonorCapabilities()
+                .forPlayableCharacter(com.openggf.game.PlayerCharacter.TAILS_ALONE)
+                .resolveNativeId(flight.selectAnimation(carrying)),
+                "creator pose selection shares the native branch and archetype vocabulary");
     }
 
     private void assertLastSound(GameSound expected) {

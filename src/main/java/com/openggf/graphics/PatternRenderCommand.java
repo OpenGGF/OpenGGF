@@ -62,6 +62,7 @@ public final class PatternRenderCommand implements GLCommandable {
     private int presentationCount;
     private float presentationHue;
     private float presentationOpacity=1;
+    private int presentationTint;
     private boolean presentationPriorityShader;
     private boolean nativeShadow15;
     private Shadow15Backdrop shadowBackdrop;
@@ -136,7 +137,7 @@ public final class PatternRenderCommand implements GLCommandable {
             cmd = new PatternRenderCommand();
         }
         cmd.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
-        cmd.presentationQuad=null;cmd.presentationCount=0;cmd.presentationHue=0;cmd.presentationOpacity=1;
+        cmd.presentationQuad=null;cmd.presentationCount=0;cmd.presentationHue=0;cmd.presentationOpacity=1;cmd.presentationTint=0;
         cmd.nativeShadow15=false;cmd.shadowBackdrop=null;
         cmd.paletteTextureId = paletteTextureId;
         cmd.u0 = entry.u0();
@@ -173,7 +174,7 @@ public final class PatternRenderCommand implements GLCommandable {
             cmd = new PatternRenderCommand();
         }
         cmd.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
-        cmd.presentationQuad=null;cmd.presentationCount=0;cmd.presentationHue=0;cmd.presentationOpacity=1;
+        cmd.presentationQuad=null;cmd.presentationCount=0;cmd.presentationHue=0;cmd.presentationOpacity=1;cmd.presentationTint=0;
         cmd.nativeShadow15=false;cmd.shadowBackdrop=null;
         cmd.paletteTextureId = paletteTextureId;
         cmd.atlasIndex = entry.atlasIndex();
@@ -589,7 +590,7 @@ public final class PatternRenderCommand implements GLCommandable {
         glVertexAttribPointer(ATTRIB_PALETTE, 1, GL_FLOAT, false, 0, 0L);
         glEnableVertexAttribArray(ATTRIB_PALETTE);
 
-        shaderProgram.setPresentationColor(presentationHue,presentationOpacity);
+        shaderProgram.setPresentationColor(presentationHue,presentationOpacity,presentationTint);
         try {
             glDrawArrays(presentationCount > 1 ? GL_TRIANGLES : GL_TRIANGLE_FAN, 0,
                     presentationCount > 1 ? presentationCount * 6 : 4);
@@ -599,6 +600,11 @@ public final class PatternRenderCommand implements GLCommandable {
     }
 
     void presentation(float[] quad,float hue,float opacity) {
+        presentation(quad,hue,opacity,0);
+    }
+
+    void presentation(float[] quad,float hue,float opacity,int tint) {
+        presentationTint=tint;
         if(quad.length!=8) throw new IllegalArgumentException("Presentation quad requires four vertices");
         for(float value:quad) if(!Float.isFinite(value)) throw new IllegalArgumentException("Nonfinite picture vertex");
         presentationQuad=quad.clone();presentationCount=1;presentationHue=hue;presentationOpacity=Math.clamp(opacity,0,1);
@@ -618,7 +624,8 @@ public final class PatternRenderCommand implements GLCommandable {
                 || ghostAlpha != next.ghostAlpha
                 || nativeShadow15 != next.nativeShadow15 || shadowBackdrop != next.shadowBackdrop
                 || presentationPriorityShader != next.presentationPriorityShader
-                || presentationHue != next.presentationHue || presentationOpacity != next.presentationOpacity) return false;
+                || presentationHue != next.presentationHue || presentationOpacity != next.presentationOpacity
+                || presentationTint != next.presentationTint) return false;
         int required = (presentationCount + 1) * 12;
         if (presentationBatchData == null || presentationBatchData.length < required) {
             int capacity = Math.min(MAX_PRESENTATION_PATTERNS * 12,

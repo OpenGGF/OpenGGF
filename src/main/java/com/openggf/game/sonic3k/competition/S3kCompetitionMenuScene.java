@@ -48,6 +48,10 @@ public final class S3kCompetitionMenuScene {
 
     /** A detached immutable frame; mutable engine asset types are copied on access. */
     public static final class Scene {
+        private Map<Integer,Integer> portraitBanks = Map.of();
+        private Map<Integer,int[]> portraitPalettes = Map.of();
+        Map<Integer,Integer> portraitBanks() { return portraitBanks; }
+        Map<Integer,int[]> portraitPalettes() { return portraitPalettes; }
         private final MenuPhase phase;
         private final int frame, horizontalScrollA, verticalScrollA;
         private final int[] planeA, planeB;
@@ -110,6 +114,7 @@ public final class S3kCompetitionMenuScene {
     private static final int ZONE_SELECT = 0xAF24, RESULT_PLAYER = 0xB9A6;
     private static final int RESULT_WINNER = 0xB9CA, RECORD_CHARACTER = 0xBEF8;
 
+    private final Map<Integer, com.openggf.game.CharacterPresentation> presentations;
     private final RomByteReader rom;
     private final S3kCompetitionAssets assets;
     private final S3kCompetitionResources resources;
@@ -118,6 +123,11 @@ public final class S3kCompetitionMenuScene {
     private final Map<SheetKey, ObjectSpriteSheet> sheetCache = new HashMap<>();
 
     public S3kCompetitionMenuScene(Rom rom, S3kCompetitionAssets assets) throws IOException {
+        this(rom, assets, Map.of());
+    }
+
+    public S3kCompetitionMenuScene(Rom rom, S3kCompetitionAssets assets, Map<Integer, com.openggf.game.CharacterPresentation> presentations) throws IOException {
+        this.presentations = Map.copyOf(presentations);
         this.rom = RomByteReader.fromRom(Objects.requireNonNull(rom));
         this.assets = Objects.requireNonNull(assets);
         resources = assets.resources();
@@ -178,8 +188,51 @@ public final class S3kCompetitionMenuScene {
         // TimeAttack_Records writes -$88 before its first frame, independently of menu scroll state.
         int hScroll = phase == MenuPhase.TIME_ATTACK_RESULTS ? -0x88 : view.horizontalScroll();
         int vScroll = phase == MenuPhase.ARENA_SELECT ? view.verticalScroll() : 0;
-        return new Scene(phase, view.frame(), a, b, banks.get(phase), assets.menuPalette(phase, paletteArena),
-                groups, hScroll, vScroll);
+        return present(new Scene(phase, view.frame(), a, b, banks.get(phase), assets.menuPalette(phase, paletteArena),
+                groups, hScroll, vScroll));
+    }
+
+    private Scene present(Scene nativeScene) {
+        if (presentations.isEmpty()) return nativeScene;
+        var patterns = nativeScene.patterns();
+        var groups = new ArrayList<SpriteGroup>();
+        var colors = new HashMap<Integer,int[]>();
+        var patternBanks = new HashMap<Integer,Integer>();
+        int nextTile = 0x650, nextBank = 1;
+        for (var group : nativeScene.sprites()) {
+            boolean player = group.mappingKey().equals("competition_menu_player");
+            boolean record = group.mappingKey().equals("competition_results_character");
+            var p = presentations.get(player ? group.mappingFrame() : group.mappingFrame() - 0x29);
+            var surface = player ? com.openggf.game.CharacterPresentation.CompetitionSurface.S3K_PLAYER
+                    : com.openggf.game.CharacterPresentation.CompetitionSurface.S3K_RECORD;
+            var portrait = p == null || !(player || record) ? null : p.competitionPortraits().get(surface);
+            if (portrait == null) { groups.add(group); continue; }
+            var pose = portrait.pose();
+            int rows = (pose.image().height()+7)/8, columns = (pose.image().width()+7)/8;
+            if (nextTile + rows*columns > 0x800) { groups.add(group); continue; }
+            var pieces = new ArrayList<SpriteMappingPiece>();
+            boolean priority = (group.nativeArtWord() & 0x8000) != 0;
+            byte[] source = pose.image().pixels();
+            for (int col=0;col<columns;col+=4) for (int row=0;row<rows;row+=4) {
+                int w = Math.min(4,columns-col), h = Math.min(4,rows-row);
+                byte[] pixels = new byte[w*8*h*8];
+                for (int y=0;y<h*8;y++) for (int x=0;x<w*8;x++)
+                    if (col*8+x<pose.image().width() && row*8+y<pose.image().height())
+                        pixels[y*w*8+x]=source[(row*8+y)*pose.image().width()+col*8+x];
+                var tiles = com.openggf.game.presentation.CharacterNameComposer.tiles(
+                        new com.openggf.game.CharacterPresentation.Image(w*8,h*8,pixels));
+                pieces.add(new SpriteMappingPiece(col*8-pose.hotspotX(),row*8-pose.hotspotY(),w,h,
+                        nextTile,false,false,group.nativeArtWord() >>> 13 & 3,priority));
+                for (var tile : tiles) { patterns[nextTile]=tile; patternBanks.put(nextTile++,nextBank); }
+            }
+            colors.put(nextBank++,portrait.rgb());
+            groups.add(new SpriteGroup(group.nativeSlot(),group.drawPriority(),group.x(),group.y(),
+                    group.mappingKey(),group.mappingFrame(),group.nativeArtWord(),pieces));
+        }
+        var scene = new Scene(nativeScene.phase(),nativeScene.frame(),nativeScene.planeA(),nativeScene.planeB(),
+                new PatternBank(patterns),nativeScene.palettes(),groups,nativeScene.horizontalScrollA(),nativeScene.verticalScrollA());
+        scene.portraitBanks=Map.copyOf(patternBanks); scene.portraitPalettes=Map.copyOf(colors);
+        return scene;
     }
 
     private void mode(S3kCompetitionScreen.MenuView view, List<SpriteGroup> groups) throws IOException {

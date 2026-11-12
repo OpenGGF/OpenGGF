@@ -4,7 +4,7 @@ import java.util.Objects;
 
 /** Immutable host-interpreted policy values. They cannot read or mutate a gameplay world. */
 @com.openggf.game.ModApi
-public sealed interface MutatorPolicy permits MutatorPolicy.DrySonicGravity,
+public sealed interface MutatorPolicy permits CharacterSuperFormPolicy, MutatorPolicy.DrySonicGravity,
         MutatorPolicy.PlayerStealth, MutatorPolicy.Ringfall, MutatorPolicy.BigHead,
         MutatorPolicy.MonitorFilter, MutatorPolicy.NoCheckpoints, MutatorPolicy.NoRings,
         MutatorPolicy.GameplaySpeed, MutatorPolicy.NoSpecialStages, MutatorPolicy.NoBonusStages,

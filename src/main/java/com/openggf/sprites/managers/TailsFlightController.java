@@ -1,5 +1,7 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
@@ -68,7 +70,10 @@ public final class TailsFlightController {
             if (ySpeed < -0x100) {
                 state = 1;
             } else {
-                ySpeed -= 0x20;
+                // Tails_Move_FlySwim (sonic3k.asm:27632-27654): native $20 acceleration.
+                // Solar is an explicit mod extension.
+                ySpeed -= sprite.isSuperSonic() && PlayableArchetype.declares(sprite,
+                        com.openggf.game.CharacterDefinition.MovementAbility.SUPER_FLIGHT_LIFT) ? 0x40 : 0x20;
                 state = (state + 1) & 0xFF;
                 if (state == 0x20) {
                     state = 1;
@@ -100,7 +105,8 @@ public final class TailsFlightController {
         sprite.setDoubleJumpProperty((byte) 0);
     }
 
-    private void applyAnimation(boolean carryingMainCharacter) {
+    /** Native flight/swim pose selection, shared with creator sheets using private animation IDs. */
+    public CanonicalAnimation selectAnimation(boolean carryingMainCharacter) {
         CanonicalAnimation animation;
         if (PlayerFluidContextAccess.movementUnderwater(sprite)) {
             if ((sprite.getDoubleJumpProperty() & 0xFF) == 0) {
@@ -124,7 +130,11 @@ public final class TailsFlightController {
                     : CanonicalAnimation.TAILS_FLY;
         }
 
-        int animationId = sprite.resolveAnimationId(animation);
+        return animation;
+    }
+
+    private void applyAnimation(boolean carryingMainCharacter) {
+        int animationId = sprite.resolveAnimationId(selectAnimation(carryingMainCharacter));
         if (animationId >= 0) {
             sprite.setAnimationId(animationId);
             if (sprite.getForcedAnimationId() >= 0) {
