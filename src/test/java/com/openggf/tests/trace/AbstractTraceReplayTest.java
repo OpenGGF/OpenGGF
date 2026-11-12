@@ -1220,7 +1220,7 @@ public abstract class AbstractTraceReplayTest {
             case DATA_SELECT -> 0x18;
             case CREDITS_TEXT, CREDITS_DEMO, TRY_AGAIN_END, ENDING_CUTSCENE, EDITOR,
                     BONUS_STAGE, LEGAL_DISCLAIMER, NATIVE_MOD_NOTICE, MOD_SCENE,
-                    OPTIONS, COMPETITION_MENU, COMPETITION, COMPETITION_RESULTS -> null;
+                    OPTIONS, COMPETITION_MENU, COMPETITION, COMPETITION_RESULTS, BLUE_SPHERES -> null;
         };
     }
 

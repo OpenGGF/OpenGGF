@@ -3038,6 +3038,7 @@ FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId S1
 FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId S2
 FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId S3K
 FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId STANDALONE
+FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode BLUE_SPHERES
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode BONUS_STAGE
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode COMPETITION
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode COMPETITION_MENU

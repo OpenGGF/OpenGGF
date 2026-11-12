@@ -1072,6 +1072,7 @@ public class GameLoop {
     }
 
     private void finishMasterTitleFrame() {
+        if (nativeMenuFlow.launchPendingExtra()) return;
         if (pendingTitleEntryOpen != null && !resolveFadeManager().isActive()) {
             Runnable open = pendingTitleEntryOpen;
             pendingTitleEntryOpen = null;
@@ -1968,6 +1969,9 @@ public class GameLoop {
     private Runnable pendingHostedRunLaunch;
     private Runnable pendingTitleEntryOpen;
 
+    void openNativeExtra(com.openggf.game.nativemenu.NativeExtra extra) { nativeMenuFlow.openNativeExtra(extra); }
+    void requestNativeExtraOpen(com.openggf.game.nativemenu.NativeExtra extra) { nativeMenuFlow.requestExtra(extra); }
+
     /** Opens a mod title entry once the master title's update has returned, behind a fade. */
     void requestTitleEntryOpen(Runnable open) {
         pendingTitleEntryOpen = Objects.requireNonNull(open, "open");
@@ -2700,19 +2704,6 @@ public class GameLoop {
         return nativeMenuFlow.resolveTitleActionRoute(titleScreen);
     }
 
-    private DataSelectPresentationResolution resolveDataSelectPresentation() {
-        return nativeMenuFlow.resolveDataSelectPresentation();
-    }
-
-
-    private void executeTitleActionRoute(TitleActionRoute route, int zone, int act) {
-        nativeMenuFlow.executeTitleActionRoute(route, zone, act);
-    }
-
-    private void openNativeTitleMode(boolean options) {
-        nativeMenuFlow.openNativeTitleMode(options);
-    }
-
     void openHostedArenaScreen(com.openggf.game.nativemenu.NativeMenuScreen screen) {
         nativeMenus.open(screen);
     }
@@ -2748,6 +2739,7 @@ public class GameLoop {
         userRecordingSessionLauncher.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
         pendingHostedRunLaunch = null;
         pendingTitleEntryOpen = null;
+        nativeMenuFlow.requestExtra(null);
         hostedRunReturn = ignored -> { };
         hostedRuns.end(RunEndReason.ABORTED);
         specialStageLifecycle.retireForSessionReset();

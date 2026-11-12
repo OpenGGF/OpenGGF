@@ -2292,13 +2292,25 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			TitleContentImportAccess.bind(screen, this::openContentImport);
 		screen.setEnabledModsByGame(enabledTitleModsByGame());
 		com.openggf.game.MasterTitleCatalog.bind(screen, this::masterTitleEntries);
-		if (ModSubsystem.current().policy().mayScanAtBoot()) {
+		boolean modsAtBoot = ModSubsystem.current().policy().mayScanAtBoot();
+		if (modsAtBoot) {
 			screen.setModManagerScreenFactory(font -> ModSubsystem.current().createManager(font));
 			screen.setModManagerApplyHandler(this::reloadExternalContentAtTitle);
-			List<com.openggf.mods.code.OwnedTitleEntry> titleEntries = modRuntime.titleEntries();
-			screen.setTitleEntries(titleEntries.stream().map(com.openggf.mods.code.OwnedTitleEntry::label).toList(),
-					(games, index) -> gameLoop.requestTitleEntryOpen(
-							() -> openTitleEntryScene(titleEntries.get(index), games)));
+		}
+		// Built-in extras come first; each launches its host game, not a game of its own.
+		List<com.openggf.game.nativemenu.NativeExtra> extras =
+				com.openggf.game.BuiltInNativeExtras.available(romManager);
+		List<com.openggf.mods.code.OwnedTitleEntry> titleEntries =
+				modsAtBoot ? modRuntime.titleEntries() : List.of();
+		List<String> extraLabels = new ArrayList<>();
+		for (var extra : extras) extraLabels.add(extra.label());
+		for (var entry : titleEntries) extraLabels.add(entry.label());
+		if (!extraLabels.isEmpty()) {
+			screen.setTitleEntries(extraLabels, !extras.isEmpty(), (games, index) -> {
+				if (index < extras.size()) gameLoop.requestNativeExtraOpen(extras.get(index));
+				else gameLoop.requestTitleEntryOpen(
+						() -> openTitleEntryScene(titleEntries.get(index - extras.size()), games));
+			});
 		}
 		return screen;
 	}
@@ -3134,7 +3146,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		projectionMatrix.identity().ortho2D(0, (float) projectionWidth, 0, (float) realHeight);
 		projectionMatrix.get(matrixBuffer);
 
-		renderDispatcher.applyClearColor(getCurrentGameMode(), entryShowsLevel(),
+		renderDispatcher.applyClearColor(getCurrentGameMode(), entryPresentation(),
 				clearActions);
 		glScissor(viewportX, viewportY, viewportWidth, viewportHeight);
 		glEnable(GL_SCISSOR_TEST);
@@ -3489,7 +3501,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 					TITLE_SCREEN, CONTINUE_SCREEN, DATA_SELECT, LEVEL_SELECT, EDITOR, CREDITS_TEXT,
 					CREDITS_DEMO, MASTER_TITLE_SCREEN, LEGAL_DISCLAIMER, TRY_AGAIN_END,
                     ENDING_CUTSCENE, BONUS_STAGE, NATIVE_MOD_NOTICE, MOD_SCENE,
-                    OPTIONS, COMPETITION_MENU, COMPETITION, COMPETITION_RESULTS -> true;
+                    OPTIONS, COMPETITION_MENU, COMPETITION, COMPETITION_RESULTS, BLUE_SPHERES -> true;
 		};
 		boolean renderedState = switch (Objects.requireNonNull(state, "state")) {
 			case NORMAL, MODAL_SHADER_PICKER, PAUSED, FRAME_STEP, REWIND -> true;
@@ -4149,7 +4161,14 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	public void draw() {
-		renderDispatcher.draw(getCurrentGameMode(), entryShowsLevel(), debugViewEnabled, debugState, drawActions);
+		renderDispatcher.draw(getCurrentGameMode(), entryPresentation(), debugViewEnabled, debugState, drawActions);
+	}
+
+	/** A stage launched from a native screen fades to white over that screen, not a level. */
+	private EngineRenderDispatcher.EntryPicture entryPresentation() {
+		boolean level = entryShowsLevel(); // Only a live stage entry may resolve the active provider.
+		return EngineRenderDispatcher.EntryPicture.of(level, level && GameLoopNativeMenus.entryShowsNativeMenu(
+				gameLoop.getNativeMenuScreen(), gameLoop.getActiveSpecialStageProvider()));
 	}
 
 	/**

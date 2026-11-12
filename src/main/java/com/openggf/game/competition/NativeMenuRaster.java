@@ -30,13 +30,27 @@ public final class NativeMenuRaster {
 
     private NativeMenuRaster() { }
 
-    public record Plane(int widthTiles, int heightTiles, int[] words, int horizontalScroll, int verticalScroll) {
+    /**
+     * One scroll plane. {@code lineScroll}, when present, holds one horizontal
+     * scroll value per display line (an H_scroll_buffer in per-line mode) and
+     * replaces {@code horizontalScroll}.
+     */
+    public record Plane(int widthTiles, int heightTiles, int[] words, int horizontalScroll, int verticalScroll,
+                        int[] lineScroll) {
         public Plane {
             if (widthTiles <= 0 || heightTiles <= 0 || words.length != widthTiles * heightTiles)
                 throw new IllegalArgumentException("Native plane geometry and words disagree");
+            if (lineScroll != null && lineScroll.length != HEIGHT)
+                throw new IllegalArgumentException("Per-line scroll needs one value per display line");
             words = words.clone();
+            lineScroll = lineScroll == null ? null : lineScroll.clone();
+        }
+        public Plane(int widthTiles, int heightTiles, int[] words, int horizontalScroll, int verticalScroll) {
+            this(widthTiles, heightTiles, words, horizontalScroll, verticalScroll, null);
         }
         @Override public int[] words() { return words.clone(); }
+        @Override public int[] lineScroll() { return lineScroll == null ? null : lineScroll.clone(); }
+        int scrollAt(int y) { return lineScroll == null ? horizontalScroll : lineScroll[y]; }
     }
 
     public record Picture(int[] indexedPixels, java.util.Map<Integer, int[]> portraitPalettes) {
@@ -128,7 +142,7 @@ public final class NativeMenuRaster {
     }
 
     private static int planePixel(Plane plane, Pattern[] patterns, int x, int y) {
-        int sourceX = Math.floorMod(x - plane.horizontalScroll, plane.widthTiles * 8);
+        int sourceX = Math.floorMod(x - plane.scrollAt(y), plane.widthTiles * 8);
         int sourceY = Math.floorMod(y + plane.verticalScroll, plane.heightTiles * 8);
         int word = plane.words[sourceY / 8 * plane.widthTiles + sourceX / 8];
         int pixel = patternPixel(patterns, word & 0x7FF, sourceX & 7, sourceY & 7,

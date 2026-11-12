@@ -1207,6 +1207,15 @@ candidate remains `0.7.0`; descriptor topology/status and published baselines
 are unchanged. Competition activation still requires a connected native session,
 arena and results provider; the mode names alone expose no playable product.
 
+### Blue Spheres host mode (2026-11-12)
+
+The S&K Blue Spheres extra adds one appended `GameMode` value, `BLUE_SPHERES`,
+for its native title, level-code menu and results screens. Existing enum
+positions are unchanged. The Blue Spheres session, stage generator and
+special-stage return route are engine internals outside the creator surface.
+The exact mutable `0.7` pin gains only that field; the candidate remains
+`0.7.0`, and descriptor topology/status and published baselines are unchanged.
+
 ### Stageplay unified worlds (2026-10-22)
 
 The unpublished engine-aligned 0.7.0 candidate has one `LIVE` world policy.

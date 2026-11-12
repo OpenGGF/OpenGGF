@@ -146,7 +146,7 @@ and on Start, with set-for-this-game values in amber.
 | From the game card | Reaches |
 |---|---|
 | Down | **Start**, **Game Setup** and **Recordings** |
-| Up | Engine-wide tabs: **Mods**, **Settings**, **Extras** (mod-added modes such as the bundled **Time Attack** mod), **Advanced** and **Quit** |
+| Up | Engine-wide tabs: **Mods**, **Settings**, **Extras** (**Blue Spheres** and mod-added modes such as the bundled **Time Attack** mod), **Advanced** and **Quit** |
 | Back | Asks whether to quit (from any other row, Back returns to the game card) |
 
 The footer shows only the keys that work on the focused row, as key caps or your
