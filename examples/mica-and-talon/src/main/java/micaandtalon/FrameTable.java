@@ -96,15 +96,6 @@ final class FrameTable {
         return Map.copyOf(result);
     }
 
-    /**
-     * Binds a partner's bank under another surface. A bank exists only while its table rows do, so
-     * a bank whose drawings are still pending (rows commented out in its table) links nothing.
-     */
-    static void link(Map<EndingSpriteSet.Surface, EndingSpriteSet> into, EndingSpriteSet.Surface as,
-            EndingSpriteSet bank) {
-        if (bank != null) into.put(as, bank);
-    }
-
     Map<String, Map<Integer, PresentationFrameSet.Pose>> screenBanks() {
         var result = new LinkedHashMap<String, Map<Integer, PresentationFrameSet.Pose>>();
         banks.forEach(

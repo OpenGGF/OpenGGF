@@ -514,10 +514,15 @@ class TestMicaCharacterIntegration {
     void micaSlotsCapture() throws Exception { captureStage("s3k", true); }
 
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
-    void micaS1EndingCapture() throws Exception {
-        Path output=Path.of(System.getProperty("mica.s2.captureRoot", "target/mica-s2-ending-captures")).resolve("s1");
+    void micaS1EndingCapture() throws Exception { captureS1Ending(CODE,"s1"); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
+    void talonS1EndingCelebratesInHisOwnDrawings() throws Exception { captureS1Ending("mica-and-talon:talon","s1-talon"); }
+
+    /** The Sonic 1 celebration: the ending actor draws the lead's own eight S1_ENDING frames in its palette. */
+    private void captureS1Ending(String main, String folder) throws Exception {
+        Path output=Path.of(System.getProperty("mica.s2.captureRoot", "target/mica-s2-ending-captures")).resolve(folder);
         Files.createDirectories(output);
-        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"","off",null,null,null);
+        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,main,"","off",null,null,null);
         try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
             session.applyMod(buildSample());
             session.boot(com.openggf.tests.RomTestUtils.ensureSonic1RomAvailable().toPath(),7,0,settings);
@@ -713,15 +718,15 @@ class TestMicaCharacterIntegration {
             assertNotNull(definition);
             var presentation = definition.presentationSupplier().load(CODE);
             // S1/S2 and S3K ending sets share one map; these S3K surfaces must all be present.
-            // S3K_PASSENGER (the mid-size Tornado's rider) joins them when its drawing lands.
             assertTrue(presentation.endings().keySet().containsAll(java.util.EnumSet.of(
                     EndingSpriteSet.Surface.S3K_NORMAL_POSE, EndingSpriteSet.Surface.S3K_POWERED_POSE,
                     EndingSpriteSet.Surface.S3K_EYECATCH, EndingSpriteSet.Surface.S3K_SOLO_TORNADO_PILOT,
-                    EndingSpriteSet.Surface.S3K_PLAYER, EndingSpriteSet.Surface.S3K_POWERED_PLAYER)));
+                    EndingSpriteSet.Surface.S3K_PLAYER, EndingSpriteSet.Surface.S3K_POWERED_PLAYER,
+                    EndingSpriteSet.Surface.S3K_PASSENGER, EndingSpriteSet.Surface.S3K_SOLO_MINI_TORNADO_PILOT,
+                    EndingSpriteSet.Surface.S3K_SOLO_EYECATCH)));
             // Native selectors 22 and 23 are that plane's exhaust flame and are never a character's.
-            for (var set : presentation.endings().values())
-                if (set == presentation.endings().get(EndingSpriteSet.Surface.S3K_PASSENGER))
-                    assertTrue(java.util.Set.of(14,15).containsAll(set.sprites().frames().keySet()));
+            assertEquals(java.util.Set.of(14),
+                    presentation.endings().get(EndingSpriteSet.Surface.S3K_PASSENGER).sprites().frames().keySet());
             for (var entry : presentation.endings().entrySet()) {
                 var compiled = com.openggf.game.presentation.StageSpriteCompiler.compile(entry.getValue().sprites(),null);
                 for (var frame : entry.getValue().sprites().frames().entrySet()) {
@@ -783,12 +788,15 @@ class TestMicaCharacterIntegration {
             }
             assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_PLAYER));
             assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_TORNADO_PILOT),"TALON flies a solo MICA's Tornado");
-            if (presentation.endings().containsKey(EndingSpriteSet.Surface.S3K_PASSENGER))
-                assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_PASSENGER));
+            assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_PASSENGER),"MICA rides the mid-size Tornado to the island");
+            assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_MINI_TORNADO_PILOT),"TALON flies the mid-size Tornado");
             assertDisjointEndingBanks(cache);
             assertTrue(drawn.contains(progress < 0 ? EndingSpriteSet.Surface.S3K_NORMAL_POSE : EndingSpriteSet.Surface.S3K_POWERED_POSE));
             if (progress >= 0) assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_POWERED_PLAYER));
-            if (progress == 2) assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_EYECATCH));
+            if (progress == 2) {
+                assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_EYECATCH));
+                assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_SOLO_EYECATCH),"TALON stands beside MICA on the final card");
+            }
             Files.writeString(output.resolve("state.csv"),csv);
             if (progress < 2) assertTrue(floatSeen,"native Float2 frames must run");
             assertTrue(rideSeen,"native plane ride must run");
@@ -871,8 +879,9 @@ class TestMicaCharacterIntegration {
 
     /**
      * A Tails-role creator lead in the S3K ending: its fall takes Tails's script (mapping ids
-     * $B5..$BC, never Sonic's $C8..$CF), its partner sits in the Sonic seat of the cockpit, and on
-     * the final card the partner fills the Sonic seat. Regression for the 2026-11-12 endings check.
+     * $B5..$BC, never Sonic's $C8..$CF), its partner sits in the Sonic seat of both cockpits, it
+     * rides the mid-size Tornado itself, and the final card seats both. Regression for the
+     * 2026-11-12 endings check.
      */
     private void assertTalonS3kEnding(int progress) throws Exception {
         String talon="mica-and-talon:talon";
@@ -902,8 +911,12 @@ class TestMicaCharacterIntegration {
             assertFalse(sonicFloat,"a Tails-role lead never takes Sonic's float mapping ids");
             assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_TORNADO_PILOT),"MICA sits in the Sonic seat of TALON's Tornado");
             assertTrue(drawn.contains(progress < 0 ? EndingSpriteSet.Surface.S3K_NORMAL_POSE : EndingSpriteSet.Surface.S3K_POWERED_POSE));
-            if (progress == 2) assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_SOLO_EYECATCH),
-                    "MICA fills the Sonic seat of TALON's final card");
+            assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_PASSENGER),"TALON rides the mid-size Tornado to the island");
+            assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_MINI_TORNADO_PILOT),"MICA flies the mid-size Tornado");
+            if (progress == 2) {
+                assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_SOLO_EYECATCH),"MICA fills the Sonic seat of TALON's final card");
+                assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_EYECATCH),"TALON fills his own seat of the final card");
+            }
             assertDisjointEndingBanks(cache);
         } finally {
             if (previous == null) System.clearProperty("openggf.saveRoot"); else System.setProperty("openggf.saveRoot",previous);

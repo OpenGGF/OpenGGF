@@ -191,12 +191,16 @@ Sonic seat, selector 11) and her figure in the Sonic seat of the final S3 graphi
 the S3K ending TALON falls on his own flight frames: a Tails-role lead takes Tails's float
 script, whose mapping ids his sheet aliases.
 
-These ending drawings are still to come, with their rows commented out in the tables:
-`endings/s1/ending-00..07.png` (the Sonic 1 celebration, `S1_ENDING`; until then the host
-draws its own ending actor), `endings/eyecatch-0a.png` and `-0b.png` (the final S3 graphics
-card, `S3K_EYECATCH` selectors 10 and 11, 24×40), `endings/arrival-rider-0f.png`
-(`S3K_PASSENGER` selector 15, 16×16) and `endings/arrival-pilot-0c.png`
-(`S3K_MINI_TORNADO_PILOT` selector 12, 16×8).
+`endings/s1/ending-00..07.png` are his Sonic 1 celebration (`S1_ENDING`, native EndSonic
+selectors 0 to 7: stand, look up, the emerald wait, the crouch, the leap and the close-up).
+`endings/eyecatch-0a.png` and `-0b.png` are his figure on the final S3 graphics card
+(`S3K_EYECATCH` selectors 10 and 11, 24×40), which a MICA lead also seats beside her.
+`endings/arrival-rider-0f.png` (`S3K_PASSENGER` selector 15, 16×24) and
+`endings/arrival-pilot-0c.png` (`S3K_MINI_TORNADO_PILOT` selector 12, 16×8) are the mid-size
+Tornado's rider and cockpit head. The ten larger drawings were generated in the sheet's
+flat-colour, heavy-line style and reduced with the sheet pipeline; the two arrival sprites
+were placed by hand from his own drawings. Prompts, source hashes, factors and the line and
+ink measurements are in `production/talon/endings/celebration-generation.json`.
 
 `endings/final-pilot/` contains the front-view cockpit overlay and binary native
 clear mask (184×120, selector 0, hotspot 0,0). It follows the independently

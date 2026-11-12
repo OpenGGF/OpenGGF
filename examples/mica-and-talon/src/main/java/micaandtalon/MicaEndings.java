@@ -29,9 +29,9 @@ final class MicaEndings {
         // partner. To keep the host's own search photos for a solo MICA, drop the S2_SOLO_PHOTOS line.
         result.put(EndingSpriteSet.Surface.S2_SOLO_PHOTOS,
                 companion.get(EndingSpriteSet.Surface.S2_PHOTOS));
-        FrameTable.link(result, EndingSpriteSet.Surface.S3K_SOLO_MINI_TORNADO_PILOT,
+        result.put(EndingSpriteSet.Surface.S3K_SOLO_MINI_TORNADO_PILOT,
                 companion.get(EndingSpriteSet.Surface.S3K_MINI_TORNADO_PILOT));
-        FrameTable.link(result, EndingSpriteSet.Surface.S3K_SOLO_EYECATCH,
+        result.put(EndingSpriteSet.Surface.S3K_SOLO_EYECATCH,
                 companion.get(EndingSpriteSet.Surface.S3K_EYECATCH));
         result.putAll(FrameTable.read(assets, "art/mica/endings/final-pilot/frames.txt").endings());
         result.put(EndingSpriteSet.Surface.S2_SOLO_FINAL_TORNADO_PILOT,

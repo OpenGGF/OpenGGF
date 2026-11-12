@@ -128,9 +128,10 @@ as her solo companion: his Sonic 2 search photos (`S2_SOLO_PHOTOS`), his cockpit
 once drawn, his mid-size cockpit head and his figure on the final S3 graphics card. To keep
 the host's own photos for a solo MICA, drop the `S2_SOLO_PHOTOS` line in `MicaEndings`.
 
-Two ending drawings are still to come, with their rows commented out in the tables: `endings/s3k/arrival_rider-0e.png`
-(the rider on the mid-size Tornado, `S3K_PASSENGER` selector 14, 16×24) and
-`endings/pilot/arrival_pilot-0d.png` (that plane's cockpit head, selector 13, 16×8).
+`endings/s3k/arrival_rider-0e.png` (the rider on the mid-size Tornado, `S3K_PASSENGER`
+selector 14, 16×24) and `endings/pilot/arrival_pilot-0d.png` (that plane's cockpit head,
+`S3K_MINI_TORNADO_PILOT` selector 13, 16×8) were placed by hand from her own drawings; the
+record is in `production/talon/endings/celebration-generation.json`.
 `endings/s3k/tiny_passenger-16.png` and `-17.png` are no longer bound: they were drawn for
 native selectors 22 and 23, which are that plane's exhaust flame.
 

@@ -272,7 +272,8 @@ under the matching area heading; see the
   lead can supply its partner's Sonic 2 search photos (`S2_SOLO_PHOTOS`) and the partner's
   seat on the final S3 graphics card (`S3K_SOLO_EYECATCH`); the mid-size Tornado's rider
   and cockpit head are creator surfaces (`S3K_PASSENGER` selectors 14/15,
-  `S3K_MINI_TORNADO_PILOT`), and its exhaust flame is native again. Native Competition has no character-name
+  `S3K_MINI_TORNADO_PILOT`), and its exhaust flame is native again. TALON has his own Sonic 1
+  celebration, final-card figure and island-arrival sprites. Native Competition has no character-name
   strings. S3K Competition renders MICA/TALON with
   independent native-ID miniature banks and hotspots, per-frame native fallback
   and private palettes; configured creator team members occupy their native

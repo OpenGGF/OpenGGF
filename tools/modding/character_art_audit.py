@@ -198,18 +198,17 @@ def main():
         'native alias' if (ART/'mica/endings/pilot/2d.png').is_file() else 'fallback',
         'MicaEndings S3K_TORNADO_PILOT',evidence=citation('docs/skdisasm/sonic3k.asm','loc_5EB88'),
         notes='Sonic seat of a Tails-role lead (solo TALON); same head and hotspot 12,8 as the Tails seat')
-    # Ending surfaces whose drawings are still to come (gen-plan-endings.json, 2026-11-12). Their
-    # table rows are commented out until the images exist, so these stay fallback until then.
+    # Ending surfaces drawn on 2026-11-12 (production/talon/endings/celebration-generation.json).
     for f in range(8):
         add('talon','S1','ending celebration',f'{f:02X}',
             'authored' if (ART/'talon/endings/s1'/f'ending-{f:02x}.png').is_file() else 'fallback','TalonEndings S1_ENDING',
             evidence=citation('docs/s1disasm/_incObj/87, 88, 89 Ending Sequence Sonic, Emeralds, Logo.asm','Map_ESon'),
-            notes='Native EndSonic selectors; the host draws its own ending actor until these exist')
+            notes='Native EndSonic selectors; without them the host draws its own ending actor')
     for character,rider,head in [('mica','arrival_rider-0e.png','pilot/arrival_pilot-0d.png'),('talon','arrival-rider-0f.png','arrival-pilot-0c.png')]:
         folder=ART/character/'endings'/('s3k' if character=='mica' else '')
         add(character,'S3K','mid-size Tornado rider',rider[-6:-4].upper(),
             'authored' if (folder/rider).is_file() else 'fallback','S3K_PASSENGER',
-            evidence=citation('docs/skdisasm/sonic3k.asm','byte_5ED0E'),notes='Island arrival and Angel Island return; 14 Sonic seat 16x24, 15 Tails seat 16x16')
+            evidence=citation('docs/skdisasm/sonic3k.asm','byte_5ED0E'),notes='Island arrival and Angel Island return; 14 Sonic seat 16x24, 15 Tails seat (native 16x16; TALON stands 16x24)')
         add(character,'S3K','mid-size Tornado cockpit head',head[-6:-4].upper(),
             'authored' if (ART/character/'endings'/head).is_file() else 'fallback','S3K_MINI_TORNADO_PILOT',
             evidence=citation('docs/skdisasm/sonic3k.asm','byte_5ED0E'),notes='16x8; 12 Tails seat, 13 Sonic seat; paired or explicit solo companion ownership')

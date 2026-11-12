@@ -21,7 +21,7 @@ final class TalonEndings {
                 companion.get(EndingSpriteSet.Surface.S2_TORNADO_PILOT));
         result.put(EndingSpriteSet.Surface.S3K_SOLO_TORNADO_PILOT,
                 companion.get(EndingSpriteSet.Surface.S3K_TORNADO_PILOT));
-        FrameTable.link(result, EndingSpriteSet.Surface.S3K_SOLO_MINI_TORNADO_PILOT,
+        result.put(EndingSpriteSet.Surface.S3K_SOLO_MINI_TORNADO_PILOT,
                 companion.get(EndingSpriteSet.Surface.S3K_MINI_TORNADO_PILOT));
         // MICA takes the Sonic seat beside TALON on the final S3 graphics card.
         result.put(EndingSpriteSet.Surface.S3K_SOLO_EYECATCH,
