@@ -174,7 +174,7 @@ def main():
             add('talon',g,'native presentation','all','N/A',notes='S1 has no native Tails bank; TALON supplies mod-defined Sonic-host surface selectors separately.')
         else:
             add('talon',g,'presentation contract','all','authored' if talon_contract else 'fallback','TalonPresentation.java',rank='normal early-zone play',notes='Native actor ownership selects solo Tails-role main or active follower independently from the Sonic leader.')
-    add('mica','S2','ending search photos','1..3','N/A',notes='Active first sidekick owns these selectors; photo 0 remains native. MICA may own them only when selected as sidekick, outside agreed Sonic lead role.')
+    add('mica','S2','ending search photos','1..3','N/A',notes='Active first sidekick owns these selectors; photo 0 remains native. A solo MICA shows her partner: MicaEndings binds TALON photos as S2_SOLO_PHOTOS.')
     def talon_ending(group, frame):
         path=ART/'talon/endings'/f'{group}-{frame:02x}.png'
         return path.is_file()
@@ -194,6 +194,29 @@ def main():
     add('mica','S3K','Tornado pilot','0C',
         'native alias' if (ART/'mica/endings/pilot/2d.png').is_file() else 'fallback',
         'MicaEndings S3K_TORNADO_PILOT',notes='Solo companion bank aliases authored S2 head; hotspot 12,8')
+    add('mica','S3K','Tornado pilot','0B',
+        'native alias' if (ART/'mica/endings/pilot/2d.png').is_file() else 'fallback',
+        'MicaEndings S3K_TORNADO_PILOT',evidence=citation('docs/skdisasm/sonic3k.asm','loc_5EB88'),
+        notes='Sonic seat of a Tails-role lead (solo TALON); same head and hotspot 12,8 as the Tails seat')
+    # Ending surfaces whose drawings are still to come (gen-plan-endings.json, 2026-11-12). Their
+    # table rows are commented out until the images exist, so these stay fallback until then.
+    for f in range(8):
+        add('talon','S1','ending celebration',f'{f:02X}',
+            'authored' if (ART/'talon/endings/s1'/f'ending-{f:02x}.png').is_file() else 'fallback','TalonEndings S1_ENDING',
+            evidence=citation('docs/s1disasm/_incObj/87, 88, 89 Ending Sequence Sonic, Emeralds, Logo.asm','Map_ESon'),
+            notes='Native EndSonic selectors; the host draws its own ending actor until these exist')
+    for character,rider,head in [('mica','arrival_rider-0e.png','pilot/arrival_pilot-0d.png'),('talon','arrival-rider-0f.png','arrival-pilot-0c.png')]:
+        folder=ART/character/'endings'/('s3k' if character=='mica' else '')
+        add(character,'S3K','mid-size Tornado rider',rider[-6:-4].upper(),
+            'authored' if (folder/rider).is_file() else 'fallback','S3K_PASSENGER',
+            evidence=citation('docs/skdisasm/sonic3k.asm','byte_5ED0E'),notes='Island arrival and Angel Island return; 14 Sonic seat 16x24, 15 Tails seat 16x16')
+        add(character,'S3K','mid-size Tornado cockpit head',head[-6:-4].upper(),
+            'authored' if (ART/character/'endings'/head).is_file() else 'fallback','S3K_MINI_TORNADO_PILOT',
+            evidence=citation('docs/skdisasm/sonic3k.asm','byte_5ED0E'),notes='16x8; 12 Tails seat, 13 Sonic seat; paired or explicit solo companion ownership')
+    for f in [0x0A,0x0B]:
+        add('talon','S3K','final card figure',f'{f:02X}',
+            'authored' if (ART/'talon/endings'/f'eyecatch-{f:02x}.png').is_file() else 'fallback','TalonEndings S3K_EYECATCH',
+            evidence=citation('docs/skdisasm/sonic3k.asm','AniRaw_6026B'),notes='Tails seat body 24x40; also the partner seat of a MICA lead (S3K_SOLO_EYECATCH)')
     add('talon','S2','Tornado pilot','native pilot sequence','native alias' if talon_ending('pilot',16) else 'fallback','native 24-step / nine-clock sequence',evidence=citation('docs/s2disasm/s2.asm','ObjB2_Animate_Pilot'),notes='S2_TORNADO_PILOT supplies cockpit crops in ending and SCZ/WFZ. Native DPLC/timing retained; paired and solo companion selection wired.')
     add('talon','S3K','Tornado pilot','0C','native alias' if talon_ending('pilot',16) else 'fallback',
         'TalonEndings S3K_TORNADO_PILOT: S2 side-view cockpit crop; hotspot 12,8',

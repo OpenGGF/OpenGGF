@@ -13,6 +13,18 @@ reconcile current desired identities after checkpoint removal without restoring 
 The descriptor and `ModApiVersion` description remain unpublished candidate `0.7.0`;
 the normalized signature pin includes these additions. No published baseline changes.
 
+`EndingSpriteSet.Surface` gains four constants, appended to preserve existing ordinals:
+`S2_SOLO_PHOTOS` (a solo lead's companion search photos), `S3K_MINI_TORNADO_PILOT` and
+`S3K_SOLO_MINI_TORNADO_PILOT` (the mid-size Tornado's cockpit head, native selectors 12 and 13),
+and `S3K_SOLO_EYECATCH` (the partner's seat on the final S3 graphics card). Three existing
+constants change meaning. `S3K_TORNADO_PILOT` and its solo form also accept selector 11, the
+Sonic seat a Tails-role lead flies with. `S3K_EYECATCH` also accepts the Tails-seat body
+selectors 10 and 11. `S3K_PASSENGER` now addresses the mid-size Tornado's rider, native
+selectors 14 and 15; it previously addressed selectors 22 and 23, which are that plane's exhaust
+flame, so any set authored for those selectors must be redrawn for the rider. The mutable `0.7`
+signature pin and `ModApiVersion` description include the additions; the descriptor remains
+unpublished candidate `0.7.0` with no published baseline.
+
 The five saved rewind allowance preferences (`REWIND_BUDGET_SCOPE`,
 `REWIND_BUDGET_SECONDS`, `REWIND_REFILL_ON_LIFE_LOSS`, `REWIND_BONUS_STAGES`,
 `REWIND_SPECIAL_STAGES`) are appended to `SonicConfiguration`, preserving existing

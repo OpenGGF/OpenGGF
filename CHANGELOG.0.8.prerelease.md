@@ -262,7 +262,16 @@ under the matching area heading; see the
   for solo TALON and TALON pilot for MICA; ending and SCZ/WFZ support both native
   pilot mapping families, and Tails-role ending art binds its own animation families.
   The separate final front-view cockpit now selects the companion too, using
-  bounded native clear masks and independent ending-surface pattern residency. Native Competition has no character-name
+  bounded native clear masks and independent ending-surface pattern residency. Ending
+  fixes: in Sonic 2 a creator lead is drawn on the Tornado again under the level's sky
+  (its playable bank no longer overwrites the level tiles, and wait/walk frames come from
+  the bound sheet); in S3K every ending surface owns its pattern bank, so the rider is no
+  longer doubled and the cockpit no longer corrupts through the credits; a Tails-role lead
+  falls on Tails's float script and is flown by its partner from the Sonic seat; a solo
+  lead can supply its partner's Sonic 2 search photos (`S2_SOLO_PHOTOS`) and the partner's
+  seat on the final S3 graphics card (`S3K_SOLO_EYECATCH`); the mid-size Tornado's rider
+  and cockpit head are creator surfaces (`S3K_PASSENGER` selectors 14/15,
+  `S3K_MINI_TORNADO_PILOT`), and its exhaust flame is native again. Native Competition has no character-name
   strings. S3K Competition renders MICA/TALON with
   independent native-ID miniature banks and hotspots, per-frame native fallback
   and private palettes; configured creator team members occupy their native

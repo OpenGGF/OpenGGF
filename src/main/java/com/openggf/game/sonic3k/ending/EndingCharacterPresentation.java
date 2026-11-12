@@ -15,20 +15,59 @@ import java.util.*;
 final class EndingCharacterPresentation {
     private static final Map<Object, Map<EndingSpriteSet.Surface, PlayerSpriteRenderer>> CACHE = new WeakHashMap<>();
     private EndingCharacterPresentation() { }
+    /** Atlas slots, in a fixed order: several of these surfaces are on screen in the same frame. */
+    private static final List<EndingSpriteSet.Surface> BANKS = List.of(
+            EndingSpriteSet.Surface.S3K_TORNADO_PILOT, EndingSpriteSet.Surface.S3K_NORMAL_POSE,
+            EndingSpriteSet.Surface.S3K_POWERED_POSE, EndingSpriteSet.Surface.S3K_PASSENGER,
+            EndingSpriteSet.Surface.S3K_EYECATCH, EndingSpriteSet.Surface.S3K_PLAYER,
+            EndingSpriteSet.Surface.S3K_POWERED_PLAYER, EndingSpriteSet.Surface.S3K_MINI_TORNADO_PILOT,
+            EndingSpriteSet.Surface.S3K_SOLO_EYECATCH);
+    private static final int BANK_SLOT = 0x1000;
+    /**
+     * Each compiled set is a DPLC bank that holds only its current frame. Sets that share an
+     * address overwrite one another's tiles whenever two of them are drawn in one picture (the
+     * rider and the cockpit, the float sprite and the passenger), so every surface owns a slot.
+     */
+    private static int bankBase(EndingSpriteSet.Surface surface, EndingSpriteSet set) {
+        int slot = BANKS.indexOf(surface);
+        if (slot < 0) throw new IllegalArgumentException("Not an S3K ending draw surface: " + surface);
+        int largest = set.sprites().frames().values().stream().mapToInt(frame ->
+                ((frame.image().width() + 7) / 8) * ((frame.image().height() + 7) / 8)).max().orElse(0);
+        if (largest > BANK_SLOT) throw new IllegalArgumentException("Ending frame exceeds its pattern slot: " + surface);
+        return com.openggf.graphics.PatternAtlasRange.CHARACTER_STAGE_PRESENTATION.base() + slot * BANK_SLOT;
+    }
+    /**
+     * Whose art a draw key shows. The two cockpits belong to the partner. {@code S3K_SOLO_EYECATCH}
+     * as a draw key is the final card's other hero seat: the first sidekick's own eyecatch set,
+     * or the lead's companion set on a solo team. Every other surface is the lead's own.
+     */
+    static EndingSpriteSet resolve(EndingSpriteSet.Surface surface) throws IOException {
+        return switch (surface) {
+            case S3K_TORNADO_PILOT, S3K_MINI_TORNADO_PILOT ->
+                    com.openggf.game.presentation.EndingCharacterPresentation.pilot(surface);
+            case S3K_SOLO_EYECATCH -> com.openggf.game.presentation.EndingCharacterPresentation.companion(
+                    EndingSpriteSet.Surface.S3K_EYECATCH, EndingSpriteSet.Surface.S3K_SOLO_EYECATCH);
+            default -> com.openggf.game.presentation.EndingCharacterPresentation.get(surface);
+        };
+    }
+    /** Whether the resolved set for {@code surface} authors {@code frame}; a frame with no surface is native. */
+    static boolean supplies(EndingSpriteSet.Surface surface, int frame) {
+        if (surface == null) return false;
+        try {
+            var set = resolve(surface);
+            return set != null && set.sprites().frames().containsKey(frame);
+        } catch (IOException failure) { throw new UncheckedIOException(failure); }
+    }
     static boolean draw(ObjectServices services, EndingSpriteSet.Surface surface, int frame,
             int x, int y, boolean flipX, boolean flipY, boolean high, int bucket) {
-        var definition = StageCharacterPresentation.activeDefinition();
-        boolean sidekick = surface == EndingSpriteSet.Surface.S3K_TORNADO_PILOT;
-        if (!sidekick && (definition == null || definition.presentationSupplier() == null)) return false;
         try {
-            var presentation = sidekick ? null : definition.presentationSupplier().load(definition.key().persisted());
-            var set = sidekick ? com.openggf.game.presentation.EndingCharacterPresentation.pilot(surface)
-                    : presentation == null ? null : presentation.endings().get(surface);
+            var set = resolve(surface);
             if (set == null || !set.sprites().frames().containsKey(frame)) return false;
             var renderers = CACHE.computeIfAbsent(services.currentLevel(), ignored -> new HashMap<>());
             var renderer = renderers.get(surface);
             if (renderer == null) {
-                renderer = new PlayerSpriteRenderer(StageSpriteCompiler.compile(set.sprites(), null), services.graphicsManager());
+                renderer = new PlayerSpriteRenderer(StageSpriteCompiler.compile(set.sprites(), null, bankBase(surface, set)),
+                        services.graphicsManager());
                 var context = RenderContext.createSidekickContext(GameServices.module().getGameId());
                 var palette = new Palette();
                 int[] rgb = set.rgb();

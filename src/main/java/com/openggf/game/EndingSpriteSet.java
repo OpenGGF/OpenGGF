@@ -24,12 +24,38 @@ public record EndingSpriteSet(StageSpriteSet sprites, int[] rgb,
         S2_FINAL_TORNADO_PILOT,
         /** Main-owned companion version of the final Enigma plane cockpit. */
         S2_SOLO_FINAL_TORNADO_PILOT,
-        /** First sidekick supplies native Sonic-plane pilot selector 12. */
+        /**
+         * First sidekick supplies the full-size Sonic-plane cockpit: selector 12 is the Tails seat
+         * (Sonic- and Knuckles-role leads); selector 11 is the Sonic seat a Tails-role lead flies with.
+         */
         S3K_TORNADO_PILOT,
-        /** Main-owned companion cockpit art for a solo team, native selector 12. */
+        /** Main-owned companion cockpit art for a solo team; the same selectors 12 and 11. */
         S3K_SOLO_TORNADO_PILOT,
-        S3K_NORMAL_POSE, S3K_POWERED_POSE, S3K_PASSENGER, S3K_EYECATCH,
-        S3K_PLAYER, S3K_POWERED_PLAYER
+        S3K_NORMAL_POSE, S3K_POWERED_POSE,
+        /**
+         * The lead standing on the mid-size Tornado that reaches the island (and returns to Angel
+         * Island): native Sonic-plane-ending rider selector 14 (Sonic seat, 16x24) or 15 (Tails
+         * seat, 16x16). The plane and its exhaust flame stay native.
+         */
+        S3K_PASSENGER, S3K_EYECATCH,
+        S3K_PLAYER, S3K_POWERED_PLAYER,
+        /** Main-owned companion search photos when no sidekick is configured; selectors 1..3. */
+        S2_SOLO_PHOTOS,
+        /**
+         * First sidekick supplies the mid-size Tornado's cockpit head, 16x8: native selector 12
+         * (Tails seat) or 13 (the Sonic seat a Tails-role lead flies with).
+         */
+        S3K_MINI_TORNADO_PILOT,
+        /** Main-owned companion cockpit head for a solo team; the same selectors 12 and 13. */
+        S3K_SOLO_MINI_TORNADO_PILOT,
+        /**
+         * Main-owned companion figure for the other hero seat of the final S3 graphics card on a
+         * solo team. Seats use {@link #S3K_EYECATCH}'s selectors: 1..4 for the Sonic seat, 10 and
+         * 11 for the Tails seat body (its native tail, 5..9, is not drawn beside a custom body).
+         * A lead supplies its own seat through {@link #S3K_EYECATCH}; a configured creator
+         * sidekick supplies the other seat through its own {@link #S3K_EYECATCH}.
+         */
+        S3K_SOLO_EYECATCH
     }
     public EndingSpriteSet {
         Objects.requireNonNull(sprites, "sprites");

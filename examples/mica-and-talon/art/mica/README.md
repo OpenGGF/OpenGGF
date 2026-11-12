@@ -95,6 +95,18 @@ TALON pilot art. Fresh GPT Image candidates and native references stay in the
 feedback-round scratch directory; reduction and area checks are recorded in
 `production/mica/endings/pilot/provenance.json` (scale ratios 0.988–1.017).
 
+The S3K cockpit rows cover both seats: selector 12 (the Tails seat) and selector 11 (the
+Sonic seat, where MICA sits when TALON is the lead). `MicaEndings` also binds TALON's banks
+as her solo companion: his Sonic 2 search photos (`S2_SOLO_PHOTOS`), his cockpits, and,
+once drawn, his mid-size cockpit head and his figure on the final S3 graphics card. To keep
+the host's own photos for a solo MICA, drop the `S2_SOLO_PHOTOS` line in `MicaEndings`.
+
+Two ending drawings are still to come, with their rows commented out in the tables: `endings/s3k/arrival_rider-0e.png`
+(the rider on the mid-size Tornado, `S3K_PASSENGER` selector 14, 16×24) and
+`endings/pilot/arrival_pilot-0d.png` (that plane's cockpit head, selector 13, 16×8).
+`endings/s3k/tiny_passenger-16.png` and `-17.png` are no longer bound: they were drawn for
+native selectors 22 and 23, which are that plane's exhaust flame.
+
 `endings/final-pilot/` contains the front-view cockpit overlay and binary native
 clear mask (184×120, selector 0, hotspot 0,0). It follows the independently
 scrolling ending-plane backdrop. The native-pose reference, two candidate rows,

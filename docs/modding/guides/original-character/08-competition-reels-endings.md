@@ -73,11 +73,23 @@ Each game's ending has its own actors, keyed by `EndingSpriteSet.Surface`:
 | Sonic 2 | `S2_ENDING`, `S2_SUPER`, `S2_FLOAT` | leader |
 | Sonic 2 | `S2_PHOTOS` (photos 1–3), `S2_TORNADO_PILOT` | first sidekick |
 | Sonic 3 & Knuckles | `S3K_NORMAL_POSE`, `S3K_POWERED_POSE`, `S3K_PLAYER`, `S3K_POWERED_PLAYER`, `S3K_PASSENGER`, `S3K_EYECATCH` | leader |
-| Sonic 3 & Knuckles | `S3K_TORNADO_PILOT` | first sidekick |
+| Sonic 3 & Knuckles | `S3K_TORNADO_PILOT`, `S3K_MINI_TORNADO_PILOT`, the other seat's `S3K_EYECATCH` | first sidekick |
 
 Read what a native scene actually shows before you draw for it. The Sonic 2 photos
 show Tails and the animals *searching for* the missing Sonic, so they belong to the
 sidekick: TALON draws them, and MICA draws none. The first photo always stays native.
+
+A leader played solo has no sidekick to own the partner's scenes, so the leader's own
+table can name its partner's banks under the `SOLO` surfaces (`S2_SOLO_PHOTOS`,
+`S2_SOLO_TORNADO_PILOT`, `S3K_SOLO_TORNADO_PILOT`, `S3K_SOLO_MINI_TORNADO_PILOT`,
+`S3K_SOLO_EYECATCH`). `MicaEndings` binds TALON's banks this way, so a solo MICA is
+still searched for, flown and joined on the final card by TALON. Leave a `SOLO` surface
+out to keep the host's own character in that scene.
+
+Seats matter in Sonic 3 & Knuckles. A Sonic-role leader stands in the Sonic seat and
+its partner flies from the Tails seat; a Tails-role leader is the other way round. The
+cockpit, the mid-size Tornado and the final card each take a different native selector
+per seat, listed on `EndingSpriteSet.Surface`.
 
 The ending tables add one kind of row: `palette <bank> <image>`, naming the image whose
 16 colours that bank uses. The loader is short:

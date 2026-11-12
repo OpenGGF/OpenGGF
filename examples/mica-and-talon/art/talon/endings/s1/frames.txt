@@ -1,0 +1,13 @@
+# bank selector image hotspotX hotspotY; image paths are relative to this table.
+# TALON's Sonic 1 celebration: native EndSonic selectors 0..7 (Map_ESon). Sizes and hotspots are
+# the native ones MICA's table uses. Until these rows are live the host draws its own ending actor.
+# Pending drawing (endings gen-plan, id s1-talon-ending); uncomment every row with the images.
+# palette S1_ENDING ending-00.png
+# S1_ENDING 0 ending-00.png 16 20
+# S1_ENDING 1 ending-01.png 16 20
+# S1_ENDING 2 ending-02.png 16 20
+# S1_ENDING 3 ending-03.png 16 20
+# S1_ENDING 4 ending-04.png 16 20
+# S1_ENDING 5 ending-05.png 16 20
+# S1_ENDING 6 ending-06.png 16 78
+# S1_ENDING 7 ending-07.png 56 128
