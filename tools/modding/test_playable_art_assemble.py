@@ -168,7 +168,7 @@ class TalonAssemblyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             out = Path(directory)
             manifest, custom, stats = assembler.assemble(art, out)
-            self.assertEqual(282, stats['frames'])
+            self.assertEqual(297, stats['frames'])
             self.assertEqual(47, stats['animations'])
             self.assertTrue({'TAILS_FLY_ASCEND', 'TAILS_FLY_CARRY', 'TAILS_FLY_CARRY_ASCEND',
                              'TAILS_SWIM', 'TAILS_SWIM_ASCEND', 'TAILS_SWIM_CARRY',
@@ -177,7 +177,7 @@ class TalonAssemblyTests(unittest.TestCase):
             self.assertEqual(1, manifest['animations']['BLINK']['loopBackSteps'])
             self.assertEqual('next', manifest['animations']['GET_UP']['end'])
             self.assertEqual('loop-back', manifest['animations']['WAIT']['end'])
-            self.assertEqual(28, manifest['animations']['WAIT']['loopBackSteps'])
+            self.assertEqual(33, manifest['animations']['WAIT']['loopBackSteps'])   # his own idle: one stand, then the loop
             self.assertFalse((out/'mica.png').exists())
             before = {file.name: file.read_bytes() for file in out.iterdir()}
             assembler.assemble(art, out)

@@ -1939,7 +1939,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-b2",
@@ -1952,7 +1952,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-b1",
@@ -1965,7 +1965,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-b3",
@@ -1978,7 +1978,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-ac",

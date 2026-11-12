@@ -228,7 +228,11 @@ under the matching area heading; see the
   share his idle's head and line weight instead of each drawing's own, MICA's flat poses
   and her Sonic 1 title portrait are despeckled with their scale edges kept, and every slope and
   homing-dive frame of both characters, powered forms included, is re-derived
-  with a cleaner rotation. S1 creator
+  with a cleaner rotation. TALON's idle is now his own: he preens a flight feather,
+  ruffles up and catches a loose feather instead of repeating Tails' blink and yawn.
+  His victory is a two-finger salute off his goggles, and both characters' signposts
+  carry one readable portrait in all three games (MICA's peace sign, TALON's salute).
+  MICA keeps her idle. S1 creator
   forms play animated transformations. Joint native-pose carry redraws now
   keep MICA’s raised gloves against TALON’s shoes throughout his wingbeat,
   with native-style material contours and the complete S3K hanging sequence.

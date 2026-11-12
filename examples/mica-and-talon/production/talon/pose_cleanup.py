@@ -22,7 +22,7 @@ Hand patches from the record, x,y,index inside one material, are applied last.
 Second stage, since the owner's line-art feedback of 2026-11-12: lineart_pass.restyle takes the
 cleaned drawings and gives the off-style ones WAIT's head and line weight (see lineart_pass.py and
 lineart-pass.json). `cleaned()` is the first stage alone; a redrawn frame's hotspot moves with its
-origin when the head overhangs the old frame. WAIT, BLINK and VICTORY are the first stage only.
+origin when the head overhangs the old frame. wait-00 is the first stage only: it is the head the others get.
 
 Not touched here: WALK/RUN and their slopes (walk_cleanup.py), the flight and carry sets
 (tonal_reshade.py, already clean), and the drawings listed under left_alone in the record.

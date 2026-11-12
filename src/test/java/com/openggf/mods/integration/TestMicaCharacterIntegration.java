@@ -1551,7 +1551,7 @@ class TestMicaCharacterIntegration {
             var encoded = Files.readAllBytes(temp.resolve("classes/art/talon.ggfp"));
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(encoded);
             var materialized = com.openggf.level.objects.PlayableSheetMaterializer.read(encoded);
-            assertEquals(282, sheet.frames().size());
+            assertEquals(297, sheet.frames().size());
             assertEquals(47, sheet.animations().size());
             assertEquals(6, sheet.animations().get("TAILS_FLY").steps().size());
             assertEquals(6, sheet.animations().get("TAILS_FLY_TIRED").steps().size());
@@ -2072,10 +2072,39 @@ class TestMicaCharacterIntegration {
                 for (int i = 0; i < 180; i++) { session.step(null); session.renderFrame(); }
                 com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve(game + "-" + mode + "-act-results.png"));
             }
+            captureSignpostInLevel(game, mode, settings, jar, romProperty, output);
         }
         } finally {
             if (priorSaveRoot == null) System.clearProperty("openggf.saveRoot");
             else System.setProperty("openggf.saveRoot", priorSaveRoot);
+        }
+    }
+
+    /**
+     * The host's own signpost object, spawned beside the player in a booted level and stepped through its
+     * spin, so the plate that lands is the one {@code CharacterSignRenderer.draw} gives the real object.
+     * S1 Sign_Touch and S2 Obj0D start when the player is 0..$1F pixels past the post; the S3K post falls and lands.
+     * Both then lock the camera's left edge to its right limit, which is the act's end, so the right limit is
+     * first brought to where the camera stands: the post that spins is the one in view.
+     */
+    private void captureSignpostInLevel(String game, String mode,
+            com.openggf.tools.GameplayCaptureSession.Settings settings, Path jar, String romProperty, Path output) throws Exception {
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(jar); session.boot(Path.of(System.getProperty(romProperty)), 0, 0, settings);
+            for (int i = 0; i < 120; i++) session.step(null);
+            int x = session.player().getCentreX(), y = session.player().getCentreY();
+            if (!game.equals("s3k")) GameServices.camera().setMaxX(GameServices.camera().getX());
+            var spawn = new com.openggf.level.objects.ObjectSpawn(x - 8, y, 0x0D, 0, 0, false, 0);
+            assertNotNull(GameServices.level().getObjectManager().createDynamicObject(() -> switch (game) {
+                case "s1" -> new com.openggf.game.sonic1.objects.Sonic1SignpostObjectInstance(spawn);
+                case "s2" -> new com.openggf.game.sonic2.objects.SignpostObjectInstance(spawn, "Signpost");
+                default -> new com.openggf.game.sonic3k.objects.S3kSignpostInstance(x + 32, 0);
+            }));
+            for (int i = 1; i <= 300; i++) {
+                session.step(null);
+                if (i % 20 == 0) com.openggf.graphics.ScreenshotCapture.savePNG(session.render(),
+                        output.resolve(game + "-" + mode + "-signpost-" + String.format("%03d", i) + ".png"));
+            }
         }
     }
 

@@ -191,6 +191,9 @@ MICA’s run now keeps the native two-phase lean and contact clock. TALON’s fr
 flight uses the approved carry profile and wing design. His flight, carry and other
 oversized poses are redrawn to the head scale of his idle (`scale_audit.py`,
 2026-11-12); MICA’s hand-to-feet registration is unchanged.
+TALON’s idle is his own (he preens, ruffles up and catches a loose feather), his victory
+is a salute off his goggles, and both characters’ signposts carry one portrait in all three
+games (`idle_sign_victory.py`, 2026-11-12). MICA keeps her idle.
 The owner-picked concepts (2026-11-11) are rolled out: Open Cone Gilded MICA redraws
 every powered pose, and Corona Crest Solar TALON every common pose, for S2 and S3K.
 Normal TALON stands 37 px (owner rung); Solar's crest rises above that body. Gilded plates breathe from a deep amber underside to a pale-gold edge; Hyper
@@ -211,6 +214,7 @@ python3 examples/mica-and-talon/production/talon/walk_cleanup.py --check
 python3 examples/mica-and-talon/production/talon/pose_cleanup.py --check
 python3 examples/mica-and-talon/production/talon/scale_audit.py --check
 python3 examples/mica-and-talon/production/talon/lineart_pass.py --check
+python3 examples/mica-and-talon/production/idle_sign_victory.py --check
 python3 tools/modding/playable_art/style_audit.py examples/mica-and-talon/production/style-audit.json --check
 python3 examples/mica-and-talon/production/slope_sets.py --check
 python3 examples/mica-and-talon/production/mica/carried_reshade.py --check

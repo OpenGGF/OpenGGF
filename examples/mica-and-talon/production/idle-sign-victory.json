@@ -1,0 +1,997 @@
+{
+ "purpose": "Provenance and inputs of production/idle_sign_victory.py: TALON's own idle, both characters' signpost plates and the victory pass (owner request, 2026-11-12).",
+ "owner_decisions": [
+  "MICA keeps her current idle: 'it comes across as sassy, with a hand on chin for thinking.'",
+  "TALON: concept C, preen and ruffle, with the revised timing ('revised is sweet, I like it').",
+  "Sources are flat colour with near-black interior lines about one sprite pixel thick; the pipeline inks the silhouette."
+ ],
+ "generation": {
+  "model": "openai/gpt-image-2.6-sunburst",
+  "endpoint": "POST https://openrouter.ai/api/v1/images",
+  "request": {
+   "aspect_ratio": "3:2",
+   "quality": "high",
+   "output_format": "png",
+   "background": "opaque",
+   "n": 1
+  },
+  "references": "Per sheet: a pose guide of the character's own sprites re-posed by hand, the character's current sprites at 8x, and the approved model sheet. No native Sonic or Tails art.",
+  "every_attempt": "a fresh generation; no output was fed back in",
+  "gate": "interior line / reduction factor >= 0.9 sprite px; interior ink 15-30% of the pixels inside the silhouette after reduction and cleanup",
+  "prompts": {
+   "talon-idle-c-1-preen": "Use case: animation source drawings that our pipeline will shrink to tiny game sprites about 37 pixels tall. Draw CLEAN FLAT-COLOUR ILLUSTRATIONS, like cut paper or flat vector art. This is NOT pixel art: no pixel grid, no blocky stair-step edges, no dithering. Every fill is solid and flat with smooth edges, using at most 2 or 3 flat tones per material (base, one shadow, at most one light). No gradients, no glow, no texture, no highlights except where a cell asks for one. BOLD INTERIOR CONTOUR LINES: inside the figure, draw a near-black (#242424) line everywhere one part overlaps or separates from another: a wing-arm in front of the body, each group of flight feathers and the crest points, the head against the body, glove cuffs, the goggle rims and strap, the satchel strap and pouch, the top of each shoe and its toe cap, the beak, the eye and the moustache stripe. LINE WEIGHT IS THE WHOLE POINT. This image is shrunk to one 11th of its size, and any line thinner than about 9 pixels DISAPPEARS. Draw every interior line VERY THICK: 11 to 13 pixels wide in this 1536x1024 image (one 37th of the standing figure's height, about as wide as the white sole strip of his shoe), like a fat marker or the bold line of a die-cut sticker. Every line the same heavy weight, with clean edges. To leave room for lines this thick, SIMPLIFY the drawing: four crest points, three broad flight feathers on each wing, three chest bars, one simple strap. Fewer, fatter lines; if a detail cannot be drawn with a line this thick, leave the detail out. No thin lines anywhere, no hatching, no doubled lines. Do NOT draw any line around the OUTSIDE of the figure: the outer silhouette meets the magenta background with no outline at all, because our pipeline inks the silhouette itself with one uniform 1-pixel line after the reduction. Background: one plain flat magenta (#FF00FF) everywhere. No ground line, no cast shadows, no text, no numbers, no labels, no borders, no grid lines, nothing between cells. Layout: exactly 3 columns by 2 rows of equal cells, read left to right, top row first; one figure per cell, centred, fully inside its cell with a clear margin; the SAME scale in every cell (the head is the same size in all cells); feet, or the lowest point of the body, at the same height within each row; side view facing RIGHT as in image 2 unless a cell says otherwise. Proportions: match image 2 (his current in-game sprites enlarged 8x), not a realistic build and not the taller model sheet. Measured on his standing sprite: the head, from the top of the feather crest to the bottom of the beak, is 17 of his 37 pixels of height, 46% - he is about two heads tall - and the head with its swept-back crest is 62% as wide as he is tall. Short body, short legs, large simple gloves and shoes. Keep exactly this head-to-body ratio in every cell. Character: TALON, an original peregrine-falcon courier boy; loyal, nimble, cool and clever. Slate blue-grey plumage with a swept-back feather crest, a cream chest with a few short dark bars, a dark falcon moustache stripe under the eye, a yellow hooked beak, amber aviator goggles pushed up on his forehead (unless a cell says otherwise), a brown satchel strap across the chest with a small pouch at the hip, white gloves. ANATOMY RULE, the most important instruction: his wings ARE his arms. He has exactly ONE limb on each side: a feathered wing-arm that ends in a white-gloved hand. Never draw separate arms plus wings. When a hand reaches, holds or folds, the long flight feathers fold along that same forearm and trail from the wrist like a sleeve. Count the limbs in every cell: two wing-arms, two legs. Draw feathers as simple flat shapes: the crest is four or five big swept points, each wing three or four broad flight feathers with pale-grey tips; no shading inside individual feathers. Shoes exactly as in image 2: plain red high-tops with a white toe cap and a white sole strip, no laces. Flat colours: plumage slate #6D6D92 with shadow #49496D and deep #242449, light #9292B6, feather tips #DBDBDB; chest #FFFFDB with shade #DBB692; beak and goggles amber #FFB624 with shadow #B66D24; satchel #6D4924; shoes #FF4949 with shadow #B62424; gloves white. No fox features, no rotor tails. No resemblance to Tails, Jet the Hawk or any Sega character, and do not imitate Tails' idle poses. Image 1 is a rough pose guide in the same cell order as the sheet to draw: his existing sprites cut up and re-posed by hand. Follow each cell's pose, facing and limb placement, but draw every pose properly; do not copy its pixel errors or its pixel style. An empty guide cell means draw from the description alone. Image 2 is his current in-game sprites at 8x: the authority for proportions, colours and the boots or shoes (again, do not copy its pixel style). Image 3 is the approved model sheet, for face and identity only: use the normal form at the left, and ignore its line weight, its taller build, its footwear details, the ball, the dive and the glowing powered form. New idle animation 'Preen and ruffle (revised)', sheet 1 of 3 (preen). Cell 1 (scale anchor): his relaxed standing idle exactly as the first sprite in image 2: side view facing right, wing-arms at his sides, goggles up on his forehead. Cell 2: anticipation: standing tall, his near wing-arm lifting forward to waist height with the flight feathers beginning to fan, his head starting to turn down toward that wing, eye on it. Cell 3: the near wing-arm raised in front of him at chest height with three broad flight feathers fanned out; head bent down so the tip of his beak touches the BASE of the middle feather, right beside the wrist; eye half closed. Cell 4: the same body and wing as cell 3; his beak has slid halfway along the same feather, head a little higher and further forward; eye closed. Cell 5: the same body and wing as cell 3; his beak is at the TIP of that feather, neck stretched forward and up, the feather drawn slightly taut; eye closed. Cell 6: ruffle wind-up: both wing-arms at his sides, knees bent so he stands a little shorter, shoulders hunched, body feathers just starting to lift, eye squeezed shut.",
+   "talon-idle-c-2-ruffle": "Use case: animation source drawings that our pipeline will shrink to tiny game sprites about 37 pixels tall. Draw CLEAN FLAT-COLOUR ILLUSTRATIONS, like cut paper or flat vector art. This is NOT pixel art: no pixel grid, no blocky stair-step edges, no dithering. Every fill is solid and flat with smooth edges, using at most 2 or 3 flat tones per material (base, one shadow, at most one light). No gradients, no glow, no texture, no highlights except where a cell asks for one. BOLD INTERIOR CONTOUR LINES: inside the figure, draw a near-black (#242424) line everywhere one part overlaps or separates from another: a wing-arm in front of the body, each group of flight feathers and the crest points, the head against the body, glove cuffs, the goggle rims and strap, the satchel strap and pouch, the top of each shoe and its toe cap, the beak, the eye and the moustache stripe. LINE WEIGHT IS THE WHOLE POINT. This image is shrunk to one 11th of its size, and any line thinner than about 9 pixels DISAPPEARS. Draw every interior line VERY THICK: 11 to 13 pixels wide in this 1536x1024 image (one 37th of the standing figure's height, about as wide as the white sole strip of his shoe), like a fat marker or the bold line of a die-cut sticker. Every line the same heavy weight, with clean edges. To leave room for lines this thick, SIMPLIFY the drawing: four crest points, three broad flight feathers on each wing, three chest bars, one simple strap. Fewer, fatter lines; if a detail cannot be drawn with a line this thick, leave the detail out. No thin lines anywhere, no hatching, no doubled lines. Do NOT draw any line around the OUTSIDE of the figure: the outer silhouette meets the magenta background with no outline at all, because our pipeline inks the silhouette itself with one uniform 1-pixel line after the reduction. Background: one plain flat magenta (#FF00FF) everywhere. No ground line, no cast shadows, no text, no numbers, no labels, no borders, no grid lines, nothing between cells. Layout: exactly 3 columns by 2 rows of equal cells, read left to right, top row first; one figure per cell, centred, fully inside its cell with a clear margin; the SAME scale in every cell (the head is the same size in all cells); feet, or the lowest point of the body, at the same height within each row; side view facing RIGHT as in image 2 unless a cell says otherwise. Proportions: match image 2 (his current in-game sprites enlarged 8x), not a realistic build and not the taller model sheet. Measured on his standing sprite: the head, from the top of the feather crest to the bottom of the beak, is 17 of his 37 pixels of height, 46% - he is about two heads tall - and the head with its swept-back crest is 62% as wide as he is tall. Short body, short legs, large simple gloves and shoes. Keep exactly this head-to-body ratio in every cell. Character: TALON, an original peregrine-falcon courier boy; loyal, nimble, cool and clever. Slate blue-grey plumage with a swept-back feather crest, a cream chest with a few short dark bars, a dark falcon moustache stripe under the eye, a yellow hooked beak, amber aviator goggles pushed up on his forehead (unless a cell says otherwise), a brown satchel strap across the chest with a small pouch at the hip, white gloves. ANATOMY RULE, the most important instruction: his wings ARE his arms. He has exactly ONE limb on each side: a feathered wing-arm that ends in a white-gloved hand. Never draw separate arms plus wings. When a hand reaches, holds or folds, the long flight feathers fold along that same forearm and trail from the wrist like a sleeve. Count the limbs in every cell: two wing-arms, two legs. Draw feathers as simple flat shapes: the crest is four or five big swept points, each wing three or four broad flight feathers with pale-grey tips; no shading inside individual feathers. Shoes exactly as in image 2: plain red high-tops with a white toe cap and a white sole strip, no laces. Flat colours: plumage slate #6D6D92 with shadow #49496D and deep #242449, light #9292B6, feather tips #DBDBDB; chest #FFFFDB with shade #DBB692; beak and goggles amber #FFB624 with shadow #B66D24; satchel #6D4924; shoes #FF4949 with shadow #B62424; gloves white. No fox features, no rotor tails. No resemblance to Tails, Jet the Hawk or any Sega character, and do not imitate Tails' idle poses. Image 1 is a rough pose guide in the same cell order as the sheet to draw: his existing sprites cut up and re-posed by hand. Follow each cell's pose, facing and limb placement, but draw every pose properly; do not copy its pixel errors or its pixel style. An empty guide cell means draw from the description alone. Image 2 is his current in-game sprites at 8x: the authority for proportions, colours and the boots or shoes (again, do not copy its pixel style). Image 3 is the approved model sheet, for face and identity only: use the normal form at the left, and ignore its line weight, its taller build, its footwear details, the ball, the dive and the glowing powered form. New idle animation 'Preen and ruffle (revised)', sheet 2 of 3 (ruffle). Cell 1 (scale anchor): his relaxed standing idle exactly as the first sprite in image 2: side view facing right, wing-arms at his sides, goggles up on his forehead. Cell 2: fully PUFFED UP: every body and head feather fluffed out so he is clearly wider and rounder than in cell 1 (about a third wider), crest standing up, eye shut with a contented look; his feet, beak, goggles and strap stay the same size. He must read as a fluffed-up bird, not as hurt. Cell 3: mid-shake, still fully puffed: head twisted toward the left of the picture and body twisted the other way, feather tips flared out on the trailing side, eye shut. Cell 4: the opposite half of the shake, still fully puffed: head twisted toward the right of the picture, body the other way, feather tips flared on the other side, eye shut. Cell 5: sleek again, the same build as cell 1: standing with wing-arms at his sides, head tilted down and forward, eye looking down at a point just in front of his chest. No feather in this cell. Cell 6: NO character in this cell: only one small loose flight feather on the magenta. A simple slate-grey leaf shape with a pale-grey tip, tilted about 30 degrees, drawn at the SAME scale as the figures, so its length is one sixth of his standing height. One flat shape plus the pale tip, with no interior line.",
+   "talon-idle-c-3-catch": "Use case: animation source drawings that our pipeline will shrink to tiny game sprites about 37 pixels tall. Draw CLEAN FLAT-COLOUR ILLUSTRATIONS, like cut paper or flat vector art. This is NOT pixel art: no pixel grid, no blocky stair-step edges, no dithering. Every fill is solid and flat with smooth edges, using at most 2 or 3 flat tones per material (base, one shadow, at most one light). No gradients, no glow, no texture, no highlights except where a cell asks for one. BOLD INTERIOR CONTOUR LINES: inside the figure, draw a near-black (#242424) line everywhere one part overlaps or separates from another: a wing-arm in front of the body, each group of flight feathers and the crest points, the head against the body, glove cuffs, the goggle rims and strap, the satchel strap and pouch, the top of each shoe and its toe cap, the beak, the eye and the moustache stripe. LINE WEIGHT IS THE WHOLE POINT. This image is shrunk to one 11th of its size, and any line thinner than about 9 pixels DISAPPEARS. Draw every interior line VERY THICK: 11 to 13 pixels wide in this 1536x1024 image (one 37th of the standing figure's height, about as wide as the white sole strip of his shoe), like a fat marker or the bold line of a die-cut sticker. Every line the same heavy weight, with clean edges. To leave room for lines this thick, SIMPLIFY the drawing: four crest points, three broad flight feathers on each wing, three chest bars, one simple strap. Fewer, fatter lines; if a detail cannot be drawn with a line this thick, leave the detail out. No thin lines anywhere, no hatching, no doubled lines. Do NOT draw any line around the OUTSIDE of the figure: the outer silhouette meets the magenta background with no outline at all, because our pipeline inks the silhouette itself with one uniform 1-pixel line after the reduction. Background: one plain flat magenta (#FF00FF) everywhere. No ground line, no cast shadows, no text, no numbers, no labels, no borders, no grid lines, nothing between cells. Layout: exactly 3 columns by 2 rows of equal cells, read left to right, top row first; one figure per cell, centred, fully inside its cell with a clear margin; the SAME scale in every cell (the head is the same size in all cells); feet, or the lowest point of the body, at the same height within each row; side view facing RIGHT as in image 2 unless a cell says otherwise. Proportions: match image 2 (his current in-game sprites enlarged 8x), not a realistic build and not the taller model sheet. Measured on his standing sprite: the head, from the top of the feather crest to the bottom of the beak, is 17 of his 37 pixels of height, 46% - he is about two heads tall - and the head with its swept-back crest is 62% as wide as he is tall. Short body, short legs, large simple gloves and shoes. Keep exactly this head-to-body ratio in every cell. Character: TALON, an original peregrine-falcon courier boy; loyal, nimble, cool and clever. Slate blue-grey plumage with a swept-back feather crest, a cream chest with a few short dark bars, a dark falcon moustache stripe under the eye, a yellow hooked beak, amber aviator goggles pushed up on his forehead (unless a cell says otherwise), a brown satchel strap across the chest with a small pouch at the hip, white gloves. ANATOMY RULE, the most important instruction: his wings ARE his arms. He has exactly ONE limb on each side: a feathered wing-arm that ends in a white-gloved hand. Never draw separate arms plus wings. When a hand reaches, holds or folds, the long flight feathers fold along that same forearm and trail from the wrist like a sleeve. Count the limbs in every cell: two wing-arms, two legs. Draw feathers as simple flat shapes: the crest is four or five big swept points, each wing three or four broad flight feathers with pale-grey tips; no shading inside individual feathers. Shoes exactly as in image 2: plain red high-tops with a white toe cap and a white sole strip, no laces. Flat colours: plumage slate #6D6D92 with shadow #49496D and deep #242449, light #9292B6, feather tips #DBDBDB; chest #FFFFDB with shade #DBB692; beak and goggles amber #FFB624 with shadow #B66D24; satchel #6D4924; shoes #FF4949 with shadow #B62424; gloves white. No fox features, no rotor tails. No resemblance to Tails, Jet the Hawk or any Sega character, and do not imitate Tails' idle poses. Image 1 is a rough pose guide in the same cell order as the sheet to draw: his existing sprites cut up and re-posed by hand. Follow each cell's pose, facing and limb placement, but draw every pose properly; do not copy its pixel errors or its pixel style. An empty guide cell means draw from the description alone. Image 2 is his current in-game sprites at 8x: the authority for proportions, colours and the boots or shoes (again, do not copy its pixel style). Image 3 is the approved model sheet, for face and identity only: use the normal form at the left, and ignore its line weight, its taller build, its footwear details, the ball, the dive and the glowing powered form. New idle animation 'Preen and ruffle (revised)', sheet 3 of 3 (catch). Cell 1 (scale anchor): his relaxed standing idle exactly as the first sprite in image 2: side view facing right, wing-arms at his sides, goggles up on his forehead. Cell 2: the catch, a fast snatch: his near wing-arm shot straight out in front of him at chest height, gloved hand closed in a pinch, body leaning into it, eye sharp and fixed on the hand. No feather visible. Cell 3: his near wing-arm raised with the forearm upright, the small loose feather held upright between his gloved thumb and forefinger at eye level, head turned to look at it, cool smirk. Cell 4: the flick: the same raised wing-arm snapped outward, wrist bent back and fingers open, beak open in a grin, eye following something leaving toward the upper right. No feather in this cell. Cell 5: leave empty (plain magenta). Cell 6: leave empty (plain magenta).",
+   "talon-victory": "Use case: animation source drawings that our pipeline will shrink to tiny game sprites about 37 pixels tall. Draw CLEAN FLAT-COLOUR ILLUSTRATIONS, like cut paper or flat vector art. This is NOT pixel art: no pixel grid, no blocky stair-step edges, no dithering. Every fill is solid and flat with smooth edges, using at most 2 or 3 flat tones per material (base, one shadow, at most one light). No gradients, no glow, no texture, no highlights except where a cell asks for one. BOLD INTERIOR CONTOUR LINES: inside the figure, draw a near-black (#242424) line everywhere one part overlaps or separates from another: a wing-arm in front of the body, each group of flight feathers and the crest points, the head against the body, glove cuffs, the goggle rims and strap, the satchel strap and pouch, the top of each shoe and its toe cap, the beak, the eye and the moustache stripe. LINE WEIGHT IS THE WHOLE POINT. This image is shrunk to one 11th of its size, and any line thinner than about 9 pixels DISAPPEARS. Draw every interior line VERY THICK: 11 to 13 pixels wide in this 1536x1024 image (one 37th of the standing figure's height, about as wide as the white sole strip of his shoe), like a fat marker or the bold line of a die-cut sticker. Every line the same heavy weight, with clean edges. To leave room for lines this thick, SIMPLIFY the drawing: four crest points, three broad flight feathers on each wing, three chest bars, one simple strap. Fewer, fatter lines; if a detail cannot be drawn with a line this thick, leave the detail out. No thin lines anywhere, no hatching, no doubled lines. Do NOT draw any line around the OUTSIDE of the figure: the outer silhouette meets the magenta background with no outline at all, because our pipeline inks the silhouette itself with one uniform 1-pixel line after the reduction. Background: one plain flat magenta (#FF00FF) everywhere. No ground line, no cast shadows, no text, no numbers, no labels, no borders, no grid lines, nothing between cells. Layout: exactly 3 columns by 2 rows of equal cells, read left to right, top row first; one figure per cell, centred, fully inside its cell with a clear margin; the SAME scale in every cell (the head is the same size in all cells); feet, or the lowest point of the body, at the same height within each row; side view facing RIGHT as in image 2 unless a cell says otherwise. Proportions: match image 2 (his current in-game sprites enlarged 8x), not a realistic build and not the taller model sheet. Measured on his standing sprite: the head, from the top of the feather crest to the bottom of the beak, is 17 of his 37 pixels of height, 46% - he is about two heads tall - and the head with its swept-back crest is 62% as wide as he is tall. Short body, short legs, large simple gloves and shoes. Keep exactly this head-to-body ratio in every cell. Character: TALON, an original peregrine-falcon courier boy; loyal, nimble, cool and clever. Slate blue-grey plumage with a swept-back feather crest, a cream chest with a few short dark bars, a dark falcon moustache stripe under the eye, a yellow hooked beak, amber aviator goggles pushed up on his forehead (unless a cell says otherwise), a brown satchel strap across the chest with a small pouch at the hip, white gloves. ANATOMY RULE, the most important instruction: his wings ARE his arms. He has exactly ONE limb on each side: a feathered wing-arm that ends in a white-gloved hand. Never draw separate arms plus wings. When a hand reaches, holds or folds, the long flight feathers fold along that same forearm and trail from the wrist like a sleeve. Count the limbs in every cell: two wing-arms, two legs. Draw feathers as simple flat shapes: the crest is four or five big swept points, each wing three or four broad flight feathers with pale-grey tips; no shading inside individual feathers. Shoes exactly as in image 2: plain red high-tops with a white toe cap and a white sole strip, no laces. Flat colours: plumage slate #6D6D92 with shadow #49496D and deep #242449, light #9292B6, feather tips #DBDBDB; chest #FFFFDB with shade #DBB692; beak and goggles amber #FFB624 with shadow #B66D24; satchel #6D4924; shoes #FF4949 with shadow #B62424; gloves white. No fox features, no rotor tails. No resemblance to Tails, Jet the Hawk or any Sega character, and do not imitate Tails' idle poses. Image 1 is a rough pose guide in the same cell order as the sheet to draw: his current victory sprites. Follow each cell's pose, facing and limb placement, but draw every pose properly; do not copy its pixel errors or its pixel style. An empty guide cell means draw from the description alone. Image 2 is his current in-game sprites at 8x: the authority for proportions, colours and the boots or shoes (again, do not copy its pixel style). Image 3 is the approved model sheet, for face and identity only: use the normal form at the left, and ignore its line weight, its taller build, its footwear details, the ball, the dive and the glowing powered form. Victory pose, four frames (wind-up, hold, two accents that alternate while the hold repeats). His gesture is the aviator's two-finger salute, as on his signpost. His current raised-wing frames smear into a blur when shrunk: draw the raised wing-arm as ONE clear shape with three or four broad flight feathers folded along the forearm and a distinct white glove. Cell 1 (scale anchor): his relaxed standing idle exactly as the first sprite in image 2: side view facing right, wing-arms at his sides, goggles up on his forehead. Cell 2: wind-up: turning three-quarters toward the viewer, one wing-arm coming up toward his goggles, cool half-smile. Cell 3: the hold: feet planted, chest out, two-finger salute with the fingertips at the goggle rim, other wing-arm folded with the hand on his hip, confident smirk. Cell 4: accent A: the salute flicked outward, hand a head's width away from the goggles with the two fingers still extended, beak open in a grin. Cell 5: accent B: the same as the hold with one eye winking and the crest feathers lifted. Cell 6: leave empty (plain magenta).",
+   "talon-sign": "Use case: animation source drawings that our pipeline will shrink to tiny game sprites about 32 pixels tall. Draw CLEAN FLAT-COLOUR ILLUSTRATIONS, like cut paper or flat vector art. This is NOT pixel art: no pixel grid, no blocky stair-step edges, no dithering. Every fill is solid and flat with smooth edges, using at most 2 or 3 flat tones per material (base, one shadow, at most one light). No gradients, no glow, no texture, no highlights except where a cell asks for one. BOLD INTERIOR CONTOUR LINES: inside the figure, draw a near-black (#242424) line everywhere one part overlaps or separates from another: the hand in front of the face, each finger, the crest points, the goggle rims and strap, the beak, the eye and the moustache stripe. LINE WEIGHT IS THE WHOLE POINT. This image is shrunk to one 14th of its size, and any line thinner than about 11 pixels DISAPPEARS. Draw every interior line VERY THICK: 14 to 16 pixels wide in this 1536x1024 image (one 32nd of the portrait's height, about as wide as the rim of his goggles), like a fat marker or the bold line of a die-cut sticker. Every line the same heavy weight, with clean edges. To leave room for lines this thick, SIMPLIFY the drawing: four crest points, plain goggle lenses, one moustache stripe, a simple beak. Fewer, fatter lines; if a detail cannot be drawn with a line this thick, leave the detail out. No thin lines anywhere, no hatching, no doubled lines. Do NOT draw any line around the OUTSIDE of the figure: the outer silhouette meets the magenta background with no outline at all, because our pipeline inks the silhouette itself with one uniform 1-pixel line after the reduction. Background: one plain flat magenta (#FF00FF) everywhere. No ground line, no cast shadows, no text, no numbers, no labels, no borders, no grid lines, nothing between cells. Layout: exactly 2 columns by 2 rows of equal landscape cells (each cell is 3 wide by 2 tall), read left to right, top row first; one head-and-hand portrait per cell, filling about 90% of the cell's height, centred, the SAME scale in every cell. Each portrait will be shrunk to a 48 by 32 pixel signpost plate, so use few, big, simple shapes: nothing smaller than one thirtieth of the picture height, the eye large and bright, the expression readable as a thumbnail. Portrait only: head, a little neck or shoulder, and ONE gloved hand making the gesture beside the face; no body. Character: TALON, an original peregrine-falcon courier boy; loyal, nimble, cool and clever. Slate blue-grey plumage with a swept-back feather crest, a cream chest with a few short dark bars, a dark falcon moustache stripe under the eye, a yellow hooked beak, amber aviator goggles pushed up on his forehead (unless a cell says otherwise), a brown satchel strap across the chest with a small pouch at the hip, white gloves. ANATOMY RULE, the most important instruction: his wings ARE his arms. He has exactly ONE limb on each side: a feathered wing-arm that ends in a white-gloved hand. Never draw separate arms plus wings. When a hand reaches, holds or folds, the long flight feathers fold along that same forearm and trail from the wrist like a sleeve. Count the limbs in every cell: two wing-arms, two legs. Draw feathers as simple flat shapes: the crest is four or five big swept points, each wing three or four broad flight feathers with pale-grey tips; no shading inside individual feathers. Shoes exactly as in image 2: plain red high-tops with a white toe cap and a white sole strip, no laces. Flat colours: plumage slate #6D6D92 with shadow #49496D and deep #242449, light #9292B6, feather tips #DBDBDB; chest #FFFFDB with shade #DBB692; beak and goggles amber #FFB624 with shadow #B66D24; satchel #6D4924; shoes #FF4949 with shadow #B62424; gloves white. No fox features, no rotor tails. No resemblance to Tails, Jet the Hawk or any Sega character, and do not imitate Tails' idle poses. His gesture is his own: an aviator's TWO-FINGER SALUTE flicked off the rim of his goggles. Image 1 shows his current signpost plates enlarged (S1, S2, S2 alternate, S3K), for composition and size only: they are a dark blob: the goggles dominate, the face is hard to read and there is no gesture. Fix all three: the goggles are SMALL and sit high on the forehead (no more than a sixth of the head's height), the cream cheek-and-brow patch covers most of the face so the portrait reads LIGHT (dark slate on the crest and nape only, under 40% of the head), the eye is large with a clear white, the yellow beak is bright, and a white-gloved hand makes the gesture. Do not copy its pixel style. Image 2 is his in-game sprites at 8x: the authority for colours and how his face is simplified in game. Image 3 is the approved model sheet, for face and identity only (normal form at the left; ignore its line weight and the powered form). Signpost portraits. Cell 1: three-quarter view facing right; his white-gloved hand at the left of the picture gives a two-finger salute with the fingertips touching the goggle rim; confident smirk, one brow raised. Cell 2: the same portrait with the salute flicked outward, hand a little away from the goggles, beak open in a grin. Cell 3: alternative gesture: a thumbs-up beside his cheek with a wink (the model sheet's gesture), same light, readable face. Cell 4: the mirror composition of cell 1: face turned three-quarters LEFT, salute at the right of the picture.",
+   "mica-sign": "Use case: animation source drawings that our pipeline will shrink to tiny game sprites about 32 pixels tall. Draw CLEAN FLAT-COLOUR ILLUSTRATIONS, like cut paper or flat vector art. This is NOT pixel art: no pixel grid, no blocky stair-step edges, no dithering. Every fill is solid and flat with smooth edges, using at most 2 or 3 flat tones per material (base, one shadow, at most one light). No gradients, no glow, no texture, no highlights except where a cell asks for one. BOLD INTERIOR CONTOUR LINES: inside the figure, draw a near-black (#242424) line everywhere one part overlaps or separates from another: the hand in front of the face, each finger, the lower edge of each scale plate, the ear, the eyes, the lashes and the mouth. LINE WEIGHT IS THE WHOLE POINT. This image is shrunk to one 14th of its size, and any line thinner than about 11 pixels DISAPPEARS. Draw every interior line VERY THICK: 14 to 16 pixels wide in this 1536x1024 image (one 32nd of the portrait's height, about as wide as the cuff of her glove is deep), like a fat marker or the bold line of a die-cut sticker. Every line the same heavy weight, with clean edges. To leave room for lines this thick, SIMPLIFY the drawing: five or six large scale plates around the face, two lashes per eye, a simple open mouth. Fewer, fatter lines; if a detail cannot be drawn with a line this thick, leave the detail out. No thin lines anywhere, no hatching, no doubled lines. Do NOT draw any line around the OUTSIDE of the figure: the outer silhouette meets the magenta background with no outline at all, because our pipeline inks the silhouette itself with one uniform 1-pixel line after the reduction. Background: one plain flat magenta (#FF00FF) everywhere. No ground line, no cast shadows, no text, no numbers, no labels, no borders, no grid lines, nothing between cells. Layout: exactly 2 columns by 2 rows of equal landscape cells (each cell is 3 wide by 2 tall), read left to right, top row first; one head-and-hand portrait per cell, filling about 90% of the cell's height, centred, the SAME scale in every cell. Each portrait will be shrunk to a 48 by 32 pixel signpost plate, so use few, big, simple shapes: nothing smaller than one thirtieth of the picture height, the eye large and bright, the expression readable as a thumbnail. Portrait only: head, a little neck or shoulder, and ONE gloved hand making the gesture beside the face; no body. Character: MICA, an original jade pangolin girl; cute and happy-go-lucky, but she can turn deadly serious. Soft round sand-cream face with a pointed snout, large dark-brown eyes with lashes, small pink ears, ridged cream belly, white gloves. Her armour is overlapping pangolin SCALE PLATES over the head crest, back and long thick tail. Draw each plate as ONE simple rounded shape in a single flat jade tone, with only a thin darker-jade band where the next plate overlaps it: no inner shading, no highlight and no texture on individual plates, and few large plates (about six to eight across the head crest), never dozens of tiny ones. Never quills, spikes, spines, hair or fur. Boots exactly as in image 2: plain coral-red ankle boots with a thin tan sole strip. NO laces and NO chunky treaded soles (ignore the boots on the model sheet). Flat colours: jade #00926D with shadow #006D6D and light #24B692; face and belly #FFDB92 with shade #DBB66D; gloves white with light-grey shade; boots #FF4949 with shadow #B62424 and sole #B6926D; ears #FF9292; eyes dark brown. No resemblance to Sonic or any Sega character, and do not imitate Sonic's idle poses. Her gesture is the PEACE SIGN (two fingers in a V). Image 1 shows her current signpost plates enlarged (S1, S2, S2 alternate, S3K), for composition and size only: they read well; keep that charm, the big eyes and the V sign, and make all four the same drawing style. Do not copy its pixel style. Image 2 is her in-game sprites at 8x: the authority for colours and how her face is simplified in game. Image 3 is the approved model sheet, for face and identity only (normal form at the left; ignore its line weight and the powered form). Signpost portraits. Cell 1: three-quarter view facing right; her gloved hand at the left of the picture holds a peace sign up beside her cheek; one eye winking, big open smile. Cell 2: the same portrait with both eyes open and bright, big open smile, peace sign unchanged. Cell 3: the mirror composition: face turned three-quarters LEFT, peace sign at the right of the picture, winking. Cell 4: the same portrait as cell 1 with both eyes closed in a laughing smile, peace sign unchanged (second expression for the alternate plate)."
+  },
+  "attempts": {
+   "talon-idle-c-1-preen-v1": {
+    "raw_sha256": "bf4a28efcee1b3f14efd87117758c65bf2c9d533eaa03c1dc12c34f87d9cf5fe",
+    "factor": 11.378,
+    "cells": {
+     "anchor": {
+      "line_sprite_px": 0.88,
+      "interior_ink": 0.164,
+      "passed": false
+     },
+     "antic": {
+      "line_sprite_px": 0.97,
+      "interior_ink": 0.156,
+      "passed": true
+     },
+     "preen-base": {
+      "line_sprite_px": 0.88,
+      "interior_ink": 0.155,
+      "passed": false
+     },
+     "preen-mid": {
+      "line_sprite_px": 0.88,
+      "interior_ink": 0.137,
+      "passed": false
+     },
+     "preen-tip": {
+      "line_sprite_px": 0.97,
+      "interior_ink": 0.153,
+      "passed": true
+     },
+     "windup": {
+      "line_sprite_px": 1.05,
+      "interior_ink": 0.173,
+      "passed": true
+     }
+    }
+   },
+   "talon-idle-c-1-preen-v2": {
+    "raw_sha256": "51371d979a0d4be0472bf56e1e425dca24c9d6a5e183fc4caf06abbb1cff5e41",
+    "factor": 11.703,
+    "cells": {
+     "anchor": {
+      "line_sprite_px": 0.94,
+      "interior_ink": 0.162,
+      "passed": true
+     },
+     "antic": {
+      "line_sprite_px": 0.9,
+      "interior_ink": 0.141,
+      "passed": false
+     },
+     "preen-base": {
+      "line_sprite_px": 0.94,
+      "interior_ink": 0.136,
+      "passed": false
+     },
+     "preen-mid": {
+      "line_sprite_px": 0.94,
+      "interior_ink": 0.153,
+      "passed": true
+     },
+     "preen-tip": {
+      "line_sprite_px": 0.94,
+      "interior_ink": 0.14,
+      "passed": false
+     },
+     "windup": {
+      "line_sprite_px": 0.94,
+      "interior_ink": 0.133,
+      "passed": false
+     }
+    }
+   },
+   "talon-idle-c-1-preen-v1-r1": {
+    "raw_sha256": "422abe3b8a729744c05613832ee3e1d90ad53e89f1b54b49e033337a72324ac7",
+    "factor": 11.432,
+    "cells": {
+     "anchor": {
+      "line_sprite_px": 0.96,
+      "interior_ink": 0.173,
+      "passed": true
+     },
+     "antic": {
+      "line_sprite_px": 0.96,
+      "interior_ink": 0.136,
+      "passed": false
+     },
+     "preen-base": {
+      "line_sprite_px": 0.96,
+      "interior_ink": 0.151,
+      "passed": true
+     },
+     "preen-mid": {
+      "line_sprite_px": 0.96,
+      "interior_ink": 0.138,
+      "passed": false
+     },
+     "preen-tip": {
+      "line_sprite_px": 0.96,
+      "interior_ink": 0.158,
+      "passed": true
+     },
+     "windup": {
+      "line_sprite_px": 1.05,
+      "interior_ink": 0.162,
+      "passed": true
+     }
+    }
+   },
+   "talon-idle-c-1-preen-v1-r2": {
+    "raw_sha256": "ebd67ae3e8b01faf1d1be35095b389f6e31be90d770d234344a5d010a4a58ee9",
+    "factor": 11.405,
+    "cells": {
+     "anchor": {
+      "line_sprite_px": 0.96,
+      "interior_ink": 0.155,
+      "passed": true
+     },
+     "antic": {
+      "line_sprite_px": 0.96,
+      "interior_ink": 0.147,
+      "passed": false
+     },
+     "preen-base": {
+      "line_sprite_px": 0.96,
+      "interior_ink": 0.116,
+      "passed": false
+     },
+     "preen-mid": {
+      "line_sprite_px": 1.05,
+      "interior_ink": 0.139,
+      "passed": false
+     },
+     "preen-tip": {
+      "line_sprite_px": 1.05,
+      "interior_ink": 0.145,
+      "passed": false
+     },
+     "windup": {
+      "line_sprite_px": 1.05,
+      "interior_ink": 0.15,
+      "passed": true
+     }
+    }
+   },
+   "talon-idle-c-2-ruffle-v1": {
+    "raw_sha256": "87f24238dff1ef5df4a7f646d18edb1cc5957d7aca827dcb295e9351bab9dea8",
+    "factor": 10.459,
+    "cells": {
+     "anchor": {
+      "line_sprite_px": 1.24,
+      "interior_ink": 0.22,
+      "passed": true
+     },
+     "puff": {
+      "line_sprite_px": 1.34,
+      "interior_ink": 0.205,
+      "passed": true
+     },
+     "shake-left": {
+      "line_sprite_px": 1.24,
+      "interior_ink": 0.22,
+      "passed": true
+     },
+     "shake-right": {
+      "line_sprite_px": 1.24,
+      "interior_ink": 0.211,
+      "passed": true
+     },
+     "look-down": {
+      "line_sprite_px": 1.24,
+      "interior_ink": 0.221,
+      "passed": true
+     }
+    }
+   },
+   "talon-idle-c-2-ruffle-v2": {
+    "raw_sha256": "58ae38ee2df66fc1fd7d56d8f6e9ce594eba6ae7b5eed8d98a141b9fd27415cf",
+    "factor": 10.676,
+    "cells": {
+     "anchor": {
+      "line_sprite_px": 1.12,
+      "interior_ink": 0.203,
+      "passed": true
+     },
+     "puff": {
+      "line_sprite_px": 1.22,
+      "interior_ink": 0.233,
+      "passed": true
+     },
+     "shake-left": {
+      "line_sprite_px": 1.12,
+      "interior_ink": 0.203,
+      "passed": true
+     },
+     "shake-right": {
+      "line_sprite_px": 1.22,
+      "interior_ink": 0.212,
+      "passed": true
+     },
+     "look-down": {
+      "line_sprite_px": 1.12,
+      "interior_ink": 0.21,
+      "passed": true
+     }
+    }
+   },
+   "talon-idle-c-3-catch-v1": {
+    "raw_sha256": "a4372f9806e72c80a9a00a27099cae6c31295e2fcb98f3f7530b9c06c02edc4f",
+    "factor": 11.865,
+    "cells": {
+     "anchor": {
+      "line_sprite_px": 1.01,
+      "interior_ink": 0.183,
+      "passed": true
+     },
+     "snatch": {
+      "line_sprite_px": 1.01,
+      "interior_ink": 0.187,
+      "passed": true
+     },
+     "caught": {
+      "line_sprite_px": 1.01,
+      "interior_ink": 0.183,
+      "passed": true
+     },
+     "flick": {
+      "line_sprite_px": 1.01,
+      "interior_ink": 0.167,
+      "passed": true
+     }
+    }
+   },
+   "talon-idle-c-3-catch-v2": {
+    "raw_sha256": "16d01b287edb454c0c8d18dd58a86229fd40be577073928ce12e4b507611794b",
+    "factor": 12.378,
+    "cells": {
+     "anchor": {
+      "line_sprite_px": 0.97,
+      "interior_ink": 0.18,
+      "passed": true
+     },
+     "snatch": {
+      "line_sprite_px": 0.97,
+      "interior_ink": 0.169,
+      "passed": true
+     },
+     "caught": {
+      "line_sprite_px": 0.97,
+      "interior_ink": 0.157,
+      "passed": true
+     },
+     "flick": {
+      "line_sprite_px": 0.97,
+      "interior_ink": 0.162,
+      "passed": true
+     }
+    }
+   },
+   "talon-victory-v1": {
+    "raw_sha256": "d5d84b9229d6c5db25f8423481aca5c488d7a514744bdfb05d3cda5784cedd48",
+    "factor": 12.189,
+    "cells": {
+     "anchor": {
+      "line_sprite_px": 0.9,
+      "interior_ink": 0.148,
+      "passed": false
+     },
+     "victory-0": {
+      "line_sprite_px": 0.9,
+      "interior_ink": 0.15,
+      "passed": true
+     },
+     "victory-1": {
+      "line_sprite_px": 0.82,
+      "interior_ink": 0.134,
+      "passed": false
+     },
+     "victory-2": {
+      "line_sprite_px": 0.9,
+      "interior_ink": 0.14,
+      "passed": false
+     },
+     "victory-3": {
+      "line_sprite_px": 0.82,
+      "interior_ink": 0.143,
+      "passed": false
+     }
+    }
+   },
+   "talon-victory-v2": {
+    "raw_sha256": "26b41b262c68ccd1111814a8f2b6a6adb3cb22c080c9586a24dbcd5d5f1401d8",
+    "factor": 11.811,
+    "cells": {
+     "anchor": {
+      "line_sprite_px": 1.1,
+      "interior_ink": 0.23,
+      "passed": true
+     },
+     "victory-0": {
+      "line_sprite_px": 1.02,
+      "interior_ink": 0.189,
+      "passed": true
+     },
+     "victory-1": {
+      "line_sprite_px": 1.02,
+      "interior_ink": 0.203,
+      "passed": true
+     },
+     "victory-2": {
+      "line_sprite_px": 1.02,
+      "interior_ink": 0.199,
+      "passed": true
+     },
+     "victory-3": {
+      "line_sprite_px": 1.02,
+      "interior_ink": 0.207,
+      "passed": true
+     }
+    }
+   },
+   "mica-victory-v1": {
+    "raw_sha256": "4489256060baca443f92b093e1c1c5bb07bd3d9733ec386aec07fa326ffb58e7",
+    "factor": 11.103,
+    "cells": {
+     "anchor": {
+      "line_sprite_px": 1.08,
+      "interior_ink": 0.215,
+      "passed": true
+     },
+     "victory-0": {
+      "line_sprite_px": 0.99,
+      "interior_ink": 0.24,
+      "passed": true
+     },
+     "victory-1": {
+      "line_sprite_px": 1.08,
+      "interior_ink": 0.222,
+      "passed": true
+     },
+     "victory-2": {
+      "line_sprite_px": 1.08,
+      "interior_ink": 0.224,
+      "passed": true
+     },
+     "victory-3": {
+      "line_sprite_px": 1.08,
+      "interior_ink": 0.236,
+      "passed": true
+     }
+    }
+   },
+   "mica-victory-v2": {
+    "raw_sha256": "333fa1c6a159d498b05f94529434c1210b5cf0e7f6dd2c79388f0d72df198ab6",
+    "factor": 11.256,
+    "cells": {
+     "anchor": {
+      "line_sprite_px": 1.07,
+      "interior_ink": 0.243,
+      "passed": true
+     },
+     "victory-0": {
+      "line_sprite_px": 1.07,
+      "interior_ink": 0.232,
+      "passed": true
+     },
+     "victory-1": {
+      "line_sprite_px": 0.98,
+      "interior_ink": 0.219,
+      "passed": true
+     },
+     "victory-2": {
+      "line_sprite_px": 1.02,
+      "interior_ink": 0.203,
+      "passed": true
+     },
+     "victory-3": {
+      "line_sprite_px": 1.07,
+      "interior_ink": 0.199,
+      "passed": true
+     }
+    }
+   }
+  },
+  "exceptions": [
+   "wait-03 (preen, mid-stroke): 13.8% interior ink before the head is placed, against a gate of 15%. Both regenerations of the sheet were also under (r1 13.8%, r2 13.9%). The stated fallback, turning a sprite pixel to ink where a third of its source block is line, over-inks this sheet (32-44%) because its lines already pass the weight gate (0.96 px), so the frame is used as reduced, from the same sheet as the strokes either side of it. With WAIT's head it has 19% interior ink and passes style_audit.py.",
+   "The loose feather is 8x7 pixels and is not gated.",
+   "mica-victory was generated (two variants, both pass the gate) and not used: her victory keeps its drawings, which match her kept idle; they are cleaned by mica/sheet_despeckle.py."
+  ]
+ },
+ "tone": {
+  "rule": "plumage indices 5->4, 4->3, 3->2 on every TALON sprite drawing of this lane, before cleanup",
+  "why": "the prompts named slate (4) as the plumage base; the sheet's base is slate-shadow (3). References: 28% deep, 52% shadow, 17% slate; these drawings before the shift: 8%, 25%, 62%."
+ },
+ "talon_idle": {
+  "drawings": {
+   "wait-01": {
+    "pose": "antic",
+    "sheet": "talon-idle-c-1-preen",
+    "variant": "v1",
+    "cell": 2,
+    "factor": 11.378,
+    "line_sprite_px": 0.97,
+    "interior_ink": 0.156,
+    "gate_passed": true,
+    "rows_sha256": "5a660cd14b7e75f236b242287220575c90d7a8854495b695656434610ea13ed2",
+    "head": "reference head"
+   },
+   "wait-02": {
+    "pose": "preen-base",
+    "sheet": "talon-idle-c-1-preen",
+    "variant": "v1-r1",
+    "cell": 3,
+    "factor": 11.432,
+    "line_sprite_px": 0.96,
+    "interior_ink": 0.151,
+    "gate_passed": true,
+    "rows_sha256": "718d0fd943a630e20b0a57ebdc464041f94bcfd94eaf6004a7987d9930b756b8",
+    "head": "reference head"
+   },
+   "wait-03": {
+    "pose": "preen-mid",
+    "sheet": "talon-idle-c-1-preen",
+    "variant": "v1-r1",
+    "cell": 4,
+    "factor": 11.432,
+    "line_sprite_px": 0.96,
+    "interior_ink": 0.138,
+    "gate_passed": false,
+    "rows_sha256": "1d3013a3065070dfae023dd0073093502a8136bf93cabaf2cf1d0fa0d02ab5c1",
+    "head": "reference head"
+   },
+   "wait-04": {
+    "pose": "preen-tip",
+    "sheet": "talon-idle-c-1-preen",
+    "variant": "v1-r1",
+    "cell": 5,
+    "factor": 11.432,
+    "line_sprite_px": 0.96,
+    "interior_ink": 0.158,
+    "gate_passed": true,
+    "rows_sha256": "bec0f22f08c5751410dbdefbe056664f3dd22e191e8cdec4b741c005872dc5da",
+    "head": "reference head"
+   },
+   "wait-05": {
+    "pose": "windup",
+    "sheet": "talon-idle-c-1-preen",
+    "variant": "v1-r1",
+    "cell": 6,
+    "factor": 11.432,
+    "line_sprite_px": 1.05,
+    "interior_ink": 0.162,
+    "gate_passed": true,
+    "rows_sha256": "b0f8e57f01179b070adade5c0673b73672c2d893f2183ae6954ee9722d590b40",
+    "head": "reference head"
+   },
+   "wait-06": {
+    "pose": "puff",
+    "sheet": "talon-idle-c-2-ruffle",
+    "variant": "v1",
+    "cell": 2,
+    "factor": 10.459,
+    "line_sprite_px": 1.34,
+    "interior_ink": 0.205,
+    "gate_passed": true,
+    "rows_sha256": "2408eac57798b83a5fe9c3dd88e26512993225d8f337f6f9d4b16dc8341b08fe",
+    "head": "own head"
+   },
+   "wait-07": {
+    "pose": "shake-left",
+    "sheet": "talon-idle-c-2-ruffle",
+    "variant": "v1",
+    "cell": 3,
+    "factor": 10.459,
+    "line_sprite_px": 1.24,
+    "interior_ink": 0.22,
+    "gate_passed": true,
+    "rows_sha256": "6bbb62bf684d6873e048f8cfe7a20517dae2168716711f9b7c2561c9a4dbed5a",
+    "head": "own head"
+   },
+   "wait-08": {
+    "pose": "shake-right",
+    "sheet": "talon-idle-c-2-ruffle",
+    "variant": "v1",
+    "cell": 4,
+    "factor": 10.459,
+    "line_sprite_px": 1.24,
+    "interior_ink": 0.211,
+    "gate_passed": true,
+    "rows_sha256": "89a0cb42578c902122b3d3ab15e64e8bf7f163340c523ad403745eac1fa6c06b",
+    "head": "own head"
+   },
+   "wait-09": {
+    "pose": "look-down",
+    "sheet": "talon-idle-c-2-ruffle",
+    "variant": "v1",
+    "cell": 5,
+    "factor": 10.459,
+    "line_sprite_px": 1.24,
+    "interior_ink": 0.221,
+    "gate_passed": true,
+    "rows_sha256": "4ef2b77a0ae09df2720f7439da6b67c70145c56b6f8a0cef3a6e1931ba1cb3a4",
+    "head": "reference head"
+   },
+   "wait-10": {
+    "pose": "snatch",
+    "sheet": "talon-idle-c-3-catch",
+    "variant": "v1",
+    "cell": 2,
+    "factor": 11.865,
+    "line_sprite_px": 1.01,
+    "interior_ink": 0.187,
+    "gate_passed": true,
+    "rows_sha256": "4c042bb0b8affec7da06939e1fd83c144b3ceb2ea40da3225100fbe4fea5fb26",
+    "head": "reference head"
+   },
+   "wait-11": {
+    "pose": "caught",
+    "sheet": "talon-idle-c-3-catch",
+    "variant": "v1",
+    "cell": 3,
+    "factor": 11.865,
+    "line_sprite_px": 1.01,
+    "interior_ink": 0.183,
+    "gate_passed": true,
+    "rows_sha256": "71c0c8809267ad1391c5b6a52f50d0538ea2bee1fd8aef330ea53390f9bf71ac",
+    "head": "reference head"
+   },
+   "wait-12": {
+    "pose": "flick",
+    "sheet": "talon-idle-c-3-catch",
+    "variant": "v1",
+    "cell": 4,
+    "factor": 11.865,
+    "line_sprite_px": 1.01,
+    "interior_ink": 0.167,
+    "gate_passed": true,
+    "rows_sha256": "cb9073bb0daf0958b1d50265360e2dfa6d30ddcad8f5755ac7deb0247de470ba",
+    "head": "reference head"
+   }
+  },
+  "reused": {
+   "wait-00": "the standing frame, unchanged",
+   "look_up-00": "existing LOOK_UP drawing, shown as wait-21 (the same pixels on the idle's ground line): the sleek settle and the first two feather positions"
+  },
+  "reregistered": {
+   "wait-21": {
+    "base": "look_up-00",
+    "hotspot": [
+     15,
+     18
+    ],
+    "why": "look_up-00 stands with its soles 15 px below its hotspot and its feet 2-3 px right of WAIT's; the idle frames stand 18 px below. Reused as it is the idle would hop 3 px, so the idle shows the same pixels on its own ground line."
+   }
+  },
+  "feather": {
+   "sheet": "talon-idle-c-2-ruffle",
+   "variant": "v1",
+   "cell": 6,
+   "rows": [
+    "00000111",
+    "00011661",
+    "00136610",
+    "01333410",
+    "01333100",
+    "13311000",
+    "11100000"
+   ],
+   "note": "reduced with its sheet, plumage shifted with it; if a future sheet draws it badly, cut it from the caught drawing"
+  },
+  "composites": {
+   "wait-13": {
+    "base": "wait-21",
+    "at": [
+     13,
+     -27
+    ],
+    "mirrored": false
+   },
+   "wait-14": {
+    "base": "wait-21",
+    "at": [
+     10,
+     -23
+    ],
+    "mirrored": true
+   },
+   "wait-15": {
+    "base": "wait-00",
+    "at": [
+     14,
+     -19
+    ],
+    "mirrored": false
+   },
+   "wait-16": {
+    "base": "wait-00",
+    "at": [
+     11,
+     -15
+    ],
+    "mirrored": true
+   },
+   "wait-17": {
+    "base": "wait-09",
+    "at": [
+     14,
+     -11
+    ],
+    "mirrored": false
+   },
+   "wait-18": {
+    "base": "wait-09",
+    "at": [
+     11,
+     -8
+    ],
+    "mirrored": true
+   },
+   "wait-19": {
+    "base": "wait-12",
+    "at": [
+     16,
+     -22
+    ],
+    "mirrored": false
+   },
+   "wait-20": {
+    "base": "wait-12",
+    "at": [
+     22,
+     -27
+    ],
+    "mirrored": true
+   }
+  },
+  "script": {
+   "tick_rate": 60,
+   "note": "WAIT plays intro once, then repeats loop (end loop-back, loopBackSteps = len(loop)); approved storyboard timings",
+   "intro": [
+    {
+     "frame": "wait-00",
+     "ticks": 160,
+     "beat": "stand"
+    }
+   ],
+   "loop": [
+    {
+     "frame": "wait-01",
+     "ticks": 6,
+     "beat": "anticipation: head turns, wing comes up"
+    },
+    {
+     "frame": "wait-02",
+     "ticks": 8,
+     "beat": "beak to the feather base"
+    },
+    {
+     "frame": "wait-03",
+     "ticks": 8,
+     "beat": "stroke along the feather"
+    },
+    {
+     "frame": "wait-04",
+     "ticks": 12,
+     "beat": "out to the tip"
+    },
+    {
+     "frame": "wait-02",
+     "ticks": 6,
+     "beat": "second stroke: base"
+    },
+    {
+     "frame": "wait-03",
+     "ticks": 8,
+     "beat": "second stroke"
+    },
+    {
+     "frame": "wait-04",
+     "ticks": 14,
+     "beat": "second stroke: tip"
+    },
+    {
+     "frame": "wait-01",
+     "ticks": 8,
+     "beat": "settle: wing lowers"
+    },
+    {
+     "frame": "wait-00",
+     "ticks": 24,
+     "beat": "stand"
+    },
+    {
+     "frame": "wait-05",
+     "ticks": 8,
+     "beat": "wind-up: squash, feathers lift"
+    },
+    {
+     "frame": "wait-06",
+     "ticks": 18,
+     "beat": "puffed-up hold (300 ms)"
+    },
+    {
+     "frame": "wait-07",
+     "ticks": 4,
+     "beat": "shake, 70 ms"
+    },
+    {
+     "frame": "wait-08",
+     "ticks": 4,
+     "beat": "shake, 70 ms"
+    },
+    {
+     "frame": "wait-07",
+     "ticks": 6,
+     "beat": "shake, 100 ms"
+    },
+    {
+     "frame": "wait-08",
+     "ticks": 6,
+     "beat": "shake, 100 ms"
+    },
+    {
+     "frame": "wait-07",
+     "ticks": 8,
+     "beat": "shake, 130 ms"
+    },
+    {
+     "frame": "wait-08",
+     "ticks": 8,
+     "beat": "shake, 130 ms"
+    },
+    {
+     "frame": "wait-06",
+     "ticks": 6,
+     "beat": "still puffed"
+    },
+    {
+     "frame": "wait-05",
+     "ticks": 6,
+     "beat": "feathers settle"
+    },
+    {
+     "frame": "wait-21",
+     "ticks": 12,
+     "beat": "sleek again; spots a loose feather"
+    },
+    {
+     "frame": "wait-13",
+     "ticks": 7,
+     "beat": "feather drifts right; head up"
+    },
+    {
+     "frame": "wait-14",
+     "ticks": 7,
+     "beat": "sways left"
+    },
+    {
+     "frame": "wait-15",
+     "ticks": 7,
+     "beat": "sways right; head level"
+    },
+    {
+     "frame": "wait-16",
+     "ticks": 7,
+     "beat": "sways left"
+    },
+    {
+     "frame": "wait-17",
+     "ticks": 7,
+     "beat": "sways right; head down"
+    },
+    {
+     "frame": "wait-18",
+     "ticks": 6,
+     "beat": "sways left, in reach"
+    },
+    {
+     "frame": "wait-10",
+     "ticks": 3,
+     "beat": "catch: 50 ms snap"
+    },
+    {
+     "frame": "wait-11",
+     "ticks": 30,
+     "beat": "hold: got it"
+    },
+    {
+     "frame": "wait-19",
+     "ticks": 4,
+     "beat": "flick"
+    },
+    {
+     "frame": "wait-20",
+     "ticks": 4,
+     "beat": "feather flies off"
+    },
+    {
+     "frame": "wait-12",
+     "ticks": 6,
+     "beat": "follow-through"
+    },
+    {
+     "frame": "wait-01",
+     "ticks": 8,
+     "beat": "ease back: wing lowers"
+    },
+    {
+     "frame": "wait-00",
+     "ticks": 150,
+     "beat": "stand, then the loop repeats"
+    }
+   ]
+  },
+  "native_frames": {
+   "family-wait/0": "wait-00",
+   "family-wait/1": "family-blink-01",
+   "family-wait/2": "family-blink-02",
+   "family-wait/3": "wait-09",
+   "family-wait/4": "wait-01",
+   "family-wait/5": "wait-02",
+   "family-wait/6": "wait-04",
+   "family-wait/7": "wait-02",
+   "family-wait/8": "wait-04",
+   "family-wait/9": "look_up-00"
+  },
+  "native_frames_why": "Native Tails wait frames, when a host selects one directly: 0 stand; 1-2 the blink, now his own BLINK drawings; 3 the look at the camera, now his look down; 4-8 the yawn, now the wing coming up and the preen at base and tip; 9 unchanged.",
+  "blink": "BLINK keeps its own five drawings (family-blink-00..04) and its script. They are not Tails' idle but the host's blink interrupt and the S3K yawn selectors; they now get the line-art body rule and keep their own heads."
+ },
+ "talon_victory": {
+  "drawings": {
+   "family-victory-00": {
+    "pose": "victory-0",
+    "sheet": "talon-victory",
+    "variant": "v2",
+    "cell": 2,
+    "factor": 11.811,
+    "line_sprite_px": 1.02,
+    "interior_ink": 0.189,
+    "gate_passed": true,
+    "rows_sha256": "daccf64c0d30ba18255fa42f5333c2ad6ed7b7fca2352d3c93fc3df8f434cfb0",
+    "head": "reference head"
+   },
+   "family-victory-01": {
+    "pose": "victory-1",
+    "sheet": "talon-victory",
+    "variant": "v2",
+    "cell": 3,
+    "factor": 11.811,
+    "line_sprite_px": 1.02,
+    "interior_ink": 0.203,
+    "gate_passed": true,
+    "rows_sha256": "761f1df8c283e358d3fa267d275eb4b87cac15c1b793a229433b0efdcd4532d7",
+    "head": "reference head"
+   },
+   "family-victory-02": {
+    "pose": "victory-2",
+    "sheet": "talon-victory",
+    "variant": "v2",
+    "cell": 4,
+    "factor": 11.811,
+    "line_sprite_px": 1.02,
+    "interior_ink": 0.199,
+    "gate_passed": true,
+    "rows_sha256": "c2e7d46903f1ed6b93eca798d446f7d556de99dd052398770b72ceb0c5b7e11e",
+    "head": "reference head"
+   },
+   "family-victory-03": {
+    "pose": "victory-3",
+    "sheet": "talon-victory",
+    "variant": "v2",
+    "cell": 5,
+    "factor": 11.811,
+    "line_sprite_px": 1.02,
+    "interior_ink": 0.207,
+    "gate_passed": true,
+    "rows_sha256": "bbccb00760ddce2286a7228cea78769c0757f397dedf50d60ba33cdc235eb8fa",
+    "head": "reference head"
+   }
+  },
+  "gesture": "two-finger salute off the goggle rim, as on his signpost: wind-up, hold, salute flicked out, wink",
+  "script": "unchanged: 00, 01 x6, then 02, 01, 03, 01 repeating"
+ },
+ "mica_victory": "variant-s3k-b0..b3 keep their drawings; mica/sheet_despeckle.py cleans them (they were left to this lane on 2026-11-12).",
+ "signs": {
+  "mica": {
+   "source": "mica-sign v1, cell 2",
+   "gesture": "peace sign, both eyes open",
+   "raw_sha256": "14b4031f0a1c3d4cb3361e6c632197cfd05143ed15fb63f1eb95e4f217be1440",
+   "factor": 17.36,
+   "fit": "largest component scaled to the 42x28 field at (3,2), bottom-centred; LANCZOS, indexed() to the sheet palette, outline()",
+   "rows": [
+    "000000000000000000000000000000000000000000000000",
+    "000000000000000000000000000000000000000000000000",
+    "000000000000000000000111111000000000000000000000",
+    "000000000000000000001354555110000000000000000000",
+    "000000000000000011112254554451000000000000000000",
+    "000000000000001155543135545433100110000000000000",
+    "000000000000015445211112454122211991000000000000",
+    "000000000000014452f778111113555419e1000000000000",
+    "0000000000001555418eee714225444541e1000000000000",
+    "0000000000011122117eee91111454545291000000000000",
+    "0000000000154322317ee919889135445311000000000000",
+    "000000000154555551979197798813545391100000000000",
+    "000000000155544541191891111971355311100000000000",
+    "0000000015445553123118813c9198145299110000000000",
+    "000000000155442123329911dc199981519d100000000000",
+    "000000000111111332229781dc199f792111000000000000",
+    "000000001433341221111771dc91ff779f11000000000000",
+    "000000001555541119c919799c91f1777911000000000000",
+    "000000001545419919cd11979dc119777789111000000000",
+    "00000000144529cc91cc1321977799877777881000000000",
+    "00000000155541dcc1dc13531877bbb1f777810000000000",
+    "000000000143111dcdd911331777baef9771100000000000",
+    "00000000001123212999dd1119779ba97910000000000000",
+    "0000000000133319cd1ccc92411999991100000000000000",
+    "000000000013321ccc919c92541911111000000000000000",
+    "000000000013321cdd19dc12552977792100000000000000",
+    "000000000001311dd9dcd391352199991210000000000000",
+    "0000000000001001ddd919c9251989979131000000000000",
+    "00000000000000001999dcc1341777779131000000000000",
+    "000000000000000011111111111111111111000000000000",
+    "000000000000000000000000000000000000000000000000",
+    "000000000000000000000000000000000000000000000000"
+   ]
+  },
+  "talon": {
+   "source": "talon-sign v1, cell 1",
+   "gesture": "two-finger salute off the goggle rim",
+   "raw_sha256": "55807e9f318c1a81d51663fe3b037c154871a83cfd943d4387ca8d91db6ce679",
+   "factor": 17.25,
+   "fit": "largest component scaled to the 42x28 field at (3,2), bottom-centred; LANCZOS, indexed() to the sheet palette, outline()",
+   "rows": [
+    "000000000000000000000000000000000000000000000000",
+    "000000000000000000000000000000000000000000000000",
+    "000000000000000000111111100000000000000000000000",
+    "000000000000000000124444311000000000000000000000",
+    "000000000000000000011444542100000000000000000000",
+    "000000000000000111121344299910011100000000000000",
+    "000000000000011344444442feeee11fef10000000000000",
+    "000000000000134554444431eeeef199eee1000000000000",
+    "0000000000011123345323119f99911199f1000000000000",
+    "000000000000001123326623199991331991000000000000",
+    "0000000000000134533c6366191134443211000000000000",
+    "000000000000135421dd46c3324533444441000000000000",
+    "00000000000134414d52d62343cc61344443100000000000",
+    "000000000001111dc6cc315663ccd4322431000000000000",
+    "000000000000001cc64d3177746cd1165341000000000000",
+    "000000000000001c6cc1d4d77d4c699cd991000000000000",
+    "00000000000001dc65c4c36d321365d6fee1000000000000",
+    "000000000000146cc3133d622256d8eeeeee100000000000",
+    "0000000000011dcc6d397773137769feeeee100000000000",
+    "00000000001331dccc314675137776544111000000000000",
+    "000000000134431231101467d33677775101000000000000",
+    "0000000013444443321111135d5444431000000000000000",
+    "0000000013234444421344431d778d319111000000000000",
+    "00000001134344434344444534666741f123110000000000",
+    "000000014634431344444444335344119144431000000000",
+    "00000001662312144434433524c779ff1244444100000000",
+    "0000001d6633dd2431344134144539fff144433210000000",
+    "0000001663466d1132442121d7551e19f134431110000000",
+    "000000111166642d634213146d7d1fee1414441000000000",
+    "000000000111111111111111111111111111111100000000",
+    "000000000000000000000000000000000000000000000000",
+    "000000000000000000000000000000000000000000000000"
+   ]
+  }
+ }
+}

@@ -653,6 +653,29 @@ and `examples/mica-and-talon/production/talon/lineart_pass.py` fixed both those 
 redrawing each off-style pose's head from WAIT's (placed on the pose's own goggle lens and beak,
 turned from WAIT's source where the head is pitched) instead of reducing each pose's source again.
 
+## Source drawings for reduction: line weight
+
+A generated drawing reduced to a sprite keeps an interior line only if the line is about one
+sprite pixel thick in the source. `pipeline.outline()` inks the silhouette and nothing else, so
+every separation inside it (an arm across the body, one plate over the next, a dark wing on a dark
+body) has to come from the drawing. Measured on 2026-11-12 with six poses per character
+(`examples/mica-and-talon/production/idle-sign-victory.json` names the experiment's result): the
+crisp reference sprites carry 19–22% ink inside the silhouette; flat sources with no lines, and
+sources whose lines are a darker shade of the fill, reduce to under 3%; pixel-art sources with
+1 px borders to 6%, because a 4 px line at a 10:1 reduction is 0.4 sprite px and averages into the
+fill. Near-black interior lines of 10–12 px on a 3×2 sheet at 1536×1024 (about 400 px figures,
+reduced 10:1 to 11:1) reach 19–23% with the unmodified pipeline.
+
+So ask for flat colour, no pixel grid, no line round the silhouette, and near-black interior lines
+at a stated pixel width, and make that width the headline of the prompt with a list of what to
+simplify to leave room for it: giving only the reduction factor got 5 px lines. Accept a sheet when
+its median interior line divided by its reduction factor is at least 0.9 sprite px, and each
+reduced, cleaned frame has 15–30% interior ink. A model may draw a silhouette line anyway; it lands
+on the pixel `outline()` inks and does no harm. Turning a sprite pixel to ink where a third of its
+source block is line rescues thin-line sources and over-inks sources that already pass, so it is a
+fallback for a failed sheet, not a step of the pipeline. Put a standing pose in the first cell of
+every sheet and take the sheet's one reduction factor from it.
+
 ## Production special-stage character probe
 
 `tools/modding/SpecialStageCharacterProbe.java` records real capture PNGs and a
