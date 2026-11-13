@@ -468,6 +468,13 @@ under the matching area heading; see the
   run loop. A JVM pays about three times the old per-frame cost for its first
   second of FM sound while that compile runs.
 
+- **Sprite presentation performance:** the native SAT post-pass evaluates each
+  scanline from primitive per-entry arrays and only over lines that sprites cover.
+  SAT ingress, mask clipping, sprite preparation, native tile drawing and the
+  widescreen bounds-mask fade no longer build intermediate entries, per-tile
+  lambdas, list copies or per-frame working arrays. Output is unchanged; this is
+  not yet a measured gameplay FPS claim.
+
 - **Engine quality and contributions:** the README and contributor entry point now
   acknowledge maintainability weaknesses and invite focused improvements to object
   lifetime, collision contact, rewind reconstruction, trace diagnosis and navigation.
