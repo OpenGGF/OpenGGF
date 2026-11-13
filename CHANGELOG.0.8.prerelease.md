@@ -498,6 +498,24 @@ under the matching area heading; see the
   65.6 MB and takes about 10-15 ms instead of 21-28 ms once warm; the first load
   allocates about 103 MB instead of 160 MB.
 
+- **Load, act-transition and menu load cost:** five Sonic 2 sprite tables
+  (springs, breathing bubbles, the Grabber's string, Grounder and its rocks)
+  and the Sonic 3&K Gumball bonus springs took their frame count from a first
+  offset word that points past the table, so loading them decoded up to about
+  a million meaningless sprite pieces (about 40 MB for the Grabber string
+  alone). They now read the number of frames the disassembly lists; the frames
+  that are drawn are unchanged. Kosinski Moduled art now decompresses straight
+  from the ROM instead of from a copied 64 KB-256 KB window, and the title
+  card, title screen, continue screen, character font and Sonic 3&K data
+  select no longer copy everything from the art to the end of the ROM before
+  decompressing it. Pattern decoding reuses one tile buffer, and ROM reads use
+  the ROM's in-memory copy instead of a locked file read. In headless
+  measurements a Sonic 3&K seamless act transition allocates about 3.1-4.1 MB
+  instead of 3.9-5.1 MB (FBZ 6.8 MB instead of 7.6 MB), a respawn reload about
+  1.5-2.5 MB less, a Sonic 2 CPZ or ARZ respawn about 3 MB instead of
+  11-12 MB, the Sonic 3&K data select load 1 MB instead of 24 MB and a title
+  card's art 0.1 MB instead of 36 MB.
+
 - **Sprite presentation performance:** the native SAT post-pass evaluates each
   scanline from primitive per-entry arrays and only over lines that sprites cover.
   SAT ingress, mask clipping, sprite preparation, native tile drawing and the

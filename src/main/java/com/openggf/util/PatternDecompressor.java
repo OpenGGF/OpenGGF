@@ -11,7 +11,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.util.Arrays;
 import java.util.logging.Logger;
 
 /**
@@ -148,9 +147,9 @@ public final class PatternDecompressor {
      * @throws IOException on decompression failure
      */
     public static Pattern[] kosinskiModuled(Rom rom, int address) throws IOException {
-        try (var channel = RomChannel.at(rom, address)) {
-            return fromBytes(KosinskiReader.decompressModuled(channel));
-        }
+        // Read the archive's own modules from the ROM; the channel overload would first
+        // copy everything from the archive to the end of the ROM.
+        return fromBytes(KosinskiReader.decompressModuled(RomByteReader.fromRom(rom), address));
     }
 
     /**
@@ -168,22 +167,16 @@ public final class PatternDecompressor {
             throw new IOException("Uncompressed art size is not a multiple of " + Pattern.PATTERN_SIZE_IN_ROM);
         }
         int count = size / Pattern.PATTERN_SIZE_IN_ROM;
-        Pattern[] patterns = new Pattern[count];
-        for (int i = 0; i < count; i++) {
-            patterns[i] = new Pattern();
-            patterns[i].fromSegaFormat(reader.slice(address + i * Pattern.PATTERN_SIZE_IN_ROM, Pattern.PATTERN_SIZE_IN_ROM));
-        }
-        return patterns;
+        return buildPatterns(reader.slice(address, count * Pattern.PATTERN_SIZE_IN_ROM), count);
     }
 
     private static Pattern[] buildPatterns(byte[] data, int count) {
         Pattern[] patterns = new Pattern[count];
+        // fromSegaFormat only reads its argument, so one tile buffer serves every pattern.
+        byte[] tile = new byte[Pattern.PATTERN_SIZE_IN_ROM];
         for (int i = 0; i < count; i++) {
             patterns[i] = new Pattern();
-            byte[] tile = Arrays.copyOfRange(
-                    data,
-                    i * Pattern.PATTERN_SIZE_IN_ROM,
-                    (i + 1) * Pattern.PATTERN_SIZE_IN_ROM);
+            System.arraycopy(data, i * Pattern.PATTERN_SIZE_IN_ROM, tile, 0, Pattern.PATTERN_SIZE_IN_ROM);
             patterns[i].fromSegaFormat(tile);
         }
         return patterns;

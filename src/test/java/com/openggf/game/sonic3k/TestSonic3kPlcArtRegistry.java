@@ -1088,7 +1088,7 @@ public class TestSonic3kPlcArtRegistry {
             RomByteReader reader = RomByteReader.fromRom(rom);
             Sonic3kObjectArt art = new Sonic3kObjectArt(null, reader);
 
-            for (int zone : new int[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 0x16, 0x17}) {
+            for (int zone : new int[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 0x13, 0x14, 0x15, 0x16, 0x17}) {
                 for (int act = 0; act <= 1; act++) {
                     Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(zone, act);
                     String context = "zone 0x" + Integer.toHexString(zone) + " act " + act;
@@ -1151,6 +1151,28 @@ public class TestSonic3kPlcArtRegistry {
                     }
                 }
             }
+            // The Gumball bonus stage's dispenser springs load Map_Spring as a standalone sheet.
+            Sonic3kObjectArt art = new Sonic3kObjectArt(null, reader);
+            int standaloneSprings = 0;
+            for (Sonic3kPlcArtRegistry.StandaloneArtEntry entry
+                    : Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_GUMBALL, 0).standaloneArt()) {
+                if (entry.mappingAddr() != Sonic3kConstants.MAP_SPRING_ADDR
+                        && entry.mappingAddr() != Sonic3kConstants.MAP_SPRING2_ADDR) {
+                    continue;
+                }
+                standaloneSprings++;
+                assertEquals(11, entry.mappingFrameCount(), entry.key());
+                List<SpriteMappingFrame> unbounded = S3kSpriteDataLoader.loadMappingFrames(
+                        reader, entry.mappingAddr(), entry.mappingFormat());
+                List<SpriteMappingFrame> sheetFrames = new ArrayList<>();
+                var sheet = art.loadStandaloneSheet(rom, entry);
+                for (int frame = 0; frame < sheet.getFrameCount(); frame++) {
+                    sheetFrames.add(sheet.getFrame(frame));
+                }
+                assertEquals(11, sheetFrames.size(), entry.key());
+                assertEquals(unbounded.subList(0, 11), sheetFrames, entry.key());
+            }
+            assertEquals(1, standaloneSprings, "Gumball standalone spring sheets");
         }
     }
 
