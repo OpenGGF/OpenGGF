@@ -502,7 +502,8 @@ under the matching area heading; see the
   time. It reports frame time, allocation, garbage collection and hitches per
   level and how far each replay got. It lists the slow frames that recur across
   runs, and it matches profiler samples, including JDK 25 method traces, to those
-  frames. `RouteFrameBudgetProbe` takes a route's launch settings (`--game`,
+  frames. `compare` sets two sweeps side by side level by level, counting the
+  frames over 8.33 ms and 16.67 ms that recur across runs. `RouteFrameBudgetProbe` takes a route's launch settings (`--game`,
   `--width`, `--title-card`, `--intros`, `--emeralds`, `--vint-run-count`,
   `--setup-step`, `--input-start`). `TraceBenchmarkTool --frame-log` records when
   each frame started, so a recording can be lined up with it. The trace catalogue
