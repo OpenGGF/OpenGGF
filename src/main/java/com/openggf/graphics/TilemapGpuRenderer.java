@@ -42,6 +42,12 @@ public class TilemapGpuRenderer {
     /** An owned descriptor texture keeps cinematic window uploads outside native GPU residency. */
     void withCinematicBackground(CinematicBackgroundResidency residency, Runnable draw) {
         if (cinematicBackgroundActive) throw new IllegalStateException("Nested cinematic background residency");
+        // Pending row spans belong to the native foreground texture; escalate them to a
+        // full upload so the restored residency republishes them after the private draw.
+        if (foregroundPendingRowCount > 0) {
+            foregroundDirty = true;
+            foregroundPendingRowCount = 0;
+        }
         BackgroundResidencyState saved = captureBackgroundResidency();
         var savedForeground = new ForegroundResidencyState(foregroundTexture, foregroundWindowTexture,
                 foregroundData, foregroundWidthTiles, foregroundHeightTiles, foregroundDirty,
@@ -202,6 +208,9 @@ public class TilemapGpuRenderer {
     private int foregroundWidthTiles;
     private int foregroundHeightTiles;
     private boolean foregroundDirty = false;
+    // Contiguous row span of foregroundData awaiting upload into the existing texture.
+    private int foregroundPendingFirstRow;
+    private int foregroundPendingRowCount;
 
     private byte[] lookupData;
     private int lookupSize;
@@ -289,6 +298,7 @@ public class TilemapGpuRenderer {
             this.foregroundWidthTiles = widthTiles;
             this.foregroundHeightTiles = heightTiles;
             this.foregroundDirty = true;
+            this.foregroundPendingRowCount = 0;
         } else {
             this.backgroundData = data;
             this.backgroundWidthTiles = widthTiles;
@@ -302,6 +312,33 @@ public class TilemapGpuRenderer {
             this.backgroundContentGeneration++;
         }
     }
+
+    /**
+     * Republishes rows {@code firstRow..firstRow+rowCount-1} of the foreground array that
+     * is already resident. Any other array or geometry, or a pending full upload, takes
+     * the ordinary {@link #setTilemapData} path; spans union into one contiguous range.
+     */
+    void setForegroundTilemapRows(byte[] data, int widthTiles, int heightTiles, int firstRow, int rowCount) {
+        if (foregroundDirty || data != foregroundData || widthTiles != foregroundWidthTiles
+                || heightTiles != foregroundHeightTiles || rowCount <= 0
+                || firstRow < 0 || firstRow > heightTiles - rowCount) {
+            setTilemapData(Layer.FOREGROUND, data, widthTiles, heightTiles);
+            return;
+        }
+        if (foregroundPendingRowCount > 0) {
+            int end = Math.max(foregroundPendingFirstRow + foregroundPendingRowCount, firstRow + rowCount);
+            foregroundPendingFirstRow = Math.min(foregroundPendingFirstRow, firstRow);
+            foregroundPendingRowCount = end - foregroundPendingFirstRow;
+        } else {
+            foregroundPendingFirstRow = firstRow;
+            foregroundPendingRowCount = rowCount;
+        }
+    }
+
+    /** Diagnostics: pending foreground row span (count 0 = none). */
+    int foregroundPendingRowCountForDiagnostics() { return foregroundPendingRowCount; }
+    int foregroundPendingFirstRowForDiagnostics() { return foregroundPendingFirstRow; }
+    boolean foregroundFullUploadPendingForDiagnostics() { return foregroundDirty; }
 
     /**
      * Publishes a complete physical Plane B texture while retaining its logical
@@ -583,7 +620,14 @@ public class TilemapGpuRenderer {
             if (foregroundDirty) {
                 tilemapTexture.upload(tilemapData, tilemapWidthTiles, tilemapHeightTiles);
                 foregroundDirty = false;
+            } else if (foregroundPendingRowCount > 0) {
+                if (!tilemapTexture.uploadRows(tilemapData, tilemapWidthTiles, tilemapHeightTiles,
+                        foregroundPendingFirstRow, foregroundPendingFirstRow, foregroundPendingRowCount)) {
+                    // Texture recreated or resized since the last full upload.
+                    tilemapTexture.upload(tilemapData, tilemapWidthTiles, tilemapHeightTiles);
+                }
             }
+            foregroundPendingRowCount = 0;
         } else if (backgroundDirty) {
             tilemapTexture.upload(tilemapData, tilemapWidthTiles, tilemapHeightTiles);
             backgroundDirty = false;
@@ -1118,6 +1162,7 @@ public class TilemapGpuRenderer {
         foregroundLineScrollBuffer.cleanup();
         backgroundTexture.cleanup();
         foregroundTexture.cleanup();
+        foregroundPendingRowCount = 0;
         foregroundWindowTexture.cleanup();
         uploadedWindowDescriptors = null;
         foregroundWindow = null;
