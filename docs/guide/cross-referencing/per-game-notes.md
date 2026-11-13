@@ -151,12 +151,15 @@ engine handles this in the level loading pipeline.
 
 ### REV00 vs REV01
 
-The engine targets **REV01**. Some differences from REV00:
+The engine's canonical address vocabulary is **REV01**. Some differences from REV00:
 - Object code may have bug fixes or behavior changes.
 - ROM addresses may shift due to code size differences.
 - Some animation scripts have `rev02even` alignment directives.
 
-Using REV00 ROMs will cause address mismatches and incorrect behavior.
+A verified REV00 image is recognised by its retail fingerprint and uses its own
+data locations and shipped behavior; see
+[How Addresses Are Found](how-the-engine-reads-roms.md#hardcoded-constants). Other
+editions remain unverified.
 
 ### SMPS Audio
 

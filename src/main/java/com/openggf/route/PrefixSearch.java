@@ -31,6 +31,7 @@ final class PrefixSearch {
 
     /** Expansion policy over the shared machinery. */
     interface Expander {
+        default void beginPrefix(RouteSample entry) { }
         /** Checks one immutable prefix row; a reason stops the plan as {@link StopReason#PREFIX_DIVERGED}. */
         String checkPrefixRow(int row, RouteSample sample);
 
@@ -156,8 +157,11 @@ final class PrefixSearch {
     Draft run() {
         try {
             boot();
+            expander.beginPrefix(last);
             var rows = new InputTape.Builder();
             for (int i = 0; i < immutable.size(); i++) {
+                if(cancelled()) return new Draft(null,StopReason.CANCELLED,"cancelled in immutable prefix",null);
+                if(outOfSteps()) return new Draft(null,StopReason.BUDGET_EXHAUSTED,"steps exhausted in immutable prefix",null);
                 step(immutable.row(i));
                 rows.add(immutable.row(i));
                 String diverged = expander.checkPrefixRow(i, last);
@@ -193,6 +197,8 @@ final class PrefixSearch {
                 if (next != null && next.segmentRoot) frontier.clear();
                 if (next == null) next = nextFromFrontier(frontier, Integer.MAX_VALUE);
                 if (next == null) {
+                    if(cancelled()) return new Draft(null,StopReason.CANCELLED,"cancelled",best);
+                    if(outOfSteps()) return new Draft(null,StopReason.BUDGET_EXHAUSTED,"steps exhausted",best);
                     return expander.failure().isEmpty()
                             ? new Draft(null, StopReason.NO_PROGRESS, "every line stalled at progress " + best.k, best)
                             : new Draft(null, expander.failureReason(), expander.failure(), best);

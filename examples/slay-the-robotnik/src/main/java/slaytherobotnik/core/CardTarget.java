@@ -2,7 +2,7 @@ package slaytherobotnik.core;
 
 /**
  * Who a card (or potion) needs the player to point at when it is played.
- * See {@link CardType} for why these are String constants.
+ * These identifiers retain their existing save and content keys.
  */
 public final class CardTarget {
     /** The player chooses one living enemy. */

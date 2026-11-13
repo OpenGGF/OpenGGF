@@ -138,10 +138,46 @@ public final class RouteFiles {
         return new Written(manifest, script);
     }
 
-    /** Derives a standalone BizHawk movie of the route's rows, proven loadable row for row. */
+    /** Derives a movie, replacing title/load rows with a hash-bound native witness when declared. */
     public static Path exportBk2(RouteArtifact route, Path out) throws IOException {
-        RouteBk2.write(out, route.launch().rom(), route.tape());
+        RouteBk2.write(out, route.launch().rom(), nativeInputTape(route));
         return out;
+    }
+
+    /** Derives frozen controller rows only; no native state or timing enters an engine replay. */
+    public static InputTape nativeInputTape(RouteArtifact route) throws IOException {
+        var facts=route.manifest().nativeFacts();
+        if(!facts.exportBlocker().isEmpty())throw new IOException("native export blocked: "+facts.exportBlocker());
+        var entry=facts.entry();
+        if(route.launch().inlet() instanceof Inlet.Title && (entry.isEmpty() || entry.get().anchorBoundary().isEmpty()))
+            throw new IOException("title export requires observed engine/native gameplay anchors and a native witness");
+        InputTape result=InputTape.empty();int cursor=0;
+        if(entry.isPresent() && !entry.get().anchorBoundary().isEmpty()) {
+            var a=entry.get();
+            if(a.engineAnchorRows()>route.tape().size())throw new IOException("engine anchor exceeds route rows");
+            result=inputPrefix(Path.of(a.movie()),a.prefixRows());
+            if(!result.hash().equals(a.inputHash()))throw new IOException("native witness prefix hash mismatch");
+            cursor=a.engineAnchorRows();
+        }
+        for(var inlet:facts.inlets()) {
+            var a=inlet.anchor();
+            if(inlet.engineFromRows()<cursor || a.engineAnchorRows()>route.tape().size())throw new IOException("native inlet outside route rows");
+            result=result.append(route.tape().slice(cursor,inlet.engineFromRows()));
+            var witness=inputPrefix(Path.of(a.movie()),a.prefixRows());
+            if(!witness.hash().equals(a.inputHash()))throw new IOException("later native witness hash mismatch");
+            if(witness.size()<result.size() || !witness.slice(0,result.size()).equals(result))
+                throw new IOException("later native witness has different preceding frozen inputs");
+            result=witness;cursor=a.engineAnchorRows();
+        }
+        return result.append(route.tape().slice(cursor,route.tape().size()));
+    }
+
+    /** Reads exactly the declared prefix; .script is the frozen input grammar, never an authored offset. */
+    public static InputTape inputPrefix(Path input, int rows) throws IOException {
+        if (!input.toString().endsWith(".script")) return tapeFromMovie(input, rows);
+        var tape = tapeFromScript(Files.readString(input, StandardCharsets.UTF_8));
+        if (rows < 0 || rows > tape.size()) throw new IOException("native witness prefix exceeds input rows");
+        return tape.slice(0,rows);
     }
 
     /** Compiles route-script text (the {@code InputScriptCompiler} grammar) to a tape. */

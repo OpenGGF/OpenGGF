@@ -1,0 +1,72 @@
+{
+  "status": "uninstalled pilot; no coverage advancement",
+  "method": "Built-in GPT Image native-pose transformation; precise model version unavailable",
+  "native_reference": {
+    "game": "S2",
+    "frame": 114,
+    "label": "Map_Sonic_0C90",
+    "size": [
+      26,
+      45
+    ],
+    "hotspot": [
+      15,
+      25
+    ],
+    "palette": "native Super steady phase at CyclingPal_SSTransformation + $30"
+  },
+  "references": [
+    "concept/mica.png",
+    "art/mica/frames/wait-00.png"
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "raw_sha256": "c6beedcb944c112afefa5ec11f7756360ef8ed19c9c8d2d578fba855933809b6",
+      "size": [
+        26,
+        45
+      ],
+      "hotspot": [
+        15,
+        25
+      ],
+      "native_opaque_area": 650,
+      "authored_opaque_area": 736,
+      "size_ratio": 1.064099474817882,
+      "prompt": "Use case: identity-preserve. Asset: one production 16-bit pixel sprite, upright Gilded MICA powered stance. Image 1 is the native POSE reference at 8x nearest neighbour; image 2 is the character model sheet, use the GOLD powered panel on right; image 3 is the approved normal in-game MICA sprite and locks her head and torso scale. Transform image 1's pose into this ORIGINAL pangolin MICA: upright confident powerful stance, legs straight, arms hanging with clenched white gloved fists, face turned right, feet planted as in native pose, slight suspended Super stance. She has overlapping rounded gold scale plates, NOT quills or spikes; long gold pangolin tail extending behind left, short pointed soft snout, pink ear, large brown eye with lashes, pale gold cream face and segmented belly, coral boots with tan soles and jade laces. Match approved sprite head/torso proportions, same 39px body scale; do not copy Sonic identity or spiky hair. Strong small-pixel silhouette; at most 15 flat colors; no glow, no text, no ground shadow. Draw ONE sprite large with crisp pixel structure suitable reduction into native 26x45 pose box, transparent background. Keep crown scales rounded and connected. Entire tail and boots visible. Upright powered stance must differ from normal wait pose."
+    },
+    {
+      "attempt": 2,
+      "raw_sha256": "7bc92099dc758c1411c465cc7726cab74fdcb20056dcb7a1f549e71637021c48",
+      "size": [
+        26,
+        45
+      ],
+      "hotspot": [
+        15,
+        25
+      ],
+      "native_opaque_area": 650,
+      "authored_opaque_area": 746,
+      "size_ratio": 1.0713040220648422,
+      "prompt": "Draw a single small pixel-art game character on transparent background. Use the gold pangolin on the right of the model sheet as identity. Use the first reference for the upright standing pose, with arms relaxed down, white mittens at sides and red boots planted, facing right. The third image is the approved sprite: keep its compact proportions and rounded overlapping armor scales. Gold scales and tail, pale yellow face and belly, pink ears, brown eyes, white gloves and coral red boots with tan soles and green laces. No spikes, no text, no glow. Full body and long tail visible. Designed to be reduced into a 26 by 45 pixel game sprite."
+    }
+  ],
+  "rejected_generation": {
+    "position": 2,
+    "status": "provider rejected output; no image returned",
+    "request_id": "795ec852-1a07-4982-a2de-cb29e32f4526"
+  },
+  "selection": {
+    "attempt": 1,
+    "reason": "Straighter upright posture and lowered fists closer to native reference; candidate only, no anatomy or gameplay acceptance"
+  },
+  "cleanup": "Connected-alpha extraction, Lanczos reduction to 26x45, nearest fixed semantic gold palette, binary alpha, inside one-pixel ink; no repainted anatomy",
+  "limits": [
+    "Neither generated candidate is accepted for gameplay.",
+    "Hotspot is a native comparison value, not contact-certified MICA geometry.",
+    "Anatomical scale needs manual acceptance alongside area check.",
+    "No animation, engine seam or in-game capture."
+  ]
+}

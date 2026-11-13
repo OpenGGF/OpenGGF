@@ -177,6 +177,8 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
         this.fixedFrame = fixedFrame;
     }
 
+    boolean isBuzzerStinger() { return type == ProjectileType.BUZZER_STINGER; }
+
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         ObjectSpawn spawn = ctx.spawn();

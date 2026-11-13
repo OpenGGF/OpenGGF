@@ -153,6 +153,9 @@ public final class ConfigCatalog {
 
         // audio
         put(AUDIO_ENABLED, of("audio", "enabled", BOOL, "Enable music and SFX"));
+        put(AUDIO_MUSIC_VOLUME, of("audio", "musicVolume", INT,
+                "Music volume from 0 to 100 percent; 0 silences music and keeps sound effects"));
+        put(AUDIO_SFX_VOLUME, of("audio", "sfxVolume", INT, "Sound-effect volume from 0 to 100 percent"));
         put(AUDIO_HUB_MUSIC_ENABLED, of("audio", "hubMusicEnabled", BOOL,
                 "Play the selected game's ROM title theme quietly in the hub"));
         put(AUDIO_HUB_MUSIC_VOLUME, of("audio", "hubMusicVolume", INT,

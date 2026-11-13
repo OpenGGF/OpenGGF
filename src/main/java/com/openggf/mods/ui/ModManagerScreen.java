@@ -1319,7 +1319,7 @@ public final class ModManagerScreen {
         lines.add(UiMessages.text("menu.mods.merge.version", Map.of("version", String.valueOf(manifest.version()))));
         lines.add(UiMessages.text("menu.mods.jar", Map.of("file", filename(descriptor.jarPath()))));
         if (isBundled(descriptor)) {
-            lines.add(UiMessages.text("menu.mods.ui.bundled_with_openggf_enabled_by_default_and_trusted_by_this_build_s_manifest_you_can_"));
+            lines.add(UiMessages.text("menu.mods.ui.bundled_caps"));
         }
         lines.add(UiMessages.text("menu.mods.merge.id", Map.of("id", manifest.id())));
         lines.add(UiMessages.text("menu.mods.merge.applies_to", Map.of("game", gameLabel(manifest))));

@@ -908,10 +908,13 @@ class S1Mz1SlotLayoutHarness {
         }
         ObjectSpawn spawn = maybeSpawn.get();
         try {
-            Field activeObjectsField = ObjectManager.class.getDeclaredField("activeObjects");
+            Field populationField = ObjectManager.class.getDeclaredField("population");
+            populationField.setAccessible(true);
+            Object population = populationField.get(objectManager);
+            Field activeObjectsField = population.getClass().getDeclaredField("placed");
             activeObjectsField.setAccessible(true);
             Map<ObjectSpawn, ObjectInstance> activeObjects =
-                    (Map<ObjectSpawn, ObjectInstance>) activeObjectsField.get(objectManager);
+                    (Map<ObjectSpawn, ObjectInstance>) activeObjectsField.get(population);
 
             ObjectInstance byIdentity = activeObjects.get(spawn);
             ObjectInstance byEquals = null;
@@ -1053,9 +1056,12 @@ class S1Mz1SlotLayoutHarness {
             return "<no object manager>";
         }
         try {
-            Field field = ObjectManager.class.getDeclaredField("reservedChildSlots");
+            Field populationField = ObjectManager.class.getDeclaredField("population");
+            populationField.setAccessible(true);
+            Object population = populationField.get(objectManager);
+            Field field = population.getClass().getDeclaredField("reservedChildren");
             field.setAccessible(true);
-            Map<ObjectSpawn, int[]> reserved = (Map<ObjectSpawn, int[]>) field.get(objectManager);
+            Map<ObjectSpawn, int[]> reserved = (Map<ObjectSpawn, int[]>) field.get(population);
             return reserved.entrySet().stream()
                     .filter(entry -> entry.getKey() != null)
                     .filter(entry -> entry.getKey().x() >= minX && entry.getKey().x() <= maxX)

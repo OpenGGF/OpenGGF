@@ -6,6 +6,18 @@ import com.openggf.sprites.playable.PlayableMutatorPolicySource;
 public final class SpriteManagerInternalAccess {
     private SpriteManagerInternalAccess() { }
 
+    /** Read the completed BuildSprites admission before its transient hurt latch was consumed. */
+    public static boolean nativeDisplayAdmission(SpriteManager manager,
+            com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        return manager.nativeDisplayAdmission(player);
+    }
+
+    /** Real physics/history/animation within the initial scope; honors native forced controls. */
+    public static void runNativeUncountedPlayablePass(SpriteManager manager) {
+        requireEngineCaller();
+        manager.runNativeUncountedPlayablePass();
+    }
+
     /** Optional native credits input semantics wrap only the ending owner's gameplay callback. */
     public static void runCreditsDemoGameplay(SpriteManager manager, com.openggf.game.GameModule module,
             com.openggf.sprites.Sprite sprite, Runnable frame) {
@@ -110,6 +122,16 @@ public final class SpriteManagerInternalAccess {
             com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
         requireEngineCaller();
         return sprite.getMovementManager() instanceof PlayableSpriteMovement movement ? movement.motionMutators : null;
+    }
+
+    /**
+     * Whether a bound motion mutator holds this sprite in local fluid. Unchecked on purpose: it publishes
+     * only the boolean that {@code PlayerFluidContextAccess} already answers to every caller, never the
+     * runtime, and physics asks it several times per frame.
+     */
+    public static boolean motionFluidActive(com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+        var motion = sprite.getMovementManager() instanceof PlayableSpriteMovement movement ? movement.motionMutators : null;
+        return motion != null && motion.movementFluidActive(sprite);
     }
 
     public static void prepareMotionInputForNativeTick(SpriteManager manager) {

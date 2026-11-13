@@ -879,6 +879,21 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 	}
 
+	/** Ordinary playable physics inside an already-owned initial object scope, with no clock advance. */
+	void runNativeUncountedPlayablePass() {
+		LevelManager level = getLevelManager();
+		ObjectManager objects = level != null ? level.getObjectManager() : null;
+		if (objects == null || !objects.hasActiveInitialProcessSpritesDispatch())
+			throw new IllegalStateException("Native uncounted playable pass requires the actual initial object scope");
+		// Level_FDLoop keeps executing objects after it stops incrementing
+		// v_framecount (sonic.asm:3073-3090). The next uncounted assembly
+		// therefore inherits independently owned level and sprite clocks.
+		// Preserve both until the native post-pass clear; do not use the
+		// synchronized fresh Process_Sprites epoch validator here.
+		var epoch = new ProcessSpritesEpoch(level.getFrameCounter(), objects.getFrameCounter(), false);
+		processPlayableSlots(PlayableDispatchContext.nativeUncounted(epoch));
+	}
+
 	private void processPlayableSlots(PlayableDispatchContext context) {
 		// Note: bucketsDirty is already marked in addSprite()/removeSprite(),
 		// no need to unconditionally mark dirty every frame.
@@ -1241,11 +1256,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 */
 	public void advanceTailsTailsAfterObjectExecution() {
 		AbstractPlayableSprite main = getMainPlayable();
-		if (main != null && main.getTailsTailsController() != null) {
+		if (main != null && main.getTailsTailsController() != null && !NativeDustDisplayInternalAccess.owns(main)) {
 			main.getTailsTailsController().update();
 		}
 		for (AbstractPlayableSprite sidekick : getRegisteredSidekicks()) {
-			if (sidekick != null && sidekick.getTailsTailsController() != null) {
+			if (sidekick != null && sidekick.getTailsTailsController() != null && !NativeDustDisplayInternalAccess.owns(sidekick)) {
 				sidekick.getTailsTailsController().update();
 			}
 		}
@@ -1256,6 +1271,9 @@ public class SpriteManager implements PlayableSstDispatcher {
 				sprites, sidekicks, isCpuSidekickSuppressed(),
 				playableOrderScratch, playableScheduledScratch, playableAvailableScratch);
 		for (AbstractPlayableSprite playable : playables) {
+            // Native capability-owned controllers run at their actual reserved SSTs,
+            // inside the admitted object walk, not a second broad tail callback.
+            if (NativeDustDisplayInternalAccess.owns(playable)) continue;
 			if (!(playable.getMovementManager() instanceof PlayableSpriteMovement movement)) {
 				continue;
 			}
@@ -1562,6 +1580,9 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	private void beginPlayableFrame(List<AbstractPlayableSprite> playables) {
+		// The prior BuildSprites admission expires before any new playable pass,
+		// including uncounted title passes on the next level's zero epoch.
+		nativeDisplayAdmissions.clear();
 		playableFrameActive = true;
 		playableUpdateOrder.clear();
 		deferredPostTickMutations.clear();
@@ -1662,13 +1683,21 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 	}
 
+	private final java.util.Map<AbstractPlayableSprite, Boolean> nativeDisplayAdmissions = new java.util.IdentityHashMap<>();
+
+	boolean nativeDisplayAdmission(AbstractPlayableSprite player) {
+		return nativeDisplayAdmissions.getOrDefault(player, player.shouldRefreshRenderFlagThisFrame());
+	}
+
 	public void refreshPlayableRenderFlags(Camera camera) {
 		if (camera == null) {
 			return;
 		}
+		nativeDisplayAdmissions.clear();
 		for (Sprite sprite : getAllSprites()) {
 			if (sprite instanceof AbstractPlayableSprite playable) {
 				boolean refresh = playable.shouldRefreshRenderFlagThisFrame();
+				nativeDisplayAdmissions.put(playable, refresh);
 				// The hurt routine's unconditional DisplaySprite owns only the
 				// current BuildSprites pass.
 				playable.clearHurtRoutineOwnedDisplayLatch();

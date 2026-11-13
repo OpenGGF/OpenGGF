@@ -1,0 +1,2 @@
+# bank selector image hotspotX hotspotY; image paths are relative to this table.
+portrait 5 mica.png 18 40

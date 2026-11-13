@@ -85,6 +85,34 @@ class TestLightningSparkArtRewind {
     }
 
     @Test
+    void ownedHelperSparksSurviveTheirCapturedShieldsDeferredRefresh() throws Exception {
+        Harness h = new Harness(new Sonic3kGameModule());
+        loadArt(h.services.module);
+        var shield = assertInstanceOf(LightningShieldObjectInstance.class,
+                new DefaultPowerUpSpawner(h.manager).spawnShield(h.player, ShieldType.LIGHTNING));
+        shield.triggerSparks();
+        assertEquals(4, h.live().size());
+        Frame boundary = h.frame();
+        var snapshot = h.manager.rewindSnapshottable().capture();
+        var shieldEntry = snapshot.dynamicObjects().stream()
+                .filter(e -> e.className().equals(LightningShieldObjectInstance.class.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(4, snapshot.dynamicObjects().stream()
+                .filter(e -> e.constructionFamily() != null
+                        && shieldEntry.objectId().equals(e.constructionFamily().parentId())).count());
+        h.manager.rewindSnapshottable().restore(snapshot);
+        assertEquals(4, h.live().size(), "independent spark recreation must not wait forever for shield refresh");
+        Frame beforeRefresh = h.frame();
+        assertEquals(boundary.sparks(), beforeRefresh.sparks());
+        assertEquals(boundary.image(), beforeRefresh.image());
+        new DefaultPowerUpSpawner(h.manager).spawnShield(h.player, ShieldType.LIGHTNING);
+        assertEquals(boundary, h.frame(), "complete slot inventory follows the deferred shield refresh");
+        var recaptured = h.manager.rewindSnapshottable().capture();
+        assertEquals(snapshot.dynamicObjects().stream().map(e -> e.constructionFamily()).toList(),
+                recaptured.dynamicObjects().stream().map(e -> e.constructionFamily()).toList());
+    }
+
+    @Test
     void stockProducerRestoresExactRomTilesAndVisibleBlankFramesThroughRetirement() throws Exception {
         Harness h = new Harness(new Sonic3kGameModule());
         SpriteArtSet art = loadArt(h.services.module);

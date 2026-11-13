@@ -6,7 +6,6 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -59,18 +58,14 @@ class TestObjectRewindExactAdoption {
     }
 
     private static void reserveOnly(ObjectManager manager, int... retainedSlots) throws Exception {
-        Field field = ObjectManager.class.getDeclaredField("slotAllocator");
-        field.setAccessible(true);
-        SlotAllocator allocator = (SlotAllocator) field.get(manager);
+        SlotAllocator allocator = manager.population().allocator;
         for (int slot : retainedSlots) {
             assertTrue(allocator.reserve(slot));
         }
     }
 
     private static ObjectInstance[] execOrder(ObjectManager manager) throws Exception {
-        Field field = ObjectManager.class.getDeclaredField("execOrder");
-        field.setAccessible(true);
-        return (ObjectInstance[]) field.get(manager);
+        return manager.population().executionOrder;
     }
 
     private static ObjectManager s3kObjectManager() {

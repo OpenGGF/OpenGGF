@@ -1,5 +1,7 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.CanonicalAnimation;
@@ -388,15 +390,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return sprite.currentLevelManager();
 	}
 
-	/** Homing and dash launches lag the camera exactly like the fire-shield dash below. */
-	private void applyHomingCameraLag() {
-		sprite.resetPositionAndStatTableHistory();
-		Camera camera = camera();
-		if (camera != null && camera.getFocusedSprite() == sprite) {
-			camera.setHorizScrollDelay(com.openggf.game.mutators.HomingAttackRuntime.CAMERA_LAG_FRAMES);
-		}
-	}
-
 	private com.openggf.game.mutators.HomingAttackRuntime homingAttack() {
 		return com.openggf.sprites.playable.PlayableSpriteInternalAccess.homingAttack(sprite);
 	}
@@ -657,6 +650,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (motionMutators != null) {
 			motionMutators.beforeMovement(sprite);
 		}
+		com.openggf.sprites.playable.PlayableSpriteInternalAccess.movementTick(sprite);
 		var homingAttack = homingAttack();
 		if (homingAttack != null) {
 			homingAttack.beforeMovement(sprite);
@@ -1264,6 +1258,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		setSpindashAnimation();
 		com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_CHARGE, audioManager);
 		sprite.setSpindash(true);
+		// Native fixed-Dust mode writer; ordinary worlds have no capability receiver.
+		NativeDustDisplayInternalAccess.chargeStarted(sprite);
 		sprite.setSpindashCounter((short) 0);
 		doLevelBoundaryAndAnglePos();
 		return true;
@@ -1336,6 +1332,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// (sonic3k.asm:23732-23737; Tails loc_1527C :28788).
 		applyRollRadiusShift(preReleaseCentreY, true);
 		sprite.setSpindash(false);
+		// The explicit release write is distinct from a transferred spindash flag.
+		NativeDustDisplayInternalAccess.chargeReleased(sprite);
 
 		short[] table = getSpindashSpeedTable();
 		int speedIndex = Math.min((sprite.getSpindashCounter() >> 8) & 0xFF, table.length - 1);
@@ -1513,8 +1511,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				// without one the native move runs and the forward air dash is the fallback.
 				var homingAttack = homingAttack();
 				if (homingAttack != null && homingAttack.tryLaunch(sprite)) {
-					com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_RELEASE, audioManager);
-					applyHomingCameraLag();
 					jumpReleasedSinceJump = false;
 					inputJumpPress = false;
 					return;
@@ -1550,8 +1546,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					return;
 				}
 				if (homingAttack != null && homingAttack.tryAirDash(sprite)) {
-					com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_RELEASE, audioManager);
-					applyHomingCameraLag();
 					jumpReleasedSinceJump = false;
 					inputJumpPress = false;
 					return;
@@ -1580,7 +1574,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean tryActivateTailsFlight() {
 		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
 		if (capabilityRules == null
-				|| !capabilityRules.tailsFlightEnabled()
+				|| !(capabilityRules.tailsFlightEnabled()
+					|| PlayableArchetype.declares(sprite,
+						com.openggf.game.CharacterDefinition.MovementAbility.CROSS_GAME_FLIGHT))
 				|| sprite.getSecondaryAbility() != SecondaryAbility.FLY
 				|| sprite.getTailsFlightController() == null
 				|| sprite.getTailsFlightController().isActive()) {
@@ -1602,6 +1598,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (tailsFlightActivatedThisFrame || !isManualTailsFlightActive()) {
 			return;
 		}
+		// Native flight consumes flap edges outside JumpHeight's double-jump gate.
+		// Offer mod characters that edge first; native Tails' default hook declines it.
+		if (inputJumpPress && com.openggf.sprites.playable.CharacterRuntimeHooks.activateAbility(
+				sprite, inputUp, inputDown, inputLeft, inputRight)) {
+			inputJumpPress = false;
+			return;
+		}
 		boolean carryingMainCharacter = sprite.getTailsCarryController() != null
 				&& sprite.getTailsCarryController().isCarryingMainCharacter();
 		sprite.getTailsFlightController().updateVertical(
@@ -1612,7 +1615,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean isManualTailsFlightActive() {
 		PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
 		if (capabilityRules == null
-				|| !capabilityRules.tailsFlightEnabled()
+				|| !(capabilityRules.tailsFlightEnabled()
+					|| PlayableArchetype.declares(sprite,
+						com.openggf.game.CharacterDefinition.MovementAbility.CROSS_GAME_FLIGHT))
 				|| sprite.getSecondaryAbility() != SecondaryAbility.FLY
 				|| sprite.getTailsFlightController() == null
 				|| !sprite.getTailsFlightController().isActive()) {
@@ -2017,6 +2022,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int adjustedAngle = (hexAngle + 0x20) & 0xC0;
 
 		if (adjustedAngle != 0) {
+			// Knuckles_BeginSlide (docs/kis2disasm/s2.asm:38217-38231) branches
+			// to Sonic_ResetOnFloor_Part2 only on this non-flat arrival.
+			com.openggf.sprites.playable.PlayableNativeFloorReset.resetChain(sprite);
 			// Non-flat surface: land normally
 			sprite.setXSpeed((short) sprite.getGSpeed());
 			sprite.setYSpeed((short) 0);
@@ -2167,8 +2175,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// zero.
 		// (This build is FixBugs = 0; the site carries no bug-fix conditional.)
 		// double_jump_flag is cleared; native keeps double_jump_property.
-		// Status_RollJump, Chain_bonus_counter and scroll_delay_counter have no
-		// modelled engine state at this site; flip_type and flips_remaining do.
+		// Status_RollJump and scroll_delay_counter have no modelled engine state
+		// here. The floor-reset funnel delegates chain state to the host.
 		com.openggf.sprites.playable.PlayableSpriteInternalAccess.landForNativeFloorReset(sprite);
 		sprite.setPushing(false);
 		sprite.setJumping(false);
@@ -2575,6 +2583,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			if (sprite.getDirection() == Direction.LEFT) {
 				NativePositionOps.addXPosPreserveSubpixel(sprite, -1);
 			}
+			// Knuckles_Climbing_Onto_Ledge (docs/kis2disasm/s2.asm:38848-38864)
+			// calls Sonic_ResetOnFloor_Part2 on the final frame.
+			com.openggf.sprites.playable.PlayableNativeFloorReset.resetChain(sprite);
 			exitWallClimbToGround();
 			sprite.setPushing(false);
 			sprite.setRollingJump(false);
@@ -4316,6 +4327,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return false;
 		}
 
+		// Sonic_ResetOnFloor_Part3 (s2.asm:38142-38147), Tails_ResetOnFloor_Part3 (s2.asm:41033-41044).
+		com.openggf.sprites.playable.PlayableNativeFloorReset.resetChain(sprite);
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		boolean preservePinballRoll = movementRules != null
 				&& movementRules.landing().pinballLandingPreservesRoll();

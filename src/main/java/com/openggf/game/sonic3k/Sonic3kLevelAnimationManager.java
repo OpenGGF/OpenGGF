@@ -263,7 +263,7 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
     public void advanceEndingPoweredPaletteAtAnPal(com.openggf.level.objects.ObjectServices services) {
         if(globalAnimationState.paletteFadeTimer()!=0)return;
         if(services.playerQuery().mainPlayerOrNull() instanceof com.openggf.sprites.playable.AbstractPlayableSprite player
-                && player.getSuperStateController() instanceof Sonic3kSuperStateController controller){
+                && player.getSuperStateController() instanceof com.openggf.game.internal.EndingFormController controller){
             controller.advanceEndingPaletteAtAnPal();
             // Native Normal_palette changes precede object reads and later writes.
             S3kPaletteWriteSupport.resolvePendingWritesNow(services.paletteOwnershipRegistryOrNull(),

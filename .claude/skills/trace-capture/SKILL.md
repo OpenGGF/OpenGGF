@@ -49,6 +49,7 @@ the repository for durable captures; `target/trace-videos` is disposable output.
 | `--codec <name>` | `CAPTURE_CODEC=ffv1` | Video codec; changing it may change losslessness |
 | `--clip frames:START:END` | None | Fast-forward from the original start, then capture the inclusive zero-based trace-row window, retaining elapsed-VBlank title/lag frames; explicit windows do not add `--tail-frames` |
 | `--no-ghosts` / `--ghosts` | `TRACE_SHOW_DESYNC_GHOSTS=true` | Desync ghost visibility |
+| `--no-sprite-limits` | Native sprite limits on | Render without native sprite dropout, as normal play does by default; for promotional footage, not ROM image comparison |
 
 A full-run capture presents no frame on trace lag rows (`lag_counter` != 0): MKV frame
 n is row n only until the first lag row, then row minus the lag rows before it (measured
@@ -61,8 +62,9 @@ sessions in both live playback and capture.
 
 Audio uses the no-device `HeadlessSmpsAudioBackend`, fixed at 48 kHz stereo.
 The capture runtime must be the sole PCM consumer: a live device backend draining
-the same FIFO causes fast/out-of-sync audio. For silence, check `AUDIO_ENABLED`
-and backend installation; inspect the output with
+the same FIFO causes fast/out-of-sync audio. The capture pins the music and SFX
+volume settings to 100, so saved player volumes do not reach the evidence. For
+silence, check `AUDIO_ENABLED` and backend installation; inspect the output with
 `ffmpeg -i <mkv> -af volumedetect -f null -`. Unexpected speaker output likewise
 indicates that the wrong backend was installed.
 

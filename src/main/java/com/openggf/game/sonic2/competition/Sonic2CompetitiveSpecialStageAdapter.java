@@ -59,6 +59,20 @@ public final class Sonic2CompetitiveSpecialStageAdapter {
         this.session = java.util.Objects.requireNonNull(session);
         this.halfpipe = java.util.Objects.requireNonNull(halfpipe);
     }
+    /** Production composition: all bytes use the ROM pipeline and the caller owns V-int/rewind. */
+    public static Sonic2CompetitiveSpecialStageAdapter create(Sonic2CompetitionSession session,
+            com.openggf.data.Rom rom, com.openggf.graphics.GraphicsManager graphics,
+            com.openggf.game.SpecialStageViewport viewport, com.openggf.audio.AudioManager audio,
+            java.util.function.IntSupplier verticalInterruptCount) throws java.io.IOException {
+        return new Sonic2CompetitiveSpecialStageAdapter(session,
+                new com.openggf.game.sonic2.competition.specialstage.Sonic2CompetitiveHalfpipe(
+                        new com.openggf.game.sonic2.competition.specialstage.CompetitiveHalfpipeRomData(rom),
+                        graphics, viewport, audio, verticalInterruptCount));
+    }
+    public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
+        return halfpipe instanceof com.openggf.game.rewind.RewindSnapshottable<?> state
+                ? java.util.List.of(state) : java.util.List.of();
+    }
     public boolean supportsStage(int index) { return halfpipe.supportsCompetitiveStage(index); }
     public void load() {
         requireActive();

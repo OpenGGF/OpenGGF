@@ -390,6 +390,8 @@ public class Sonic1GameModule implements com.openggf.game.internal.RetailRomAwar
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.ProfileSuperHostRules.class)
+            return type.cast(new com.openggf.game.internal.ProfileSuperHostRules(false, true, 0, com.openggf.game.GameId.S1));
         if (type == com.openggf.game.internal.StandingInputPolicy.class)
             return type.cast(com.openggf.game.internal.StandingInputPolicy.UP_FIRST);
         if (type == com.openggf.data.RetailRomRevision.class) return (T) retailRomRevision;
@@ -647,8 +649,19 @@ public class Sonic1GameModule implements com.openggf.game.internal.RetailRomAwar
 
         static final Sonic1DonorCapabilities INSTANCE = new Sonic1DonorCapabilities();
 
+        @Override public java.util.Map<Integer, NativeFramePose> getNativeFramePoses() {
+            return java.util.Map.of(3, new NativeFramePose("wait/fidget", CanonicalAnimation.WAIT));
+        }
+
         private static final java.util.Set<PlayerCharacter> CHARACTERS =
                 java.util.Set.of(PlayerCharacter.SONIC_ALONE);
+
+        private static final java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> FAMILIES =
+                com.openggf.game.AnimationFamilies.load("/animation-families/s1.json");
+
+        @Override public java.util.Map<Integer, com.openggf.game.AnimationFamilies.Binding> getAnimationFamilies() {
+            return FAMILIES;
+        }
 
         private static final java.util.Map<CanonicalAnimation, CanonicalAnimation> FALLBACKS =
                 buildFallbacks();
@@ -706,11 +719,13 @@ public class Sonic1GameModule implements com.openggf.game.internal.RetailRomAwar
 
         @Override
         public java.util.Map<CanonicalAnimation, CanonicalAnimation> getAnimationFallbacks() {
-            return FALLBACKS;
+            return com.openggf.game.AnimationFamilies.fallbacks(FAMILIES, FALLBACKS);
         }
 
         @Override
         public int resolveNativeId(CanonicalAnimation canonical) {
+            int familyId = com.openggf.game.AnimationFamilies.resolve(FAMILIES, canonical);
+            if (familyId >= 0) return familyId;
             return Sonic1AnimationIds.fromCanonical(canonical);
         }
 

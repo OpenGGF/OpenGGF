@@ -82,6 +82,7 @@ public final class ContinueScreenArtwork {
     }
     /** Reuses the native playable animation and DPLC helpers without running gameplay movement. */
     public static final class Character {
+        private com.openggf.game.presentation.ScreenFrameRenderer replacement;
         private final com.openggf.sprites.playable.AbstractPlayableSprite sprite;
         private final com.openggf.sprites.managers.PlayableSpriteAnimation animation;
         private final com.openggf.sprites.render.PlayerSpriteRenderer renderer;
@@ -101,6 +102,8 @@ public final class ContinueScreenArtwork {
             renderer = new com.openggf.sprites.render.PlayerSpriteRenderer(relocated);
         }
 
+        public void setReplacement(com.openggf.game.presentation.ScreenFrameRenderer replacement) { this.replacement = replacement; }
+
         public void setAnimation(int id) { sprite.setAnimationId(id); }
 
         public void update(int vint, int inertia) {
@@ -111,6 +114,7 @@ public final class ContinueScreenArtwork {
         }
 
         public void draw(int x, int y) {
+            if (replacement != null && replacement.draw("continue/player", sprite.getMappingFrame(), x, y, sprite.getRenderHFlip())) return;
             renderer.drawFrame(sprite.getMappingFrame(), x, y, sprite.getRenderHFlip(), sprite.getRenderVFlip());
         }
     }

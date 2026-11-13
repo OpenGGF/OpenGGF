@@ -1188,6 +1188,10 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     }
 
     private void resetWallCeilingLandingState(AbstractPlayableSprite sprite, int angle) {
+        // Sonic_HitCeilingAndWalls branches to loc_1B02C (s2.asm:38039-38057);
+        // Tails_HitCeilingAndWalls to loc_1CADC (s2.asm:40935-40953). Both
+        // accepted angled-ceiling branches call their native ResetOnFloor.
+        com.openggf.sprites.playable.PlayableNativeFloorReset.resetChain(sprite);
         PlayerAnimationRules animationRules = playerAnimationRulesOrNull(sprite);
         if (sprite.isObjectControlled()) {
             publishWalkOnAcceptedLanding(sprite, animationRules);

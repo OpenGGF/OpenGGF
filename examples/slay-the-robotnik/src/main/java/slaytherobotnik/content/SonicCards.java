@@ -42,7 +42,7 @@ public final class SonicCards {
         rares(c);
     }
 
-    private static CardDef.Builder card(String id, String name, String type, String rarity) {
+    private static CardDef.Builder card(String id, String name, CardType type, String rarity) {
         return CardDef.builder(id, name, COLOR, type, rarity);
     }
 

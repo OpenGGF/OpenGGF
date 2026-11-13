@@ -90,6 +90,12 @@ public final class CnzEndBossRobotnikShipChild extends AbstractObjectInstance
         facingRight = boss.facingRight();
     }
 
+    /** Offer the same structural families as the live defeat/escape routines. */
+    void recreateDefeatChildrenForRewind() {
+        spawnChild(() -> new CnzEndBossExplosionControllerChild(this, 4));
+        spawnChild(() -> new CnzEndBossRobotnikFlameChild(this));
+    }
+
     private void spawnExplosionController() {
         if (explosionControllerSpawned) return;
         explosionControllerSpawned = true;

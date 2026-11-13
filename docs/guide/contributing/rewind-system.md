@@ -84,19 +84,51 @@ rewind key is held only takes effect on release.
 
 ### Live Play
 
-Live gameplay rewind is disabled by default. To enable it:
+Supported live gameplay enables rewind by default with a ten-second allowance
+per act. The default configuration is:
 
 ```yaml
 rewind:
   liveEnabled: true
+  budgetScope: act
+  budgetSeconds: "10"
   liveKey: R
 ```
 
 While playing a level, hold `rewind.liveKey` to step backward through the live
 gameplay buffer. Releasing the key resumes normal gameplay from the restored frame.
-The small live HUD is hidden during ordinary play and appears only while the key is
-held, showing a one-row `REW F:<frame>` plate above the lives counter. Its translucent
-navy backing keeps scenery visible; status icons have the same dark outline as the text.
+`budgetScope: off` disables the live key; `budgetSeconds: "unlimited"` removes the
+allowance limit. The allowance is separate from the retained history buffer and
+is not restored by seeking backward.
+
+The small live HUD sits above the lives counter, with a translucent navy plate
+and outlined status glyph. Its content follows the allowance:
+
+| Live state | Plate |
+| --- | --- |
+| Finite allowance while rewinding | `REW <seconds>s` and a two-pixel meter; amber at one quarter or less |
+| Allowance exhausted, including a fresh denied press | Amber empty glyph/frame and dashed meter with `0.0s`, even without an active frame counter |
+| Unlimited allowance while rewinding | `REW F:<frame>`, without a meter |
+| Ordinary idle play or module-scripted rewind | Hidden |
+
+Seconds round upward to a tenth, so a remaining frame never reads as `0.0s`.
+The regional simulation cadence supplies the conversion: 60 frames per second
+for NTSC, 50 for PAL. Automatic exhaustion stops live rewind and starts empty
+feedback; a fresh press with nothing left also shows it for one regional second.
+Keeping the key held does not keep extending that feedback. A module's
+`ScriptedRewind` controls its own presentation and suppresses both live counter
+and budget plates.
+
+For a HUD change, start at `LiveRewindHudOverlay.message`: it owns finite/empty
+precedence, the quarter threshold and seconds formatting. `LiveRewindManager`
+owns allowance and eligibility and supplies a nullable frame plus its existing
+budget snapshot. `TransportHud` owns shared plate geometry, glyphs and drawing;
+`MenuChrome` remains the shared visual authority. A budget-to-plate policy edit usually
+stays in the adapter and `TestLiveRewindHudOverlay`; use
+`TestLiveRewindOwnerLifetime` for manager admission/exhaustion. Layout changes
+also need `TestTransportHud`, `TestLiveRewindHudOverlayWidescreen` and
+`TestTransportHudPresentation` with surfaceless EGL. Follow the
+[testing guide](testing.md) for queued commands, ROM prerequisites and skips.
 
 By default live rewind steps backward one frame per visual frame while the key is
 held, with no movement after release. The experimental tape-coast layer remains
@@ -352,6 +384,55 @@ The audio gate properties can be overridden with
 `openggf.rewind.benchmark.audio.maxRestoreMeanNs`,
 `openggf.rewind.benchmark.audio.maxReplayMeanNs`, and
 `openggf.rewind.benchmark.audio.maxAllocatedBytes`.
+
+## Ordinary dynamic objects and constructor children
+
+Start at `level.objects.ObjectRewindLifecycle`: capture → reconstruct/adopt and
+publish identities → restore fields/references → settle. `ObjectPopulation` owns
+membership and identity publication, not the reconstruction recipe. Generic
+`RewindRecreatable.recreateForRewind` calls run inside the construction-services
+context. Use `SpawnRewindRecreatable` for an exact `ObjectSpawn` constructor;
+`SpawnConstructionContextRewindRecreatable` is the compatible old name, not a
+second recipe. Parent-linked hooks still supply their actual construction logic.
+
+Owned `spawnChild`, `spawnFreeChild`, `spawnChildAfterSlot` and direct child wrappers
+record the actual parent without running external child notifications during
+restore/probes. `DynamicObjectEntry.constructionFamily` captures its stable id
+only if the parent is in the captured population. Restore waits for that parent
+before adopting a constructor child, then matches class/creator/subtype and FIFO
+within that family. Fixed-point retries handle nested generations. Moving XY is
+not family evidence. Known missing/excluded owners cannot borrow another family's
+candidate. Fresh uninstrumented admissions are explicitly unknown; only candidates
+without a known parent are eligible. Old 4–9 argument entry constructors retain
+legacy FIFO behavior and stay explicitly legacy on recapture. They cannot provide
+the family guarantee of current owned-helper captures.
+
+Adoption preserves constructor-established links in both directions. It does not
+repair every link: `schema.RewindPolicyRegistry` and `DefaultObjectRewindPolicies`
+are the authoritative reference-disposition owners. Read final/structural rules,
+global field-name rules and per-class overrides before assuming a parent/child
+field becomes an identity reference. Captured reference fields resolve in phase 2;
+excluded structural/final links need construction or an explicit class contract.
+Children without constructor candidates need their own recreate path. After
+family retries stop making progress, independent recreation may proceed even when
+a captured parent failed or defers to later player refresh; adoption remains blocked
+for that missing parent. Family metadata distinguishes parents, not construction
+from routine births. A same-class/subtype routine child can still consume a
+constructor candidate within its own family according to capture order; an explicit
+class contract is needed when those roles must be distinguished. The coverage analyzer recognizes explicit hooks; its new-gap guard fails
+against the committed baseline. Do not add a marker or expand that baseline to
+make an unsupported child appear covered.
+
+Run the ordinary family witnesses and neighbors through the queue:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestConstructorChildFamilyRewind,TestObjectManagerDynamicChainRewindRestore,TestTwoPhaseRestoreOrdering,TestObjectManagerRewindSnapshot,TestModOwnedDynamicObjectRewind' test -B
+```
+
+`TestObjectRewindExactAdoption` covers the separate FBZ exact-SST adoption surface;
+it does not establish ordinary constructor-family adoption. Recreate probes must
+remain side-effect-free; unmatched constructed children receive their existing
+owner cleanup hook before being discarded.
 
 ## Technical Architecture
 

@@ -16,8 +16,8 @@ way it does in the game. You can also pose characters exactly, frame by frame,
 when a moment calls for it.
 
 This guide follows the **0.9.prerelease development line**; Stageplay first shipped in 0.7.20261105. It is
-experimental; use a 0.7 build of the engine and, if you want it, the desktop
-editor.
+experimental; use engine build 0.7.20261105 or later and, if you want it, the
+desktop editor.
 
 ## What you need
 

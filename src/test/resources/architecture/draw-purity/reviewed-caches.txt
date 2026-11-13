@@ -3,14 +3,8 @@
 1 com.openggf.game.sonic1.objects.Sonic1ResultsScreenObjectInstance#lastScoreValue # Memo key for regenerated score tiles; does not advance score.
 1 com.openggf.game.sonic1.objects.Sonic1ResultsScreenObjectInstance#lastTimeBonus # Memo key for regenerated time-bonus tiles.
 1 com.openggf.game.sonic1.specialstage.Sonic1SpecialStageResultsScreen#artCached # GPU residency memo for ROM-derived art.
-1 com.openggf.game.sonic1.specialstage.Sonic1SpecialStageResultsScreen#artLoaded # CPU decode readiness memo for ROM-derived art.
-2 com.openggf.game.sonic1.specialstage.Sonic1SpecialStageResultsScreen#combinedPatterns # Decoded combined art buffer used by renderers.
-1 com.openggf.game.sonic1.specialstage.Sonic1SpecialStageResultsScreen#continueRenderer # Renderer memo over decoded continue art.
-1 com.openggf.game.sonic1.specialstage.Sonic1SpecialStageResultsScreen#emeraldRenderer # Renderer memo over decoded emerald art.
 1 com.openggf.game.sonic1.specialstage.Sonic1SpecialStageResultsScreen#lastRingBonus # Memo key for regenerated digit tiles; does not advance the bonus.
 1 com.openggf.game.sonic1.specialstage.Sonic1SpecialStageResultsScreen#lastScoreValue # Memo key for regenerated score tiles; does not advance score.
-1 com.openggf.game.sonic1.specialstage.Sonic1SpecialStageResultsScreen#resultsRenderer # Renderer memo over decoded results art.
-1 com.openggf.game.sonic1.specialstage.Sonic1SpecialStageResultsScreen#sourceDigitPatterns # Decoded ROM digit art memo.
 1 com.openggf.game.sonic2.objects.PointPokeyObjectInstance#slotDisplayOffsetCalculated # Memo readiness for mapping-derived slot-display coordinates.
 1 com.openggf.game.sonic2.objects.PointPokeyObjectInstance#slotDisplayOffsetX # Mapping-derived slot-display offset, independent of service time.
 1 com.openggf.game.sonic2.objects.PointPokeyObjectInstance#slotDisplayOffsetY # Mapping-derived slot-display offset, independent of service time.
@@ -22,13 +16,8 @@
 1 com.openggf.game.sonic2.objects.SidewaysPformObjectInstance#mczMappingsLoadAttempted # Readiness memo for optional MCZ mapping decode.
 1 com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance#renderer # Renderer memo over ROM-derived art.
 1 com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen#artCached # GPU residency memo for ROM-derived art.
-1 com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen#artLoaded # CPU decode readiness memo for ROM-derived art.
-2 com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen#combinedPatterns # Decoded combined art buffer used by renderers.
 1 com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen#lastDisplayedRingCount # Memo key for regenerated ring-count digit tiles.
 1 com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen#lastEmeraldBonus # Memo key for regenerated emerald-bonus digit tiles.
-2 com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen#paletteLoaded # Palette upload residency memo.
-1 com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen#resultsPalettes # Decoded ROM results palettes.
-1 com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen#sourceDigitPatterns # Decoded ROM digit art memo.
 1 com.openggf.game.sonic3k.ending.EndingIslandLiftObjectInstance#mappings # Decoded ending-island mapping memo.
 1 com.openggf.game.sonic3k.objects.Aiz1ZiplinePegObjectInstance#placeholder # Fallback renderer object; never updated as a native object.
 1 com.openggf.game.sonic3k.objects.AizForegroundPlantInstance#placeholder # Fallback renderer object; never updated as a native object.

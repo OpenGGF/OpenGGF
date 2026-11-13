@@ -101,7 +101,8 @@ public class Sonic2SuperStateController extends SuperStateController
         // Obj35_Layer0Update (s2.asm:42494-42503), FixBugs=0: only the
         // secondary invincibility bit gates deletion. The fixed branch would
         // delete on Super_Sonic_flag; the shipped ROM keeps existing stars.
-        return player.isSuperSonic();
+        Boolean raw = PlayableSpriteInternalAccess.nativeSecondaryInvincibility(player);
+        return raw != null ? raw : player.isSuperSonic();
     }
 
     @Override
@@ -194,7 +195,7 @@ public class Sonic2SuperStateController extends SuperStateController
     protected PhysicsProfile getNormalProfile() {
         // Obj02_Init (loc_1B8D8) retains Tails' $0F standing radius;
         // normal-state rewind must not install Sonic's $13 body/balance profile.
-        return player instanceof com.openggf.sprites.playable.Tails
+        return com.openggf.sprites.playable.PlayableArchetype.isTails(player)
                 ? PhysicsProfile.SONIC_2_TAILS : PhysicsProfile.SONIC_2_SONIC;
     }
 
@@ -222,10 +223,9 @@ public class Sonic2SuperStateController extends SuperStateController
         // branch retains that bank (s2.asm:37481-37483,36379-36382).
         PlayableSpriteInternalAccess.publishNativeSpeedConstantsWaterState(player, false);
         PlayableSpriteInternalAccess.publishNativeSpeedWords(player, 0xA00, 0x30, 0x100);
-        // REV01 $1AB84 clears invincibility_time; $1AB8A sets secondary bit1.
-        // The already-published Super flag supplies inherent protection in the
-        // playable's native damage gate, independently of the cleared timer.
+        // Sonic_CheckGoSuper (s2.asm:37480-37487): timer zero and raw bit one are independent.
         player.setInvincibleFrames(0);
+        PlayableSpriteInternalAccess.writeNativeSecondaryInvincibility(player, true);
         // Play transformation SFX
         try {
             if (CrossGameFeatureProvider.isActive()) {
@@ -374,6 +374,8 @@ public class Sonic2SuperStateController extends SuperStateController
         // period, this is how Sonic_RevertToNormal restores the zone music: it
         // plays none itself and lets Obj01_ChkInvin re-issue Level_Music when
         // the timer expires on the next tick.
+        // Sonic_RevertToNormal (s2.asm:37535-37542) never sets status_secondary.invincible.
+        // If teleport moved that bit away, this WORD remains one until another native producer sets the bit.
         player.setInvincibleFrames(1);
         // Sonic_RevertToNormal (s2.asm:37535-37542) writes after invincibility_time=1; shoes are ignored.
         PlayableSpriteInternalAccess.publishNativeSpeedWords(player, player.isInWater() ? 0x300 : 0x600,

@@ -4,24 +4,31 @@ This page covers the engine's test infrastructure and how to write tests for new
 
 All new or updated tests must use JUnit 5 / Jupiter. Do not add JUnit 4 tests, rules, runners, or `org.junit.*` imports.
 
-Published Sonic TAS tricks are indexed in the
-[representative verdict record](../../architecture/validation/2026-10-26-tas-trick-verdicts.md).
-Each completed assessment records an independent native expectation, an executed
-production scenario, a relevant control and a supported or unsupported verdict.
-The record explicitly identifies any remaining named mechanism under investigation.
-A passing
-current-limitation regression confirms an engine mismatch; it is not proof that
-the trick works. Broad families retain their original IDs and can contain
-different named tricks with different outcomes. Publication-route and whole-movie
-synchronization remain separate from representative mechanism support. The
-[first regression pass](../../architecture/validation/2026-10-26-tas-trick-regressions.md)
-preserves the earlier component-evidence assessment.
+Pick the check from what you changed:
+
+| Change | Run |
+|---|---|
+| One class or a bounded fix | The focused test: `python3 tools/testing/maven_queue.py -Dmse=off -Dtest=<TestClass> test` |
+| Shared code, or impact you are unsure of | The change-based smoke selection: `python3 tools/testing/run_categories.py --base <pre-task-commit> --workers 2 --run` |
+| Structural rules (guards) | `python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B` |
+| A public release | `-Pfull-suite`, through the [release workflow](#release-builds-in-github) only |
+
+`<pre-task-commit>` is the commit your branch started from, for example the output
+of `git rev-parse HEAD` before your first edit. Keep that SHA for validation,
+including after integrating upstream changes. Read the category runner's final `VERDICT`
+line: unexplained or required skips mean the run is incomplete.
 
 ## Running Tests
 
 ```bash
+# Before editing, record the starting commit once. Keep BASE for later validation.
+BASE=$(git rev-parse HEAD)
+
+# After editing, inspect the selection, then run it.
+python3 tools/testing/run_categories.py --base "$BASE"
+python3 tools/testing/run_categories.py --base "$BASE" --workers 2 --run
 # Routine broad coverage: all smoke candidates, yielding admission between batches.
-python3 tools/testing/run_categories.py --category all --run
+python3 tools/testing/run_categories.py --category all --workers 2 --run
 # Focused regression (reviewed small classes select lean automatically).
 python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestCollisionLogic test
 # Single method.
@@ -89,6 +96,20 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptracechaser-integration \
   '-Dtest=com.openggf.trace.TestTraceChaserV5ConsumerContract#initializedCheckoutPreservesConsumerCopiesFromDeclaredImmutableOrigin' test -B
 ```
 
+### TAS trick verdicts
+
+Published Sonic TAS tricks are indexed in the
+[representative verdict record](../../architecture/validation/2026-10-26-tas-trick-verdicts.md).
+Each completed assessment records an independent native expectation, an executed
+production scenario, a relevant control and a supported or unsupported verdict.
+The record explicitly identifies any remaining named mechanism under investigation.
+A passing current-limitation regression confirms an engine mismatch; it is not
+proof that the trick works. Broad families retain their original IDs and can contain
+different named tricks with different outcomes. Publication-route and whole-movie
+synchronization remain separate from representative mechanism support. The
+[first regression pass](../../architecture/validation/2026-10-26-tas-trick-regressions.md)
+preserves the earlier component-evidence assessment.
+
 ## CI in GitHub
 
 | Event | What runs |
@@ -99,12 +120,17 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptracechaser-integration \
 | Push to a feature or bugfix branch | Nothing. Open a pull request, or run CI by hand. |
 | Manual dispatch | Smoke and guards on the chosen ref. `trace_replay` adds the ROM-fixture develop trace replay on the self-hosted runner. |
 
+<details>
+<summary>How the 30-minute quiet period works</summary>
+
 The 30-minute quiet period is the `ci-quiet-period` environment's wait timer
 (repository Settings -> Environments). The smoke job waits there without using a
 runner, and a newer push to the same branch cancels the wait and starts another,
 so a burst of pushes produces one smoke run for its last commit. Edit the timer
 there to change the delay. Deleting the environment removes the delay: GitHub
 recreates it on the next run without a timer.
+
+</details>
 
 Guards are not part of push CI, so run `-Pguards` locally before pushing
 straight to `develop` or `next`. Pull requests do not build native packages;
@@ -131,6 +157,9 @@ cloud builds. The no-regression policy in
 [release 6 trace scope](../../status/trace-scope-release-6.md) still applies to
 ROM-backed sign-off.
 
+<details>
+<summary>History boundary and content audit for release checks</summary>
+
 Release checks use the fixed reviewed `develop` snapshot
 `45cecf566825aa50612f5e687b2682fc9681aed1` as the 0.6 history boundary, as
 approved by the maintainer on September 11, 2026. They audit every entry of
@@ -145,10 +174,73 @@ The baseline is an immutable commit, not a moving branch name. Existing
 trailer debt is preserved without rewriting published history. Future
 baseline changes require explicit review; an audit failure is never ignored.
 
+</details>
+
 ## Rewind Tests And Benchmark
 
 The rewind system has both ordinary regression tests and an opt-in benchmark. See
 [Rewind System](rewind-system.md) for usage, limitations, and architecture details.
+
+### Object population and contact boundaries
+
+For contact retirement, start with the real landing/pushing, equal-key survivor,
+occurrence and removal-callback boundaries:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestDynamicSolidContactRetirement,TestSolidContactState,TestObjectSolidContactController,TestTasS3kOrtExhaustion,TestObjectRemovalCallbackOwnership' test
+```
+
+`TestDynamicSolidContactRetirement` covers explicit/destroyed dynamic retirement
+and a placed range-unload/reentry. Its placed case calls both object execution
+and post-camera placement: counter-mode `update()` alone does not advance the
+loader. It checks retired live bits, unchanged player state, fresh identity/slot
+reuse and subsequent ordinary contact. This sole-owner case does not establish a
+new policy for frame history or aliases across placed and dynamic owners.
+
+For retained-SST transfer, snapshot round trips or late player effects, use:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSolidContactState,TestObjectSolidContactController,TestSolidObjectManager,TestObjectManagerRewindSnapshot,TestShieldRewindPendingRestore,TestObjectManagerDynamicChainRewindRestore' test
+```
+
+The first three classes cover contact memory, real solid calls and retained-SST
+transfer; the manager snapshot class covers population round trips. The last pair
+exercises late player-bound admission and children that precede their parents in
+capture order. For a transfer walkthrough, start at
+`TestObjectSolidContactController#transitionContactsRetainLiveCarriedPieceWithoutRecreatingClearedOrNoncarriedBits`:
+real landings establish the bits, an object release and continued ride leave one
+piece live, then the production transition carries only the surviving owner.
+`TestSolidObjectManager` supplies the non-surviving-object control. For late
+effects, follow reverse player-refresh/identity and retry in
+`TestShieldRewindPendingRestore`. Snapshot piece-key restoration is a separate
+boundary from live-manager transfer.
+
+For ordinary graph reconstruction, constructor-child families and forward
+references, use:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestConstructorChildFamilyRewind,TestObjectManagerDynamicChainRewindRestore,TestTwoPhaseRestoreOrdering,TestObjectManagerRewindSnapshot,TestModOwnedDynamicObjectRewind' test
+```
+
+`TestConstructorChildFamilyRewind` distinguishes interleaved same-class families,
+moving children and deferred/absent parents. `TestObjectRewindExactAdoption`
+instead exercises event-owned exact SST-slot adoption and rollback; add it when
+changing that separate surface. It is not the ordinary constructor-child witness.
+
+The late-effect witness calls actual player refresh hooks in reverse order and
+compares captured identities and the complete object snapshot. It covers the
+deferred scalar restore path; `TestTwoPhaseRestoreOrdering` covers references
+between actors reconstructed in the ordinary graph pass.
+
+Use the [ownership map](architecture.md#finding-an-object-lifecycle-owner) to find
+the production entry. Check which cases executed and why any skipped. This
+bounded command does not replace change-based smoke, guards or affected ROM/trace
+checks required by the change.
+
+### General rewind coverage
 
 Run the regular rewind suite:
 
@@ -492,12 +584,58 @@ Current examples:
 - `TestS1Ghz1TraceReplay`
 - `TestS1Mz1TraceReplay`
 
-Run them with:
+Run these release-6 examples with the replay profile:
 
 ```bash
-python3 tools/testing/maven_queue.py -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 \
   -Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay test
 ```
+
+### Diagnose one trace replay
+
+Start at the concrete test class: its `game()`, `zone()`, `act()` and
+`traceDirectory()` identify the engine entry and fixture. Read that fixture's
+`metadata.json` for the recorded team, row count and `source_bk2`. Shared movies
+live under the game's `src/test/resources/traces/<game>/_movies/`; the replay
+loader resolves the metadata reference. A missing movie can skip the test.
+
+Use the [release-scope policy](../../status/trace-scope-release-6.md) and the
+`trace-replay`, `trace-replay-r7` and `trace-segments` profiles in
+[root pom.xml](../../../pom.xml) to find the lane.
+These are the selection authorities; a test's historical status comment is not
+a current result. The HCZ Sonic/Tails leaf is standalone segment instrumentation;
+its lane is `trace-segments`, while run chains supply release-gate evidence:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments \
+  -Dsurefire.forkCount=1 -Dtrace.print.summary=true \
+  '-Dtest=TestS3kSonicTailsHczSegmentTraceReplay' test
+```
+
+Use Java 25. Check the wrapper's verified-ROM discovery line and ensure the
+fixture payload and referenced movie are available. A failed replay prints its
+concrete test, resolved fixture, exact published report and a copyable triage
+command. `trace.print.summary=true` also prints that route for a successful
+replay. Copy the command to inspect the report, its sibling context and the
+fixture's plain or compressed auxiliary evidence without finding hashed report
+names yourself.
+
+After completion, read this class's fresh Surefire result under
+`target/surefire-reports/`. The triage brief distinguishes a completed comparison
+gate, an incomplete prefix and legacy reports whose completion is unknown.
+Planned trace rows and gameplay comparisons count different boundaries; their
+totals need not match. Triage reads saved evidence and does not certify its
+freshness or process success. Confirm this invocation executed without errors
+or skips and reached its intended gate. Preserve prior evidence before clearing
+generated reports, and keep output in this worktree's `target/`.
+
+For a real divergence, read the
+[trace diagnosis procedure](../../../.agents/skills/trace-replay-bug-fixing/SKILL.md)
+and its linked measurement hazards before reporting counts or changing code.
+Reports use trace row indices, which can differ from recorded frame numbers;
+trace comparisons do not authorise copying observed gameplay state into the
+engine. Record new measured frontiers in the existing
+[frontier log](../../status/trace-frontier-log.md), with the tested commit and command.
 
 For the full workflow, including recording traces and reading divergence reports, see
 [Trace Replay Testing](trace-replay.md).
@@ -508,7 +646,11 @@ Visual regression tests capture rendered frames and compare them against referen
 They verify that changes to the rendering pipeline or art loading do not introduce visual
 regressions.
 
-These tests require ROM files and a GPU context. They typically:
+These tests require ROM files and a GPU context. On Linux, add
+`-Dopenggf.headless.gl=surfaceless-egl` to the queued Maven command so they render
+offscreen without a display; see
+[offscreen rendering prerequisites](headless-testing.md#offscreen-rendering-prerequisites).
+They typically:
 1. Load a level and set the camera to a known position.
 2. Render one or more frames.
 3. Compare the rendered output against a stored reference image.

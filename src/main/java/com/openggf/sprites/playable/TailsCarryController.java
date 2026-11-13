@@ -86,7 +86,7 @@ public final class TailsCarryController {
         NativePositionOps.writeYPosPreserveSubpixel(main, carrier.getCentreY() + yOffset);
         publishCarriedOrientation(main);
         var sprites = carrier.currentSpriteManagerOrNull();
-        if (sprites != null && main.currentLevelManagerIfAvailable() != null && main.getSpriteRenderer() != null)
+        if (main.characterKey().isBuiltin() && sprites != null && main.currentLevelManagerIfAvailable() != null && main.getSpriteRenderer() != null)
             com.openggf.sprites.managers.SpriteManagerInternalAccess.borrowNativePlayerArt(sprites, main);
         int carriedAnimationId = main.resolveAnimationId(CanonicalAnimation.TAILS_CARRIED);
         // Tails_Carry_Sonic writes the carried id to both anim and prev_anim,
@@ -216,6 +216,18 @@ public final class TailsCarryController {
             return;
         }
 
+        // Native loc_144BA / AniRaw_Tails_Carry (sonic3k.asm:27342-27375)
+        // owns Sonic's literal mapping bytes. Creator sheets own their bound
+        // TAILS_CARRIED family instead; those indices belong to their renderer.
+        if (!main.characterKey().isBuiltin()) {
+            var script = main.getAnimationSet().getScript(main.resolveAnimationId(CanonicalAnimation.TAILS_CARRIED));
+            int index = main.getAnimationFrameIndex();
+            if (index < 0 || index >= script.frames().size()) index = 0;
+            main.setAnimationTick(script.delay());
+            main.setMappingFrame(script.frames().get(index));
+            main.setAnimationFrameIndex((index + 1) % script.frames().size());
+            return;
+        }
         main.setAnimationTick(CARRIED_FRAME_DELAY);
         int frameIndex = main.getAnimationFrameIndex();
         if (frameIndex < 0 || frameIndex >= CARRIED_MAPPING_FRAMES.length) {

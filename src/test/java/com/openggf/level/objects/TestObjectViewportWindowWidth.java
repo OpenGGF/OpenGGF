@@ -225,7 +225,7 @@ class TestObjectViewportWindowWidth {
     }
 
     // -------------------------------------------------------------------------
-    // ObjectManager.outOfRangeLimit — pure function (native and widescreen)
+    // ObjectRangeOps.viewportOutOfRangeBound — pure function (native and widescreen)
     // -------------------------------------------------------------------------
 
     /**
@@ -233,8 +233,8 @@ class TestObjectViewportWindowWidth {
      * Reproduces the ROM {@code cmpi.w #$280,d0} constant exactly.
      */
     @Test
-    void outOfRangeLimit_native320_returns640() {
-        assertEquals(640, ObjectManager.outOfRangeLimit(320),
+    void viewportOutOfRangeBound_native320_returns640() {
+        assertEquals(640, ObjectRangeOps.viewportOutOfRangeBound(320),
                 "Native viewport width 320 must yield the ROM constant 640");
     }
 
@@ -244,8 +244,8 @@ class TestObjectViewportWindowWidth {
      * near the right edge from being incorrectly removed.
      */
     @Test
-    void outOfRangeLimit_widescreen528_returns848() {
-        assertEquals(848, ObjectManager.outOfRangeLimit(528),
+    void viewportOutOfRangeBound_widescreen528_returns848() {
+        assertEquals(848, ObjectRangeOps.viewportOutOfRangeBound(528),
                 "ULTRA_21_9 viewport width 528 must yield 848 (128 + 528 + 192)");
     }
 

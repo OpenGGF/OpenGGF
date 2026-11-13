@@ -39,7 +39,8 @@ there is no fixed slot count, model ladder, or mandatory paired investigation.
 Continue locally when tasks are dependent or agent tools are unavailable.
 
 For concurrent tests/edits, give each worker an isolated worktree branched from
-the current main-workspace branch. Follow repository worktree conventions, using
+the selected release destination's updated remote tip. Use cow worktrees and
+follow repository worktree conventions, using
 `.worktrees/trace-<game>-<route>` and `bugfix/ai-trace-<game>-<route>` when free.
 Each worktree owns its `target/`. Discover ROMs once and pass absolute paths
 (`sonic1.rom.path`, `sonic2.rom.path`, `s3k.rom.path`); never create ROM aliases.
@@ -73,13 +74,14 @@ coverage, including the S3K keep-green set in root guidance. Baseline failures
 can remain, but introduced regressions block integration. If a correct fix exposes
 a compensating defect, investigate it and report that relationship explicitly.
 
-Integrate under root `AGENTS.md`: updated baseline comparison, merge into the
-main-workspace branch, post-merge suite comparison, push only that branch, then
-verify and clean up fully merged worktrees/branches. Do not substitute a fixed
-`develop` target or add a new approval gate. Preserve unresolved work.
+Deliver under root `AGENTS.md`: select the targeted release branch (`develop`
+or `next`), use isolated cow worktrees, verify against the updated baseline,
+push the task branch and open its PR. Leave it open unless merging is authorized;
+retain needed worktrees/branches until merge and account for all changes before
+cleanup. Follow an explicitly requested alternative flow. Preserve unresolved work.
 
 Append required frontier evidence to
 [trace-frontier-log.md](../../../docs/status/trace-frontier-log.md); keep its
 historic prefix unchanged and avoid machine-local absolute paths. The final
 fleet report gives each frontier's outcome, significant root causes, remaining
-failures, verification evidence, and integrated/pushed commits.
+failures, verification evidence, and PRs and pushed commits.

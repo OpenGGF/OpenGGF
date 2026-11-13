@@ -76,14 +76,14 @@ public final class NativeSpriteSubmissionAccess {
     /**
      * Render-only late lookup of a currently reserved external slot. Real objects
      * take precedence. The callback and returned draw closures never enter rewind
-     * state; bind again after full manager reset/resync. Passing null unbinds it.
+     * state; the binding survives manager reset/resync. Passing null unbinds it.
      */
     public static void bindExternalResolver(ObjectManager manager,
             IntFunction<SpriteSlotEmission> resolver) {
         if (manager != null) manager.bindNativeSpriteExternalResolver(resolver);
     }
 
-    /** Bind the live owner; full reset/resync unbinds it. Callback identity never rewinds. */
+    /** Bind the live owner; it survives manager reset/resync. Callback identity never rewinds. */
     public static void bindExternalSlotDispatch(ObjectManager manager, ExternalSlotDispatch dispatch) {
         if (manager != null) manager.bindNativeSpriteExternalSlotDispatch(dispatch);
     }

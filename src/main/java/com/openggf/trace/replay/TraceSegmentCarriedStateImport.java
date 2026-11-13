@@ -178,16 +178,20 @@ public final class TraceSegmentCarriedStateImport {
         TraceRunManifest.Transition inbound = inboundTransition(run.manifest(), target);
 
         Integer rings = null;
-        if (inbound != null && "s3k".equals(run.manifest().game())) {
-            // S3K only: a return reloads through Load_Starpost_Settings, whose
-            // Special_bonus_entry_flag arm restores Saved2_ring_count (loc_2D2C2);
-            // stage_exit records that Ring_count. Into a bonus stage the ROM keeps
-            // the level's Ring_count across the Restart_level_flag reload, recorded
-            // as rings_before. Other entries (S2's level_advance, star-post
-            // returns) clear or rebuild rings in the ROM, so nothing is carried.
-            if ("stage_exit".equals(inbound.entryKind())) {
+        if (inbound != null) {
+            // Ruling A: the manifest records the destination's carried rings.
+            // S2-family stage_exit includes stock S2's cleared zero and the
+            // lock-on patch's retained count. Do not assume either from team
+            // names or hydrate any later row. S1 returns load a new level and
+            // its result-screen ring count is not a destination entry value.
+            if ("stage_exit".equals(inbound.entryKind())
+                    && ("s3k".equals(run.manifest().game())
+                    || "s2".equals(run.manifest().game()))) {
                 rings = inbound.ringsAfter();
-            } else if ("bonus_stage".equals(segment.kind())) {
+            } else if ("s3k".equals(run.manifest().game())
+                    && "bonus_stage".equals(segment.kind())) {
+                // Load_Starpost_Settings (sonic3k.asm:61784-61851)
+                // preserves the level's Ring_count into a bonus stage.
                 rings = inbound.ringsBefore();
             }
         }

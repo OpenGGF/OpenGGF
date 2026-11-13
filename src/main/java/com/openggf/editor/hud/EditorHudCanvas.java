@@ -200,6 +200,12 @@ final class EditorHudCanvas implements AutoCloseable {
                 (rgb & 255) / 255f, alpha);
     }
 
+    void menuIcon(com.openggf.game.MenuChrome.Icon icon, float x, float y, int rgb) {
+        flush();
+        com.openggf.game.MenuChrome.icon(font, icon, Math.round(x), Math.round(y),
+                new float[]{((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f});
+    }
+
     /** Text truncated with "..." to fit {@code maxWidth} units. */
     void fittedText(String text, float x, float y, float maxWidth, Size size, int rgb, float alpha) {
         text(fit(text, maxWidth, size), x, y, size, rgb, alpha);

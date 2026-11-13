@@ -27,6 +27,43 @@ by current route blockers and trace frontiers. Start with the [0.7 roadmap](docs
 and [trace frontier log](docs/status/trace-frontier-log.md). The per-game object checklists
 record implementation coverage, not proof that a complete route matches the ROM.
 
+## Improving Engine Quality
+
+Some engine code is difficult to understand and risky to change. Improving it is a
+valuable contribution in its own right. Our priority is to reduce the knowledge
+needed to find, understand, change and verify a behavior while preserving ROM
+accuracy. The [complexity audit](docs/architecture/audits/2026-11-06-ai-code-climb.md)
+contains concrete walkthroughs and historical assessments; its scores apply to the
+named tasks and revisions, not to the engine as a whole.
+
+These are areas where we think help will make a meaningful difference:
+
+- **Object lifetime and collision contact:** make admission, offscreen unloading,
+  deletion and contact expiry easier to follow. Their distinct lifetimes and
+  ordering rules currently require too much cross-reading.
+- **Linked-object rewind reconstruction:** clarify ownership and the sequence for
+  rebuilding parents, children and their references. Constructor side effects and
+  deferred restoration make this especially difficult to change safely.
+- **Trace diagnosis and verification:** shorten the route from a failing replay to
+  the owning behavior and trustworthy evidence. Reports should make incomplete
+  runs and missing prerequisites clear; instructions should agree with the tools.
+- **Navigation and readability:** give responsibilities clear names and boundaries,
+  simplify dense control flow, and remove obsolete guidance or overlapping paths.
+  Moving files or adding another abstraction helps only if it makes a real task
+  easier to understand.
+
+A useful first contribution can be a small bug reproduction, a test of an uncovered
+lifecycle boundary, or a report of a confusing reading path. Open an
+[issue](https://github.com/OpenGGF/OpenGGF/issues) describing what you tried, where
+you got stuck and which files or instructions led you there. You do not need to
+solve the problem before reporting it.
+
+For a refactor, explain the concrete task it makes easier and the relevant checks
+that preserve behavior. Keep changes bounded so reviewers can follow the result.
+Passing tests are necessary evidence for runtime changes, but do not by themselves
+show that code is easier to maintain. Existing patterns are open to criticism;
+please point out when following them would perpetuate the problem.
+
 ## Legal And Asset Rules
 
 Do not commit ROM files, ripped sprites, ripped music, screenshots containing copyrighted game art,

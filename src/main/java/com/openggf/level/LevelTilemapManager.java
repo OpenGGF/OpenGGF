@@ -112,6 +112,12 @@ public class LevelTilemapManager {
     private int foregroundTilemapWidthTiles;
     private int foregroundTilemapHeightTiles;
     private boolean foregroundTilemapDirty = true;
+    // Layer-0 layout cells rewritten since the last foreground build, packed
+    // (cellY << 16) | cellX. A flat FG tilemap is a pure function of layout plus
+    // block/chunk data, so a layout write changes only the tiles under its cell;
+    // the next ensure redraws those in place instead of rebuilding the level image.
+    private int[] pendingForegroundMapCells = new int[8];
+    private int pendingForegroundMapCellCount;
     private long foregroundDescriptorRevision;
     // Derived images only: rewind restores the owner, then invalidates these keys.
     private final RetainedPlaneDescriptorSource[] retainedSources = new RetainedPlaneDescriptorSource[2];
@@ -241,7 +247,8 @@ public class LevelTilemapManager {
         copy.foregroundTilemapData = foregroundTilemapData == null ? null : foregroundTilemapData.clone();
         copy.foregroundTilemapWidthTiles = foregroundTilemapWidthTiles;
         copy.foregroundTilemapHeightTiles = foregroundTilemapHeightTiles;
-        copy.foregroundTilemapDirty = foregroundTilemapDirty;
+        // Pending cell redraws are not carried into the copy; its full rebuild covers them.
+        copy.foregroundTilemapDirty = foregroundTilemapDirty || pendingForegroundMapCellCount > 0;
         copy.foregroundDescriptorRevision = foregroundDescriptorRevision;
         copy.lastForegroundWrap = lastForegroundWrap;
         copy.foregroundRingSeeded = foregroundRingSeeded;
@@ -505,6 +512,17 @@ public class LevelTilemapManager {
             return;
         }
 
+        if (pendingForegroundMapCellCount > 0) {
+            boolean redrawn = !foregroundTilemapDirty && !fgWrap && foregroundTilemapData != null
+                    && redrawPendingForegroundMapCells(blockLookup, zoneFeatureProvider, currentZone, level);
+            pendingForegroundMapCellCount = 0;
+            if (redrawn) {
+                ensurePatternLookupData();
+                return;
+            }
+            foregroundTilemapDirty = true;
+        }
+
         // FG ring active and already built: incremental window reconcile only
         // (fills columns entering the visible window on either edge).
         if (fgWrap && !foregroundTilemapDirty && foregroundTilemapData != null
@@ -534,14 +552,21 @@ public class LevelTilemapManager {
         uploadForegroundTilemap();
     }
 
+    RetainedPlaneDescriptorSource retainedPlaneOverride;
+
+    void setRetainedPlaneOverride(RetainedPlaneDescriptorSource source) {
+        retainedPlaneOverride = source;
+    }
+
     /** Complete owner-authored planes bypass all layout/window/ring heuristics. */
     private boolean ensureRetainedPlane(ZoneFeatureProvider provider, boolean foreground) {
         int layer = foreground ? 0 : 1;
         if (cinematicBackground && cinematicParameters == null)
             throw new IllegalStateException("Private plane build requires captured background authority");
         // Captured inactive is authoritative too: never fall through to a newly active live provider.
-        RetainedPlaneDescriptorSource source = cinematicParameters == null
-                && provider instanceof RetainedPlaneDescriptorSource owner ? owner : null;
+        RetainedPlaneDescriptorSource source = cinematicParameters != null ? null
+                : retainedPlaneOverride != null ? retainedPlaneOverride
+                : provider instanceof RetainedPlaneDescriptorSource owner ? owner : null;
         RetainedPlaneDescriptorSource.Plane plane;
         if (cinematicParameters != null) {
             var image = foreground ? cinematicParameters.retainedForeground() : cinematicParameters.retainedBackground();
@@ -1044,6 +1069,9 @@ public class LevelTilemapManager {
         return 0;
     }
 
+    /** Diagnostic: full foreground tilemap builds performed (package tests). */
+    int foregroundFullBuildCount;
+
     private void buildForegroundTilemapData(BlockLookup blockLookup,
                                             ZoneFeatureProvider zoneFeatureProvider,
                                             int currentZone,
@@ -1063,6 +1091,8 @@ public class LevelTilemapManager {
         foregroundTilemapData = data.data;
         foregroundTilemapWidthTiles = data.widthTiles;
         foregroundTilemapHeightTiles = data.heightTiles;
+        pendingForegroundMapCellCount = 0;
+        foregroundFullBuildCount++;
         if (foregroundDescriptorRevision != 0) {
             var descriptors = cinematicParameters != null ? cinematicParameters.foregroundDescriptors()
                     : zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride owner
@@ -1481,6 +1511,97 @@ public class LevelTilemapManager {
      */
     public void invalidateForegroundTilemap() {
         foregroundTilemapDirty = true;
+    }
+
+    /**
+     * Marks one foreground layout cell (map block coordinates) as rewritten. The next
+     * ensure redraws only that cell's tiles when the foreground is a flat layout image
+     * that is otherwise current; any other foreground mode, or a full rebuild already
+     * pending, falls back to {@link #invalidateForegroundTilemap()}.
+     */
+    void invalidateForegroundMapCell(int cellX, int cellY) {
+        if (foregroundTilemapDirty || foregroundTilemapData == null || !foregroundCellRedrawEligible()
+                || cellX < 0 || cellY < 0 || cellX > 0xFFFF || cellY > 0xFFFF) {
+            foregroundTilemapDirty = true;
+            return;
+        }
+        if (pendingForegroundMapCellCount == pendingForegroundMapCells.length) {
+            pendingForegroundMapCells = java.util.Arrays.copyOf(pendingForegroundMapCells,
+                    pendingForegroundMapCellCount * 2);
+        }
+        pendingForegroundMapCells[pendingForegroundMapCellCount++] = (cellY << 16) | cellX;
+    }
+
+    /** Cell redraw serves only the ordinary flat layout image, not owner-authored planes. */
+    private boolean foregroundCellRedrawEligible() {
+        return cinematicParameters == null && retainedPlanes[0] == null && foregroundDescriptorRevision == 0;
+    }
+
+    /**
+     * Rewrites the tiles of every pending layout cell with the same per-chunk writer
+     * the full build uses, then publishes only the affected tilemap rows. Returns
+     * false (caller falls back to a full rebuild) unless the current image has the
+     * exact flat-layout geometry a full build would produce.
+     */
+    private boolean redrawPendingForegroundMapCells(BlockLookup blockLookup,
+                                                    ZoneFeatureProvider zoneFeatureProvider,
+                                                    int currentZone, Level level) {
+        if (!foregroundCellRedrawEligible()) {
+            return false;
+        }
+        BgBuildParams params = computeBuildParams((byte) 0, zoneFeatureProvider, currentZone);
+        int widthTiles = params.builtWidthPx() / Pattern.PATTERN_WIDTH;
+        int heightTiles = params.builtHeightPx() / Pattern.PATTERN_HEIGHT;
+        if (widthTiles != foregroundTilemapWidthTiles || heightTiles != foregroundTilemapHeightTiles
+                || params.xQueryOffset() != 0 || params.yQueryOffset() != 0
+                || params.xQueryWrapWidthPx() != 0 || params.bgLinearRowOverflow()
+                || foregroundTilemapData.length != widthTiles * heightTiles * 4) {
+            return false;
+        }
+        int blockPixelSize = geometry.blockPixelSize();
+        int firstRow = Integer.MAX_VALUE;
+        int endRow = 0;
+        for (int i = 0; i < pendingForegroundMapCellCount; i++) {
+            int packed = pendingForegroundMapCells[i];
+            int x0 = (packed & 0xFFFF) * blockPixelSize;
+            int y0 = (packed >>> 16) * blockPixelSize;
+            int x1 = Math.min(x0 + blockPixelSize, params.builtWidthPx());
+            int y1 = Math.min(y0 + blockPixelSize, params.builtHeightPx());
+            if (x0 >= x1 || y0 >= y1) {
+                continue;
+            }
+            // Same chunk walk and query coordinates as fillChunkColumn with zero offsets.
+            for (int y = y0; y < y1; y += LevelConstants.CHUNK_HEIGHT) {
+                for (int x = x0; x < x1; x += LevelConstants.CHUNK_WIDTH) {
+                    writeChunkAt(foregroundTilemapData, widthTiles, heightTiles, (byte) 0,
+                            x / LevelConstants.CHUNK_WIDTH * CHUNK_TILE_SPAN,
+                            y / LevelConstants.CHUNK_HEIGHT * CHUNK_TILE_SPAN,
+                            x, y, params, blockLookup, level, blockPixelSize);
+                }
+            }
+            firstRow = Math.min(firstRow, y0 / Pattern.PATTERN_HEIGHT);
+            endRow = Math.max(endRow, Math.min(heightTiles, (y1 + Pattern.PATTERN_HEIGHT - 1) / Pattern.PATTERN_HEIGHT));
+        }
+        foregroundCellRedrawCount++;
+        if (endRow > firstRow) {
+            publishForegroundRows(firstRow, endRow - firstRow);
+        }
+        return true;
+    }
+
+    /** Diagnostic: incremental layout-cell redraws performed (package tests). */
+    int foregroundCellRedrawCount;
+
+    private void publishForegroundRows(int firstRow, int rowCount) {
+        TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
+        if (renderer == null) {
+            return;
+        }
+        ensurePatternLookupData();
+        com.openggf.graphics.TilemapGpuRendererInternalAccess.setForegroundTilemapRows(renderer,
+                foregroundTilemapData, foregroundTilemapWidthTiles, foregroundTilemapHeightTiles,
+                firstRow, rowCount);
+        renderer.setPatternLookupData(patternLookupData, patternLookupSize);
     }
 
     /**
@@ -2155,6 +2276,7 @@ public class LevelTilemapManager {
         bgTilemapBaseX = 0;
         currentBgPeriodWidth = VDP_BG_PLANE_WIDTH_PX;
         foregroundTilemapDirty = true;
+        pendingForegroundMapCellCount = 0;
         patternLookupDirty = true;
         multiAtlasWarningLogged = false;
         bgWindowShiftCandidate = false;

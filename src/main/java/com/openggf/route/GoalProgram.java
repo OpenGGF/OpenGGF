@@ -37,8 +37,15 @@ public record GoalProgram(Guard routeGuard, List<Leg> legs, int startRow) {
     }
 
     /** A replay check evaluating this program from {@link #startRow()}; legs complete in order. */
-    ReplayCheck check() {
-        return new ReplayCheck() {
+    ReplayCheck check() { return cursor(); }
+
+    interface Cursor extends ReplayCheck {
+        int completedLegs();
+        int legStartRow();
+    }
+
+    Cursor cursor() {
+        return new Cursor() {
             private int leg;
             private int legStart;
             private RouteSample previous;
@@ -47,6 +54,9 @@ public record GoalProgram(Guard routeGuard, List<Leg> legs, int startRow) {
             @Override public void begin(RouteSample entry) {
                 previous = entry;
             }
+
+            @Override public int completedLegs() { return leg; }
+            @Override public int legStartRow() { return legStart; }
 
             @Override public String name() {
                 return legs.isEmpty() ? "route-guard" : "goals[" + String.join(",", legs.stream().map(Leg::id).toList()) + "]";
@@ -70,6 +80,7 @@ public record GoalProgram(Guard routeGuard, List<Leg> legs, int startRow) {
                 if (current != null) {
                     boolean done = switch (current.goal()) {
                         case RouteGoal.Achieve achieve -> achieve.condition().test(sample);
+                        case RouteGoal.Wait wait -> row + 1 - legStart >= wait.rows();
                         case RouteGoal.EnterBoundary ignored -> previous != null && sample.epoch() != previous.epoch();
                     };
                     if (done) {

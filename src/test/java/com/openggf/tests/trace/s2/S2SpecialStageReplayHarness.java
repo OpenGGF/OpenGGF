@@ -85,12 +85,17 @@ final class S2SpecialStageReplayHarness {
 
     S2SpecialStageReplayHarness(Path bk2, int bk2FrameOffset, int specialStageIndex)
             throws IOException {
-        // Recorded team: the SS trace was captured with Sonic + Tails. Set the
-        // standard two-key config before initializeStage() runs setupPlayers().
-        GameServices.configuration()
-                .setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-        GameServices.configuration()
-                .setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        this(bk2, bk2FrameOffset, specialStageIndex, "sonic", List.of("tails"));
+    }
+
+    S2SpecialStageReplayHarness(Path bk2, int bk2FrameOffset, int specialStageIndex,
+                               String mainCharacter, List<String> sidekicks) throws IOException {
+        // Recorded team is an entry input; do not replace solo lock-on/team
+        // recordings with the historical Sonic+Tails harness default.
+        GameServices.configuration().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,
+                mainCharacter == null || mainCharacter.isBlank() ? "sonic" : mainCharacter);
+        GameServices.configuration().setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE,
+                String.join(",", sidekicks));
 
         this.movie = new Bk2MovieLoader().load(Objects.requireNonNull(bk2, "bk2"));
         this.recordedInputs = new RecordedInputRows(movie, bk2FrameOffset);

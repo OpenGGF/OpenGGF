@@ -3856,3 +3856,43 @@ cached object visibility. It does not undo an object's earlier clock reads in
 locked passes. The inherited Cog `$F` gate can still see the advancing
 LevelManager counter there; retain this limitation instead of claiming complete
 title-clock parity. Test release separately from actual locked object scans.
+
+
+## Special contact must hand ordinary enemy hits back to Touch_KillEnemy (2026-11-06)
+
+Crawl's `loc_3D2D4` (s2.asm:82520-82584) handles shield/direction behavior after
+`Touch_Special` publishes contact. `loc_3D36C` (s2.asm:82573-82581) selects
+ordinary enemy flags for an invincible actor, including Super Sonic with no
+timed power-up. Once `Touch_Enemy` accepts that ordinary attack,
+`Touch_KillEnemy` (s2.asm:85514-85561) owns retirement and the single rebound.
+Repeating the special shield/rolling checks in the ordinary attack callback
+can silently reject an uncurled invincible attack or bounce a rolling actor
+without killing the enemy. Keep callbacks faithful to their selected category.
+
+Read every routine's proximity call: `loc_3D2A6` (s2.asm:82505-82517) runs
+`loc_3D416` during each nonnegative pause countdown pass, including zero.
+Sharing the walking proximity helper preserves its saved prior routine;
+turning at zero or omitting the paused check changes the later touch category.
+Validate both phases and compare the already-clean trace prefix, not only the
+later successful kill. See the [handoff audit](../../../docs/architecture/audits/2026-11-06-s2-crawl-enemy-handoff.md).
+
+## Capture both riders before an aggregate release decision (2026-11-07)
+
+`Obj85_Diagonal` interleaves P1 and P2's `loc_2AF06` solid/capture branches before
+testing captured riders' held inputs or decompressing an empty spring
+(s2.asm:58224-58285). `AUTO_AFTER_UPDATE` captures too late: it can reduce the
+launch force before a fresh P2 lands, miss P2's same-pass release, or launch P1
+despite a newly captured P2 holding jump. Use the existing participant-scoped
+manual checkpoint at the native call site with the current head as `d4`;
+return after fresh capture rather than running held compression immediately
+(loc_2AF06/loc_2AF2E, s2.asm:58286-58321). Test both the fresh-rider release and
+held-input veto through the real solid pipeline. A one-frame flag or a second
+release check in a later compatibility callback does not reproduce the two-player
+decision. See the [executed ordering audit](../../../docs/architecture/audits/2026-11-07-s2-diagonal-launcher-capture.md).
+
+When replacing an automatic tail, separate capture admission from solid
+resolution: an inherited capture cooldown must not make the object intangible.
+Retire the object's native standing bit and OnObject on its release branch,
+using the existing owner-scoped ride-release operation; the removed tail can
+no longer supply that cleanup (loc_2AF7A, s2.asm:58326-58334). Exercise a real
+cooldown landing and offscreen release, not only ordinary capture and launch.

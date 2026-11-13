@@ -35,7 +35,8 @@ public record TraceRunManifest(
     @JsonProperty("transitions") List<Transition> transitions,
     @JsonProperty("dynamic_art_gap_transitions")
         List<DynamicArtTransfer.GapTransition> dynamicArtGapTransitions,
-    @JsonProperty("expected_movie_end_mode") ExpectedMovieEndMode expectedMovieEndMode
+    @JsonProperty("expected_movie_end_mode") ExpectedMovieEndMode expectedMovieEndMode,
+    @JsonProperty("terminal_admission_runs") List<Integer> terminalAdmissionRuns
 ) {
 
     public static final int TRACE_SCHEMA = 5;
@@ -48,12 +49,46 @@ public record TraceRunManifest(
             "death_restart", "level_advance");
 
     public TraceRunManifest {
+        terminalAdmissionRuns = terminalAdmissionRuns == null ? null : List.copyOf(terminalAdmissionRuns);
+        if (terminalAdmissionRuns != null) {
+            for (int index = 0; index < terminalAdmissionRuns.size(); index++) {
+                int count = terminalAdmissionRuns.get(index);
+                if (count < 0 || (index > 0 && count == 0))
+                    throw new IllegalArgumentException("invalid terminal admission run");
+            }
+        }
         dynamicArtGapTransitions = dynamicArtGapTransitions == null
                 ? List.of()
                 : List.copyOf(dynamicArtGapTransitions);
         if (expectedMovieEndMode == null) {
             expectedMovieEndMode = ExpectedMovieEndMode.UNSPECIFIED;
         }
+    }
+
+    /** Compatibility for manifests recorded before the terminal lag census. */
+    public TraceRunManifest(String game, String runId, String sourceBk2, String romChecksum,
+            List<Segment> segments, List<Transition> transitions,
+            List<DynamicArtTransfer.GapTransition> dynamicArtGapTransitions,
+            ExpectedMovieEndMode expectedMovieEndMode) {
+        this(game, runId, sourceBk2, romChecksum, segments, transitions,
+                dynamicArtGapTransitions, expectedMovieEndMode, null);
+    }
+
+    /** Contract-1 lag admission only; the caller supplies the established physical-row mapping. */
+    public boolean terminalRowIsLagged(int tailStart, int movieFrameCount, int movieRow) {
+        if (terminalAdmissionRuns == null) return false;
+        long total = 0;
+        boolean lag = false;
+        Boolean selected = null;
+        for (int count : terminalAdmissionRuns) {
+            long next = Math.addExact(total, count);
+            if (movieRow - (long) tailStart >= total && movieRow - (long) tailStart < next) selected = lag;
+            total = next;
+            lag = !lag;
+        }
+        if (total != (long) movieFrameCount - tailStart || selected == null)
+            throw new IllegalStateException("terminal admission census does not cover its physical movie tail");
+        return selected;
     }
 
     /** Convenience constructor for manifests without an explicit terminal mode. */
@@ -231,6 +266,16 @@ public record TraceRunManifest(
                     || !schemaNode.canConvertToInt() || schemaNode.asInt() != TRACE_SCHEMA) {
                 throw new IOException("trace_schema must be integer " + TRACE_SCHEMA);
             }
+            JsonNode terminalCensus = root.get("terminal_admission_runs");
+            if (terminalCensus != null) {
+                if (!terminalCensus.isArray()) throw new IOException("terminal_admission_runs must be an integer array");
+                for (int i = 0; i < terminalCensus.size(); i++) {
+                    JsonNode count = terminalCensus.get(i);
+                    if (!count.isIntegralNumber() || !count.canConvertToInt()
+                            || count.intValue() < 0 || (i > 0 && count.intValue() == 0))
+                        throw new IOException("invalid terminal admission run");
+                }
+            }
             JsonNode gapNode = root.get("dynamic_art_gap_transitions");
             if (gapNode == null || !gapNode.isArray()) {
                 throw new IOException(
@@ -263,7 +308,7 @@ public record TraceRunManifest(
                     parsed.segments(), segmentInitialLedgers);
             return new TraceRunManifest(parsed.game(), parsed.runId(),
                     parsed.sourceBk2(), parsed.romChecksum(), parsedSegments, parsed.transitions(),
-                    gaps, parsed.expectedMovieEndMode());
+                    gaps, parsed.expectedMovieEndMode(), parsed.terminalAdmissionRuns());
         }
     }
 

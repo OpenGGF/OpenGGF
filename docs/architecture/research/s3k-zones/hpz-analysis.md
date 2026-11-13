@@ -31,7 +31,7 @@ with `$1701` (`sonic3k.asm:102393-102400`), the level-select list names `$1601` 
 - **HPZ (`$1601`)** is reached by level progression from LRZ.
 - **HPZS (`$1701`)** is reached via the Special Stage ring (`SSEntryFlash_GoSS` at line 128383). When the player has all 7 Chaos Emeralds and is in an S&K level (or the subtype is negative), the code sets `Special_bonus_entry_flag = 2` and `Current_zone_and_act = $1701` (`sonic3k.asm:128471-128472`).
 
-**HPZS (sanctuary) loading:** the custom loading sequence at line 63125 sets `$1701` (`sonic3k.asm:63214`) and belongs to the sanctuary, not the playable HPZ act. It:
+**HPZS results-backdrop loading:** the custom loading sequence at line 63125 sets `$1701` (`sonic3k.asm:63214`) and belongs to the sanctuary, not the playable HPZ act. It:
 1. Loads `Pal_HPZIntro` palette (intro colors at $CCC) fading to `Pal_HPZ` target palette
 2. Copies `Layout_HPZ` directly to level layout RAM
 3. Decompresses chunks and blocks via `Kos_Decomp` (not standard LevelResourcePlan)
@@ -39,6 +39,18 @@ with `$1701` (`sonic3k.asm:102393-102400`), the level-select list names `$1601` 
 5. Loads PLC $48 (teleporter art)
 6. Sets camera to initial position ($15A0, $240)
 7. Loads objects and adjusts camera X based on `Current_special_stage_2`
+
+**Fresh HPZS loading is a different path.** Giant-ring entry restarts `Level:`;
+`loc_62B6` (sonic3k.asm:7762-7767) bypasses the title owner, then
+`loc_6310` (sonic3k.asm:7788-7798) runs `Get_LevelSizeStart` and deformation
+before the terrain-art wait in `loc_7870` (sonic3k.asm:9772-9780).
+`loc_6468` (sonic3k.asm:7880-7887) spawns players and executes the first
+`Process_Sprites` only afterward. Fresh camera `$0326` and results camera
+`$0240` therefore do not imply the same player/scene lifecycle. The
+[current bounded MHZ handoff record](../../validation/levels/s3k-mhz-act1.md#fresh-shrine-routine-frontier--2026-11-07)
+retains the unimplemented intermediate-load interval; neither a routine override
+nor the results resource path repairs it. These sites have no alternate
+`FixBugs` branch in the shipped `FixBugs=0` build.
 
 **Music:** `mus_LRZ2` (LRZ Act 2 music) for both HPZ and HPZS.
 

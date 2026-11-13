@@ -571,6 +571,8 @@ Allowed launch profile enums:
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
 | `AUDIO_ENABLED` | `audio.enabled` | bool | `true` | Master switch for all audio output (music and SFX). |
+| `AUDIO_MUSIC_VOLUME` | `audio.musicVolume` | int | `100` | Music volume, 0–100 percent. Each sound-chip channel takes the volume of the track type that last wrote to it, so sound effects that borrow a music channel keep the sound-effect volume. `0` gives game audio with sound effects and no music, for example for recordings. Presentation only: the driver, gameplay, rewind and traces are unchanged. Applies as soon as it is saved. |
+| `AUDIO_SFX_VOLUME` | `audio.sfxVolume` | int | `100` | Sound-effect volume, 0–100 percent, applied the same way. |
 | `AUDIO_HUB_MUSIC_ENABLED` | `audio.hubMusicEnabled` | bool | `false` | Play the selected stock game's ROM title theme in the hub. |
 | `AUDIO_HUB_MUSIC_VOLUME` | `audio.hubMusicVolume` | int | `20` | Hub theme volume, 0–100 percent; the theme is filtered and quieter while a child menu is open. |
 | `REGION` | `audio.region` | string | `"NTSC"` | Hardware region: `"NTSC"` (60 Hz) or `"PAL"` (50 Hz). Selects the outer simulation/audio service cadence and affects SMPS tempo timing and DAC sample rates. Under NTSC, each region service advances the sound chips by one NTSC hardware frame (896,040 master clocks), so at a 60 Hz service cadence music sounds about 1.29 per mille higher and faster than on a 59.92 Hz console. Under PAL, each region service advances the chips by 1/50 s, because PAL chip clocks are not modelled. |
@@ -816,6 +818,7 @@ CLI flags (all optional except `--trace`; unspecified flags fall back to the `CA
 | `--fps <n>` | `CAPTURE_FPS` | Output frame rate. |
 | `--codec <name>` | `CAPTURE_CODEC` | Capture video codec. |
 | `--no-ghosts` / `--ghosts` | `TRACE_SHOW_DESYNC_GHOSTS` | Hide / show the desync ghost(s) in the captured video (overrides the config flag for this run). |
+| `--no-sprite-limits` | Native limits on | Render without native sprite dropout (`DISPLAY_SPRITE_SCANLINE_LIMIT=false`, the normal-play default). Captures otherwise enforce the native per-line limits so frames compare with ROM images. |
 
 Desync-ghost / game-HUD / debug-HUD visibility during capture is governed by the `TRACE_SHOW_*` keys in the Debug section; `--no-ghosts`/`--ghosts` is a per-run override for the ghost flag. Game-HUD and debug-HUD visibility are set via those config keys (no CLI flag yet).
 

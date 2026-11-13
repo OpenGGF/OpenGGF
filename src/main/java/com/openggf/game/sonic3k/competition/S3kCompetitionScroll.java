@@ -331,6 +331,9 @@ public final class S3kCompetitionScroll implements RewindSnapshottable<S3kCompet
     }
     /** ApplyDeformation2: height bit15 consumes one intermediate word per raster. */
     private void applyDeformation(ViewRuntime v,int backgroundY,int start,int count) {
+        applyDeformation(v, backgroundY, start, count, raster);
+    }
+    private void applyDeformation(ViewRuntime v,int backgroundY,int start,int count,int[] destination) {
         int offset=(short)backgroundY,band=0,tableIndex=0;
         while(true) {
             if(band>=heights.length) throw new IllegalStateException("Native competition deformation exhausted its ROM heights");
@@ -344,7 +347,7 @@ public final class S3kCompetitionScroll implements RewindSnapshottable<S3kCompet
                     int take=Math.min(amount,remaining);
                     for(int i=0;i<take;i++) {
                         if(tableIndex<0 || tableIndex>=v.table.length) throw new IllegalStateException("Native competition HScroll_table overflow");
-                        raster[start+written++]=packScroll(v.cameraX,v.table[tableIndex]);
+                        destination[start+written++]=packScroll(v.cameraX,v.table[tableIndex]);
                         if(perLine) tableIndex++;
                     }
                     if(!perLine) tableIndex++;
@@ -370,6 +373,17 @@ public final class S3kCompetitionScroll implements RewindSnapshottable<S3kCompet
                 start,integers(Arrays.copyOfRange(raster,start,start+count)),integers(v.table),
                 v.unwrappedX,v.unwrappedY,v.cameraLagWord);
     }
+    /** Display-only extension of the existing P1 deformation table; never advances scroll state. */
+    public int[] projectSoloHorizontalScroll(int displayY) {
+        requireInitialized();
+        var v = views[0];
+        int[] result = new int[224];
+        int backgroundY = v.backgroundY + displayY - v.cameraY();
+        if (arena == Arena.DESERT_PALACE) Arrays.fill(result, packScroll(v.cameraX,v.backgroundX));
+        else applyDeformation(v,backgroundY,0,result.length,result);
+        return result;
+    }
+
     public int[] horizontalScrollBuffer() { requireInitialized();return raster.clone(); }
     private static List<Integer> integers(int[] words) { return Arrays.stream(words).boxed().toList(); }
     private static void requireSlot(S3kCompetitionPlayer player,int slot) {

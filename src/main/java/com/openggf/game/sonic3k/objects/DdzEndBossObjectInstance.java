@@ -467,6 +467,8 @@ public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
             visualControlOwners.acquire(player).setControlLocked(true);
             if (player.getSuperStateController() instanceof com.openggf.game.sonic3k.Sonic3kSuperStateController superState) {
                 superState.holdDoomsdayRingDrain();
+            } else if (player.getSuperStateController() instanceof com.openggf.sprites.playable.ProfileSuperStateController authored) {
+                authored.holdDoomsdayRingDrain();
             }
         }
         Camera camera = services().camera();
@@ -546,6 +548,8 @@ public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
                 if (player != null && player.getSuperStateController()
                         instanceof com.openggf.game.sonic3k.Sonic3kSuperStateController superState) {
                     superState.clearDoomsdayPalette();
+                } else if (player != null && player.getSuperStateController() instanceof com.openggf.sprites.playable.ProfileSuperStateController authored) {
+                    authored.clearDoomsdayPalette();
                 }
             }
             case 6 -> {

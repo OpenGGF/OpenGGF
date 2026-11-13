@@ -84,22 +84,11 @@ import static org.mockito.Mockito.when;
  * Unit tests for the {@link RewindRegistry} integration on
  * {@link GameplayModeContext}.
  *
- * <p>Tests verify that the seventeen always-available atomic adapters are
+ * <p>Tests verify that the twenty-one always-available atomic adapters are
  * registered automatically when {@link GameplayModeContext#attachGameplayManagers}
  * is called, without requiring a full level load or ROM access.
  */
 class TestGameplayModeContextRewindRegistry {
-    private static final Set<String> CORE_REWIND_KEYS = Set.of(
-            "camera",
-            "directed-player-lease",
-            "gamestate",
-            "gamerng",
-            "timermanager",
-            "fademanager",
-            "oscillation",
-            "kosinski-module-queue",
-            "solid-execution");
-
     @BeforeEach
     void configureServices() {
         TestEnvironment.resetEngineOnly();
@@ -193,6 +182,7 @@ class TestGameplayModeContextRewindRegistry {
                 "camera",
                 com.openggf.camera.CameraSubpixelAccess.REWIND_KEY,
                 "directed-player-lease",
+                "controlled-native-presentation",
                 "gamestate",
                 com.openggf.game.internal.NativePauseRewindAccess.KEY,
                 "gamerng",
@@ -205,19 +195,49 @@ class TestGameplayModeContextRewindRegistry {
                 ctx.seamlessTransitionResourceHandoffs().key(),
                 com.openggf.game.sonic2.timing.Sonic2LevelMusicScheduler.REWIND_KEY,
                 com.openggf.game.sonic2.slotmachine.CNZPrizeSoundState.REWIND_KEY,
+                // 50bc64259: S2 Chain_Bonus_counter is shared even in 1P.
+                "sonic2_badnik_chain",
                 "solid-execution",
+                "homing-attack",
+                "sonic2.race-swap",
                 "kosinski-module-queue");
         assertTrue(snapshot.entries().keySet().containsAll(expectedKeys),
                 "Expected all atomic adapter keys to be present, got: " + snapshot.entries().keySet());
     }
 
     @Test
-    void exactlySeventeenAtomicKeysAfterAttach() {
+    void worldHomingRoundTripsThroughRegisteredAdapterAfterReattachment() {
+        var ctx = buildAttachedContext();
+        var runtime = WorldSessionPolicyAccess.getService(ctx.getWorldSession(),
+                com.openggf.game.mutators.HomingAttackRuntime.class);
+        var state = new com.openggf.game.mutators.HomingAttackRuntime.Snapshot(
+                com.openggf.game.mutators.HomingAttackRuntime.Phase.HOMING, true, 7, 123, 456,
+                com.openggf.level.objects.homing.HomingTargetKind.BADNIK,
+                com.openggf.game.mutators.HomingAttackRuntime.Mode.INSTAGIB,
+                8, 4, 32, List.of(new com.openggf.game.mutators.HomingAttackRuntime.Shard(1, 2, 3, 4, 5, 6, 7)),
+                2, true, true);
+        runtime.restore(state);
+        var saved = ctx.getRewindRegistry().capture();
+        assertTrue(saved.containsKey("homing-attack"));
+        runtime.reset();
+        ctx.getRewindRegistry().restore(saved);
+        assertEquals(state, runtime.capture());
+        ctx.attachGameplayManagers(new Camera(), new TimerManager(), new GameStateManager(),
+                new FadeManager(), new GameRng(GameRng.Flavour.S1_S2), new DefaultSolidExecutionRegistry());
+        runtime.reset();
+        ctx.getRewindRegistry().restore(saved);
+        assertEquals(state, runtime.capture());
+        assertSame(runtime, WorldSessionPolicyAccess.getService(ctx.getWorldSession(),
+                com.openggf.game.mutators.HomingAttackRuntime.class));
+    }
+
+    @Test
+    void exactlyTwentyOneAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(17, snapshot.entries().keySet().size(),
-                "Expected exactly 17 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(21, snapshot.entries().keySet().size(),
+                "Expected exactly 21 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -470,7 +490,8 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        assertEquals(17, second.capture().entries().keySet().size());
+        assertEquals(21, second.capture().entries().keySet().size());
+        assertTrue(second.capture().containsKey("sonic2.race-swap"),"reattachment must retain the timer/request adapter");
         var running = second.capture();
         previousState.setGamePaused(true);
         gameState2.setGamePaused(true);

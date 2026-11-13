@@ -1,5 +1,45 @@
 # Level test coverage backlog
 
+S2 Competition monitor outcomes (2026-11-09): eight cold-title EHZ1 fixtures
+exercise P1 breaking for all eight outcomes and hold the award for six seconds.
+The [bounded matrix](../architecture/plans/2026-11-07-s2-competition-parity.md#question-mark-monitor-outcomes-2026-11-09)
+records engine/native evidence and inherited gaps. This certifies no new act.
+
+S2 EHZ simultaneous jump release (2026-11-09): the
+[bounded investigation](../architecture/plans/2026-11-07-s2-competition-parity.md#simultaneous-ehz-jump-release-2026-11-09)
+adds a cold-ROM two-human spiral-jump prefix and independent-rider unit coverage.
+Both integer trajectories match native through row 3202; physical lag, a new
+planner-qualified route, act-2 inlet, pictures, viewport breadth and inherited
+rewind/route obligations remain open. No additional act is certified.
+
+S2 Competition (2026-11-08): the [Competition parity plan](../architecture/plans/2026-11-07-s2-competition-parity.md#route-and-act-obligations)
+records the [CNZ object-display regression](../architecture/plans/2026-11-07-s2-competition-parity.md#cnz-object-display-follow-up-2026-11-09) and the EHZ/MCZ/CNZ and special-stage route obligations as an LTS-08
+auxiliary-mode increment. Native state prefixes match for EHZ 1, MCZ 1, CNZ 1
+and the competitive special stage up to the first native lag frame or open
+frontier; act 2 routes, results, tiebreaker and native pictures beyond the
+sampled cuts remain open. Participants are fixed by the ROM; viewport width is
+unassessed and held rewind is off by decision. No act is certified. ROM-backed Competition HUD tests cover signpost pole/face
+uploads and rewind, digit-five SAT mapping selection, and the interrupt-before-goal
+timer boundary. Scattered-ring recollection remains V-int-origin dependent under
+[S2 Whole-Run V-int Clock Cannot Be Made Exact](known-discrepancies.md#s2-whole-run-v-int-clock-cannot-be-made-exact);
+progressive HUD pixels and integrated recollection remain lead qualification work.
+
+LRZ title-owned enemy art (2026-11-07): the [submission audit](../architecture/audits/2026-11-07-lrz-enemy-art-submission.md)
+and [Act1](../architecture/validation/levels/s3k-lrz-act1.md) /
+[Act2](../architecture/validation/levels/s3k-lrz-act2.md) matrices record the native
+three-archive recipe, two-act title/queue/rewind regression and matched Knuckles /
+Tails segment controls. The Knuckles `lrz_2` FIFO abort is resolved, with first
+remaining error 604; no actual common baseline clean row gains ERROR. Its newly
+observed suffix has no paired baseline, and broader coverage gaps remain inherited.
+
+Fresh sanctuary load interval (2026-11-07): the
+[MHZ handoff record](../architecture/validation/levels/s3k-mhz-act1.md#fresh-shrine-routine-frontier--2026-11-07)
+reproduces all four current routine-zero fronts and separates native cleared
+player slots from constructed engine state before the initial sprite scan.
+The executed rejection is missing phase admission; titleless terrain-load
+continuation and native initialization observations remain a shared load/timing
+owner obligation. No runtime fix or wider route qualification is claimed.
+
 ICZ2 rider-order maintenance (2026-11-05): the
 [Act2 matrix](../architecture/validation/levels/s3k-icz-act2.md#native-rider-impulse-order--2026-11-05)
 records deterministic native P1/P2 tension-platform impulses, existing extra
@@ -48,9 +88,9 @@ HCZ slice parity (2026-11-03): the [HCZ2 matrix](../architecture/validation/leve
 
 HCZ2 boss setup (2026-11-03): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#end-boss-setup-and-platform-animation--2026-11-03) records callback/init/movement and raw-animation controls, unchanged sibling trace results and the remaining pending-initialization restore obligation. Broader route/configuration gaps remain inherited.
 
-S3K shake/visibility maintenance (2026-11-03): the
+S3K shake/visibility maintenance (2026-11-03; contributor cleanup 2026-11-07): the
 [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md) records pending shake
-phase and rewind checks; the [LRZ1 matrix](../architecture/validation/levels/s3k-lrz-act1.md)
+phase, natural-stop/exit, handler-lifetime and rewind checks; the [LRZ1 matrix](../architecture/validation/levels/s3k-lrz-act1.md)
 records big-door off-screen completion and shake release. These are bounded local
 obligations; the existing broader route/configuration gaps remain open.
 
@@ -199,8 +239,39 @@ adds representative pause/reset, art and occurrence-ownership evidence. The
 covers both original-S3 and locked-on act-zero bindings for all five arenas,
 both human input lanes, destructive state/pixel replay and authored goal-boundary
 Match/Time Attack consumers. Its [obligation matrix](../architecture/validation/2026-10-28-tas-support-competition.md#act-obligations-in-this-bounded-host-increment)
-keeps full traversal/GP, viewport, donor, roster and native-pixel obligations open;
+now includes [a full native DPZ Sonic Time Attack race](../architecture/validation/2026-10-28-tas-support-competition.md#native-desert-palace-race-qualification-2026-11-09):
+2528 input-driven race frames, five laps and exact P1 state comparison including
+subpixels and animation, with native curve-tangent steps corroborated.
+[Azure Lake and Chrome Gadget](../architecture/validation/2026-10-28-tas-support-competition.md#native-azure-lake-and-chrome-gadget-race-qualification-2026-11-09)
+add 2143 and 3329 exact native Sonic race rows with spring/push ownership and
+bounded rewind regression checks. A [native BPZ Sonic race](../architecture/validation/2026-10-28-tas-support-competition.md#native-balloon-park-race-qualification-2026-11-09)
+adds 2389 race rows through balloons, bumpers and elephants, five completed
+laps, and focused pushing/landing-pose regressions. The
+[Endless Mine native qualification](../architecture/validation/2026-10-28-tas-support-competition.md#native-endless-mine-race-qualification-2026-11-09)
+adds a five-lap Sonic route through springs, rocks and the invisible platform. Other
+arena/character traversals, GP, viewport, donor, roster and native-pixel obligations remain open;
 this is an LTS-08 auxiliary-mode increment, not completed act certification.
+
+Hosted Competition lane F (2026-11-07): positioned BPZ crossings now exercise five
+lap durations through the Time Attack runtime, host finish validation, best lap
+and HUD state. All five arena profiles are exported from the ROM, including
+wrap geometry, five laps and twelve swap sources; S2 act source caps count ROM
+monitor placements. The input-only BPZ planner fallback is a compressed 327-row
+controller tape: the [bounded input author](../../racing/server/src/main/java/openggf/racing/server/tools/ArenaRouteAuthor.java)
+made two attempts with no completed lap. It covers GO
+at frame 240, the start crossing and a backward crossing, and replays to the
+live native ghost hash with no booked laps. **That fallback does not cover arena finishes; the native BPZ race above
+now covers a five-lap hosted traversal. The fallback does not contain a death**, so arena death-to-ghost-reset
+replay remains an explicit gap. A positioned native death separately verifies
+ARENA_DEATH_RESPAWN, clock continuation and the single ghost reset marker.
+The two-attempt kill condition forbids further
+route-authoring loops in this lane. Positioned state never enters replay.
+A separate CPZ2 input-only Competition recording includes native deaths under
+FAST_FROM_CHECKPOINT and matches the live ghost hash. Native arena swap apply
+and fallback events replay at their logged frames; the network portion uses
+two real loopback clients with synthetic engine observations. This does not
+certify a ROM-backed two-client full race, GP, other characters, viewport or
+native-pixel breadth.
 [Standalone SK startup](../architecture/validation/2026-10-28-tas-support-standalone.md#parent-integration-scope)
 separately covers Sonic/Knuckles title-to-MHZ1 entry, Knuckles intro/checkpoint
 restart and short ordinary control at native 320. It does not supersede the
@@ -876,7 +947,7 @@ matrices; never collapse skipped or unrun into pass.
 | S2 | `AQUATIC_RUIN_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `AQUATIC_RUIN_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `CASINO_NIGHT_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); [partial Sonic matrix](../architecture/validation/levels/s2-cnz1-sonic.md); [object roll ownership](../architecture/research/2026-10-16-s2-object-roll-ownership.md) adds bounded launcher/flipper/cage release and graph-rewind checks; whole-act breadth remains inherited |
-| S2 | `CASINO_NIGHT_2` | [Partial Sonic+Tails matrix](../architecture/validation/levels/s2-cnz2-sonic-tails.md): native off-screen Crawl touch dispatch and recorded-chain matching prefix; later physics, exit and width/donor/team/lifecycle breadth remain open |
+| S2 | `CASINO_NIGHT_2` | [Partial Sonic+Tails matrix](../architecture/validation/levels/s2-cnz2-sonic-tails.md): native off-screen Crawl touch, pause/attack handoff and diagonal launcher capture ordering; recorded-chain CNZ2 is green on13,045 compared rows. Later campaign physics/art gaps and independent exit/width/donor/team/lifecycle breadth remain open |
 | S2 | `CASINO_NIGHT_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending. Shared [object roll ownership](../architecture/research/2026-10-16-s2-object-roll-ownership.md) checks cover local launcher/flipper/cage contracts; complete Act 2 route breadth remains inherited |
 | S2 | `HILL_TOP_1` | [Partial Sonic matrix](../architecture/validation/levels/s2-htz1-sonic.md): positioned natural-earthquake crossing; cold traversal and configuration/rewind breadth remain open |
 | S2 | `HILL_TOP_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
@@ -2708,3 +2779,8 @@ landing window cases. Mega segment 4 removes all 2,589 errors on 7,430 actual
 compared rows with zero added ERROR tuples and unchanged coverage. Segment 8's
 movie-25811 ownership failure remains outside this repair. Existing act-route,
 donor/team/viewport and full-route rewind obligations remain open.
+
+MICA authored S3K ending presentation (2026-11-08): the
+[ending matrix](../architecture/validation/levels/s3k-ending.md#authored-sonic-route-ending-presentation-2026-11-08)
+records passing declared-entry normal/Super/Hyper mapping and capture checks.
+Doomsday route entry, mod rewind and broader team/viewport certification remain open.

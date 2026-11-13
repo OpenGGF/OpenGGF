@@ -614,6 +614,8 @@ public class Sonic3kTitleScreenDataLoader {
      *
      * @return {@link #ANIM_PATTERN_BASE}
      */
+    public Pattern[] getAnimationPatterns(int frame) { return animPatterns[frame-1]; }
+
     public int getAnimPatternBase() {
         return ANIM_PATTERN_BASE;
     }

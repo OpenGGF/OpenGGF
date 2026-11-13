@@ -78,6 +78,12 @@ public final class RewindCodecs {
     }
 
     private static Optional<RewindCodec> buildCodecFor(Field field) {
+        if (DefaultObjectRewindPolicies.restoresArrayInPlace(field)) {
+            if (!field.getType().isArray() || !supportedArrayComponent(field.getType().getComponentType()))
+                throw new IllegalArgumentException("In-place rewind array policy requires a supported array: " + field);
+            field.setAccessible(true);
+            return Optional.of(new ArrayCodec(field.getType().getComponentType(), true));
+        }
         if (DefaultObjectRewindPolicies.isOptionalObjectReference(field)) {
             field.setAccessible(true);
             return Optional.of(new ObjectReferenceCodec(field.getType(), ObjectReferenceCodec.Mode.OPTIONAL_NATIVE));
@@ -576,8 +582,13 @@ public final class RewindCodecs {
     private static final class ArrayCodec implements RewindCodec {
         private final Class<?> componentType;
 
-        private ArrayCodec(Class<?> componentType) {
+        private final boolean restoreInPlace;
+
+        private ArrayCodec(Class<?> componentType) { this(componentType, false); }
+
+        private ArrayCodec(Class<?> componentType, boolean restoreInPlace) {
             this.componentType = componentType;
+            this.restoreInPlace = restoreInPlace;
         }
 
         @Override
@@ -624,7 +635,7 @@ public final class RewindCodecs {
                 return;
             }
             Object array;
-            if (isFinal(field)) {
+            if (restoreInPlace || isFinal(field)) {
                 array = requireExistingValue(field, target);
                 if (Array.getLength(array) != length) {
                     throw new IllegalStateException("Cannot restore final rewind array field " + field

@@ -69,12 +69,15 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     // AniTails1F/HaulAss tier at $700).
     private int highSpeedWalkRunAnimId = -1;
     private int highSpeedWalkRunThreshold;
-    // Zero retains the legacy script-length-derived slope stride.
+    // Zero derives the native stride from script length; negative disables offsets.
     private int walkSlopeFrameStride;
     private int runSlopeFrameStride;
     private int highSpeedSlopeFrameStride;
     private boolean doubleWalkRunAnimationSpeedWhenSliding;
-    // Tumble/rotation frame base: S2 = 0x5F (s2.asm:38216), S3K = 0x31 (sonic3k.asm:24995).
+    /** {@link #setTumbleFrameBase} value for a character whose mappings have no tumble frames. */
+    public static final int NO_TUMBLE_FRAMES = -1;
+    // Tumble/rotation frame base: S2 = 0x5F (s2.asm:38216), S3K = 0x31 (sonic3k.asm:24995),
+    // S1 = NO_TUMBLE_FRAMES.
     private int tumbleFrameBase = 0x5F;
     // Optional native flip_type-indexed tumble bases. S3K uses
     // byte_1286E={0,$3D,$49,$49} for types 0-3.
@@ -85,6 +88,8 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
 
     public ScriptedVelocityAnimationProfile setIdleAnimId(int idleAnimId) { this.idleAnimId = idleAnimId; return this; }
     public ScriptedVelocityAnimationProfile setIdleAnimId(AnimationId id) { return setIdleAnimId(id.id()); }
+    public ScriptedVelocityAnimationProfile setBlinkAnimId(int id) { this.blinkAnimId = id; return this; }
+    public ScriptedVelocityAnimationProfile setGetUpAnimId(int id) { this.getUpAnimId = id; return this; }
     public ScriptedVelocityAnimationProfile setBlinkAnimId(AnimationId id) { this.blinkAnimId = id.id(); return this; }
     public ScriptedVelocityAnimationProfile setGetUpAnimId(AnimationId id) { this.getUpAnimId = id.id(); return this; }
     public ScriptedVelocityAnimationProfile setWalkAnimId(int walkAnimId) { this.walkAnimId = walkAnimId; return this; }
@@ -597,6 +602,9 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         return Math.min(fallbackFrame, frameCount - 1);
     }
 
+    public boolean isDuckReleasePublishesWalk() { return duckReleasePublishesWalk; }
+    public boolean isAirborneSlidePreservesPublishedAnimation() { return airborneSlidePreservesPublishedAnimation; }
+
     public int getBlinkAnimId() {
         return blinkAnimId;
     }
@@ -744,6 +752,10 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
 
     public int getTumbleFrameBase() {
         return tumbleFrameBase;
+    }
+
+    public boolean hasTumbleFrames() {
+        return tumbleFrameBase != NO_TUMBLE_FRAMES;
     }
 
     public int getTumbleTypeFrameBase(int flipType) {

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -19,7 +21,6 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-import com.openggf.sprites.playable.Tails;
 
 import java.util.List;
 
@@ -156,8 +157,8 @@ public final class FbzMagneticPendulumObjectInstance extends AbstractObjectInsta
         int nearRadius = 0x1D;
         int farRadius = 0x21;
         if (!main.getRolling()) {
-            nearRadius = main instanceof Tails ? 0x1E : 0x22;
-            farRadius = main instanceof Tails ? 0x22 : 0x26;
+            nearRadius = PlayableArchetype.isTails(main) ? 0x1E : 0x22;
+            farRadius = PlayableArchetype.isTails(main) ? 0x22 : 0x26;
         }
         if (reversedEndpoint) {
             int transformedNear = 1 - farRadius;

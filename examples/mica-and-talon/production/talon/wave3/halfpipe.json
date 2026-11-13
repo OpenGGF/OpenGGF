@@ -1,0 +1,254 @@
+[
+  {
+    "id": 0,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-00.png",
+    "dimensions": [
+      24,
+      47
+    ],
+    "hotspot": [
+      12,
+      24
+    ],
+    "native_source_label": "Map_obj10_0024",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 1,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-01.png",
+    "dimensions": [
+      25,
+      45
+    ],
+    "hotspot": [
+      12,
+      23
+    ],
+    "native_source_label": "Map_obj10_003E",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 2,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-02.png",
+    "dimensions": [
+      26,
+      47
+    ],
+    "hotspot": [
+      13,
+      23
+    ],
+    "native_source_label": "Map_obj10_0060",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 3,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-03.png",
+    "dimensions": [
+      27,
+      47
+    ],
+    "hotspot": [
+      15,
+      23
+    ],
+    "native_source_label": "Map_obj10_0082",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 4,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-04.png",
+    "dimensions": [
+      37,
+      42
+    ],
+    "hotspot": [
+      16,
+      25
+    ],
+    "native_source_label": "Map_obj10_00AC",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 5,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-05.png",
+    "dimensions": [
+      38,
+      45
+    ],
+    "hotspot": [
+      16,
+      24
+    ],
+    "native_source_label": "Map_obj10_00C6",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 6,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-06.png",
+    "dimensions": [
+      36,
+      43
+    ],
+    "hotspot": [
+      14,
+      24
+    ],
+    "native_source_label": "Map_obj10_00E8",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 7,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-07.png",
+    "dimensions": [
+      35,
+      47
+    ],
+    "hotspot": [
+      14,
+      23
+    ],
+    "native_source_label": "Map_obj10_0112",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 8,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-08.png",
+    "dimensions": [
+      36,
+      47
+    ],
+    "hotspot": [
+      14,
+      24
+    ],
+    "native_source_label": "Map_obj10_0134",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 9,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-09.png",
+    "dimensions": [
+      38,
+      47
+    ],
+    "hotspot": [
+      16,
+      24
+    ],
+    "native_source_label": "Map_obj10_0156",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 10,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-10.png",
+    "dimensions": [
+      39,
+      44
+    ],
+    "hotspot": [
+      18,
+      24
+    ],
+    "native_source_label": "Map_obj10_0180",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 11,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-11.png",
+    "dimensions": [
+      42,
+      45
+    ],
+    "hotspot": [
+      20,
+      23
+    ],
+    "native_source_label": "Map_obj10_01AA",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 12,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-12.png",
+    "dimensions": [
+      39,
+      26
+    ],
+    "hotspot": [
+      20,
+      10
+    ],
+    "native_source_label": "Map_obj10_01CC",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 13,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-13.png",
+    "dimensions": [
+      40,
+      28
+    ],
+    "hotspot": [
+      20,
+      12
+    ],
+    "native_source_label": "Map_obj10_01DE",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 14,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-14.png",
+    "dimensions": [
+      40,
+      28
+    ],
+    "hotspot": [
+      20,
+      14
+    ],
+    "native_source_label": "Map_obj10_01F8",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 15,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-15.png",
+    "dimensions": [
+      43,
+      32
+    ],
+    "hotspot": [
+      22,
+      16
+    ],
+    "native_source_label": "Map_obj10_020A",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 16,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-16.png",
+    "dimensions": [
+      28,
+      32
+    ],
+    "hotspot": [
+      14,
+      16
+    ],
+    "native_source_label": "Map_obj10_0224",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  },
+  {
+    "id": 17,
+    "file": "../../../art/talon/stage-poses/s2-halfpipe-17.png",
+    "dimensions": [
+      29,
+      32
+    ],
+    "hotspot": [
+      14,
+      16
+    ],
+    "native_source_label": "Map_obj10_0236",
+    "source": "$HOME/scratch/agent-tmp/talon-presentation-20261110/halfpipe.json"
+  }
+]

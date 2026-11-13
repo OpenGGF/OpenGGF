@@ -1947,12 +1947,10 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * ExecuteObjects until they self-destruct via their own out_of_range
      * check (e.g., Ring_Animate → out_of_range → Ring_Delete).
      * <p>
-     * Previously, the engine removed spawns from the active set here,
-     * which caused syncActiveSpawnsUnload to force-unload objects. This
-     * freed their SST slots too early, causing downstream slot assignment
-     * differences (e.g., Batbrain timing gates firing 1 frame early).
-     * Objects are now kept active and unloaded via the separate
-     * out_of_range check in syncActiveSpawnsUnload.
+     * Retreat changes cursor accounting only. Retained instances stay active
+     * until execution-time object/manager lifetime checks unload them. Removing
+     * them here would free SST slots before the native execution boundary and
+     * change subsequent slot allocation.
      */
     private void trimRightCountered(int oplChunk) {
         int rightEdge = oplChunk + getLoadAhead();

@@ -270,10 +270,24 @@ class TestTimeAttackScene {
     }
 
     @Test
+    void competitionArenaPoolPassesSceneStartValidation() {
+        fingerprint = Optional.of(FP);
+        open(List.of("s3k"));
+        chooseMode(1); // HOST LAN
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // race mode
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT); // Competition
+        for (int i=0;i<3;i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_UP); // track
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT); // last arena
+        for (int i=0;i<9;i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // start
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        assertEquals("", scene.status(), "Competition's default arena pool must not use the TA-only validator");
+    }
+
+    @Test
     void multiplayerWithoutAFingerprintExplainsTheMissingRom() {
         open(List.of("s2"));
         chooseMode(1); // HOST LAN
-        for (int i = 0; i < 4; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // past policy, window and vote pool
+        for (int i = 0; i < 5; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // past race mode, policy, window and vote pool
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
         assertEquals("The S2 ROM is not available for racing", scene.status());
         assertEquals(openggf.timeattack.mp.RaceSession.State.IDLE, scene.raceSession().state());
@@ -317,7 +331,7 @@ class TestTimeAttackScene {
     void aLongStatusWrapsWholeInsteadOfBeingCut() {
         open(List.of("s2"));
         chooseMode(1); // HOST LAN
-        for (int i = 0; i < 4; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+        for (int i = 0; i < 5; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // past race mode, policy, window, pool
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
         openggf.timeattack.ui.RecordingSceneCanvas canvas = new openggf.timeattack.ui.RecordingSceneCanvas(320);
         scene.draw(null, canvas);
@@ -564,23 +578,42 @@ class TestTimeAttackScene {
         fingerprint = Optional.of(FP);
         open(List.of("s2"));
         chooseMode(1);
-        for (int i = 0; i < 4; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+        for (int i = 0; i < 5; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // past race mode, policy, window, pool
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
-        assertTrue(host.capturesTextInput(), "creation is a modal even before its password editor opens");
+        assertFalse(host.capturesTextInput(), "the form keeps its arrows until its password is edited");
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        assertTrue(host.capturesTextInput(), "the password editor takes text");
         type("a long private room password");
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        assertFalse(host.capturesTextInput(), "the accepted password returns the arrows to the form");
         scene.focusLost(null);
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
-        assertEquals(openggf.timeattack.mp.RaceSession.State.IDLE, scene.raceSession().state());
-        assertTrue(host.capturesTextInput());
+        assertEquals(openggf.timeattack.mp.RaceSession.State.IDLE, scene.raceSession().state(),
+                "focus loss erased the password, so CREATE ROOM refuses");
         assertTrue(launched.isEmpty());
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE);
         assertFalse(host.capturesTextInput());
+    }
+
+    @Test
+    void theKeyboardReachesCreateRoomInTheAccessForm() throws Exception {
+        fingerprint = Optional.of(FP);
+        open(List.of("s2"));
+        chooseMode(1);
+        for (int i = 0; i < 5; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // past race mode, policy, window, pool
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        var canvas = new openggf.timeattack.ui.RecordingSceneCanvas(320);
+        scene.draw(null, canvas);
+        assertTrue(canvas.shows("CREATE ROOM"), "the access form is open");
+        assertFalse(host.capturesTextInput());
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // members may invite
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // CREATE ROOM
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        idleUntil("the hosted lobby", () -> scene.raceSession().state() == openggf.timeattack.mp.RaceSession.State.LOBBY);
     }
 
     @Test
@@ -628,7 +661,7 @@ class TestTimeAttackScene {
             open(List.of("s2"));
             scene.settings().setMasterSelection(new MasterSelection.Custom("ws://127.0.0.1:" + master.port() + "/master"));
             chooseMode(3);
-            for (int i = 0; i < 4; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            for (int i = 0; i < 5; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // past race mode, policy, window, pool
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
             idleUntil("browser", () -> scene.raceSession().state() == openggf.timeattack.mp.RaceSession.State.BROWSING);
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_J);
@@ -641,7 +674,7 @@ class TestTimeAttackScene {
             scene.focusLost(null);
             assertFalse(host.capturesTextInput());
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_C);
-            assertTrue(host.capturesTextInput());
+            assertFalse(host.capturesTextInput(), "the creation form keeps its arrows until its password is edited");
             scene.draw(null, canvas);
             assertTrue(canvas.shows("CREATE ROOM"));
             assertFalse(canvas.shows("Rooms listed on your master server"));

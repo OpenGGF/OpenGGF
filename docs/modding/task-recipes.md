@@ -8,7 +8,7 @@ install. The recipes below are starting points, not new API promises.
 
 | Request | Smallest supported starting point |
 |---|---|
-| [Put a badnik in a stock act](#badnik-in-a-stock-act) | Owned factory plus a decoded placement binding; true additions need expert assembly |
+| [Put a badnik in a stock act](#badnik-in-a-stock-act) | Owned factory plus a decoded placement binding or addition |
 | [Change one character's movement](#one-characters-movement) | Scoped immutable physics transform |
 | [Hold gameplay for a menu](#hold-gameplay-for-a-menu) | Captured frame controller with HOLD/native admission |
 | [Keep an upgrade between sessions](#persistent-upgrade) | Owner storage plus a validated save slot |
@@ -37,18 +37,23 @@ state on the instance, supply `ModRewindRecreatable`, and verify that custom fie
 and relationships restore through the actual object snapshot path. Never use
 static gameplay state or allocate a stock numeric object id for a mod factory.
 
-**Limit:** `nativePlacements()` admits factory bindings and original-ring retention,
-not appended, moved or arbitrary rewritten native objects. If “add” means an extra
-slot rather than replacing one, the binding recipe is insufficient. Expert
+**Add another object:** after registering its factory, use
+`LevelPatch.empty().nativePlacements().forZone(zone).addObject("guard", x, y, subtype, renderFlags, true)`
+with `ModContext.decodedLevelPatch`. Coordinates are native centre positions. The engine binds the
+verified registering owner and assigns collision-free placement identities in declaration order,
+after the source inventory. Repeat loads with the same inventory and patch order retain those
+identities. Zone and inventory gates apply to additions too. Multiple patches compose without
+replacing the native level, preserving its geometry and zone-specific services.
+
+`nativePlacements()` admits owned additions, factory bindings and original-ring retention,
+not arbitrary movement, deletion or rewriting of stock objects. Expert
 [GameModule](../../src/main/java/com/openggf/game/GameModule.java).loadLevelOverride / transformDecodedLevel and
-[MutableLevel](../../src/main/java/com/openggf/level/MutableLevel.java).snapshot / addObjectSpawn remain available for deliberate level
-assembly, with unique stable placement identities and owner/key pairs. Such a
-snapshot is not a guarantee of native zone scripts or every concrete-level service;
-verify host events, camera, water, collision and load/respawn before claiming support.
-Do not disguise a replacement as an addition.
+[MutableLevel](../../src/main/java/com/openggf/level/MutableLevel.java).snapshot remain available for deliberate
+level assembly. Such a snapshot is not a guarantee of native zone scripts or every concrete-level
+service; verify host events, camera, water, collision and load/respawn before claiming support.
 
 **Verify:** use [TestNativeDecodedPlacementPatchHost](../../src/test/java/com/openggf/mods/code/TestNativeDecodedPlacementPatchHost.java) and
-[TestNativeDecodedPlacementPatchRom](../../src/test/java/com/openggf/level/TestNativeDecodedPlacementPatchRom.java) as boundary references; add your own packed-mod
+[TestNativeDecodedPlacementPatchRom](../../src/test/java/com/openggf/mods/code/TestNativeDecodedPlacementPatchRom.java) as boundary references; add your own packed-mod
 registration, selected/unselected act, collision/defeat, respawn and full-session
 capture/restore/replay checks. Test the target ROM with an absolute path. A factory
 registration pass alone proves neither placement nor a playable encounter.

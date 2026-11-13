@@ -1,0 +1,5 @@
+# Source for s1-syz3-wait.txt (InputLogAuthorTool --script). Spring Yard Act 3, declared start
+# x 0x2365 y 0x03D8 above the rising and falling blocks where syz3_completerun stands (rows
+# 8967-9119). He lands on a block and stays idle; Sonic 1's wait animation holds the standing
+# frame for 12 x 24 frames, then he looks out and taps his foot, from about frame 290.
+600 -

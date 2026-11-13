@@ -82,14 +82,6 @@ class TestCommittedHardwareTimingFixtures {
                             new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "ssz")),
                     Map.entry("ddz_completerun",
                             new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "dez23")),
-                    Map.entry("bonus_gumball",
-                            new Ownership("v637-knuckles-c", "gumball")),
-                    Map.entry("bonus_slots",
-                            new Ownership("v637-knuckles-c", "slots")),
-                    Map.entry("bonus_pachinko",
-                            new Ownership("v637-knuckles-c", "pachinko")),
-                    Map.entry("special_stage",
-                            new Ownership("v637-knuckles-c", "ss")),
                     // SSZ1 cold route spliced onto the complete-run prefix
                     // (tools/traces/compose_route_on_movie_prefix.py); comparison only.
                     Map.entry("ssz1_cold_route_native",
@@ -97,9 +89,6 @@ class TestCommittedHardwareTimingFixtures {
     private static final Set<String> EXPECTED_DESTINATIONS = Set.of(
             "aiz1_to_hcz_fullrun",
             "aiz_completerun",
-            "bonus_gumball",
-            "bonus_pachinko",
-            "bonus_slots",
             "cnz",
             "cnz_completerun",
             "ddz_completerun",
@@ -206,7 +195,6 @@ class TestCommittedHardwareTimingFixtures {
             "runs/s3k-knuckles-complete-superemeralds/hpz22",
             "runs/s3k-knuckles-complete-superemeralds/hpz",
             "soz_completerun",
-            "special_stage",
             "ssz1_cold_route_native",
             "ssz_completerun");
     /**
@@ -371,9 +359,6 @@ class TestCommittedHardwareTimingFixtures {
         if (run != null) {
             assertEquals(run.runId(), metadataJson.path("run_id").textValue(),
                     expected.directory());
-        } else if ("v637-knuckles-c".equals(expected.owner())) {
-            assertEquals("s3k-multibonus",
-                    metadataJson.path("run_id").textValue(), expected.directory());
         } else {
             assertFalse(metadataJson.has("run_id"), expected.directory());
         }

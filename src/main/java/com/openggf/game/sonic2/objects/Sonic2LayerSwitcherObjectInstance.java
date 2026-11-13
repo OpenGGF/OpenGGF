@@ -21,7 +21,7 @@ import java.util.List;
  * preserves native slot layout for Tails' interact slot and other SST-indexed
  * state without rendering or duplicating the behavior manager.
  */
-public class Sonic2LayerSwitcherObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+public class Sonic2LayerSwitcherObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource {
     // Obj03 is an invisible plane-switch controller; its placement bits do not face a performer.
 
     public Sonic2LayerSwitcherObjectInstance(ObjectSpawn spawn, String name) {
@@ -44,5 +44,9 @@ public class Sonic2LayerSwitcherObjectInstance extends AbstractObjectInstance im
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         // Obj03 does not render.
+    }
+    /** Obj03_MainX (s2.asm:45682-45761), Obj03_MainY (s2.asm:45764-45843): no DisplaySprite path. */
+    @Override public com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.ObjectSlot nativeDisplaySlot() {
+        return null;
     }
 }

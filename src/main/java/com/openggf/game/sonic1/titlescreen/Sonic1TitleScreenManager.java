@@ -1,5 +1,9 @@
 package com.openggf.game.sonic1.titlescreen;
 
+import com.openggf.game.presentation.TitleCharacterPresentation;
+import com.openggf.game.CharacterPresentation.Host;
+import com.openggf.game.CharacterPresentation.TitlePart;
+
 import com.openggf.control.InputHandler;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -44,6 +48,16 @@ import static com.openggf.control.InputHandlerInternalAccess.nativeMenuKeyPresse
  * </ul>
  */
 public class Sonic1TitleScreenManager implements TitleScreenProvider {
+    private TitleCharacterPresentation titleLead;
+    private TitleCharacterPresentation titleSidekick;
+    private boolean titleCharactersResolved;
+    private void resolveTitleCharacters() {
+        if (titleCharactersResolved) return;
+        titleCharactersResolved = true;
+        titleLead = TitleCharacterPresentation.configured(Host.S1, false);
+        titleSidekick = TitleCharacterPresentation.configured(Host.S1, true);
+    }
+
     private static final Logger LOGGER = Logger.getLogger(Sonic1TitleScreenManager.class.getName());
 
     private static Sonic1TitleScreenManager instance;
@@ -265,6 +279,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
 
     @Override
     public void initialize() {
+        titleCharactersResolved = false; titleLead = null; titleSidekick = null;
         LOGGER.info("Initializing Sonic 1 Title Screen");
 
         // Load all data from ROM
@@ -766,7 +781,9 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
             int screenX = xOffset() + SONIC_X - 128; // VDP to screen coords, centred in viewport
             int screenY = sonicScreenY - 128;
             enableSpriteLimiterScissor(gm);
-            sonicSpriteRenderer.drawFrameIndex(sonicAnimFrame, screenX, screenY);
+            resolveTitleCharacters();
+            if (titleLead == null || !titleLead.draw(TitlePart.BODY, sonicAnimFrame, screenX, screenY))
+                sonicSpriteRenderer.drawFrameIndex(sonicAnimFrame, screenX, screenY);
             // Pattern draws are queued commands: they only reach GL in
             // flushScreenSpace(), so the scissor must still be active here.
             gm.flushPatternBatch();
@@ -1138,6 +1155,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
 
     @Override
     public void reset() {
+        titleCharactersResolved = false; titleLead = null; titleSidekick = null;
         GameServices.audio().stopSegaPcm();
         pendingTitlePlcOperation = null;
         state = State.INACTIVE;
@@ -1242,7 +1260,9 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
             int screenX = xOffset() + SONIC_X - 128;
             int screenY = sonicScreenY - 128;
             enableSpriteLimiterScissor(gm);
-            sonicSpriteRenderer.drawFrameIndex(sonicAnimFrame, screenX, screenY);
+            resolveTitleCharacters();
+            if (titleLead == null || !titleLead.draw(TitlePart.BODY, sonicAnimFrame, screenX, screenY))
+                sonicSpriteRenderer.drawFrameIndex(sonicAnimFrame, screenX, screenY);
             // Pattern draws are queued commands: they only reach GL in
             // flushScreenSpace(), so the scissor must still be active here.
             gm.flushPatternBatch();

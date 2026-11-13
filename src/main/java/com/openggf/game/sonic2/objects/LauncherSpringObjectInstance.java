@@ -1,7 +1,10 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.solid.SolidCall;
 import com.openggf.level.objects.BoxObjectInstance;
 
 import com.openggf.audio.GameSound;
@@ -16,7 +19,6 @@ import com.openggf.physics.Direction;
 import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-import com.openggf.sprites.playable.Tails;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -48,7 +50,7 @@ import java.util.Set;
  * <b>Disassembly Reference:</b> s2.asm obj85 (loc_2AD26 - loc_2AE76)
  */
 public class LauncherSpringObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.Source {
+        implements com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource, SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.Source {
     @Override
     public ObjectVisualFacing.Basis nativeFacing() {
         // loc_2B018 always launches the diagonal head UP-RIGHT, even with
@@ -124,6 +126,26 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         this.currentSpriteY = spawn.y();
     }
 
+    /** Pressure-spring state bytes $36/$37 only: swap_loop_objects (s2.asm:26087-26092). */
+    void swapPlayerOwnership() {
+        var roster = com.openggf.game.competition.NativeCompetitionRoster.from(services().worldSession());
+        if (roster == null) return;
+        var firstPlayer = roster.player(0);
+        var secondPlayer = roster.player(1);
+        var first = playerStates.get(firstPlayer);
+        var second = playerStates.get(secondPlayer);
+        int firstState = first != null ? first.state : STATE_EMPTY;
+        int secondState = second != null ? second.state : STATE_EMPTY;
+        // Keep each actor's Java cooldown and map-entry identity. An absent
+        // entry represents the native zero byte, not another field to exchange.
+        if (first == null && secondState != STATE_EMPTY)
+            first = playerStates.computeIfAbsent(firstPlayer, ignored -> new PlayerState());
+        if (second == null && firstState != STATE_EMPTY)
+            second = playerStates.computeIfAbsent(secondPlayer, ignored -> new PlayerState());
+        if (first != null) first.state = secondState;
+        if (second != null) second.state = firstState;
+    }
+
     @Override
     public void releasePlayersForVisualDirection() {
         for (var entry : playerStates.entrySet()) if (entry.getValue().state != STATE_EMPTY)
@@ -170,7 +192,7 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
     }
 
     private boolean isTails(AbstractPlayableSprite player) {
-        return player instanceof Tails;
+        return PlayableArchetype.isTails(player);
     }
 
     @Override
@@ -189,6 +211,16 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
 
         applyVerticalExactEdgeRollHandoff(player, contact);
 
+        captureFromContact(player, ps, contact.standing(), contact.pushing());
+    }
+
+    private void captureFromContact(AbstractPlayableSprite player, PlayerState ps,
+                                    boolean standing, boolean pushing) {
+        // Keep the inherited capture cooldown on admission, not on the solid
+        // helper itself: the head still resolves top/side contact while it runs.
+        if (ps.launchCooldown > 0) {
+            return;
+        }
         // Compatibility images retain the former admission. In both verified
         // retail programs loc_2AD2A/loc_2AF32 first captures routine 4; the
         // REV01 routine >=4 guard exists only on the already-held path.
@@ -205,11 +237,11 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
             // 1. Check standing bit - if standing, capture player
             // 2. For diagonal springs: if not standing, check pushing bit
             // 3. If pushing into diagonal spring from side, convert to standing (capture)
-            boolean shouldCapture = contact.standing() && player.getYSpeed() >= 0;
+            boolean shouldCapture = standing && player.getYSpeed() >= 0;
 
             // Diagonal springs can also capture players who push into them from the side
             // ROM: btst pushing_bit / bset standing_bit - converts side push to standing
-            if (!shouldCapture && isDiagonal() && contact.pushing()) {
+            if (!shouldCapture && isDiagonal() && pushing) {
                 shouldCapture = true;
             }
 
@@ -347,7 +379,7 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // ROM loc_2AD2A (vertical Obj85_Up) only sets objoff_36 nonzero at its
         // tail (s2.asm:57968 addq.b #1,(a2)). The compression timer loc_2ADB0 is
         // reached only when objoff_36 was already nonzero at the START of the
-        // object update ("move.b (a2),d0 / bne loc_2AD7A", s2.asm:57948-57949),
+        // object update ("move.b (a2),d0 / bne loc_2AD7A", s2.asm:58120-58154),
         // so the EMPTY->STANDING capture frame runs loc_2AD2A and never advances
         // objoff_38 that frame -- the capture frame is "free" (no objoff_32
         // decrement). The engine reproduces that free frame structurally rather
@@ -361,7 +393,7 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // frame too late once objoff_32 is carried as a residual (s2 cnz2 frame
         // 4296), so no extra skip is applied.
 
-        // ROM Obj85 capture (loc_2AD2A, s2.asm:57951-57968) sets obj_control,
+        // ROM capture loc_2AD2A (s2.asm:58124-58146) sets obj_control,
         // rolling, radii and objoff_36, but NEVER writes objoff_32 (the
         // compression countdown) or objoff_38 (the compression accumulator).
         // objoff_32 is therefore carried as a residual from the previous
@@ -627,6 +659,16 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // ROM: move.b #0,obj_control(a1) clears all control bits
         player.setControlLocked(false);
         ObjectControlState.none().applyTo(player);
+        if (isDiagonal()) {
+            // loc_2AF7A/loc_2B018 clear the spring's standing bit and OnObject
+            // on release (s2.asm:58326-58334, 58375-58398). Manual dispatch has
+            // no automatic tail checkpoint to retire the folded ride record.
+            player.setOnObject(false);
+            var objectManager = services().objectManager();
+            if (objectManager != null) {
+                objectManager.releaseRidingObject(player, this);
+            }
+        }
         if (!isDiagonal() && isTails(player)) {
             // Vertical Obj85 leaves the player curled after loc_2AE0C launch
             // without making the airborne CPU path behave like Obj84 pinball
@@ -677,6 +719,14 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         } catch (Exception e) {
             // Prevent audio failure from breaking game logic
         }
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        // Obj85_Diagonal calls loc_2AF06 for P1 and P2 before its shared release
+        // decision or empty-spring decompression (s2.asm:58242-58285). A tail
+        // checkpoint captures too late and can decay compression before P2 lands.
+        return isDiagonal() ? SolidExecutionMode.MANUAL_CHECKPOINT : SolidExecutionMode.AUTO_AFTER_UPDATE;
     }
 
     @Override
@@ -946,8 +996,17 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
             ps.launchCooldown--;
         }
 
-        // Skip processing if player is not on spring
         if (ps.state == STATE_EMPTY) {
+            if (isDiagonal() && !player.isDebugMode() && player.getYSpeed() >= 0) {
+                // loc_2AF06's fresh branch calls the single-character solid
+                // helper with the already-computed head as d4, then returns
+                // after capture without running held compression this pass
+                // (s2.asm:58286-58321). Keep P1/capture/P2/capture ordered before
+                // checkForLaunchTransition, including a fresh P2's held input.
+                var contact = services().solidExecution().solidFor(player,
+                        new SolidCall(0x23, 8, 5, currentSpriteX));
+                captureFromContact(player, ps, contact.standingNow(), contact.pushingNow());
+            }
             return;
         }
 
@@ -994,6 +1053,23 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
             // The transition to STATE_LAUNCH_PENDING is handled by checkForLaunchTransition()
             handleCompression(player, ps);
         }
+    }
+
+    /** Obj85_Init (s2.asm:58026-58068): one SST with a fixed base child and moving head.
+     * Obj85 (s2.asm:57993-58009) submits both through DisplaySprite3 bucket 4. */
+    @Override
+    public com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.ObjectSlot nativeDisplaySlot() {
+        var mapping = new com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.Mapping(
+                isDiagonal() ? 0x2B0EC : 0x2B07E, mainSpriteFrame);
+        var child = new com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.Child(
+                baseX & 0xFFFF, (baseY + (isDiagonal() ? 0 : 0x20)) & 0xFFFF, compression >= 0x10 ? 3 : 2);
+        var multi = new com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.MultiSprite(
+                mainSpriteFrame, isDiagonal() ? 0x20 : 0x18, 0, java.util.List.of(child));
+        return new com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.ObjectSlot(
+                0x85, 0x44 | (isLeftFacing() ? 1 : 0) | (spawn.renderFlags() & 2),
+                currentSpriteX & 0xFFFF, currentSpriteY & 0xFFFF, 0x18, 0, mapping,
+                com.openggf.game.sonic2.competition.view.Sonic2CompetitionSpriteArtTable.adjust2PArtPointer(
+                        isDiagonal() ? 0x0402 : 0x0422), multi);
     }
 
     @Override

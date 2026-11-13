@@ -1,6 +1,12 @@
 package com.openggf.game.rewind;
 
+import com.sun.source.tree.ClassTree;
+import com.sun.source.util.JavacTask;
 import org.junit.jupiter.api.Test;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.contact.SolidContactState;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -13,8 +19,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import javax.tools.Diagnostic;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaFileObject;
+import javax.tools.ToolProvider;
 
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindArchitectureGuard {
     private static final Path MAIN_ROOT = Path.of("src/main/java");
@@ -131,6 +143,13 @@ class TestRewindArchitectureGuard {
             // The typed extra preserves their exact configuration and all explosion scalars;
             // context-aware overrides retain generic capture for subtype state. Focused
             // recreation tests cover custom child order, once-only effects and S1 subtype state.
+            // Lead-authorized 2026-11-08 triage: a caller-supplied ModApi PointsFactory
+            // is executable construction policy, not reconstructible from score alone.
+            // Like ExplosionObjectInstance, retain the exact configured callback while
+            // generic scalar/RNG capture stays intact. TestAnimalObjectRngOwnership's
+            // destructive restore/birth regression pins child and subsequent IDs.
+            Map.entry("src/main/java/com/openggf/level/objects/AnimalObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/level/objects/AnimalObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/level/objects/ExplosionObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/level/objects/ExplosionObjectInstance.java#restoreRewindState", 1),
             // Shared badnik base keeps the no-arg compatibility overrides and
@@ -393,6 +412,67 @@ class TestRewindArchitectureGuard {
     }
 
     @Test
+    void objectOverrideClassificationUsesActorTypesIncludingNestedActors() {
+        assertTrue(containsObjectType(AbstractObjectInstance.class));
+        assertTrue(containsObjectType(ActorContainer.class));
+        assertFalse(containsObjectType(SolidContactState.class));
+        assertFalse(containsObjectType(ObjectManager.class));
+        assertFalse(containsObjectType(NonActorFactory.class));
+    }
+
+    @Test
+    void objectOverrideClassificationIncludesLocalActors() {
+        assertTrue(containsObjectType(LocalActorFactory.class));
+    }
+
+    @Test
+    void objectOverrideClassificationIncludesAnonymousActors() {
+        assertTrue(containsObjectType(AnonymousActorFactory.class));
+    }
+
+    @Test
+    void objectOverrideClassificationIncludesSecondaryTopLevelActors() throws IOException {
+        assertTrue(containsObjectType(Path.of(
+                "src/test/java/com/openggf/game/rewind/RewindActorSourceFixture.java")));
+        assertFalse(containsObjectType(Path.of(
+                "src/main/java/com/openggf/level/objects/contact/SolidContactState.java")));
+    }
+
+    private static final class ActorContainer {
+        private abstract static class Actor extends AbstractObjectInstance {
+            Actor() { super(null, "rewind-guard-actor"); }
+        }
+    }
+
+    private static final class LocalActorFactory {
+        Class<?> actorType() {
+            abstract class LocalActor extends AbstractObjectInstance {
+                LocalActor() { super(null, "local-rewind-guard-actor"); }
+            }
+            return LocalActor.class;
+        }
+    }
+
+    private static final class AnonymousActorFactory {
+        ObjectInstance create() {
+            return new AbstractObjectInstance(null, "anonymous-rewind-guard-actor") {
+                @Override
+                public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) { }
+
+                @Override
+                public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
+            };
+        }
+    }
+
+    private static final class NonActorFactory {
+        Class<?> helperType() {
+            class LocalHelper { }
+            return LocalHelper.class;
+        }
+    }
+
+    @Test
     void objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage() throws IOException {
         Map<String, Integer> actual = objectRewindAnnotationCounts();
 
@@ -458,12 +538,71 @@ class TestRewindArchitectureGuard {
         Map<String, Integer> counts = new LinkedHashMap<>();
         for (Path source : objectSources()) {
             String text = Files.readString(source);
-            addCount(counts, normalize(source) + "#captureRewindState",
-                    CAPTURE_OVERRIDE.matcher(text).results().count());
-            addCount(counts, normalize(source) + "#restoreRewindState",
-                    RESTORE_OVERRIDE.matcher(text).results().count());
+            long captureCount = CAPTURE_OVERRIDE.matcher(text).results().count();
+            long restoreCount = RESTORE_OVERRIDE.matcher(text).results().count();
+            if (captureCount == 0 && restoreCount == 0) {
+                continue;
+            }
+            // Package placement also includes state owners. Only actors (including
+            // actors nested in a support class) incur per-object override debt.
+            if (!containsObjectType(source)) {
+                continue;
+            }
+            addCount(counts, normalize(source) + "#captureRewindState", captureCount);
+            addCount(counts, normalize(source) + "#restoreRewindState", restoreCount);
         }
         return counts;
+    }
+
+    private static boolean containsObjectType(Path source) throws IOException {
+        var compiler = ToolProvider.getSystemJavaCompiler();
+        if (compiler == null) {
+            throw new IOException("Object override classification requires the JDK compiler");
+        }
+        var diagnostics = new DiagnosticCollector<JavaFileObject>();
+        try (var files = compiler.getStandardFileManager(diagnostics, null, null)) {
+            var task = (JavacTask) compiler.getTask(null, files, diagnostics,
+                    List.of("-proc:none"), null, files.getJavaFileObjectsFromPaths(List.of(source)));
+            boolean containsActor = false;
+            // A source file can also declare secondary top-level actors. Parse
+            // declaration names, then inspect compiled types without initializing them.
+            for (var unit : task.parse()) {
+                String prefix = unit.getPackageName() == null ? "" : unit.getPackageName() + ".";
+                for (var declaration : unit.getTypeDecls()) {
+                    if (declaration instanceof ClassTree type) {
+                        String name = prefix + type.getSimpleName();
+                        try {
+                            containsActor |= containsObjectType(Class.forName(name, false,
+                                    TestRewindArchitectureGuard.class.getClassLoader()));
+                        } catch (ClassNotFoundException error) {
+                            throw new IOException("Missing compiled type in object override scan: " + name, error);
+                        }
+                    }
+                }
+            }
+            for (var diagnostic : diagnostics.getDiagnostics()) {
+                if (diagnostic.getKind() == Diagnostic.Kind.ERROR) {
+                    throw new IOException("Cannot parse object override source " + source + ": " + diagnostic);
+                }
+            }
+            return containsActor;
+        }
+    }
+
+    private static boolean containsObjectType(Class<?> type) {
+        if (ObjectInstance.class.isAssignableFrom(type)) {
+            return true;
+        }
+        String nestedPrefix = type.getName() + "$";
+        // Nest members include local and anonymous classes. Restrict to this
+        // lexical owner so an unrelated actor in the same nest cannot classify it.
+        for (Class<?> nested : type.getNestMembers()) {
+            if (nested.getName().startsWith(nestedPrefix)
+                    && ObjectInstance.class.isAssignableFrom(nested)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Map<String, Integer> objectRewindAnnotationCounts() throws IOException {

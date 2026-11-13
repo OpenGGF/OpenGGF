@@ -23,9 +23,17 @@ public final class PlayableSheetWriter {
         byte[] appendages = sheet.appendages().isEmpty() ? null : appendages(sheet.appendages());
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try (DataOutputStream out = new DataOutputStream(bytes)) {
-            out.writeBytes("GGFP"); out.writeShort(2); out.writeShort(appendages == null ? 4 : 5);
+            out.writeBytes("GGFP"); out.writeShort(2); out.writeShort(4 + (appendages == null ? 0 : 1) + (sheet.nativeFrames().isEmpty() ? 0 : 1));
             section(out, "BASE", base); section(out, "META", meta); section(out, "FRAM", frames);
             section(out, "ANIM", animations); if (appendages != null) section(out, "APND", appendages);
+            if (!sheet.nativeFrames().isEmpty()) section(out, "NFRM", payload(data -> {
+                data.writeShort(sheet.nativeFrames().size());
+                for (String key : sortedKeys(sheet.nativeFrames())) {
+                    writeString(data, key);
+                    requireU16(sheet.nativeFrames().get(key), "native pose frame");
+                    data.writeShort(sheet.nativeFrames().get(key));
+                }
+            }));
         }
         byte[] encoded = bytes.toByteArray();
         if (encoded.length > ModInputLimits.DEFAULT_MAX_ASSET_BYTES) throw new IllegalArgumentException("playable sheet exceeds production byte limit");
@@ -83,6 +91,24 @@ public final class PlayableSheetWriter {
                     out.writeShort(step.duration());
                     out.writeByte(step.loop() ? 1 : 0);
                     out.writeByte(0);
+                }
+                out.writeByte(animation.speedDriven() ? 1 : 0);
+                out.writeByte(switch (animation.endAction()) {
+                    case LOOP -> 0; case HOLD -> 1; case SWITCH -> 2; case LOOP_BACK -> 3;
+                    default -> throw new IllegalArgumentException("Unsupported playable end action");
+                });
+                if (animation.endAction() == com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP_BACK) {
+                    requirePositiveU16(animation.loopBackSteps(), "loop-back steps");
+                    out.writeShort(animation.loopBackSteps());
+                } else if (animation.loopBackSteps() != 0) {
+                    throw new IllegalArgumentException("loopBackSteps requires loop-back end action");
+                }
+                writeString(out, animation.nextAnimation());
+                out.writeByte(animation.slopes().size());
+                for (var slope : animation.slopes()) {
+                    if (slope.size() != animation.steps().size())
+                        throw new IllegalArgumentException("Slope sets must match cycle length");
+                    for (int frame : slope) { requireU16(frame, "slope frame"); out.writeShort(frame); }
                 }
             }
         });
@@ -159,7 +185,7 @@ public final class PlayableSheetWriter {
         }
         requireU16(sheet.animations().size(), "animation count");
         for (var entry : sheet.animations().entrySet()) {
-            ModKeySyntax.requireLocalName(entry.getKey());
+            com.openggf.game.CanonicalAnimation.valueOf(entry.getKey());
             requirePositiveU16(entry.getValue().steps().size(), "animation step count");
             for (var step : entry.getValue().steps()) {
                 requireU16(step.frameIndex(), "animation frame");

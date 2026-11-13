@@ -4,13 +4,17 @@ package com.openggf.level;
 final class LevelBoundsMaskGeometry {
     private LevelBoundsMaskGeometry() { }
 
-    record Bounds(int minX, int maxX) { }
+    record Bounds(int minX, int maxX) {
+        /** Covers any viewport without overflowing the mask's edge arithmetic. */
+        static final Bounds UNMASKED = new Bounds(Integer.MIN_VALUE / 4, Integer.MAX_VALUE / 4);
+    }
 
     static Bounds select(LevelManager level, int currentMaxX) {
         if (level.getZoneFeatureProvider() instanceof
                 com.openggf.game.internal.NativeArenaCameraFraming framing) {
             var origin = framing.presentationNativeHorizontalOrigin();
             if (origin.isPresent()) return new Bounds(origin.getAsInt(), origin.getAsInt());
+            if (framing.ownsWidescreenMargins()) return Bounds.UNMASKED;
         }
         // The ROM shared boss gate (loc_85D06/loc_85D28) first ratchets a
         // temporary boundary with the camera. loc_85D36 installs the final arena

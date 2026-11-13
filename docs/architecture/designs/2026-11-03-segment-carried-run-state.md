@@ -355,3 +355,12 @@ raw gzip streams and gate results are under
 Full current-base trace profiles, inherited ordinary failures, source-qualified
 skip accounting and remaining limits are in the
 [wave 8 frontier record](../../status/trace-frontier-log.md).
+
+## S2-family destination rings (2026-11-06)
+
+The same entry import consumes `rings_after` on an S2-family `stage_exit`.
+The manifest records the destination count: stock S2 returns clear it to zero,
+while the lock-on run retains it. No team/fixture name chooses a value. S1
+result-screen counts are excluded because its next level clears them. Missing
+records stay unresolved. This changes no continuous-chain state or later row.
+The resolver test covers the stock zero and lock-on retained record explicitly.

@@ -15,6 +15,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestS3kCustomTeamPortraitComposer {
 
     @Test
+    void canonicalCustomFollowerFacesInwardWithoutMirroringSoloOrLeader() {
+        var composer = new S3kCustomTeamPortraitComposer(stubFrames());
+        var layers = composer.layoutLayers(new SelectedTeam("mica-and-talon:mica", List.of("mica-and-talon:talon")));
+        assertFalse(layers.getFirst().hFlip());
+        assertTrue(layers.getLast().hFlip());
+        assertFalse(composer.layoutLayers(new SelectedTeam("mica-and-talon:talon", List.of())).getFirst().hFlip());
+    }
+    @Test
+    void suppliedPortraitComposesWithUntouchedNativeTails() {
+        var nativeFrames=stubFrames();
+        var custom=new SpriteMappingFrame(List.of(new SpriteMappingPiece(-18,-40,4,4,0x2000,false,false,1,true)));
+        var composer=new S3kCustomTeamPortraitComposer(nativeFrames,code->"mica-and-talon:mica".equals(code)?custom:null);
+        var team=new SelectedTeam("mica-and-talon:mica",List.of("tails"));
+        var frame=composer.compose(team);
+        assertTrue(frame.pieces().stream().anyMatch(piece->piece.tileIndex()==0x2000));
+        assertEquals(custom.pieces().size()+nativeFrames.get(6).pieces().size(),frame.pieces().size());
+        assertEquals(new S3kCustomTeamPortraitComposer(nativeFrames).compose(new SelectedTeam("sonic",List.of("tails"))),
+                composer.compose(new SelectedTeam("sonic",List.of("tails"))));
+    }
+
+    @Test
     void layoutLayers_singleSidekick_placesMainLeftAndSidekickRight() {
         S3kCustomTeamPortraitComposer composer = new S3kCustomTeamPortraitComposer(stubFrames());
 

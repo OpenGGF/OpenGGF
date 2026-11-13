@@ -462,6 +462,15 @@ public class FlipperObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+        // Obj86_Init (s2.asm:58433-58445) sets width_pixels=$18 for both types.
+        // Obj86_HorizontalType (s2.asm:58588-58605) passes d1=$13, not width+$B.
+        // SolidObject_Landed (s2.asm:35588-35601) re-reads the width byte;
+        // deriving it from the collision box would wrongly narrow this top to8.
+        return 0x18;
+    }
+
+    @Override
     public byte[] getSlopeData() {
         if (isHorizontal()) {
             return null;

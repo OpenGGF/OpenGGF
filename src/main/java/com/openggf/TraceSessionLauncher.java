@@ -3322,7 +3322,11 @@ public final class TraceSessionLauncher {
         return new TraceRunFrameDriver.Step(
                 disposition, movieRow, terminalRow,
                 deferBoundaryCommit, commitDeferredBoundaryAfterClosure,
-                observedVblankCounterAdvance);
+                observedVblankCounterAdvance,
+                disposition == TraceRunFrameDriver.Disposition.TERMINAL_TAIL
+                        && entry != null && entry.runManifest() != null
+                        && entry.runManifest().terminalRowIsLagged(runTerminalTail.tailStart(),
+                                movie.getFrameCount(), movieRow));
     }
 
     private void prepareRunFrameHardwareTiming(

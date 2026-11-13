@@ -30,15 +30,24 @@ MANIFEST_DIR = Path(__file__).resolve().with_name('hero-reels')
 GAMES = ('s1', 's2', 's3k')
 TRACE_ROOT = Path('src/test/resources/traces')
 CLASSPATH_FILE = Path('target/hero-reels-classpath.txt')
-ROM_PROPERTY_GAME = {'sonic1.rom.path': 's1', 'sonic2.rom.path': 's2', 's3k.rom.path': 's3k'}
+ROM_PROPERTY_GAME = {'sonic1.rom.path': 's1', 'sonic2.rom.path': 's2', 's3k.rom.path': 's3k',
+                     'kis2.rom.path': 'kis2'}
 ROM_CONFIG_KEY = {'s1': 'sonic1', 's2': 'sonic2', 's3k': 'sonic3k'}
 SOURCES = ('trace', 'capture')
+# Kis2GameModule logs this when no lock-on dump serves the KIS2 logical ROM.
+TIER_ONE_LOG = 'Knuckles in Sonic 2 tier one'
 CAPTURE_FLAGS = {  # manifest key -> GameplayCaptureTool flag (values pass through verbatim)
     'x': '--x', 'y': '--y', 'rings': '--rings', 'emeralds': '--emeralds', 'settle': '--settle',
     'width': '--width', 'vint_run_count': '--vint-run-count',
+    'donor': '--donor',      # cross-game donation: the host borrows the donor's art and features
+    'rewind': '--rewind',    # 'FRAME:LENGTH' in capture frames: hold the live rewind key
+    'timer': '--timer',      # level timer in frames that a positioned start carried in
+    'extra_teams': '--extra-teams',  # Data Select extra team combos, e.g. 'sonic,knuckles;knuckles,tails'
 }
+CAPTURE_FILES = {'save_slots': '--save-slots'}  # repository-relative files, passed as absolute paths
 CAPTURE_SWITCHES = {'star_post': '--star-post', 'title_card': '--title-card',
-                    'complete_special_stage': '--complete-special-stage'}
+                    'complete_special_stage': '--complete-special-stage',
+                    'title_screen': '--title-screen', 'interactive_pacing': '--interactive-pacing'}
 JVM_TIMEOUT_SECONDS = 1800
 
 
@@ -100,8 +109,11 @@ def validate_manifest(manifest, game, root=ROOT):
             need(isinstance(shot.get('act'), int) and shot['act'] >= 1, f'{sid}: act is one-based')
             need(isinstance(shot.get('input'), str), f'{sid}: input path required')
             need((root / shot['input']).is_file(), f"{sid}: input {shot['input']} not found")
-            unknown = set(shot.get('setup', {})) - set(CAPTURE_FLAGS) - set(CAPTURE_SWITCHES)
+            unknown = (set(shot.get('setup', {})) - set(CAPTURE_FLAGS) - set(CAPTURE_SWITCHES)
+                       - set(CAPTURE_FILES))
             need(not unknown, f'{sid}: unknown setup keys {sorted(unknown)}')
+            for key in set(shot.get('setup', {})) & set(CAPTURE_FILES):
+                need((root / shot['setup'][key]).is_file(), f"{sid}: setup {key} {shot['setup'][key]} not found")
     poster = manifest.get('poster', {})
     need(poster.get('shot') in seen, 'poster.shot must name a shot')
     target = next(s for s in shots if s['id'] == poster['shot'])
@@ -169,7 +181,12 @@ def runtime_config(roms, root=ROOT):
     for game in GAMES:
         if game in roms:
             lines.append(f'  {ROM_CONFIG_KEY[game]}: {json.dumps(roms[game])}')
-    lines += ['  directory: "empty-rom-dir"', 'debug:', '  testMode:',
+    # Knuckles in Sonic 2 reads its own art and palettes from the S&K + Sonic 2
+    # lock-on dump (tier two). The catalogue has no per-game key for it and finds
+    # it only by listing roms.directory (top level only), so point that at the
+    # verified dump's own folder; nothing is copied or linked.
+    directory = str(Path(roms['kis2']).parent) if 'kis2' in roms else 'empty-rom-dir'
+    lines += [f'  directory: {json.dumps(directory)}', 'debug:', '  testMode:',
               f'    catalogDir: {json.dumps(str(root / TRACE_ROOT))}',
               '  traceRender:', '    showDesyncGhosts: false', '    showGameHud: true',
               '    showDebugHud: false', '']
@@ -220,8 +237,10 @@ def headless_env():
 def trace_args(game, shot, out_dir, root=ROOT):
     trace_dir = root / TRACE_ROOT / game / shot['trace']
     end = shot['start'] + shot['frames'] - 1
+    # Reels show the game as it plays, without the native sprite dropout that
+    # TraceCaptureTool otherwise keeps for ROM image comparison.
     return ['--trace', str(trace_dir), '--clip', f"frames:{shot['start']}:{end}", '--no-ghosts',
-            '--scale', '1', '--codec', 'ffv1', '--out-dir', str(out_dir)]
+            '--no-sprite-limits', '--scale', '1', '--codec', 'ffv1', '--out-dir', str(out_dir)]
 
 
 def capture_args(game, shot, rom, out_dir, root=ROOT):
@@ -234,6 +253,8 @@ def capture_args(game, shot, rom, out_dir, root=ROOT):
         if key in CAPTURE_SWITCHES:
             if value:
                 args.append(CAPTURE_SWITCHES[key])
+        elif key in CAPTURE_FILES:
+            args += [CAPTURE_FILES[key], str(root / value)]
         else:
             args += [CAPTURE_FLAGS[key], str(value)]
     return args
@@ -317,6 +338,9 @@ def render_shot(game, shot, rom, classpath, runtime, shot_dir, fps, root=ROOT):
         produced = len(pngs)
         input_args = ['-framerate', str(fps), '-start_number', str(shot['start']),
                       '-i', str(raw_dir / 'frames' / '%05d.png')]
+    if TIER_ONE_LOG in log.read_text(errors='replace'):
+        raise ReelError(f"{shot['id']}: Knuckles in Sonic 2 ran tier one, which substitutes S&K art; "
+                        'reels need the verified lock-on dump (kis2.rom.path) for its own HUD and palettes')
     if produced < shot['frames']:
         raise ReelError(f"{shot['id']}: produced {produced} frames, shot needs {shot['frames']}")
     subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y', *input_args, '-an', '-frames:v', str(shot['frames']),
@@ -492,6 +516,8 @@ def build_game(game, work, roms, classpath, root=ROOT, manifest_dir=MANIFEST_DIR
                                             if x and x != 'none'),
                            'input': shot['input'], 'input_sha256': sha256_file(root / shot['input']),
                            'input_start': shot.get('input_start', 0), 'setup': shot.get('setup', {}),
+                           'setup_sha256': {key: sha256_file(root / value) for key, value
+                                            in shot.get('setup', {}).items() if key in CAPTURE_FILES},
                            'entry': 'direct level boot (GameplayCaptureSession)'})
         if shot.get('note'):
             record['note'] = shot['note']

@@ -238,6 +238,41 @@ class TestGameLoopEndingSession {
         verify(player, never()).setControlLocked(anyBoolean());
     }
 
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void nativeDemoLoopOwnsItsClockAndOmitsWaterAndEventsDuringFade(boolean frozen) throws Exception {
+        provider = mock(EndingProvider.class, withSettings().extraInterfaces(
+                com.openggf.game.internal.NativeEndingVBlank.class));
+        installProvider();
+        var events = mock(LevelEventProvider.class);
+        when(module.getLevelEventProvider()).thenReturn(events);
+        when(provider.shouldRunDemoGameplay()).thenReturn(true);
+        when(provider.isScrollFrozen()).thenReturn(frozen);
+        when(levels.advanceWaterLevelBeforePlayerPhysics()).thenReturn(true);
+        endingCall("updateEndingCreditsDemo");
+        var order = inOrder(levels, sprites);
+        // Level_MainLoop (sonic.asm:2998-3006) owns the early clock increment;
+        // Level_FDLoop (sonic.asm:3073-3090) omits that increment and water/events.
+        if (!frozen) order.verify(levels).advanceLevelFrameCounter();
+        order.verify(sprites).publishHeldInputForLevelEvents(input);
+        if (!frozen) {
+            order.verify(levels).updateZoneFeaturesPrePhysics();
+            order.verify(levels).advanceWaterLevelBeforePlayerPhysics();
+            order.verify(levels).advanceDynamicWaterLevel();
+        }
+        order.verify(sprites).update(input);
+        order.verify(levels).updateObjectPositionsPostPhysicsWithoutTouches(null, !frozen);
+        verify(levels, never()).updateObjectPositionsPostPhysicsWithoutTouches();
+        if (frozen) {
+            verifyNoInteractions(camera, events);
+            verify(levels, never()).advanceLevelFrameCounter();
+            verify(levels, never()).updateZoneFeaturesPrePhysics();
+            verify(levels, never()).advanceDynamicWaterLevel();
+        } else {
+            verify(levels, times(1)).advanceLevelFrameCounter();
+            verify(events).update();
+        }
+    }
+
     @Test void providerCallbackRebindsLiveInputSpritesAndLevelBeforeDemoWork() throws Exception {
         installProvider();
         var rebound = mock(SpriteManager.class);
@@ -340,6 +375,24 @@ class TestGameLoopEndingSession {
         verify(reboundSprites).setInputSuppressed(false);
         verify(reboundLevels).setLevelInactiveForTransition(false);
         verify(reboundFade).startFadeFromBlack(any());
+    }
+
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void aRunningDemoAcknowledgesItsReturnOnlyAfterTheNativeBody(boolean nativeLoop) throws Exception {
+        if (nativeLoop) provider = mock(EndingProvider.class, withSettings().extraInterfaces(
+                com.openggf.game.internal.NativeEndingVBlank.class));
+        installProvider();
+        when(provider.shouldRunDemoGameplay()).thenReturn(true);
+        when(provider.hasTextReturnRequest()).thenReturn(true);
+        endingCall("updateEndingCreditsDemo");
+        var order = inOrder(sprites, levels, provider);
+        order.verify(sprites).update(input);
+        order.verify(provider).hasTextReturnRequest();
+        order.verify(provider).consumeTextReturnRequest();
+        order.verify(sprites).setInputSuppressed(false);
+        order.verify(levels).setForceHudSuppressed(false);
+        order.verify(provider).onReturnToText();
+        assertEquals(GameMode.CREDITS_TEXT, loop.getCurrentGameMode());
     }
 
     @Test void requestsAreAcknowledgedBeforeReturnCleanupAndPostCreditsExitShortCircuits() throws Exception {

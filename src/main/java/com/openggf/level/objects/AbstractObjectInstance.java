@@ -26,6 +26,30 @@ import java.util.logging.Logger;
 
 @ModApi
 public abstract class AbstractObjectInstance implements ObjectInstance {
+    // Family links are lifecycle metadata, not compact gameplay fields. The lifecycle
+    // captures only parents present in the snapshot and reinstalls legacy evidence.
+    private java.lang.ref.WeakReference<AbstractObjectInstance> rewindConstructionParent;
+    private com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ConstructionFamily rewindConstructionFamily =
+            new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ConstructionFamily(false, null);
+
+    final AbstractObjectInstance rewindConstructionParent() {
+        return rewindConstructionParent == null ? null : rewindConstructionParent.get();
+    }
+
+    private void rememberConstructionParent(AbstractObjectInstance parent) {
+        rewindConstructionParent = new java.lang.ref.WeakReference<>(parent);
+        rewindConstructionFamily = new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ConstructionFamily(true, null);
+    }
+    final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ConstructionFamily rewindConstructionFamily() {
+        return rewindConstructionFamily;
+    }
+    final void restoreConstructionFamily(
+            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ConstructionFamily family,
+            AbstractObjectInstance parent) {
+        rewindConstructionFamily = family;
+        rewindConstructionParent = parent == null ? null : new java.lang.ref.WeakReference<>(parent);
+    }
+
     private static final Logger LOG = Logger.getLogger(AbstractObjectInstance.class.getName());
 
     /**
@@ -287,10 +311,10 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
-     * Called by {@code ObjectManager.restore()} when this instance was constructed as
+     * Called by {@code ObjectRewindLifecycle} when this instance was constructed as
      * a pending rewind-reconstruction child (registered via
      * {@code ObjectManager.registerRewindReconstructionChild}, see {@link #spawnChild})
-     * but no captured {@code DynamicObjectEntry} matched it during the step-4
+     * but no captured {@code DynamicObjectEntry} matched it during the dynamic
      * dynamic-object reconciliation, so it is being dropped rather than adopted.
      * Default no-op. Owners that keep their own reference list of such children
      * (e.g. {@code AbstractBossChild} removing itself from its parent's
@@ -301,7 +325,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
-     * Called by {@code ObjectManager.restore()} immediately after this instance was
+     * Called by {@code ObjectRewindLifecycle} immediately after this instance was
      * produced by the generic {@code recreateForRewind()} dynamic-object recreate path
      * (i.e. NOT adopted from a pending rewind-reconstruction candidate --
      * {@link #onDroppedAsUnmatchedRewindReconstructionChild()} is this hook's symmetric
@@ -338,7 +362,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
-     * Called by {@code ObjectManager.restore()} once EVERY object's phase-2 field-blob
+     * Called by {@code ObjectRewindLifecycle} once EVERY object's phase-2 field-blob
      * restore has completed (so any of this instance's own children have their final,
      * captured scalar state settled) but before the restored snapshot resumes ticking.
      * Default no-op. Owners that derive some of their own state FROM their children's
@@ -731,6 +755,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return true if the object is within the camera viewport
      */
     protected boolean isOnScreen() {
+        if (ObjectDrawInternalAccess.nativeDisplayOwned(this,tryServices())) return renderFlagOnScreen;
         return cameraBounds.contains(getX(), getY()) || stageplayVisible(getX(), getY(), 0, 0);
     }
 
@@ -766,7 +791,14 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * first pass.
      */
     public boolean isWithinSolidContactBounds() {
+        if (ObjectDrawInternalAccess.nativeDisplayOwned(this,tryServices())) return renderFlagOnScreen;
         return renderFlagPassSeen ? renderFlagOnScreen : isWithinOnScreenRenderBounds();
+    }
+
+    /** Native publication uses the same captured render bit read by object and solid logic. */
+    final void captureNativeDisplayVisibility(boolean onScreen) {
+        renderFlagOnScreen = onScreen;
+        renderFlagPassSeen = true;
     }
 
     /**
@@ -784,6 +816,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      *                         {@code height_pixels} (S3K Render_Sprites)
      */
     final void captureRenderFlagOnScreen(boolean heightPixelsTest) {
+        if (ObjectDrawInternalAccess.nativeDisplayOwned(this,tryServices())) return;
         if (getSpawn() == null) return;
         int yRadius = heightPixelsTest || usesCustomRenderHeight()
                 ? getOnScreenHalfHeight()
@@ -997,6 +1030,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return true if the object is within the extended camera viewport
      */
     protected boolean isOnScreen(int margin) {
+        if (ObjectDrawInternalAccess.nativeDisplayOwned(this,tryServices())) return renderFlagOnScreen;
         return cameraBounds.contains(getX(), getY(), margin) || stageplayVisible(getX(), getY(), margin, margin);
     }
 
@@ -1111,11 +1145,10 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return true if the coordinate is within range (should NOT be deleted)
      */
     protected boolean isInRangeAt(int objectX) {
-        int objAligned = objectX & 0xFF80;
-        int screenAligned = (cameraBounds.left() - 128) & 0xFF80;
-        // ROM does a 16-bit sub.w followed by unsigned bhi, so preserve wrap semantics.
-        int dist = (objAligned - screenAligned) & 0xFFFF;
-        return dist <= (128 + viewportWidth() + 192) || stageplayVisible(objectX, getY(), 128, 128);
+        int cameraX = cameraBounds.left();
+        int bound = ObjectRangeOps.viewportOutOfRangeBound(viewportWidth());
+        return !ObjectRangeOps.outOfRangeX(objectX, cameraX, bound)
+                || stageplayVisible(objectX, getY(), 128, 128);
     }
 
     /**
@@ -1242,6 +1275,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         ObjectServices owner = tryServices();
         ObjectManager om = owner != null ? owner.objectManager() : staticObjectManager();
         if (om == null) return;
+        if (object != null) object.rememberConstructionParent(this);
         // A managed callback failure belongs to that owner. It must not retry in
         // an ambient session; only a truly unowned bootstrap uses the bridge.
         if (ObjectConstructionContext.isRewindActiveRestore()) {
@@ -1270,6 +1304,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         ObjectServices owner = tryServices();
         ObjectManager om = owner != null ? owner.objectManager() : staticObjectManager();
         if (om == null) return;
+        if (object != null) object.rememberConstructionParent(this);
         if (ObjectConstructionContext.isRewindActiveRestore()) {
             om.registerRewindReconstructionChild(object);
         } else {
@@ -1298,6 +1333,9 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
 
     /** Report structural children only after their native allocation and outside rewind probes. */
     private void notifyOwnedChild(ObjectInstance child) {
+        if (!ObjectConstructionContext.isProbeConstruction() && child instanceof AbstractObjectInstance actor) {
+            actor.rememberConstructionParent(this);
+        }
         if(!ObjectConstructionContext.isProbeConstruction() && !ObjectConstructionContext.isRewindActiveRestore()) {
             ObjectDirectionAccess.childSpawned(services(), this, child);
             var policies=com.openggf.game.mutators.NativeObjectPolicyAccess.port(services());
@@ -1389,7 +1427,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
             // identity -- see ObjectConstructionContext.isProbeConstruction().
             if (om != null && !ObjectConstructionContext.isProbeConstruction()) {
                 // See spawnChild: during an active-object rewind restore register the construction
-                // child as a reconstruction child (no fresh slot allocation) so the step-4
+                // child as a reconstruction child (no fresh slot allocation) so the dynamic
                 // reconciliation loop adopts it in place with exact captured state, keeping the
                 // boss back-reference valid and avoiding a double-spawn.
                 if (ObjectConstructionContext.isRewindActiveRestore()) {

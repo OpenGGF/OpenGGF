@@ -1,0 +1,2655 @@
+{
+  "method": "Fresh built-in GPT Image attempts from real-palette native 8x references + model + approved art; uniform anatomical scale; nearest indexed reduction; generated material contours retained. No native pixels shipped.",
+  "scale": "MICA hood 18-19px / torso8px; TALON skull11px / torso9px; fixed source scale per set. Area measured only after reduction, never used to fit.",
+  "groups": [
+    {
+      "name": "fly",
+      "prompt": "Use case: identity-preserve. Draw original TALON's six flight animation phases as production 1990s Genesis pixel art. Ref1 native Tails flight/carry at real palette 8x: borrow compact airborne torso/leg posture ONLY, REMOVE rotor/tails/mast completely. Ref2 approved TALON wait and carry sprites LOCK identity: same profile falcon head, yellow hooked beak, amber goggles on brow, swept slate crest, cream barred chest, red shoes, brown satchel and slate wings with pale cream tips. Ref3 character model confirms identity. Draw SIX separate sprites in equal cells of a 3-column 2-row transparent sheet. Head and torso face RIGHT IN PROFILE like approved carry drawing, not front facing, same 11-px skull width/9px torso height as approved wait. Only integrated wings move: phases in reading order wings high vertical; high diagonal; fully horizontal; swept DOWN vertical; low diagonal; high diagonal recovery. Both arms ARE feathered wings, never separate normal arms, no rotor or fox tails. Wing shape and feathers exactly match approved carry drawing. Body stays perfectly steady across all six, ankles aligned, feet below hips, not spread far apart. Same compact build in each cell, full feathers and boots visible. Native-pixel style: material-colored selective one-pixel contours, three broad shades per material, small upper-left stepped highlights, no dither, no all-black sticker border, no gradients or glossy airbrush. Slate dark #242449 mid #6d6d92 light #9292b6, tips cream #ffffdb, beak amber, 10-15 colors. Readable ~40px in game, not detailed concept art. Plain genuinely transparent background, NO GLOW, no halo, no ground, no labels or text, six poses only.",
+      "attempts": [
+        {
+          "attempt": 1,
+          "file": "exec-494b6355-fb42-43fd-8da7-97bcbbc465dd.png",
+          "sha256": "f31c45bf0089c70277a03f685f72b67df7ad4466f09b3060cb5faed542b2d0af"
+        },
+        {
+          "attempt": 2,
+          "file": "exec-6fb3a262-5311-420d-82f0-513dea56ab59.png",
+          "sha256": "f6edad74c99c3f20e6ee0725cfbeba623600930a980ff436c32d4bf2a05bf414"
+        }
+      ]
+    },
+    {
+      "name": "transform",
+      "prompt": "Use case: identity-preserve. Create exactly TEN pixel sprites in FIVE COLUMNS TWO ROWS, on empty transparent background. Ref1 shows native transformation's5 phases, S2 top row, S3K bottom row, at8x real palette. Transform those ten poses into SOLAR TALON, the original falcon courier in refs2/3. Ref2 approved carry/WAIT locks head/torso scale, not wing span. Ref3 gold-white form panel on right locks Solar identity. Phase1 crouched wind-up head bowed knees bent wings tucked fists low; phase2 rises with wing-hands clasped/crossed at chest; phase3 short bright ivory silhouette burst with arms opening; phase4 feet suspended straight downward, fists out, beak open upward, wings unfold; phase5 same suspended power release with a different wing/feather lift. Match respective native S2/S3K cel pixel styles: selective material-shadow contours, upper-left stepped3-tone clusters,15 flat colors maximum, no gradients/dither. Bright IVORY WHITE GOLD feathers, clean yellow/orange shadows and flame-ORANGE feather tips. No brown plumage, no dirty gray, no dark heavy outlines; dark contour only face/goggle details. Amber goggles, small hooked yellow beak, cream barred chest, brown satchel across chest, red-white boots and white gloved wing-hands. He has integrated feather wings, NOT fox tails, NOT rotor or mast, NOT Sonic quills. SAME PROFILE FACE/SKULL, head~11 native px and torso~9px, scale fixed in all10 cells like approved WAIT. Body same character as carry, full head and boots complete, no cropping. Intended native sprite roughly32x40. No atmospheric aura, no glow cloud, no text, no labels, no shadows or floor. Exactly10 hard-edged isolated sprites, not a diagram.",
+      "attempts": [
+        {
+          "attempt": 1,
+          "file": "exec-1465a3ab-8a63-43cb-84da-474442e5062c.png",
+          "sha256": "5f1e6a07e43d1f284b57c8b98c402d30c8d2f25893a31fed091ca09291db3b55"
+        },
+        {
+          "attempt": 2,
+          "file": "exec-92aa0932-cf07-48d5-8629-53189f0f35da.png",
+          "sha256": "a4d05b8800138365928bef36c25c8ae06faded1f0800767ea3eb7c7f9dfc8886"
+        }
+      ]
+    },
+    {
+      "name": "solarMain",
+      "prompt": "Use case: identity-preserve. Exactly TEN isolated production pixel sprites, FIVE COLUMNS by TWO ROWS, genuine transparent background. Ref1 is native Tails normal idle/run motion at8x real palette: each row column1 idle, columns2-5 FOUR running contacts; S2 top, S3K bottom. Strip Tails' fox tails and ears entirely. Ref2 approved TALON wait/carry identity; ref3 model use SOLAR WHITE GOLD form on right. Replace each native character with SOLAR TALON falcon courier in the same pose, proportions and game style. White-ivory GOLD plumage with warm clear yellow shadows, orange-flame feather tips, amber goggles pushed on brow, swept crest, hooked yellow beak, large brown eye, pale gold cream barred chest, brown courier satchel strap, white gloves, red-white high-top shoes. Never slate, brown or muddy plumage. Idle compact upright and confident, wing-hands relaxed. Run four phases share SAME stable skull/torso: head faces right, torso leans forward, integrated wings stream back left, correct alternating leg/boot contacts match native references, no fox tails or rotor or extra detached appendage. Feather crest not Sonic spines. Use approved wait proportions head11px torso9px at native size~40px. S2 cel3-tone material clusters, S3K extra small upper-left stepped highlights; selective material-shadow contours,15 flat colors max. NO black sticker border, NO gradients or dither, NO glossy rendering. Full sprites including boots and wing tips with padding. NO text, labels, ground, shadows, halos or glow clouds anywhere.",
+      "attempts": [
+        {
+          "attempt": 1,
+          "file": "exec-fb366d90-21b3-4fea-9fb7-64fd42106919.png",
+          "sha256": "3590bd04297f5f692c9900ddd6e7570d9c382cdba654342fe117c047511b1108"
+        },
+        {
+          "attempt": 2,
+          "file": "exec-b375197e-fa7b-4ada-a3c2-cc3b90d9f961.png",
+          "sha256": "2f52607022df86f4d898b6ead16e68e83d82a92ac676a266463ea36689ab72dd"
+        }
+      ]
+    },
+    {
+      "name": "solarFly",
+      "prompt": "Use case: identity-preserve. Draw original TALON's six flight animation phases as production 1990s Genesis pixel art. Ref1 native Tails flight/carry at real palette 8x: borrow compact airborne torso/leg posture ONLY, REMOVE rotor/tails/mast completely. Ref2 approved TALON wait and carry sprites LOCK identity: same profile falcon head, yellow hooked beak, amber goggles on brow, swept slate crest, cream barred chest, red shoes, brown satchel and slate wings with pale cream tips. Ref3 character model confirms identity. Draw SIX separate sprites in equal cells of a 3-column 2-row transparent sheet. Head and torso face RIGHT IN PROFILE like approved carry drawing, not front facing, same 11-px skull width/9px torso height as approved wait. Only integrated wings move: phases in reading order wings high vertical; high diagonal; fully horizontal; swept DOWN vertical; low diagonal; high diagonal recovery. Both arms ARE feathered wings, never separate normal arms, no rotor or fox tails. Wing shape and feathers exactly match approved carry drawing. Body stays perfectly steady across all six, ankles aligned, feet below hips, not spread far apart. Same compact build in each cell, full feathers and boots visible. Native-pixel style: material-colored selective one-pixel contours, three broad shades per material, small upper-left stepped highlights, no dither, no all-black sticker border, no gradients or glossy airbrush. SOLAR FORM: plumage is WHITE IVORY GOLD, warm clear yellow shadows, ORANGE flame feather tips, pale gold barred chest, amber goggles/beak, red-white boots, brown courier satchel. No slate, muddy gray, brown plumage or orange body: the body is pale white-gold and the wingtips are orange. 10-15 clean flat colors. Readable ~40px in game, not detailed concept art. Plain genuinely transparent background, NO GLOW, no halo, no ground, no labels or text, six poses only.",
+      "attempts": [
+        {
+          "attempt": 1,
+          "file": "exec-1f76f2ae-868f-4fea-a096-4b9d4ea8e794.png",
+          "sha256": "86e957d1d56aa6c32cc6160cac7c85dbf5020e4959dd99eec90f49d392fd228f"
+        },
+        {
+          "attempt": 2,
+          "file": "exec-3d56450e-f8fb-4b20-b4d0-b268427d54b3.png",
+          "sha256": "59658fa9c41b4d1ac280137a5fc8ce09fbccc8d5abec888f43285686e8543992"
+        }
+      ]
+    }
+  ],
+  "frames": [
+    {
+      "group": "fly",
+      "attempt": 2,
+      "cell": 0,
+      "grid": [
+        3,
+        2
+      ],
+      "source_pixels_per_native_pixel": 9.5,
+      "source_crop": [
+        94,
+        49,
+        416,
+        443
+      ],
+      "source_skull_anchor": [
+        355,
+        245,
+        7,
+        -6
+      ],
+      "hotspot": [
+        21,
+        29
+      ],
+      "size": [
+        33,
+        41
+      ],
+      "authored_area": 808,
+      "raw_sha256": "f6edad74c99c3f20e6ee0725cfbeba623600930a980ff436c32d4bf2a05bf414",
+      "id": "fly-00",
+      "file": "talon/sheet/frames/fly-00.png",
+      "native_reference": "S3K Tails $A0 (rotor-free body)",
+      "native_area": 535,
+      "size_ratio": 1.2425478798198724,
+      "selected_pixels": {
+        "rows": [
+          "000000001100000000000110000000000",
+          "000000016100000000000110000000000",
+          "000010166100000000001661000000000",
+          "000161266610000000112661000000000",
+          "001662266610000001622643100000000",
+          "0016662665610000016d2d43100000000",
+          "001666626441000001ddd433210000000",
+          "016d66644331000011dd4213310000000",
+          "0162664333310001d1dd4213310000000",
+          "1666254333310001dd111113310000000",
+          "1666643333310001d1333321310000000",
+          "1666d4333332100011133333110000000",
+          "166643333133101133311332211000000",
+          "016664333133101133333321eef101100",
+          "00164333313310001233331eec7f19e10",
+          "00124333322321012333211ee77f19710",
+          "116d64333223311333311e11ff1121fe1",
+          "16664333322331331231e121111333191",
+          "0166643332133311131f1233dd2233210",
+          "0016664333133312231133336cc113310",
+          "0012243333313312211333336cc1c2100",
+          "01d6643332313332223335772cc9ce100",
+          "01d66644323333322233776222cceee10",
+          "0011666d4333333222237722678eeeee1",
+          "0000112264321333222d772267e9111e1",
+          "000000166644311331111271288e91010",
+          "0000001662d6431111213277721ee1000",
+          "0000000116622199929278f1110110000",
+          "000000000111199991223775100000000",
+          "000000000000199991273ff1000000000",
+          "0000000000019ee991337710000000000",
+          "000000000001999992739910000000000",
+          "000000000013211113f11910000000000",
+          "00000000013321b99111cc10000000000",
+          "00000000013111bcc19bb100000000000",
+          "0000000001101bbbb99b6c10000000000",
+          "0000000000019b6c62b66610000000000",
+          "0000000000016bbbb2566610000000000",
+          "000000000001c66661566100000000000",
+          "000000000001566610111000000000000",
+          "000000000000111100000000000000000"
+        ],
+        "anchor": [
+          25,
+          35
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          36,
+          36,
+          73
+        ],
+        [
+          73,
+          73,
+          109
+        ],
+        [
+          109,
+          109,
+          146
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          182,
+          146
+        ],
+        [
+          109,
+          73,
+          36
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          182,
+          182,
+          182
+        ],
+        [
+          255,
+          182,
+          36
+        ],
+        [
+          182,
+          109,
+          36
+        ]
+      ],
+      "previous_hotspot": [
+        20,
+        27
+      ],
+      "source_goggle_anchor": [
+        349,
+        194
+      ],
+      "engine_goggle_target": [
+        6,
+        -11
+      ],
+      "registration": "Manually marked source goggle/skull landmark; fixed scale. Pixel rows unchanged.",
+      "rescale": "Owner rung 37: see rescale-37.json for the route and reason.",
+      "tonal_reshade": "2026-11-12: indices re-shaded to the rung set (tonal-reshade.json); size, silhouette and hotspot unchanged.",
+      "scale_rebuild": "2026-11-12: reduced again at x0.821 of the size this record describes (scale-audit.json)"
+    },
+    {
+      "group": "fly",
+      "attempt": 2,
+      "cell": 0,
+      "grid": [
+        3,
+        2
+      ],
+      "source_pixels_per_native_pixel": 9.5,
+      "source_crop": [
+        94,
+        49,
+        416,
+        443
+      ],
+      "source_skull_anchor": [
+        355,
+        245,
+        7,
+        -6
+      ],
+      "hotspot": [
+        21,
+        29
+      ],
+      "size": [
+        33,
+        41
+      ],
+      "authored_area": 808,
+      "raw_sha256": "f6edad74c99c3f20e6ee0725cfbeba623600930a980ff436c32d4bf2a05bf414",
+      "id": "family-tails-fly-ascend-00",
+      "file": "talon/sheet/frames/family-tails-fly-ascend-00.png",
+      "native_reference": "S3K Tails $A0 (rotor-free body)",
+      "native_area": 535,
+      "size_ratio": 1.2425478798198724,
+      "selected_pixels": {
+        "rows": [
+          "000000001100000000000110000000000",
+          "000000016100000000000110000000000",
+          "000010166100000000001661000000000",
+          "000161266610000000112661000000000",
+          "001662266610000001622643100000000",
+          "0016662665610000016d2d43100000000",
+          "001666626441000001ddd433210000000",
+          "016d66644331000011dd4213310000000",
+          "0162664333310001d1dd4213310000000",
+          "1666254333310001dd111113310000000",
+          "1666643333310001d1333321310000000",
+          "1666d4333332100011133333110000000",
+          "166643333133101133311332211000000",
+          "016664333133101133333321eef101100",
+          "00164333313310001233331eec7f19e10",
+          "00124333322321012333211ee77f19710",
+          "116d64333223311333311e11ff1121fe1",
+          "16664333322331331231e121111333191",
+          "0166643332133311131f1233dd2233210",
+          "0016664333133312231133336cc113310",
+          "0012243333313312211333336cc1c2100",
+          "01d6643332313332223335772cc9ce100",
+          "01d66644323333322233776222cceee10",
+          "0011666d4333333222237722678eeeee1",
+          "0000112264321333222d772267e9111e1",
+          "000000166644311331111271288e91010",
+          "0000001662d6431111213277721ee1000",
+          "0000000116622199929278f1110110000",
+          "000000000111199991223775100000000",
+          "000000000000199991273ff1000000000",
+          "0000000000019ee991337710000000000",
+          "000000000001999992739910000000000",
+          "000000000013211113f11910000000000",
+          "00000000013321b99111cc10000000000",
+          "00000000013111bcc19bb100000000000",
+          "0000000001101bbbb99b6c10000000000",
+          "0000000000019b6c62b66610000000000",
+          "0000000000016bbbb2566610000000000",
+          "000000000001c66661566100000000000",
+          "000000000001566610111000000000000",
+          "000000000000111100000000000000000"
+        ],
+        "anchor": [
+          25,
+          35
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          36,
+          36,
+          73
+        ],
+        [
+          73,
+          73,
+          109
+        ],
+        [
+          109,
+          109,
+          146
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          182,
+          146
+        ],
+        [
+          109,
+          73,
+          36
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          182,
+          182,
+          182
+        ],
+        [
+          255,
+          182,
+          36
+        ],
+        [
+          182,
+          109,
+          36
+        ]
+      ],
+      "previous_hotspot": [
+        20,
+        27
+      ],
+      "source_goggle_anchor": [
+        349,
+        194
+      ],
+      "engine_goggle_target": [
+        6,
+        -11
+      ],
+      "registration": "Manually marked source goggle/skull landmark; fixed scale. Pixel rows unchanged.",
+      "rescale": "Owner rung 37: see rescale-37.json for the route and reason.",
+      "tonal_reshade": "2026-11-12: indices re-shaded to the rung set (tonal-reshade.json); size, silhouette and hotspot unchanged.",
+      "scale_rebuild": "2026-11-12: reduced again at x0.821 of the size this record describes (scale-audit.json)"
+    },
+    {
+      "group": "fly",
+      "attempt": 2,
+      "cell": 1,
+      "grid": [
+        3,
+        2
+      ],
+      "source_pixels_per_native_pixel": 9.5,
+      "source_crop": [
+        42,
+        127,
+        387,
+        442
+      ],
+      "source_skull_anchor": [
+        355,
+        245,
+        7,
+        -6
+      ],
+      "hotspot": [
+        24,
+        20
+      ],
+      "size": [
+        36,
+        32
+      ],
+      "authored_area": 669,
+      "raw_sha256": "f6edad74c99c3f20e6ee0725cfbeba623600930a980ff436c32d4bf2a05bf414",
+      "id": "fly-01",
+      "file": "talon/sheet/frames/fly-01.png",
+      "native_reference": "S3K Tails $A0 (rotor-free body)",
+      "native_area": 535,
+      "size_ratio": 1.1356582347556083,
+      "selected_pixels": {
+        "rows": [
+          "000000000000000000001111100000000000",
+          "000011100000000000000133311000000000",
+          "000016610000000000000113333110000000",
+          "01101d661100000011111221133331000000",
+          "166142666411100011133333332111000000",
+          "166666266444100000111333311eee111100",
+          "01666664223331000123333311feccf1f710",
+          "001466433323331013333331e1feeef1fe71",
+          "112224333333332133333319e11fff1219e1",
+          "16666433333233322223331e131111333110",
+          "0166664333323333222331f1333266133310",
+          "0014555433332223312321233333cc113100",
+          "0001445543332222321112333663cc1c1100",
+          "0016666d443332213321233777323c9cee10",
+          "00016665dd433321223312677522278eeee1",
+          "0000112666443332113331777222781eeee1",
+          "0000001122264433212232276d11d7e911e1",
+          "0000000015666544322222211777d5e91010",
+          "0000000011112666419929176ff221110000",
+          "000000000000166419999916777910000000",
+          "0000000000001111999911d7fff100000000",
+          "0000000000000001ee991377771000000000",
+          "0000000000000001999917ff310000000000",
+          "000000000000001219991f77100000000000",
+          "000000000000113219111191f10000000000",
+          "00000000000013111b8c69bf610000000000",
+          "0000000000001111bbbb29bbf10000000000",
+          "0000000000000001b8669b66610000000000",
+          "0000000000000016bbbb2d66610000000000",
+          "000000000000001666661266100000000000",
+          "000000000000001166610111000000000000",
+          "000000000000000011100000000000000000"
+        ],
+        "anchor": [
+          29,
+          25
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          36,
+          36,
+          73
+        ],
+        [
+          73,
+          73,
+          109
+        ],
+        [
+          109,
+          109,
+          146
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          182,
+          146
+        ],
+        [
+          109,
+          73,
+          36
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          182,
+          182,
+          182
+        ],
+        [
+          255,
+          182,
+          36
+        ],
+        [
+          182,
+          109,
+          36
+        ]
+      ],
+      "previous_hotspot": [
+        26,
+        18
+      ],
+      "source_goggle_anchor": [
+        328,
+        192
+      ],
+      "engine_goggle_target": [
+        6,
+        -11
+      ],
+      "registration": "Manually marked source goggle/skull landmark; fixed scale. Pixel rows unchanged.",
+      "rescale": "Owner rung 37: see rescale-37.json for the route and reason.",
+      "tonal_reshade": "2026-11-12: indices re-shaded to the rung set (tonal-reshade.json); size, silhouette and hotspot unchanged.",
+      "scale_rebuild": "2026-11-12: reduced again at x0.821 of the size this record describes (scale-audit.json)"
+    },
+    {
+      "group": "fly",
+      "attempt": 2,
+      "cell": 1,
+      "grid": [
+        3,
+        2
+      ],
+      "source_pixels_per_native_pixel": 9.5,
+      "source_crop": [
+        42,
+        127,
+        387,
+        442
+      ],
+      "source_skull_anchor": [
+        355,
+        245,
+        7,
+        -6
+      ],
+      "hotspot": [
+        24,
+        20
+      ],
+      "size": [
+        36,
+        32
+      ],
+      "authored_area": 669,
+      "raw_sha256": "f6edad74c99c3f20e6ee0725cfbeba623600930a980ff436c32d4bf2a05bf414",
+      "id": "family-tails-fly-ascend-01",
+      "file": "talon/sheet/frames/family-tails-fly-ascend-01.png",
+      "native_reference": "S3K Tails $A0 (rotor-free body)",
+      "native_area": 535,
+      "size_ratio": 1.1356582347556083,
+      "selected_pixels": {
+        "rows": [
+          "000000000000000000001111100000000000",
+          "000011100000000000000133311000000000",
+          "000016610000000000000113333110000000",
+          "01101d661100000011111221133331000000",
+          "166142666411100011133333332111000000",
+          "166666266444100000111333311eee111100",
+          "01666664223331000123333311feccf1f710",
+          "001466433323331013333331e1feeef1fe71",
+          "112224333333332133333319e11fff1219e1",
+          "16666433333233322223331e131111333110",
+          "0166664333323333222331f1333266133310",
+          "0014555433332223312321233333cc113100",
+          "0001445543332222321112333663cc1c1100",
+          "0016666d443332213321233777323c9cee10",
+          "00016665dd433321223312677522278eeee1",
+          "0000112666443332113331777222781eeee1",
+          "0000001122264433212232276d11d7e911e1",
+          "0000000015666544322222211777d5e91010",
+          "0000000011112666419929176ff221110000",
+          "000000000000166419999916777910000000",
+          "0000000000001111999911d7fff100000000",
+          "0000000000000001ee991377771000000000",
+          "0000000000000001999917ff310000000000",
+          "000000000000001219991f77100000000000",
+          "000000000000113219111191f10000000000",
+          "00000000000013111b8c69bf610000000000",
+          "0000000000001111bbbb29bbf10000000000",
+          "0000000000000001b8669b66610000000000",
+          "0000000000000016bbbb2d66610000000000",
+          "000000000000001666661266100000000000",
+          "000000000000001166610111000000000000",
+          "000000000000000011100000000000000000"
+        ],
+        "anchor": [
+          29,
+          25
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          36,
+          36,
+          73
+        ],
+        [
+          73,
+          73,
+          109
+        ],
+        [
+          109,
+          109,
+          146
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          182,
+          146
+        ],
+        [
+          109,
+          73,
+          36
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          182,
+          182,
+          182
+        ],
+        [
+          255,
+          182,
+          36
+        ],
+        [
+          182,
+          109,
+          36
+        ]
+      ],
+      "previous_hotspot": [
+        26,
+        18
+      ],
+      "source_goggle_anchor": [
+        328,
+        192
+      ],
+      "engine_goggle_target": [
+        6,
+        -11
+      ],
+      "registration": "Manually marked source goggle/skull landmark; fixed scale. Pixel rows unchanged.",
+      "rescale": "Owner rung 37: see rescale-37.json for the route and reason.",
+      "tonal_reshade": "2026-11-12: indices re-shaded to the rung set (tonal-reshade.json); size, silhouette and hotspot unchanged.",
+      "scale_rebuild": "2026-11-12: reduced again at x0.821 of the size this record describes (scale-audit.json)"
+    },
+    {
+      "group": "fly",
+      "attempt": 2,
+      "cell": 2,
+      "grid": [
+        3,
+        2
+      ],
+      "source_pixels_per_native_pixel": 9.5,
+      "source_crop": [
+        0,
+        127,
+        486,
+        441
+      ],
+      "source_skull_anchor": [
+        355,
+        245,
+        7,
+        -6
+      ],
+      "hotspot": [
+        29,
+        20
+      ],
+      "size": [
+        50,
+        32
+      ],
+      "authored_area": 753,
+      "raw_sha256": "f6edad74c99c3f20e6ee0725cfbeba623600930a980ff436c32d4bf2a05bf414",
+      "id": "fly-02",
+      "file": "talon/sheet/frames/fly-02.png",
+      "native_reference": "S3K Tails $A0 (rotor-free body)",
+      "native_area": 535,
+      "size_ratio": 1.222835681031486,
+      "selected_pixels": {
+        "rows": [
+          "00000000000000000000000011111000000000000000000000",
+          "00000000000000000000000012333110000000000000000000",
+          "00000000000000000000000001133331100000000000000000",
+          "00000000000000000000111113211333310000000000000000",
+          "00000000000000000000111333333311110000000000000000",
+          "000000000000000000000011133331feee1111000000000000",
+          "000000000000000000000133333311feccf1f7100000000000",
+          "0000000000000000000013333331e1feeef1fee10000000000",
+          "0000000000000000001133223319e11ff91219e10000000000",
+          "00000000000000000001122333fe1311113331100000000000",
+          "00000000111100000000012331113332c61333100000000000",
+          "00011111222211110000013231133332cc1131000000000000",
+          "001d6666643333321111122211333dd3cc1c11000000000000",
+          "116666644211333333332221233777222c97ee111111000000",
+          "16662223333211122233333111677322387eeee13333111000",
+          "116666d4333333221111223331777222781eeee12223456110",
+          "0012222443333333322222123227732267e911e12333342210",
+          "01466666d444333333343311122117763d8912233334466621",
+          "0166666225d544434345419912916993111133333446626661",
+          "001111446662d6646266199999187771133433444666622110",
+          "0000001666266666611199991217fff1114d42666226661000",
+          "000000111116661110019e9912877710001161166611111000",
+          "000000000001110000019f991233f100000010011100000000",
+          "0000000000000000001211991f771000000000000000000000",
+          "0000000000000000013222119331b100000000000000000000",
+          "000000000000000013312bbc619bc100000000000000000000",
+          "000000000000000011101bbb29b35100000000000000000000",
+          "000000000000000000001b662b666100000000000000000000",
+          "000000000000000000016bbbb5666100000000000000000000",
+          "00000000000000000001666612661000000000000000000000",
+          "00000000000000000001666101111000000000000000000000",
+          "00000000000000000000111000000000000000000000000000"
+        ],
+        "anchor": [
+          35,
+          24
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          36,
+          36,
+          73
+        ],
+        [
+          73,
+          73,
+          109
+        ],
+        [
+          109,
+          109,
+          146
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          182,
+          146
+        ],
+        [
+          109,
+          73,
+          36
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          182,
+          182,
+          182
+        ],
+        [
+          255,
+          182,
+          36
+        ],
+        [
+          182,
+          109,
+          36
+        ]
+      ],
+      "previous_hotspot": [
+        30,
+        18
+      ],
+      "source_goggle_anchor": [
+        330,
+        192
+      ],
+      "engine_goggle_target": [
+        6,
+        -11
+      ],
+      "registration": "Manually marked source goggle/skull landmark; fixed scale. Pixel rows unchanged.",
+      "rescale": "Owner rung 37: see rescale-37.json for the route and reason.",
+      "tonal_reshade": "2026-11-12: indices re-shaded to the rung set (tonal-reshade.json); size, silhouette and hotspot unchanged.",
+      "scale_rebuild": "2026-11-12: reduced again at x0.821 of the size this record describes (scale-audit.json)"
+    },
+    {
+      "group": "fly",
+      "attempt": 2,
+      "cell": 2,
+      "grid": [
+        3,
+        2
+      ],
+      "source_pixels_per_native_pixel": 9.5,
+      "source_crop": [
+        0,
+        127,
+        486,
+        441
+      ],
+      "source_skull_anchor": [
+        355,
+        245,
+        7,
+        -6
+      ],
+      "hotspot": [
+        29,
+        20
+      ],
+      "size": [
+        50,
+        32
+      ],
+      "authored_area": 753,
+      "raw_sha256": "f6edad74c99c3f20e6ee0725cfbeba623600930a980ff436c32d4bf2a05bf414",
+      "id": "family-tails-fly-ascend-02",
+      "file": "talon/sheet/frames/family-tails-fly-ascend-02.png",
+      "native_reference": "S3K Tails $A0 (rotor-free body)",
+      "native_area": 535,
+      "size_ratio": 1.222835681031486,
+      "selected_pixels": {
+        "rows": [
+          "00000000000000000000000011111000000000000000000000",
+          "00000000000000000000000012333110000000000000000000",
+          "00000000000000000000000001133331100000000000000000",
+          "00000000000000000000111113211333310000000000000000",
+          "00000000000000000000111333333311110000000000000000",
+          "000000000000000000000011133331feee1111000000000000",
+          "000000000000000000000133333311feccf1f7100000000000",
+          "0000000000000000000013333331e1feeef1fee10000000000",
+          "0000000000000000001133223319e11ff91219e10000000000",
+          "00000000000000000001122333fe1311113331100000000000",
+          "00000000111100000000012331113332c61333100000000000",
+          "00011111222211110000013231133332cc1131000000000000",
+          "001d6666643333321111122211333dd3cc1c11000000000000",
+          "116666644211333333332221233777222c97ee111111000000",
+          "16662223333211122233333111677322387eeee13333111000",
+          "116666d4333333221111223331777222781eeee12223456110",
+          "0012222443333333322222123227732267e911e12333342210",
+          "01466666d444333333343311122117763d8912233334466621",
+          "0166666225d544434345419912916993111133333446626661",
+          "001111446662d6646266199999187771133433444666622110",
+          "0000001666266666611199991217fff1114d42666226661000",
+          "000000111116661110019e9912877710001161166611111000",
+          "000000000001110000019f991233f100000010011100000000",
+          "0000000000000000001211991f771000000000000000000000",
+          "0000000000000000013222119331b100000000000000000000",
+          "000000000000000013312bbc619bc100000000000000000000",
+          "000000000000000011101bbb29b35100000000000000000000",
+          "000000000000000000001b662b666100000000000000000000",
+          "000000000000000000016bbbb5666100000000000000000000",
+          "00000000000000000001666612661000000000000000000000",
+          "00000000000000000001666101111000000000000000000000",
+          "00000000000000000000111000000000000000000000000000"
+        ],
+        "anchor": [
+          35,
+          24
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          36,
+          36,
+          73
+        ],
+        [
+          73,
+          73,
+          109
+        ],
+        [
+          109,
+          109,
+          146
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          182,
+          146
+        ],
+        [
+          109,
+          73,
+          36
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          182,
+          182,
+          182
+        ],
+        [
+          255,
+          182,
+          36
+        ],
+        [
+          182,
+          109,
+          36
+        ]
+      ],
+      "previous_hotspot": [
+        30,
+        18
+      ],
+      "source_goggle_anchor": [
+        330,
+        192
+      ],
+      "engine_goggle_target": [
+        6,
+        -11
+      ],
+      "registration": "Manually marked source goggle/skull landmark; fixed scale. Pixel rows unchanged.",
+      "rescale": "Owner rung 37: see rescale-37.json for the route and reason.",
+      "tonal_reshade": "2026-11-12: indices re-shaded to the rung set (tonal-reshade.json); size, silhouette and hotspot unchanged.",
+      "scale_rebuild": "2026-11-12: reduced again at x0.821 of the size this record describes (scale-audit.json)"
+    },
+    {
+      "group": "fly",
+      "attempt": 2,
+      "cell": 3,
+      "grid": [
+        3,
+        2
+      ],
+      "source_pixels_per_native_pixel": 9.5,
+      "source_crop": [
+        125,
+        95,
+        412,
+        463
+      ],
+      "source_skull_anchor": [
+        355,
+        250,
+        7,
+        -6
+      ],
+      "hotspot": [
+        17,
+        21
+      ],
+      "size": [
+        30,
+        38
+      ],
+      "authored_area": 682,
+      "raw_sha256": "f6edad74c99c3f20e6ee0725cfbeba623600930a980ff436c32d4bf2a05bf414",
+      "id": "fly-03",
+      "file": "talon/sheet/frames/fly-03.png",
+      "native_reference": "S3K Tails $A0 (rotor-free body)",
+      "native_area": 535,
+      "size_ratio": 1.1389452408620193,
+      "selected_pixels": {
+        "rows": [
+          "000000000000011111100000000000",
+          "000000000000001333311000000000",
+          "000000000000001223333110000000",
+          "000000000011112222333321000000",
+          "000000000111333333331111000000",
+          "00000000000012233331feee111000",
+          "0000000000001223321fe7ceffe110",
+          "00000000011133332fe1feeef19ee1",
+          "00000001133333331ee19fff111fe1",
+          "000000001112223191121112333110",
+          "000000000001233ff23325dd133310",
+          "0000000000123321133335cc113310",
+          "0000000000012311333335cc1c2100",
+          "000000000001111333d773cc9cee10",
+          "00000000000001333776222c7eeee1",
+          "000000000001111177622278eeeee1",
+          "0000000001133332276222771911e1",
+          "000000001333312222371227e91010",
+          "0000001133322111222777d1f10000",
+          "0000001333221919966ff211100000",
+          "000001333221999123777112210000",
+          "00001333322e99918788f222221000",
+          "00013333311e991236661221231000",
+          "000133331119991877110121331000",
+          "001332331221112ff11b1222133110",
+          "001332331121bbb119cc1222133210",
+          "014323331019bcc19bb10122233310",
+          "01542232101bcc7bbb661d42d13310",
+          "0164333101db8882d66622ddd13310",
+          "16654331016c6662d6661152d41310",
+          "166644310166666113110012dd1100",
+          "16266d41001dd61001000014661000",
+          "11266d610011110000000011261000",
+          "001662661000000000000000161000",
+          "001662661000000000000000110000",
+          "000111661000000000000000100000",
+          "000100161000000000000000000000",
+          "000000110000000000000000000000"
+        ],
+        "anchor": [
+          20,
+          25
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          36,
+          36,
+          73
+        ],
+        [
+          73,
+          73,
+          109
+        ],
+        [
+          109,
+          109,
+          146
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          182,
+          146
+        ],
+        [
+          109,
+          73,
+          36
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          182,
+          182,
+          182
+        ],
+        [
+          255,
+          182,
+          36
+        ],
+        [
+          182,
+          109,
+          36
+        ]
+      ],
+      "previous_hotspot": [
+        17,
+        22
+      ],
+      "source_goggle_anchor": [
+        344,
+        160
+      ],
+      "engine_goggle_target": [
+        6,
+        -11
+      ],
+      "registration": "Manually marked source goggle/skull landmark; fixed scale. Pixel rows unchanged.",
+      "rescale": "Owner rung 37: see rescale-37.json for the route and reason.",
+      "tonal_reshade": "2026-11-12: indices re-shaded to the rung set (tonal-reshade.json); size, silhouette and hotspot unchanged.",
+      "scale_rebuild": "2026-11-12: reduced again at x0.821 of the size this record describes (scale-audit.json)"
+    },
+    {
+      "group": "fly",
+      "attempt": 2,
+      "cell": 3,
+      "grid": [
+        3,
+        2
+      ],
+      "source_pixels_per_native_pixel": 9.5,
+      "source_crop": [
+        125,
+        95,
+        412,
+        463
+      ],
+      "source_skull_anchor": [
+        355,
+        250,
+        7,
+        -6
+      ],
+      "hotspot": [
+        17,
+        21
+      ],
+      "size": [
+        30,
+        38
+      ],
+      "authored_area": 682,
+      "raw_sha256": "f6edad74c99c3f20e6ee0725cfbeba623600930a980ff436c32d4bf2a05bf414",
+      "id": "family-tails-fly-ascend-03",
+      "file": "talon/sheet/frames/family-tails-fly-ascend-03.png",
+      "native_reference": "S3K Tails $A0 (rotor-free body)",
+      "native_area": 535,
+      "size_ratio": 1.1389452408620193,
+      "selected_pixels": {
+        "rows": [
+          "000000000000011111100000000000",
+          "000000000000001333311000000000",
+          "000000000000001223333110000000",
+          "000000000011112222333321000000",
+          "000000000111333333331111000000",
+          "00000000000012233331feee111000",
+          "0000000000001223321fe7ceffe110",
+          "00000000011133332fe1feeef19ee1",
+          "00000001133333331ee19fff111fe1",
+          "000000001112223191121112333110",
+          "000000000001233ff23325dd133310",
+          "0000000000123321133335cc113310",
+          "0000000000012311333335cc1c2100",
+          "000000000001111333d773cc9cee10",
+          "00000000000001333776222c7eeee1",
+          "000000000001111177622278eeeee1",
+          "0000000001133332276222771911e1",
+          "000000001333312222371227e91010",
+          "0000001133322111222777d1f10000",
+          "0000001333221919966ff211100000",
+          "000001333221999123777112210000",
+          "00001333322e99918788f222221000",
+          "00013333311e991236661221231000",
+          "000133331119991877110121331000",
+          "001332331221112ff11b1222133110",
+          "001332331121bbb119cc1222133210",
+          "014323331019bcc19bb10122233310",
+          "01542232101bcc7bbb661d42d13310",
+          "0164333101db8882d66622ddd13310",
+          "16654331016c6662d6661152d41310",
+          "166644310166666113110012dd1100",
+          "16266d41001dd61001000014661000",
+          "11266d610011110000000011261000",
+          "001662661000000000000000161000",
+          "001662661000000000000000110000",
+          "000111661000000000000000100000",
+          "000100161000000000000000000000",
+          "000000110000000000000000000000"
+        ],
+        "anchor": [
+          20,
+          25
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          36,
+          36,
+          73
+        ],
+        [
+          73,
+          73,
+          109
+        ],
+        [
+          109,
+          109,
+          146
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          182,
+          146
+        ],
+        [
+          109,
+          73,
+          36
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          182,
+          182,
+          182
+        ],
+        [
+          255,
+          182,
+          36
+        ],
+        [
+          182,
+          109,
+          36
+        ]
+      ],
+      "previous_hotspot": [
+        17,
+        22
+      ],
+      "source_goggle_anchor": [
+        344,
+        160
+      ],
+      "engine_goggle_target": [
+        6,
+        -11
+      ],
+      "registration": "Manually marked source goggle/skull landmark; fixed scale. Pixel rows unchanged.",
+      "rescale": "Owner rung 37: see rescale-37.json for the route and reason.",
+      "tonal_reshade": "2026-11-12: indices re-shaded to the rung set (tonal-reshade.json); size, silhouette and hotspot unchanged.",
+      "scale_rebuild": "2026-11-12: reduced again at x0.821 of the size this record describes (scale-audit.json)"
+    },
+    {
+      "group": "fly",
+      "attempt": 2,
+      "cell": 4,
+      "grid": [
+        3,
+        2
+      ],
+      "source_pixels_per_native_pixel": 9.5,
+      "source_crop": [
+        61,
+        96,
+        393,
+        407
+      ],
+      "source_skull_anchor": [
+        355,
+        250,
+        7,
+        -6
+      ],
+      "hotspot": [
+        23,
+        20
+      ],
+      "size": [
+        34,
+        32
+      ],
+      "authored_area": 634,
+      "raw_sha256": "f6edad74c99c3f20e6ee0725cfbeba623600930a980ff436c32d4bf2a05bf414",
+      "id": "fly-04",
+      "file": "talon/sheet/frames/fly-04.png",
+      "native_reference": "S3K Tails $A0 (rotor-free body)",
+      "native_area": 535,
+      "size_ratio": 1.1157328591935043,
+      "selected_pixels": {
+        "rows": [
+          "0000000000000000011111100000000000",
+          "0000000000000000001233311000000000",
+          "0000000000000011112213333110000000",
+          "0000000000000122333331133331000000",
+          "0000000000000011233333331111000000",
+          "000000000000000012233331feee111100",
+          "000000000000000123333319eecce1fc10",
+          "0000000000000113333331e1feeef19ee1",
+          "000000000001122331331ee11fff1219e1",
+          "00000000000011111331fe131111333110",
+          "00000000000000012331123332cc133310",
+          "00000000000000012321133332cc113310",
+          "00000000000000011212333dd3cc1c1100",
+          "000000000000000001233777222c97ee10",
+          "00000000000000011122677d22277eeee1",
+          "00000000000011133311777222781eeee1",
+          "000000000011233222222dd52257e91110",
+          "0000000011333321111221277762ff1000",
+          "00000001233333119912916ff311110000",
+          "0000011333321119999913777122100000",
+          "000116d432223299999117fff122210000",
+          "000166d43333321ee99177771222221000",
+          "001664433333419f99927f311222231000",
+          "000126643334541199137712d122233100",
+          "001666644426d1211121919941d4223100",
+          "0166662565611319bcc29bcd11dd243100",
+          "166642666110111bbbb19bb1001ddd1000",
+          "164126661000001bccc9966d1011261000",
+          "11101611000001cbbbb2d66d1010110000",
+          "00001100000001666661d6610000110000",
+          "0000000000000156661011100000000000",
+          "0000000000000011110000000000000000"
+        ],
+        "anchor": [
+          28,
+          24
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          36,
+          36,
+          73
+        ],
+        [
+          73,
+          73,
+          109
+        ],
+        [
+          109,
+          109,
+          146
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          182,
+          146
+        ],
+        [
+          109,
+          73,
+          36
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          182,
+          182,
+          182
+        ],
+        [
+          255,
+          182,
+          36
+        ],
+        [
+          182,
+          109,
+          36
+        ]
+      ],
+      "previous_hotspot": [
+        24,
+        22
+      ],
+      "source_goggle_anchor": [
+        332,
+        160
+      ],
+      "engine_goggle_target": [
+        6,
+        -11
+      ],
+      "registration": "Manually marked source goggle/skull landmark; fixed scale. Pixel rows unchanged.",
+      "rescale": "Owner rung 37: see rescale-37.json for the route and reason.",
+      "tonal_reshade": "2026-11-12: indices re-shaded to the rung set (tonal-reshade.json); size, silhouette and hotspot unchanged.",
+      "scale_rebuild": "2026-11-12: reduced again at x0.821 of the size this record describes (scale-audit.json)"
+    },
+    {
+      "group": "fly",
+      "attempt": 2,
+      "cell": 4,
+      "grid": [
+        3,
+        2
+      ],
+      "source_pixels_per_native_pixel": 9.5,
+      "source_crop": [
+        61,
+        96,
+        393,
+        407
+      ],
+      "source_skull_anchor": [
+        355,
+        250,
+        7,
+        -6
+      ],
+      "hotspot": [
+        23,
+        20
+      ],
+      "size": [
+        34,
+        32
+      ],
+      "authored_area": 634,
+      "raw_sha256": "f6edad74c99c3f20e6ee0725cfbeba623600930a980ff436c32d4bf2a05bf414",
+      "id": "family-tails-fly-ascend-04",
+      "file": "talon/sheet/frames/family-tails-fly-ascend-04.png",
+      "native_reference": "S3K Tails $A0 (rotor-free body)",
+      "native_area": 535,
+      "size_ratio": 1.1157328591935043,
+      "selected_pixels": {
+        "rows": [
+          "0000000000000000011111100000000000",
+          "0000000000000000001233311000000000",
+          "0000000000000011112213333110000000",
+          "0000000000000122333331133331000000",
+          "0000000000000011233333331111000000",
+          "000000000000000012233331feee111100",
+          "000000000000000123333319eecce1fc10",
+          "0000000000000113333331e1feeef19ee1",
+          "000000000001122331331ee11fff1219e1",
+          "00000000000011111331fe131111333110",
+          "00000000000000012331123332cc133310",
+          "00000000000000012321133332cc113310",
+          "00000000000000011212333dd3cc1c1100",
+          "000000000000000001233777222c97ee10",
+          "00000000000000011122677d22277eeee1",
+          "00000000000011133311777222781eeee1",
+          "000000000011233222222dd52257e91110",
+          "0000000011333321111221277762ff1000",
+          "00000001233333119912916ff311110000",
+          "0000011333321119999913777122100000",
+          "000116d432223299999117fff122210000",
+          "000166d43333321ee99177771222221000",
+          "001664433333419f99927f311222231000",
+          "000126643334541199137712d122233100",
+          "001666644426d1211121919941d4223100",
+          "0166662565611319bcc29bcd11dd243100",
+          "166642666110111bbbb19bb1001ddd1000",
+          "164126661000001bccc9966d1011261000",
+          "11101611000001cbbbb2d66d1010110000",
+          "00001100000001666661d6610000110000",
+          "0000000000000156661011100000000000",
+          "0000000000000011110000000000000000"
+        ],
+        "anchor": [
+          28,
+          24
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          36,
+          36,
+          73
+        ],
+        [
+          73,
+          73,
+          109
+        ],
+        [
+          109,
+          109,
+          146
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          182,
+          146
+        ],
+        [
+          109,
+          73,
+          36
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          182,
+          182,
+          182
+        ],
+        [
+          255,
+          182,
+          36
+        ],
+        [
+          182,
+          109,
+          36
+        ]
+      ],
+      "previous_hotspot": [
+        24,
+        22
+      ],
+      "source_goggle_anchor": [
+        332,
+        160
+      ],
+      "engine_goggle_target": [
+        6,
+        -11
+      ],
+      "registration": "Manually marked source goggle/skull landmark; fixed scale. Pixel rows unchanged.",
+      "rescale": "Owner rung 37: see rescale-37.json for the route and reason.",
+      "tonal_reshade": "2026-11-12: indices re-shaded to the rung set (tonal-reshade.json); size, silhouette and hotspot unchanged.",
+      "scale_rebuild": "2026-11-12: reduced again at x0.821 of the size this record describes (scale-audit.json)"
+    },
+    {
+      "group": "fly",
+      "attempt": 2,
+      "cell": 5,
+      "grid": [
+        3,
+        2
+      ],
+      "source_pixels_per_native_pixel": 9.5,
+      "source_crop": [
+        34,
+        95,
+        391,
+        409
+      ],
+      "source_skull_anchor": [
+        355,
+        250,
+        7,
+        -6
+      ],
+      "hotspot": [
+        25,
+        20
+      ],
+      "size": [
+        37,
+        32
+      ],
+      "authored_area": 678,
+      "raw_sha256": "f6edad74c99c3f20e6ee0725cfbeba623600930a980ff436c32d4bf2a05bf414",
+      "id": "fly-05",
+      "file": "talon/sheet/frames/fly-05.png",
+      "native_reference": "S3K Tails $A0 (rotor-free body)",
+      "native_area": 535,
+      "size_ratio": 1.1560487005878435,
+      "selected_pixels": {
+        "rows": [
+          "0000000000000000000011111100000000000",
+          "0000000000000000000001233311000000000",
+          "0000000000000000010001223333110000000",
+          "0000011100000000121113322333331000000",
+          "0000016510000000011233333331111000000",
+          "0000016641000000000122333319eee111100",
+          "111110166611000000122333319eec7f1ec10",
+          "1666612464441000013333331e1feeef1fee1",
+          "016666d22333310113331331ee11fff1219f1",
+          "00166443322333101111331fe131112333110",
+          "00012333333333210012331133332cc123310",
+          "00122333333133331123331233332cc123310",
+          "01666443333112333222212333dd3cc1c2100",
+          "016666d43333111333222233777223c97ee10",
+          "00114443333332112332111777222877eeee1",
+          "00001424333333222223221777222771ffee1",
+          "0001666d44433332211233226d32287e91111",
+          "0001166666643333221111221177755ef1000",
+          "000001dd6622443333199199171ff21110000",
+          "0000001111666524319999912777310000000",
+          "0000000000145566199999117ff3100000000",
+          "000000000011166119e991267778100000000",
+          "000000000000011019999127f311000000000",
+          "0000000000000000111991f77110000000000",
+          "0000000000000001322111111991000000000",
+          "000000000000001312bbcc29b610000000000",
+          "000000000000001101bbbb99bdd1000000000",
+          "000000000000000001bccc9b6661000000000",
+          "000000000000000016bbbb2d6661000000000",
+          "0000000000000000166666156610000000000",
+          "0000000000000000136661011100000000000",
+          "0000000000000000011110000000000000000"
+        ],
+        "anchor": [
+          30,
+          24
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          36,
+          36,
+          73
+        ],
+        [
+          73,
+          73,
+          109
+        ],
+        [
+          109,
+          109,
+          146
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          182,
+          146
+        ],
+        [
+          109,
+          73,
+          36
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          182,
+          182,
+          182
+        ],
+        [
+          255,
+          182,
+          36
+        ],
+        [
+          182,
+          109,
+          36
+        ]
+      ],
+      "previous_hotspot": [
+        27,
+        22
+      ],
+      "source_goggle_anchor": [
+        330,
+        160
+      ],
+      "engine_goggle_target": [
+        6,
+        -11
+      ],
+      "registration": "Manually marked source goggle/skull landmark; fixed scale. Pixel rows unchanged.",
+      "rescale": "Owner rung 37: see rescale-37.json for the route and reason.",
+      "tonal_reshade": "2026-11-12: indices re-shaded to the rung set (tonal-reshade.json); size, silhouette and hotspot unchanged.",
+      "scale_rebuild": "2026-11-12: reduced again at x0.821 of the size this record describes (scale-audit.json)"
+    },
+    {
+      "group": "fly",
+      "attempt": 2,
+      "cell": 5,
+      "grid": [
+        3,
+        2
+      ],
+      "source_pixels_per_native_pixel": 9.5,
+      "source_crop": [
+        34,
+        95,
+        391,
+        409
+      ],
+      "source_skull_anchor": [
+        355,
+        250,
+        7,
+        -6
+      ],
+      "hotspot": [
+        25,
+        20
+      ],
+      "size": [
+        37,
+        32
+      ],
+      "authored_area": 678,
+      "raw_sha256": "f6edad74c99c3f20e6ee0725cfbeba623600930a980ff436c32d4bf2a05bf414",
+      "id": "family-tails-fly-ascend-05",
+      "file": "talon/sheet/frames/family-tails-fly-ascend-05.png",
+      "native_reference": "S3K Tails $A0 (rotor-free body)",
+      "native_area": 535,
+      "size_ratio": 1.1560487005878435,
+      "selected_pixels": {
+        "rows": [
+          "0000000000000000000011111100000000000",
+          "0000000000000000000001233311000000000",
+          "0000000000000000010001223333110000000",
+          "0000011100000000121113322333331000000",
+          "0000016510000000011233333331111000000",
+          "0000016641000000000122333319eee111100",
+          "111110166611000000122333319eec7f1ec10",
+          "1666612464441000013333331e1feeef1fee1",
+          "016666d22333310113331331ee11fff1219f1",
+          "00166443322333101111331fe131112333110",
+          "00012333333333210012331133332cc123310",
+          "00122333333133331123331233332cc123310",
+          "01666443333112333222212333dd3cc1c2100",
+          "016666d43333111333222233777223c97ee10",
+          "00114443333332112332111777222877eeee1",
+          "00001424333333222223221777222771ffee1",
+          "0001666d44433332211233226d32287e91111",
+          "0001166666643333221111221177755ef1000",
+          "000001dd6622443333199199171ff21110000",
+          "0000001111666524319999912777310000000",
+          "0000000000145566199999117ff3100000000",
+          "000000000011166119e991267778100000000",
+          "000000000000011019999127f311000000000",
+          "0000000000000000111991f77110000000000",
+          "0000000000000001322111111991000000000",
+          "000000000000001312bbcc29b610000000000",
+          "000000000000001101bbbb99bdd1000000000",
+          "000000000000000001bccc9b6661000000000",
+          "000000000000000016bbbb2d6661000000000",
+          "0000000000000000166666156610000000000",
+          "0000000000000000136661011100000000000",
+          "0000000000000000011110000000000000000"
+        ],
+        "anchor": [
+          30,
+          24
+        ]
+      },
+      "palette": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          36,
+          36,
+          73
+        ],
+        [
+          73,
+          73,
+          109
+        ],
+        [
+          109,
+          109,
+          146
+        ],
+        [
+          146,
+          146,
+          182
+        ],
+        [
+          219,
+          219,
+          219
+        ],
+        [
+          255,
+          255,
+          219
+        ],
+        [
+          219,
+          182,
+          146
+        ],
+        [
+          109,
+          73,
+          36
+        ],
+        [
+          255,
+          73,
+          73
+        ],
+        [
+          182,
+          36,
+          36
+        ],
+        [
+          255,
+          255,
+          255
+        ],
+        [
+          182,
+          182,
+          182
+        ],
+        [
+          255,
+          182,
+          36
+        ],
+        [
+          182,
+          109,
+          36
+        ]
+      ],
+      "previous_hotspot": [
+        27,
+        22
+      ],
+      "source_goggle_anchor": [
+        330,
+        160
+      ],
+      "engine_goggle_target": [
+        6,
+        -11
+      ],
+      "registration": "Manually marked source goggle/skull landmark; fixed scale. Pixel rows unchanged.",
+      "rescale": "Owner rung 37: see rescale-37.json for the route and reason.",
+      "tonal_reshade": "2026-11-12: indices re-shaded to the rung set (tonal-reshade.json); size, silhouette and hotspot unchanged.",
+      "scale_rebuild": "2026-11-12: reduced again at x0.821 of the size this record describes (scale-audit.json)"
+    }
+  ],
+  "motion_correction": "The generated second row sat 4-6 native pixels above the first. Goggle/skull registration now holds all six phases at engine (6,-11), within nearest-reduction rounding. This is hotspot registration, not a pose warp.",
+  "outline_remap": [
+    {
+      "file": "talon/powered/s2/frames/idle.png",
+      "remapped_ink_pixels": 92,
+      "retained_interior_separators": 31,
+      "source_sha256": "d214fa470ca63d3206456b51e911c80483890aede37f2bb01ead9fbc9a3a9430",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-0.png",
+      "remapped_ink_pixels": 83,
+      "retained_interior_separators": 32,
+      "source_sha256": "984b74c31949bcc908e23425707c081f5beb502d9fc0ea61409ec3b09c32d121",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-up45-0.png",
+      "remapped_ink_pixels": 167,
+      "retained_interior_separators": 20,
+      "source_sha256": "8d83dc908a5a19170ab1a0c082d8e64be93bac8a8780f00de76149007e98454c",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-steep-0.png",
+      "remapped_ink_pixels": 83,
+      "retained_interior_separators": 32,
+      "source_sha256": "bc05581b7b5131694d05915df910b29a732514e6c32a927a6b5b44a3bd44bf5b",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-inverted-0.png",
+      "remapped_ink_pixels": 167,
+      "retained_interior_separators": 20,
+      "source_sha256": "b89f041735de7eaff15e93e2d3f5b97a31b30429882ead95057a0c1c219db0f9",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-1.png",
+      "remapped_ink_pixels": 79,
+      "retained_interior_separators": 25,
+      "source_sha256": "778d49acecb4f6f469a1b3ffe268b0076ec1864b2d587a499a47d1e7bc81685d",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-up45-1.png",
+      "remapped_ink_pixels": 158,
+      "retained_interior_separators": 27,
+      "source_sha256": "540d6d2fdd75f117b9213d545ac17e993c903371a1fa68a9258cd8092cc18db3",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-steep-1.png",
+      "remapped_ink_pixels": 79,
+      "retained_interior_separators": 25,
+      "source_sha256": "955b3f14f13c4ec217e0db4c34535127d0a11e007eb5ae893ea07faeee9c85a0",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-inverted-1.png",
+      "remapped_ink_pixels": 158,
+      "retained_interior_separators": 27,
+      "source_sha256": "7681e52b4274edb53c38af2b9d0cf214491f12ac5c0c240aa9566d586814a438",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-2.png",
+      "remapped_ink_pixels": 88,
+      "retained_interior_separators": 26,
+      "source_sha256": "a6c4d89dad31ceaa70ebedb70a82a8f96137b0702fc96d2c67cc5bc8c8d8db42",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-up45-2.png",
+      "remapped_ink_pixels": 149,
+      "retained_interior_separators": 28,
+      "source_sha256": "249bc655882655dd4852ed57fff42794ece4ea26f8f4894565fd358e20a77402",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-steep-2.png",
+      "remapped_ink_pixels": 88,
+      "retained_interior_separators": 26,
+      "source_sha256": "a43ada0fd3129438c485e18010da20cda95a5894d8bd58e05a74e8f7872e0bf3",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-inverted-2.png",
+      "remapped_ink_pixels": 149,
+      "retained_interior_separators": 28,
+      "source_sha256": "6545844e6daace03919cddb0447d806a941ef4bd790b13b8e510f9add2d37b05",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-3.png",
+      "remapped_ink_pixels": 82,
+      "retained_interior_separators": 18,
+      "source_sha256": "304602ce39bdd8f4cc881f70da21e4a756cd1457d8cdeba27072c13822f16d7c",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-up45-3.png",
+      "remapped_ink_pixels": 178,
+      "retained_interior_separators": 21,
+      "source_sha256": "1d98599f95c97c2702a6de2b819a0e368cf2d3046b0380be3b406eb973a93f06",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-steep-3.png",
+      "remapped_ink_pixels": 82,
+      "retained_interior_separators": 18,
+      "source_sha256": "ae379a815d7f1e9938e4b2d4c8160a722c6198775d1335df8ee24f18460e5b39",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/run-inverted-3.png",
+      "remapped_ink_pixels": 178,
+      "retained_interior_separators": 21,
+      "source_sha256": "cc7e6d3be064ddb6053b533210e4432d4477aad444b0491039e3880036163afa",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/fly-0.png",
+      "remapped_ink_pixels": 72,
+      "retained_interior_separators": 19,
+      "source_sha256": "0d56ea6193a807bbe8dbf7912663acb1c817fc0eb2e998e6009c57f49f8260d3",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/fly-1.png",
+      "remapped_ink_pixels": 71,
+      "retained_interior_separators": 16,
+      "source_sha256": "1e35e5f00edcce0e18e571537da93138a91c6fc5b99f9cdd8b37c3d6eff01253",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/fly-2.png",
+      "remapped_ink_pixels": 63,
+      "retained_interior_separators": 17,
+      "source_sha256": "92482e84acc82cd76f60dea32c793141466e1e14b5545fb6191941920a5d5e28",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/fly-3.png",
+      "remapped_ink_pixels": 53,
+      "retained_interior_separators": 19,
+      "source_sha256": "174c1443c236b5b9a1e9da8b2c1a931f465e6ce626d9284f7ce297c0c3e3d983",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/fly-4.png",
+      "remapped_ink_pixels": 63,
+      "retained_interior_separators": 17,
+      "source_sha256": "dc374705c3391418f747bba15cbae76d736cd50757353c82f65d507bb8e5f17c",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/fly-5.png",
+      "remapped_ink_pixels": 59,
+      "retained_interior_separators": 15,
+      "source_sha256": "e2798622e2cca8f9ec975a1f3837e02afea51b52c57ae97b3a0d99d72519bd9f",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/transform-0.png",
+      "remapped_ink_pixels": 98,
+      "retained_interior_separators": 17,
+      "source_sha256": "fa77e8563b81a6a0528dc53e36e39499292c68548ca90026a328297ff44772fc",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/transform-1.png",
+      "remapped_ink_pixels": 77,
+      "retained_interior_separators": 27,
+      "source_sha256": "04e80245344de89af837e9adce27a5a091a0c6057aac43b9344f3b3166493541",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/transform-2.png",
+      "remapped_ink_pixels": 0,
+      "retained_interior_separators": 0,
+      "source_sha256": "da2c53aa4fc469d42bf436cd967ad0a64f1d98d5fafdddd6505a061c502b3437",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/transform-3.png",
+      "remapped_ink_pixels": 73,
+      "retained_interior_separators": 25,
+      "source_sha256": "3caa720612c37d7c055b84e53fe5a3ca481a1ad5126fa59b8a9a56bea57c8066",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/transform-4.png",
+      "remapped_ink_pixels": 87,
+      "retained_interior_separators": 19,
+      "source_sha256": "c2e4ac844ad4fa44d08dec999625a16c980a658c640218762dad24c97d326026",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/gold-roll-00.png",
+      "remapped_ink_pixels": 137,
+      "retained_interior_separators": 0,
+      "source_sha256": "fd1d4569ff2e927c18a1bb27ff7dc317d5111d9510594cb453a48d43675b9d23",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/gold-roll-03.png",
+      "remapped_ink_pixels": 123,
+      "retained_interior_separators": 0,
+      "source_sha256": "f119348d6e607f8d6fc7b880f6fe72a3bdb2c0f02e318c28758e23c51673b39a",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/gold-roll-01.png",
+      "remapped_ink_pixels": 153,
+      "retained_interior_separators": 0,
+      "source_sha256": "abe9916b7b25ee6401f92cb2afb13d69a53daa44ab4e84ed9172cd1d7ac292dd",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s2/frames/gold-roll-02.png",
+      "remapped_ink_pixels": 133,
+      "retained_interior_separators": 0,
+      "source_sha256": "ce6bddf40f4bd102762affabc76b2cd01bbe820c3b4b9c9b267c1b089641cd5a",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/idle.png",
+      "remapped_ink_pixels": 99,
+      "retained_interior_separators": 35,
+      "source_sha256": "79b44a79635637cfda22b8838ce9ef8d70f9bdb5cc1eae64f18c2cff5faa832e",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-0.png",
+      "remapped_ink_pixels": 76,
+      "retained_interior_separators": 29,
+      "source_sha256": "f47e6b7687ab0ba205fd75c37a1e51753f74374dfb08264d204c43a065db4469",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-up45-0.png",
+      "remapped_ink_pixels": 157,
+      "retained_interior_separators": 26,
+      "source_sha256": "70c6f47d2d30d07dd72f66ad62f714c0d4eda35e41ac1564d650622d02041a3d",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-steep-0.png",
+      "remapped_ink_pixels": 76,
+      "retained_interior_separators": 29,
+      "source_sha256": "d1da5ed0aaa6fb0af582ab52dcf82ee0e2a9dbd8c60408671d87158faee8fa7e",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-inverted-0.png",
+      "remapped_ink_pixels": 157,
+      "retained_interior_separators": 26,
+      "source_sha256": "7fc5547e1713943c3d3cb5c7f44880ff4406138c7129da8924c2f6ec863bb4ea",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-1.png",
+      "remapped_ink_pixels": 71,
+      "retained_interior_separators": 30,
+      "source_sha256": "965882bc92125741033ae7163c7e5f27f84b0627e10128a0ee59081f1c3d2d22",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-up45-1.png",
+      "remapped_ink_pixels": 162,
+      "retained_interior_separators": 30,
+      "source_sha256": "4c37a86329828e255e0a36c4e75a359955d6ffbabd6b4c4edad108d9199774e4",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-steep-1.png",
+      "remapped_ink_pixels": 71,
+      "retained_interior_separators": 30,
+      "source_sha256": "bfe7c453adec278d38d6483768069658d1471656d086e6ed81930ab4e22228a5",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-inverted-1.png",
+      "remapped_ink_pixels": 162,
+      "retained_interior_separators": 30,
+      "source_sha256": "81b26ee414c3dff0c1d514e69bf954012b62bfa16e9f12c03e9f29604d818b47",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-2.png",
+      "remapped_ink_pixels": 62,
+      "retained_interior_separators": 24,
+      "source_sha256": "8c3c7bea363ea1b14892e432a7020559b5d6db3caa70dea3c0a7c74d9237f7ed",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-up45-2.png",
+      "remapped_ink_pixels": 151,
+      "retained_interior_separators": 22,
+      "source_sha256": "a5b427bce725bcd410c6c28b3d69e6112209f3fab3a211cc4861cb5e16ad5d48",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-steep-2.png",
+      "remapped_ink_pixels": 62,
+      "retained_interior_separators": 24,
+      "source_sha256": "e574338412382f68bd86a96175fc0c765ef494e5ce9f192407c7ca406efaa723",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-inverted-2.png",
+      "remapped_ink_pixels": 151,
+      "retained_interior_separators": 22,
+      "source_sha256": "8fcb769dba16cb7a43850e3e6accdfe9182c0590cd52bf5f11400198bd47364c",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-3.png",
+      "remapped_ink_pixels": 63,
+      "retained_interior_separators": 21,
+      "source_sha256": "84cbb59fd837a4516c97a72ee30bcd6b600cd6a85572ddfe23e226194e11353f",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-up45-3.png",
+      "remapped_ink_pixels": 163,
+      "retained_interior_separators": 20,
+      "source_sha256": "d594542a066eeef6fa0e53d1a525b4ed2b1071de141ddfc3ddb2bba7e6844816",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-steep-3.png",
+      "remapped_ink_pixels": 63,
+      "retained_interior_separators": 21,
+      "source_sha256": "bbd73171582a3bccb123acf885dffcce333adf9d4fde2613d34a9ed737b7919a",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/run-inverted-3.png",
+      "remapped_ink_pixels": 163,
+      "retained_interior_separators": 20,
+      "source_sha256": "3b38b3917580218264d23a12d1bf9e18dc456773590dcb9bff8e61926397c8cd",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/fly-0.png",
+      "remapped_ink_pixels": 72,
+      "retained_interior_separators": 19,
+      "source_sha256": "0d56ea6193a807bbe8dbf7912663acb1c817fc0eb2e998e6009c57f49f8260d3",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/fly-1.png",
+      "remapped_ink_pixels": 71,
+      "retained_interior_separators": 16,
+      "source_sha256": "1e35e5f00edcce0e18e571537da93138a91c6fc5b99f9cdd8b37c3d6eff01253",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/fly-2.png",
+      "remapped_ink_pixels": 63,
+      "retained_interior_separators": 17,
+      "source_sha256": "92482e84acc82cd76f60dea32c793141466e1e14b5545fb6191941920a5d5e28",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/fly-3.png",
+      "remapped_ink_pixels": 53,
+      "retained_interior_separators": 19,
+      "source_sha256": "174c1443c236b5b9a1e9da8b2c1a931f465e6ce626d9284f7ce297c0c3e3d983",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/fly-4.png",
+      "remapped_ink_pixels": 63,
+      "retained_interior_separators": 17,
+      "source_sha256": "dc374705c3391418f747bba15cbae76d736cd50757353c82f65d507bb8e5f17c",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/fly-5.png",
+      "remapped_ink_pixels": 59,
+      "retained_interior_separators": 15,
+      "source_sha256": "e2798622e2cca8f9ec975a1f3837e02afea51b52c57ae97b3a0d99d72519bd9f",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/transform-0.png",
+      "remapped_ink_pixels": 0,
+      "retained_interior_separators": 1,
+      "source_sha256": "64602440c2d2b79d12555c4ed1dd90b8c28380445dcca6973ceda6e54af5c1da",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/transform-1.png",
+      "remapped_ink_pixels": 2,
+      "retained_interior_separators": 3,
+      "source_sha256": "901b4bd829f824f0ab2e636a7bc20a98024de171b88954108b55835fb7531bd7",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/transform-2.png",
+      "remapped_ink_pixels": 0,
+      "retained_interior_separators": 0,
+      "source_sha256": "97a63bbd35802f6bb93f2761f305450f8f51c63ae60f229d907a378b60d18963",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/transform-3.png",
+      "remapped_ink_pixels": 0,
+      "retained_interior_separators": 5,
+      "source_sha256": "7f7b396ea2176864c68544444f948c87d4a3c2e7a8f13db72bc228c05e2335ef",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/transform-4.png",
+      "remapped_ink_pixels": 2,
+      "retained_interior_separators": 3,
+      "source_sha256": "6d015d90903ba8c1ffb34752e4064f938d84c5c1b69a16376a596ae58bd5580e",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/gold-roll-00.png",
+      "remapped_ink_pixels": 137,
+      "retained_interior_separators": 0,
+      "source_sha256": "fd1d4569ff2e927c18a1bb27ff7dc317d5111d9510594cb453a48d43675b9d23",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/gold-roll-03.png",
+      "remapped_ink_pixels": 123,
+      "retained_interior_separators": 0,
+      "source_sha256": "f119348d6e607f8d6fc7b880f6fe72a3bdb2c0f02e318c28758e23c51673b39a",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/gold-roll-01.png",
+      "remapped_ink_pixels": 153,
+      "retained_interior_separators": 0,
+      "source_sha256": "abe9916b7b25ee6401f92cb2afb13d69a53daa44ab4e84ed9172cd1d7ac292dd",
+      "alpha_unchanged": true
+    },
+    {
+      "file": "talon/powered/s3k/frames/gold-roll-02.png",
+      "remapped_ink_pixels": 133,
+      "retained_interior_separators": 0,
+      "source_sha256": "ce6bddf40f4bd102762affabc76b2cd01bbe820c3b4b9c9b267c1b089641cd5a",
+      "alpha_unchanged": true
+    }
+  ],
+  "gold_cycle": "MICA brightest yellow/white, darkest0CE/0EE; TALON warmer bright amber with orange tips;9-phase shimmer in S2/S3K and S1 uses the S2 cycle.",
+  "palette_preview": "Indexed PNG palettes now match the first live powered cycle (including pale-gold face slots), not the obsolete orange/brown ramp."
+}

@@ -12,6 +12,7 @@ import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.resources.SkippedPresentationPlcLifecycle;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 
 import java.util.List;
 import java.io.IOException;
@@ -37,7 +38,9 @@ import java.io.IOException;
  *      Design doc: Sonic 1 Level Init Profile (44 steps)</a>
  */
 public class Sonic1LevelInitProfile extends AbstractLevelInitProfile
-        implements com.openggf.game.internal.LevelMotionPresentation, com.openggf.game.internal.BlockingLevelEntryFade {
+        implements com.openggf.game.internal.LevelMotionPresentation, com.openggf.game.internal.BlockingLevelEntryFade,
+        com.openggf.game.internal.NativeFreshLevelLoadProfile, com.openggf.game.internal.NativeTitlelessLevelLoad,
+        com.openggf.game.internal.NativeEndingDemoLoadProfile {
     private final Sonic1LevelEventManager levelEventManager;
     private final Sonic1SwitchManager switchManager;
     private final Sonic1ConveyorState conveyorState;
@@ -48,6 +51,109 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile
         this.levelEventManager = levelEventManager;
         this.switchManager = switchManager;
         this.conveyorState = conveyorState;
+    }
+
+    private Sonic1EndingLoad endingLoad;
+    private Sonic1CreditsDemoLoad creditsDemoLoad;
+    private com.openggf.game.sonic1.credits.Sonic1EndingProvider demoCaller;
+    private boolean nativeModeSwitchCaller;
+
+    @Override
+    public com.openggf.game.internal.NativeLevelLoadCallerScope beginModeSwitchLoad() {
+        if (nativeModeSwitchCaller) throw new IllegalStateException("nested native mode-switch load scope");
+        nativeModeSwitchCaller = true;
+        return new com.openggf.game.internal.NativeLevelLoadCallerScope() {
+            private boolean closed;
+            @Override public void close() {
+                if (!closed) { nativeModeSwitchCaller = false; closed = true; }
+            }
+        };
+    }
+
+    @Override
+    public com.openggf.game.internal.NativeLevelLoadCallerScope beginEndingDemoLoad(com.openggf.game.EndingProvider owner) {
+        if (!(owner instanceof com.openggf.game.sonic1.credits.Sonic1EndingProvider provider))
+            throw new IllegalArgumentException("S1 demo load requires its actual ending owner");
+        if (demoCaller != null) throw new IllegalStateException("nested ending demo load scope");
+        demoCaller = provider;
+        return new com.openggf.game.internal.NativeLevelLoadCallerScope() {
+            private boolean closed;
+            @Override public void close() {
+                if (!closed) { demoCaller = null; closed = true; }
+            }
+        };
+    }
+
+    @Override
+    public void completeDemoPresentationPlcs() {
+        // Level_ClrCardArt (sonic.asm:2979-2989) appends these after the actual
+        // palette waits; it neither drains the queue nor runs another fade.
+        if (!com.openggf.game.resources.NativeLevelPlcPolicy.allowsCurrent()) return;
+        var plc = GameServices.module().getGameService(Sonic1PlcService.class);
+        if (plc == null) return;
+        int zone = GameServices.level().getCurrentLevel().getZoneIndex();
+        Runnable submit = () -> {
+            try {
+                plc.transact(Sonic1PlcService.appendOperation(2), Sonic1PlcService.appendOperation(0x15 + zone));
+            } catch (IOException failure) { throw new java.io.UncheckedIOException(failure); }
+        };
+        // The final palette loop's RunPLC precedes Level_ClrCardArt. Do not
+        // let its newly appended head borrow that outgoing preparation tail.
+        var lifecycle = GameServices.plcFrameLifecycleOrNull();
+        if (lifecycle == null) submit.run();
+        else lifecycle.afterConsumedIteration(submit);
+    }
+
+    @Override
+    public com.openggf.game.internal.NativeLevelLoadPlan freshLevelLoadPlan(LevelLoadContext context) {
+        var manager = GameServices.level();
+        // The production caller selects actual ending/demo work before timing
+        // admission. With no recorded stream, the same phases resume immediately.
+        if ((!com.openggf.level.NativeLevelLoadAccess.hasPhaseAdmission(manager)
+                && !nativeModeSwitchCaller && demoCaller == null)
+                || !context.isIncludePostLoadAssembly() || GameServices.plcFrameLifecycleOrNull() == null
+                || context.getLoadMode() != com.openggf.game.LevelLoadMode.FULL
+                || GameServices.module().getZoneRegistry().modZoneRuntimeContribution(context.getLevelIndex()) != null)
+            return null;
+        try {
+            var rom = manager.getWorldSession().getDataSource().rom().orElseThrow();
+            var selected = new Sonic1(rom).selectEndingLoad(context.getLevelIndex());
+            if (selected != null) {
+                endingLoad = new Sonic1EndingLoad(context, selected, levelEventManager, () -> endingLoad = null);
+                return endingLoad.plan(levelLoadSteps(context));
+            }
+            var provider = demoCaller;
+            if (provider == null) return null;
+            var credits = provider.getCreditsManager();
+            if (credits == null || credits.getState() != com.openggf.game.sonic1.credits.Sonic1CreditsManager.State.DEMO_LOADING)
+                return null;
+            var inputs = Sonic1CreditsDemoLoad.inputs(com.openggf.data.RomByteReader.fromRom(rom), credits.getCreditsNum());
+            creditsDemoLoad = new Sonic1CreditsDemoLoad(context, inputs, provider, () -> creditsDemoLoad = null);
+            return creditsDemoLoad.plan(levelLoadSteps(context));
+        } catch (IOException failure) {
+            throw new java.io.UncheckedIOException(failure);
+        }
+    }
+    @Override public void serviceLoadZeroRoutineVInt() {
+        var objects = GameServices.level().getObjectManager();
+        if (objects != null) objects.advanceVblaCounter();
+        else com.openggf.game.session.EngineTiming.vIntRunCounter().serviceRepresentedVBlank();
+    }
+    @Override public boolean switchesAtLoopTail(int zone, int act) {
+        // BossFinal_Eggman_Escape.ending (85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:558-569)
+        // writes id_Ending; Level_MainLoop returns to
+        // MainGameLoop and enters GM_Ending before the next WaitForVBlank.
+        return zone == Sonic1ZoneConstants.ZONE_ENDING;
+    }
+    @Override public boolean creditsSwitchesAtLoopTail() { return true; }
+    @Override public boolean titlelessLoadSelected() { return endingLoad != null || creditsDemoLoad != null; }
+    @Override public boolean readyForEntryVBlank() { return endingLoad != null && endingLoad.readyForEntryVBlank(); }
+    @Override public void entryVBlankServiced() { endingLoad.entryVBlankServiced(); }
+    @Override public boolean ownsEntryReveal() { return endingLoad != null; }
+    @Override public void cancelPendingLevelLoadWork() {
+        if (endingLoad != null) endingLoad.cancel();
+        endingLoad = null;
+        creditsDemoLoad = null;
     }
 
     @Override
@@ -127,9 +233,15 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile
     }
 
     private void queueInitialPlcs(LevelLoadContext ctx) {
-        if (ctx.getLevel() == null || !com.openggf.game.resources.NativeLevelPlcPolicy.allows(ctx)) {
+        // GM_Ending uses synchronous QuickPLC Ending, not GM_Level's Main2 queue.
+        if (ctx.getLevel() == null || ctx.getLevel().getZoneIndex() == Sonic1Constants.ZONE_ENDZ
+                || !com.openggf.game.resources.NativeLevelPlcPolicy.allows(ctx)) {
             return;
         }
+        var credits = demoCaller == null ? null : demoCaller.getCreditsManager();
+        // GM_Level (sonic.asm:2714-2737) skips primary/Main2 for f_demo<0.
+        // They already drained while the credits page was visible.
+        if (credits != null && credits.getState() == com.openggf.game.sonic1.credits.Sonic1CreditsManager.State.DEMO_LOADING) return;
         Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
         if (plcService == null) {
             return;
@@ -168,8 +280,8 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile
             // (docs/s1disasm/_incObj/34 Title Cards.asm:122-168), so arm it here
             // rather than from the card renderer, which a headless run omits.
             levelEventManager.armTitleCardArtReloadAtLevelStart(
-                    levelManager.getCurrentZone(), levelManager.getCurrentAct(),
-                    levelManager.getCurrentLevel().getZoneIndex());
+                        levelManager.getCurrentZone(), levelManager.getCurrentAct(),
+                        levelManager.getCurrentLevel().getZoneIndex());
         } catch (IOException failure) {
             throw new IllegalStateException(
                     "Failed to access S1 ROM for initial presentation PLCs",

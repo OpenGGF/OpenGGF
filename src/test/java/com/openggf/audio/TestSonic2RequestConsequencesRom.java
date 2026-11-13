@@ -52,6 +52,27 @@ class TestSonic2RequestConsequencesRom {
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(Sonic2Music.class)
+    void musicMailboxUsesNativeByteAndRetainsPlaybackIdentity(Sonic2Music music) {
+        List<Sonic2SoundRequestService.Event> events = new ArrayList<>();
+        AudioManager audio = install(events::add);
+
+        audio.playMusic(music.id);
+        for (int frame = 0; frame < 4; frame++) {
+            assertDoesNotThrow(() -> audio.presentFrame(PresentationMode.FORWARD));
+        }
+
+        assertEquals(List.of(music.nativeId), events.stream()
+                .filter(Sonic2SoundRequestService.Submission.class::isInstance)
+                .map(Sonic2SoundRequestService.Submission.class::cast)
+                .map(Sonic2SoundRequestService.Submission::rawRequestId).toList());
+        AudioCommand.PlayMusic command = (AudioCommand.PlayMusic)
+                audio.commandTimeline().entries().getFirst().command();
+        assertEquals(music.id, command.musicId(),
+                "native mailbox translation must not change the resolved song");
+    }
+
     @Test
     void oneUpStopsSfxBeforeSaveAndRetainsShippedPriorityBug() {
         List<Sonic2SoundRequestService.Event> events = new ArrayList<>();

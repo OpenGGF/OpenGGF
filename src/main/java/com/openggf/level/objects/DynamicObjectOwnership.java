@@ -11,22 +11,17 @@ import java.util.function.Function;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Consumer;
 
-/** Tracks engine-owned dynamic objects that intentionally sit outside the ROM SST pool. */
+/**
+ * Dynamic classification and captured-order metadata. Membership and identity
+ * mutations belong to {@link ObjectPopulation}; auxiliary classifications mark
+ * engine objects that intentionally sit outside the ROM SST pool.
+ */
 final class DynamicObjectOwnership {
     // Restore-only ordering, derived from the snapshot. Late player-bound
     // recreation must retain which dynamic alias last owns a fixed ROM SST.
     private final Map<ObjectRefId, Integer> restoredOrder =
             new HashMap<>();
-
-    void restoreIdentity(ObjectInstance object, ObjectRefId capturedId,
-            Map<ObjectInstance, ObjectRefId> identities) {
-        if (capturedId == null) {
-            throw new IllegalArgumentException("restored dynamic object identity is required");
-        }
-        identities.put(object, capturedId);
-    }
 
     void rememberCapturedOrder(List<DynamicObjectEntry> entries) {
         restoredOrder.clear();
@@ -36,12 +31,9 @@ final class DynamicObjectOwnership {
         }
     }
 
-    void restoreCapturedOrder(List<ObjectInstance> objects,
-            Function<ObjectInstance, ObjectRefId> identity) {
-        if (!restoredOrder.isEmpty()) {
-            objects.sort(Comparator.comparingInt(object ->
-                    restoredOrder.getOrDefault(identity.apply(object), Integer.MAX_VALUE)));
-        }
+    Comparator<ObjectInstance> capturedOrder(Function<ObjectInstance, ObjectRefId> identity) {
+        return restoredOrder.isEmpty() ? null : Comparator.comparingInt(object ->
+                restoredOrder.getOrDefault(identity.apply(object), Integer.MAX_VALUE));
     }
 
     private final Set<ObjectInstance> nonRewindable =
@@ -49,48 +41,11 @@ final class DynamicObjectOwnership {
     private final Set<ObjectInstance> rewindable =
             Collections.newSetFromMap(new IdentityHashMap<>());
 
-    boolean addNonRewindable(
-            ObjectInstance object, ObjectServices services, List<ObjectInstance> dynamicObjects) {
-        if (!prepare(object, services)) {
-            return false;
-        }
-        dynamicObjects.add(object);
+    void markNonRewindable(ObjectInstance object) {
         nonRewindable.add(object);
-        return true;
     }
 
-    boolean addRewindable(
-            ObjectInstance object,
-            ObjectServices services,
-            List<ObjectInstance> dynamicObjects,
-            Set<ObjectInstance> deferredThisFrame,
-            boolean updating,
-            Consumer<ObjectInstance> assignRewindId) {
-        if (!prepare(object, services)) {
-            return false;
-        }
-        assignRewindId.accept(object);
-        dynamicObjects.add(object);
-        rewindable.add(object);
-        if (updating && object instanceof AbstractObjectInstance instance
-                && instance.skipsSameFrameUpdateAfterSpawn()) {
-            deferredThisFrame.add(object);
-        }
-        return true;
-    }
-
-    private boolean prepare(ObjectInstance object, ObjectServices services) {
-        if (object == null) {
-            return false;
-        }
-        if (object instanceof AbstractObjectInstance instance) {
-            instance.setServices(services);
-            ObjectLifetimeOps.clearPreviousManagerSlot(instance);
-        }
-        return true;
-    }
-
-    void markRestoredRewindable(ObjectInstance object) {
+    void markRewindable(ObjectInstance object) {
         rewindable.add(object);
     }
 

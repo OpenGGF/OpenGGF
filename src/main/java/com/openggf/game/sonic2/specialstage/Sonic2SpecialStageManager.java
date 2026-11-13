@@ -971,7 +971,13 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
 
         // Load HUD and START banner art for intro sequence
         hudPatternBase = playerPatternBase + playerPatterns.length;
-        Pattern[] hudPatterns = dataLoader.getHudArtPatterns();
+        var names = Sonic2SpecialStageHudPresentation.applyBanks(dataLoader.getHudArtPatterns(),
+                dataLoader.getTailsTextArtPatterns(),
+                com.openggf.game.presentation.StageCharacterPresentation.presentation(
+                        com.openggf.game.presentation.StageCharacterPresentation.sonicDefinition(), com.openggf.game.GameId.S2),
+                com.openggf.game.presentation.StageCharacterPresentation.presentation(
+                        com.openggf.game.presentation.StageCharacterPresentation.tailsDefinition(), com.openggf.game.GameId.S2));
+        Pattern[] hudPatterns = names.hud();
         for (int i = 0; i < hudPatterns.length; i++) {
             graphicsManager.cachePatternTexture(hudPatterns[i], hudPatternBase + i);
         }
@@ -992,7 +998,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         LOGGER.fine("Cached " + messagesPatterns.length + " Messages patterns");
 
         tailsTextPatternBase = messagesPatternBase + messagesPatterns.length;
-        Pattern[] tailsTextPatterns = dataLoader.getTailsTextArtPatterns();
+        Pattern[] tailsTextPatterns = names.tails();
         for (int i = 0; i < tailsTextPatterns.length; i++) {
             graphicsManager.cachePatternTexture(tailsTextPatterns[i], tailsTextPatternBase + i);
         }
@@ -1021,6 +1027,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         GraphicsManager graphicsManager = graphicsManager();
         renderer = new Sonic2SpecialStageRenderer(graphicsManager);
         renderer.setDataLoader(dataLoader);
+        renderer.loadCharacterStageArt();
         renderer.setSpecialStageViewport(specialStageViewport);
         renderer.beginStaticBackgroundStage(backgroundStageGeneration);
         renderer.onRenderContextGenerationChanged(graphicsManager.getPatternAtlas());
@@ -1089,15 +1096,10 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
         initialPlayerSpawnPending = true;
         playerBootstrapPhase = PlayerBootstrapPhase.WAIT_FIRST_DRAWING_WRAP;
 
-        String characterCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(configuration());
-        if (characterCode == null) {
-            characterCode = "sonic";
-        }
-        characterCode = characterCode.toLowerCase();
-        boolean tailsSidekick = ActiveGameplayTeamResolver.resolveSidekicks(configuration())
-                .stream().map(String::toLowerCase).anyMatch("tails"::equals);
+        var character = ActiveGameplayTeamResolver.resolvePlayerCharacter(configuration());
+        boolean tailsSidekick = character == com.openggf.game.PlayerCharacter.SONIC_AND_TAILS;
 
-        if ("tails".equals(characterCode)) {
+        if (character == com.openggf.game.PlayerCharacter.TAILS_ALONE) {
             tailsPlayer = new Sonic2SpecialStagePlayer(
                     Sonic2SpecialStagePlayer.PlayerType.TAILS, true, this);
             players.add(tailsPlayer);

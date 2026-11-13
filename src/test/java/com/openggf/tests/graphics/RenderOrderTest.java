@@ -296,7 +296,9 @@ public class RenderOrderTest {
                 + "com.openggf.game.internal.SpriteTableBuildProfile.PlacedRings.BEFORE_OBJECT_BUCKETS"));
         assertTrue(placed >= 0 && placed < buckets,
                 "the native ring-list profile emits its rows before object buckets");
-        assertTrue(preparation.contains("RingDrawInternalAccess.slottedAttracted(ringManager, bucket)"),
+        assertTrue(preparation.contains("RingDrawInternalAccess.attractedPass(ringManager)")
+                        && preparation.contains("objectPass.draw(bucket, attractedRings == null ? java.util.List.of()"
+                        + " : attractedRings.slotted(bucket));"),
                 "physical ring slots join the matching object bucket instead of a late global draw");
         int legacyGuard = preparation.indexOf(
                 "if (!(lm.gameModule instanceof com.openggf.game.internal.SpriteTableBuildProfile))");

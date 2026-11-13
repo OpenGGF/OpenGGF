@@ -248,7 +248,7 @@ public class BumperObjectInstance extends AbstractObjectInstance
         services().playSfx(GameSound.BUMPER);
 
         // Award 10 points and spawn points display (ROM: lines 44675-44683)
-        services().gameState().addScore(10);
+        Sonic2ObjectScore.award(services(), player, 10);
         spawnFreeChild(() -> new PointsObjectInstance(
                 new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0),
                 services(), 10));
@@ -295,10 +295,10 @@ public class BumperObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
-        // S2 Touch_Special loc_3FA00 increments collision_property once for
-        // P1 and twice for the sidekick; Obj44_Main then tests bits 0/1
-        // (s2.asm:44653-44667, 85073-85098).
-        if (playerEntity instanceof AbstractPlayableSprite sprite && sprite.isCpuControlled()) {
+        // loc_3FA00 (s2.asm:85758-85765) compares the actor with MainCharacter:
+        // P1 adds one, native P2 adds two. CPU control does not identify the slot;
+        // the second human must set the same Obj44 pending bit as CPU Tails.
+        if (playerEntity != null && playerEntity == services().playerQuery().nativeP2OrNull()) {
             collisionProperty += 2;
         } else {
             collisionProperty += 1;

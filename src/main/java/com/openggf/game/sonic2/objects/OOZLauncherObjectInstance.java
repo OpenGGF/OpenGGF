@@ -12,6 +12,8 @@ import com.openggf.game.solid.PlayerStandingState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -85,27 +87,6 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     // Fragment gravity (ROM: addi.w #$18,y_vel)
     private static final int FRAGMENT_GRAVITY = 0x18;
 
-    // Fragment velocity table (ROM: word_2507A - 16 entries, X/Y pairs)
-    // Each pair is initial velocity for one fragment piece
-    private static final int[][] FRAGMENT_VELOCITIES = {
-            {-0x400, -0x400},   // 0: Upper-left corner
-            {-0x200, -0x400},   // 1: Upper-center-left
-            { 0x200, -0x400},   // 2: Upper-center-right
-            { 0x400, -0x400},   // 3: Upper-right corner
-            {-0x3C0, -0x200},   // 4: Mid-upper-left
-            {-0x1C0, -0x200},   // 5: Mid-upper-center-left
-            { 0x1C0, -0x200},   // 6: Mid-upper-center-right
-            { 0x3C0, -0x200},   // 7: Mid-upper-right
-            {-0x380,  0x200},   // 8: Mid-lower-left
-            {-0x180,  0x200},   // 9: Mid-lower-center-left
-            { 0x180,  0x200},   // 10: Mid-lower-center-right
-            { 0x380,  0x200},   // 11: Mid-lower-right
-            {-0x340,  0x400},   // 12: Lower-left corner
-            {-0x140,  0x400},   // 13: Lower-center-left
-            { 0x140,  0x400},   // 14: Lower-center-right
-            { 0x340,  0x400},   // 15: Lower-right corner
-    };
-
     // Proximity detection bounds for invisible launcher
     // ROM: addi.w #$10,d0; cmpi.w #$20,d0 (horizontal)
     // ROM: cmpi.w #$10,d1 (vertical)
@@ -121,7 +102,6 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     private boolean broken = false;
     private boolean launcherActive = false;
     private boolean invisibleLauncherOnly = false;
-    private int sameFrameLauncherScanFrame = Integer.MIN_VALUE;
     private boolean parentFragmentActive = false;
     private int parentFragmentX;
     private int parentFragmentY;
@@ -167,7 +147,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         }
 
         if (invisibleLauncherOnly) {
-            if (launcherActive && vIntRunCount != sameFrameLauncherScanFrame) {
+            if (launcherActive) {
                 updateInvisibleLauncher(vIntRunCount, player);
             }
         } else if (parentFragmentActive) {
@@ -262,13 +242,23 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         // Obj3D loc_24F04 allocates the invisible routine-6 launcher with
         // AllocateObjectAfterCurrent before BreakObjectToPieces mutates the
         // current object into fragment routine 4 (s2.asm:51040-51062).
-        OOZLauncherObjectInstance invisibleLauncher =
-                spawnChild(() -> new OOZLauncherObjectInstance(spawn, "OOZLauncher", true));
-        invisibleLauncher.updateInvisibleLauncher(frameCounter, player);
-        invisibleLauncher.sameFrameLauncherScanFrame = frameCounter;
+        int parentSlot = Sonic2BreakIntoPieces.requireParentSlot(this);
+        int launcherSlot = com.openggf.level.objects.ObjectLifetimeOps.reserveFindNextFreeChildSlot(services().objectManager(), parentSlot);
+        if (launcherSlot >= 0) {
+            var invisibleLauncher = ObjectConstructionContext.with(services(), launcherSlot,
+                    () -> new OOZLauncherObjectInstance(spawn, "OOZLauncher", true));
+            ObjectLifetimeOps.addDynamicAtReservedSlot(services().objectManager(), invisibleLauncher, launcherSlot);
+            // Its routine 6 runs when the after-current execution cursor reaches
+            // this admitted slot, after the current fragment (s2.asm:51040-51077).
+        }
         int fragmentFrameIndex = isVertical ? 1 : 3;
-        startParentFragment(fragmentFrameIndex);
-        spawnFragmentChildren(fragmentFrameIndex);
+        var pieces = Sonic2BreakIntoPieces.readPieces(services(), 0x250BA, fragmentFrameIndex, 0x2507A);
+        startParentFragment(fragmentFrameIndex, pieces.getFirst());
+        boolean onScreen = isWithinSolidContactBounds();
+        String artKey = isVertical ? Sonic2ObjectArtKeys.OOZ_LAUNCHER_VERT : Sonic2ObjectArtKeys.OOZ_LAUNCHER_HORIZ;
+        Sonic2BreakIntoPieces.addLaterPieces(services(), parentSlot, pieces.size(), index ->
+                new Sonic2BreakPieceObjectInstance(spawn, pieces.get(index), artKey,
+                        FRAGMENT_GRAVITY, getOnScreenHalfWidth(), 0, false, false, 4, onScreen));
 
         // Play smash sound
         try {
@@ -283,52 +273,16 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     /**
      * Keep the current Obj3D slot as fragment piece 0.
      */
-    private void startParentFragment(int fragmentFrameIndex) {
+    private void startParentFragment(int fragmentFrameIndex, Sonic2BreakIntoPieces.Piece piece) {
         parentFragmentActive = true;
         parentFragmentX = spawn.x();
         parentFragmentY = spawn.y();
         parentFragmentSubX = parentFragmentX << 8;
         parentFragmentSubY = parentFragmentY << 8;
-        parentFragmentVelX = FRAGMENT_VELOCITIES[0][0];
-        parentFragmentVelY = FRAGMENT_VELOCITIES[0][1];
+        parentFragmentVelX = piece.xVelocity();
+        parentFragmentVelY = piece.yVelocity();
         parentFragmentFrameIndex = fragmentFrameIndex;
         parentFragmentPieceIndex = 0;
-    }
-
-    /**
-     * Spawn remaining fragment pieces with velocities from ROM table.
-     */
-    private void spawnFragmentChildren(int fragmentFrameIndex) {
-        ObjectManager objectManager = services().objectManager();
-        ObjectRenderManager renderManager = services().renderManager();
-        if (objectManager == null || renderManager == null) {
-            return;
-        }
-
-        String artKey = isVertical ? Sonic2ObjectArtKeys.OOZ_LAUNCHER_VERT : Sonic2ObjectArtKeys.OOZ_LAUNCHER_HORIZ;
-        PatternSpriteRenderer renderer = renderManager.getRenderer(artKey);
-        ObjectSpriteSheet sheet = renderManager.getSheet(artKey);
-        if (renderer == null || sheet == null) {
-            return;
-        }
-
-        SpriteMappingFrame fragmentFrame = sheet.getFrameCount() > fragmentFrameIndex
-                ? sheet.getFrame(fragmentFrameIndex) : null;
-        if (fragmentFrame == null) {
-            return;
-        }
-
-        List<SpriteMappingPiece> pieces = fragmentFrame.pieces();
-        int count = Math.min(pieces.size(), FRAGMENT_VELOCITIES.length);
-
-        for (int i = 1; i < count; i++) {
-            SpriteMappingPiece piece = pieces.get(i);
-            final int index = i;
-            spawnChild(() -> new LauncherFragmentInstance(
-                    spawn.x(), spawn.y(),
-                    FRAGMENT_VELOCITIES[index][0], FRAGMENT_VELOCITIES[index][1],
-                    piece, artKey));
-        }
     }
 
     private void updateParentFragment() {
@@ -338,10 +292,9 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         parentFragmentY = parentFragmentSubY >> 8;
         parentFragmentVelY += FRAGMENT_GRAVITY;
 
-        Camera camera = services().camera();
-        if (camera != null && parentFragmentY > camera.getY() + 224 + 32) {
-            setDestroyed(true);
-        }
+        // Obj3D_Fragment tests the retained render bit after moving/gravity
+        // (s2.asm:51070-51077), including the first in-place fragment.
+        if (!isWithinSolidContactBounds()) setDestroyed(true);
     }
 
     // ========================================================================

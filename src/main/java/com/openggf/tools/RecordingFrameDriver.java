@@ -234,6 +234,14 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             previousDriverSnapshot = snapshot;
             return lastFrameResult;
         }
+        if (com.openggf.level.NativeLevelLoadAccess.resumeTitleless(levelManager,
+                SessionManager.getCurrentGameplayMode(), lifecycleFrame)) {
+            lastFrameResult = LevelFrameResult.GAMEPLAY_FRAME;
+            lastFrameRanGameplay = false;
+            inputHandler.update();
+            previousDriverSnapshot = snapshot;
+            return lastFrameResult;
+        }
         if (levelManager.isLevelInactiveForTransition()) {
             // Match GameLoop's pending-zone/act freeze. Native StartNewLevel
             // leaves LevelLoop: Pal_FadeToBlack services VBlank/palette work,
@@ -324,6 +332,8 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                         levelManager, GameServices.camera(),
                         () -> GameServices.sprites().update(inputHandler),
                         stepWrapper);
+                com.openggf.level.NativeLevelLoadAccess.dispatchLoopTailModeSwitch(
+                        levelManager, this::applyPendingZoneActTransition);
                 lastFrameRanGameplay =
                         lastFrameResult == LevelFrameResult.GAMEPLAY_FRAME;
                 // ROM: a retained Obj_LevelResults that mutates into
@@ -422,7 +432,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         var blockingFade = gameplayMode.plcFrameLifecycle().beginNativeBlockingFade();
         gameplayMode.getFadeManager().startFadeToBlack(
                 blockingFade.wrapCompletion(() -> {
-                    try {
+                    try (var caller = com.openggf.level.NativeLevelLoadAccess.beginModeSwitchLoad(levelManager, zone, act)) {
                         if (freshBoundary) {
                             levelManager.loadZoneAndActAtFreshTitleCardBoundary(zone, act);
                         } else {
@@ -690,6 +700,12 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             markBk2RowPolled(currentBk2Index);
         }
         currentBk2Index++;
+        if (com.openggf.level.NativeLevelLoadAccess.resumeTitleless(levelManager,
+                SessionManager.getCurrentGameplayMode(), lifecycleFrame)) {
+            lastFrameRanGameplay = false;
+            inputHandler.update();
+            return mask;
+        }
         applyPauseToggleForSuppressedRow(snapshot);
         LevelFrameContext context =
                 LevelFrameContext.from(SessionManager.getCurrentGameplayMode());

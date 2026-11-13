@@ -1,0 +1,32 @@
+{
+  "method": "built-in GPT Image native-pose transformation",
+  "native": "ArtUnc_CNZSlotPics (s2.asm:90461), 32x32 column-major tiles, SonicAndTails palette line 0",
+  "references": [
+    "s2-native-1-8x.png",
+    "concept/talon.png",
+    "art/talon/frames/wait-00.png"
+  ],
+  "raw_sha256": "142e7af03d9ae07227a0bec1772be6df9aa9d1fd643cfec4da97462375d6f62d",
+  "raw_scratch": "$HOME/scratch/agent-tmp/mt-reels-title-20261110/talon-attempts.png",
+  "selection": 0,
+  "rejection": "Open mouth alternative less legible at native size",
+  "reduction": "Lanczos to native portrait bounds; alpha 128; fixed approved 15-colour character palette, no dithering or geometry repaint",
+  "native_area": 607,
+  "authored_area": 602,
+  "sqrt_area_ratio": 0.9958728672426262,
+  "native_cell": [
+    32,
+    32
+  ],
+  "hotspot": [
+    16,
+    16
+  ],
+  "host_alias": "S3K uses the same head portrait in its 32x32 cell; no animation phases exist within a symbol",
+  "limits": "Static head portrait; native symbol order, rewards and backing retained. Normal portrait reused in the same 32x32 S3K cell.",
+  "size_measurement": "Native silhouette excludes edge-connected white backing (S2 index 6), retaining dark portrait outline; generated head reduced to 91% of native box before palette quantization.",
+  "generation_requests": 1,
+  "alternatives": 2,
+  "s3k_native_area": 592,
+  "s3k_sqrt_area_ratio": 1.008410577042849
+}

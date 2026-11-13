@@ -12,4 +12,9 @@ public interface PresentationVoice {
     void stop();
 
     PresentationVoiceSnapshot snapshot();
+
+    /** Whether the music volume (rather than the sound-effect volume) applies to this voice. */
+    default boolean music() {
+        return false;
+    }
 }

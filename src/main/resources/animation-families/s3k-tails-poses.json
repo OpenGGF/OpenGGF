@@ -1,0 +1,918 @@
+{
+  "7": {
+    "key": "object-walk/6",
+    "fallback": "WALK"
+  },
+  "8": {
+    "key": "object-walk/7",
+    "fallback": "WALK"
+  },
+  "1": {
+    "key": "object-walk/0",
+    "fallback": "WALK"
+  },
+  "2": {
+    "key": "object-walk/1",
+    "fallback": "WALK"
+  },
+  "3": {
+    "key": "object-walk/2",
+    "fallback": "WALK"
+  },
+  "4": {
+    "key": "object-walk/3",
+    "fallback": "WALK"
+  },
+  "5": {
+    "key": "object-walk/4",
+    "fallback": "WALK"
+  },
+  "6": {
+    "key": "object-walk/5",
+    "fallback": "WALK"
+  },
+  "33": {
+    "key": "object-run/0",
+    "fallback": "RUN"
+  },
+  "34": {
+    "key": "object-run/1",
+    "fallback": "RUN"
+  },
+  "35": {
+    "key": "object-run/2",
+    "fallback": "RUN"
+  },
+  "36": {
+    "key": "object-run/3",
+    "fallback": "RUN"
+  },
+  "150": {
+    "key": "family-roll/1",
+    "fallback": "ROLL"
+  },
+  "151": {
+    "key": "family-roll/2",
+    "fallback": "ROLL"
+  },
+  "152": {
+    "key": "family-roll/3",
+    "fallback": "ROLL"
+  },
+  "169": {
+    "key": "family-push/0",
+    "fallback": "PUSH"
+  },
+  "170": {
+    "key": "family-push/1",
+    "fallback": "PUSH"
+  },
+  "171": {
+    "key": "family-push/2",
+    "fallback": "PUSH"
+  },
+  "172": {
+    "key": "family-push/3",
+    "fallback": "PUSH"
+  },
+  "173": {
+    "key": "family-wait/0",
+    "fallback": "WAIT"
+  },
+  "175": {
+    "key": "family-wait/2",
+    "fallback": "WAIT"
+  },
+  "174": {
+    "key": "family-wait/1",
+    "fallback": "WAIT"
+  },
+  "177": {
+    "key": "family-wait/3",
+    "fallback": "WAIT"
+  },
+  "178": {
+    "key": "family-wait/4",
+    "fallback": "WAIT"
+  },
+  "179": {
+    "key": "family-wait/5",
+    "fallback": "WAIT"
+  },
+  "180": {
+    "key": "family-wait/6",
+    "fallback": "WAIT"
+  },
+  "154": {
+    "key": "family-balance/0",
+    "fallback": "BALANCE"
+  },
+  "155": {
+    "key": "family-balance/1",
+    "fallback": "BALANCE"
+  },
+  "176": {
+    "key": "family-look-up/0",
+    "fallback": "LOOK_UP"
+  },
+  "153": {
+    "key": "family-duck/0",
+    "fallback": "DUCK"
+  },
+  "134": {
+    "key": "family-spindash/1",
+    "fallback": "SPINDASH"
+  },
+  "135": {
+    "key": "family-spindash/2",
+    "fallback": "SPINDASH"
+  },
+  "136": {
+    "key": "family-spindash/3",
+    "fallback": "SPINDASH"
+  },
+  "164": {
+    "key": "family-balance/2",
+    "fallback": "BALANCE2"
+  },
+  "142": {
+    "key": "family-skid/0",
+    "fallback": "SKID"
+  },
+  "143": {
+    "key": "family-skid/1",
+    "fallback": "SKID"
+  },
+  "181": {
+    "key": "family-float2/0",
+    "fallback": "FLOAT"
+  },
+  "182": {
+    "key": "family-float2/1",
+    "fallback": "FLOAT2"
+  },
+  "183": {
+    "key": "family-float2/2",
+    "fallback": "FLOAT2"
+  },
+  "184": {
+    "key": "family-float2/3",
+    "fallback": "FLOAT2"
+  },
+  "185": {
+    "key": "family-float2/4",
+    "fallback": "FLOAT2"
+  },
+  "186": {
+    "key": "family-float2/5",
+    "fallback": "FLOAT2"
+  },
+  "187": {
+    "key": "family-float2/6",
+    "fallback": "FLOAT2"
+  },
+  "188": {
+    "key": "family-float2/7",
+    "fallback": "FLOAT2"
+  },
+  "139": {
+    "key": "family-spring/0",
+    "fallback": "SPRING"
+  },
+  "140": {
+    "key": "family-spring/1",
+    "fallback": "SPRING"
+  },
+  "157": {
+    "key": "family-hang/0",
+    "fallback": "HANG"
+  },
+  "158": {
+    "key": "family-hang/1",
+    "fallback": "HANG"
+  },
+  "165": {
+    "key": "family-blink/3",
+    "fallback": "BLINK"
+  },
+  "166": {
+    "key": "family-blink/4",
+    "fallback": "BLINK"
+  },
+  "145": {
+    "key": "family-hang2/0",
+    "fallback": "HANG2"
+  },
+  "159": {
+    "key": "family-bubble/0",
+    "fallback": "BUBBLE"
+  },
+  "156": {
+    "key": "family-burnt/0",
+    "fallback": "BURNT"
+  },
+  "203": {
+    "key": "family-hurt-fall/0",
+    "fallback": "HURT_FALL"
+  },
+  "204": {
+    "key": "family-hurt-fall/1",
+    "fallback": "HURT_FALL"
+  },
+  "138": {
+    "key": "family-hurt/0",
+    "fallback": "HURT"
+  },
+  "137": {
+    "key": "family-hurt-fall/0",
+    "fallback": "HURT_FALL"
+  },
+  "0": {
+    "key": "family-blank/0",
+    "fallback": "BLANK"
+  },
+  "195": {
+    "key": "family-run/0",
+    "fallback": "RUN"
+  },
+  "196": {
+    "key": "family-run/1",
+    "fallback": "RUN"
+  },
+  "160": {
+    "key": "flight/body-0",
+    "fallback": "TAILS_FLY"
+  },
+  "162": {
+    "key": "family-tails-fly-carry/0",
+    "fallback": "TAILS_FLY_CARRY"
+  },
+  "161": {
+    "key": "family-tails-fly-carry-ascend/0",
+    "fallback": "TAILS_FLY_CARRY_ASCEND"
+  },
+  "163": {
+    "key": "flight/tired-body-0",
+    "fallback": "TAILS_FLY_TIRED"
+  },
+  "189": {
+    "key": "family-tails-swim/0",
+    "fallback": "TAILS_SWIM"
+  },
+  "190": {
+    "key": "family-tails-swim/1",
+    "fallback": "TAILS_SWIM"
+  },
+  "191": {
+    "key": "family-tails-swim/2",
+    "fallback": "TAILS_SWIM"
+  },
+  "192": {
+    "key": "family-tails-swim/3",
+    "fallback": "TAILS_SWIM"
+  },
+  "193": {
+    "key": "family-tails-swim/4",
+    "fallback": "TAILS_SWIM"
+  },
+  "207": {
+    "key": "family-tails-swim-carry/0",
+    "fallback": "TAILS_SWIM_CARRY"
+  },
+  "208": {
+    "key": "family-tails-swim-carry/1",
+    "fallback": "TAILS_SWIM_CARRY"
+  },
+  "194": {
+    "key": "family-tails-swim-tired/0",
+    "fallback": "TAILS_SWIM_TIRED"
+  },
+  "205": {
+    "key": "family-tails-swim-tired/1",
+    "fallback": "TAILS_SWIM_TIRED"
+  },
+  "206": {
+    "key": "family-tails-swim-tired/2",
+    "fallback": "TAILS_SWIM_TIRED"
+  },
+  "235": {
+    "key": "family-super-transform/0",
+    "fallback": "SUPER_TRANSFORM"
+  },
+  "236": {
+    "key": "family-super-transform/3",
+    "fallback": "SUPER_TRANSFORM"
+  },
+  "237": {
+    "key": "family-super-transform/2",
+    "fallback": "SUPER_TRANSFORM"
+  },
+  "9": {
+    "key": "object-walk-up45/0",
+    "fallback": "WALK"
+  },
+  "10": {
+    "key": "object-walk-up45/1",
+    "fallback": "WALK"
+  },
+  "11": {
+    "key": "object-walk-up45/2",
+    "fallback": "WALK"
+  },
+  "12": {
+    "key": "object-walk-up45/3",
+    "fallback": "WALK"
+  },
+  "13": {
+    "key": "object-walk-up45/4",
+    "fallback": "WALK"
+  },
+  "14": {
+    "key": "object-walk-up45/5",
+    "fallback": "WALK"
+  },
+  "15": {
+    "key": "object-walk-up45/6",
+    "fallback": "WALK"
+  },
+  "16": {
+    "key": "object-walk-up45/7",
+    "fallback": "WALK"
+  },
+  "17": {
+    "key": "object-walk-steep/0",
+    "fallback": "WALK"
+  },
+  "18": {
+    "key": "object-walk-steep/1",
+    "fallback": "WALK"
+  },
+  "19": {
+    "key": "object-walk-steep/2",
+    "fallback": "WALK"
+  },
+  "20": {
+    "key": "object-walk-steep/3",
+    "fallback": "WALK"
+  },
+  "21": {
+    "key": "object-walk-steep/4",
+    "fallback": "WALK"
+  },
+  "22": {
+    "key": "object-walk-steep/5",
+    "fallback": "WALK"
+  },
+  "23": {
+    "key": "object-walk-steep/6",
+    "fallback": "WALK"
+  },
+  "24": {
+    "key": "object-walk-steep/7",
+    "fallback": "WALK"
+  },
+  "25": {
+    "key": "object-walk-inverted/0",
+    "fallback": "WALK"
+  },
+  "26": {
+    "key": "object-walk-inverted/1",
+    "fallback": "WALK"
+  },
+  "27": {
+    "key": "object-walk-inverted/2",
+    "fallback": "WALK"
+  },
+  "28": {
+    "key": "object-walk-inverted/3",
+    "fallback": "WALK"
+  },
+  "29": {
+    "key": "object-walk-inverted/4",
+    "fallback": "WALK"
+  },
+  "30": {
+    "key": "object-walk-inverted/5",
+    "fallback": "WALK"
+  },
+  "31": {
+    "key": "object-walk-inverted/6",
+    "fallback": "WALK"
+  },
+  "32": {
+    "key": "object-walk-inverted/7",
+    "fallback": "WALK"
+  },
+  "37": {
+    "key": "object-run-up45/0",
+    "fallback": "RUN"
+  },
+  "38": {
+    "key": "object-run-up45/1",
+    "fallback": "RUN"
+  },
+  "39": {
+    "key": "object-run-up45/2",
+    "fallback": "RUN"
+  },
+  "40": {
+    "key": "object-run-up45/3",
+    "fallback": "RUN"
+  },
+  "41": {
+    "key": "object-run-steep/0",
+    "fallback": "RUN"
+  },
+  "42": {
+    "key": "object-run-steep/1",
+    "fallback": "RUN"
+  },
+  "43": {
+    "key": "object-run-steep/2",
+    "fallback": "RUN"
+  },
+  "44": {
+    "key": "object-run-steep/3",
+    "fallback": "RUN"
+  },
+  "45": {
+    "key": "object-run-inverted/0",
+    "fallback": "RUN"
+  },
+  "46": {
+    "key": "object-run-inverted/1",
+    "fallback": "RUN"
+  },
+  "47": {
+    "key": "object-run-inverted/2",
+    "fallback": "RUN"
+  },
+  "48": {
+    "key": "object-run-inverted/3",
+    "fallback": "RUN"
+  },
+  "49": {
+    "key": "gravity-loop/0",
+    "fallback": "ROLL"
+  },
+  "50": {
+    "key": "gravity-loop/1",
+    "fallback": "ROLL"
+  },
+  "51": {
+    "key": "gravity-loop/2",
+    "fallback": "ROLL"
+  },
+  "52": {
+    "key": "gravity-loop/3",
+    "fallback": "ROLL"
+  },
+  "53": {
+    "key": "gravity-loop/4",
+    "fallback": "ROLL"
+  },
+  "54": {
+    "key": "gravity-loop/5",
+    "fallback": "ROLL"
+  },
+  "55": {
+    "key": "gravity-loop/6",
+    "fallback": "ROLL"
+  },
+  "56": {
+    "key": "gravity-loop/7",
+    "fallback": "ROLL"
+  },
+  "57": {
+    "key": "gravity-loop/8",
+    "fallback": "ROLL"
+  },
+  "58": {
+    "key": "gravity-loop/9",
+    "fallback": "ROLL"
+  },
+  "59": {
+    "key": "gravity-loop/10",
+    "fallback": "ROLL"
+  },
+  "60": {
+    "key": "gravity-loop/11",
+    "fallback": "ROLL"
+  },
+  "61": {
+    "key": "gravity-transition/0",
+    "fallback": "ROLL"
+  },
+  "62": {
+    "key": "gravity-transition/1",
+    "fallback": "ROLL"
+  },
+  "63": {
+    "key": "gravity-transition/2",
+    "fallback": "ROLL"
+  },
+  "64": {
+    "key": "gravity-transition/3",
+    "fallback": "ROLL"
+  },
+  "65": {
+    "key": "gravity-transition/4",
+    "fallback": "ROLL"
+  },
+  "66": {
+    "key": "gravity-transition/5",
+    "fallback": "ROLL"
+  },
+  "67": {
+    "key": "gravity-transition/6",
+    "fallback": "ROLL"
+  },
+  "68": {
+    "key": "gravity-transition/7",
+    "fallback": "ROLL"
+  },
+  "69": {
+    "key": "gravity-transition/8",
+    "fallback": "ROLL"
+  },
+  "70": {
+    "key": "gravity-transition/9",
+    "fallback": "ROLL"
+  },
+  "71": {
+    "key": "gravity-transition/10",
+    "fallback": "ROLL"
+  },
+  "72": {
+    "key": "gravity-transition/11",
+    "fallback": "ROLL"
+  },
+  "73": {
+    "key": "cage-entry/0",
+    "fallback": "RUN"
+  },
+  "74": {
+    "key": "cage-entry/1",
+    "fallback": "RUN"
+  },
+  "75": {
+    "key": "cage-entry/2",
+    "fallback": "RUN"
+  },
+  "76": {
+    "key": "cage-entry/3",
+    "fallback": "RUN"
+  },
+  "77": {
+    "key": "cage-entry/4",
+    "fallback": "RUN"
+  },
+  "78": {
+    "key": "cage-entry/5",
+    "fallback": "RUN"
+  },
+  "79": {
+    "key": "cage-entry/6",
+    "fallback": "RUN"
+  },
+  "80": {
+    "key": "cage-entry/7",
+    "fallback": "RUN"
+  },
+  "81": {
+    "key": "cage-entry/8",
+    "fallback": "RUN"
+  },
+  "82": {
+    "key": "cage-entry/9",
+    "fallback": "RUN"
+  },
+  "83": {
+    "key": "cage-entry/10",
+    "fallback": "RUN"
+  },
+  "84": {
+    "key": "cage-entry/11",
+    "fallback": "RUN"
+  },
+  "85": {
+    "key": "twist/0",
+    "fallback": "WAIT"
+  },
+  "86": {
+    "key": "twist/1",
+    "fallback": "WAIT"
+  },
+  "87": {
+    "key": "twist/2",
+    "fallback": "WAIT"
+  },
+  "88": {
+    "key": "twist/3",
+    "fallback": "WAIT"
+  },
+  "89": {
+    "key": "twist/4",
+    "fallback": "WAIT"
+  },
+  "90": {
+    "key": "twist/5",
+    "fallback": "WAIT"
+  },
+  "91": {
+    "key": "twist/6",
+    "fallback": "WAIT"
+  },
+  "92": {
+    "key": "pole/0",
+    "fallback": "HANG"
+  },
+  "93": {
+    "key": "pole/1",
+    "fallback": "HANG"
+  },
+  "94": {
+    "key": "pole/2",
+    "fallback": "HANG"
+  },
+  "95": {
+    "key": "pole/3",
+    "fallback": "HANG"
+  },
+  "96": {
+    "key": "pole/4",
+    "fallback": "HANG"
+  },
+  "97": {
+    "key": "pole/5",
+    "fallback": "HANG"
+  },
+  "98": {
+    "key": "pole/6",
+    "fallback": "HANG"
+  },
+  "99": {
+    "key": "bar/0",
+    "fallback": "HANG"
+  },
+  "100": {
+    "key": "bar/1",
+    "fallback": "HANG"
+  },
+  "101": {
+    "key": "bar/2",
+    "fallback": "HANG"
+  },
+  "102": {
+    "key": "bar/3",
+    "fallback": "HANG"
+  },
+  "103": {
+    "key": "bar/4",
+    "fallback": "HANG"
+  },
+  "104": {
+    "key": "bar/5",
+    "fallback": "HANG"
+  },
+  "105": {
+    "key": "tumble/0",
+    "fallback": "ROLL"
+  },
+  "106": {
+    "key": "tumble/1",
+    "fallback": "ROLL"
+  },
+  "107": {
+    "key": "tumble/2",
+    "fallback": "ROLL"
+  },
+  "108": {
+    "key": "tumble/3",
+    "fallback": "ROLL"
+  },
+  "109": {
+    "key": "tumble/4",
+    "fallback": "ROLL"
+  },
+  "110": {
+    "key": "tumble/5",
+    "fallback": "ROLL"
+  },
+  "111": {
+    "key": "tumble/6",
+    "fallback": "ROLL"
+  },
+  "112": {
+    "key": "tumble/7",
+    "fallback": "ROLL"
+  },
+  "113": {
+    "key": "tumble/8",
+    "fallback": "ROLL"
+  },
+  "114": {
+    "key": "tumble/9",
+    "fallback": "ROLL"
+  },
+  "115": {
+    "key": "tumble/10",
+    "fallback": "ROLL"
+  },
+  "116": {
+    "key": "tumble/11",
+    "fallback": "ROLL"
+  },
+  "117": {
+    "key": "tumble/12",
+    "fallback": "ROLL"
+  },
+  "118": {
+    "key": "tumble/13",
+    "fallback": "ROLL"
+  },
+  "119": {
+    "key": "tumble/14",
+    "fallback": "ROLL"
+  },
+  "120": {
+    "key": "swing/0",
+    "fallback": "HANG"
+  },
+  "121": {
+    "key": "swing/1",
+    "fallback": "HANG"
+  },
+  "122": {
+    "key": "swing/2",
+    "fallback": "HANG"
+  },
+  "123": {
+    "key": "swing/3",
+    "fallback": "HANG"
+  },
+  "124": {
+    "key": "swing/4",
+    "fallback": "HANG"
+  },
+  "125": {
+    "key": "swing/5",
+    "fallback": "HANG"
+  },
+  "126": {
+    "key": "swing/6",
+    "fallback": "HANG"
+  },
+  "127": {
+    "key": "swing/7",
+    "fallback": "HANG"
+  },
+  "128": {
+    "key": "chain/0",
+    "fallback": "HANG"
+  },
+  "129": {
+    "key": "chain/1",
+    "fallback": "HANG"
+  },
+  "130": {
+    "key": "chain/2",
+    "fallback": "HANG"
+  },
+  "131": {
+    "key": "chain/3",
+    "fallback": "HANG"
+  },
+  "132": {
+    "key": "chain/4",
+    "fallback": "HANG"
+  },
+  "133": {
+    "key": "chain/5",
+    "fallback": "HANG"
+  },
+  "141": {
+    "key": "carry/curl",
+    "fallback": "ROLL"
+  },
+  "144": {
+    "key": "hang/0",
+    "fallback": "HANG"
+  },
+  "146": {
+    "key": "hang/2",
+    "fallback": "HANG"
+  },
+  "147": {
+    "key": "hang/3",
+    "fallback": "HANG"
+  },
+  "148": {
+    "key": "bar-end/0",
+    "fallback": "HANG"
+  },
+  "149": {
+    "key": "bar-end/1",
+    "fallback": "HANG"
+  },
+  "202": {
+    "key": "crane/fall",
+    "fallback": "HURT"
+  },
+  "223": {
+    "key": "wall-run/0",
+    "fallback": "RUN"
+  },
+  "224": {
+    "key": "wall-run/1",
+    "fallback": "RUN"
+  },
+  "225": {
+    "key": "wall-run/2",
+    "fallback": "RUN"
+  },
+  "226": {
+    "key": "wall-run/3",
+    "fallback": "RUN"
+  },
+  "227": {
+    "key": "wall-run/4",
+    "fallback": "RUN"
+  },
+  "228": {
+    "key": "parachute/0",
+    "fallback": "HANG"
+  },
+  "229": {
+    "key": "parachute/1",
+    "fallback": "HANG"
+  },
+  "230": {
+    "key": "parachute/2",
+    "fallback": "HANG"
+  },
+  "231": {
+    "key": "parachute/3",
+    "fallback": "HANG"
+  },
+  "232": {
+    "key": "parachute/4",
+    "fallback": "HANG"
+  },
+  "233": {
+    "key": "parachute/5",
+    "fallback": "HANG"
+  },
+  "234": {
+    "key": "parachute/6",
+    "fallback": "HANG"
+  },
+  "239": {
+    "key": "corkscrew/0",
+    "fallback": "ROLL"
+  },
+  "240": {
+    "key": "corkscrew/1",
+    "fallback": "ROLL"
+  },
+  "241": {
+    "key": "corkscrew/2",
+    "fallback": "ROLL"
+  },
+  "242": {
+    "key": "corkscrew/3",
+    "fallback": "ROLL"
+  },
+  "243": {
+    "key": "corkscrew/4",
+    "fallback": "ROLL"
+  },
+  "244": {
+    "key": "corkscrew/5",
+    "fallback": "ROLL"
+  },
+  "245": {
+    "key": "corkscrew/6",
+    "fallback": "ROLL"
+  },
+  "246": {
+    "key": "corkscrew/7",
+    "fallback": "ROLL"
+  },
+  "247": {
+    "key": "corkscrew/8",
+    "fallback": "ROLL"
+  },
+  "248": {
+    "key": "corkscrew/9",
+    "fallback": "ROLL"
+  },
+  "249": {
+    "key": "corkscrew/10",
+    "fallback": "ROLL"
+  },
+  "250": {
+    "key": "corkscrew/11",
+    "fallback": "ROLL"
+  }
+}

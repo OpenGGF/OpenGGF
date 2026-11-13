@@ -9,6 +9,12 @@ act/character combinations and inherited gaps; the
 [trace frontier log](../../status/trace-frontier-log.md) records replay evidence.
 This documentation review did not rerun those gameplay checks.
 
+| Game | Status | Read before reporting a problem |
+|---|---|---|
+| [Sonic 1](#sonic-the-hedgehog-s1) | Broadly playable from start to finish | [Known gaps](#known-gaps) |
+| [Sonic 2](#sonic-the-hedgehog-2-s2) | Broadly playable from start to finish, with remaining parity gaps | [Known gaps](#known-gaps-1) |
+| [Sonic 3 & Knuckles](#sonic-3--knuckles-s3k) | Broad playable campaign implementation, with remaining route and parity gaps | [Remaining limits](#remaining-limits) and [S3K known bugs](../../status/s3k-known-bugs.md) |
+
 ---
 
 ## Sonic the Hedgehog (S1)
@@ -72,6 +78,8 @@ This documentation review did not rerun those gameplay checks.
 - Special Stage checkpoint wings remain fixed while the independent hand peer
   bobs for both successful and failed ring checks.
 - Demo playback.
+- Two-player Competition: Emerald Hill, Mystic Cave, Casino Night and the
+  special stage, with results.
 - SMPS music and sound effects.
 
 ### Known gaps
@@ -81,8 +89,11 @@ This documentation review did not rerun those gameplay checks.
   slightly from the original.
 - Oil Ocean surface collision and oil slides are implemented; complete act,
   character/team, donor and viewport coverage remains incomplete.
-- Native Sonic 2 competition mode and item-placement debug mode are unavailable.
-  Player 2 bindings control the configured sidekick/manual-input path.
+- Item-placement debug mode is unavailable.
+- Two-player Competition shows one interlace field, splits exactly at line 108,
+  never shows the original's lag-frame slowdown or torn sprites, and has no
+  live rewind. Outside Competition, Player 2 bindings control the configured
+  sidekick/manual-input path.
 
 ### Notable quirks
 

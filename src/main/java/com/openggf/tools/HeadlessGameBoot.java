@@ -160,6 +160,39 @@ public final class HeadlessGameBoot implements AutoCloseable {
     /** Capture the real title/launch flow before the first level assembly (Mutator Lab, 2026-10-07). */
     public void setBootToTitle(boolean enabled) { bootToTitle = enabled; }
 
+    /**
+     * Engine.maybeGenerateDonatedDataSelectImagesBeforeStartupMode: with S3K donating its Data
+     * Select, the host module's warm-up generates the host's slot previews before the startup
+     * mode, pumping render-thread work until it settles. Without it the donated screen falls back
+     * to S3K's placeholder previews.
+     */
+    static void warmUpDonatedDataSelect(com.openggf.game.GameModule module,
+                                        com.openggf.configuration.SonicConfigurationService config) {
+        warmUpDonatedDataSelect(module, config, com.openggf.game.CrossGameFeatureProvider.isS3kDonorActive(),
+                () -> GameServices.graphics().runPendingRenderThreadTasks());
+    }
+
+    static void warmUpDonatedDataSelect(com.openggf.game.GameModule module,
+                                        com.openggf.configuration.SonicConfigurationService config,
+                                        boolean s3kDonorActive, Runnable runRenderThreadTasks) {
+        if (module == null || !config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED)
+                || !"s3k".equalsIgnoreCase(config.getString(SonicConfiguration.CROSS_GAME_SOURCE))
+                || !s3kDonorActive) {
+            return;
+        }
+        var warmup = module.getDonatedDataSelectWarmupTask();
+        if (warmup.isEmpty()) {
+            return;
+        }
+        var task = warmup.orElseThrow();
+        task.start();
+        while (task.isRunning()) {
+            runRenderThreadTasks.run();
+            Thread.onSpinWait();
+        }
+        runRenderThreadTasks.run();
+    }
+
     private com.openggf.game.session.LevelEntryProvenance entryProvenance;
 
     /** Declares the recorded entry kind for this boot's level load, as trace replay does. */
@@ -529,6 +562,11 @@ public final class HeadlessGameBoot implements AutoCloseable {
         loop.setGameMode(GameMode.LEVEL);
         loop.setDataSelectActionHandler(action -> com.openggf.game.dataselect.NativeDataSelectLaunchFlow.launch(
                 action, services, loop, new com.openggf.game.dataselect.NativeDataSelectLaunchFlow.Host() {
+                    @Override public java.util.List<String> additionalMainCharacters() {
+                        // Only this boot's explicitly decorated registry, not arbitrary saved keys.
+                        return module.getPlayableCharacterRegistry().definitions().keySet().stream()
+                                .map(com.openggf.game.CharacterKey::persisted).toList();
+                    }
                     @Override public ModuleResolutionService.PreparedLaunch prepareLaunch() {
                         return services.moduleResolutionService().prepareLaunch(ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
                     }
@@ -593,6 +631,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
                         module, GameServices.sprites(), configService);
 
         if (bootToTitle) {
+            warmUpDonatedDataSelect(module, configService);
             GameServices.camera().setFocusedSprite(team.mainSprite());
             loop.initializeTitleScreenMode();
             return loop;

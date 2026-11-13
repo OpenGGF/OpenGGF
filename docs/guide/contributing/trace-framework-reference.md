@@ -1,4 +1,4 @@
-# Trace Framework Reference
+# Trace framework reference
 
 A deep, end-to-end reference for the OpenGGF trace-replay framework. The live
 recording and publication path is the native BizHawk headless harness and the
@@ -12,10 +12,12 @@ is the long-form companion that documents every layer.
 
 ---
 
-## Table of Contents
+## Table of contents
 
-1. [What the Trace Framework Is For](#1-what-the-trace-framework-is-for)
-2. [High-Level Architecture](#2-high-level-architecture)
+1. [What the trace framework is for](#1-what-the-trace-framework-is-for)
+   - 1.1 [Questions and answers](#11-questions-and-answers)
+   - 1.2 [Input, scheduling and comparison data](#12-input-scheduling-and-comparison-data)
+2. [High-level architecture](#2-high-level-architecture)
 3. [Part I — Recording: BizHawk Lua](#3-part-i--recording-bizhawk-lua)
    - 3.1 [Script inventory](#31-script-inventory)
    - 3.2 [`s1_trace_recorder.lua`](#32-s1_trace_recorderlua)
@@ -30,12 +32,12 @@ is the long-form companion that documents every layer.
    - 4.3 [`s1_trace_recorder.py`](#43-s1_trace_recorderpy)
    - 4.4 [`s1_credits_trace_recorder.py`](#44-s1_credits_trace_recorderpy)
    - 4.5 [Platform setup (WSL / macOS / Linux)](#45-platform-setup-wsl--macos--linux)
-5. [Part III — Trace File Formats](#5-part-iii--trace-file-formats)
+5. [Part III — Trace file formats](#5-part-iii--trace-file-formats)
    - 5.1 [`metadata.json`](#51-metadatajson)
    - 5.2 [`physics.csv` — v5](#52-physicscsv--v5)
    - 5.3 [`aux_state.jsonl` — event catalogue](#53-aux_statejsonl--event-catalogue)
    - 5.4 [`.bk2` BizHawk movie](#54-bk2-bizhawk-movie)
-6. [Part IV — Java Replay Harness](#6-part-iv--java-replay-harness)
+6. [Part IV — Java replay harness](#6-part-iv--java-replay-harness)
    - 6.1 [`AbstractTraceReplayTest`](#61-abstracttracereplaytest)
    - 6.2 [`AbstractCreditsDemoTraceReplayTest`](#62-abstractcreditsdemotracereplaytest)
    - 6.3 [Concrete test classes](#63-concrete-test-classes)
@@ -45,10 +47,10 @@ is the long-form companion that documents every layer.
    - 6.7 [Execution phase model (lag-frame detection)](#67-execution-phase-model-lag-frame-detection)
    - 6.8 [S3K checkpoints and historical elastic windows](#68-s3k-checkpoints-and-historical-elastic-windows)
    - 6.9 [`EngineDiagnostics` and context windows](#69-enginediagnostics-and-context-windows)
-7. [Part V — Runtime Collision Tracing](#7-part-v--runtime-collision-tracing)
-8. [Part VI — Test Resource Layout](#8-part-vi--test-resource-layout)
-9. [Part VII — CI Pipeline](#9-part-vii--ci-pipeline)
-10. [Part VIII — Agent-Driven Iterative Improvement Loop](#10-part-viii--agent-driven-iterative-improvement-loop)
+7. [Part V — Runtime collision tracing](#7-part-v--runtime-collision-tracing)
+8. [Part VI — Test resource layout](#8-part-vi--test-resource-layout)
+9. [Part VII — CI pipeline](#9-part-vii--ci-pipeline)
+10. [Part VIII — Agent-driven iterative improvement loop](#10-part-viii--agent-driven-iterative-improvement-loop)
     - 10.1 [Why the loop exists](#101-why-the-loop-exists)
     - 10.2 [Inputs available to the agent](#102-inputs-available-to-the-agent)
     - 10.3 [The skills that drive iteration](#103-the-skills-that-drive-iteration)
@@ -65,77 +67,122 @@ is the long-form companion that documents every layer.
 
 ---
 
-## 1. What the Trace Framework Is For
+## 1. What the trace framework is for
 
-OpenGGF reimplements the physics, collision, object timing, and scroll behaviour of Sonic 1, 2
-and 3&K at pixel-level parity. Trace replay measures that parity on a recorded route by feeding the
-engine the same inputs as the original ROM and comparing their state frame by frame.
-Its evidence is bounded by the fixture, compared fields and completed run.
+OpenGGF reimplements the physics, collision, object timing and scroll behaviour
+of Sonic 1, 2 and 3&K, aiming to match the shipped ROMs exactly. Trace replay
+measures that match on a recorded route. It feeds the engine the same buttons the
+original game received and compares their state frame by frame. Its evidence
+covers only the fixture, the compared fields and the frames that completed.
 
-The trace framework is the plumbing that does that:
+The trace framework connects four steps:
 
-- **Record** — run the real ROM through the native BizHawk headless harness
-  with a deterministic input stream, and snapshot player/camera/object state every frame.
-- **Replay** — drive the engine with the same input stream and step it frame by frame,
-  honouring the same ROM-internal pacing (gameplay frames vs VBlank-only lag frames).
-- **Compare** — match the engine's per-frame state against the recorded ROM state, with
-  configurable tolerances, and emit a structured divergence report.
-- **Iterate** — feed the divergence report back to humans or to agents (through a bounded debugging task) to diagnose and fix the first non-cascading error,
-  and re-run.
+- **Record.** Run the real ROM through the native BizHawk headless harness in
+  TraceChaser with a fixed input movie, and save player, camera and object state
+  on every frame.
+- **Replay.** Drive the engine with the same movie and step it frame by frame,
+  following the ROM's own pacing of full game frames and VBlank-only lag frames.
+- **Compare.** Check the engine's state on each frame against the recorded ROM
+  state, with configurable tolerances, and write a structured divergence report.
+- **Iterate.** Diagnose the first error that does not follow from an earlier
+  one, fix it, and run again. People and bounded agent tasks both use this loop.
 
-Trace replay tests are described by [`trace-replay.md`](trace-replay.md) as "the highest-signal
-tests in the repo for physics, object timing, spawn timing, and collision parity work."
+See the [trace replay guide](trace-replay.md) for replay commands and
+[making your own traces](making-traces.md) for the recording walkthrough.
+
+### 1.1 Questions and answers
+
+The [trace replay guide](trace-replay.md#questions-and-answers) answers these in
+more detail.
+
+**What is a trace?** A frame-by-frame recording of the original game running a
+BizHawk movie. A fixture holds the movie, `metadata.json`, `physics.csv`,
+`aux_state.jsonl` and, where the route needs them, dedicated timing streams.
+
+**What is TraceChaser?** The separate repository, pinned as the optional
+`tools/tracechaser` submodule, that holds the native recorder and the tools that
+validate and publish traces. Builds and ordinary tests do not need it.
+
+**Why does replay need data beyond buttons?** The Mega Drive sometimes takes
+more than one frame for work such as decompression, and on those lag frames the
+game's main loop does not run. Lag depends on CPU cycles, DMA and other hardware
+costs. OpenGGF does not simulate the CPU, VDP, beam or bus (see the
+[reimplementation boundary](../../architecture/engine-map.md#reimplementation-boundary)),
+so a trace tells the engine which frames lagged and when hardware-paced work
+finished. Without that, the same buttons fall on different game frames.
+
+**Does that data undermine accuracy?** It narrows what a pass proves. Timing data
+says when matching, already-prepared work becomes ready. It never supplies a
+position, speed, ring count, object slot, decoder byte or random number. A pass
+shows the engine's game logic matches the ROM given the ROM's timing on that
+route. It does not show that the engine's own live-play timing matches the
+hardware, and it says nothing about uncovered routes. OpenGGF is alpha software
+and its trace coverage is a bounded set of routes; the
+[trace frontier log](../../status/trace-frontier-log.md) records dated results.
+
+### 1.2 Input, scheduling and comparison data
+
+| Class | Sources | When it acts | Limit |
+| --- | --- | --- | --- |
+| Input | `.bk2` buttons, or the ROM's demo table for Sonic 1 credits | Every frame | Buttons only |
+| Bootstrap | `metadata.json`, run manifest, segment entry row | Once, at segment entry | Start position, RNG seed, counter bases and carried run state. Never reapplied mid-run |
+| Scheduling | Frame-type evidence in `physics.csv` and `aux_state.jsonl` (see [6.7](#67-execution-phase-model-lag-frame-detection)), Sonic 1 `terminal_admission_runs`, `hardware_timing.jsonl.gz`, `initialization_timing.jsonl.gz`, `initialization_hardware_timing.jsonl.gz` | Per row or per load phase | Chooses an existing engine loop, or releases, holds or resumes work the engine already prepared, after identity checks. Carries no gameplay value |
+| Comparison | `physics.csv` and `aux_state.jsonl` values | Every compared row | Read by the comparator and report. Never written into the engine |
+
+The guide's [input versus comparison data](trace-replay.md#input-versus-comparison-data)
+table gives the full limits of each source. The
+[timing contract](../../architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md)
+is the authority for which timing kinds and fixtures are implemented.
+
+Bootstrap and continuous correction differ in when and how often they write. The
+bootstrap writes a fixed set of start values once, before the first compared row,
+like loading a save state. Continuous correction would copy recorded values into
+the engine on later rows, which hides any engine error, and committed tests never
+do it.
+
+A completion edge in a timing stream releases work like this:
+
+```mermaid
+sequenceDiagram
+    participant P as Production code
+    participant T as Timing service
+    participant S as Timing stream
+    participant C as ROM-modelled consumer
+    P->>T: Submit job with kind, ordinal and fingerprint
+    P->>P: Prepare the job from ROM data
+    S->>T: Completion edge with kind, ordinal, fingerprint and boundary
+    alt Identity matches a prepared job
+        T->>C: Job becomes ready
+        C->>C: Perform every downstream change
+    else Unknown, mismatched or unprepared job
+        T-->>P: Replay fails
+    end
+```
+
+The timing stream decides only the moment of readiness. Production code chooses,
+prepares and consumes the work.
 
 ---
 
-## 2. High-Level Architecture
+## 2. High-level architecture
 
+```mermaid
+flowchart TD
+    rom["ROM: Sonic 1, 2 or 3&K<br/>native BizHawk headless harness"]
+    rec["Native recorder<br/>tools/tracechaser/bizhawk-headless/src/Recording/"]
+    fixture["Trace fixture<br/>metadata.json, physics.csv, aux_state.jsonl,<br/>timing streams, .bk2 movie"]
+    test["AbstractTraceReplayTest, JUnit 5<br/>HeadlessTestFixture, TraceBinder,<br/>TraceExecutionModel, ROM-backed timing admission"]
+    reports["target/trace-reports/profile/<br/>logical-key-lane-owner-hash.json<br/>and _context.txt"]
+    loop["Iteration loop<br/>trace-replay-bug-fixing skill,<br/>bizhawk-headless-trace skill,<br/>plan, research and design docs"]
+    rom -->|"per-frame RAM reads"| rec
+    rec -->|"writes v5 payloads"| fixture
+    fixture -->|"consumed by"| test
+    test -->|"emits"| reports
+    reports -->|"read by"| loop
 ```
-                ┌──────────────────────────────────────────┐
-                │       ROM (Sonic 1 / 2 / 3&K)            │
-                │   native BizHawk headless harness        │
-                └──────────────────────────────────────────┘
-                                   │
-                                   │  per-frame RAM reads
-                                   ▼
-                ┌──────────────────────────────────────────┐
-                │  Native recorder                         │
-                │   tools/tracechaser/bizhawk-headless/     │
-                │   src/Recording/                         │
-                └──────────────────────────────────────────┘
-                                   │ writes v5 payloads
-                                   ▼
-                ┌──────────────────────────────────────────┐
-                │  Trace fixture                           │
-                │   metadata.json  physics.csv  aux_state  │
-                │   .bk2           (BizHawk movie)         │
-                └──────────────────────────────────────────┘
-                                   │ consumed by
-                                   ▼
-                ┌──────────────────────────────────────────┐
-                │  AbstractTraceReplayTest (JUnit 5)       │
-                │   - HeadlessTestFixture                  │
-                │   - TraceBinder                          │
-                │   - TraceExecutionModel                  │
-                │   - ROM-backed timing admission          │
-                └──────────────────────────────────────────┘
-                                   │ emits
-                                   ▼
-                ┌──────────────────────────────────────────┐
-                │  target/trace-reports/<profile>/         │
-                │   <logical-key>-<lane>-<owner-hash>.json │
-                │   ...-<owner-hash>_context.txt           │
-                └──────────────────────────────────────────┘
-                                   │ read by
-                                   ▼
-                ┌──────────────────────────────────────────┐
-                │  Agent iteration loop                    │
-                │   - trace-replay-bug-fixing skill         │
-                │   - subagent-driven-development skill    │
-                │   - trace-replay / bizhawk-headless      │
-                │   - plan/research/spec docs              │
-                └──────────────────────────────────────────┘
-```
+
+The report path in the chart drops angle brackets; the real pattern is
+`target/trace-reports/<profile>/<logical-key>-<lane>-<owner-hash>.json`.
 
 The recorder lives in the optional pinned `tools/tracechaser` submodule; initialize
 it explicitly before capture. Java replay lives in OpenGGF. The ROM is not tracked; it is gitignored and users must supply
@@ -627,7 +674,7 @@ ROM SHA-1 must be `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b` (Sonic 1 REV01 Worl
 
 ---
 
-## 5. Part III — Trace File Formats
+## 5. Part III — Trace file formats
 
 Every production recorder produces the same v5 envelope and payload set (plus
 the BK2 movie for BK2-owned recordings).
@@ -740,7 +787,7 @@ invent a P2 lane.
 
 ---
 
-## 6. Part IV — Java Replay Harness
+## 6. Part IV — Java replay harness
 
 JUnit replay harnesses live under `src/test/java/com/openggf/tests/trace/`. Shared
 models, parsers, comparators and bootstrap logic live in `src/main/java/com/openggf/trace/`;
@@ -937,6 +984,16 @@ when a native loop services animation/input without the full gameplay pass. It
 does not authorize copying recorded gameplay values into the engine. Current
 readers require v5; there is no pre-v3 schema fallback.
 
+The classification is the one place replay reads physics or aux rows on the
+engine side. It mainly compares the gameplay, VBlank and lag counters of
+consecutive rows. `TraceReplayBootstrap.phaseForReplay` also reads the recorded
+game mode around level entry and some recorder execution events, such as the
+Tails CPU normal-step hook and playable-slot history. For S3K rows without an
+authoritative VBlank counter, `TraceExecutionModel` falls back to checking whether
+the recorded player state changed. Every branch returns a `TraceExecutionPhase`,
+so the result is a choice of existing engine loop. No branch copies a recorded
+value into engine state.
+
 ### 6.8 S3K checkpoints and historical elastic windows
 
 `S3kReplayCheckpointDetector` and `S3kRequiredCheckpointGuard` provide semantic
@@ -969,7 +1026,7 @@ and recent aux events around the error.
 
 ---
 
-## 7. Part V — Runtime Collision Tracing
+## 7. Part V — Runtime collision tracing
 
 Independent of file-based trace replay, the engine has a *runtime* collision-tracing hook
 that records per-frame collision events in memory. This is used by collision-heavy tests
@@ -998,7 +1055,7 @@ regressions, not a recording of full gameplay.
 
 ---
 
-## 8. Part VI — Test Resource Layout
+## 8. Part VI — Test resource layout
 
 Canonical fixtures live under `src/test/resources/traces/<game>/`. They include
 single-level routes, credits demos, complete-run segments and manifests, plus
@@ -1015,7 +1072,7 @@ belong in the [trace frontier log](../../status/trace-frontier-log.md).
 
 ---
 
-## 9. Part VII — CI Pipeline
+## 9. Part VII — CI pipeline
 
 [Testing](testing.md#ci-in-github) describes the current event matrix owned by
 `.github/workflows/ci.yml`: develop/next push smoke after a quiet period, non-draft
@@ -1031,7 +1088,7 @@ pinned TraceChaser harness, verified ROMs and BizHawk prerequisites.
 
 ---
 
-## 10. Part VIII — Agent-Driven Iterative Improvement Loop
+## 10. Part VIII — Agent-driven iterative improvement loop
 
 This is the crucial feedback loop that turns the trace framework into an *improvement
 engine*. Agents run it over long sessions — the user describes this as "work long hours to

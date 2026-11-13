@@ -1,0 +1,9 @@
+[
+  {
+    "id": "s3k-hud",
+    "prompt": "Use case: style-transfer. Asset: one animation frame, transparent background, no text, no ground or shadow. Image 1 is the NATIVE POSE TARGET. Image 2 is the MICA CHARACTER IDENTITY reference (use jade version only). Redraw image 1 as the ORIGINAL pangolin MICA: jade overlapping rounded scales, sand-cream face and belly, coral-red boots with tan soles, white gloves, big friendly brown eye, scaled tail. New drawing, not a recolour. NO blue, spikes or Sonic facial features. Keep the exact body pose, limb placement, framing, silhouette SIZE and facing of image 1; fit tail within the same bounds. Crisp 16-bit pixel sprite, clean dark outline, flat clustered shading, simple readable eyes, no antialiasing. One sprite only, filling the same proportional bounds. Frame: s3k-hud Character face only; NO sign border, pole, yellow panel, letters, numbers, square backing or white background. Match native face direction, expression, and hand gesture. Fit native rectangular icon bounds.",
+    "reason": "Drew a full body instead of a HUD head; replaced with a stricter head-only transformation.",
+    "review_file": "/tmp/mica-native-pose-20261108/rejected/s3k-hud.png",
+    "raw_sha256": "b7db471b4f1f9886859769c5bd19b4cd2ac455bf3c33c89e2b8db4eb1b3f4636"
+  }
+]

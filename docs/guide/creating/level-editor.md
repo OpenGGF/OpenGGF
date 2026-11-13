@@ -6,8 +6,8 @@ and background layouts, block/chunk composition, collision assignments,
 object/ring placement, launch properties, project saves, and playtesting.
 
 The project and export workflows below describe the **0.9.prerelease development line**, including
-the unpublished candidate Mod API. The editor is experimental; this guide does not
-describe the 0.6 editor's feature set.
+the unpublished candidate Mod API. The editor is experimental; published release
+builds can have fewer features than this guide describes.
 
 Start at **Advanced → Editor projects** on the master title (**More** replaces
 **Advanced** on narrow layouts). The same project
@@ -18,6 +18,22 @@ cutscenes/boss scripts, and campaign packaging are separate workflows.
 For authored sprite films and mod cutscenes, press **F4** to open
 [OpenGGF Stageplay](stageplay.md). It shares the loaded set with a separate
 directing document and preserves the level workspace when you switch back.
+
+A first level goes through five steps. Each links to its section below.
+
+```mermaid
+flowchart LR
+    A[New blank level] --> B[Paint blocks<br/>and place objects]
+    B --> C[Save project as<br/>.ogfproject]
+    C --> D[Playtest with F5,<br/>return with Shift+Tab]
+    D --> E[Export level<br/>Ctrl+Shift+E]
+```
+
+1. [Start a project](#start-a-project) and set its level properties.
+2. [Edit the level](#edit-the-level): brushes, objects and rings.
+3. [Save](#save-and-reopen-safely) the `.ogfproject` (`Ctrl+S`).
+4. [Playtest and return](#playtest-and-return). Playtests never change or save the project.
+5. [Export a playable level](#export-a-playable-level) to a new directory.
 
 ## Start a project
 
@@ -33,6 +49,8 @@ directing document and preserves the level workspace when you switch back.
 
 *New blank level after choosing Sonic 2 and an Emerald Hill asset library.
 Dimensions count map cells; an 8×4 Sonic 2 canvas is 1024×512 pixels.*
+
+### Edit a stock layout
 
 To edit a stock layout, enable `debug.flags.editor`, load the zone/act in
 gameplay, and press `Shift+Tab`. Native editing preserves ROM collision and
@@ -57,6 +75,8 @@ not become an authored campaign. Layouts with native collision remaps, including
 Sonic 1 loop flags, fail with an explanation; use **New blank level** with that asset
 library instead. An incompatible stock object can also prevent playtesting or
 export until it is removed or replaced.
+
+### Open and import
 
 **Open project** reopens a complete `.ogfproject`. **Import exported level** reads a canonical level
 export directory containing `level.json` and its binary assets; choose its host

@@ -103,7 +103,7 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
 
     /** Location of the committed trace (when one exists). */
     static final Path TRACE_DIRECTORY =
-            Path.of("src", "test", "resources", "traces", "s3k", "special_stage");
+            Path.of("src", "test", "resources", "traces", "s3k", "runs", "s3-knux-multibonus-ss", "ss");
 
     /**
      * ROM clear-routine terminal state (sub_9B62, sonic3k.asm:12566-12700):

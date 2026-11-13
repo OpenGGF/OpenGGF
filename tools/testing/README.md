@@ -247,6 +247,16 @@ replay, native graphics, diagnostics, performance profiles and TraceChaser integ
 their existing commands and prerequisites. Gameplay category coverage does not replace affected
 replay fixtures or the domain skill's required checks. A category run is never a full trace sweep.
 
+When reproducing a recorded category batch with a direct `surefire:test` goal,
+keep its profiles, fork shape and inputs. Prepare the command's actual temporary
+directories before launch: `test-concurrent` needs both `fork-1` and `fork-2`
+under its configured `openggf.test.tmpdir`. The plugin goal skips lifecycle
+initialization; an earlier `test-compile` using the default directory does not
+prepare a different custom directory. Missing directories can appear as Mockito
+agent-attachment failures or JUnit `TempDir` errors. Check the causal I/O error,
+repair that prerequisite and retain the failed control before a justified rerun.
+Ordinary focused checks should continue to use the queue wrapper's `test` lifecycle.
+
 Use `--workers 2` to opt into the `test-concurrent` Maven profile for the ordinary lane.
 The default is one reused JVM; the opt-in uses two reused JVMs with serial JUnit
 execution. Normal batches retain 3 GiB heaps. Reviewed low-heap classes are grouped
@@ -1373,3 +1383,29 @@ The remaining trace validation scripts in this directory validate committed
 metadata, run manifests, timing sidecars, and fixture compression. They are
 independent of the Maven launcher and continue to operate on caller-supplied
 paths.
+
+## Rendered frame region comparisons
+
+[`compare_frame_regions.py`](compare_frame_regions.py) compares stock, a trusted
+clean baseline and a candidate capture. It rejects any candidate change outside
+independently declared allowed rectangles, including new creator-coloured pixels
+that a stock-palette scan misses. It also reports new non-stock pixels separately.
+All selected frames and region entries are required; missing inputs fail rather
+than reducing coverage. JSON output records per-frame counts/bounds and a digest
+of all compared pixels. Pillow is required.
+
+```bash
+python3 tools/testing/compare_frame_regions.py \
+  --stock /capture/stock/frames --baseline /capture/before/frames \
+  --candidate /capture/current/frames --regions /capture/allowed-regions.json \
+  --first 3900 --last 4437 --output /capture/region-result.json
+python3 -m unittest discover -s tools/testing -p test_compare_frame_regions.py
+```
+
+The region file maps frame numbers to lists of `[left, top, right, bottom]`
+rectangles (exclusive right/bottom), such as `{"3900": [[150, 100, 190, 140]]}`.
+Derive regions from authored geometry and a read-only production-state ledger,
+never from a corrupted candidate's pixel bounds. Keep a known corrupt capture as
+a negative control and inspect transition frames visually. This is comparison
+only; region data must never enter gameplay. Record capture source/artifact hashes
+and distinguish rejected intermediate captures from final review evidence.

@@ -1199,7 +1199,7 @@ abstract class AbstractRunChainTest {
                 List.copyOf(segments.subList(startSegmentIndex, segments.size())),
                 List.copyOf(transitions),
                 rebasedGaps,
-                run.expectedMovieEndMode());
+                run.expectedMovieEndMode(), run.terminalAdmissionRuns());
     }
 
     private DynamicArtGapJournalEvidence assertChainReplay(
@@ -3312,7 +3312,10 @@ abstract class AbstractRunChainTest {
             HeadlessRunCoordinatorAdapter coordinator) {
         int movieRow = playback.getCursorFrame();
         driver.execute(
-                new TraceRunFrameDriver.Step(disposition, movieRow, false),
+                new TraceRunFrameDriver.Step(disposition, movieRow, false, false, false, true,
+                        disposition == TraceRunFrameDriver.Disposition.TERMINAL_TAIL
+                                && coordinator.run.terminalRowIsLagged(coordinator.terminalPlan().tailStart(),
+                                        movie.getFrameCount(), movieRow)),
                 new TraceRunFrameDriver.Hooks<DynamicArtDiagnosticsSnapshot>() {
                     @Override
                     public void preparePhysicalRow(

@@ -9,7 +9,7 @@ import static org.mockito.Mockito.*;
 class TestNativeMenuRenderDispatch {
     @ParameterizedTest
     @EnumSource(value = GameMode.class, names = {
-            "OPTIONS", "COMPETITION_MENU", "COMPETITION", "COMPETITION_RESULTS"})
+            "OPTIONS", "COMPETITION_MENU", "COMPETITION", "COMPETITION_RESULTS", "BLUE_SPHERES"})
     void nativeScreensOwnTheirClearAndDrawEvenWhenOrdinaryDebugViewIsEnabled(GameMode mode) {
         var dispatcher = new EngineRenderDispatcher();
         var clear = mock(EngineRenderDispatcher.ClearActions.class);

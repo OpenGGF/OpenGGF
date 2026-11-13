@@ -1348,8 +1348,16 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
     // ================================================================
 
     private void loadArt() {
+        com.openggf.data.Rom rom;
         try {
-            var rom = GameServices.rom().getRom();
+            rom = GameServices.rom().getRom();
+        } catch (java.io.IOException e) {
+            // ROM-less unit fixtures keep the results logic and draw nothing; an
+            // unreadable configured ROM is still a failure.
+            if (com.openggf.data.RomManager.isConfiguredRomMissing(e)) return;
+            throw new java.io.UncheckedIOException("Cannot open the ROM for S3K special-stage results", e);
+        }
+        try {
             RomByteReader reader = RomByteReader.fromRom(rom);
             Sonic3kObjectArt objectArt = new Sonic3kObjectArt(null, reader);
 
@@ -1363,6 +1371,11 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
                 // Art is loaded at $4F1 base (VRAM_SS_RESULTS_BASE), adjust mapping tile indices
                 List<SpriteMappingFrame> adjustedMappings = Sonic3kObjectArt.adjustTileIndices(
                         rawMappings, -Sonic3kConstants.VRAM_SS_RESULTS_BASE);
+                var custom = com.openggf.game.sonic3k.Sonic3kCharacterPresentation.results(
+                        rom, combinedPatterns, adjustedMappings,
+                        com.openggf.game.sonic3k.Sonic3kCharacterPresentation.active(), CHAR_NAME_TILE_OFFSET);
+                combinedPatterns = custom.patterns();
+                adjustedMappings = custom.mappings();
                 spriteSheet = new ObjectSpriteSheet(combinedPatterns, adjustedMappings, 0, 1);
                 renderer = new PatternSpriteRenderer(spriteSheet);
                 artLoaded = true;
@@ -1373,7 +1386,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
             // Load Pal_Results (ROM line 63110-63117)
             loadPalette(rom);
         } catch (Exception e) {
-            LOG.warning("Failed to load SS results screen art: " + e.getMessage());
+            throw new IllegalStateException("Cannot prepare character presentation", e);
         }
     }
 

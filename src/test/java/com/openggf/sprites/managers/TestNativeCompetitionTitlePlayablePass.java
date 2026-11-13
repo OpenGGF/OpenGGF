@@ -113,6 +113,19 @@ class TestNativeCompetitionTitlePlayablePass {
         verify(f.objects, never()).advanceVblaCounter();
     }
 
+    @Test void titlePassExpiresThePreviousFrameDisplayAdmission() {
+        var f = fixture();
+        f.p1.setInvulnerableFrames(0x78);
+        assertFalse(f.p1.shouldRefreshRenderFlagThisFrame());
+        f.sprites.refreshPlayableRenderFlags(f.roster.camera(0));
+        assertFalse(SpriteManagerInternalAccess.nativeDisplayAdmission(f.sprites, f.p1));
+        f.p1.beforeMovement = () -> f.p1.setInvulnerableFrames(0);
+        SpriteManagerInternalAccess.runNativeCompetitionTitlePlayablePass(f.sprites);
+        assertTrue(f.p1.shouldRefreshRenderFlagThisFrame());
+        assertTrue(SpriteManagerInternalAccess.nativeDisplayAdmission(f.sprites, f.p1),
+                "uncounted title passes must not retain the preceding act's flash rejection");
+    }
+
     @Test void failedPlayerSlotClearsScopeAndLeavesOrdinaryDustAndCounterBehaviorIntact() {
         var f = fixture();
         var failure = new IllegalStateException("movement failed");

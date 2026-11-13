@@ -18,7 +18,8 @@ public enum PlcLifecyclePhase {
     ENDING,
     POST_CREDITS,
     NORMAL_PAUSE,
-    SPECIAL_STAGE_PAUSE;
+    SPECIAL_STAGE_PAUSE,
+    LEVEL_ENTRY_WAIT;
 
     public static PlcLifecyclePhase orElse(
             PlcLifecyclePhase phase, PlcLifecyclePhase fallback) {

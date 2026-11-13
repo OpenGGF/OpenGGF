@@ -10,7 +10,7 @@ memory and shows an unsaved notice, with retries during the run and when it ends
 the menu retries too. Rejected best-time files remain untouched; storage retry does not require
 a faster attempt.
 
-The menu echoes the engine's menus through the public canvas and fonts only (`PracticePage`):
+The menu uses the public `SceneMenuChrome` components and the shared `MenuTheme`:
 a navy page under a gold-ruled header, the choice as one focused card with page dots, a result
 line whose icon and colour say what happened (a completed act and whether it set the best, a
 failed load, an unsaved best), and key caps that name the keyboard or the controller, whichever
@@ -23,7 +23,7 @@ binding decides and the caps name the bound keys. Times read m:ss.cc, as in Time
 src/main/resources/META-INF/openggf-mod.yaml   baseGame: any, entry point
 src/main/java/practice/ActPracticeMod.java     registers the title entry
 src/main/java/practice/PracticeScene.java      the menu: picks a game, launches runs, shows results
-src/main/java/practice/PracticePage.java       the page look: header, focus card, notices, key caps
+src/main/java/practice/PracticeNames.java      display names for the games
 src/main/java/practice/PracticeHost.java       the run host: timing, ghost, overlay, retry key
 ```
 

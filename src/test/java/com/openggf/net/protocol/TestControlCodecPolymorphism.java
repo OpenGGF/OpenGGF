@@ -93,7 +93,13 @@ class TestControlCodecPolymorphism {
                 parameterTypes[index] = components[index].getType();
                 String name = components[index].getName();
                 arguments[index] = parameterTypes[index] == String.class ? switch (name) {
-                    case "chatMode", "mode" -> ChatMode.FULL_CHAT.name();
+                    case "chatMode" -> ChatMode.FULL_CHAT.name();
+                    case "mode" -> type == ControlMessage.RoomSummary.class || type == ControlMessage.RoomDescriptor.class ? "TIME_ATTACK" : ChatMode.FULL_CHAT.name();
+                    case "trackKind" -> "ACT";
+                    case "board" -> "TOTAL";
+                    case "verifyState" -> "NONE";
+                    case "outcome" -> type == ControlMessage.TeleportOutcome.class ? "APPLIED" : "FINISHED";
+                    case "reason" -> type == ControlMessage.AttemptReset.class ? "RETRY" : type == ControlMessage.TeleportNoPartner.class ? "NO_PARTNER" : "fixture";
                     case "phraseId" -> QuickChatPhrase.BRUTAL.name();
                     case "rule" -> "DEFAULT_BY_SIZE";
                     case "characterPolicy" -> "OPEN";
@@ -110,10 +116,11 @@ class TestControlCodecPolymorphism {
                 } : parameterTypes[index] == int.class ? switch (name) {
                     case "protocolVersion" -> Protocol.VERSION;
                     case "maxPlayers" -> 8;
+                    case "slotB", "progress" -> 1;
                     case "timeFrames", "bestTimeFrames", "rank", "totalPages" -> 1;
                     default -> 0;
                 } : parameterTypes[index] == long.class ? switch (name) {
-                    case "roundId", "planRevision", "routeGeneration", "registrationGeneration",
+                    case "swapId", "roundId", "planRevision", "routeGeneration", "registrationGeneration",
                          "retirementId" -> 1L;
                     case "countdownEndsAtHubMillis" -> 100L;
                     case "deadlineHubMillis" -> 200L;

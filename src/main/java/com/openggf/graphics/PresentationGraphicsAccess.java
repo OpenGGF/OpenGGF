@@ -47,6 +47,31 @@ public final class PresentationGraphicsAccess {
         engineCaller(); return graphics.presentationMaskIsPerInstance();
     }
 
+    /**
+     * One caller check for a whole draw batch (a picture's frozen restores, viewport, mask and quad draws).
+     * The check only ever admits a fixed engine call site, so the handle carries that verdict without a
+     * stack walk per pattern. Hold it in engine-private state; never hand it to creator code.
+     */
+    public static Batch batch(GraphicsManager graphics) {
+        engineCaller(); return new Batch(java.util.Objects.requireNonNull(graphics, "graphics"));
+    }
+    public static final class Batch {
+        private final GraphicsManager graphics;
+        private Batch(GraphicsManager graphics) { this.graphics = graphics; }
+        public boolean boundTo(GraphicsManager graphics) { return this.graphics == graphics; }
+        public void restoreFrozenPattern(SpritePresentation.PatternVersion version, int id) {
+            graphics.restoreFrozenPattern(version, id);
+        }
+        public boolean maskIsPerInstance() { return graphics.presentationMaskIsPerInstance(); }
+        public Viewport viewport() { return currentViewport(graphics); }
+        /** {@code tint} is 0xAARRGGBB: alpha blends the shaded picture toward the RGB colour. */
+        public void render(int id, int palette, boolean hFlip, boolean vFlip, boolean priority, int rowStart,
+                           int rowEnd, float[] quad, float hue, float opacity, int tint) {
+            graphics.renderPresentationPattern(id, palette, hFlip, vFlip, priority, rowStart, rowEnd, quad, hue,
+                    opacity, tint);
+        }
+    }
+
     /** Bounds of the supported current orthographic projection, in logical top-left pixels. */
     public record Viewport(float left, float top, float right, float bottom) {
         public boolean outside(float left, float top, float right, float bottom) {
@@ -65,7 +90,9 @@ public final class PresentationGraphicsAccess {
         }
     }
     public static Viewport viewport(GraphicsManager graphics) {
-        engineCaller();
+        engineCaller(); return currentViewport(graphics);
+    }
+    private static Viewport currentViewport(GraphicsManager graphics) {
         if (SpritePresentation.isPreparing(graphics)) return null;
         float[] m = graphics.getProjectionMatrixBuffer();
         if (m == null || m.length != 16 || m[0] == 0 || m[5] == 0 || m[15] != 1) return null;
@@ -84,7 +111,15 @@ public final class PresentationGraphicsAccess {
 
     public static void render(GraphicsManager graphics, int id, int palette, boolean hFlip, boolean vFlip,
                               boolean priority, int rowStart, int rowEnd, float[] quad, float hue, float opacity) {
+        render(graphics, id, palette, hFlip, vFlip, priority, rowStart, rowEnd, quad, hue, opacity, 0);
+    }
+
+    /** {@code tint} is 0xAARRGGBB: alpha blends the shaded picture toward the RGB colour. */
+    public static void render(GraphicsManager graphics, int id, int palette, boolean hFlip, boolean vFlip,
+                              boolean priority, int rowStart, int rowEnd, float[] quad, float hue, float opacity,
+                              int tint) {
         engineCaller();
-        graphics.renderPresentationPattern(id, palette, hFlip, vFlip, priority, rowStart, rowEnd, quad, hue, opacity);
+        graphics.renderPresentationPattern(id, palette, hFlip, vFlip, priority, rowStart, rowEnd, quad, hue, opacity,
+                tint);
     }
 }

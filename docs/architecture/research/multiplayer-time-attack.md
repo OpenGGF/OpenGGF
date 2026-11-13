@@ -1,11 +1,13 @@
 # Multiplayer Time Attack: architecture and lifecycle
 
-This reference describes the implemented system, from room discovery through
-gameplay, verification, results and teardown. It follows the `0.7.prerelease`
-development line. Source review: 2026-10-27, commit
-`d2f3ce1e3c3165034b1cbafb4c1792f5472fdc5f`, racing protocol **8**.
-Dated designs and validation records describe their own revisions; the linked
-source owners below determine current behavior.
+This reference describes room discovery, gameplay, verification, results and
+teardown. Network review: 2026-11-07, racing protocol **9**. Competition adds a
+host-scheduled mass start, one attempt, DNS/DNF rows, lap validation and a
+first-finish cutoff. Unverified placement boards are explicitly UNVERIFIED.
+Track identity includes arena keys; server-mediated swaps use validated poses
+and a host decision log. See the [Competition design](../designs/2026-11-07-s3k-competition-time-attack-tracks-design.md)
+for the lane boundaries and pending engine/verifier integration. Source owners
+below determine behavior; historical sections retain their original context.
 
 Start with the [component view](#component-view) and
 [lifecycle](#three-nested-lifetimes). The integration views then separate

@@ -17,3 +17,19 @@ Arrival alone cannot satisfy the tunnel row: disabling the forced-roll action
 must fail even if Sonic still reaches the far-side coordinate. The test never
 presses Down and asserts the initial clear state, so pre-existing rolling cannot
 satisfy the outcome.
+
+Obj86 local landing regression (2026-11-08):
+`TestFlipperRollOwnership.bothFlipperTypesRetainTheirRomWidthByteForNewLandings`
+reads the ROM's width byte and distinguishes horizontal collision width19 from
+standable width24; vertical collision width35 still uses the same24-pixel top.
+The production two-human planner witness independently exercises the offset
+landing. This closes that object geometry edge only; supported width/donor
+products, complete native slot/flip goals and whole-act certification remain
+outside this local check. Existing flipper graph rewind and both rewind guards
+are included in the focused validation selection.
+
+The same two-human route exercises Obj44 with human P2 after the landing.
+`TestBumperObjectInstance.touchLatchUsesNativePlayerSlotForHumanAndCpuTails`
+asserts the ROM's slot-based pending bits for both human and CPU P2; complete
+slot-machine/flip goals still require a fresh planner qualification. This adds
+no whole-act or viewport/donor coverage claim.

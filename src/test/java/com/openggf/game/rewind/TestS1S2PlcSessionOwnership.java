@@ -44,9 +44,15 @@ class TestS1S2PlcSessionOwnership {
         sonic2.createGame(fixtureRom());
         Sonic2PlcService s2Service = sonic2.getGameService(Sonic2PlcService.class);
         assertFalse(s2Service.isBusy(), "the next session must start with an empty PLC FIFO");
-        assertEquals(3, sonic2.rewindAdapters().size());
+        // 50bc64259: Touch_KillEnemy (s2.asm:85514-85534) owns one shared
+        // chain word even in 1P; this is not another PLC or competition adapter.
+        assertEquals(5, sonic2.rewindAdapters().size());
+        assertSame(sonic2.getGameService(com.openggf.game.internal.BadnikChainPolicy.class),
+                sonic2.rewindAdapters().get(3));
         assertSame(sonic2.getGameService(com.openggf.game.sonic2.slotmachine.CNZPrizeSoundState.class),
                 sonic2.rewindAdapters().get(2));
+        assertSame(sonic2.getGameService(com.openggf.game.arena.RaceSwapApplier.class),
+                sonic2.rewindAdapters().get(4), "race swap state is a session-owned rewind adapter");
         assertSame(s2Service, sonic2.rewindAdapters().get(0));
         var scheduler = sonic2.rewindAdapters().get(1);
         assertTrue(scheduler
@@ -70,7 +76,7 @@ class TestS1S2PlcSessionOwnership {
         context.registerLevelAdapters(context.getLevelManager());
         Sonic1PlcService service = module.getGameService(Sonic1PlcService.class);
         assertRegistryReplaysAndResetsMissingAdapter(context, service, Sonic1PlcService.REWIND_KEY,
-                service::prepare, service::serviceLevelVBlank, service::clearQueued);
+                service::prepare, service::serviceLevelVBlank, service::clearQueued, true);
     }
 
     @Test
@@ -85,7 +91,7 @@ class TestS1S2PlcSessionOwnership {
         context.registerLevelAdapters(context.getLevelManager());
         Sonic2PlcService service = module.getGameService(Sonic2PlcService.class);
         assertRegistryReplaysAndResetsMissingAdapter(context, service, Sonic2PlcService.REWIND_KEY,
-                service::prepare, service::serviceLevelVBlank, service::clearQueued);
+                service::prepare, service::serviceLevelVBlank, service::clearQueued, false);
     }
 
     private static Rom fixtureRom() {
@@ -116,20 +122,29 @@ class TestS1S2PlcSessionOwnership {
             String rewindKey,
             Runnable prepare,
             Runnable serviceFrame,
-            Runnable rejectedMutation) {
+            Runnable mutation, boolean clearCancelsDecoder) {
         service.restore(new NemesisPlcQueueSnapshot(
                 new NemesisPlcQueueSnapshot.Entry(0x100, 0x20, 6, 6),
                 List.of(new NemesisPlcQueueSnapshot.Entry(0x200, 0x40, 3, 3))));
         CompositeSnapshot snapshot = context.getRewindRegistry().capture();
         assertTrue(snapshot.containsKey(rewindKey));
 
-        assertThrows(IllegalStateException.class, rejectedMutation::run,
-                "active queue mutation must remain rejected before a registry restore");
+        Runnable assertMutationPolicy = () -> {
+            if (clearCancelsDecoder) {
+                mutation.run();
+                assertEquals(new NemesisPlcQueueSnapshot(null, List.of()), service.capture(),
+                        "S1 ClearPLC cancels decoder state as well as waiting descriptors");
+                context.getRewindRegistry().restore(snapshot);
+            } else {
+                assertThrows(IllegalStateException.class, mutation::run,
+                        "S2 retains its active-decoder mutation policy");
+            }
+        };
+        assertMutationPolicy.run();
         List<Boolean> original = advanceBusySequence(service, prepare, serviceFrame);
 
         context.getRewindRegistry().restore(snapshot);
-        assertThrows(IllegalStateException.class, rejectedMutation::run,
-                "active queue mutation must remain rejected after a registry restore");
+        assertMutationPolicy.run();
         assertEquals(original, advanceBusySequence(service, prepare, serviceFrame),
                 "registry restore must preserve the exact consumer release frame");
 

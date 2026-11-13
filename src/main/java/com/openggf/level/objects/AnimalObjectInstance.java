@@ -65,6 +65,33 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     private boolean romRenderOnScreen;
     private transient DestructionEffects.PointsFactory pointsFactory;
 
+    // Construction policy can be needed after capture but before the first
+    // animal dispatch. Keep its exact factory, as ExplosionObjectInstance does;
+    // the default rewind constructor intentionally has no points factory.
+    private record AnimalRewindPolicy(DestructionEffects.PointsFactory pointsFactory)
+            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        var snapshot = super.captureRewindState(context);
+        // Explicit policy capture must not disable the existing generic scalar
+        // coverage (firstDisplayFrame, spawnedPoints, deferred RNG and motion).
+        var scalars = com.openggf.game.rewind.GenericFieldCapturer
+                .captureObjectSubclassScalarsCompact(this, context);
+        snapshot = scalars.isPresent() ? snapshot.withCompactGenericState(scalars.get())
+                : snapshot.withGenericState(com.openggf.game.rewind.GenericFieldCapturer.captureObjectSubclassScalars(this));
+        return snapshot.withObjectSubclassExtra(new AnimalRewindPolicy(pointsFactory));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot,
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        if (snapshot.objectSubclassExtra() instanceof AnimalRewindPolicy policy)
+            pointsFactory = policy.pointsFactory();
+    }
+
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         // appendRenderCommands uses this exact sign test; zero keeps the raw
         // right-facing picture during the initial pop, before walking starts.

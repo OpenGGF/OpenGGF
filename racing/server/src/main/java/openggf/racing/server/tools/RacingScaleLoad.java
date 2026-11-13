@@ -227,7 +227,7 @@ final class RacingScaleLoad implements AutoCloseable {
         await(() -> finished.size() == config.players(), "accepted finish for every player");
         for (Peer peer : peers) check(peer.observedGhostFrames > 0, "peer received no remote ghosts");
         peers.getFirst().connection.sendControl(new ControlMessage.StandingsPageRequest(0));
-        await(() -> pages.containsKey(0), "empty casual standings page");
+        await(() -> pages.containsKey(0), "UNVERIFIED casual standings page");
         await(() -> peers.stream().allMatch(peer -> peer.roundEnded), "all round ends");
         reconnect();
         removeRoom();
@@ -470,16 +470,17 @@ final class RacingScaleLoad implements AutoCloseable {
                 if (measuring()) pings.add(System.nanoTime() - sent);
             }
             case ControlMessage.StandingsDelta delta ->
-                    check(delta.rows().isEmpty(), "unverified standings were published");
-            case ControlMessage.RankUpdate ignored ->
-                    throw new IllegalStateException("unverified private rank was published");
+                    check(delta.rows().stream().allMatch(row -> "UNVERIFIED".equals(row.verifyState())), "casual rows must be UNVERIFIED");
+            case ControlMessage.RankUpdate rank ->
+                    check(rank.rank() > 0 && rank.bestTimeFrames() > 0, "invalid casual private rank");
             case ControlMessage.StandingsPage page -> {
-                check(page.totalPages() == 0 && page.page() == 0 && page.rows().isEmpty(),
-                        "unverified standings page was published");
+                check(page.totalPages() > 0 && page.page() == 0 && !page.rows().isEmpty()
+                            && page.rows().stream().allMatch(row -> "UNVERIFIED".equals(row.verifyState())),
+                        "casual standings page must carry UNVERIFIED rows");
                 check(pages.putIfAbsent(page.page(), page.rows()) == null, "duplicate standings page");
             }
             case ControlMessage.RoundEnd end -> {
-                check(end.finalStandings().isEmpty(), "unverified final standings were published");
+                check(end.finalStandings().stream().allMatch(row -> "UNVERIFIED".equals(row.verifyState())), "casual final rows must be UNVERIFIED");
                 peer.roundEnded = true;
             }
             case ControlMessage.Kick kick -> throw new IllegalStateException("unexpected kick: " + kick.reason());

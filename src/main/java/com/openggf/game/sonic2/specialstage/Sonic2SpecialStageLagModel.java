@@ -7,7 +7,7 @@ import java.util.Map;
  * stage. This empirical model preserves interactive pacing only; trace replay
  * disables it and admits recorded lag solely through the timing port.
  */
-final class Sonic2SpecialStageLagModel {
+public final class Sonic2SpecialStageLagModel {
     /**
      * Observed NTSC presentations spent by the shared retail entry load.
      * {@code SpecialStage} masks interrupts for screen/RAM setup, then restores
@@ -17,7 +17,7 @@ final class Sonic2SpecialStageLagModel {
      * This duration is measured native evidence, not a ROM timer literal or
      * a cycle-accurate load-cost model; PAL cost closure remains separate.
      */
-    static final int ENTRY_LOAD_LAG_FRAMES = 104;
+    public static final int ENTRY_LOAD_LAG_FRAMES = 104;
 
     private static final Map<Bucket, BucketRatio> EMPIRICAL_BUCKETS = Map.of(
             new Bucket(0, 12), new BucketRatio(65, 185),
@@ -31,7 +31,7 @@ final class Sonic2SpecialStageLagModel {
     private Sonic2SpecialStageLagModel() {
     }
 
-    static boolean shouldSkipLiveUpdate(int frameCounter, int speedFactor, int segmentType) {
+    public static boolean shouldSkipLiveUpdate(int frameCounter, int speedFactor, int segmentType) {
         BucketRatio ratio = EMPIRICAL_BUCKETS.getOrDefault(
                 new Bucket(segmentType, speedFactor), FALLBACK_RATIO);
         long phase = Math.floorMod((long) frameCounter * ratio.numerator(), ratio.denominator());

@@ -83,6 +83,9 @@ class TestSonic2CompetitionPresentation {
             var graphics = GameServices.graphics();
             var screen = new Sonic2CompetitionScreen(new Sonic2CompetitionSession(), mock(Sonic2CompetitionHost.class), null, rom);
             screen.initialize(); screen.setClearColor();
+            var initial = BufferUtils.createFloatBuffer(4); glGetFloatv(GL_COLOR_CLEAR_VALUE, initial);
+            assertEquals(0, initial.get(1)); assertEquals(0, initial.get(2), "arrival begins black");
+            Sonic2CompetitionTestFlow.finishMenuFade(screen); screen.setClearColor();
             var clear = BufferUtils.createFloatBuffer(4);
             glGetFloatv(GL_COLOR_CLEAR_VALUE, clear);
             assertEquals(0, clear.get(0));

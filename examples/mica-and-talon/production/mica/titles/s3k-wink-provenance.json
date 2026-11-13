@@ -1,0 +1,109 @@
+{
+  "date": "2026-11-10",
+  "hand_commit": "f4529a2f1a",
+  "tool": "Built-in GPT Image, four fresh candidates (two half-closed, two closed); native8x and approved MICA eye8x references. No chained edits.",
+  "prompt": "Use case: precise-object-edit. Production S3K title wink eye sprites, original MICA jade pangolin. Four independent candidates on a 2x2 sheet, all matching exact full eye-region composition of reference1. TOP ROW two half-closed wink alternatives, BOTTOM ROW two fully-closed wink alternatives. Native 1994 pre-rendered CGI rendering and volumetric ordered-dithered 15-colour shading of native reference2 (enlarged8x). Reference1 is the approved MICA open eye region enlarged8x: preserve jade scales, cream brow/muzzle, eye corners, head light direction, coral ear, smile and pose exactly. Near eye only closes. The entire THREE EYELASH group on viewer-RIGHT must be included and redrawn AS ONE ROOTED GROUP with the eyelid: three individual single dark curved lashes sharing the outer eye corner. Half-closed: lid descends, all3 lashes fan from same outer corner at lowered lid. Closed: one naturally curved closed lid, all3 lashes sweep smoothly upward/right from that same anatomical outer eye corner. NO extra lash stubs in the former open-lid position, NO doubled or disconnected lashes, NO separate eyebrow mistaken for lashes. Do not keep the old upper three lashes floating above the closed lid. Own the entire lash group, with jade background restored where the old lashes were. Retain exactly the approved image's framing and scale within each quadrant; every quadrant is a full84x76 native region enlarged8x, not a crop. No hands, text, outlines, labels or border. Fresh generations, not chained edits. Soft baked3D highlight, not flat vector/cel or modern airbrush. Keep iris dark for half phase; no iris in fully closed phase.",
+  "selection": "Left half-closed and left closed candidates: three individually rooted lashes sweep with the continuous eyelid; no old open-lash stubs survive.",
+  "registration": "Each full84x76 crop registered to the approved plane eye at native global100,24. Reduced with ordered2x2 dither into unchanged private15-opaque-colour palette; transfer only the whole-eye/lash ownership shape. Two-pixel context border retains exact approved plane pixels.",
+  "ownership": "Native wink owns a complete32x48 eye/context patch through two mapped pieces. MICA extends to80x60 at global108,32 because her whole lash group is larger; irregular alpha owns the eye/lashes with original context outside. Old group has an opaque surround. No plane, hand, palette, native clock or API change.",
+  "references": [
+    "word_4FCA (General/Title/Map - S3 Sonic Anim.asm:17-19)",
+    "word_4FD8 (General/Title/Map - S3 Sonic Anim.asm:20-22)",
+    "Obj_TitleSonicWink (sonic3k.asm:6261-6279)",
+    "byte_4BA6 (General/Title/Anim - S3 Sonic Wink.asm:3-4)"
+  ],
+  "checks": "s3k_wink_continuity.py: original lash footprint plus surround opaque;8-connected ink from shared lid root to each of three tips; every ink crossing at alpha boundary equals original plane on both sides. Source/capture checks supplemented by visual6x review, not an anatomy classifier.",
+  "raw": "$HOME/scratch/agent-tmp/title-s3k-wink/wink-attempts.png",
+  "review": "$HOME/scratch/agent-tmp/title-s3k-wink/review.html",
+  "generation_sha256": "aa79f02c9c3814e447762ab8afa69dd536f776564133fc3e38c0d56c0d8ec92d",
+  "rebuild_byte_idempotent": true,
+  "capture_checks": {
+    "presentations": 900,
+    "state_csv_byte_identical": true,
+    "active_wink_presentations": 64,
+    "source_lash_continuity_failures": 0,
+    "exact_render_pixel_checks": 173312,
+    "render_failures": [],
+    "render_failure_count": 0,
+    "outside_owned_patch_failures": [],
+    "full_hand_pixel_checks": 660272,
+    "full_hand_failures": [],
+    "full_hand_failure_count": 0,
+    "hand_and_intro_preserved": true,
+    "old_lash_pixels_owned": 233,
+    "ownership_pixels": 2708,
+    "distinct_states": {
+      "4": 450,
+      "2": 472,
+      "3": 474
+    }
+  },
+  "png_preservation": {
+    "unchanged_capture_pngs": 836,
+    "intro_pngs_unchanged": 296
+  },
+  "SEGA": {
+    "SEGA_checks": 100763,
+    "SEGA_failures": [],
+    "residual_blue_failures": []
+  },
+  "size_checks": [
+    {
+      "selector": 2,
+      "owned_pixels": 2708,
+      "native_context_pixels": 1526,
+      "sqrt_context_ratio": 1.3321313935957697
+    },
+    {
+      "selector": 3,
+      "owned_pixels": 2708,
+      "native_context_pixels": 1526,
+      "sqrt_context_ratio": 1.3321313935957697
+    }
+  ],
+  "size_limit": "Area is whole-patch context ownership, enlarged to include all lashes. Portrait scale and plane landmarks are unchanged; this is not a character body-area scale measurement.",
+  "rejected_approach": "Initial expanded mask excluded the old context contract only:19 resting-glove and72 left-wag material pixels beyond that contract intersected it. Rejected; the final mask excludes all three full glove silhouettes (78 union pixels removed), and660272 real per-presentation glove pixel comparisons now pass. Initial PNG candidates retained in scratch.",
+  "hand_protection": "Old context and full material silhouettes0/1/4 excluded. Real capture compares every glove material pixel to the preceding hand commit, including pixels beyond the original region.",
+  "python_checks": "68 pass,0 skips, including seam/root/ownership negative controls and full derived-glove non-overlap.",
+  "java_checks": "59 focused tests pass,0 failures/errors/skips, supported lean lane1GiB test heap; no OOM. Selection:TestMicaCharacterIntegration,TestCharacterArtCoverageAudit,TestNativeTitleMascotFallbackPixels,TestSonic3kTitleState.",
+  "coverage": "No rows moved; six authored title rows remain authored. MICA/S3K171 authored,121 native alias,24 alias,10 N/A.",
+  "asset_preservation": {
+    "base": "f4529a2f1a",
+    "unchanged": [
+      "../../../art/mica/titles/s3k-hand-master.png",
+      "../../../art/mica/titles/s3k-plane-1-left.png",
+      "../../../art/mica/titles/s3k-plane-1-right.png",
+      "../../../art/mica/titles/s3k-plane-10-left.png",
+      "../../../art/mica/titles/s3k-plane-10-right.png",
+      "../../../art/mica/titles/s3k-plane-11-left.png",
+      "../../../art/mica/titles/s3k-plane-11-right.png",
+      "../../../art/mica/titles/s3k-plane-12-left.png",
+      "../../../art/mica/titles/s3k-plane-12-right.png",
+      "../../../art/mica/titles/s3k-plane-13-left.png",
+      "../../../art/mica/titles/s3k-plane-13-right.png",
+      "../../../art/mica/titles/s3k-plane-2-left.png",
+      "../../../art/mica/titles/s3k-plane-2-right.png",
+      "../../../art/mica/titles/s3k-plane-3-left.png",
+      "../../../art/mica/titles/s3k-plane-3-right.png",
+      "../../../art/mica/titles/s3k-plane-4-left.png",
+      "../../../art/mica/titles/s3k-plane-4-right.png",
+      "../../../art/mica/titles/s3k-plane-5-left.png",
+      "../../../art/mica/titles/s3k-plane-5-right.png",
+      "../../../art/mica/titles/s3k-plane-6-left.png",
+      "../../../art/mica/titles/s3k-plane-6-right.png",
+      "../../../art/mica/titles/s3k-plane-7-left.png",
+      "../../../art/mica/titles/s3k-plane-7-right.png",
+      "../../../art/mica/titles/s3k-plane-8-left.png",
+      "../../../art/mica/titles/s3k-plane-8-right.png",
+      "../../../art/mica/titles/s3k-plane-9-left.png",
+      "../../../art/mica/titles/s3k-plane-9-right.png",
+      "../../../art/mica/titles/s3k-sprite-0.png",
+      "../../../art/mica/titles/s3k-sprite-1.png",
+      "../../../art/mica/titles/s3k-sprite-4.png"
+    ],
+    "changed": [
+      "../../../art/mica/titles/s3k-sprite-2.png",
+      "../../../art/mica/titles/s3k-sprite-3.png"
+    ]
+  }
+}

@@ -141,6 +141,26 @@ Playable doesn't mean identical to the original everywhere. The
 [known discrepancies](docs/status/known-discrepancies.md) lists the differences we
 made on purpose.
 
+## Engine quality and where we need help
+
+Parts of OpenGGF are low-quality and need substantial improvement. Playable games
+and passing tests do not make all of the code clear, maintainable or adequately
+tested. Some central classes carry too many responsibilities, and ordinary changes
+can require too much knowledge of distant systems and their ordering rules.
+
+Our biggest maintainability concerns include object lifetime and collision contact
+state, linked-object reconstruction during rewind, and the path from a failed trace
+to a useful diagnosis. Package navigation and overlapping contributor guidance also
+make the engine harder to approach. The [code complexity audit](docs/architecture/audits/2026-11-06-ai-code-climb.md)
+records concrete contributor tasks and the limits of the cleanup so far.
+
+We welcome help fixing these weaknesses: clearer ownership and control flow, tests
+that exercise real behavior, reproducible bug reports, and documentation that makes
+a task easier to complete. You do not need to understand the whole engine to help;
+reporting where you got lost is useful too. See
+[quality improvement contributions](CONTRIBUTING.md#improving-engine-quality) for
+starting points. We are responsible for making this code easier to contribute to.
+
 ## Documentation
 
 | I want to… | Start here |

@@ -271,6 +271,16 @@ class BuildProjectTest(unittest.TestCase):
         self.assertFalse((target / launcher.LOCAL_CONFIG).exists())
         self.assertTrue((target / "META-INF/openggf-mod.yaml").is_file())
 
+    def test_resource_generator_receives_converter_classpath(self):
+        (self.project / "generate_resources.py").write_text(
+            "import os, pathlib, sys\n"
+            "pathlib.Path(sys.argv[1], 'cp.txt').write_text(os.environ.get('OPENGGF_CLI_CLASSPATH', 'unset'))\n")
+        target = self.project / "target/classes"
+        launcher.copy_resources(self.project, target, "engine.jar" + os.pathsep + "sdk.jar")
+        self.assertEqual("engine.jar" + os.pathsep + "sdk.jar", (target / "cp.txt").read_text())
+        launcher.copy_resources(self.project, target)
+        self.assertEqual(os.environ.get("OPENGGF_CLI_CLASSPATH", "unset"), (target / "cp.txt").read_text())
+
 
 if __name__ == "__main__":
     unittest.main()

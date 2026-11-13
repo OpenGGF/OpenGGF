@@ -42,6 +42,10 @@ import java.util.stream.Stream;
  * a generated entry that collides with a project resource fails the build, so a committed copy
  * can never shadow the build's value.
  *
+ * <p>Project-specific generated assets are read from
+ * {@code target/bundled-mod-resources/<project>}. Optional {@code bundled.properties}
+ * in the project sets {@code enabledByDefault=true|false} (default true).
+ *
  * <p>Usage: {@code BundledModPackager <basedir> <jar-output-dir> <manifest-output>
  * [<project>[,<project>...]] [--overlay=<directory>]}, project paths relative to {@code basedir}.
  * Maven runs it at {@code prepare-package} with the {@code openggf.bundled.mods} property.
@@ -115,6 +119,8 @@ public final class BundledModPackager {
             Path classes = Files.createDirectories(work.resolve(root.getFileName().toString()).resolve("classes"));
             compile(root.resolve("src/main/java"), classes, classpath);
             copyTree(resources, classes);
+            Path generated = base.resolve("target/bundled-mod-resources").resolve(project);
+            if (Files.isDirectory(generated)) applyOverlay(generated, classes);
             if (overlay != null) applyOverlay(overlay, classes);
             ModManifest manifest;
             try {
@@ -129,9 +135,18 @@ public final class BundledModPackager {
             if (status != 0) {
                 throw new IllegalStateException("ggfmod package rejected " + project + " (warnings are errors)");
             }
+            java.util.Properties defaults = new java.util.Properties();
+            Path settings = root.resolve("bundled.properties");
+            if (Files.exists(settings)) {
+                try (var input = Files.newInputStream(settings)) { defaults.load(input); }
+            }
+            String enabled = defaults.getProperty("enabledByDefault", "true");
+            if (!enabled.equals("true") && !enabled.equals("false")) {
+                throw new IllegalArgumentException("enabledByDefault must be true or false: " + project);
+            }
             byte[] bytes = Files.readAllBytes(jar);
             entries.add(new BundledModManifest.Entry(manifest.id(), manifest.version(),
-                    jar.getFileName().toString(), sha256(bytes), bytes.length));
+                    jar.getFileName().toString(), sha256(bytes), bytes.length, Boolean.parseBoolean(enabled)));
             log.println("Bundled " + manifest.id() + " " + manifest.version() + " from " + project);
         }
         BundledModManifest manifest = new BundledModManifest(entries);

@@ -125,6 +125,7 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
     private static final int BOSS_ACT_INDEX = 2;
 
     private int routineState = STATE_IDLE;
+    private final transient com.openggf.game.presentation.CharacterSignRenderer characterSign = new com.openggf.game.presentation.CharacterSignRenderer();
     private int currentFrame = FRAME_EGGMAN;
 
     // Spin state
@@ -356,7 +357,7 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
             // animation dispatch can rewrite Flash_Collect's retained
             // id_Null byte. Keep the structural engine sprite aligned with
             // that absent-slot state while the signpost commits v_endcard.
-            player.setAnimationId(Sonic1AnimationIds.NULL.id());
+            player.setAnimationId(Sonic1AnimationIds.NULL);
             player.setForcedAnimationId(Sonic1AnimationIds.NULL.id());
             triggerGotThroughAct(player);
             return;
@@ -458,6 +459,9 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
         if (renderer == null || !renderer.isReady()) {
             return;
         }
+        if (characterSign.draw(services(), com.openggf.game.CharacterPresentation.Host.S1,
+                renderManager.getSignpostSheet(), currentFrame, FRAME_SONIC, -1,
+                FRAME_SPIN1, FRAME_SPIN2, FRAME_SPIN3, spawn.x(), spawn.y())) return;
         renderer.drawFrameIndex(currentFrame, spawn.x(), spawn.y(), false, false);
     }
 

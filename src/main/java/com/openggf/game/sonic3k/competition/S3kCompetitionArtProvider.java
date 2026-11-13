@@ -28,6 +28,9 @@ public final class S3kCompetitionArtProvider implements ObjectArtProvider {
     private final Map<String,ObjectSpriteSheet> sheets;
     private final Map<String,SpriteAnimationSet> animations;
     private final Map<String,PatternSpriteRenderer> renderers=new LinkedHashMap<>();
+    private final Map<String,java.util.Set<Integer>> creatorIds;
+    private final Map<String,com.openggf.level.Palette> creatorPalettes;
+    private final Map<String,Integer> paletteLines=new LinkedHashMap<>();
     private final List<String> keys;
     private final List<Pattern[]> banks;
     private final int regularPatternCount;
@@ -37,8 +40,14 @@ public final class S3kCompetitionArtProvider implements ObjectArtProvider {
     private int cachedBase=-1;
 
     public S3kCompetitionArtProvider(S3kCompetitionAssets assets) {
+        this(assets, new S3kCompetitionCharacterArt.Banks(Map.of(),Map.of(),Map.of()));
+    }
+
+    S3kCompetitionArtProvider(S3kCompetitionAssets assets, S3kCompetitionCharacterArt.Banks overrides) {
         this.assets=Objects.requireNonNull(assets,"assets");
         sheets=new LinkedHashMap<>(new TreeMap<>(assets.sheets()));
+        sheets.putAll(overrides.sheets());
+        creatorIds=overrides.ids(); creatorPalettes=overrides.palettes();
         keys=List.copyOf(sheets.keySet());
         Map<String,SpriteAnimationSet> animationSets=new LinkedHashMap<>();
         IdentityHashMap<Pattern[],Boolean> seen=new IdentityHashMap<>();
@@ -54,6 +63,12 @@ public final class S3kCompetitionArtProvider implements ObjectArtProvider {
         animations=Map.copyOf(animationSets);
         bundle=ObjectArtBundle.builder().sheets(sheets).animations(animations).build();
     }
+
+    String resolveKey(String nativeKey,int frame) {
+        String key=nativeKey+"_creator";
+        return creatorIds.getOrDefault(key,java.util.Set.of()).contains(frame)?key:nativeKey;
+    }
+    int paletteLine(String key) { return paletteLines.getOrDefault(key,-1); }
 
     public S3kCompetitionAssets assets() { return assets; }
 
@@ -81,6 +96,11 @@ public final class S3kCompetitionArtProvider implements ObjectArtProvider {
         if (cachedGraphics==graphics && cachedBase==baseIndex) return (int)end;
 
         renderers.clear(); cachedGraphics=null; cachedBase=-1;
+        for(var entry:creatorPalettes.entrySet()) {
+            int line=paletteLines.computeIfAbsent(entry.getKey(), key ->
+                    com.openggf.graphics.RenderContext.createSidekickContext(com.openggf.game.GameId.S3K).getEffectivePaletteLine(0));
+            graphics.cachePaletteTexture(entry.getValue(),line);
+        }
         IdentityHashMap<Pattern[],Integer> bases=new IdentityHashMap<>();
         int next=baseIndex;
         for (Pattern[] bank:banks) {

@@ -128,6 +128,139 @@ class TestS3kSpecialStageSpritePixels {
     }
 
     @Test
+    void missingCreatorOrientationRetainsNativeHorizontalFlip() throws Exception {
+        int orientation = 1;
+        withGraphics((graphics, width) -> {
+            var renderer = renderer(graphics, width, mapping(0), 0, 0, 40);
+            var manager = manager();
+            var nativeMap = character();
+            nativeMap[60] = (byte) (orientation << 3);
+            renderer.setPlayerPatternBase(REAR);
+            renderer.setSonicMappingData(nativeMap, nativeMap);
+            byte[] scalars = new byte[512];
+            word(scalars, 0xE0 * 2, -11585); word(scalars, 0x20 * 2, 11585);
+            renderer.setPlayerProjectionScalars(scalars);
+            var tile = solid(2);
+            byte[] pixels = new byte[64];
+            for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+                byte colour = (byte) (x < 4 ? (y < 4 ? 1 : 2) : (y < 4 ? 3 : 1));
+                tile.setPixel(x, y, colour);
+                pixels[y * 8 + x] = colour;
+            }
+            graphics.cachePatternTexture(tile, REAR);
+            draw(graphics, renderer, manager, width);
+            int[] colours = {GREEN, RED, BLUE};
+            for (int y : new int[]{1, 6}) for (int x : new int[]{1, 6}) {
+                int sx = (orientation & 1) != 0 ? 7 - x : x;
+                int sy = (orientation & 2) != 0 ? 7 - y : y;
+                assertPixel(width / 2 + x, 40 + y, colours[pixels[sy * 8 + sx] - 1], "native control");
+            }
+            // Hotspots are in unflipped drawing coordinates; mirroring transforms their offsets too.
+            var frame = new com.openggf.game.StageSpriteSet.Frame(
+                    new com.openggf.game.CharacterPresentation.Image(8, 8, pixels),
+                    (orientation & 1) != 0 ? 8 : 0, (orientation & 2) != 0 ? -114 : 122);
+            var source = new com.openggf.game.StageSpriteSet(java.util.Map.of(0, frame));
+            set(renderer, "characterStageRenderer", new com.openggf.sprites.render.PlayerSpriteRenderer(
+                    com.openggf.game.presentation.StageSpriteCompiler.compile(source, null), graphics));
+            set(renderer, "characterStageSet", source);
+            draw(graphics, renderer, manager, width);
+            for (int y : new int[]{1, 6}) for (int x : new int[]{1, 6}) {
+                int sx = (orientation & 1) != 0 ? 7 - x : x;
+                int sy = (orientation & 2) != 0 ? 7 - y : y;
+                assertPixel(width / 2 + x, 40 + y, colours[pixels[sy * 8 + sx] - 1], "creator fallback");
+            }
+            assertEquals(0, manager.getPlayer().getMappingFrame());
+        });
+    }
+
+    @Test
+    void explicitCreatorMirroredPhaseUsesUnflippedPixelsWhileNativeStillMirrors() throws Exception {
+        withGraphics((graphics, width) -> {
+            var renderer = renderer(graphics, width, mapping(0), 0, 0, 40);
+            var manager = manager();
+            var nativeMap = character(); nativeMap[60] = 8;
+            assertEquals(1, Sonic3kSpecialStageRenderer.nativeFrameOrientation(nativeMap, 0));
+            renderer.setPlayerPatternBase(REAR);
+            renderer.setSonicMappingData(nativeMap, nativeMap);
+            byte[] scalars = new byte[512];
+            word(scalars, 0xE0 * 2, -11585); word(scalars, 0x20 * 2, 11585);
+            renderer.setPlayerProjectionScalars(scalars);
+            var nativeTile = solid(2);
+            for (int y = 0; y < 8; y++) for (int x = 4; x < 8; x++) nativeTile.setPixel(x, y, (byte) 3);
+            graphics.cachePatternTexture(nativeTile, REAR);
+            draw(graphics, renderer, manager, width);
+            assertPixel(width / 2 + 1, 43, BLUE, "native H mapping still mirrors source right half");
+            assertPixel(width / 2 + 6, 43, RED, "native source left half stays mirrored");
+            byte[] pixels = new byte[64]; java.util.Arrays.fill(pixels, (byte) 3);
+            byte[] oriented = new byte[64];
+            for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) oriented[y*8+x] = (byte) (x < 4 ? 1 : 2);
+            var set = new com.openggf.game.StageSpriteSet(java.util.Map.of(0,
+                    new com.openggf.game.StageSpriteSet.Frame(new com.openggf.game.CharacterPresentation.Image(8,8,pixels),0,122)))
+                    .withMirroredFrames(java.util.Map.of(0,
+                            new com.openggf.game.StageSpriteSet.Frame(new com.openggf.game.CharacterPresentation.Image(8,8,oriented),0,122)));
+            var creator = new com.openggf.sprites.render.PlayerSpriteRenderer(
+                    com.openggf.game.presentation.StageSpriteCompiler.compile(set, null), graphics);
+            set(renderer, "characterStageRenderer", creator);
+            set(renderer, "characterStageSet", set);
+            draw(graphics, renderer, manager, width);
+            assertPixel(width / 2 + 1, 43, GREEN, "creator authored left highlight remains on left");
+            assertPixel(width / 2 + 6, 43, RED, "creator variant is selected without another H flip");
+            assertEquals(0, manager.getPlayer().getMappingFrame(), "native selector is untouched");
+        });
+    }
+
+    @Test
+    void creatorPlayerClaimsNativePixelsBeforeGridAndShadowAndUsesTheStageFade() throws Exception {
+        withGraphics((graphics, width) -> {
+            var renderer = renderer(graphics, width, mapping(0), 0x54, 0, 150);
+            var manager = manager();
+            renderer.setPlayerPatternBase(REAR);
+            renderer.setSonicMappingData(character(), character());
+            byte[] scalars = new byte[512];
+            word(scalars, 0xE0 * 2, -11585); word(scalars, 0x20 * 2, 11585);
+            renderer.setPlayerProjectionScalars(scalars);
+            renderer.setShadowPatternBase(0x6000);
+            for (int i = 0; i < 16; i++) graphics.cachePatternTexture(solid(15), 0x6000 + i);
+            set(manager, "initialized", true);
+            set(manager, "mainLoopSpritesPublished", true);
+            manager.getGrid().setCellByIndex(0x2C8, Sonic3kSpecialStageConstants.CELL_BLUE);
+            byte[] pixels = new byte[64]; java.util.Arrays.fill(pixels, (byte) 10);
+            pixels[8] = 12;
+            var set = new com.openggf.game.StageSpriteSet(java.util.Map.of(0,
+                    new com.openggf.game.StageSpriteSet.Frame(
+                            new com.openggf.game.CharacterPresentation.Image(8, 8, pixels), 0, 12)));
+            var art = com.openggf.game.presentation.StageSpriteCompiler.compile(set, null);
+            var creator = new com.openggf.sprites.render.PlayerSpriteRenderer(art, graphics);
+            var context = RenderContext.createSidekickContext(com.openggf.game.GameId.S3K);
+            var palette = new Palette();
+            palette.setColor(10, new Palette.Color((byte) 255, (byte) 73, (byte) 73));
+            palette.setColor(12, new Palette.Color((byte) 255, (byte) 255, (byte) 255));
+            context.setPalette(0, palette); creator.setRenderContext(context);
+            set(renderer, "characterStageRenderer", creator);
+            var fadeOwner = new Sonic3kSpecialStagePalette();
+            fadeOwner.bindCharacterContext(context);
+            for (boolean batching : new boolean[]{false, true}) {
+                graphics.setBatchingEnabled(batching);
+                context.setPalette(0, palette.deepCopy());
+                fadeOwner.getPalettes()[0] = palette.deepCopy();
+                for (int pass = 0; pass <= 21; pass++) {
+                    var current = context.getPalette(0);
+                    graphics.cachePaletteTexture(current, context.getEffectivePaletteLine(0));
+                    draw(graphics, renderer, manager, width);
+                    assertTrue(current.dataEquals(fadeOwner.getPalette(0)),
+                            "creator and native palette receive the identical white-fade pass");
+                    var c = fadeOwner.getPalette(0).getColor(10);
+                    int expected = ((c.r & 255) << 16) | ((c.g & 255) << 8) | (c.b & 255);
+                    assertPixel(width / 2 + 2, 151, expected,
+                            "creator precedes grid/shadow and retains fade pass " + pass);
+                    assertPixel(width / 2, 151, 0xFFFFFF, "white glove survives shadow");
+                    fadeOwner.fadeTowardWhiteOneStep(37);
+                }
+            }
+        });
+    }
+
+    @Test
     void firstOpaqueSatPixelOwnsPriorityBeforePlaneComparison() throws Exception {
         withGraphics((graphics, width) -> {
             for (boolean batching : new boolean[]{false, true}) {

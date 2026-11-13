@@ -49,7 +49,7 @@ class TestTypingHedgehogPresentationOwnership {
     @AfterAll static void close() throws Exception { if (harness != null) harness.close(); }
 
     @Test @RequiresRom(SonicGame.SONIC_1)
-    void heldWorldRetiresRemovedAndOldGenerationPuppetsWithoutAdvancingNativeObjects() throws Exception {
+    void heldWorldRetiresRemovedPuppetsWithoutAdvancingNativeObjects() throws Exception {
         try (World world = world()) {
             var manager = world.services().objectManager();
             Sentinel foreign = ObjectConstructionContext.construct(world.services(), Sentinel::new);
@@ -67,15 +67,14 @@ class TestTypingHedgehogPresentationOwnership {
                 present(world);
                 assertEquals(base + 2, manager.getActiveObjects().size(), "removed visual cycle " + cycle);
                 List<ObjectInstance> old = puppets(world);
-                call(world.hand(), "invalidatePuppets");
+                for (ObjectInstance puppet : old) manager.removeDynamicObject(puppet);
                 present(world);
-                assertEquals(base + 2, manager.getActiveObjects().size(), "generation cycle " + cycle);
+                assertEquals(base + 2, manager.getActiveObjects().size(), "replacement cycle " + cycle);
                 assertTrue(old.stream().allMatch(ObjectInstance::isDestroyed), "retired through unload callbacks");
                 assertTrue(old.stream().noneMatch(manager.getActiveObjects()::contains));
                 call(world.hand(), "clear");
                 present(world);
                 assertEquals(base, manager.getActiveObjects().size(), "clear cycle " + cycle);
-                assertEquals(0, tracked(world.hand()), "tracked references retire with registrations");
             }
             // Native/rewind removal of a current puppet must not strand its served-visual marker.
             call(world.hand(), "add", "monitor", 32, 64);
@@ -85,10 +84,8 @@ class TestTypingHedgehogPresentationOwnership {
             present(world);
             assertEquals(1, puppets(world).size());
             assertNotSame(removed, puppets(world).getFirst());
-            assertEquals(1, tracked(world.hand()));
             call(world.course(), "close");
             assertEquals(base, manager.getActiveObjects().size(), "leave/session close retires immediately");
-            assertEquals(0, tracked(world.hand()));
             // A load that yields no active intent also retires the prior presentation, even
             // though afterTick will return before the next spawn/cleanup boundary.
             call(world.hand(), "add", "monitor", 32, 64);
@@ -96,7 +93,6 @@ class TestTypingHedgehogPresentationOwnership {
             assertEquals(base + 1, manager.getActiveObjects().size());
             call(world.course(), "detectLevel");
             assertEquals(base, manager.getActiveObjects().size(), "inactive level entry retires immediately");
-            assertEquals(0, tracked(world.hand()));
             assertTrue(manager.getActiveObjects().contains(foreign), "unknown auxiliary owner is untouched");
             assertEquals(0, foreign.updates);
             assertEquals(0, foreign.unloads);
@@ -104,6 +100,30 @@ class TestTypingHedgehogPresentationOwnership {
             assertEquals(vInt, manager.getVblaCounter());
             assertEquals(nativeSlots, manager.getAllocatedSlotCount());
             manager.removeDynamicObject(foreign);
+            assertTrue(harness.findings().isEmpty(), harness.findings().toString());
+        }
+    }
+
+    @Test @RequiresRom(SonicGame.SONIC_1)
+    void realCheckpointRestoreRecreatesPresentationWithoutCreatorInvalidation() throws Exception {
+        try (World world = world()) {
+            var manager = world.services().objectManager();
+            call(world.hand(), "add", "monitor", 32, 64);
+            present(world);
+            ObjectInstance before = puppets(world).getFirst();
+            var adapter = manager.rewindSnapshottable();
+            var checkpoint = adapter.capture();
+
+            adapter.restore(checkpoint);
+            assertFalse(manager.getActiveObjects().contains(before));
+            int clock = manager.getFrameCounter(), vInt = manager.getVblaCounter();
+            int slots = manager.getAllocatedSlotCount();
+            present(world);
+            assertEquals(1, puppets(world).size());
+            assertNotSame(before, puppets(world).getFirst());
+            assertEquals(clock, manager.getFrameCounter());
+            assertEquals(vInt, manager.getVblaCounter());
+            assertEquals(slots, manager.getAllocatedSlotCount());
             assertTrue(harness.findings().isEmpty(), harness.findings().toString());
         }
     }
@@ -200,12 +220,6 @@ class TestTypingHedgehogPresentationOwnership {
         set(sprite, "frame", frame);
         set(sprite, "highPriority", high);
         return sprite;
-    }
-
-    private static int tracked(Object hand) throws Exception {
-        var field = hand.getClass().getDeclaredField("ownedPuppets");
-        field.setAccessible(true);
-        return ((List<?>) field.get(hand)).size();
     }
 
     private static List<ObjectInstance> puppets(World world) {

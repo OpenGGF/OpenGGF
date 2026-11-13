@@ -18,6 +18,15 @@ Zone delivery: [methodology v2](../architecture/designs/2026-09-15-zone-methodol
 retains FBZ's route slices and adds early short native comparisons and compatibility
 checks. Its first target is the [Sandopolis plan](../architecture/plans/2026-09-15-soz-methodology-v2.md).
 
+## Default delivery
+
+Agent work defaults to a PR against the targeted release's `develop` or `next`
+branch. Follow [root guidance](../../AGENTS.md#delivery-and-documentation) for
+release selection, copy-on-write worktrees, verification, task-branch push and
+PR retention. Leave merging to review unless the user authorizes it; direct
+integration is an explicit opt-in. The main checkout keeps its branch and
+unrelated work.
+
 ## Delivery skills
 
 - [Mod authoring](../../.agents/skills/mod-authoring/SKILL.md) routes creator
@@ -43,6 +52,11 @@ These skills apply the methodology and current repository policy; plans retain
 per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
+
+- [Rendered frame region comparison](../../tools/testing/compare_frame_regions.py) detects creator-coloured corruption outside independently declared regions as well as native remnants. Requires lockstep stock/clean-baseline/candidate PNGs and an authored-geometry region ledger; missing frames fail. Keep a corrupt negative control, capture hashes and full-resolution transition review. See the [usage](../../tools/testing/README.md#rendered-frame-region-comparisons). Origin: S2 final cockpit capture review, 2026-11-11.
+- [Character art coverage probe](../../src/test/java/com/openggf/level/objects/TestCharacterArtCoverageAudit.java) loads the verified ROM and example sheets through production binding. `-Dart.audit.output=<external-dir>` writes numeric inventories; [report generator](../../tools/modding/character_art_audit.py) joins them with creator provenance and native labels. Origin: MICA/TALON art audit, 2026-11-09. No native pixels are written; diagnostic TALON binding is not integrated Tails coverage.
+
+- [Native S1 ending initialization timing](../../tools/tracechaser/docs/capture-s1.md#ending-initialization-timing): observe actual ending/font/demo loads with fixed opcode cuts and fail-closed callback qualification, then compare independently encoded ROM fingerprints before publication. Reuse a saved native state near later probes and the unedited movie; retain strict full-run comparison. The [S1 chain audit](../architecture/audits/2026-11-06-s1-chain-plc-timing.md) records the bounded clock/RNG proof and limits (2026-11-07).
 
 - [Native S3K initialization timing](../../tools/tracechaser/docs/capture-s3k.md): `--initialization-timing` observes load-phase service and completion, with rejection diagnostics for unsupported interrupted routines and later callbacks; it exports no CPU/slot state. Origin: [2026-11-03 synchronous loading](../architecture/designs/2026-11-03-synchronous-load-vint-accounting.md).
 
@@ -79,6 +93,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 - [S2 fixed-tail pressure diagnostic](../../tools/bizhawk/README.md#s2-fixed-tail-pressure-diagnostic): original-ROM headless instruction/RAM observations with declared last-slot/two-parent setup, empty/live/reinstalled fixed targets and physical retirement; comparison-only, finite coverage (2026-10-24 Sideways ownership research).
 - [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see [render](../guide/creating/stageplay-authoring.md#render). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. The guide screenshots in `docs/guide/creating/images/stageplay/` are 256-colour palette PNGs reduced from these pictures (plus `TestStageplayRouteOverlayPictures`); refresh them from the same tests when the UI changes. Origin: 2026-10-21 Stageplay delivery.
 - [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles and losslessly decompiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
+- [Competition checkpoint probe](../../tools/stageplay/CompetitionCheckpointProbe.java) delegates the existing Stageplay route planner and reads the captured/live object-ID counter around restore. Inputs are a frozen route, a goal programme and the verified S2 ROM. It never writes state or weakens replay equality; a matching immediate counter does not prove deterministic subsequent object reconstruction. Run with Java25 and the engine classpath, `-Dmse=off -Dopenggf.headless.gl=surfaceless-egl`, with DISPLAY/WAYLAND unset. Origin: lane P EHZ human-P2 checkpoint frontier, 2026-11-08.
+- [S2 native competition goals](../../tools/bizhawk/README.md#s2-competition-goal-observations) binds cold host/movie identity to read-only slot visibility, resident non-flat AniPLC cells, results ledgers and special-stage observations. Native lag ends comparison, not goal observation. Origin: lane P final evidence gate, 2026-11-08.
 - [Stageplay route helper](../../src/main/java/com/openggf/tools/StageplayRouteTool.java): bounded shot-entry native-input search with cold LIVE qualification, or visual object floor/headroom paths; same cancellable logic worker and content-bound result in both editors. Inputs are canonical scenes and supplied ROMs; see [route limits](../guide/creating/stageplay-authoring.md#route-helper). Origin: 2026-10-22 complete-cast task.
 
 
@@ -478,6 +494,13 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 - `tools/performance/run_isolated.py`: OS-leased exclusion of linked-worktree builds/tests plus a bypass-process guard for prebuilt measurements; writes an isolation audit (2026-10-13 P5 timing correction). Exclusive test admission precedes a separate active-build lease; idle retained category worktrees do not block it (2026-10-16 queue liveness correction).
 - `tools/performance/MultiplayerJfrSummary.java`: streams real multiplayer JFR recordings into bounded component/thread attribution, with explicit traffic/capture windows, separate Java/native samples, estimated allocation weights and thresholded socket observations (2026-10-21 Time Attack capacity investigation). Compile before acquiring a measurement lease; run the prebuilt summary class with a bounded heap.
 
+- [S2 competition divergence diagnostic](../../src/test/java/com/openggf/game/sonic2/competition/view/DebugSonic2CompetitionDivergence.java): test-scope production-host replay of original 2P BK2 controllers against completed native CSV rows; `s2comp.refs` (external native-reference directory), `s2comp.route` (one movie stem) and `s2comp.out` (report directory) select inputs and output, `s2comp.instrument=true` adds the touch-response observer and nearby objects to each frontier row, and `s2comp.exclude` lists columns left out of the gameplay comparison (default `vint`). Absent inputs skip cleanly, raw clock offsets remain separate, no hydration; comparison stops before the first native repeated-LFC/advancing-V-int lag row (unsupported CPU overrun), without re-alignment (2026-11-07/08 lane F). Results: [S2 Competition plan](../architecture/plans/2026-11-07-s2-competition-parity.md#native-state-comparisons).
+- [S2 competition C2 picture producer](../../src/test/java/com/openggf/game/sonic2/competition/view/DebugSonic2CompetitionC2Capture.java): runs the production Competition host, views and renderer from the original two-controller EHZ BK2s and writes engine PNGs and state text at named physical cuts to `target/s2comp-c2b` for fixed-field-0 comparison with BizHawk screenshots. The native BK2 directory is a fixed external path in the source; no physics, auxiliary or CSV input (2026-11-07 A2-S C2b).
+- [S2 competition uncut parity video](../../src/test/java/com/openggf/stageplay/route/DebugSonic2CompetitionRouteVideo.java): replays a frozen `routes/s2/competition` programme (`s2video.route`, default the tie route) on the cold title host and writes one FFV1 frame plus a state row (mode, phase, LFC, VInt, title state, title lock, positions, rings, timers) per committed row to `s2video.out`, including title, menu, results and special stage. `s2video.routeFile` selects an external planner-qualified artifact. `s2video.clockOnly=true` records the same state rows without rendering or starting FFmpeg. Pair it with a native capture from [capture_every_frame.lua](../../tools/bizhawk/capture_every_frame.lua) via `capture_native_references.py --dump-wave-frames N`, then compose with [s2_competition_parity_video.py](../../tools/media/s2_competition_parity_video.py), which aligns at each ordinary level entry and marks held engine frames. The native BK2 must be the export of the current route content (2026-11-08 PR #270 video).
+- [S2 competition fixture flow](../../src/test/java/com/openggf/game/sonic2/competition/Sonic2CompetitionTestFlow.java): drives the production menu fades and title continuation before positioned gameplay/rewind probes; retains LFC0 and bounded native waits instead of assuming load return already released control.
+- [Competitive special-stage divergence diagnostic](../../src/test/java/com/openggf/game/sonic2/competition/specialstage/DebugSonic2CompetitiveHalfpipeDivergence.java): original standalone 2P BK2 through the production halfpipe; `s2comp.ss.refs`, `s2comp.ss.movie`, `s2comp.ss.out` select generic read-only native observations/movie/report. FadeWhite callback identifies load completion, native RunObjects entries plus V-int and actual Vint_Lag callbacks bound comparison; both actors, track speed/state, checkpoints/archives and ring/bomb slots are comparison-only, with no re-alignment. Missing external inputs skip; read the report to distinguish execution from parity (2026-11-08 lane F).
+- [Competition native P1 sampler](../../tools/bizhawk/S3kCompetitionNativeProbe.cs): cold title/Time Attack/Desert Palace controller ingress, reusable near-start native save, RAM-owned GO alignment and comparison-only per-frame miniature state. Origin and reproduction: [native race qualification](../architecture/validation/2026-10-28-tas-support-competition.md#native-desert-palace-race-qualification-2026-11-09).
+- [Read-only native execution observer](../../tools/bizhawk/capture_execution_observations.lua): explicit Genesis ROM callbacks, registers, bounded MainRAM fields and owned same-movie checkpoints; required hit counts and cold/warm verification, comparison-only (2026-11-08 S2 Competition). Protocol: [native capture host](../../tools/bizhawk/README.md#read-only-execution-and-ram-observations).
 - [Native published-video diagnostic port](../../tools/tracechaser/bizhawk-headless/README.md#diagnostic-rendered-frames): opt-in rendered GPGX frames with owned pixels/VDP domains and stale-generation guards; explicit ROM/movie/scene inputs, no canonical fixture publication (2026-10-14 S3K visual parity task).
 
 - [Positioned S3K ending sampler](../../src/main/java/com/openggf/tools/S3kEndingSamplerTool.java) and [fail-closed native RGB comparator](../../tools/bizhawk/compare_native_rgb.py): explicit nine Sonic/Tails/team NTSC 320×224 title-owner products with declared progress, spot-bound or title completion, complete raw RGB pairs and explicit native filename padding/mapping/crops (2026-10-17 recurring ending parity); [protocol, commands and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#2026-10-17-nine-declared-ntsc-ending-products).
@@ -509,6 +532,9 @@ OpenGGF is an early large-scale AI-agent reimplementation. The method is
 part of what the project preserves, for future contributors and for anyone
 studying how it was done. Keep the record light and put things where they
 already belong; do not create new document types.
+
+- [Playable art preprocessing](../../tools/modding/playable_art/README.md) — generated pose atlases to shared 15-colour indexed frames, explicit native hotspots/pixel patches, deterministic verification and disposable animation reviews (MICA W7, 2026-11-08).
+- [Locked special-stage assembly](../../tools/modding/playable_art/locked_stage.py), [native body measurement](../../tools/modding/playable_art/measure_stage_body.py), [hip-pivot posing](../../tools/modding/playable_art/stage_body_motion.py) and [review sampler](../../tools/modding/playable_art/locked_stage_review.py) — generated identity/curl reuse, native PCA lean/sway/bob, screen-space relighting and independent limb/contact measurements (MICA/TALON correction, 2026-11-10).
 
 - **Scripts and probes.** A one-off diagnostic stays temporary. A probe,
   oracle, comparator, or sampler that answered a question likely to recur,
@@ -568,3 +594,16 @@ never preserved.
 - Next-line Mod API and multiplayer contracts: [subsystem reference](../architecture/next-line-subsystems.md),
   [creator handbook](../modding/index.md), and
   [API compatibility](../architecture/mod-api-compatibility.md).
+
+Animation-family review method: [`animation_family_review.py`](../../tools/modding/animation_family_review.py)
+joins the production art audit with module phase profiles, emits a cited native
+script inventory and exact-palette, full-frame native/MICA GIFs. Inputs and limits
+are documented in the [playable art guide](../../tools/modding/playable_art/README.md#shared-family-phases).
+
+- [Competition monitor route probe](../../tools/stageplay/S2CompetitionMonitorRouteProbe.java):
+  replay-only per-row content/init/award/lives/rings/position CSV from a frozen
+  manifest. Run with Java 25 and `-cp target/classes:<engine-dependencies-jar>`
+  followed by the source path, manifest, S2 ROM and new CSV path. The classes
+  directory supplies the compiler plugin provider when using Java source launch.
+  Native confirmation uses the [question-mark validator](../../tools/bizhawk/check_s2_qmark_goals.py).
+  Origin: eight EHZ question-mark outcomes, 2026-11-09.

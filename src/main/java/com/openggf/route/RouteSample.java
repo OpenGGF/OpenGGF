@@ -11,17 +11,27 @@ import java.util.Optional;
  * @param verticalWrap the camera's vertical wrap range in pixels, or zero when the level does not wrap
  * @param objects      live objects that report a capability or carry a player, in timeline order
  * @param interactions players held by objects this tick (solid rides and owner-reported custody)
+ * @param facts        immutable copied host facts; observations only, never gameplay inputs
  */
 public record RouteSample(int rowsOffered, long epoch, Level level, Clocks clocks, PlayerView p1,
                           Optional<PlayerView> p2, int cameraX, int cameraY, int verticalWrap,
-                          java.util.List<ObjectView> objects, java.util.List<InteractionView> interactions) {
+                          java.util.List<ObjectView> objects, java.util.List<InteractionView> interactions,
+                          java.util.Map<String, Integer> facts) {
     public RouteSample {
+        facts = java.util.Map.copyOf(facts);
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(clocks, "clocks");
         Objects.requireNonNull(p1, "p1");
         Objects.requireNonNull(p2, "p2");
         objects = java.util.List.copyOf(objects);
         interactions = java.util.List.copyOf(interactions);
+    }
+
+    public RouteSample(int rowsOffered, long epoch, Level level, Clocks clocks, PlayerView p1,
+                       Optional<PlayerView> p2, int cameraX, int cameraY, int verticalWrap,
+                       java.util.List<ObjectView> objects, java.util.List<InteractionView> interactions) {
+        this(rowsOffered, epoch, level, clocks, p1, p2, cameraX, cameraY, verticalWrap, objects, interactions,
+                java.util.Map.of());
     }
 
     /** A sample without object observations (hosts with no live objects). */

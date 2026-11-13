@@ -1034,3 +1034,28 @@ hardware availability, and changes no profiles/manifests/readiness/service count
 AIZ water/delayed redraw, other caller costs, interrupt/hardware terms, the BG16
 head19 Sonic3/Tails4 difference, Hyper/Kos6+46 and PAL/PCM remain open. Root owns
 later composition and combined validation; no native/media capture ran here.
+
+### Authored Sonic-route ending presentation (2026-11-08)
+
+The MICA ending lane adds optional native-frame presentation sets and a semantic
+scene-form controller. Native director, credits and post-credit dispatch remain
+owned by the existing ROM routines. The focused MICA tests boot the declared
+ending entry directly for negative, Chaos and Super progress, verify the compiled
+indexed mappings against packaged PNG pixels, and record rendered witnesses.
+They do not certify Doomsday completion or the route into the ending. Stock
+ending/credits and S3K guard tests retain their existing breadth; mod rewind,
+other viewport widths and donor/team variants remain separate obligations.
+The stock ending/credits/API/S3K run passes its 402 existing checks; its three
+new long capture methods initially hit native input callback identity churn.
+Stable native service identities fix that bounded-cache abort (4/0/0/0 rerun).
+The remaining MICA/DDZ/API/required-S3K selection passes 100/0/0/0. A visual
+review then corrected duplicate authored WAIT over the enlarged pose: native
+mapping zero hides P1. Final captures and hidden-frame/input checks pass 6/0/0/0.
+Normal, Chaos and Super progress reach title after 15,088 / 15,798 / 15,538 level
+frames respectively. Reviewed PNGs and state CSVs are retained outside Git at
+`/tmp/mica-endings-s3k-20261108/`. Native choreography stays with the existing
+owners; this is authored presentation evidence, not ROM pixel parity.
+
+The final strengthened renderer selection/private palette contract passes
+3/0/0/0. This asserts actual use of every expected authored scene surface, not
+only asset availability. Fixed-palette surfaces retain every packaged RGB entry.

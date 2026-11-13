@@ -9,6 +9,16 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+## Hosted solo arena presentation (2026-11-07)
+
+Hosted Competition arenas use one 320×224 P1 view instead of the ROM split screen.
+The extra rows are a display projection of the native terrain and sprite sources;
+the native cameras, both 112-row sprite pages and their visibility writes still run.
+The display camera does not feed death checks or physics. Remote ghosts use the
+ROM miniature mappings and art, without becoming native participants.
+See the [Competition design](architecture/designs/2026-11-07-s3k-competition-time-attack-tracks-design.md#46-full-screen-arena-view-s3k-presentation-only).
+
+
 **DEZ tube interact word (2026-10-30):** fresh original-input callbacks
 [identify the row14502 owner](status/trace-frontier-log.md#2026-10-30--dez-gravity-tube-live-interact-word-at-p2-row-14502):
 S3K's existing CPU compare needs the tube's live routine high word4, which its
@@ -219,6 +229,20 @@ comparison closing the845 targeted wall/peppermint component pixels with no new
 bad pixels. Remaining HUD/bootstrap and tiny RGB differences, native-high-glass
 control and full-product/integration qualification remain open.
 
+## Hosted network arena shoe partner (2026-11-07)
+
+In an eligible hosted Competition attempt, the native swap box requests a
+server-selected remote partner instead of exchanging with the unspawned second
+slot immediately. An admitted command replaces only the speed-shoe bit, shoe
+timer and native speed triple from the streamed partner. Position and other
+local state remain local, as the arena swap never moves either player. Each
+client applies at its own next executed step. A delayed no-partner or rejected
+command uses the shipped empty-slot shoe exchange; dead or finished recipients
+receive no effect. With swapping disabled, the native solo effect remains
+immediate. This is an intentional network room rule, distinct from the fixed
+solo parity defect in loc_3652A.
+See the [Competition swap design](architecture/designs/2026-11-07-s3k-competition-time-attack-tracks-design.md#83-what-is-swapped-and-what-the-command-carries).
+
 ## Table of Contents
 
 1. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)
@@ -239,6 +263,7 @@ control and full-product/integration qualification remain open.
 16. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation)
 17. [SOZ Background Event Modes and Torch Animation](#soz-background-event-modes-and-torch-animation)
 18. [SSZ Act 2 Widescreen Background Columns](#ssz-act-2-widescreen-background-columns)
+19. [Blue Spheres NO WAY! Accepts Any Button](#blue-spheres-no-way-accepts-any-button)
 
 ---
 
@@ -2156,3 +2181,41 @@ loads also take that native dispatch: FBZ2 starpost5 finishes at `$B06` with
 maxY `$B00`, rather than stopping at the intermediate clamp. The
 [FBZ2 matrix](architecture/validation/levels/s3k-fbz-act2.md#native-checkpoint-initial-camera--2026-11-05)
 records the ROM-backed derivation, retained route assertions and bounded checks.
+
+### Competition idle edge balance (2026-11-09)
+
+Miniature racers now select idle terrain/object-edge balance before look/duck,
+including facing and Sonic/Knuckles' second pose. Miniature Knuckles shares
+Sonic_Move, rather than the campaign Knuckles animation reset. Tails retains
+its four-pixel object margin and single pose. See the
+[arena balance qualification](architecture/validation/2026-10-28-tas-support-competition.md#native-miniature-idle-balance-qualification-2026-11-09)
+for bounded route evidence and remaining arena gaps.
+
+---
+
+## Blue Spheres NO WAY! Accepts Any Button
+
+**Location:** `S3kBlueSpheresTitle.waitForAbc`
+
+### Original Implementation
+
+With Sonic 1 locked on, S&K first shows the NO WAY! banner. Obj_SpheresTitle_4CEAA's
+`loc_4CEB6` (`sonic3k.asm:100632-100645`) opens the menu only when `Ctrl_1` equals
+`button_A_mask|button_B_mask|button_C_mask` exactly: A, B and C held together with no
+direction or Start.
+
+### Our Implementation
+
+Any newly pressed button opens the menu. Everything after the press is the ROM's
+`loc_4CEC8`: the pressed byte is cleared, `sfx_Starpost` plays, the banner becomes GET
+BLUE SPHERES and the menu slides in.
+
+### Rationale
+
+Requested by the project owner. The three-button chord is a cartridge easter-egg
+gesture that keyboard players rarely discover, and it gates nothing but the menu.
+
+### Verification
+
+`TestS3kBlueSpheresRom.titleOpensTheMenuOnAbcAndAcceptsItsOwnCode` holds a button
+(no menu), then presses B alone and checks the menu opens with `sfx_Starpost`.

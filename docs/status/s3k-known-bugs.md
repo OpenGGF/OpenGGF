@@ -8,6 +8,24 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+## Ordinary Knuckles boss-glide exit is held — 2026-11-08
+
+`Touch_Enemy .bossnotdefeated` (sonic3k.asm:20961-20977) ends active character 2
+flight with flag 2, animation `$21` and default radii, without moving the centre or
+setting airborne status. The generic S3K ordinary rebound still retains active
+glide. Local component `60b2e6137` models the native tail and advances Mega, but
+introduces a maintained solo Knuckles/800px SOZ end-boss route failure. The
+[bounded observations and held decision](../architecture/validation/levels/s3k-aiz2.md#ordinary-boss-glide-rebound--2026-11-07)
+are preserved; the component is excluded from this delivery rather than weakening
+route assertions or tuning runtime/input constants. Both unsuccessful controller
+hypotheses are discarded, and the original destination rules/touch tests remain.
+
+Removal condition: qualify the native hit transition together with all six
+maintained SOZ routes through eight hits, capsule/results/redraws, graph rewind
+and playable LRZ; preserve other characters, velocity-only contacts, KiS2 and
+baseline-agreeing trace rows. The precise SOZ fatal-contact ownership and broader
+route/pixel parity are not established by the measured native hit writes.
+
 ## Mega Chopper shake escape counts held directions, not new presses — 2026-11-05
 
 `Check_LRControllerShake` (sonic3k.asm:179972-179993) counts a change only when

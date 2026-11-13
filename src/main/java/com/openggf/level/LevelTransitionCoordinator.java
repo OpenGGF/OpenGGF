@@ -797,6 +797,8 @@ public class LevelTransitionCoordinator {
      *
      * @return true if a specific zone/act was requested
      */
+    boolean hasZoneActRequest() { return specificZoneActRequested; }
+
     public boolean consumeZoneActRequest() {
         boolean requested = specificZoneActRequested;
         specificZoneActRequested = false;
@@ -876,6 +878,8 @@ public class LevelTransitionCoordinator {
      *
      * @return true if credits were requested
      */
+    boolean hasCreditsRequest() { return creditsRequested; }
+
     public boolean consumeCreditsRequest() {
         boolean requested = creditsRequested;
         creditsRequested = false;
