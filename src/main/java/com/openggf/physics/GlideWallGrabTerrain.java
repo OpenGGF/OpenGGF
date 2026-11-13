@@ -1,9 +1,16 @@
 package com.openggf.physics;
 
+import com.openggf.level.objects.ClimbableWall;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-/** Terrain fit for Knuckles_BeginClimb / Knuckles_Gliding_HitWall. */
+/**
+ * Terrain fit for Knuckles_BeginClimb / Knuckles_Gliding_HitWall.
+ *
+ * <p>Every probe here also sees a {@link ClimbableWall}. That part is the engine's own: the original
+ * routines read terrain alone, and no level of the games they ship in holds such an object.
+ */
 public final class GlideWallGrabTerrain {
     private GlideWallGrabTerrain() { }
 
@@ -15,7 +22,9 @@ public final class GlideWallGrabTerrain {
                     SensorResult result = sensor.scanWorld(direction, (short) x, (short) y,
                             (short) 0, (short) 0, sprite.getLrbSolidBit());
                     // Read immediately: GroundSensor reuses its result between probes.
-                    return result == null ? Integer.MAX_VALUE : result.distance();
+                    int terrain = result == null ? Integer.MAX_VALUE : result.distance();
+                    int wall = climbableWallDistance(sprite, direction, x, y);
+                    return wall != TerrainCheckResult.NO_COLLISION && wall < terrain ? wall : terrain;
                 });
         if (fit == null) return false;
         NativePositionOps.addXPosPreserveSubpixel(sprite, fit.x());
@@ -41,10 +50,10 @@ public final class GlideWallGrabTerrain {
                                                        int solidityBit, boolean secondaryCollisionPath) {
         GroundSensor sensor = new GroundSensor(sprite, Direction.DOWN, (byte) 0, (byte) 0,
                 true, secondaryCollisionPath);
-        SensorResult result = sensor.scanWorld(facingRight ? Direction.RIGHT : Direction.LEFT,
-                (short) (facingRight ? 10 : -10), (short) 0, (short) 0, (short) 0, solidityBit);
-        return result == null ? TerrainCheckResult.noCollision()
-                : new TerrainCheckResult(result.distance(), result.angle(), result.tileId());
+        Direction wall = facingRight ? Direction.RIGHT : Direction.LEFT;
+        int xOffset = facingRight ? 10 : -10;
+        return withClimbableWalls(sprite, wall, xOffset, 0, sensor.scanWorld(wall,
+                (short) xOffset, (short) 0, (short) 0, (short) 0, solidityBit));
     }
 
     /**
@@ -59,22 +68,58 @@ public final class GlideWallGrabTerrain {
         boolean upwards = towardsLedge != reversed;
         int offset = ((towardsLedge ? 8 : 9) + (byte) sprite.getXRadius()) * (upwards ? -1 : 1);
         GroundSensor sensor = new GroundSensor(sprite, Direction.DOWN, (byte) 0, (byte) 0, true);
-        SensorResult result = sensor.scanWorld(upwards ? Direction.UP : Direction.DOWN,
+        Direction vertical = upwards ? Direction.UP : Direction.DOWN;
+        return withClimbableWalls(sprite, vertical, 0, offset, sensor.scanWorld(vertical,
                 (short) 0, (short) offset, (short) 0, (short) 0,
-                towardsLedge ? sprite.getLrbSolidBit() : sprite.getTopSolidBit());
-        return result == null ? TerrainCheckResult.noCollision()
-                : new TerrainCheckResult(result.distance(), result.angle(), result.tileId());
+                towardsLedge ? sprite.getLrbSolidBit() : sprite.getTopSolidBit()));
     }
 
     private static TerrainCheckResult scanWall(AbstractPlayableSprite sprite, boolean facingRight,
                                                int xOffset, int yOffset) {
         GroundSensor sensor = new GroundSensor(sprite, Direction.DOWN, (byte) 0, (byte) 0, true);
-        SensorResult result = sensor.scanWorld(facingRight ? Direction.RIGHT : Direction.LEFT,
-                (short) xOffset, (short) yOffset, (short) 0, (short) 0, sprite.getLrbSolidBit());
-        // Copy immediately: GroundSensor owns a reusable result. Empty extensions
-        // retain the native finite distance; signed widths can return exact contact.
-        return result == null ? TerrainCheckResult.noCollision()
-                : new TerrainCheckResult(result.distance(), result.angle(), result.tileId());
+        Direction wall = facingRight ? Direction.RIGHT : Direction.LEFT;
+        // Empty extensions retain the native finite distance; signed widths can return exact contact.
+        return withClimbableWalls(sprite, wall, xOffset, yOffset, sensor.scanWorld(wall,
+                (short) xOffset, (short) yOffset, (short) 0, (short) 0, sprite.getLrbSolidBit()));
+    }
+
+    /** Copies the terrain result at once (GroundSensor reuses it) and lets a nearer stand-in wall win. */
+    private static TerrainCheckResult withClimbableWalls(AbstractPlayableSprite sprite, Direction direction,
+                                                         int xOffset, int yOffset, SensorResult terrain) {
+        TerrainCheckResult result = terrain == null ? TerrainCheckResult.noCollision()
+                : new TerrainCheckResult(terrain.distance(), terrain.angle(), terrain.tileId());
+        int wall = climbableWallDistance(sprite, direction, xOffset, yOffset);
+        // A flat face: the angle a full block would report to a probe from that side.
+        return wall < result.distance()
+                ? new TerrainCheckResult(wall, (byte) switch (direction) {
+                    case DOWN -> 0x00;
+                    case LEFT -> 0x40;
+                    case UP -> 0x80;
+                    case RIGHT -> 0xC0;
+                }, -1)
+                : result;
+    }
+
+    /**
+     * The nearest {@link ClimbableWall} along a probe from the player's centre plus an offset, or
+     * {@link TerrainCheckResult#NO_COLLISION}. Collision paths and solidity bits do not apply: the box
+     * is solid to its object's own routine whichever path the player is on.
+     */
+    private static int climbableWallDistance(AbstractPlayableSprite sprite, Direction direction,
+                                             int xOffset, int yOffset) {
+        var level = sprite.currentLevelManagerIfAvailable();
+        var objects = level == null ? null : level.getObjectManager();
+        if (objects == null) return TerrainCheckResult.NO_COLLISION;
+        int x = (short) (sprite.getCentreX() + xOffset);
+        int y = (short) (sprite.getCentreY() + yOffset);
+        int nearest = TerrainCheckResult.NO_COLLISION;
+        for (ObjectInstance object : objects.getActiveObjects()) {
+            if (object instanceof ClimbableWall wall) {
+                ClimbableWall.Box box = wall.climbableWall();
+                if (box != null) nearest = Math.min(nearest, box.distance(direction, x, y));
+            }
+        }
+        return nearest;
     }
 
     @FunctionalInterface

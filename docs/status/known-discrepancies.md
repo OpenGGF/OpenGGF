@@ -129,6 +129,7 @@ no discrepancy entry was added or reclassified by the cutover.
 38. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it)
 39. [Fixed Native Sprite Capacity in Wider Presentation](#fixed-native-sprite-capacity-in-wider-presentation)
 40. [S2 Sideways Platform Safe Admission and Owned-Child Retirement](#s2-sideways-platform-safe-admission-and-owned-child-retirement)
+41. [Knuckles Climbs Sonic 1 Edge Walls](#knuckles-climbs-sonic-1-edge-walls)
 
 ---
 
@@ -580,6 +581,35 @@ When cross-game sidekicks are donated into Sonic 1, `Sonic1MonitorObjectInstance
 ### Verification
 
 `TestSonic1MonitorObjectInstance.cpuSidekickCannotBreakSonic1Monitor` covers the donated-sidekick path. The local S1 disassembly also confirms that the static monitor icon mapping (`Map_Monitor` frame `2`) is real art, so no icon-suppression discrepancy entry is needed.
+
+---
+
+## Knuckles Climbs Sonic 1 Edge Walls
+
+**Location:** `ClimbableWall.java`, `GlideWallGrabTerrain.java`, `Sonic1EdgeWallObjectInstance.java`
+**ROM Reference:** `docs/s1disasm/_incObj/44 GHZ Edge Walls.asm`; `Knuckles_Gliding_HitWall` and `Knuckles_Wall_Climb` in `docs/skdisasm/sonic3k.asm`
+
+### Original Implementation
+
+Neither game has this case. Sonic 1 builds Green Hill's cliff faces from edge-wall objects (object `$44`): a strip 16 pixels wide whose routine, `EdgeWall_SolidWall`, pushes the player out sideways (`d1 = 38/2`, `d2 = 80/2`). The terrain behind a wall need not be solid: behind the cliff at x 2112 in Green Hill 3 it is solid only below y 768, 88 pixels under the top. Sonic 1 has nobody who climbs. Sonic 3 & Knuckles' walls are all terrain, and Knuckles' glide collision, grab and climb read terrain alone (`FindWall` and `FindFloor`).
+
+### Our Implementation
+
+With Knuckles donated to Sonic 1, his probes saw none of these walls. A face that is only an edge wall stopped his glide without a grab. Where terrain lay behind the lower part of one, he climbed to where the terrain ended, took that for the top, pulled up into the wall and fell back.
+
+The engine adds a rule of its own. An object may declare itself a `ClimbableWall` and give a box of solid pixels. Every probe in `GlideWallGrabTerrain` (glide wall contact, grab alignment, the climb's wall, ceiling and floor checks) reports the nearer of the terrain and any such box, as if the box were full terrain blocks. `Sonic1EdgeWallObjectInstance` is the only implementer: the box is as wide as the wall is drawn (16 pixels, which is `d1` less the 11 pixels a Sonic 1 solid adds for the player) and as tall as its solid box (80 pixels). A display-only wall (subtype bit 4) has none.
+
+While Knuckles is gliding, climbing or pulling up (`double_jump_flag` 1, 4 or 5), the wall's own solid routine leaves him alone. Otherwise it would stop a glide one pixel short of the contact a grab from the right needs, and push the first steps of a pull-up back off the ledge. Falling, sliding and every other state are pushed as before, as is every other character.
+
+### Rationale
+
+1. **Donation creates the case.** The art shows a cliff, a glider hits it, and the grab belongs to that contact. Without the rule Knuckles cannot climb most of Green Hill.
+2. **No original behaviour changes.** No level of Sonic 2 or Sonic 3 & Knuckles holds a `ClimbableWall`, so their probes return what they returned before, and their Knuckles replays pin that. In Sonic 1 the wall's solidity changes only for a glide-capable player in those three states, which the game as shipped cannot produce.
+3. **It is an approximation.** The box is treated as flat full blocks, with no collision path or solidity bit. A glide whose centre passes above or below a wall's box while its body overlaps the corner is not stopped by that corner. Other Sonic 1 objects that look like walls are not covered.
+
+### Verification
+
+`TestKnucklesClimbsEdgeWalls`: in Green Hill 3 Knuckles grabs the cliff at x 2101 above where its terrain ends, climbs it and stands on top; a wall is grabbed from its right side (Green Hill 1, x 3080); two stacked walls are climbed as one face (Green Hill 1, x 6152); the wall stays solid to other characters and to Knuckles' other states; the box geometry and probe distances are checked directly.
 
 ---
 

@@ -44,6 +44,14 @@ under the matching area heading; see the
   art upload also stopped allocating a version record and a boxed tile number,
   about 16% of Angel Island's per-frame allocation. Pixels are unchanged.
 
+- **Knuckles climbs Green Hill's cliffs in Sonic 1:** with Sonic 3&K donating,
+  Knuckles could not grab a Green Hill cliff face unless terrain lay behind it,
+  and there he pulled up short of the top and fell back. The faces are edge-wall objects,
+  not terrain, and his grab and climb read terrain only. His probes now also see
+  those walls, and a wall leaves him alone while he glides, climbs and pulls up.
+  This is a rule of the engine's own, recorded in the known discrepancies; the
+  original games are unchanged because none of their levels has such a wall.
+
 - **Blue Spheres:** new under **Extras** when the Sonic 3&K and Sonic 1 ROMs
   are both present. It is the game Sonic & Knuckles starts with Sonic 1 locked
   on, rebuilt from the S&K ROM: the title and menu, endless generated stages,
