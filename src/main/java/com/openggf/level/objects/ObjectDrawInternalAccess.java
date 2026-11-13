@@ -233,14 +233,18 @@ public final class ObjectDrawInternalAccess {
             // (The InstancedPatternRenderer bakes priority per-instance and doesn't
             // need the flush, but it's harmless — empty flushes are no-ops.)
 
-            drawBucketInstancesWithPriority(unifiedBuckets[idx], idx + RenderPriority.MIN, gfx);
+            int target = idx + RenderPriority.MIN;
+            drawBucketInstancesWithPriority(unifiedBuckets[idx], target, gfx,
+                    manager.dormantLayer.withDormantEmissions(target, gfx, List.of()));
         }
 
         void drawBucketWithSlotEmissions(int bucket, GraphicsManager graphics,
                 List<com.openggf.level.render.SpriteSlotEmission> external) {
             ensureBuckets.run();
             int index = RenderPriority.clamp(bucket) - RenderPriority.MIN;
-            drawBucketInstancesWithPriority(unifiedBuckets[index], index + RenderPriority.MIN, graphics, external);
+            int target = index + RenderPriority.MIN;
+            drawBucketInstancesWithPriority(unifiedBuckets[index], target, graphics,
+                    manager.dormantLayer.withDormantEmissions(target, graphics, external));
         }
 
         private void drawBucketInstancesWithPriority(List<ObjectRenderParts.RenderEntry> entries, int bucket,

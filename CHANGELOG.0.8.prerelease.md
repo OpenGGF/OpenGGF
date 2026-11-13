@@ -7,6 +7,21 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Widescreen that plays like the original:** a new setting,
+  `display.widescreenDrawMode`, chooses how a wide screen plays. `EDGE`, the default,
+  is the existing behaviour: objects wake up across the whole wide screen, so a 16:9
+  game plays a little differently from a 4:3 one. `NATIVE` keeps the game itself on
+  the original 320-pixel screen and draws the extra width as scenery, so every screen
+  size plays exactly the same game. That makes widescreen fair for time attack, races
+  and shared replays. Objects in the extra width that the original game has not woken
+  up yet are drawn frozen where they start, in greyscale by default
+  (`display.widescreenDormantStyle`: `GREYSCALE`, `NORMAL` or `HIDDEN`). They come to
+  life when the original screen reaches them and freeze again when it leaves them,
+  unless they were destroyed for good. Tests run Sonic 1, Sonic 2 and Sonic 3 & Knuckles
+  at 32:9 and 4:3 with the same input and check that the game state matches on every
+  frame. The capture tool gained `--draw-mode` and `--dormant-style`; both are pinned so
+  a personal setting never changes a capture.
+
 - **Lava Reef 1 frame hitches:** two stutters on the Lava Reef Act 1 route are
   gone. When the rock crusher opens the floor, the engine rebuilt the whole
   foreground layer (10-60 ms in a frame); it now redraws only the rewritten layout

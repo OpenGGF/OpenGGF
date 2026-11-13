@@ -16,6 +16,8 @@ display:
   shaderPickerKey: BACKSLASH   # Runtime key to open the searchable display shader picker
   shaderDefaultPhase: PRESENTATION   # Fallback render phase for standalone display shaders
   deadzoneMode: "PROPORTIONAL"   # Camera horizontal deadzone behaviour on wide screens
+  widescreenDrawMode: "EDGE"   # EDGE: objects run to the screen edge; NATIVE: gameplay stays 320 wide, extra width is drawn only
+  widescreenDormantStyle: "GREYSCALE"   # NATIVE mode: GREYSCALE, NORMAL or HIDDEN for not-yet-loaded objects in the extra width
   hudAnchor: "DEFAULT"   # Widescreen HUD position: centered native frame or screen left edge
   hudTimeHundredths: false   # TIME in hundredths (0:00.00), as Sonic CD shows it; the original games show whole seconds
   spriteScanlineLimit: false  # Enable native per-row count/pixel budgets for ROM image comparisons

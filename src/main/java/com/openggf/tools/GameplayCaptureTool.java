@@ -77,7 +77,8 @@ public final class GameplayCaptureTool {
                 arguments.width(), arguments.mainCharacter(), arguments.sidekickCharacter(),
                 arguments.donor(), donorRom, arguments.startX(), arguments.startY(), arguments.emeralds(), arguments.titleCard(),
                 arguments.completeSpecialStage(), arguments.vIntRunCount(), arguments.cameraXSub(),
-                arguments.starPost(), arguments.rings(), arguments.reverseGravity(), arguments.endOfLevel());
+                arguments.starPost(), arguments.rings(), arguments.reverseGravity(), arguments.endOfLevel(),
+                arguments.drawMode(), arguments.dormantStyle());
         int zone = ZoneIds.resolve(arguments.game(), arguments.zone());
         int act = arguments.act();
 
@@ -279,7 +280,25 @@ public final class GameplayCaptureTool {
                             Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
                             Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
                             boolean nativePcm, boolean endOfLevel, int rewindFrom, int rewindFrames,
-                            Path saveSlots, String extraTeams, Integer timerFrames, boolean noMusic) {
+                            Path saveSlots, String extraTeams, Integer timerFrames, boolean noMusic,
+                            String drawMode, String dormantStyle) {
+
+        /** EDGE widescreen draw mode with greyscale dormant objects, the pinned capture defaults. */
+        public Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
+                         String mainCharacter, String sidekickCharacter, String donor, Path donorRom, Path input,
+                         int settle, int inputStart, Integer frames, int captureFrom, int every, Set<Integer> stills,
+                         boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
+                         Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
+                         Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
+                         Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
+                         boolean nativePcm, boolean endOfLevel, int rewindFrom, int rewindFrames,
+                         Path saveSlots, String extraTeams, Integer timerFrames, boolean noMusic) {
+            this(game, rom, zone, act, startX, startY, width, mainCharacter, sidekickCharacter, donor, donorRom, input,
+                    settle, inputStart, frames, captureFrom, every, stills, stopOnDeath, deathGrace, video, scale, fps,
+                    outDir, emeralds, titleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, rings,
+                    reverseGravity, mod, titleScreen, audio, interactivePacing, nativePcm, endOfLevel, rewindFrom,
+                    rewindFrames, saveSlots, extraTeams, timerFrames, noMusic, "EDGE", "GREYSCALE");
+        }
 
         /** With music in the audio capture. */
         public Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
@@ -405,6 +424,7 @@ public final class GameplayCaptureTool {
             int rewindFrom = -1, rewindFrames = 0;
             Path saveSlots = null;
             String extraTeams = null;
+            String drawMode = "EDGE", dormantStyle = "GREYSCALE";
             for (int i = 0; i < argv.length; i++) {
                 String flag = argv[i];
                 switch (flag) {
@@ -421,6 +441,9 @@ public final class GameplayCaptureTool {
                     case "--x" -> startX = number(value(argv, ++i, flag), flag);
                     case "--y" -> startY = number(value(argv, ++i, flag), flag);
                     case "--width" -> width = number(value(argv, ++i, flag), flag);
+                    case "--draw-mode" -> drawMode = choice(value(argv, ++i, flag), flag, "EDGE", "NATIVE");
+                    case "--dormant-style" -> dormantStyle =
+                            choice(value(argv, ++i, flag), flag, "GREYSCALE", "NORMAL", "HIDDEN");
                     case "--main" -> main = value(argv, ++i, flag);
                     case "--sidekick" -> {
                         String raw = value(argv, ++i, flag);
@@ -503,7 +526,14 @@ public final class GameplayCaptureTool {
                     settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
                     video, scale, fps, outDir, emeralds, titleCard, completeSpecialStage,
                     vIntRunCount, cameraXSub, starPost, rings, reverseGravity, mod, titleScreen, audio, interactivePacing,
-                    nativePcm, endOfLevel, rewindFrom, rewindFrames, saveSlots, extraTeams, timerFrames, noMusic);
+                    nativePcm, endOfLevel, rewindFrom, rewindFrames, saveSlots, extraTeams, timerFrames, noMusic,
+                    drawMode, dormantStyle);
+        }
+
+        private static String choice(String raw, String flag, String... allowed) {
+            String value = raw.trim().toUpperCase(Locale.ROOT);
+            for (String candidate : allowed) if (candidate.equals(value)) return value;
+            throw new IllegalArgumentException(flag + " must be one of " + String.join(", ", allowed));
         }
 
         private static String value(String[] argv, int index, String flag) {

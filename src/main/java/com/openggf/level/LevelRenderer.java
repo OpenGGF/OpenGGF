@@ -1,5 +1,6 @@
 package com.openggf.level;
 
+import com.openggf.camera.CameraPresentationAccess;
 import com.openggf.trace.replay.TraceGhostHook;
 import com.openggf.audio.AudioManager;
 import com.openggf.camera.Camera;
@@ -1262,6 +1263,22 @@ public final class LevelRenderer {
         finally { cinematicDraw = false; }
     }
 
+    /**
+     * NATIVE widescreen draw mode: the simulation camera is the 320-pixel ROM window and
+     * the picture adds an equal presentation-only inset each side. Rebase the displayed
+     * scroll generation so the tile passes cover the margins; sprites and world commands
+     * follow through {@code GraphicsManager}'s presentation flush origin.
+     */
+    private void insetNativePresentation() {
+        if (!CameraPresentationAccess.hasMargin(lm.camera) || nativeCompetitionScroll != null || cinematicDraw) return;
+        int inset = CameraPresentationAccess.inset(lm.camera);
+        var base = currentScrollPresentation != null ? currentScrollPresentation
+                : LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState);
+        var sampled = boundsMask.sample();
+        currentScrollPresentation = base.insetForPresentation(inset, CameraPresentationAccess.width(lm.camera),
+                sampled != null ? sampled : LevelScrollPresentation.captureArenaMask(lm));
+    }
+
     private LevelScrollPresentation scrollForDraw() {
         if (nativeCompetitionScroll != null) return nativeCompetitionScroll;
         if (cinematicDraw) return cinematicScroll;
@@ -1444,7 +1461,7 @@ public final class LevelRenderer {
         // (e.g. a centered arena carried into a seamless act's negative camera X).
         // Do not sample unrelated far-end terrain there. This affects rendering only:
         // native boundary words, player walls and intentional foreground rings remain.
-        com.openggf.graphics.TilemapGpuRendererInternalAccess.setClipHorizontal(tilemapRenderer, lm.camera.getWidth() > 320
+        com.openggf.graphics.TilemapGpuRendererInternalAccess.setClipHorizontal(tilemapRenderer, CameraPresentationAccess.width(lm.camera) > 320
                 && foregroundPlaneSource(currentAdvancedRenderFrameState) == TilemapGpuRenderer.Layer.FOREGROUND
                 && retainedPlane(foregroundPlaneSource(currentAdvancedRenderFrameState)) == null
                 && !ownsWidescreenMargins()
@@ -1573,6 +1590,7 @@ public final class LevelRenderer {
         adoptMotion();
         if (currentScrollPresentation == null) resolveAdvancedRenderFrameState(lm.frameCounter);
         else currentAdvancedRenderFrameState = currentScrollPresentation.renderMode();
+        insetNativePresentation();
 
         List<GLCommand> collisionCommands = lm.debugRenderer != null
                 ? lm.debugRenderer.getCollisionCommands() : new ArrayList<>();

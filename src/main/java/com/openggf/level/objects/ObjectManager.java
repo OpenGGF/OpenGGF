@@ -120,6 +120,8 @@ public class ObjectManager {
     private final ObjectSlotLayout allocationLayout;
 
     final ObjectServices objectServices;
+    /** NATIVE widescreen draw mode's presentation-only frozen layout objects. */
+    final DormantObjectLayer dormantLayer = new DormantObjectLayer(this);
     StageplayObjectDirection stageplayDirection;
     private final ObjectStageplayController stageplayController;
     final StageplayActivationPolicy stageplayActivation;
@@ -1868,6 +1870,23 @@ public class ObjectManager {
 
     public Collection<ObjectSpawn> getActiveSpawns() {
         return placement.getActiveSpawns();
+    }
+
+    Camera camera() {
+        return camera;
+    }
+
+    /** Re-derives the static on-screen bounds from the (restored) simulation camera. */
+    void refreshCameraBoundsAfterPresentationProbe() {
+        updateCameraBounds();
+    }
+
+    /**
+     * NATIVE widescreen draw mode: bake frozen poses for layout objects at a frame
+     * boundary. No-op unless the display is wider than the native simulation window.
+     */
+    void prepareDormantPresentation(com.openggf.game.rewind.RewindRegistry registry) {
+        dormantLayer.prepareAtFrameBoundary(registry);
     }
 
     public List<ObjectSpawn> getAllSpawns() {

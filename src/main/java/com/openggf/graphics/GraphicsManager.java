@@ -1,5 +1,6 @@
 package com.openggf.graphics;
 
+import com.openggf.camera.CameraPresentationAccess;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -589,8 +590,9 @@ public class GraphicsManager {
 		if (spritePresentationBuilder != null) return;
 		Camera cam = getCamera();
         var offset = sceneMotionOffset;
-        flushScene(cam.getXWithShake() + (offset == null ? 0 : offset.x()),
-                cam.getYWithShake() + (offset == null ? 0 : offset.y()), cam.getWidth(), cam.getHeight());
+        // The presentation origin: the camera window, widened by the NATIVE widescreen inset.
+        flushScene(CameraPresentationAccess.leftWithShake(cam) + (offset == null ? 0 : offset.x()),
+                cam.getYWithShake() + (offset == null ? 0 : offset.y()), CameraPresentationAccess.width(cam), cam.getHeight());
 	}
 
 	/** Discards queued draw commands after an aborted frame without executing them. */
@@ -664,7 +666,7 @@ public class GraphicsManager {
 	 */
 	public void flushScreenSpace() {
 		Camera cam = getCamera();
-		flushWithCamera((short) 0, (short) 0, cam.getWidth(), cam.getHeight());
+		flushWithCamera((short) 0, (short) 0, CameraPresentationAccess.width(cam), cam.getHeight());
 	}
 
 	/**
@@ -1938,6 +1940,8 @@ public class GraphicsManager {
 		int rasterHeight = getConfiguredScreenHeightPx();
 		int rasterX = spritePresentationBuilder != null ? spritePresentationBuilder.cameraX : getCamera().getXWithShake();
 		int rasterY = spritePresentationBuilder != null ? spritePresentationBuilder.cameraY : getCamera().getYWithShake();
+		// NATIVE widescreen: the raster starts at the presentation left edge, not the camera.
+		rasterX -= CameraPresentationAccess.inset(getCamera());
 		if ((rasterWidth & 7) == 0) {
 			beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster.extended(rasterX, rasterY, rasterWidth, rasterHeight));
 		} else {
