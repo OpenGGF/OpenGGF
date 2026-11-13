@@ -56,7 +56,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image wait strip attempt 2, cell 0; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Built-in GPT Image wait strip attempt 2, cell 0; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "wait-01",
@@ -69,7 +69,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image wait strip attempt 2, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Built-in GPT Image wait strip attempt 2, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "wait-02",
@@ -82,7 +82,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image wait strip attempt 2, cell 2; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Built-in GPT Image wait strip attempt 2, cell 2; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "wait-03",
@@ -95,7 +95,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image wait strip attempt 2, cell 3; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Built-in GPT Image wait strip attempt 2, cell 3; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "wait-04",
@@ -108,7 +108,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image wait strip attempt 2, cell 4; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Built-in GPT Image wait strip attempt 2, cell 4; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "wait-05",
@@ -121,7 +121,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image wait strip attempt 2, cell 5; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Built-in GPT Image wait strip attempt 2, cell 5; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "wait-06",
@@ -134,7 +134,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image wait strip attempt 2, cell 6; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Built-in GPT Image wait strip attempt 2, cell 6; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "walk-00",
@@ -355,7 +355,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original spindash attempt 2 cell 0, uniform factor 0.9; skull/torso scale; no painting."
+      "notes": "Consistency: original spindash attempt 2 cell 0, uniform factor 0.9; skull/torso scale; no painting. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "spindash-01",
@@ -368,7 +368,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original spindash attempt 2 cell 1, uniform factor 0.9; skull/torso scale; no painting."
+      "notes": "Consistency: original spindash attempt 2 cell 1, uniform factor 0.9; skull/torso scale; no painting. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "spindash-02",
@@ -381,7 +381,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original spindash attempt 2 cell 2, uniform factor 0.9; skull/torso scale; no painting."
+      "notes": "Consistency: original spindash attempt 2 cell 2, uniform factor 0.9; skull/torso scale; no painting. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "spindash-03",
@@ -402,12 +402,12 @@
       "order": 0,
       "file": "frames/spring-00.png",
       "hotspot": [
-        16,
-        17
+        18,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency built-in image generation: spring-2.png, cell 1; uniform 18:1 reduction; no contour painting."
+      "notes": "Consistency built-in image generation: spring-2.png, cell 1; uniform 18:1 reduction; no contour painting. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x1.15 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "hurt-00",
@@ -420,7 +420,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original poses attempt 1 cell 1, uniform factor 0.9; skull/torso scale; no painting."
+      "notes": "Consistency: original poses attempt 1 cell 1, uniform factor 0.9; skull/torso scale; no painting. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "death-00",
@@ -433,7 +433,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image poses strip attempt 1, cell 2; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Built-in GPT Image poses strip attempt 1, cell 2; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "duck-00",
@@ -441,12 +441,12 @@
       "order": 3,
       "file": "frames/duck-00.png",
       "hotspot": [
-        19,
-        4
+        22,
+        7
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original poses attempt 1 cell 3, uniform factor 0.85; skull/torso scale; no painting."
+      "notes": "Consistency: original poses attempt 1 cell 3, uniform factor 0.85; skull/torso scale; no painting. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x1.15 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "look_up-00",
@@ -459,7 +459,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image poses strip attempt 1, cell 4; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1."
+      "notes": "Built-in GPT Image poses strip attempt 1, cell 4; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "skid-00",
@@ -472,7 +472,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original poses attempt 1 cell 5, uniform factor 0.9; skull/torso scale; no painting."
+      "notes": "Consistency: original poses attempt 1 cell 5, uniform factor 0.9; skull/torso scale; no painting. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "skid-01",
@@ -485,7 +485,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Consistency: original poses attempt 1 cell 6, uniform factor 0.9; skull/torso scale; no painting."
+      "notes": "Consistency: original poses attempt 1 cell 6, uniform factor 0.9; skull/torso scale; no painting. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "fly-00",
@@ -493,12 +493,12 @@
       "order": 0,
       "file": "frames/fly-00.png",
       "hotspot": [
-        25,
-        35
+        21,
+        29
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "fly-01",
@@ -506,12 +506,12 @@
       "order": 1,
       "file": "frames/fly-01.png",
       "hotspot": [
-        29,
-        25
+        24,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "fly-02",
@@ -519,12 +519,12 @@
       "order": 2,
       "file": "frames/fly-02.png",
       "hotspot": [
-        35,
-        24
+        29,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "fly-03",
@@ -532,12 +532,12 @@
       "order": 3,
       "file": "frames/fly-03.png",
       "hotspot": [
-        20,
-        25
+        17,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "fly-04",
@@ -545,12 +545,12 @@
       "order": 4,
       "file": "frames/fly-04.png",
       "hotspot": [
-        28,
-        24
+        23,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "fly-05",
@@ -558,12 +558,12 @@
       "order": 5,
       "file": "frames/fly-05.png",
       "hotspot": [
-        30,
-        24
+        25,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 2,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "fly_tired-00",
@@ -576,7 +576,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Flight scale: original tired-1.png cell 0, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86."
+      "notes": "Flight scale: original tired-1.png cell 0, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "fly_tired-01",
@@ -589,7 +589,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Flight scale: original tired-1.png cell 1, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86."
+      "notes": "Flight scale: original tired-1.png cell 1, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "fly_tired-02",
@@ -602,7 +602,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Flight scale: original tired-1.png cell 2, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86."
+      "notes": "Flight scale: original tired-1.png cell 2, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "fly_tired-03",
@@ -615,7 +615,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Flight scale: original tired-1.png cell 3, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86."
+      "notes": "Flight scale: original tired-1.png cell 3, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "fly_tired-04",
@@ -628,7 +628,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Flight scale: original tired-1.png cell 4, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86."
+      "notes": "Flight scale: original tired-1.png cell 4, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "fly_tired-05",
@@ -641,7 +641,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Flight scale: original tired-1.png cell 5, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86."
+      "notes": "Flight scale: original tired-1.png cell 5, uniform 6.8:1 Lanczos reduction; hand skull/eye/torso registration, no wingspan fitting or body plate. Rotor stub cleared in authoritative rows as 094c6fbf86. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "walk-up45-00",
@@ -1122,7 +1122,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image corrected PUSH, alternative row 1 phase 0; uniform anatomical scale 7.5000:1. Native palm/wall plane at centre+16, approved WAIT foot baseline at centre+19; no painted contours."
+      "notes": "GPT Image corrected PUSH, alternative row 1 phase 0; uniform anatomical scale 7.5000:1. Native palm/wall plane at centre+16, approved WAIT foot baseline at centre+19; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-push-01",
@@ -1135,7 +1135,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image corrected PUSH, alternative row 1 phase 1; uniform anatomical scale 7.5000:1. Native palm/wall plane at centre+16, approved WAIT foot baseline at centre+19; no painted contours."
+      "notes": "GPT Image corrected PUSH, alternative row 1 phase 1; uniform anatomical scale 7.5000:1. Native palm/wall plane at centre+16, approved WAIT foot baseline at centre+19; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-push-02",
@@ -1148,7 +1148,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image corrected PUSH, alternative row 1 phase 2; uniform anatomical scale 7.3000:1. Native palm/wall plane at centre+16, approved WAIT foot baseline at centre+19; no painted contours."
+      "notes": "GPT Image corrected PUSH, alternative row 1 phase 2; uniform anatomical scale 7.3000:1. Native palm/wall plane at centre+16, approved WAIT foot baseline at centre+19; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-push-03",
@@ -1161,7 +1161,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image corrected PUSH, alternative row 1 phase 3; uniform anatomical scale 7.1000:1. Native palm/wall plane at centre+16, approved WAIT foot baseline at centre+19; no painted contours."
+      "notes": "GPT Image corrected PUSH, alternative row 1 phase 3; uniform anatomical scale 7.1000:1. Native palm/wall plane at centre+16, approved WAIT foot baseline at centre+19; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-balance-00",
@@ -1174,7 +1174,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE: attempt row 1, phase 0; uniform anatomical/goggle scale 8.6000:1. No painted contours."
+      "notes": "GPT Image BALANCE: attempt row 1, phase 0; uniform anatomical/goggle scale 8.6000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-balance-01",
@@ -1187,7 +1187,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE: attempt row 3, phase 1; uniform anatomical/goggle scale 8.7000:1. No painted contours."
+      "notes": "GPT Image BALANCE: attempt row 3, phase 1; uniform anatomical/goggle scale 8.7000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-balance2-00",
@@ -1195,12 +1195,12 @@
       "order": 0,
       "file": "frames/family-balance2-00.png",
       "hotspot": [
-        18,
-        19
+        15,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE2: attempt row 2, phase 0; uniform anatomical/goggle scale 8.4000:1. No painted contours. Landmark review uniform correction 1.15. 2026-11-10: re-reduced original generation at 6.640316 source pixels/native pixel; uniform anatomy correction 1.1; no painted contours."
+      "notes": "GPT Image BALANCE2: attempt row 2, phase 0; uniform anatomical/goggle scale 8.4000:1. No painted contours. Landmark review uniform correction 1.15. 2026-11-10: re-reduced original generation at 6.640316 source pixels/native pixel; uniform anatomy correction 1.1; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.79 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-balance2-01",
@@ -1208,12 +1208,12 @@
       "order": 1,
       "file": "frames/family-balance2-01.png",
       "hotspot": [
-        18,
-        22
+        14,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE2: attempt row 1, phase 1; uniform anatomical/goggle scale 7.7000:1. No painted contours. Landmark review uniform correction 1.15. 2026-11-10: re-reduced original generation at 6.086957 source pixels/native pixel; uniform anatomy correction 1.1; no painted contours."
+      "notes": "GPT Image BALANCE2: attempt row 1, phase 1; uniform anatomical/goggle scale 7.7000:1. No painted contours. Landmark review uniform correction 1.15. 2026-11-10: re-reduced original generation at 6.086957 source pixels/native pixel; uniform anatomy correction 1.1; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.79 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-balance2-02",
@@ -1221,12 +1221,12 @@
       "order": 2,
       "file": "frames/family-balance2-02.png",
       "hotspot": [
-        17,
-        19
+        13,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE2: attempt row 3, phase 2; uniform anatomical/goggle scale 6.7000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.090909 source pixels/native pixel; uniform anatomy correction 1.1; no painted contours."
+      "notes": "GPT Image BALANCE2: attempt row 3, phase 2; uniform anatomical/goggle scale 6.7000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.090909 source pixels/native pixel; uniform anatomy correction 1.1; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.79 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-balance3-00",
@@ -1239,7 +1239,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE3: attempt row 2, phase 0; uniform anatomical/goggle scale 10.2000:1. No painted contours."
+      "notes": "GPT Image BALANCE3: attempt row 2, phase 0; uniform anatomical/goggle scale 10.2000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-balance3-01",
@@ -1252,7 +1252,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE3: attempt row 2, phase 1; uniform anatomical/goggle scale 10.5000:1. No painted contours."
+      "notes": "GPT Image BALANCE3: attempt row 2, phase 1; uniform anatomical/goggle scale 10.5000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-balance4-00",
@@ -1265,7 +1265,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE4: attempt row 1, phase 0; uniform anatomical/goggle scale 6.2000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 6.071289 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours."
+      "notes": "GPT Image BALANCE4: attempt row 1, phase 0; uniform anatomical/goggle scale 6.2000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 6.071289 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "family-balance4-01",
@@ -1273,12 +1273,12 @@
       "order": 1,
       "file": "frames/family-balance4-01.png",
       "hotspot": [
-        22,
-        24
+        18,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE4: attempt row 2, phase 1; uniform anatomical/goggle scale 5.3000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 5.189973 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours."
+      "notes": "GPT Image BALANCE4: attempt row 2, phase 1; uniform anatomical/goggle scale 5.3000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 5.189973 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.81 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "family-balance4-02",
@@ -1286,12 +1286,12 @@
       "order": 2,
       "file": "frames/family-balance4-02.png",
       "hotspot": [
-        23,
-        22
+        20,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE4: attempt row 3, phase 2; uniform anatomical/goggle scale 5.3000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 5.189973 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours."
+      "notes": "GPT Image BALANCE4: attempt row 3, phase 2; uniform anatomical/goggle scale 5.3000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 5.189973 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.84 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-balance4-03",
@@ -1299,12 +1299,12 @@
       "order": 3,
       "file": "frames/family-balance4-03.png",
       "hotspot": [
-        24,
-        24
+        20,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE4: attempt row 2, phase 3; uniform anatomical/goggle scale 5.1000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 4.994125 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours."
+      "notes": "GPT Image BALANCE4: attempt row 2, phase 3; uniform anatomical/goggle scale 5.1000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 4.994125 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.77 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-balance4-04",
@@ -1317,7 +1317,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BALANCE4: attempt row 3, phase 4; uniform anatomical/goggle scale 5.9000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 5.777517 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours."
+      "notes": "GPT Image BALANCE4: attempt row 3, phase 4; uniform anatomical/goggle scale 5.9000:1. No painted contours. Landmark review uniform correction 0.92. 2026-11-10: re-reduced original generation at 5.777517 source pixels/native pixel; uniform anatomy correction 1.11; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "family-hang-00",
@@ -1325,12 +1325,12 @@
       "order": 0,
       "file": "frames/family-hang-00.png",
       "hotspot": [
-        26,
+        23,
         12
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image HANG: attempt row 2, phase 0; uniform anatomical/goggle scale 12.0000:1. No painted contours."
+      "notes": "GPT Image HANG: attempt row 2, phase 0; uniform anatomical/goggle scale 12.0000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.86 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-hang-01",
@@ -1338,12 +1338,12 @@
       "order": 1,
       "file": "frames/family-hang-01.png",
       "hotspot": [
-        26,
+        22,
         12
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image HANG: attempt row 3, phase 1; uniform anatomical/goggle scale 11.8000:1. No painted contours."
+      "notes": "GPT Image HANG: attempt row 3, phase 1; uniform anatomical/goggle scale 11.8000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.86 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-hang2-00",
@@ -1356,7 +1356,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image HANG2: attempt row 1, phase 0; uniform anatomical/goggle scale 11.0000:1. No painted contours."
+      "notes": "GPT Image HANG2: attempt row 1, phase 0; uniform anatomical/goggle scale 11.0000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-hang2-01",
@@ -1369,7 +1369,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image HANG2: attempt row 2, phase 1; uniform anatomical/goggle scale 10.9000:1. No painted contours."
+      "notes": "GPT Image HANG2: attempt row 2, phase 1; uniform anatomical/goggle scale 10.9000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-bubble-00",
@@ -1377,12 +1377,12 @@
       "order": 0,
       "file": "frames/family-bubble-00.png",
       "hotspot": [
-        24,
-        26
+        18,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BUBBLE: attempt row 1, phase 0; uniform anatomical/goggle scale 7.8000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 5.616359 source pixels/native pixel; uniform anatomy correction 1.24; no painted contours."
+      "notes": "GPT Image BUBBLE: attempt row 1, phase 0; uniform anatomical/goggle scale 7.8000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 5.616359 source pixels/native pixel; uniform anatomy correction 1.24; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.76 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-bubble-01",
@@ -1390,12 +1390,12 @@
       "order": 1,
       "file": "frames/family-bubble-01.png",
       "hotspot": [
-        24,
-        26
+        18,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BUBBLE: attempt row 2, phase 1; uniform anatomical/goggle scale 7.7000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 5.544355 source pixels/native pixel; uniform anatomy correction 1.24; no painted contours."
+      "notes": "GPT Image BUBBLE: attempt row 2, phase 1; uniform anatomical/goggle scale 7.7000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 5.544355 source pixels/native pixel; uniform anatomy correction 1.24; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.76 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-bubble-02",
@@ -1403,12 +1403,12 @@
       "order": 2,
       "file": "frames/family-bubble-02.png",
       "hotspot": [
-        24,
-        26
+        18,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BUBBLE: attempt row 3, phase 2; uniform anatomical/goggle scale 7.9000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 5.688364 source pixels/native pixel; uniform anatomy correction 1.24; no painted contours."
+      "notes": "GPT Image BUBBLE: attempt row 3, phase 2; uniform anatomical/goggle scale 7.9000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 5.688364 source pixels/native pixel; uniform anatomy correction 1.24; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.76 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-hurt-fall-00",
@@ -1416,12 +1416,12 @@
       "order": 0,
       "file": "frames/family-hurt-fall-00.png",
       "hotspot": [
-        20,
-        28
+        15,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image HURT_FALL: attempt row 2, phase 0; uniform anatomical/goggle scale 12.7000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 8.790144 source pixels/native pixel; uniform anatomy correction 1.29; no painted contours."
+      "notes": "GPT Image HURT_FALL: attempt row 2, phase 0; uniform anatomical/goggle scale 12.7000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 8.790144 source pixels/native pixel; uniform anatomy correction 1.29; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.73 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-hurt-fall-01",
@@ -1429,12 +1429,12 @@
       "order": 1,
       "file": "frames/family-hurt-fall-01.png",
       "hotspot": [
-        23,
-        26
+        16,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image HURT_FALL: attempt row 3, phase 1; uniform anatomical/goggle scale 13.0000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 8.997785 source pixels/native pixel; uniform anatomy correction 1.29; no painted contours."
+      "notes": "GPT Image HURT_FALL: attempt row 3, phase 1; uniform anatomical/goggle scale 13.0000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 8.997785 source pixels/native pixel; uniform anatomy correction 1.29; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.73 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-drown-00",
@@ -1447,7 +1447,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image DROWN: attempt row 3, phase 0; uniform anatomical/goggle scale 23.0000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 15.796703 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours."
+      "notes": "GPT Image DROWN: attempt row 3, phase 0; uniform anatomical/goggle scale 23.0000:1. No painted contours. Landmark review uniform correction 1.12. 2026-11-10: re-reduced original generation at 15.796703 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "family-float2-00",
@@ -1455,12 +1455,12 @@
       "order": 0,
       "file": "frames/family-float2-00.png",
       "hotspot": [
-        22,
-        13
+        21,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 1, phase 0; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours."
+      "notes": "GPT Image FLOAT2: attempt row 1, phase 0; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-float2-01",
@@ -1468,12 +1468,12 @@
       "order": 1,
       "file": "frames/family-float2-01.png",
       "hotspot": [
-        19,
-        13
+        18,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 2, phase 1; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours."
+      "notes": "GPT Image FLOAT2: attempt row 2, phase 1; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-float2-02",
@@ -1481,12 +1481,12 @@
       "order": 2,
       "file": "frames/family-float2-02.png",
       "hotspot": [
-        19,
-        14
+        18,
+        13
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 1, phase 2; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours."
+      "notes": "GPT Image FLOAT2: attempt row 1, phase 2; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "family-float2-03",
@@ -1494,12 +1494,12 @@
       "order": 3,
       "file": "frames/family-float2-03.png",
       "hotspot": [
-        19,
-        13
+        18,
+        12
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 3, phase 3; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours."
+      "notes": "GPT Image FLOAT2: attempt row 3, phase 3; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-float2-04",
@@ -1507,12 +1507,12 @@
       "order": 4,
       "file": "frames/family-float2-04.png",
       "hotspot": [
-        22,
-        12
+        20,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 2, phase 4; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours."
+      "notes": "GPT Image FLOAT2: attempt row 2, phase 4; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "family-float2-05",
@@ -1520,12 +1520,12 @@
       "order": 5,
       "file": "frames/family-float2-05.png",
       "hotspot": [
-        18,
-        16
+        17,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 3, phase 5; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours."
+      "notes": "GPT Image FLOAT2: attempt row 3, phase 5; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "family-float2-06",
@@ -1533,12 +1533,12 @@
       "order": 6,
       "file": "frames/family-float2-06.png",
       "hotspot": [
-        18,
-        17
+        16,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 1, phase 6; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours."
+      "notes": "GPT Image FLOAT2: attempt row 1, phase 6; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "family-float2-07",
@@ -1546,12 +1546,12 @@
       "order": 7,
       "file": "frames/family-float2-07.png",
       "hotspot": [
-        18,
-        16
+        17,
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image FLOAT2: attempt row 2, phase 7; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours."
+      "notes": "GPT Image FLOAT2: attempt row 2, phase 7; uniform anatomical/goggle scale 8.0000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.442177 source pixels/native pixel; uniform anatomy correction 1.47; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "family-blink-00",
@@ -1564,7 +1564,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BLINK: attempt row 1, phase 0; uniform anatomical/goggle scale 6.9000:1. No painted contours."
+      "notes": "GPT Image BLINK: attempt row 1, phase 0; uniform anatomical/goggle scale 6.9000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-blink-01",
@@ -1572,12 +1572,12 @@
       "order": 1,
       "file": "frames/family-blink-01.png",
       "hotspot": [
-        11,
+        12,
         16
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BLINK: attempt row 2, phase 1; uniform anatomical/goggle scale 7.3000:1. No painted contours."
+      "notes": "GPT Image BLINK: attempt row 2, phase 1; uniform anatomical/goggle scale 7.3000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-blink-02",
@@ -1590,7 +1590,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image BLINK: attempt row 3, phase 2; uniform anatomical/goggle scale 7.1000:1. No painted contours."
+      "notes": "GPT Image BLINK: attempt row 3, phase 2; uniform anatomical/goggle scale 7.1000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-get-up-00",
@@ -1603,7 +1603,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image GET_UP: attempt row 2, phase 0; uniform anatomical/goggle scale 9.4000:1. No painted contours."
+      "notes": "GPT Image GET_UP: attempt row 2, phase 0; uniform anatomical/goggle scale 9.4000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "family-get-up-01",
@@ -1616,7 +1616,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image GET_UP: attempt row 3, phase 1; uniform anatomical/goggle scale 11.0000:1. No painted contours."
+      "notes": "GPT Image GET_UP: attempt row 3, phase 1; uniform anatomical/goggle scale 11.0000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "family-victory-00",
@@ -1624,12 +1624,12 @@
       "order": 0,
       "file": "frames/family-victory-00.png",
       "hotspot": [
-        14,
-        27
+        12,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image VICTORY: attempt row 1, phase 0; uniform anatomical/goggle scale 8.5000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.538462 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours."
+      "notes": "GPT Image VICTORY: attempt row 1, phase 0; uniform anatomical/goggle scale 8.5000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.538462 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-victory-01",
@@ -1637,12 +1637,12 @@
       "order": 1,
       "file": "frames/family-victory-01.png",
       "hotspot": [
-        15,
-        25
+        13,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image VICTORY: attempt row 2, phase 1; uniform anatomical/goggle scale 8.6000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.615385 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours."
+      "notes": "GPT Image VICTORY: attempt row 2, phase 1; uniform anatomical/goggle scale 8.6000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.615385 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-victory-02",
@@ -1650,12 +1650,12 @@
       "order": 2,
       "file": "frames/family-victory-02.png",
       "hotspot": [
-        17,
-        25
+        14,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image VICTORY: attempt row 3, phase 2; uniform anatomical/goggle scale 8.7000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.692308 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours."
+      "notes": "GPT Image VICTORY: attempt row 3, phase 2; uniform anatomical/goggle scale 8.7000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.692308 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-victory-03",
@@ -1663,12 +1663,12 @@
       "order": 3,
       "file": "frames/family-victory-03.png",
       "hotspot": [
-        15,
-        27
+        13,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image VICTORY: attempt row 2, phase 3; uniform anatomical/goggle scale 8.5000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.538462 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours."
+      "notes": "GPT Image VICTORY: attempt row 2, phase 3; uniform anatomical/goggle scale 8.5000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.538462 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-carried-00",
@@ -1676,12 +1676,12 @@
       "order": 0,
       "file": "frames/family-tails-carried-00.png",
       "hotspot": [
-        18,
+        16,
         24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_CARRIED: attempt row 2, phase 0; uniform anatomical/goggle scale 6.7000:1. No painted contours. Raised feather hands registered to native carried grip plane at centre-24. 2026-11-10: re-reduced original generation at 5.775862 source pixels/native pixel; uniform anatomy correction 1.16; no painted contours."
+      "notes": "GPT Image TAILS_CARRIED: attempt row 2, phase 0; uniform anatomical/goggle scale 6.7000:1. No painted contours. Raised feather hands registered to native carried grip plane at centre-24. 2026-11-10: re-reduced original generation at 5.775862 source pixels/native pixel; uniform anatomy correction 1.16; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.91 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-carried-01",
@@ -1689,12 +1689,12 @@
       "order": 1,
       "file": "frames/family-tails-carried-01.png",
       "hotspot": [
-        19,
+        17,
         24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_CARRIED: attempt row 1, phase 1; uniform anatomical/goggle scale 5.2000:1. No painted contours. Landmark review uniform correction 0.8. Raised feather hands registered to native carried grip plane at centre-24. 2026-11-10: re-reduced original generation at 5.603448 source pixels/native pixel; uniform anatomy correction 1.16; no painted contours."
+      "notes": "GPT Image TAILS_CARRIED: attempt row 1, phase 1; uniform anatomical/goggle scale 5.2000:1. No painted contours. Landmark review uniform correction 0.8. Raised feather hands registered to native carried grip plane at centre-24. 2026-11-10: re-reduced original generation at 5.603448 source pixels/native pixel; uniform anatomy correction 1.16; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.91 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-carried-02",
@@ -1702,12 +1702,12 @@
       "order": 2,
       "file": "frames/family-tails-carried-02.png",
       "hotspot": [
-        23,
+        21,
         24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_CARRIED: attempt row 3, phase 2; uniform anatomical/goggle scale 5.1000:1. No painted contours. Landmark review uniform correction 0.75. Raised feather hands registered to native carried grip plane at centre-24. 2026-11-10: re-reduced original generation at 5.862069 source pixels/native pixel; uniform anatomy correction 1.16; no painted contours."
+      "notes": "GPT Image TAILS_CARRIED: attempt row 3, phase 2; uniform anatomical/goggle scale 5.1000:1. No painted contours. Landmark review uniform correction 0.75. Raised feather hands registered to native carried grip plane at centre-24. 2026-11-10: re-reduced original generation at 5.862069 source pixels/native pixel; uniform anatomy correction 1.16; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.91 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-super-transform-00",
@@ -1715,12 +1715,12 @@
       "order": 0,
       "file": "frames/family-super-transform-00.png",
       "hotspot": [
-        24,
-        23
+        17,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image SUPER_TRANSFORM: attempt row 2, phase 0; uniform anatomical/goggle scale 5.3000:1. No painted contours. Landmark review uniform correction 0.88. 2026-11-10: re-reduced original generation at 4.742305 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours."
+      "notes": "GPT Image SUPER_TRANSFORM: attempt row 2, phase 0; uniform anatomical/goggle scale 5.3000:1. No painted contours. Landmark review uniform correction 0.88. 2026-11-10: re-reduced original generation at 4.742305 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.70 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "family-super-transform-01",
@@ -1728,12 +1728,12 @@
       "order": 1,
       "file": "frames/family-super-transform-01.png",
       "hotspot": [
-        27,
-        27
+        20,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image SUPER_TRANSFORM: attempt row 3, phase 1; uniform anatomical/goggle scale 6.1000:1. No painted contours. 2026-11-10: re-reduced original generation at 4.803150 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours."
+      "notes": "GPT Image SUPER_TRANSFORM: attempt row 3, phase 1; uniform anatomical/goggle scale 6.1000:1. No painted contours. 2026-11-10: re-reduced original generation at 4.803150 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.74 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-super-transform-02",
@@ -1741,12 +1741,12 @@
       "order": 2,
       "file": "frames/family-super-transform-02.png",
       "hotspot": [
-        20,
-        26
+        16,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image SUPER_TRANSFORM: attempt row 1, phase 2; uniform anatomical/goggle scale 6.7333:1. No painted contours. 2026-11-10: re-reduced original generation at 5.301837 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours."
+      "notes": "GPT Image SUPER_TRANSFORM: attempt row 1, phase 2; uniform anatomical/goggle scale 6.7333:1. No painted contours. 2026-11-10: re-reduced original generation at 5.301837 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.81 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-super-transform-03",
@@ -1754,12 +1754,12 @@
       "order": 3,
       "file": "frames/family-super-transform-03.png",
       "hotspot": [
-        26,
-        24
+        23,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image SUPER_TRANSFORM: attempt row 2, phase 3; uniform anatomical/goggle scale 6.4000:1. No painted contours. Landmark review uniform correction 0.9. 2026-11-10: re-reduced original generation at 5.599300 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours."
+      "notes": "GPT Image SUPER_TRANSFORM: attempt row 2, phase 3; uniform anatomical/goggle scale 6.4000:1. No painted contours. Landmark review uniform correction 0.9. 2026-11-10: re-reduced original generation at 5.599300 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-super-transform-04",
@@ -1767,12 +1767,12 @@
       "order": 4,
       "file": "frames/family-super-transform-04.png",
       "hotspot": [
-        24,
-        24
+        22,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image SUPER_TRANSFORM: attempt row 3, phase 4; uniform anatomical/goggle scale 6.5000:1. No painted contours. Landmark review uniform correction 0.9. 2026-11-10: re-reduced original generation at 5.686789 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours."
+      "notes": "GPT Image SUPER_TRANSFORM: attempt row 3, phase 4; uniform anatomical/goggle scale 6.5000:1. No painted contours. Landmark review uniform correction 0.9. 2026-11-10: re-reduced original generation at 5.686789 source pixels/native pixel; uniform anatomy correction 1.27; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.91 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-fly-ascend-00",
@@ -1780,12 +1780,12 @@
       "order": 0,
       "file": "frames/family-tails-fly-ascend-00.png",
       "hotspot": [
-        25,
-        35
+        21,
+        29
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-ascend-01",
@@ -1793,12 +1793,12 @@
       "order": 1,
       "file": "frames/family-tails-fly-ascend-01.png",
       "hotspot": [
-        29,
-        25
+        24,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-ascend-02",
@@ -1806,12 +1806,12 @@
       "order": 2,
       "file": "frames/family-tails-fly-ascend-02.png",
       "hotspot": [
-        35,
-        24
+        29,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-ascend-03",
@@ -1819,12 +1819,12 @@
       "order": 3,
       "file": "frames/family-tails-fly-ascend-03.png",
       "hotspot": [
-        20,
-        25
+        17,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-ascend-04",
@@ -1832,12 +1832,12 @@
       "order": 4,
       "file": "frames/family-tails-fly-ascend-04.png",
       "hotspot": [
-        28,
-        24
+        23,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-ascend-05",
@@ -1845,12 +1845,12 @@
       "order": 5,
       "file": "frames/family-tails-fly-ascend-05.png",
       "hotspot": [
-        30,
-        24
+        25,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged."
+      "notes": "Owner-feedback: fresh GPT Image flight attempt 2; profile identity matches the carry; fixed skull/torso scale. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage and grey-white feather tips as the 37 px rung set; silhouette and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.82 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-00",
@@ -1858,12 +1858,12 @@
       "order": 0,
       "file": "frames/family-tails-fly-carry-00.png",
       "hotspot": [
-        22,
-        36
+        19,
+        32
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 0, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 0, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-01",
@@ -1871,12 +1871,12 @@
       "order": 1,
       "file": "frames/family-tails-fly-carry-01.png",
       "hotspot": [
-        28,
-        33
+        25,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 1, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 1, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-02",
@@ -1884,12 +1884,12 @@
       "order": 2,
       "file": "frames/family-tails-fly-carry-02.png",
       "hotspot": [
-        33,
-        28
+        30,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 2, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 2, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-03",
@@ -1897,12 +1897,12 @@
       "order": 3,
       "file": "frames/family-tails-fly-carry-03.png",
       "hotspot": [
-        23,
-        28
+        20,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 3, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 3, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-04",
@@ -1910,12 +1910,12 @@
       "order": 4,
       "file": "frames/family-tails-fly-carry-04.png",
       "hotspot": [
-        28,
-        28
+        25,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 4, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 4, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-05",
@@ -1923,12 +1923,12 @@
       "order": 5,
       "file": "frames/family-tails-fly-carry-05.png",
       "hotspot": [
-        37,
-        28
+        33,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 5, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 5, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-ascend-00",
@@ -1936,12 +1936,12 @@
       "order": 0,
       "file": "frames/family-tails-fly-carry-ascend-00.png",
       "hotspot": [
-        22,
-        36
+        19,
+        32
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 0, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 0, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-ascend-01",
@@ -1949,12 +1949,12 @@
       "order": 1,
       "file": "frames/family-tails-fly-carry-ascend-01.png",
       "hotspot": [
-        28,
-        33
+        25,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 1, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 1, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-ascend-02",
@@ -1962,12 +1962,12 @@
       "order": 2,
       "file": "frames/family-tails-fly-carry-ascend-02.png",
       "hotspot": [
-        33,
-        28
+        30,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 2, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 2, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-ascend-03",
@@ -1975,12 +1975,12 @@
       "order": 3,
       "file": "frames/family-tails-fly-carry-ascend-03.png",
       "hotspot": [
-        23,
-        28
+        20,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 3, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 3, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-ascend-04",
@@ -1988,12 +1988,12 @@
       "order": 4,
       "file": "frames/family-tails-fly-carry-ascend-04.png",
       "hotspot": [
-        28,
-        28
+        25,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 4, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 4, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-fly-carry-ascend-05",
@@ -2001,12 +2001,12 @@
       "order": 5,
       "file": "frames/family-tails-fly-carry-ascend-05.png",
       "hotspot": [
-        37,
-        28
+        33,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 5, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged."
+      "notes": "Joint native-pose carry redraw 2026-11-10, attempt 5 cell 5, uniform locked head/torso reduction (MICA 6:1, TALON 6.5:1); original generated contours. Contact at native +28 centre offset. Tonal re-shade 2026-11-12 (tonal_reshade.py): ink silhouette and separators, slate-shadow plumage, grey-white feather tips and brown satchel as the 37 px rung set; silhouette, hotspot and grip pixels unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.89 of its size, to the 37 px rung; see scale-audit.json."
     },
     {
       "id": "family-tails-swim-00",
@@ -2014,12 +2014,12 @@
       "order": 0,
       "file": "frames/family-tails-swim-00.png",
       "hotspot": [
-        27,
-        24
+        24,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM: attempt row 1, phase 0; uniform anatomical/goggle scale 7.5000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.147541 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours."
+      "notes": "GPT Image TAILS_SWIM: attempt row 1, phase 0; uniform anatomical/goggle scale 7.5000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.147541 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-swim-01",
@@ -2027,12 +2027,12 @@
       "order": 1,
       "file": "frames/family-tails-swim-01.png",
       "hotspot": [
-        27,
-        24
+        24,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM: attempt row 3, phase 1; uniform anatomical/goggle scale 7.2000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.901639 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours."
+      "notes": "GPT Image TAILS_SWIM: attempt row 3, phase 1; uniform anatomical/goggle scale 7.2000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.901639 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-swim-02",
@@ -2040,12 +2040,12 @@
       "order": 2,
       "file": "frames/family-tails-swim-02.png",
       "hotspot": [
-        33,
-        23
+        30,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM: attempt row 2, phase 2; uniform anatomical/goggle scale 7.3000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.983607 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours."
+      "notes": "GPT Image TAILS_SWIM: attempt row 2, phase 2; uniform anatomical/goggle scale 7.3000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.983607 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-swim-03",
@@ -2053,12 +2053,12 @@
       "order": 3,
       "file": "frames/family-tails-swim-03.png",
       "hotspot": [
-        28,
-        24
+        26,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM: attempt row 3, phase 3; uniform anatomical/goggle scale 7.3000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.983607 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours."
+      "notes": "GPT Image TAILS_SWIM: attempt row 3, phase 3; uniform anatomical/goggle scale 7.3000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.983607 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-swim-04",
@@ -2066,12 +2066,12 @@
       "order": 4,
       "file": "frames/family-tails-swim-04.png",
       "hotspot": [
-        28,
-        24
+        26,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM: attempt row 2, phase 4; uniform anatomical/goggle scale 7.3000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.983607 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours."
+      "notes": "GPT Image TAILS_SWIM: attempt row 2, phase 4; uniform anatomical/goggle scale 7.3000:1. No painted contours. 2026-11-10: re-reduced original generation at 5.983607 source pixels/native pixel; uniform anatomy correction 1.22; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-swim-ascend-00",
@@ -2084,7 +2084,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM_ASCEND: attempt row 2, phase 0; uniform anatomical/goggle scale 6.3000:1. No painted contours."
+      "notes": "GPT Image TAILS_SWIM_ASCEND: attempt row 2, phase 0; uniform anatomical/goggle scale 6.3000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-swim-ascend-01",
@@ -2097,7 +2097,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM_ASCEND: attempt row 1, phase 1; uniform anatomical/goggle scale 6.5000:1. No painted contours."
+      "notes": "GPT Image TAILS_SWIM_ASCEND: attempt row 1, phase 1; uniform anatomical/goggle scale 6.5000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-swim-ascend-02",
@@ -2110,7 +2110,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM_ASCEND: attempt row 3, phase 2; uniform anatomical/goggle scale 6.4000:1. No painted contours."
+      "notes": "GPT Image TAILS_SWIM_ASCEND: attempt row 3, phase 2; uniform anatomical/goggle scale 6.4000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-swim-ascend-03",
@@ -2123,7 +2123,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM_ASCEND: attempt row 2, phase 3; uniform anatomical/goggle scale 6.3000:1. No painted contours."
+      "notes": "GPT Image TAILS_SWIM_ASCEND: attempt row 2, phase 3; uniform anatomical/goggle scale 6.3000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-swim-ascend-04",
@@ -2136,7 +2136,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM_ASCEND: attempt row 3, phase 4; uniform anatomical/goggle scale 6.4000:1. No painted contours."
+      "notes": "GPT Image TAILS_SWIM_ASCEND: attempt row 3, phase 4; uniform anatomical/goggle scale 6.4000:1. No painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-swim-carry-00",
@@ -2149,7 +2149,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM_CARRY: attempt row 2, phase 0; uniform anatomical/goggle scale 9.1000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+13."
+      "notes": "GPT Image TAILS_SWIM_CARRY: attempt row 2, phase 0; uniform anatomical/goggle scale 9.1000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+13. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-swim-carry-01",
@@ -2162,7 +2162,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM_CARRY: attempt row 3, phase 1; uniform anatomical/goggle scale 9.2000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+13."
+      "notes": "GPT Image TAILS_SWIM_CARRY: attempt row 3, phase 1; uniform anatomical/goggle scale 9.2000:1. No painted contours. Carrier boots registered to native handhold baseline at centre+13. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-swim-tired-00",
@@ -2170,12 +2170,12 @@
       "order": 0,
       "file": "frames/family-tails-swim-tired-00.png",
       "hotspot": [
-        25,
-        26
+        23,
+        24
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM_TIRED: attempt row 2, phase 0; uniform anatomical/goggle scale 10.9000:1. No painted contours. 2026-11-10: re-reduced original generation at 8.384615 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours."
+      "notes": "GPT Image TAILS_SWIM_TIRED: attempt row 2, phase 0; uniform anatomical/goggle scale 10.9000:1. No painted contours. 2026-11-10: re-reduced original generation at 8.384615 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-swim-tired-01",
@@ -2183,12 +2183,12 @@
       "order": 1,
       "file": "frames/family-tails-swim-tired-01.png",
       "hotspot": [
-        24,
-        24
+        22,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM_TIRED: attempt row 1, phase 1; uniform anatomical/goggle scale 11.4000:1. No painted contours. 2026-11-10: re-reduced original generation at 8.769231 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours."
+      "notes": "GPT Image TAILS_SWIM_TIRED: attempt row 1, phase 1; uniform anatomical/goggle scale 11.4000:1. No painted contours. 2026-11-10: re-reduced original generation at 8.769231 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-swim-tired-02",
@@ -2196,12 +2196,12 @@
       "order": 2,
       "file": "frames/family-tails-swim-tired-02.png",
       "hotspot": [
-        25,
-        23
+        23,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image TAILS_SWIM_TIRED: attempt row 3, phase 2; uniform anatomical/goggle scale 11.2000:1. No painted contours. 2026-11-10: re-reduced original generation at 8.615385 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours."
+      "notes": "GPT Image TAILS_SWIM_TIRED: attempt row 3, phase 2; uniform anatomical/goggle scale 11.2000:1. No painted contours. 2026-11-10: re-reduced original generation at 8.615385 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.92 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-blank-00",
@@ -2222,12 +2222,12 @@
       "order": 3,
       "file": "frames/family-blink-03.png",
       "hotspot": [
-        12,
+        14,
         23
       ],
       "angle_set": "flat",
       "duration_ticks": 16,
-      "notes": "Original GPT Image S3K yawn/stretch pose, attempt 2 of 3; uniform 13.5:1 reduction; no painted contours. Feet registered to native centre+16."
+      "notes": "Original GPT Image S3K yawn/stretch pose, attempt 2 of 3; uniform 13.5:1 reduction; no painted contours. Feet registered to native centre+16. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-blink-04",
@@ -2240,7 +2240,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 16,
-      "notes": "Original GPT Image S3K yawn/stretch pose, attempt 2 of 3; uniform 13.5:1 reduction; no painted contours. Feet registered to native centre+16."
+      "notes": "Original GPT Image S3K yawn/stretch pose, attempt 2 of 3; uniform 13.5:1 reduction; no painted contours. Feet registered to native centre+16. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object4-s3k-82",
@@ -2253,7 +2253,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Rare native-pose redraw, two attempts, no separate fox tails; rare-poses/provenance.json."
+      "notes": "Rare native-pose redraw, two attempts, no separate fox tails; rare-poses/provenance.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object4-s3k-8d",
@@ -2266,7 +2266,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Rare native-pose redraw, two attempts, no separate fox tails; rare-poses/provenance.json."
+      "notes": "Rare native-pose redraw, two attempts, no separate fox tails; rare-poses/provenance.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-31",
@@ -2279,7 +2279,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-32",
@@ -2292,7 +2292,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-33",
@@ -2305,7 +2305,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-34",
@@ -2318,7 +2318,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-35",
@@ -2331,7 +2331,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-36",
@@ -2344,7 +2344,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-37",
@@ -2357,7 +2357,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-38",
@@ -2370,7 +2370,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-39",
@@ -2383,7 +2383,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-3a",
@@ -2396,7 +2396,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-3b",
@@ -2409,7 +2409,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-3c",
@@ -2422,7 +2422,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-3d",
@@ -2435,7 +2435,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-3e",
@@ -2448,7 +2448,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-3f",
@@ -2461,7 +2461,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-40",
@@ -2474,7 +2474,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-41",
@@ -2487,7 +2487,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-42",
@@ -2500,7 +2500,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-43",
@@ -2513,7 +2513,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-44",
@@ -2526,7 +2526,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-45",
@@ -2539,7 +2539,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-46",
@@ -2552,7 +2552,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-47",
@@ -2565,7 +2565,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-48",
@@ -2578,7 +2578,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-49",
@@ -2591,7 +2591,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-4a",
@@ -2604,7 +2604,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-4b",
@@ -2617,7 +2617,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-4c",
@@ -2630,7 +2630,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-4d",
@@ -2643,7 +2643,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-4e",
@@ -2656,7 +2656,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-4f",
@@ -2669,7 +2669,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-50",
@@ -2682,7 +2682,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-51",
@@ -2695,7 +2695,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-52",
@@ -2708,7 +2708,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-53",
@@ -2721,7 +2721,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-54",
@@ -2734,7 +2734,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-58",
@@ -2747,7 +2747,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-59",
@@ -2755,12 +2755,12 @@
       "order": 389,
       "file": "frames/object5-59.png",
       "hotspot": [
-        12,
+        17,
         18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-5a",
@@ -2773,7 +2773,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-5b",
@@ -2786,7 +2786,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-5c",
@@ -2799,7 +2799,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-5d",
@@ -2812,7 +2812,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-5e",
@@ -2825,7 +2825,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-5f",
@@ -2838,7 +2838,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-60",
@@ -2851,7 +2851,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-61",
@@ -2864,7 +2864,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-62",
@@ -2877,7 +2877,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-69",
@@ -2885,12 +2885,12 @@
       "order": 405,
       "file": "frames/object5-69.png",
       "hotspot": [
-        19,
-        18
+        17,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.87 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-6a",
@@ -2903,7 +2903,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-6b",
@@ -2911,12 +2911,12 @@
       "order": 407,
       "file": "frames/object5-6b.png",
       "hotspot": [
-        15,
+        17,
         19
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-6c",
@@ -2929,7 +2929,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-6d",
@@ -2937,12 +2937,12 @@
       "order": 409,
       "file": "frames/object5-6d.png",
       "hotspot": [
-        20,
+        21,
         11
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.88 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-6e",
@@ -2955,7 +2955,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-6f",
@@ -2968,7 +2968,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-70",
@@ -2981,7 +2981,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-71",
@@ -2994,7 +2994,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-72",
@@ -3007,7 +3007,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-73",
@@ -3020,7 +3020,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-74",
@@ -3033,7 +3033,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-75",
@@ -3046,7 +3046,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-76",
@@ -3059,7 +3059,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-77",
@@ -3072,7 +3072,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-78",
@@ -3080,12 +3080,12 @@
       "order": 420,
       "file": "frames/object5-78.png",
       "hotspot": [
-        17,
-        30
+        14,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-79",
@@ -3093,12 +3093,12 @@
       "order": 421,
       "file": "frames/object5-79.png",
       "hotspot": [
-        31,
-        32
+        26,
+        28
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-7e",
@@ -3106,12 +3106,12 @@
       "order": 426,
       "file": "frames/object5-7e.png",
       "hotspot": [
-        8,
-        17
+        6,
+        14
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.83 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-80",
@@ -3119,12 +3119,12 @@
       "order": 428,
       "file": "frames/object5-80.png",
       "hotspot": [
-        20,
-        27
+        18,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.90 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-81",
@@ -3132,12 +3132,12 @@
       "order": 429,
       "file": "frames/object5-81.png",
       "hotspot": [
-        30,
-        28
+        25,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.84 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-83",
@@ -3145,12 +3145,12 @@
       "order": 431,
       "file": "frames/object5-83.png",
       "hotspot": [
-        23,
-        29
+        19,
+        25
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-84",
@@ -3158,12 +3158,12 @@
       "order": 432,
       "file": "frames/object5-84.png",
       "hotspot": [
-        26,
-        27
+        22,
+        23
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.84 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-85",
@@ -3171,12 +3171,12 @@
       "order": 433,
       "file": "frames/object5-85.png",
       "hotspot": [
-        23,
-        27
+        19,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.83 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-90",
@@ -3189,7 +3189,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-92",
@@ -3202,7 +3202,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-93",
@@ -3215,7 +3215,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-94",
@@ -3228,7 +3228,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-95",
@@ -3241,7 +3241,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-ca",
@@ -3254,7 +3254,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-df",
@@ -3262,12 +3262,12 @@
       "order": 523,
       "file": "frames/object5-df.png",
       "hotspot": [
-        17,
-        24
+        16,
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.91 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-e0",
@@ -3280,7 +3280,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-e1",
@@ -3293,7 +3293,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-e2",
@@ -3301,12 +3301,12 @@
       "order": 526,
       "file": "frames/object5-e2.png",
       "hotspot": [
-        12,
-        23
+        11,
+        21
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.91 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-e3",
@@ -3314,12 +3314,12 @@
       "order": 527,
       "file": "frames/object5-e3.png",
       "hotspot": [
-        17,
-        23
+        15,
+        20
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.86 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-e4",
@@ -3332,7 +3332,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-e5",
@@ -3341,11 +3341,11 @@
       "file": "frames/object5-e5.png",
       "hotspot": [
         14,
-        20
+        22
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-e6",
@@ -3358,7 +3358,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-e7",
@@ -3371,7 +3371,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-e8",
@@ -3384,7 +3384,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-e9",
@@ -3397,7 +3397,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-ea",
@@ -3410,7 +3410,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-ef",
@@ -3423,7 +3423,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-f0",
@@ -3436,7 +3436,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-f1",
@@ -3449,7 +3449,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-f2",
@@ -3462,7 +3462,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-f6",
@@ -3470,12 +3470,12 @@
       "order": 546,
       "file": "frames/object5-f6.png",
       "hotspot": [
-        14,
+        17,
         18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "object5-f7",
@@ -3488,7 +3488,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-f8",
@@ -3501,7 +3501,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "../../../production/talon/object-poses/provenance.json"
+      "notes": "../../../production/talon/object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-63",
@@ -3509,12 +3509,12 @@
       "order": 399,
       "file": "frames/object5-63.png",
       "hotspot": [
-        14,
+        13,
         16
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-64",
@@ -3522,12 +3522,12 @@
       "order": 400,
       "file": "frames/object5-64.png",
       "hotspot": [
-        12,
+        11,
         1
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-65",
@@ -3535,12 +3535,12 @@
       "order": 401,
       "file": "frames/object5-65.png",
       "hotspot": [
-        14,
+        13,
         19
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-66",
@@ -3548,12 +3548,12 @@
       "order": 402,
       "file": "frames/object5-66.png",
       "hotspot": [
-        14,
+        13,
         26
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-67",
@@ -3561,12 +3561,12 @@
       "order": 403,
       "file": "frames/object5-67.png",
       "hotspot": [
-        14,
+        13,
         13
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-68",
@@ -3574,12 +3574,12 @@
       "order": 404,
       "file": "frames/object5-68.png",
       "hotspot": [
-        13,
+        12,
         29
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-7a",
@@ -3587,12 +3587,12 @@
       "order": 422,
       "file": "frames/object5-7a.png",
       "hotspot": [
-        30,
-        20
+        26,
+        16
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-7b",
@@ -3600,12 +3600,12 @@
       "order": 423,
       "file": "frames/object5-7b.png",
       "hotspot": [
-        32,
-        14
+        28,
+        11
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-7c",
@@ -3613,12 +3613,12 @@
       "order": 424,
       "file": "frames/object5-7c.png",
       "hotspot": [
-        20,
-        12
+        16,
+        9
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-7d",
@@ -3626,12 +3626,12 @@
       "order": 425,
       "file": "frames/object5-7d.png",
       "hotspot": [
-        14,
-        11
+        11,
+        8
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-7f",
@@ -3639,12 +3639,12 @@
       "order": 427,
       "file": "frames/object5-7f.png",
       "hotspot": [
-        11,
-        31
+        8,
+        26
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-f3",
@@ -3657,7 +3657,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-f4",
@@ -3665,12 +3665,12 @@
       "order": 544,
       "file": "frames/object5-f4.png",
       "hotspot": [
-        15,
+        16,
         18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-f5",
@@ -3678,12 +3678,12 @@
       "order": 545,
       "file": "frames/object5-f5.png",
       "hotspot": [
-        18,
+        23,
         18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-f9",
@@ -3691,12 +3691,12 @@
       "order": 549,
       "file": "frames/object5-f9.png",
       "hotspot": [
-        14,
+        15,
         18
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     },
     {
       "id": "object5-fa",
@@ -3709,7 +3709,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json"
+      "notes": "Exact native quarter-turn/mirror equivalence; derive_slopes.rotate; object-poses/provenance.json Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
     }
   ],
   "scripts": {

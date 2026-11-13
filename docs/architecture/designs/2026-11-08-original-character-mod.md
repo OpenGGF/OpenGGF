@@ -1729,6 +1729,46 @@ test is re-pinned to the new method and fails when a frame is reverted. No flat 
 in this step. Left alone because they are not turned by this tool: the special-stage sets
 (`locked_stage.py`, per-part rotation with its own `--check`) and the S3K title hand
 (`titles/s3k_hand_anatomy.py`); steep frames and other quarter turns are lossless either way.
+The owner's answer on the remaining poses was to clean them too. `production/talon/pose_cleanup.py`
+runs the walk cleanup's rules over TALON's other 203 flat drawings (noise 0.34 → 0.19 on average;
+sheet median 0.32 → 0.19). ROLL, the SPINDASH blur ball and the white transformation flash stay as
+drawn: they already score 0.10–0.18 and their one-pixel steps are curve shading, motion streaks or
+a deliberate flat silhouette. The flight and carry sets, Solar, the other surfaces and MICA were not
+touched; MICA's flat poses still score a median of 0.34, where TALON's stood before. The same step
+tightened the shared rule so that white pixels belonging to goggles, beak or shoes are restored
+exactly; seven such pixels on five walk/run flats, and their slope frames, were rebuilt.
+The owner then reported that the poses "still seem to have varying sizes".
+`production/talon/scale_audit.py` measures head scale on each frame's source drawing (goggle band
+thickness and lens-to-beak span, over the frame's reduction factor, against WAIT) and rebuilds the
+68 drawings more than 8% off at a corrected factor: flight ×0.82, carry ×0.89, VICTORY ×0.85 and
+the families the 2026-11-10 area-matching pass had enlarged, plus DUCK and SPRING enlarged by hand.
+Rejected on the way, with the evidence in `scale-audit.json` and the tool's header: the band alone
+(it over-shrinks sheets that draw the goggles thick, and reads the reference WALK at 1.13), a shoe
+measure (shoes merge and foreshorten), frame height, treating the object poses as one set at one
+scale (their figures differ per cell; only frames whose own head also reads large are rebuilt), and
+enlarging on a small reading (both measures fail low, so DEATH came out a head too tall). MICA was
+audited from her hand-marked skull widths and not changed: 107 of 123 readable flats are within 8%,
+and the 16 outside (0.78–1.11) are object poses.
+The owner's last complaint was line art: balancing and the air bubble "look like a completely
+different artist drew them" beside standing and flying, and "we constantly have to perform
+cleanups". The cause is structural: every pose is its own reduction of its own drawing. So the
+fix redraws from the reference pose instead of cleaning again. `style_audit.py` scores each frame
+against the sheet's reference animations (outline gaps, dark rim, surviving bands, ramp mix, patch
+size, speckle); `production/talon/lineart_pass.py` gives 87 of TALON's poses WAIT's own head
+on the pose's lens and beak and thins the lit side of their dark rim. Rejected, with evidence in
+the tool's header and record: clearing a ring round the new head (it ate raised wings and arms;
+only the old goggles and beak are removed now), turning the 24 px head with Scale2x (blurred
+goggles; turned heads are reduced from WAIT's source instead), thinning the whole rim (it left
+the poses lighter than WAIT; only lit edges are thinned), and placing heads on tumbles, dives and
+front or back views (no reference part exists for them; they keep their own and are listed).
+The same audit scored the other sets. Solar TALON and Gilded MICA were each drawn as one design
+and read as one; neither was changed, and their outliers are accepted or deferred in the profile.
+MICA's normal sheet has one face throughout and differed from TALON's by speckle (0.33 against
+0.19), so `production/mica/sheet_despeckle.py` cleans 203 flats with a line-preserving option of the
+shared despeckle (0.23); the plain rules were rejected because they erase her one-pixel diagonal
+scale edges. Her Sonic 1 title portrait gets the same cleanup (`titles/s1_despeckle.py`). Her idle
+is kept as drawn and cleaned with the rest; TALON's idle frames other than `wait-00`, his BLINK,
+both VICTORY sets and the signposts belong to another lane.
 
 **Powered-form owner feedback, 2026-11-11:** powered binding selects the creator’s
 movement archetype; native Tails families retain Tails clocks instead of consuming

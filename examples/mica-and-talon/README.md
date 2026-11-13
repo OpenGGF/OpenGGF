@@ -188,8 +188,9 @@ without a donor ROM or a native Super animation slot. See
 [powered script addresses](../../docs/modding/characters.md) for the candidate API.
 
 MICA’s run now keeps the native two-phase lean and contact clock. TALON’s free
-flight uses the approved carry profile, skull scale, wing design and material
-contours. Carry geometry and MICA’s hand-to-feet registration are unchanged.
+flight uses the approved carry profile and wing design. His flight, carry and other
+oversized poses are redrawn to the head scale of his idle (`scale_audit.py`,
+2026-11-12); MICA’s hand-to-feet registration is unchanged.
 The owner-picked concepts (2026-11-11) are rolled out: Open Cone Gilded MICA redraws
 every powered pose, and Corona Crest Solar TALON every common pose, for S2 and S3K.
 Normal TALON stands 37 px (owner rung); Solar's crest rises above that body. Gilded plates breathe from a deep amber underside to a pale-gold edge; Hyper
@@ -207,8 +208,14 @@ Check or rebuild the selected images without native pixels or raw generations:
 python3 examples/mica-and-talon/production/talon/feedback_art.py --check
 python3 examples/mica-and-talon/production/talon/tonal_reshade.py --check
 python3 examples/mica-and-talon/production/talon/walk_cleanup.py --check
+python3 examples/mica-and-talon/production/talon/pose_cleanup.py --check
+python3 examples/mica-and-talon/production/talon/scale_audit.py --check
+python3 examples/mica-and-talon/production/talon/lineart_pass.py --check
+python3 tools/modding/playable_art/style_audit.py examples/mica-and-talon/production/style-audit.json --check
 python3 examples/mica-and-talon/production/slope_sets.py --check
 python3 examples/mica-and-talon/production/mica/carried_reshade.py --check
+python3 examples/mica-and-talon/production/mica/sheet_despeckle.py --check
+python3 examples/mica-and-talon/production/mica/titles/s1_despeckle.py --check
 python3 examples/mica-and-talon/production/powered_palettes.py --check
 python3 tools/modding/playable_art/gilded_java.py --check
 python3 tools/modding/playable_art/solar_java.py --check

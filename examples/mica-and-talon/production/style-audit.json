@@ -1,0 +1,402 @@
+{
+ "purpose": "Profile for tools/modding/playable_art/style_audit.py: per sheet, its ramps (dark to light), the crisp reference animations the owner named or their equivalent, animations with no comparable drawing, and frames accepted as they are with the reason.",
+ "sheets": {
+  "talon": {
+   "root": "../art/talon/sheet",
+   "ramps": {
+    "plumage": [
+     2,
+     3,
+     4,
+     5
+    ],
+    "white": [
+     13,
+     6,
+     12
+    ],
+    "cream": [
+     8,
+     7
+    ],
+    "amber": [
+     15,
+     14
+    ],
+    "red": [
+     11,
+     10
+    ],
+    "brown": [
+     9
+    ]
+   },
+   "reference": [
+    "wait-00",
+    "WALK",
+    "RUN",
+    "TAILS_FLY"
+   ],
+   "skip": [
+    "BLANK",
+    "ROLL",
+    "SPINDASH"
+   ],
+   "accepted": {
+    "family-super-transform-02": "the white transformation flash: a flat silhouette by design",
+    "spring-00": "wings spread overhead: two large flat feather fans, few small shapes to break them up",
+    "fly_tired-03": "drooped wings fill the frame: large flat plumage",
+    "object5-5a": "back view: the frame is nearly all plumage",
+    "object5-f7": "back view: the frame is nearly all plumage",
+    "object5-f9": "object5-f7 mirrored: the same back view, nearly all plumage",
+    "object5-ea": "back view standing: the frame is nearly all plumage",
+    "object5-e9": "back view: the frame is nearly all plumage",
+    "object5-45": "curled tumble seen from above: almost no light material, so its ramp mix is its own",
+    "object5-93": "hanging pose reduced at its own factor: one-pixel steps on the wing bars are its feather detail",
+    "object5-6c": "sprawled pose: one-pixel steps along the wing bars are its feather detail",
+    "WAIT": "idle frames other than wait-00 belong to another lane since 2026-11-12",
+    "BLINK": "belongs to another lane since 2026-11-12",
+    "VICTORY": "belongs to another lane since 2026-11-12"
+   }
+  },
+  "mica": {
+   "root": "../art/mica/sheet",
+   "ramps": {
+    "scales": [
+     2,
+     3,
+     4,
+     5,
+     6
+    ],
+    "sand": [
+     9,
+     8,
+     7
+    ],
+    "white": [
+     13,
+     12
+    ],
+    "coral": [
+     11,
+     10
+    ],
+    "pink": [
+     14
+    ],
+    "brown": [
+     15
+    ]
+   },
+   "reference": [
+    "WAIT",
+    "WALK",
+    "RUN"
+   ],
+   "skip": [
+    "ROLL",
+    "SPINDASH"
+   ],
+   "accepted": {
+    "balance-01": "deferred: its scale edges are denser than the references' and the line-preserving cleanup keeps them; thinning them means redrawing the scales",
+    "homing_dive-00": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive-02": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive-03": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive_down-00": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive_down-01": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive_down-02": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive_down-03": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive_forward-00": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive_forward-01": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive_forward-02": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive_forward-03": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive_forward_up-00": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive_forward_up-02": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive_forward_up-03": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive_up-00": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive_up-01": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive_up-02": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "homing_dive_up-03": "curled dive: the frame is nearly all scales, so its shade mix and patch size are the pose's own; the forward, up and down sets are this dive turned by slope_sets.py",
+    "native-pose-5a": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "object-pose-5f": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "object-pose-67": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "object4-s3k-31": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "object4-s3k-32": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "object4-s3k-33": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "object4-s3k-3b": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "object4-s3k-4d": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "object4-s3k-83": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "object4-s3k-d4": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "object4-s3k-f7": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "object4-s3k-f8": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "object4-s3k-f9": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "variant-s1-33": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "variant-s1-33-rot52": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "variant-s1-33-rot53": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "variant-s1-33-rot54": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "variant-s1-4b": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "variant-s1-4e-scale81": "deferred: its scale edges are denser than the references' and the line-preserving cleanup keeps them; thinning them means redrawing the scales",
+    "variant-s1-4e-scale82": "deferred: its scales use a different mix of the jade ramp than the references (two-tone or deep-heavy shading, or a curled or back view that is nearly all scales); a cleanup cannot re-band them and her poses have no source landmarks to redraw from",
+    "variant-s3k-b1": "her VICTORY frames belong to another lane since 2026-11-12",
+    "variant-s3k-b3": "her VICTORY frames belong to another lane since 2026-11-12",
+    "variant-s3k-b0": "her VICTORY frames belong to another lane since 2026-11-12",
+    "variant-s3k-b2": "her VICTORY frames belong to another lane since 2026-11-12"
+   }
+  },
+  "talon-solar-s2": {
+   "root": "../art/talon/powered/s2",
+   "ink": [
+    1,
+    2
+   ],
+   "ramps": {
+    "plumage": [
+     3,
+     4,
+     5
+    ],
+    "flame": [
+     15,
+     14,
+     6
+    ],
+    "cream": [
+     8,
+     7
+    ],
+    "white": [
+     13,
+     12
+    ],
+    "red": [
+     11,
+     10
+    ],
+    "brown": [
+     9
+    ]
+   },
+   "reference": [
+    "idle-0",
+    "WALK",
+    "RUN",
+    "TAILS_FLY"
+   ],
+   "skip": [
+    "ROLL",
+    "ROLL2",
+    "SPINDASH"
+   ],
+   "accepted": {
+    "transform-2": "the white transformation flash: a flat silhouette by design",
+    "hurt": "sprawled pose with both wings, gloves and shoes showing: busier than the references, same drawing style",
+    "spring": "wings spread overhead: many feather tips, busier than the references, same drawing style"
+   }
+  },
+  "talon-solar-s3k": {
+   "root": "../art/talon/powered/s3k",
+   "ink": [
+    1,
+    2
+   ],
+   "ramps": {
+    "plumage": [
+     3,
+     4,
+     5
+    ],
+    "flame": [
+     15,
+     14,
+     6
+    ],
+    "cream": [
+     8,
+     7
+    ],
+    "white": [
+     13,
+     12
+    ],
+    "red": [
+     11,
+     10
+    ],
+    "brown": [
+     9
+    ]
+   },
+   "reference": [
+    "idle-0",
+    "WALK",
+    "RUN",
+    "TAILS_FLY"
+   ],
+   "skip": [
+    "ROLL",
+    "ROLL2",
+    "SPINDASH"
+   ],
+   "accepted": {
+    "transform-2": "the white transformation flash: a flat silhouette by design",
+    "hurt": "sprawled pose with both wings, gloves and shoes showing: busier than the references, same drawing style",
+    "spring": "wings spread overhead: many feather tips, busier than the references, same drawing style"
+   }
+  },
+  "mica-gilded-s2": {
+   "root": "../art/mica/powered/s2",
+   "ink": [
+    1,
+    2,
+    15
+   ],
+   "ramps": {
+    "plates": [
+     3,
+     4,
+     5,
+     6
+    ],
+    "sand": [
+     9,
+     8,
+     7
+    ],
+    "white": [
+     13,
+     12
+    ],
+    "coral": [
+     11,
+     10
+    ],
+    "pink": [
+     14
+    ]
+   },
+   "reference": [
+    "s3k-wait-0",
+    "s3k-wait-1",
+    "s3k-walk-0",
+    "s3k-walk-1",
+    "s3k-walk-2",
+    "s3k-walk-3",
+    "s3k-walk-4",
+    "s3k-walk-5",
+    "s3k-walk-6",
+    "s3k-walk-7",
+    "run-0",
+    "run-1",
+    "s2-wait-0",
+    "s2-wait-1",
+    "s2-walk-0",
+    "s2-walk-1",
+    "s2-walk-2",
+    "s2-walk-3",
+    "s2-walk-4",
+    "s2-walk-5",
+    "s2-walk-6",
+    "s2-walk-7"
+   ],
+   "skip": [
+    "ROLL",
+    "ROLL2",
+    "SPINDASH"
+   ],
+   "accepted": {
+    "transform-2": "the white transformation flash: a flat silhouette by design",
+    "transform-0": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "transform-3": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "transform-4": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "balance-2": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "balance-3": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "balance-4": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "balance-5": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "push-0": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "push-1": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "push-2": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "push-3": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "run-0": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "run-1": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "duck-0": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design"
+   }
+  },
+  "mica-gilded-s3k": {
+   "root": "../art/mica/powered/s3k",
+   "ink": [
+    1,
+    2,
+    15
+   ],
+   "ramps": {
+    "plates": [
+     3,
+     4,
+     5,
+     6
+    ],
+    "sand": [
+     9,
+     8,
+     7
+    ],
+    "white": [
+     13,
+     12
+    ],
+    "coral": [
+     11,
+     10
+    ],
+    "pink": [
+     14
+    ]
+   },
+   "reference": [
+    "s3k-wait-0",
+    "s3k-wait-1",
+    "s3k-walk-0",
+    "s3k-walk-1",
+    "s3k-walk-2",
+    "s3k-walk-3",
+    "s3k-walk-4",
+    "s3k-walk-5",
+    "s3k-walk-6",
+    "s3k-walk-7",
+    "run-0",
+    "run-1",
+    "s2-wait-0",
+    "s2-wait-1",
+    "s2-walk-0",
+    "s2-walk-1",
+    "s2-walk-2",
+    "s2-walk-3",
+    "s2-walk-4",
+    "s2-walk-5",
+    "s2-walk-6",
+    "s2-walk-7"
+   ],
+   "skip": [
+    "ROLL",
+    "ROLL2",
+    "SPINDASH"
+   ],
+   "accepted": {
+    "transform-2": "the white transformation flash: a flat silhouette by design",
+    "balance-0": "deferred: gloves, shoes and plate tips sit on the silhouette without the contour slot more often than on the idle and walk frames; closing them means redrawing the contour, which this pass did not do for powered sets",
+    "balance-1": "deferred: gloves, shoes and plate tips sit on the silhouette without the contour slot more often than on the idle and walk frames; closing them means redrawing the contour, which this pass did not do for powered sets",
+    "push-0": "deferred: gloves, shoes and plate tips sit on the silhouette without the contour slot more often than on the idle and walk frames; closing them means redrawing the contour, which this pass did not do for powered sets",
+    "push-1": "deferred: gloves, shoes and plate tips sit on the silhouette without the contour slot more often than on the idle and walk frames; closing them means redrawing the contour, which this pass did not do for powered sets",
+    "push-3": "deferred: gloves, shoes and plate tips sit on the silhouette without the contour slot more often than on the idle and walk frames; closing them means redrawing the contour, which this pass did not do for powered sets",
+    "run-0": "deferred: gloves, shoes and plate tips sit on the silhouette without the contour slot more often than on the idle and walk frames; closing them means redrawing the contour, which this pass did not do for powered sets",
+    "run-1": "deferred: gloves, shoes and plate tips sit on the silhouette without the contour slot more often than on the idle and walk frames; closing them means redrawing the contour, which this pass did not do for powered sets",
+    "duck-0": "deferred: gloves, shoes and plate tips sit on the silhouette without the contour slot more often than on the idle and walk frames; closing them means redrawing the contour, which this pass did not do for powered sets",
+    "transform-0": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "transform-3": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "transform-4": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design",
+    "push-2": "deferred: larger flat plates than the idle and walk frames (pose shows the plates edge-on or stretched); same Open Cone design"
+   }
+  }
+ }
+}
