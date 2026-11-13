@@ -7,6 +7,16 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Lava Reef 1 frame hitches:** two stutters on the Lava Reef Act 1 route are
+  gone. When the rock crusher opens the floor, the engine rebuilt the whole
+  foreground layer (10-60 ms in a frame); it now redraws only the rewritten layout
+  cells and uploads only their rows, and a test checks the result against a full
+  rebuild. A sprite update of about 65-70 scattered tiles passed the old 64-tile
+  limit and uploaded their whole bounding rectangle, about 37 times the changed
+  bytes, and that one driver call took 1-100 ms. Changes of up to 256 tiles now
+  upload only those tiles, joining neighbours in a row (about 0.02 ms there). The tilemap shader also no longer looks up its uniform
+  locations on every draw. Pixels are unchanged.
+
 - **Blue Spheres:** new under **Extras** when the Sonic 3&K and Sonic 1 ROMs
   are both present. It is the game Sonic & Knuckles starts with Sonic 1 locked
   on, rebuilt from the S&K ROM: the title and menu, endless generated stages,
@@ -217,7 +227,9 @@ under the matching area heading; see the
 
 ## Modding and tools
 
-- **MICA, an original character framework example:** TALON’s S3K lives label now
+- **MICA, an original character framework example:** The complete MICA and TALON
+  mod now ships bundled with JVM and native distributions, disabled by default.
+  Enable it in the mod manager; saved enable/disable choices survive upgrades. TALON’s S3K lives label now
   spells his full name using native glyph pixels with tighter blank padding; S1,
   S2 and MICA retain their existing words and portraits. Creator S3K lives names
   preserve the native × beside the counter, as S1/S2 already do. TALON now joins as her
@@ -474,6 +486,13 @@ under the matching area heading; see the
   references, are still refused. Physics reads the local-fluid flag without
   a stack walk. The Lava Reef 1 allocation profile put about 30% of the game's
   per-frame allocation in these walks; this is not a frame-rate claim.
+
+- **Sprite presentation performance:** the native SAT post-pass evaluates each
+  scanline from primitive per-entry arrays and only over lines that sprites cover.
+  SAT ingress, mask clipping, sprite preparation, native tile drawing and the
+  widescreen bounds-mask fade no longer build intermediate entries, per-tile
+  lambdas, list copies or per-frame working arrays. Output is unchanged; this is
+  not yet a measured gameplay FPS claim.
 
 - **Engine quality and contributions:** the README and contributor entry point now
   acknowledge maintainability weaknesses and invite focused improvements to object

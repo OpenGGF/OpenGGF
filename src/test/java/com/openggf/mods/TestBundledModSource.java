@@ -254,6 +254,29 @@ class TestBundledModSource {
                 "an unverified bundled entry receives no default");
     }
 
+    @Test void disabledBundleStartsTrustedButOffAndRemembersExplicitEnable() throws Exception {
+        Path install = Files.createDirectories(temp.resolve("install/bundled")).getParent();
+        byte[] jar = modJar("characters", "1.0.0", true);
+        Files.write(install.resolve("bundled/characters.jar"), jar);
+        BundledModManifest.Entry enabled = entry("characters", "1.0.0", "characters.jar", jar);
+        BundledModManifest.Entry disabled = new BundledModManifest.Entry(enabled.id(), enabled.version(),
+                enabled.file(), enabled.sha256(), enabled.size(), false);
+        byte[] json = manifest(disabled);
+        assertFalse(BundledModManifest.parse(json).mods().getFirst().enabledByDefault());
+        try (BundledModSource source = open(resources(Map.of(BundledModManifest.RESOURCE, json)),
+                Optional.of(install), temp.resolve("c"))) {
+            ModState fresh = source.applyStartupDefaults(new ModState(1, List.of()), source.entries());
+            assertFalse(fresh.entries().getFirst().enabled());
+            assertTrue(fresh.entries().getFirst().trusted());
+            ModState saved = new ModState(1, List.of(new ModState.Entry("characters", true, 0)));
+            assertTrue(source.applyStartupDefaults(saved, source.entries()).entries().getFirst().enabled());
+        }
+        String legacy = new String(manifest(enabled), java.nio.charset.StandardCharsets.UTF_8)
+                .replaceAll(",?\\s*\"enabledByDefault\"\\s*:\\s*true", "");
+        assertTrue(BundledModManifest.parse(legacy.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                .mods().getFirst().enabledByDefault());
+    }
+
     @Test void installDirectoryHonoursTheOverrideAndOtherwiseUsesTheEngineCodeSource() {
         String previous = System.getProperty(BundledModSource.INSTALL_DIR_PROPERTY);
         try {

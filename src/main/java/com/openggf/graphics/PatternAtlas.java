@@ -31,9 +31,12 @@ public class PatternAtlas {
     private static final int NATIVE_PATTERN_ID_MAX = 0x7FF;
     private static final int GOVERNED_RANGE_ALIGNMENT = 0x1000;
     // Max distinct dirty slots tracked exactly per page per batch. Below/at this count,
-    // endBatch() uploads each dirty tile individually; past it, the bounding rectangle
-    // of ALL dirty tiles (bounds keep updating after overflow) is uploaded instead.
-    private static final int DIRTY_SLOT_TRACK_LIMIT = 64;
+    // endBatch() uploads the dirty tiles as horizontal runs; past it, the bounding
+    // rectangle of ALL dirty tiles (bounds keep updating after overflow) is uploaded.
+    // A whole sprite presentation (~65-70 scattered tiles in S3K LRZ1) must stay on
+    // the exact path: its bounding rectangle was ~37x the dirty bytes, and that one
+    // mid-frame glTexSubImage2D was measured at 1-100 ms against ~0.02 ms for the runs.
+    static final int DIRTY_SLOT_TRACK_LIMIT = 256;
 
     private final int atlasWidth;
     private final int atlasHeight;
@@ -81,6 +84,8 @@ public class PatternAtlas {
     // Exact dirty-slot tracking (per page): fixed-capacity slot list with overflow flag.
     // Bounds (min/max dirty tile x/y) keep updating even after the slot list overflows.
     private int[][] dirtySlots;
+    // One bit per page slot: O(1) de-duplication of the exact dirty-slot list.
+    private long[][] dirtySlotBits;
     private int[] dirtySlotCounts;
     private boolean[] dirtySlotOverflow;
     private int[] dirtyMinTileX;
@@ -338,6 +343,7 @@ public class PatternAtlas {
         cpuPixels = new byte[MAX_ATLASES][pagePixels];
         dirtyPages = new boolean[MAX_ATLASES];
         dirtySlots = new int[MAX_ATLASES][DIRTY_SLOT_TRACK_LIMIT];
+        dirtySlotBits = new long[MAX_ATLASES][(maxSlots + 63) >>> 6];
         dirtySlotCounts = new int[MAX_ATLASES];
         dirtySlotOverflow = new boolean[MAX_ATLASES];
         dirtyMinTileX = new int[MAX_ATLASES];
@@ -369,6 +375,12 @@ public class PatternAtlas {
     }
 
     private void clearDirtyState(int atlasIndex) {
+        // Every set bit has a list entry (bits are set only when the slot is listed).
+        long[] bits = dirtySlotBits[atlasIndex];
+        int[] slots = dirtySlots[atlasIndex];
+        for (int i = 0; i < dirtySlotCounts[atlasIndex]; i++) {
+            bits[slots[i] >>> 6] = 0L;
+        }
         dirtyPages[atlasIndex] = false;
         dirtySlotCounts[atlasIndex] = 0;
         dirtySlotOverflow[atlasIndex] = false;
@@ -400,15 +412,15 @@ public class PatternAtlas {
         if (dirtySlotOverflow[atlasIndex]) {
             return;
         }
-        int[] slots = dirtySlots[atlasIndex];
-        int count = dirtySlotCounts[atlasIndex];
-        for (int i = 0; i < count; i++) {
-            if (slots[i] == slot) {
-                return;
-            }
+        long[] bits = dirtySlotBits[atlasIndex];
+        long mask = 1L << slot;
+        if ((bits[slot >>> 6] & mask) != 0) {
+            return;
         }
+        int count = dirtySlotCounts[atlasIndex];
         if (count < DIRTY_SLOT_TRACK_LIMIT) {
-            slots[count] = slot;
+            dirtySlots[atlasIndex][count] = slot;
+            bits[slot >>> 6] |= mask;
             dirtySlotCounts[atlasIndex] = count + 1;
         } else {
             dirtySlotOverflow[atlasIndex] = true;
@@ -622,6 +634,7 @@ public class PatternAtlas {
         cpuPixels = null;
         dirtyPages = null;
         dirtySlots = null;
+        dirtySlotBits = null;
         dirtySlotCounts = null;
         dirtySlotOverflow = null;
         dirtyMinTileX = null;
@@ -776,19 +789,32 @@ public class PatternAtlas {
         uploadSink.begin(textureId);
         try {
             if (!dirtySlotOverflow[atlasIndex]) {
-                // Small change: upload each dirty tile individually under one bind.
+                // Exact change: upload each horizontal run of dirty tiles under one bind.
+                // Every write is already in the CPU mirror and the runs are disjoint,
+                // so slot order is free; sorting groups adjacent tiles of one row.
                 byte[] tile = ensurePatternUploadScratch();
                 int[] slots = dirtySlots[atlasIndex];
                 int count = dirtySlotCounts[atlasIndex];
-                for (int i = 0; i < count; i++) {
-                    int slot = slots[i];
-                    int pixelX = (slot % tilesPerRow) * TILE_SIZE;
-                    int pixelY = (slot / tilesPerRow) * TILE_SIZE;
-                    for (int row = 0; row < TILE_SIZE; row++) {
-                        System.arraycopy(page, (pixelY + row) * atlasWidth + pixelX,
-                                tile, row * TILE_SIZE, TILE_SIZE);
+                Arrays.sort(slots, 0, count);
+                for (int i = 0; i < count;) {
+                    int first = slots[i++];
+                    int tileRow = first / tilesPerRow;
+                    int last = first;
+                    while (i < count && slots[i] == last + 1 && slots[i] / tilesPerRow == tileRow) {
+                        last = slots[i++];
                     }
-                    uploadSink.upload(tile, 0, TILE_SIZE, pixelX, pixelY, TILE_SIZE, TILE_SIZE);
+                    int pixelX = (first % tilesPerRow) * TILE_SIZE;
+                    int pixelY = tileRow * TILE_SIZE;
+                    if (last == first) {
+                        for (int row = 0; row < TILE_SIZE; row++) {
+                            System.arraycopy(page, (pixelY + row) * atlasWidth + pixelX,
+                                    tile, row * TILE_SIZE, TILE_SIZE);
+                        }
+                        uploadSink.upload(tile, 0, TILE_SIZE, pixelX, pixelY, TILE_SIZE, TILE_SIZE);
+                    } else {
+                        uploadSink.upload(page, pixelY * atlasWidth + pixelX, atlasWidth,
+                                pixelX, pixelY, (last - first + 1) * TILE_SIZE, TILE_SIZE);
+                    }
                 }
             } else {
                 // Large change: upload the bounding rectangle of all dirty tiles.

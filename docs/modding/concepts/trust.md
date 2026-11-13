@@ -7,13 +7,16 @@ Changing any byte changes the hash and requires a new grant.
 
 ## First-party bundled mods: a deliberate narrowing
 
+Each bundle has a build-pinned enable default: Time Attack starts enabled; MICA
+and TALON starts disabled. A saved player choice takes precedence.
+
 Mods bundled with an OpenGGF build are the one exception to the explicit-grant rule.
 The build packages each first-party mod with `ggfmod package --warnings error` and
 writes its id, version, file name, size and SHA-256 into a manifest inside the engine
 artifact itself (`META-INF/openggf/bundled-mods.json`). That build-pinned manifest is
 the only source of this default trust:
 
-- A bundled jar is trusted, and enabled unless the player disabled it, only when its
+- A bundled jar is trusted only when its
   immutable snapshot matches the manifest's hash, size, id and version. Nothing the jar
   declares about itself grants trust; there is no first-party flag, package exception
   or validator exemption. The engine validates and class-loads it exactly like any other

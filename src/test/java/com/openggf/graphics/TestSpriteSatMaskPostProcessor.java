@@ -274,6 +274,48 @@ class TestSpriteSatMaskPostProcessor {
     }
 
     @Test
+    void pixelOverflowArmsOnlyTheNextLineAcrossUncoveredLines() {
+        var raster = SpriteSatMaskPostProcessor.Raster.h40(0, 0, 224);
+        for (int gap : new int[] {0, 8}) {
+            var entries = new java.util.ArrayList<SpriteSatEntry>();
+            // 11 x 32px on lines 0-7 reach the 320px budget on every line.
+            for (int i = 0; i < 11; i++) entries.add(SpriteSatEntry.of(i * 24, 0, 4, 1, 0x200 + i * 4, 0,
+                    false, false, false, false));
+            int top = 8 + gap;
+            // X=0 (biased 128) followed by a visible entry on the following covered lines.
+            entries.add(SpriteSatEntry.of(-128, top, 1, 1, 0x300, 0, false, false, false, false));
+            SpriteSatEntry later = SpriteSatEntry.of(40, top, 1, 1, 0x301, 0, false, false, false, false);
+            entries.add(later);
+            List<SpriteSatEntry> result = SpriteSatMaskPostProcessor.process(entries, false, raster);
+            var visibleLater = result.stream().filter(entry -> entry.piece().firstPatternIndex() == 0x301).toList();
+            if (gap == 0) {
+                // Overflow on line 7 masks line 8 only.
+                assertEquals(1, visibleLater.size());
+                assertEquals(top + 1, visibleLater.getFirst().visibleTopY());
+            } else {
+                // An uncovered line clears the carried arm.
+                assertEquals(List.of(later), visibleLater);
+            }
+        }
+    }
+
+    @Test
+    void reusableUnclippedPassAllocatesNothingOnceWarm() {
+        var raster = SpriteSatMaskPostProcessor.LogicalViewport.h40(0, 0, 320, 224);
+        var entries = new java.util.ArrayList<SpriteSatEntry>();
+        for (int i = 0; i < 64; i++) entries.add(SpriteSatEntry.of((i % 16) * 16, (i / 16) * 40, 2, 2,
+                0x100 + i * 4, 0, false, false, false, false));
+        for (int i = 0; i < 2000; i++) SpriteSatMaskPostProcessor.processLogicalReusable(entries, true, raster, true);
+        var threads = (com.sun.management.ThreadMXBean) java.lang.management.ManagementFactory.getThreadMXBean();
+        long before = threads.getCurrentThreadAllocatedBytes();
+        for (int i = 0; i < 100; i++) SpriteSatMaskPostProcessor.processLogicalReusable(entries, true, raster, true);
+        long allocated = threads.getCurrentThreadAllocatedBytes() - before;
+        assertEquals(64, SpriteSatMaskPostProcessor.processLogicalReusable(entries, true, raster, true).size());
+        org.junit.jupiter.api.Assertions.assertTrue(allocated < 4096,
+                "unclipped admission should reuse thread scratch, allocated " + allocated + " bytes");
+    }
+
+    @Test
     void preMaskFrontPieces_areReplayedAheadOfMaskedPileEvenWhenCollectedLater() {
         SpriteSatEntry maskMarker = SpriteSatEntry.of(108, 24, 2, 2, 0x7C0, 0,
                 false, false, false, false);

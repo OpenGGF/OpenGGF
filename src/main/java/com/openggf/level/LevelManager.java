@@ -2583,6 +2583,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
     }
 
+    /** Redraws one rewritten foreground layout cell; see {@link LevelLayoutCellRedrawAccess}. */
+    void invalidateForegroundMapCell(int cellX, int cellY) {
+        if (tilemapManager != null) {
+            tilemapManager.invalidateForegroundMapCell(cellX, cellY);
+        }
+    }
+
     /**
      * Marks only the pattern atlas lookup as dirty. Use this after runtime
      * writes that replace 8x8 pattern data in place (art overlays, PLC uploads)
