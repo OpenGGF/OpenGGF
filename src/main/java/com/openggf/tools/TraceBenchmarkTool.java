@@ -92,7 +92,7 @@ public final class TraceBenchmarkTool {
     /** Parsed CLI arguments. */
     record Args(String trace, String mode, int warmupFrames, int measureFrames, int iterations,
                 Path json, Path markdown, String label, boolean trackAllocations, boolean audio, String fmCore,
-                Path frameLog, boolean paced) {
+                Path frameLog, boolean paced, boolean rewind) {
 
         static Args parse(String[] argv) {
             String trace = null;
@@ -108,6 +108,7 @@ public final class TraceBenchmarkTool {
             String fmCore = null;
             Path frameLog = null;
             boolean paced = false;
+            boolean rewind = false;
 
             for (int i = 0; i < argv.length; i++) {
                 String arg = argv[i];
@@ -125,6 +126,7 @@ public final class TraceBenchmarkTool {
                     case "--no-audio" -> audio = false;
                     case "--frame-log" -> frameLog = Path.of(CliArguments.requireValue(argv, ++i, arg));
                     case "--paced" -> paced = true;
+                    case "--rewind" -> rewind = true;
                     default -> throw new IllegalArgumentException("Unknown argument: " + arg);
                 }
             }
@@ -139,7 +141,7 @@ public final class TraceBenchmarkTool {
                 throw new IllegalArgumentException("--fm-core must be 'fast' or 'accurate', got: " + fmCore);
             }
             return new Args(trace, mode, warmupFrames, measureFrames, iterations,
-                    json, markdown, label, trackAllocations, audio, fmCore, frameLog, paced);
+                    json, markdown, label, trackAllocations, audio, fmCore, frameLog, paced, rewind);
         }
 
         private static int parseCount(String[] argv, int index, String flag, int minimum) {
@@ -280,10 +282,11 @@ public final class TraceBenchmarkTool {
      * hitch is located and attributed to a section.
      */
     private static void writeFrameLog(Path path, SectionTimeline measured,
-                                      int[] traceIndex, int[] act) throws java.io.IOException {
+                                      int[] traceIndex, int[] act, FrameExtras extras)
+            throws java.io.IOException {
         List<String> sections = measured.sectionNames();
         StringBuilder out = new StringBuilder();
-        out.append("measured_frame,trace_index,act,frame_ms");
+        out.append("measured_frame,trace_index,act,frame_ms,").append(FrameExtras.HEADER);
         for (String section : sections) {
             out.append(',').append(section.replace(',', '_'));
         }
@@ -292,6 +295,7 @@ public final class TraceBenchmarkTool {
         for (int i = 0; i < measured.frameCount(); i++) {
             out.append(i).append(',').append(traceIndex[i]).append(',').append(act[i])
                     .append(',').append(String.format(Locale.ROOT, "%.3f", frames[i] / 1e6));
+            extras.appendRow(out, i);
             for (String section : sections) {
                 out.append(',').append(String.format(Locale.ROOT, "%.3f",
                         measured.rawSection(section)[i] / 1e6));
@@ -403,6 +407,9 @@ public final class TraceBenchmarkTool {
         // act it ran in, so spikes can be placed on the run.
         int[] loggedTraceIndex = new int[args.measureFrames()];
         int[] loggedAct = new int[args.measureFrames()];
+        FrameExtras extras = new FrameExtras(args.measureFrames());
+        BenchmarkRewindRecorder rewindRecorder = args.rewind()
+                ? BenchmarkRewindRecorder.install(profiler) : null;
         int[] rowsByPhase = new int[TraceExecutionPhase.values().length];
         int rowsWithoutGameplay = 0;
         try {
@@ -418,6 +425,7 @@ public final class TraceBenchmarkTool {
                 // represent no work. beginFrame simply clears and re-arms, so an
                 // unclosed frame leaves nothing behind.
                 long frameStartNanos = System.nanoTime();
+                extras.beginFrame();
                 profiler.beginFrame();
                 TraceReplayDrive.DriveOutcome outcome = TraceReplayDrive.driveOneFrame(
                         trace, frameDriver, replayStart, phase, driveTraceIndex);
@@ -440,7 +448,11 @@ public final class TraceBenchmarkTool {
                         TraceReplayDrive.renderFrame();
                     }
                     audio.present(profiler);
+                    if (rewindRecorder != null) {
+                        rewindRecorder.record(profiler);
+                    }
                     profiler.endFrame();
+                    long frameEndNanos = System.nanoTime();
 
                     if (args.paced() && steppedFrames >= args.warmupFrames()) {
                         // Real-time pacing for the measured window only: this
@@ -461,6 +473,8 @@ public final class TraceBenchmarkTool {
                         if (measuredIndex < loggedTraceIndex.length) {
                             loggedTraceIndex[measuredIndex] = driveTraceIndex;
                             loggedAct[measuredIndex] = currentActOrMinusOne();
+                            extras.endFrame(measuredIndex, driveFrame,
+                                    frameEndNanos - frameStartNanos);
                         }
                     }
                 }
@@ -493,7 +507,7 @@ public final class TraceBenchmarkTool {
 
         if (args.frameLog() != null && index == 0) {
             try {
-                writeFrameLog(args.frameLog(), measured, loggedTraceIndex, loggedAct);
+                writeFrameLog(args.frameLog(), measured, loggedTraceIndex, loggedAct, extras);
                 System.out.println("Wrote per-frame log -> " + args.frameLog().toAbsolutePath());
             } catch (java.io.IOException e) {
                 throw new java.io.UncheckedIOException("Unable to write --frame-log", e);
@@ -539,6 +553,145 @@ public final class TraceBenchmarkTool {
     private static long usedHeapBytes() {
         Runtime runtime = Runtime.getRuntime();
         return runtime.totalMemory() - runtime.freeMemory();
+    }
+
+    /**
+     * Per-frame evidence that the profiler sections cannot carry: bytes this
+     * thread allocated, collections that completed and their pause time, the
+     * wall time spent outside every profiler section, and where the player was
+     * against the recorded row. Position columns are the validity check: a
+     * replay that has left the recorded route is measuring some other workload.
+     */
+    private static final class FrameExtras {
+        static final String HEADER = "wall_ms,alloc_kb,gc_count,gc_ms,zone,"
+                + "player_x,trace_x,player_y,trace_y,camera_x,camera_y";
+        private final com.sun.management.ThreadMXBean threads =
+                (com.sun.management.ThreadMXBean) java.lang.management.ManagementFactory.getThreadMXBean();
+        private final List<java.lang.management.GarbageCollectorMXBean> collectors =
+                java.lang.management.ManagementFactory.getGarbageCollectorMXBeans();
+        private final double[] wallMs;
+        private final long[] allocBytes;
+        private final long[] gcCount;
+        private final long[] gcMs;
+        private final int[] zone;
+        private final int[][] position;
+        private long allocAtStart;
+        private long gcCountAtStart;
+        private long gcMsAtStart;
+
+        FrameExtras(int frames) {
+            threads.setThreadAllocatedMemoryEnabled(true);
+            wallMs = new double[frames];
+            allocBytes = new long[frames];
+            gcCount = new long[frames];
+            gcMs = new long[frames];
+            zone = new int[frames];
+            position = new int[frames][6];
+        }
+
+        void beginFrame() {
+            allocAtStart = threads.getCurrentThreadAllocatedBytes();
+            gcCountAtStart = totalCollections();
+            gcMsAtStart = totalCollectionMs();
+        }
+
+        void endFrame(int index, TraceFrame row, long wallNanos) {
+            wallMs[index] = wallNanos / 1e6;
+            allocBytes[index] = threads.getCurrentThreadAllocatedBytes() - allocAtStart;
+            gcCount[index] = totalCollections() - gcCountAtStart;
+            gcMs[index] = totalCollectionMs() - gcMsAtStart;
+            var level = GameServices.levelOrNull();
+            zone[index] = level != null ? level.getCurrentZone() : -1;
+            AbstractPlayableSprite sprite = GameServices.camera().getFocusedSprite();
+            Camera camera = GameServices.camera();
+            position[index][0] = sprite != null ? sprite.getCentreX() : -1;
+            position[index][1] = row.x();
+            position[index][2] = sprite != null ? sprite.getCentreY() : -1;
+            position[index][3] = row.y();
+            position[index][4] = camera.getX();
+            position[index][5] = camera.getY();
+        }
+
+        void appendRow(StringBuilder out, int i) {
+            out.append(String.format(Locale.ROOT, ",%.3f,%.1f,%d,%d,%d",
+                    wallMs[i], allocBytes[i] / 1024.0, gcCount[i], gcMs[i], zone[i]));
+            for (int value : position[i]) {
+                out.append(',').append(value);
+            }
+        }
+
+        private long totalCollections() {
+            long total = 0;
+            for (var collector : collectors) {
+                total += Math.max(0, collector.getCollectionCount());
+            }
+            return total;
+        }
+
+        private long totalCollectionMs() {
+            long total = 0;
+            for (var collector : collectors) {
+                total += Math.max(0, collector.getCollectionTime());
+            }
+            return total;
+        }
+    }
+
+    /**
+     * Records live rewind history the way {@code LiveRewindManager} does for an
+     * ordinary level: a registry checkpoint every ten frames, an audio keyframe
+     * every sixty, PCM history armed, and pruning to the configured history
+     * length. The headless replay bypasses GameLoop, so without this the
+     * benchmark measures a session the player never runs.
+     */
+    private static final class BenchmarkRewindRecorder {
+        private static final int KEYFRAME_INTERVAL = 60;
+        private static final int GAMEPLAY_CHECKPOINT_INTERVAL = 10;
+        private final com.openggf.game.rewind.RewindController controller;
+        private final int retainedFrames;
+
+        private BenchmarkRewindRecorder(com.openggf.game.rewind.RewindController controller,
+                                        int retainedFrames) {
+            this.controller = controller;
+            this.retainedFrames = retainedFrames;
+        }
+
+        static BenchmarkRewindRecorder install(PerformanceProfiler profiler) {
+            var gameplayMode = SessionManager.getCurrentGameplayMode();
+            com.openggf.game.rewind.InputSource inputs = new com.openggf.game.rewind.InputSource() {
+                @Override
+                public int frameCount() {
+                    return Integer.MAX_VALUE;
+                }
+
+                @Override
+                public com.openggf.debug.playback.Bk2FrameInput read(int frame) {
+                    throw new IllegalStateException("benchmark rewind records only");
+                }
+            };
+            gameplayMode.installPlaybackController(inputs, input -> {
+                throw new IllegalStateException("benchmark rewind records only");
+            }, KEYFRAME_INTERVAL);
+            var controller = gameplayMode.getRewindController();
+            controller.setGameplayCheckpointInterval(GAMEPLAY_CHECKPOINT_INTERVAL);
+            GameServices.audio().setRewindHistoryArmed(true);
+            com.openggf.game.session.WorldSessionPolicyAccess.setHistoryRecording(
+                    gameplayMode.getWorldSession(), true);
+            int seconds = Math.max(1, GameServices.configuration().getInt(
+                    com.openggf.configuration.SonicConfiguration.REWIND_HISTORY_SECONDS));
+            System.out.println("Rewind recording: checkpoint every "
+                    + GAMEPLAY_CHECKPOINT_INTERVAL + " frames, " + seconds + "s history");
+            return new BenchmarkRewindRecorder(controller, seconds * 60);
+        }
+
+        void record(PerformanceProfiler profiler) {
+            profiler.beginSection("rewind.capture");
+            controller.recordExternalStep();
+            profiler.endSection("rewind.capture");
+            profiler.beginSection("rewind.prune");
+            controller.pruneHistoryToRetainFrames(retainedFrames);
+            profiler.endSection("rewind.prune");
+        }
     }
 
     /**
