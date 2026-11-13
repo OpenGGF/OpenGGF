@@ -6,6 +6,11 @@ the boss-specific patterns. The examples illustrate structure; constants, clocks
 phase ordering must come from the matching ROM routine. Consult the game-specific
 [implementation reference](../../architecture/object-implementation-reference.md).
 
+For the order of work, start with the [checklist](#checklist-for-a-new-boss) at the
+end of this page; the sections before it explain each step. Agents use the matching
+`s1-implement-boss`, `s2-implement-boss` or `s3k-implement-boss` skill under
+[`.agents/skills/`](../../../.agents/skills/).
+
 ## State Machine
 
 Bosses have more states than typical objects. In the disassembly, these are encoded as

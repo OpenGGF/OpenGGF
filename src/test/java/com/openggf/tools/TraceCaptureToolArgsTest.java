@@ -68,6 +68,13 @@ class TraceCaptureToolArgsTest {
     }
 
     @Test
+    void nativeSpriteLimitsStayOnUnlessPromotionalFootageTurnsThemOff() {
+        assertTrue(TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1"}).nativeSpriteLimits());
+        assertFalse(TraceCaptureTool.Args.parse(
+                new String[]{"--trace", "aiz1", "--no-sprite-limits"}).nativeSpriteLimits());
+    }
+
+    @Test
     void acceptsNegativeIntegerValuesAsBefore() {
         TraceCaptureTool.Args args = TraceCaptureTool.Args.parse(
                 new String[]{"--trace", "aiz1", "--scale", "-3", "--fps", "-30", "--tail-frames", "-1"});

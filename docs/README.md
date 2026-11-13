@@ -50,6 +50,8 @@ Architecture artifacts are classified by the question they answer:
   maps components, room and attempt lifecycles, connection routes, verification
   outcomes and cleanup, with separate integration diagrams.
 - [Audits](architecture/audits/) — what state is the project currently in?
+  See the [mod example friction review](architecture/audits/2026-11-09-mod-example-friction.md)
+  for confirmed creator burdens and the alternatives chosen.
   The [interactive source atlas](architecture/audits/project-source-atlas.html)
   maps components, classes, historical file presence and Git activity;
   [regenerate it on demand](../tools/project_atlas/README.md).

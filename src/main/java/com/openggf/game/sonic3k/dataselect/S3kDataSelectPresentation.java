@@ -307,6 +307,9 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         state = State.INACTIVE;
         launchErrorMessage = null;
         renderer.reset();
+        characterPortraits.clear();
+        characterLifeIcons.clear();
+        characterContinueIcons.clear();
         if (sessionController != null) {
             sessionController.reset();
         }
@@ -386,6 +389,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
     private S3kSaveScreenObjectState cachedObjectState;
     private int cachedAnimBits = -1;
     private int cachedSelectedRow = -1;
+    private int cachedSelectedTeamIndex = -1;
     private int cachedDeleteWorldX = Integer.MIN_VALUE;
     private DeleteRobotnikState cachedDeleteState;
     private int cachedDeleteAnimFrame = -1;
@@ -403,6 +407,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         if (cachedObjectState != null
                 && animBits == cachedAnimBits
                 && displayedSelectedRow == cachedSelectedRow
+                && menuModel().getSelectedTeamIndex() == cachedSelectedTeamIndex
                 && deleteWorldX == cachedDeleteWorldX
                 && deleteRobotnikState == cachedDeleteState
                 && deleteMainAnimFrameIndex == cachedDeleteAnimFrame
@@ -415,6 +420,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
 
         cachedAnimBits = animBits;
         cachedSelectedRow = displayedSelectedRow;
+        cachedSelectedTeamIndex = menuModel().getSelectedTeamIndex();
         cachedDeleteWorldX = deleteWorldX;
         cachedDeleteState = deleteRobotnikState;
         cachedDeleteAnimFrame = deleteMainAnimFrameIndex;
@@ -793,7 +799,9 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
                 lives,
                 continuesCount,
                 getCachedEmeraldFrames(slotIndex, summary),
-                preview);
+                preview,
+                characterLifeIcon(team.mainCharacter()),
+                characterContinueIcon(team.mainCharacter()));
     }
 
     private List<Integer> getCachedEmeraldFrames(int slotIndex, SaveSlotSummary summary) {
@@ -940,9 +948,99 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
 
     private S3kCustomTeamPortraitComposer portraitComposer() {
         if (cachedPortraitComposer == null) {
-            cachedPortraitComposer = new S3kCustomTeamPortraitComposer(assets.getSaveScreenMappings());
+            cachedPortraitComposer = new S3kCustomTeamPortraitComposer(assets.getSaveScreenMappings(), this::characterPortrait);
         }
         return cachedPortraitComposer;
+    }
+
+    private final java.util.Map<String, SpriteMappingFrame> characterPortraits = new java.util.HashMap<>();
+
+    private final java.util.Map<String, SpriteMappingFrame> characterLifeIcons = new java.util.HashMap<>();
+
+    private final java.util.Map<String, SpriteMappingFrame> characterContinueIcons = new java.util.HashMap<>();
+
+    private SpriteMappingFrame characterContinueIcon(String code) {
+        if (characterContinueIcons.containsKey(code)) return characterContinueIcons.get(code);
+        SpriteMappingFrame frame = null;
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        var definition = world == null ? null : world.getPlayableCharacterRegistry()
+                .find(com.openggf.game.CharacterKey.parsePersisted(code)).orElse(null);
+        if (definition != null && definition.presentationSupplier() != null) {
+            try {
+                var presentation = definition.presentationSupplier().load(code);
+                var art = presentation == null ? null : presentation.art().get(com.openggf.game.CharacterPresentation.Host.S3K);
+                var set = art == null ? null : art.screenFrames();
+                var pose = set == null ? null : set.banks().getOrDefault("continue/icon", java.util.Map.of()).get(0);
+                if (pose != null && pose.image().height() == 24) {
+                    var image = menuContinueImage(pose.image());
+                    if (image != null) frame = renderer.registerCharacterPortrait(
+                            new com.openggf.game.PresentationFrameSet.Pose(image, 0, 0), set);
+                }
+            } catch (java.io.IOException e) {
+                throw new IllegalStateException("Cannot load character continue icon: " + code, e);
+            }
+        }
+        characterContinueIcons.put(code, frame);
+        return frame;
+    }
+
+    // The menu owns a 16x24 figure cell; the adjacent cross must remain native.
+    private static com.openggf.game.CharacterPresentation.Image menuContinueImage(
+            com.openggf.game.CharacterPresentation.Image image) {
+        byte[] source = image.pixels();
+        byte[] pixels = new byte[16 * 24];
+        for (int y = 0; y < 24; y++) for (int x = 0; x < image.width(); x++) {
+            byte pixel = source[y * image.width() + x];
+            if (x < 16) pixels[y * 16 + x] = pixel;
+            else if (pixel != 0) return null;
+        }
+        return new com.openggf.game.CharacterPresentation.Image(16, 24, pixels);
+    }
+
+    private SpriteMappingFrame characterLifeIcon(String code) {
+        if (characterLifeIcons.containsKey(code)) return characterLifeIcons.get(code);
+        SpriteMappingFrame frame = null;
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        var definition = world == null ? null : world.getPlayableCharacterRegistry()
+                .find(com.openggf.game.CharacterKey.parsePersisted(code)).orElse(null);
+        if (definition != null && definition.presentationSupplier() != null && definition.paletteSupplier() != null) {
+            try {
+                var presentation = definition.presentationSupplier().load(code);
+                var art = presentation == null ? null : presentation.art().get(com.openggf.game.CharacterPresentation.Host.S3K);
+                var palette = definition.paletteSupplier().load(code);
+                if (art != null && art.hudLifeIcon() != null && palette != null) {
+                    frame = renderer.registerCharacterImage(
+                            new com.openggf.game.PresentationFrameSet.Pose(art.hudLifeIcon(), 0, 0), palette);
+                }
+            } catch (java.io.IOException e) {
+                throw new IllegalStateException("Cannot load character life icon: " + code, e);
+            }
+        }
+        characterLifeIcons.put(code, frame);
+        return frame;
+    }
+
+    private SpriteMappingFrame characterPortrait(String code) {
+        if (characterPortraits.containsKey(code)) return characterPortraits.get(code);
+        SpriteMappingFrame frame = null;
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        if (world != null) {
+            var definition = world.getPlayableCharacterRegistry()
+                    .find(com.openggf.game.CharacterKey.parsePersisted(code)).orElse(null);
+            if (definition != null && definition.presentationSupplier() != null) {
+                try {
+                    var presentation = definition.presentationSupplier().load(code);
+                    var art = presentation == null ? null : presentation.art().get(com.openggf.game.CharacterPresentation.Host.S3K);
+                    var set = art == null ? null : art.screenFrames();
+                    var pose = set == null ? null : set.banks().getOrDefault("portrait", java.util.Map.of()).get(5);
+                    if (pose != null) frame = renderer.registerCharacterPortrait(pose, set);
+                } catch (java.io.IOException e) {
+                    throw new IllegalStateException("Cannot load character portrait: " + code, e);
+                }
+            }
+        }
+        characterPortraits.put(code, frame);
+        return frame;
     }
 
     private SpriteMappingFrame resolveCustomPortraitFrame(SelectedTeam team) {

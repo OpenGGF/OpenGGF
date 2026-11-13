@@ -1,0 +1,104 @@
+{
+  "gravity-loop": {
+    "frames": 12,
+    "customMean": 341.0,
+    "nativeMean": 372.0,
+    "ratio": 0.9574271077563381
+  },
+  "gravity-transition": {
+    "frames": 12,
+    "customMean": 377.5,
+    "nativeMean": 375.8333333333333,
+    "ratio": 1.0022148421373749
+  },
+  "cage-entry": {
+    "frames": 12,
+    "customMean": 375.1666666666667,
+    "nativeMean": 382.8333333333333,
+    "ratio": 0.9899363004620918
+  },
+  "twist": {
+    "frames": 7,
+    "customMean": 411.0,
+    "nativeMean": 432.7142857142857,
+    "ratio": 0.9745862824406191
+  },
+  "pole": {
+    "frames": 7,
+    "customMean": 455.14285714285717,
+    "nativeMean": 494.2857142857143,
+    "ratio": 0.9595880619072505
+  },
+  "bar": {
+    "frames": 6,
+    "customMean": 456.1666666666667,
+    "nativeMean": 498.8333333333333,
+    "ratio": 0.9562777263307863
+  },
+  "tumble": {
+    "frames": 15,
+    "customMean": 373.46666666666664,
+    "nativeMean": 388.2,
+    "ratio": 0.9808399740950396
+  },
+  "swing": {
+    "frames": 8,
+    "customMean": 646.375,
+    "nativeMean": 622.625,
+    "ratio": 1.018893984089164
+  },
+  "chain": {
+    "frames": 6,
+    "customMean": 714.6666666666666,
+    "nativeMean": 660.3333333333334,
+    "ratio": 1.0403276771869774
+  },
+  "carry": {
+    "frames": 1,
+    "customMean": 498.0,
+    "nativeMean": 517.0,
+    "ratio": 0.981452758130011
+  },
+  "hang": {
+    "frames": 3,
+    "customMean": 468.6666666666667,
+    "nativeMean": 448.6666666666667,
+    "ratio": 1.0220452646684508
+  },
+  "bar-end": {
+    "frames": 2,
+    "customMean": 610.5,
+    "nativeMean": 590.5,
+    "ratio": 1.0167937854020235
+  },
+  "crane": {
+    "frames": 1,
+    "customMean": 616.0,
+    "nativeMean": 520.0,
+    "ratio": 1.0884003788199381
+  },
+  "wall-run": {
+    "frames": 5,
+    "customMean": 458.6,
+    "nativeMean": 460.2,
+    "ratio": 0.9982601117747513
+  },
+  "parachute": {
+    "frames": 7,
+    "customMean": 524.8571428571429,
+    "nativeMean": 511.7142857142857,
+    "ratio": 1.0127605716222956
+  },
+  "corkscrew": {
+    "frames": 12,
+    "customMean": 500.25,
+    "nativeMean": 498.25,
+    "ratio": 1.0020050145443895
+  },
+  "S2 tumble": {
+    "frames": 12,
+    "customMean": 341.0,
+    "nativeMean": 371.8333333333333,
+    "ratio": 0.9576416572509655
+  }
+}

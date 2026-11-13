@@ -185,11 +185,19 @@ public final class DestructionEffects {
         // --- Calculate and award chain score ---
         int pointsValue = 100;
         if (player != null) {
-            pointsValue = poweredAttack
+            var host = services != null ? services.gameModule() : null;
+            var chain = host != null ? host.getGameService(com.openggf.game.internal.BadnikChainPolicy.class) : null;
+            // Touch_KillEnemy (s2.asm:85514-85534) owns the S2 shared word.
+            pointsValue = chain != null ? chain.incrementAndAward() : poweredAttack
                     ? PoweredBadnikScoring.incrementChain(player)
                     : player.incrementBadnikChain();
             if (services != null) {
-                services.gameState().addScore(pointsValue);
+                // AddPoints2 (s2.asm:87835-87842) selects the native attacker's
+                // progress bank; ordinary team awards retain the shared bank.
+                var roster = com.openggf.game.competition.NativeCompetitionRoster.from(services.worldSession());
+                int slot = roster != null && player instanceof com.openggf.sprites.playable.AbstractPlayableSprite actor
+                        ? roster.slotOf(actor) : -1;
+                (slot >= 0 ? roster.gameState(slot) : services.gameState()).addScore(pointsValue);
             }
         }
 

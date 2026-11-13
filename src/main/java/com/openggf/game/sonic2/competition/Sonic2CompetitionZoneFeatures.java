@@ -27,6 +27,8 @@ final class Sonic2CompetitionZoneFeatures extends Sonic2ZoneFeatureProvider impl
                         .playSfx(GameSound.LARGE_BUMPER)) : null;
         var registry = host.context().getRewindRegistry();
         registry.deregister("sonic2_native_cnz_bumpers");
+        registry.deregister("sonic2_native_slot_machine");
+        if (getSlotMachineManager() != null) registry.register(getSlotMachineManager().rewindAdapter());
         if (bumpers != null) registry.register(bumpers.rewindAdapter());
     }
 

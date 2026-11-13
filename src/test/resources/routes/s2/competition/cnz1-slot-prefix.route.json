@@ -1,0 +1,125 @@
+{
+  "format" : "openggf-route/1",
+  "launch" : {
+    "rom" : {
+      "game" : "s2",
+      "crc32" : "7B905383",
+      "sha1" : "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9"
+    },
+    "inlet" : {
+      "kind" : "title"
+    },
+    "roster" : {
+      "main" : "sonic",
+      "sidekick" : "tails"
+    },
+    "width" : 320,
+    "donor" : "off",
+    "initial" : {
+      "vIntStart" : 0
+    }
+  },
+  "checks" : {
+    "guard" : {
+      "allowHurt" : true,
+      "allowRingLoss" : true,
+      "allowDeath" : false,
+      "allowBoundary" : false
+    },
+    "startRow" : 1200,
+    "legs" : [ {
+      "id" : "drop-beyond-upper-floor",
+      "maxRows" : 5000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 1280, 820, 1312, 980 ]
+        }
+      }
+    }, {
+      "id" : "linked-cage-approach",
+      "maxRows" : 5000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 1200, 1080, 1232, 1160 ]
+        }
+      }
+    }, {
+      "id" : "slot-spinning",
+      "maxRows" : 300,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : false,
+        "allowBoundary" : false
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "all",
+          "clauses" : [ {
+            "kind" : "player-in",
+            "player" : "P1",
+            "region" : [ 1180, 1060, 1252, 1180 ]
+          }, {
+            "kind" : "fact-equals",
+            "key" : "competition.slot.inUse",
+            "value" : 1
+          } ]
+        }
+      }
+    } ]
+  },
+  "tape" : {
+    "script" : "cnz1-slot-prefix.script",
+    "rows" : 1976,
+    "sha256" : "4f22a8544df182474589b9d1ecaaef8246768ce291ba032e8d3e3316087ecddb"
+  },
+  "provenance" : {
+    "producer" : "RoutePlanner prefix-search/4 goal program",
+    "engine" : "openggf 0.8.prerelease-ce26118f8-dirty stageplay-s2-competition-title/1",
+    "source" : "authored after a 1976-row prefix toward legs [drop-beyond-upper-floor, linked-cage-approach, slot-spinning]",
+    "notes" : [ ]
+  },
+  "qualification" : [ {
+    "scope" : "BIZHAWK",
+    "passed" : true,
+    "content" : "7e24b954d7f6ba3641b018b4a8690fd344805b6702da8bbf548d2432f2eb3afb",
+    "environment" : "BizHawk2.11/GPGX cold read-only required-goals movie 92070b90f795cdd43a8d6c66634dbc8c6421dbe3f921fddb065457864caf5891; accepted comparison boundary 2235 ; identical input prefix covers slot at native 2045",
+    "rows" : 1976,
+    "coverage" : [ "slot-in-use-in-view" ]
+  }, {
+    "scope" : "ENGINE",
+    "passed" : true,
+    "content" : "7e24b954d7f6ba3641b018b4a8690fd344805b6702da8bbf548d2432f2eb3afb",
+    "environment" : "openggf 0.8.prerelease-ce26118f8-dirty stageplay-s2-competition-title/1",
+    "rows" : 1976
+  } ],
+  "native" : {
+    "entry" : {
+      "movie" : "src/test/resources/routes/s2/competition/witnesses/cnz-native-prefix.script",
+      "prefixRows" : 1337,
+      "inputHash" : "1b70915f57ed43f379cf8104f8917b80417a79dd1017d7efa4856e801993c66f",
+      "engineAnchorRows" : 1268,
+      "anchorBoundary" : "first-ordinary-level-lfc-zero"
+    },
+    "lag" : [ ]
+  }
+}

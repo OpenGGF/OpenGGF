@@ -79,19 +79,23 @@ Use a task directory outside the repository for captures the user should keep.
 | `--star-post` | off | Save a checkpoint at `--x/--y` and restart from it, instead of teleporting. Required wherever the act's `ScreenInit` runs a scripted intro that overrides `--x/--y` outright (S3K SSZ act 1) |
 | `--width <px>` | `320` | 320, 352, 400, 528 or 800; height is always 224 |
 | `--main`, `--sidekick` | `sonic`, `none` | Characters; `--sidekick tails` for a team |
-| `--donor off\|s1\|s2` | `off` | Cross-game donation; ROM from configuration unless `--donor-rom` |
+| `--donor off\|s1\|s2\|s3k` | `off` | Cross-game donation; ROM from configuration unless `--donor-rom` |
 | `--input <file>` | none | `Input Log.txt` or `.bk2`; neutral input after it ends |
 | `--settle <n>` | `0` | Neutral frames before the input log starts |
 | `--input-start <n>` | `0` | First movie frame to play (e.g. a level start late in a complete-run `.bk2`) |
-| `--emeralds <7 digits>` | unchanged | S3K `Collected_emeralds_array` setup (0 none, 1 Chaos, 2 grey Super, 3 Super), applied after boot |
+| `--emeralds <6-7 digits>` | unchanged | `Collected_emeralds_array` setup applied after boot: seven S3K values (0 none, 1 Chaos, 2 grey Super, 3 Super), or six for S1/S2 (1 collected) |
+| `--rewind FRAME:LENGTH` | off | Hold the live rewind key for `LENGTH` frames from capture frame `FRAME`: production held-key rewind with its VHS picture, reverse audio and transport plate. Play then resumes from the restored state with the movie's later input; not with `--interactive-pacing` |
+| `--timer FRAMES` | unset | Declared level timer in frames, written after boot (3600 per minute). A positioned start deep in an act otherwise shows TIME 0:00; take the value from the trace row the position came from. Not with `--title-screen` |
 | `--vint-run-count <n>` | fresh | Declared inherited `V_int_run_count` (objects gating on its low bits, e.g. DDZ turret aim) |
 | `--end-of-level` | off | Direct-level only: seed declared inherited `End_of_level_flag` once after declared setup; does not prove boss or route completion |
 | `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |
 | `--camera-x-sub <n>` | fresh | Declared inherited `Camera_X_pos` low word; only zones that keep a camera fraction (S3K DDZ) accept it |
-| `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |
-| `--title-screen` | off | Initialize the production title before first assembly; first zone/act only, no positioned/checkpoint/clock/donor seeds |
+| `--title-screen` | off | Initialize the production title before first assembly; first zone/act only, no positioned/checkpoint/clock seeds; `--donor` is allowed (boot activates it before the title, so `--donor s3k` on S1/S2 reaches the donated Data Select) |
+| `--save-slots <file.json>` | none | Declared Data Select setup (`--title-screen` only): a JSON object mapping slot numbers to save payloads, written through the production `SaveManager` before boot. Refuses to run without an explicit `-Dopenggf.saveRoot`, so it never touches the user's saves |
+| `--extra-teams <combos>` | config | Session override of `DATA_SELECT_EXTRA_PLAYER_COMBOS` (`--title-screen` only), e.g. `sonic,knuckles;knuckles,tails` |
 | `--interactive-pacing` | off | Use production presentation/input pacing, including menus and gameplay observer callbacks; P1 controller input only, fps 60, no debug stage completion |
-| `--audio` | off | Write `audio.wav` from one final SMPS PCM packet per outer frame; every=1, capture-from=0, matching 60-Hz presentation. Video remains silent until muxed. Music and SFX are one mix; there is no SFX-only stem |
+| `--audio` | off | Write `audio.wav` from one final SMPS PCM packet per outer frame; every=1, capture-from=0, matching 60-Hz presentation. Video remains silent until muxed. Music and SFX are one mix at full volume, whatever the saved `audio.musicVolume`/`audio.sfxVolume` |
+| `--no-music` | off | With `--audio`: silence music and keep the sound effects, including those that borrow music channels (`audio.musicVolume` 0 for this run). `--native-pcm` stays the unscaled native-compatible stage |
 | `--title-card` | off | Keep and draw title-card presentations instead of omitting them. Additive mod zones skip their card by default (`mods.skipModZoneTitleCards`); custom zone-name cards are unsupported |
 | `--complete-special-stage` | off | Request the debug special-stage completion while a special stage runs (awards its emerald with 50 rings; no key binding is involved), so the capture continues into the results screen; results frames render as `Engine` draws them, including the S3K Super Emerald sanctuary backdrop. Special-stage frames do too: the level during the entry fade-to-white, then the stage's own provider draw |
 | `--frames <n>` | settle + log length | Total frames to step |

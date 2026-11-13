@@ -1,0 +1,2901 @@
+{
+  "method": "Manual pixel landmark annotations; x edges exclusive. Signed eye-to-beak vertical distance; pitch changes its sign. Skull excludes crest and goggle strap. Native rows provide pose comparison, not a claim that a fox or hedgehog has identical falcon anatomy. Slope annotations are in source-flat anatomical axes.",
+  "reference": "wait-00",
+  "referenceLandmarks": [
+    6,
+    17,
+    10,
+    12,
+    16,
+    25
+  ],
+  "limits": [
+    "Manual landmark placement has approximately one pixel uncertainty.",
+    "Native per-frame skull/torso rectangles have not been certified; reference rows are visual comparisons.",
+    "Existing approved FLY has 8-9px torso vs WAIT 9px; pitched/crouched/curled poses must not be judged on total silhouette height."
+  ],
+  "frames": {
+    "wait-00": {
+      "animation": "WAIT",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          6,
+          17,
+          10,
+          12,
+          16,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          6,
+          17,
+          10,
+          12,
+          16,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "wait-01": {
+      "animation": "WAIT",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          6,
+          17,
+          10,
+          12,
+          16,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          6,
+          17,
+          10,
+          12,
+          16,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "wait-02": {
+      "animation": "WAIT",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          6,
+          17,
+          10,
+          12,
+          16,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          6,
+          17,
+          10,
+          12,
+          16,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "wait-03": {
+      "animation": "WAIT",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          5,
+          16,
+          10,
+          12,
+          16,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          5,
+          16,
+          10,
+          12,
+          16,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "wait-04": {
+      "animation": "WAIT",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          5,
+          16,
+          10,
+          12,
+          16,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          5,
+          16,
+          10,
+          12,
+          16,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "wait-05": {
+      "animation": "WAIT",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          5,
+          16,
+          10,
+          12,
+          16,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          5,
+          16,
+          10,
+          12,
+          16,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "wait-06": {
+      "animation": "WAIT",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          6,
+          17,
+          10,
+          12,
+          16,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          6,
+          17,
+          10,
+          12,
+          16,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "walk-00": {
+      "animation": "WALK",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          8,
+          22,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 39,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          6,
+          17,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "walk-01": {
+      "animation": "WALK",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          10,
+          24,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 40,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          7,
+          18,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 32,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "walk-02": {
+      "animation": "WALK",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          11,
+          25,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 40,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 32,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "walk-03": {
+      "animation": "WALK",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          11,
+          25,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 39,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "walk-04": {
+      "animation": "WALK",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          8,
+          22,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 39,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          6,
+          17,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "walk-05": {
+      "animation": "WALK",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          10,
+          24,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 40,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          7,
+          18,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 32,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "walk-06": {
+      "animation": "WALK",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          12,
+          26,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 38,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 30,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "walk-07": {
+      "animation": "WALK",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          11,
+          25,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 39,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "run-00": {
+      "animation": "RUN",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          16,
+          26,
+          9,
+          11,
+          14,
+          22
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 30,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          16,
+          26,
+          9,
+          11,
+          14,
+          22
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 30,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "run-01": {
+      "animation": "RUN",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "run-02": {
+      "animation": "RUN",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "run-03": {
+      "animation": "RUN",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "roll-00": {
+      "animation": "ROLL",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": null,
+        "skull_width": null,
+        "eye_to_beak_dy": null,
+        "torso_height": null,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": null,
+        "skull_width": null,
+        "eye_to_beak_dy": null,
+        "torso_height": null,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": "Occluded in curled/blur pose"
+    },
+    "roll-01": {
+      "animation": "ROLL",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": null,
+        "skull_width": null,
+        "eye_to_beak_dy": null,
+        "torso_height": null,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": null,
+        "skull_width": null,
+        "eye_to_beak_dy": null,
+        "torso_height": null,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": "Occluded in curled/blur pose"
+    },
+    "roll-02": {
+      "animation": "ROLL",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": null,
+        "skull_width": null,
+        "eye_to_beak_dy": null,
+        "torso_height": null,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": null,
+        "skull_width": null,
+        "eye_to_beak_dy": null,
+        "torso_height": null,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": "Occluded in curled/blur pose"
+    },
+    "roll-03": {
+      "animation": "ROLL",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": null,
+        "skull_width": null,
+        "eye_to_beak_dy": null,
+        "torso_height": null,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": null,
+        "skull_width": null,
+        "eye_to_beak_dy": null,
+        "torso_height": null,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": "Occluded in curled/blur pose"
+    },
+    "spindash-00": {
+      "animation": "SPINDASH",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          15,
+          28,
+          17,
+          20,
+          21,
+          26
+        ],
+        "skull_width": 13,
+        "eye_to_beak_dy": 3,
+        "torso_height": 5,
+        "opaque_height": 27,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          13,
+          25,
+          15,
+          18,
+          19,
+          24
+        ],
+        "skull_width": 12,
+        "eye_to_beak_dy": 3,
+        "torso_height": 5,
+        "opaque_height": 24,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": "Foreshortened torso in crouch/curl"
+    },
+    "spindash-01": {
+      "animation": "SPINDASH",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          14,
+          27,
+          17,
+          20,
+          21,
+          26
+        ],
+        "skull_width": 13,
+        "eye_to_beak_dy": 3,
+        "torso_height": 5,
+        "opaque_height": 28,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          12,
+          24,
+          15,
+          18,
+          19,
+          24
+        ],
+        "skull_width": 12,
+        "eye_to_beak_dy": 3,
+        "torso_height": 5,
+        "opaque_height": 25,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": "Foreshortened torso in crouch/curl"
+    },
+    "spindash-02": {
+      "animation": "SPINDASH",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          14,
+          27,
+          17,
+          20,
+          21,
+          26
+        ],
+        "skull_width": 13,
+        "eye_to_beak_dy": 3,
+        "torso_height": 5,
+        "opaque_height": 26,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          12,
+          24,
+          15,
+          18,
+          19,
+          24
+        ],
+        "skull_width": 12,
+        "eye_to_beak_dy": 3,
+        "torso_height": 5,
+        "opaque_height": 23,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": "Foreshortened torso in crouch/curl"
+    },
+    "spindash-03": {
+      "animation": "SPINDASH",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": null,
+        "skull_width": null,
+        "eye_to_beak_dy": null,
+        "torso_height": null,
+        "opaque_height": 26,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": null,
+        "skull_width": null,
+        "eye_to_beak_dy": null,
+        "torso_height": null,
+        "opaque_height": 24,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": "Occluded in curled/blur pose"
+    },
+    "spring-00": {
+      "animation": "SPRING",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          4,
+          14,
+          8,
+          7,
+          14,
+          35
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": -1,
+        "torso_height": 21,
+        "opaque_height": 47,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          10,
+          20,
+          12,
+          11,
+          15,
+          23
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": -1,
+        "torso_height": 8,
+        "opaque_height": 30,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": "Upward head pitch"
+    },
+    "hurt-00": {
+      "animation": "HURT",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          10,
+          23,
+          11,
+          13,
+          16,
+          24
+        ],
+        "skull_width": 13,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          9,
+          21,
+          10,
+          12,
+          14,
+          22
+        ],
+        "skull_width": 12,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 28,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "death-00": {
+      "animation": "DEATH",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          10,
+          20,
+          10,
+          13,
+          15,
+          23
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 3,
+        "torso_height": 8,
+        "opaque_height": 30,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          10,
+          20,
+          10,
+          13,
+          15,
+          23
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 3,
+        "torso_height": 8,
+        "opaque_height": 30,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": "Front view"
+    },
+    "duck-00": {
+      "animation": "DUCK",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          13,
+          26,
+          10,
+          13,
+          13,
+          18
+        ],
+        "skull_width": 13,
+        "eye_to_beak_dy": 3,
+        "torso_height": 5,
+        "opaque_height": 20,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          11,
+          22,
+          9,
+          11,
+          11,
+          16
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 5,
+        "opaque_height": 17,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": "Foreshortened torso in crouch/curl"
+    },
+    "look_up-00": {
+      "animation": "LOOK_UP",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          7,
+          18,
+          8,
+          7,
+          15,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": -1,
+        "torso_height": 10,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          7,
+          18,
+          8,
+          7,
+          15,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": -1,
+        "torso_height": 10,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": "Upward head pitch"
+    },
+    "skid-00": {
+      "animation": "SKID",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          14,
+          27,
+          12,
+          15,
+          17,
+          25
+        ],
+        "skull_width": 13,
+        "eye_to_beak_dy": 3,
+        "torso_height": 8,
+        "opaque_height": 31,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          12,
+          24,
+          11,
+          13,
+          15,
+          23
+        ],
+        "skull_width": 12,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 28,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "skid-01": {
+      "animation": "SKID",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          14,
+          27,
+          12,
+          15,
+          17,
+          25
+        ],
+        "skull_width": 13,
+        "eye_to_beak_dy": 3,
+        "torso_height": 8,
+        "opaque_height": 32,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          12,
+          24,
+          11,
+          13,
+          15,
+          23
+        ],
+        "skull_width": 12,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "fly-00": {
+      "animation": "TAILS_FLY",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          13,
+          23,
+          15,
+          17,
+          20,
+          29
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 35,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          13,
+          23,
+          15,
+          17,
+          20,
+          29
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 35,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "fly-01": {
+      "animation": "TAILS_FLY",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          19,
+          29,
+          11,
+          13,
+          16,
+          24
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          19,
+          29,
+          11,
+          13,
+          16,
+          24
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "fly-02": {
+      "animation": "TAILS_FLY",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          13,
+          23,
+          11,
+          13,
+          16,
+          24
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          13,
+          23,
+          11,
+          13,
+          16,
+          24
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "fly-03": {
+      "animation": "TAILS_FLY",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          13,
+          23,
+          11,
+          13,
+          16,
+          24
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          13,
+          23,
+          11,
+          13,
+          16,
+          24
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "fly-04": {
+      "animation": "TAILS_FLY",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          16,
+          26,
+          11,
+          13,
+          16,
+          24
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          16,
+          26,
+          11,
+          13,
+          16,
+          24
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 29,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "fly-05": {
+      "animation": "TAILS_FLY",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          13,
+          23,
+          15,
+          17,
+          20,
+          29
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 32,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          13,
+          23,
+          15,
+          17,
+          20,
+          29
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 32,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "fly_tired-00": {
+      "animation": "TAILS_FLY_TIRED",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          12,
+          25,
+          13,
+          15,
+          18,
+          26
+        ],
+        "skull_width": 13,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 33,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          13,
+          24,
+          11,
+          12,
+          15,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 1,
+        "torso_height": 10,
+        "opaque_height": 32,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "fly_tired-01": {
+      "animation": "TAILS_FLY_TIRED",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          13,
+          26,
+          13,
+          15,
+          18,
+          26
+        ],
+        "skull_width": 13,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 33,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          14,
+          25,
+          11,
+          12,
+          15,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 1,
+        "torso_height": 10,
+        "opaque_height": 32,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "fly_tired-02": {
+      "animation": "TAILS_FLY_TIRED",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          14,
+          27,
+          13,
+          15,
+          18,
+          26
+        ],
+        "skull_width": 13,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 33,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          14,
+          25,
+          11,
+          12,
+          15,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 1,
+        "torso_height": 10,
+        "opaque_height": 32,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "fly_tired-03": {
+      "animation": "TAILS_FLY_TIRED",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          11,
+          24,
+          13,
+          15,
+          18,
+          26
+        ],
+        "skull_width": 13,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 33,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          11,
+          22,
+          11,
+          12,
+          15,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 1,
+        "torso_height": 10,
+        "opaque_height": 33,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "fly_tired-04": {
+      "animation": "TAILS_FLY_TIRED",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          14,
+          27,
+          13,
+          15,
+          18,
+          26
+        ],
+        "skull_width": 13,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 33,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          14,
+          25,
+          11,
+          12,
+          15,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 1,
+        "torso_height": 10,
+        "opaque_height": 32,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "fly_tired-05": {
+      "animation": "TAILS_FLY_TIRED",
+      "angle_set": "flat",
+      "derived_from": null,
+      "before": {
+        "landmarks": [
+          12,
+          25,
+          13,
+          15,
+          18,
+          26
+        ],
+        "skull_width": 13,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 33,
+        "coordinate_space": "tight frame crop"
+      },
+      "after": {
+        "landmarks": [
+          13,
+          24,
+          11,
+          12,
+          15,
+          25
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 1,
+        "torso_height": 10,
+        "opaque_height": 32,
+        "coordinate_space": "tight frame crop"
+      },
+      "exception": null
+    },
+    "walk-up45-00": {
+      "animation": "WALK",
+      "angle_set": "up45",
+      "derived_from": "walk-00",
+      "before": {
+        "landmarks": [
+          8,
+          22,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 37,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          6,
+          17,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 29,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-up45-01": {
+      "animation": "WALK",
+      "angle_set": "up45",
+      "derived_from": "walk-01",
+      "before": {
+        "landmarks": [
+          10,
+          24,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 40,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          7,
+          18,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-up45-02": {
+      "animation": "WALK",
+      "angle_set": "up45",
+      "derived_from": "walk-02",
+      "before": {
+        "landmarks": [
+          11,
+          25,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 44,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 35,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-up45-03": {
+      "animation": "WALK",
+      "angle_set": "up45",
+      "derived_from": "walk-03",
+      "before": {
+        "landmarks": [
+          11,
+          25,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 44,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 35,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-up45-04": {
+      "animation": "WALK",
+      "angle_set": "up45",
+      "derived_from": "walk-04",
+      "before": {
+        "landmarks": [
+          8,
+          22,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 37,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          6,
+          17,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 29,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-up45-05": {
+      "animation": "WALK",
+      "angle_set": "up45",
+      "derived_from": "walk-05",
+      "before": {
+        "landmarks": [
+          10,
+          24,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 41,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          7,
+          18,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 32,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-up45-06": {
+      "animation": "WALK",
+      "angle_set": "up45",
+      "derived_from": "walk-06",
+      "before": {
+        "landmarks": [
+          12,
+          26,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 43,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 34,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-up45-07": {
+      "animation": "WALK",
+      "angle_set": "up45",
+      "derived_from": "walk-07",
+      "before": {
+        "landmarks": [
+          11,
+          25,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 44,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 35,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-steep-00": {
+      "animation": "WALK",
+      "angle_set": "steep",
+      "derived_from": "walk-00",
+      "before": {
+        "landmarks": [
+          8,
+          22,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 24,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          6,
+          17,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 19,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-steep-01": {
+      "animation": "WALK",
+      "angle_set": "steep",
+      "derived_from": "walk-01",
+      "before": {
+        "landmarks": [
+          10,
+          24,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 28,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          7,
+          18,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 22,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-steep-02": {
+      "animation": "WALK",
+      "angle_set": "steep",
+      "derived_from": "walk-02",
+      "before": {
+        "landmarks": [
+          11,
+          25,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 34,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 27,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-steep-03": {
+      "animation": "WALK",
+      "angle_set": "steep",
+      "derived_from": "walk-03",
+      "before": {
+        "landmarks": [
+          11,
+          25,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 33,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 27,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-steep-04": {
+      "animation": "WALK",
+      "angle_set": "steep",
+      "derived_from": "walk-04",
+      "before": {
+        "landmarks": [
+          8,
+          22,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 24,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          6,
+          17,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 19,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-steep-05": {
+      "animation": "WALK",
+      "angle_set": "steep",
+      "derived_from": "walk-05",
+      "before": {
+        "landmarks": [
+          10,
+          24,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 28,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          7,
+          18,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 22,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-steep-06": {
+      "animation": "WALK",
+      "angle_set": "steep",
+      "derived_from": "walk-06",
+      "before": {
+        "landmarks": [
+          12,
+          26,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 34,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 27,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-steep-07": {
+      "animation": "WALK",
+      "angle_set": "steep",
+      "derived_from": "walk-07",
+      "before": {
+        "landmarks": [
+          11,
+          25,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 33,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 26,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-inverted-00": {
+      "animation": "WALK",
+      "angle_set": "inverted",
+      "derived_from": "walk-00",
+      "before": {
+        "landmarks": [
+          8,
+          22,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 37,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          6,
+          17,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 29,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-inverted-01": {
+      "animation": "WALK",
+      "angle_set": "inverted",
+      "derived_from": "walk-01",
+      "before": {
+        "landmarks": [
+          10,
+          24,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 39,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          7,
+          18,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 30,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-inverted-02": {
+      "animation": "WALK",
+      "angle_set": "inverted",
+      "derived_from": "walk-02",
+      "before": {
+        "landmarks": [
+          11,
+          25,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 36,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 29,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-inverted-03": {
+      "animation": "WALK",
+      "angle_set": "inverted",
+      "derived_from": "walk-03",
+      "before": {
+        "landmarks": [
+          11,
+          25,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 40,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 32,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-inverted-04": {
+      "animation": "WALK",
+      "angle_set": "inverted",
+      "derived_from": "walk-04",
+      "before": {
+        "landmarks": [
+          8,
+          22,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 36,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          6,
+          17,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 28,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-inverted-05": {
+      "animation": "WALK",
+      "angle_set": "inverted",
+      "derived_from": "walk-05",
+      "before": {
+        "landmarks": [
+          10,
+          24,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 36,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          7,
+          18,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 29,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-inverted-06": {
+      "animation": "WALK",
+      "angle_set": "inverted",
+      "derived_from": "walk-06",
+      "before": {
+        "landmarks": [
+          12,
+          26,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 36,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 28,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "walk-inverted-07": {
+      "animation": "WALK",
+      "angle_set": "inverted",
+      "derived_from": "walk-07",
+      "before": {
+        "landmarks": [
+          11,
+          25,
+          12,
+          15,
+          18,
+          29
+        ],
+        "skull_width": 14,
+        "eye_to_beak_dy": 3,
+        "torso_height": 11,
+        "opaque_height": 41,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          8,
+          19,
+          9,
+          12,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 3,
+        "torso_height": 9,
+        "opaque_height": 32,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "run-up45-00": {
+      "animation": "RUN",
+      "angle_set": "up45",
+      "derived_from": "run-00",
+      "before": {
+        "landmarks": [
+          16,
+          26,
+          9,
+          11,
+          14,
+          22
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 32,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          16,
+          26,
+          9,
+          11,
+          14,
+          22
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 32,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "run-up45-01": {
+      "animation": "RUN",
+      "angle_set": "up45",
+      "derived_from": "run-01",
+      "before": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 33,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 33,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "run-up45-02": {
+      "animation": "RUN",
+      "angle_set": "up45",
+      "derived_from": "run-02",
+      "before": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 33,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 33,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "run-up45-03": {
+      "animation": "RUN",
+      "angle_set": "up45",
+      "derived_from": "run-03",
+      "before": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 33,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 33,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "run-steep-00": {
+      "animation": "RUN",
+      "angle_set": "steep",
+      "derived_from": "run-00",
+      "before": {
+        "landmarks": [
+          16,
+          26,
+          9,
+          11,
+          14,
+          22
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 27,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          16,
+          26,
+          9,
+          11,
+          14,
+          22
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 27,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "run-steep-01": {
+      "animation": "RUN",
+      "angle_set": "steep",
+      "derived_from": "run-01",
+      "before": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "run-steep-02": {
+      "animation": "RUN",
+      "angle_set": "steep",
+      "derived_from": "run-02",
+      "before": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 30,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 30,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "run-steep-03": {
+      "animation": "RUN",
+      "angle_set": "steep",
+      "derived_from": "run-03",
+      "before": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 31,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "run-inverted-00": {
+      "animation": "RUN",
+      "angle_set": "inverted",
+      "derived_from": "run-00",
+      "before": {
+        "landmarks": [
+          16,
+          26,
+          9,
+          11,
+          14,
+          22
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 32,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          16,
+          26,
+          9,
+          11,
+          14,
+          22
+        ],
+        "skull_width": 10,
+        "eye_to_beak_dy": 2,
+        "torso_height": 8,
+        "opaque_height": 32,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "run-inverted-01": {
+      "animation": "RUN",
+      "angle_set": "inverted",
+      "derived_from": "run-01",
+      "before": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 29,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 29,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "run-inverted-02": {
+      "animation": "RUN",
+      "angle_set": "inverted",
+      "derived_from": "run-02",
+      "before": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 27,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 27,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    },
+    "run-inverted-03": {
+      "animation": "RUN",
+      "angle_set": "inverted",
+      "derived_from": "run-03",
+      "before": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 30,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "after": {
+        "landmarks": [
+          21,
+          32,
+          9,
+          11,
+          14,
+          23
+        ],
+        "skull_width": 11,
+        "eye_to_beak_dy": 2,
+        "torso_height": 9,
+        "opaque_height": 30,
+        "coordinate_space": "flat crop; rotate with source for slopes"
+      },
+      "exception": null
+    }
+  }
+}

@@ -67,4 +67,21 @@ class TestGameplayInputBranchToolHeadless {
                 rom, "s3k", 9, 0, settings, input, 200, output, List.of("1 R")),
                 "existing authored products must not be overwritten");
     }
+
+    @Test void inputStartAndResumeSpliceOnlyTheCandidateRows(@TempDir Path dir) throws Exception {
+        var rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();
+        var input = dir.resolve("movie.bk2");
+        InputLogAuthorTool.author("40 R;40 L;40 R+A;40 -", input, "s3k");
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null, null, null);
+        var output = dir.resolve("branches");
+        GameplayInputBranchTool.run(rom, "s3k", 9, 0, settings, input, 60, output, List.of("5 D"), 20, 30, -1, java.util.Set.of());
+        var loader = new Bk2MovieLoader();
+        var movie = loader.loadMovieOrInputLog(input);
+        var variant = loader.loadMovieOrInputLog(output.resolve("variant-0.bk2"));
+        assertEquals(95, variant.getFrameCount(), "60 prefix rows, 5 candidate rows, 30 resumed rows");
+        for (int i = 0; i < 60; i++) assertEquals(movie.getFrame(20 + i).rawLine(), variant.getFrame(i).rawLine());
+        for (int i = 60; i < 65; i++) assertEquals(2, variant.getFrame(i).p1InputMask(), "candidate Down");
+        for (int i = 65; i < 95; i++) assertEquals(movie.getFrame(20 + i).rawLine(), variant.getFrame(i).rawLine());
+        assertEquals(96, Files.readAllLines(output.resolve("variant-0.csv")).size(), "header plus every row");
+    }
 }

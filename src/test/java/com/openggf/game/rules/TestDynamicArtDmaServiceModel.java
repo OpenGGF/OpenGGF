@@ -46,6 +46,11 @@ class TestDynamicArtDmaServiceModel {
         assertTrue(model.services(PlcLifecyclePhase.SPECIAL_STAGE));
         assertTrue(model.services(PlcLifecyclePhase.LEVEL_TITLE_CARD));
         assertTrue(model.services(PlcLifecyclePhase.NORMAL_PAUSE));
+        assertTrue(model.services(PlcLifecyclePhase.CONTINUE_SCREEN));
+        assertFalse(model.services(PlcLifecyclePhase.TITLE_SCREEN));
+        assertFalse(model.services(PlcLifecyclePhase.LEVEL_SELECT));
+        assertFalse(model.services(PlcLifecyclePhase.CREDITS_TEXT));
+        assertFalse(model.services(PlcLifecyclePhase.POST_CREDITS));
     }
 
     @Test

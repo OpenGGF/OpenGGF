@@ -553,7 +553,7 @@ class TestTraceReplayStartPositionPolicy {
 
     @Test
     void bonusAndSingleCharacterStartsDoNotAcquireS3kPrefixOrSeedPrelude() throws Exception {
-        TraceData bonus = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/bonus_gumball"));
+        TraceData bonus = loadPolicyTrace(Path.of("src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss/gumball"));
 
         assertEquals(List.of("knuckles"), bonus.metadata().recordedCharacters());
         assertFalse(TraceReplayBootstrap.hasRecordedPreLevelPrefix(bonus));

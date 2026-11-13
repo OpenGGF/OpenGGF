@@ -484,6 +484,11 @@ final class GameLoopSpecialStageLifecycle {
     void doEnterResultsScreen() {
         // Reset special stage provider
         SpecialStageProvider ssProvider = host.activeProvider();
+        if (ssProvider instanceof com.openggf.game.nativemenu.NativeMenuSpecialStage nativeStage
+                && nativeStage.returnsToNativeMenu()) {
+            returnToNativeMenu(ssProvider, nativeStage);
+            return;
+        }
         ssProvider.resetForResults();
 
         // Transition to results mode
@@ -522,6 +527,26 @@ final class GameLoopSpecialStageLifecycle {
 
         LOGGER.info("Entered Special Stage Results Screen (rings=" + ssRingsCollected +
                 ", emerald=" + ssEmeraldCollected + ")");
+    }
+
+    /**
+     * A native-launched stage has no level or engine results screen to return
+     * to. The launching screen learns the outcome and resumes in its own mode;
+     * the screen is still white from the stage's exit fade, and the screen owns
+     * every fade from here.
+     */
+    private void returnToNativeMenu(SpecialStageProvider ssProvider,
+                                    com.openggf.game.nativemenu.NativeMenuSpecialStage nativeStage) {
+        GameMode resume = nativeStage.finishNativeMenuStage(ssEmeraldCollected);
+        // The stage's exit white-out may still hold the engine overlay; the
+        // screen's own palette is already white and owns the fade from here.
+        host.fade().cancel();
+        ssProvider.reset();
+        host.deregisterSpecialStageAdapter();
+        activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
+        GameMode oldMode = host.changeMode(resume);
+        host.notifyModeChanged(oldMode);
+        LOGGER.info("Native special stage finished (cleared=" + ssEmeraldCollected + ")");
     }
 
     /**

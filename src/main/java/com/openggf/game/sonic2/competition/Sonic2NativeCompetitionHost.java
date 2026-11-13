@@ -16,7 +16,6 @@ import com.openggf.game.competition.NativeCompetitionWorld;
 import com.openggf.game.competition.NativeCompetitionIterationAccess;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
-import com.openggf.game.resources.SkippedPresentationPlcLifecycle;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.GameplayModeContext;
@@ -83,14 +82,54 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
     private BooleanSupplier nativeSlowMotionFlag;
     private Supplier<Sonic2CompetitionCheckpoints.PrimaryEnvironment> checkpointEnvironment;
     private boolean pendingTitleExit;
-    private record PauseSnapshot(Sonic2CompetitionPause.State planner, boolean pendingTitleExit) { }
+    private enum Entry { ARRIVAL, POST_ARRIVAL, UPLOAD, LEAVE, PLAY }
+    private Entry entry = Entry.PLAY;
+    private int uploadWaits;
+    private LogicalInputSnapshot entrySample = LogicalInputSnapshot.neutral();
+    private int initialVintRunCount;
+    int initialVintRunCount() { return initialVintRunCount; }
+    private final com.openggf.game.sonic2.competition.view.Sonic2CompetitionPlaneScroll retainedPlaneScroll =
+            new com.openggf.game.sonic2.competition.view.Sonic2CompetitionPlaneScroll();
+    com.openggf.game.sonic2.competition.view.Sonic2CompetitionPlaneScroll retainedPlaneScroll() { return retainedPlaneScroll; }
+    public void clearMenuCameraRam() {
+        retainedPlaneScroll.menuClear();
+        if (module != null) module.clearMenuCameraRam();
+    }
+    public void close() {
+        if (world != null && com.openggf.game.session.SessionManager.getCurrentGameplayMode() == context())
+            com.openggf.game.session.SessionManager.closeGameplaySession();
+    }
+    public com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState nativeState() {
+        return (com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState) nativeState;
+    }
+    public static Sonic2NativeCompetitionHost production(GameModule root, EngineContext services,
+            Consumer<GameplayModeContext> publish, Views views, boolean teleportOnly, boolean overseas,
+            com.openggf.game.sonic2.competition.state.Sonic2TeleportPorts.ObjectFields objects) {
+        var reference = new Sonic2NativeCompetitionHost[1];
+        var backgrounds = new com.openggf.game.sonic2.competition.state.Sonic2TeleportPorts.BackgroundBanks() {
+            public void swapPlayers() { reference[0].module.scroll().owner().swapPlayers(); }
+            public com.openggf.game.sonic2.competition.state.Sonic2TeleportPorts.BackgroundPosition primaryPosition() {
+                var bank = reference[0].module.scroll().owner().view(0).background();
+                return new com.openggf.game.sonic2.competition.state.Sonic2TeleportPorts.BackgroundPosition(
+                        bank.x() >>> 16, bank.y() >>> 16, bank.x2() >>> 16, bank.y2() >>> 16,
+                        bank.x3() >>> 16, bank.y3() >>> 16);
+            }
+        };
+        var nativeState = new com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState(
+                backgrounds, () -> reference[0].module.planeScroll().swapPlayers(), objects);
+        reference[0] = new Sonic2NativeCompetitionHost(root, services, publish, views, nativeState, teleportOnly, overseas);
+        return reference[0];
+    }
+    private record PauseSnapshot(Sonic2CompetitionPause.State planner, boolean pendingTitleExit,
+            Entry entry, int uploadWaits, LogicalInputSnapshot entrySample) { }
     private final RewindSnapshottable<PauseSnapshot> pauseAdapter = new RewindSnapshottable<>() {
         @Override public String key() { return pause.key(); }
-        @Override public PauseSnapshot capture() { return new PauseSnapshot(pause.capture(), pendingTitleExit); }
+        @Override public PauseSnapshot capture() { return new PauseSnapshot(pause.capture(), pendingTitleExit, entry, uploadWaits, entrySample); }
         @Override public void restore(PauseSnapshot state) {
             Objects.requireNonNull(state, "pause state");
             pause.restore(state.planner());
             pendingTitleExit = state.pendingTitleExit();
+            entry = state.entry(); uploadWaits = state.uploadWaits(); entrySample = state.entrySample();
             mirrorNativePause();
         }
         @Override public void resetForMissingSnapshot() { resetNativePause(); }
@@ -115,6 +154,8 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         this.publishMode = Objects.requireNonNull(publishMode, "publishMode");
         this.views = Objects.requireNonNull(views, "views");
         this.nativeState = Objects.requireNonNull(nativeState, "nativeState");
+        if (nativeState instanceof com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState production)
+            checkpointEnvironment = () -> production.primaryEnvironment(context(), session);
         this.teleportOnly = teleportOnly;
         this.overseas = overseas;
         this.pauseAudio = AudioNativePauseAccess.bind(services.audio());
@@ -162,6 +203,7 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
                 || supplied.romZone() != zone || supplied.act() != act)
             throw new IllegalArgumentException("Load must match the session's active native act");
         if (session != null && supplied != session) throw new IllegalStateException("Host already owns another session");
+        int enteringVint = com.openggf.game.session.EngineTiming.vIntRunCounter(services).objectClockSeed();
         try {
             // Verify/decode the destination before retiring the outgoing mode.
             var nextProfile = Sonic2CompetitionLevelProfile.load(services.roms().getRom(), zone, act);
@@ -181,13 +223,31 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
             profile = nextProfile;
             resetNativePause();
             // Reuse this exact context: policy.retire resets the complete competition ledger.
+            initialVintRunCount = enteringVint;
             world.load(logicalZone(zone), act);
+            // Legacy outer load completion restores its pre-load clock. Keep the
+            // actual title/PLC waits serviced by this native load instead.
+            context().getObjectManager().initVblaCounter(initialVintRunCount);
+            if (nativeState instanceof com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState production) {
+                var registry = context().getRewindRegistry();
+                registry.deregisterPostRestoreCallback("sprite-powerup-derived-state");
+                registry.registerPostRestoreCallback("sprite-powerup-derived-state", () -> {
+                    if (session.teleportClock().active()) production.restoreFrozenEffects(context(), session);
+                    else context().getSpriteManager().refreshPowerUpObjectsAfterRewindRestore();
+                });
+            }
             module.nativeLifecycle().initializeAct();
-            // The inherited VInt clock and native LF=0 are published only when
-            // loadZoneAndAct returns. Assembly must not lose the 25 real waits.
-            views.prepare(world.context(), session, profile, art);
-            runNativeEntry();
-            views.prepare(world.context(), session, profile, art);
+            // Level_FromCheckpoint owns the leading BuildSprites, then each
+            // title leave iteration owns exactly one more. Load itself has none.
+            module.nativeTitle().beginCompetitionArrival(logicalZone(zone), act);
+            entry = Entry.ARRIVAL;
+            entrySample = LogicalInputSnapshot.neutral();
+            for (int slot = 0; slot < 2; slot++) {
+                session.player(slot).setControlLocked(true);
+                session.camera(slot).setLevelStarted(false);
+            }
+            module.clearArrivalPlanes();
+            views.prepare(context(), session, profile, art);
         } catch (IOException failure) {
             throw new UncheckedIOException("Cannot load native S2 competition act", failure);
         } finally {
@@ -199,6 +259,10 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         return switch (zone) { case 0 -> 0; case 11 -> 5; case 12 -> 3;
             default -> throw new IllegalArgumentException("Not a competition ROM zone: " + zone); };
     }
+
+    public boolean titleOnly() { return entry == Entry.ARRIVAL || entry == Entry.POST_ARRIVAL || entry == Entry.UPLOAD; }
+
+    public boolean titleCardActive() { return entry != Entry.PLAY; }
 
     public GameplayModeContext context() { return requireWorld().context(); }
     Sonic2CompetitionSession session() { return Objects.requireNonNull(session, "session"); }
@@ -216,6 +280,7 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         Objects.requireNonNull(input, "input");
         if (NativeCompetitionIterationAccess.currentFrame() != frame)
             throw new IllegalArgumentException("Native pause requires this world's admitted token");
+        if (entry != Entry.PLAY) return NativeCompetitionIterationAccess.runLoop(frame, () -> stepEntry(frame));
         var before = pause.capture();
         boolean previousExit = pendingTitleExit;
         LevelFrameResult result;
@@ -236,10 +301,6 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
                 return pauseResult;
             }
             result = requireWorld().step(input, frame, () -> {
-                var sampled = sampleNativeInput();
-                if (!sampled.equals(input.logical()))
-                    throw new IllegalStateException("Native wait and playable dispatcher disagree on controller sample");
-                pause.acceptSample(sampled, nativeSlowMotionFlag.getAsBoolean());
                 context().getSpriteManager().update(input);
             });
             if (result == LevelFrameResult.GAMEPLAY_FRAME) {
@@ -258,7 +319,14 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         }
         // A failed presentation preparation cannot undo the world body or its
         // completed pause/title continuation. The view owner handles its fault.
-        views.prepare(context(), session, profile, art);
+        if (result == LevelFrameResult.GAMEPLAY_FRAME) {
+            views.prepare(context(), session, profile, art);
+            // Level_MainLoop (s2.asm:5098-5113): DeformBgLayer, BuildSprites,
+            // THEN ObjectsManager. New placements first execute next RunObjects.
+            // Level_Inactive_flag branches to Level before this tail.
+            if (!context().getLevelManager().isLevelInactiveForTransition())
+                ObjectManagerInternalAccess.completeDeferredPlacement(context().getObjectManager());
+        }
         return result;
     }
 
@@ -290,12 +358,15 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
     private void resetNativePause() {
         if (module != null) module.clearCameraSample();
         pause.reset();
+        entry = Entry.PLAY; uploadWaits = 0; entrySample = LogicalInputSnapshot.neutral();
         pendingTitleExit = false;
         mirrorNativePause();
     }
 
     @Override public void draw(Sonic2CompetitionSession supplied) {
         requireSession(supplied);
+        var video = module.getGameService(com.openggf.game.sonic2.competition.view.Sonic2CompetitionVideoFrame.class);
+        if (titleCardActive() && !video.registers().capture().published()) return;
         views.draw(context(), session);
     }
     @Override public boolean teleportOnly() { return teleportOnly; }
@@ -313,6 +384,7 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
     @Override public void freezeObjects(int ticks) { nativeState.freezeObjects(context(), ticks); }
 
     void prepareLoad(LevelLoadContext load) throws IOException {
+        module.clearRingAnimation();
         art = Sonic2CompetitionNativeArt.load(services.roms().getRom(), profile);
         load.setRom(services.roms().getRom());
         load.setZone(profile.romZone()); load.setAct(profile.act());
@@ -330,71 +402,72 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         operations.add(Sonic2PlcService.appendOperation(1));
         operations.add(Sonic2PlcService.appendOperation(overseas ? 8 : 6));
         plc.transact(operations.toArray(Sonic2PlcService.Operation[]::new));
-        // Level_TtlCard (s2.asm:4914-4926) waits for these descriptors before
-        // geometry/player assembly. Replay only its omitted PLC boundaries.
-        SkippedPresentationPlcLifecycle.drain(module.nativeVramOwner().plcLifecycle(),
-                PlcLifecyclePhase.LEVEL_TITLE_CARD, plc::isBusy);
-        // LoadZoneTiles patches its own span after the real initial PLC writes;
-        // completed high VRAM uploads remain intact for native presentation.
-        module.nativeVramOwner().loadZoneArt(profile);
+        // LoadTitleCard precedes the first visible title wait; initial PLCs
+        // drain on those waits instead of advancing an omitted load clock.
+        module.initializeTitleArt();
     }
 
     void completeSecondaryPlc() throws IOException {
         var plc = Objects.requireNonNull(module.getGameService(Sonic2PlcService.class), "S2 native PLC service");
         // loadZoneBlockMaps (s2.asm:20105-20110) appends PLC2 only after the
         // initial queue drained; CNZ's initial queue already uses all 15 slots.
-        if (profile.art().secondaryPlc() != 0) plc.append(profile.art().secondaryPlc());
+        // Appended by the visible Level_TtlCard continuation after PLC1 drains.
     }
 
-    private void runNativeEntry() {
+    /** Visible semantic waits only: no CPU/decompression delay model.
+     * Level_TtlCard (s2.asm:4914-4949).
+     * Level_FromCheckpoint (s2.asm:4980-5086).
+     */
+    private LevelFrameResult stepEntry(PlcLifecycleFrame frame) {
         var mode = context();
         var title = module.nativeTitle();
-        LogicalInputSnapshot[] lastWaitSample = {null};
-        title.beginOmittedPresentationLeave(logicalZone(profile.romZone()), profile.act());
-        for (int slot = 0; slot < 2; slot++) {
-            session.player(slot).setControlLocked(true);
-            session.camera(slot).setLevelStarted(false);
-        }
-        try {
-            // Level_FromCheckpoint (s2.asm:5004-5009): the leading RunObjects
-            // follows initial object/ring/bumper interest and has no WaitForVint.
-            runNativeEntryObjectPass(false);
-            // Level_FromCheckpoint (s2.asm:5004-5009) publishes BuildSprites
-            // immediately after this leading pass, before the first title wait.
-            views.prepare(mode, session, profile, art);
-            title.completeLockedIteration();
-            // The existing Obj34 state machine owns 5+11+9 leave passes. Each
-            // wait services VInt/art, then players, title slots, dynamic objects,
-            // BuildSprites and PLC tail. No ordinary frame/timer/placement runs.
-            while (!title.shouldReleaseControl()) {
-                mode.plcFrameLifecycle().runLogicalIteration(() -> { }, frame -> {
-                    LevelFrameStep.executeHardwareTimedObjectScan(LevelFrameContext.from(mode), frame,
-                            PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> {
-                                // VintRet (s2.asm:507-508): art service precedes
-                                // the counter increment read by RunObjects.
-                                mode.getObjectManager().advanceVblaCounter();
-                                lastWaitSample[0] = sampleNativeInput();
-                                runNativeEntryObjectPass(true);
-                            });
-                    title.completeLockedIteration();
-                    views.prepare(mode, session, profile, art);
-                    return null;
+        LevelFrameStep.executeHardwareTimedObjectScan(LevelFrameContext.from(mode), frame,
+                PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> {
+                    mode.getObjectManager().advanceVblaCounter();
+                    entrySample = Sonic2NativeControllerSample.poll(entrySample, sampleNativeInput());
+                    switch (entry) {
+                        case ARRIVAL -> {
+                            title.stepCompetitionArrival();
+                            if (title.competitionArrivalReady()) entry = Entry.POST_ARRIVAL;
+                        }
+                        case POST_ARRIVAL -> {
+                            try { module.initializeHudArt(); module.prepareLevelBehindTitle(); module.nativeVramOwner().loadZoneArt(profile); }
+                            catch (IOException failure) { throw new UncheckedIOException(failure); }
+                            // LoadZoneTiles (s2.asm:6471-6524): one wait per $1000
+                            // decoded bytes plus the leading partial transfer.
+                            uploadWaits = art.baseTerrain().patternBytes().length / 0x1000 + 1;
+                            entry = Entry.UPLOAD;
+                        }
+                        case UPLOAD -> {
+                            if (--uploadWaits == 0) {
+                                try {
+                                    var plc = module.getGameService(Sonic2PlcService.class);
+                                    if (profile.art().secondaryPlc() != 0) plc.append(profile.art().secondaryPlc());
+                                } catch (IOException failure) { throw new UncheckedIOException(failure); }
+                                module.prepareBackgroundBehindTitle();
+                                runNativeEntryObjectPass(false);
+                                title.beginCompetitionLeave();
+                                entry = Entry.LEAVE;
+                            }
+                        }
+                        case LEAVE -> {
+                            runNativeEntryObjectPass(true);
+                            title.completeLockedIteration();
+                            if (title.shouldReleaseControl()) {
+                                pause.seedFromNativeWait(entrySample);
+                                mirrorNativePause();
+                                for (int slot = 0; slot < 2; slot++) {
+                                    session.player(slot).setControlLocked(false);
+                                    session.camera(slot).setLevelStarted(true);
+                                }
+                                entry = Entry.PLAY;
+                            }
+                        }
+                        default -> throw new IllegalStateException("Not a title wait");
+                    }
                 });
-            }
-            // PauseGame first reads the controller words left by this actual
-            // final title wait. S2 clears them earlier in Level; neither zero
-            // nor S3K's GetDemoPtr $8000 is a substitute for the polled sample.
-            pause.seedFromNativeWait(Objects.requireNonNull(lastWaitSample[0], "final native entry wait"));
-            mirrorNativePause();
-            // Retain Obj34's real delayed animal/water art tail on ordinary
-            // object passes. The omitted pieces never create overlay elements.
-            title.beginOmittedPresentationExitTail(logicalZone(profile.romZone()), profile.act());
-        } finally {
-            for (int slot = 0; slot < 2; slot++) {
-                session.player(slot).setControlLocked(false);
-                session.camera(slot).setLevelStarted(true);
-            }
-        }
+        views.prepare(mode, session, profile, art);
+        return LevelFrameResult.PAUSED;
     }
 
     private void runNativeEntryObjectPass(boolean titleSlots) {
@@ -442,6 +515,8 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         replaceRewindAdapter(ObjectManagerInternalAccess.nativeCompetitionCollisionPointersRewindAdapter(objects));
         replaceRewindAdapter(module.nativeTitle());
         replaceRewindAdapter(pauseAdapter);
+        if (nativeSlowMotionFlag instanceof com.openggf.game.sonic2.competition.state.Sonic2NativeControlState controls)
+            context().getRewindRegistry().registerOrRefresh(controls);
     }
 
     private void replaceRewindAdapter(RewindSnapshottable<?> adapter) {
@@ -495,6 +570,8 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
             // Obj01_Init/Obj02_Init own the effective words, independent of profile binding.
             com.openggf.sprites.playable.PlayableSpriteInternalAccess.initializeNativeSpeedWords(player, context().getWorldSession());
         }
+        if (nativeState instanceof com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState production)
+            replaceRewindAdapter(production.initializeActorStatus(context(), session));
         context().getLevelManager().refreshPlayablePowerUpSpawners();
     }
 
@@ -507,7 +584,20 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
             camera.setMinX((short) bounds.minX()); camera.setMaxX((short) bounds.maxX());
             camera.setMinY((short) bounds.minY()); camera.setMaxY((short) bounds.maxY());
             camera.setLevelStarted(true);
-            camera.updatePosition(true);
+            if (slot == 0) {
+                camera.updatePosition(true);
+            } else {
+                // LevelSizeLoad (s2.asm:14796-14813) writes P1's start-derived
+                // camera words to BOTH banks, before InitPlayers. The leading
+                // DeformBgLayer (s2.asm:15097-15175) therefore
+                // scrolls P2 against its cleared SST, not initialized Tails.
+                camera.setX(session.camera(0).getX());
+                camera.setY(session.camera(0).getY());
+                // Reuse the coordinate-record scroll path for that zero-slot
+                // read; never alter the already-assembled human's gameplay state.
+                camera.requestForcedScroll(0, 0);
+                camera.updatePosition();
+            }
             camera.captureRenderCopy();
         }
         // Reset native interest from the actual initial camera, after both actors exist.
@@ -531,8 +621,45 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         if (supplied != session || world == null) throw new IllegalStateException("Foreign native session");
     }
 
+    private void serviceNativeCountdown() {
+        // Do_Updates (s2.asm:805-808) services HUD before RunObjects.
+        // Obj0D can reset Loser_Time_Left later in that body; spending the
+        // reset word at body tail makes expiry one pass early. TimeOver2
+        // (s2.asm:88125-88135) also kills before this body's actor dispatch.
+        // Pause waits do not enter this ordinary-wait service.
+        if (pause.gamePaused()) return;
+        for (int slot = 0; slot < 2; slot++) session.playerState(slot).updateNativeHudTimer();
+        session.advanceNaturalTimeOver();
+        session.advanceLoserCountdown();
+        applyPendingTimeOver();
+    }
+
+    private void applyPendingTimeOver() {
+        int timeOver = session.consumeTimeOverRequests();
+        for (int slot = 0; slot < 2; slot++) if ((timeOver & 1 << slot) != 0 && !session.player(slot).getDead())
+            session.player(slot).applyHurtOrDeath(0, DamageCause.TIME_OVER, false);
+    }
+
     private final class Policy implements WorldSessionPolicyState {
         @Override public <T> T getService(Class<T> type) {
+            if (type == ObjectManagerInternalAccess.NativeExecution.class)
+                return type.cast(new ObjectManagerInternalAccess.NativeExecution() {
+                    @Override public void afterNativeWait() {
+                        session.teleportClock().afterNativeWait(pause.gamePaused());
+                        if (pause.capture().continuation() == Sonic2CompetitionPause.Continuation.AWAITING_ORDINARY_SAMPLE) {
+                            var sampled = sampleNativeInput();
+                            if (!sampled.equals(SpriteManagerInternalAccess.publishedInput(context().getSpriteManager())))
+                                throw new IllegalStateException("Native wait and playable dispatcher disagree on controller sample");
+                            pause.acceptSample(sampled, nativeSlowMotionFlag.getAsBoolean());
+                            serviceNativeCountdown();
+                        }
+                    }
+                    @Override public boolean objectsFrozen() { return session.teleportClock().active(); }
+                    @Override public boolean placementAtWorldTail() { return true; }
+                });
+            if (type == com.openggf.level.objects.ObjectRoutineLifetime.class)
+                return type.cast(new com.openggf.game.sonic2.objects.badniks.Sonic2RoutineLifetimes(
+                        slot -> module.scroll().owner().coarseX(slot)));
             if (type == NativeCompetitionRoster.class || type == Sonic2CompetitionSession.class) return type.cast(session);
             if (type == Sonic2CompetitionObjectHost.class) return type.cast(Sonic2NativeCompetitionHost.this);
             if (type == com.openggf.game.sonic2.bumpers.Sonic2NativeCNZBumpers.class)
@@ -556,13 +683,16 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
         }
         @Override public void afterNativeTick(LevelFrameContext frame, LogicalInputSnapshot input) {
             module.nativeFeatures().updateNativeCursors();
-            session.advanceActFlow(); // LevelManager already advanced each bank's timer once.
-            int timeOver = session.consumeTimeOverRequests();
-            for (int slot = 0; slot < 2; slot++) if ((timeOver & 1 << slot) != 0 && !session.player(slot).getDead())
-                session.player(slot).applyHurtOrDeath(0, DamageCause.TIME_OVER, false);
+            if (!context().getLevelManager().isLevelInactiveForTransition())
+                for (int slot = 0; slot < 2; slot++) module.scroll().owner().setCoarseX(slot, session.camera(slot).getX());
+            applyPendingTimeOver();
         }
         @Override public void failedAssembly(LevelLoadCause cause) { resetLoadState(); resetNativePause(); }
         @Override public void closeScreens() { resetNativePause(); }
-        @Override public void retire() { resetLoadState(); resetNativePause(); session.reset(); }
+        @Override public void retire() {
+            if (nativeState instanceof com.openggf.game.sonic2.competition.state.Sonic2CompetitionNativeState production)
+                production.retireActorStatus();
+            resetLoadState(); resetNativePause(); session.reset();
+        }
     }
 }

@@ -64,6 +64,30 @@ class TestSonic2SpecialStageSpriteAssembly {
     }
 
     @Test
+    void creatorFinalOrientationSuppressesOnlyItsAuthoredFlipsAndKeepsNativeOwnerGeometry() {
+        byte[] normal = new byte[64], variant = new byte[64];
+        java.util.Arrays.fill(normal, (byte) 2); java.util.Arrays.fill(variant, (byte) 5);
+        var set = new com.openggf.game.StageSpriteSet(Map.of(0,
+                new com.openggf.game.StageSpriteSet.Frame(new com.openggf.game.CharacterPresentation.Image(8,8,normal),2,3)))
+                .withOrientationFrames(true, true, Map.of(0,
+                        new com.openggf.game.StageSpriteSet.Frame(new com.openggf.game.CharacterPresentation.Image(8,8,variant),6,5)));
+        var art = com.openggf.game.presentation.StageSpriteCompiler.compile(set, null);
+        var base = state(0, Kind.SONIC, 3, 100, 100, 0, ArtRole.SONIC);
+        var flipped = new RenderState(base.identity(),100,100,0,true,true,true,ArtRole.SONIC);
+        var assembly = assembly(32); assembly.setCharacterArt(art, 4); assembly.setOrientationSources(set,null);
+        var group = assembly.assemble(List.of(flipped),TEAM,List.of(),0,0).getFirst();
+        var piece = group.fragments().getFirst();
+        assertFalse(piece.hFlip()); assertFalse(piece.vFlip());
+        assertEquals(126,piece.x()); assertEquals(95,piece.y());
+        assertEquals(4,piece.paletteIndex());
+        assertEquals(5,art.artTiles()[piece.firstPatternIndex()-art.basePatternIndex()].getPixel(0,0));
+        assertTrue(flipped.xFlip()); assertTrue(flipped.yFlip());
+        var fallback=assembly(32); fallback.setCharacterArt(art,4);
+        var nativeRule=fallback.assemble(List.of(flipped),TEAM,List.of(),0,0).getFirst().fragments().getFirst();
+        assertTrue(nativeRule.hFlip()); assertTrue(nativeRule.vFlip());
+    }
+
+    @Test
     void asymmetricPlayerPiecesMirrorTheirGeometryAndKeepEachSourceFragmentWithItsOwnPiece() {
         var nativeState = state(0, Kind.SONIC, 3, 100, 100, 0, ArtRole.SONIC);
         var flipped = new RenderState(nativeState.identity(), 100, 100, 0, true, true, true, ArtRole.SONIC);

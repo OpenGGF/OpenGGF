@@ -360,16 +360,20 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
             updateAct1Fg();
             updateAct1Bg();
         } else {
-            updateAct2Fg();
-            if (!act2BgUpdatedPrePhysics) {
-                updateAct2Bg(frameCounter);
-            } else if (act2BgRoutine == BG_WALL_MOVE && eventsFg5) {
-                // Preserve the ROM-style same-frame FG -> BG handoff at the end
-                // of the wall chase without running the full BG move logic twice.
-                act2BgWallMove(frameCounter);
-            }
-            act2BgUpdatedPrePhysics = false;
+            updateAct2AfterPhysics(frameCounter);
         }
+    }
+
+    private void updateAct2AfterPhysics(int frameCounter) {
+        updateAct2Fg();
+        if (!act2BgUpdatedPrePhysics) {
+            updateAct2Bg(frameCounter);
+        } else if (act2BgRoutine == BG_WALL_MOVE && eventsFg5) {
+            // FG can end the chase after the pre-physics wall step. Consume that
+            // signal now, without advancing wall movement or shake a second time.
+            endWallChaseIfSignalled();
+        }
+        act2BgUpdatedPrePhysics = false;
     }
 
     /**
@@ -379,6 +383,18 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
      * background-collision FindFloor/FindWall path uses Camera_X/Y_diff. The
      * engine's normal scroll update happens later in the frame, so HCZ2 needs
      * the same pre-physics priming pattern used by MGZ2's BG-rise sequence.
+     *
+     * <p>The wall chase crosses three frame phases:
+     * <ol>
+     *   <li>This hook advances the BG routine and publishes wall/collision positions
+     *       before player physics consumes them.</li>
+     *   <li>{@link #update(int, int)} runs FG after physics, consuming its chase-end
+     *       signal without repeating a BG step already performed here.</li>
+     *   <li>The later scroll pass consumes the published wall offset and the prior
+     *       screen-shake setup; {@link #updateAct2Bg(int)} retains the next setup.</li>
+     * </ol>
+     * Rewind relinks the recreated wall through {@link #reconcileWallAfterRewindRestore()}
+     * before the next ordinary event write.
      */
     public void updatePrePhysics(int act, int frameCounter) {
         if (act != 1 || cutsceneActive) {
@@ -1007,21 +1023,24 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     // with screen shake, speed ramping, and BG collision gating.
     // =========================================================================
 
-    private void updateAct2Bg(int frameCounter) {
+    /**
+     * Normal pre-physics dispatch supplies LevelManager's frame counter. The
+     * post-physics fallback supplies Sonic3kLevelEventManager's counter when
+     * no pre-physics hook ran (for example, a dead or absent player). Both paths
+     * use their supplied clock without resampling it here.
+     */
+    private void updateAct2Bg(int dispatchFrameCounter) {
         // HCZ2_ScreenEvent (sonic3k.asm:106040-106043) consumes the offset
         // BEFORE HCZ2BGE_WallMove (sonic3k.asm:106099-106105) calls the shake setup.
-        // Our wall/collision prelude runs early, so retain its new setup result
-        // for the following screen event instead of rendering that new phase now.
-        SwScrlHcz shakeHandler = resolveHczScrollHandler();
-        int appliedShakeOffset = pendingScreenShakeOffset;
-        if (shakeHandler != null) {
-            shakeHandler.setScreenShakeOffset(0);
-        }
+        // Our wall/collision prelude runs early: publish the retained setup for
+        // this screen event, while calculating the following event's setup here.
+        SwScrlHcz scrollHandler = resolveHczScrollHandler();
+        int currentScreenShakeOffset = pendingScreenShakeOffset;
         // Timed screen shake countdown (ROM: ShakeScreen_Setup countdown)
         if (shakeTimer > 0) {
             shakeTimer--;
-            updateScreenShakeFromTimer();
         }
+        int nextScreenShakeOffset = getTimedShakeOffset();
 
         switch (act2BgRoutine) {
             case BG_WALL_INIT -> {
@@ -1029,19 +1048,22 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                 // ROM HCZ2BGE_WallMoveInit adds four to the routine and falls
                 // straight through into HCZ2BGE_WallMove on the same dispatch.
                 if (act2BgRoutine == BG_WALL_MOVE) {
-                    act2BgWallMove(frameCounter);
+                    nextScreenShakeOffset = act2BgWallMove(dispatchFrameCounter);
                 }
             }
-            case BG_WALL_MOVE -> act2BgWallMove(frameCounter);
-            case BG_WALL_TRANSITION -> act2BgTransition();
+            case BG_WALL_MOVE -> nextScreenShakeOffset = act2BgWallMove(dispatchFrameCounter);
+            case BG_WALL_TRANSITION -> {
+                act2BgTransition();
+                nextScreenShakeOffset = 0;
+            }
             case BG_WALL_REFRESH -> act2BgRefresh();
             case BG_NORMAL -> {
                 // Normal deformation — scroll handler handles everything
             }
         }
-        if (shakeHandler != null) {
-            pendingScreenShakeOffset = shakeHandler.getShakeOffsetY();
-            shakeHandler.setScreenShakeOffset(appliedShakeOffset);
+        if (scrollHandler != null) {
+            pendingScreenShakeOffset = nextScreenShakeOffset;
+            scrollHandler.setScreenShakeOffset(currentScreenShakeOffset);
         }
     }
 
@@ -1105,18 +1127,9 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
      * ROM: sonic3k.asm lines 106094-106116 (dispatch) and 106129-106170 (HCZ2_WallMove).
      * Runs wall movement logic each frame and gates BG collision.
      */
-    private void act2BgWallMove(int frameCounter) {
-        // Check if the wall chase has ended (Events_fg_5 set by FG routine)
-        if (eventsFg5) {
-            // Clean up wall
-            if (wallObject != null) {
-                wallObject.deactivate();
-                wallObject = null;
-            }
-            gameState().setBackgroundCollisionFlag(false);
-            act2BgRoutine = BG_WALL_TRANSITION;
-            LOG.info("HCZ2 BG: wall-chase ended (Events_fg_5), transitioning");
-            return;
+    private int act2BgWallMove(int dispatchFrameCounter) {
+        if (endWallChaseIfSignalled()) {
+            return getTimedShakeOffset();
         }
 
         // Gate Background_collision_flag by player position
@@ -1124,19 +1137,18 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         updateBgCollisionGating();
 
         // Run wall movement logic
-        updateWallMove(frameCounter);
+        updateWallMove(dispatchFrameCounter);
+
+        // loc_5100C (sonic3k.asm:106188-106198) installs the timed flag on
+        // the stop pass, before this background dispatch prepares its shake.
+        int nextScreenShakeOffset = wallMoving
+                ? getContinuousShakeOffset(dispatchFrameCounter)
+                : getTimedShakeOffset();
 
         // Update scroll handler with current wall offset
         SwScrlHcz scrollHandler = resolveHczScrollHandler();
         if (scrollHandler != null) {
             scrollHandler.setWallChaseOffsetX(wallOffsetPixels);
-            if (wallMoving) {
-                scrollHandler.setScreenShakeOffset(getShakeOffset(frameCounter));
-            } else {
-                // loc_5100C (sonic3k.asm:106188-106198) installs the timed flag
-                // on the stop pass, before the background tail's shake setup.
-                updateScreenShakeFromTimer();
-            }
             scrollHandler.primeBgCollisionState(camera().getX(), camera().getY());
         }
 
@@ -1144,6 +1156,22 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         if (wallObject != null) {
             wallObject.updateWallPosition(wallOffsetPixels);
         }
+        return nextScreenShakeOffset;
+    }
+
+    /** Consume the FG handoff without performing another BG movement or shake step. */
+    private boolean endWallChaseIfSignalled() {
+        if (!eventsFg5) {
+            return false;
+        }
+        if (wallObject != null) {
+            wallObject.deactivate();
+            wallObject = null;
+        }
+        gameState().setBackgroundCollisionFlag(false);
+        act2BgRoutine = BG_WALL_TRANSITION;
+        LOG.info("HCZ2 BG: wall-chase ended (Events_fg_5), transitioning");
+        return true;
     }
 
     /**
@@ -1155,7 +1183,6 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         SwScrlHcz scrollHandler = resolveHczScrollHandler();
         if (scrollHandler != null) {
             scrollHandler.setHcz2BgPhase(SwScrlHcz.Hcz2BgPhase.NORMAL);
-            scrollHandler.setScreenShakeOffset(0);
             scrollHandler.setWallChaseOffsetX(0);
             scrollHandler.primeBgCollisionState(camera().getX(), camera().getY());
         }
@@ -1187,7 +1214,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
      *   <li>Stop at offset -$600, play sfx_Crash, set timed shake</li>
      * </ol>
      */
-    private void updateWallMove(int frameCounter) {
+    private void updateWallMove(int dispatchFrameCounter) {
         // Once the wall has reached its stop position, don't restart
         if (wallStopped) {
             return;
@@ -1241,7 +1268,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
 
         // Play rumble sound every 16 frames
         // ROM: move.w (Level_frame_counter).w,d0 / andi.w #$F,d0 / bne.s + / move.w #sfx_Rumble2,...
-        if ((frameCounter & 0x0F) == 0) {
+        if ((dispatchFrameCounter & 0x0F) == 0) {
             var audioManager = audio();
             if (audioManager != null) {
                 audioManager.playSfx(Sonic3kSfx.RUMBLE_2.id);
@@ -1297,29 +1324,25 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     };
 
     /**
-     * Get continuous screen shake offset based on frame counter.
+     * Get continuous screen shake offset from the supplied dispatch counter.
      * ROM: ShakeScreen_Setup with Screen_shake_flag = -1 (bmi.s branch).
-     * Uses ScreenShakeArray2 indexed by {@code frameCounter & 0x3F}.
+     * Uses ScreenShakeArray2 indexed by {@code dispatchFrameCounter & 0x3F}.
      */
-    private int getShakeOffset(int frameCounter) {
-        return SCREEN_SHAKE_ARRAY_CONTINUOUS[frameCounter & 0x3F];
+    private int getContinuousShakeOffset(int dispatchFrameCounter) {
+        return SCREEN_SHAKE_ARRAY_CONTINUOUS[dispatchFrameCounter & 0x3F];
     }
 
     /**
-     * Apply timed screen shake offset during the countdown.
+     * Read the signed timed shake value for the current countdown.
      * ROM: ShakeScreen_Setup with Screen_shake_flag > 0.
-     * Decrements flag, reads ScreenShakeArray[flag] as signed offset.
+     * The BG dispatch decrements the countdown before selecting its next setup.
      */
-    private void updateScreenShakeFromTimer() {
-        SwScrlHcz scrollHandler = resolveHczScrollHandler();
-        if (scrollHandler != null) {
-            if (shakeTimer > 0 && shakeTimer <= SCREEN_SHAKE_ARRAY_TIMED.length) {
-                // ROM: move.b ScreenShakeArray(pc,d0.w),d1 / ext.w d1
-                scrollHandler.setScreenShakeOffset(SCREEN_SHAKE_ARRAY_TIMED[shakeTimer - 1]);
-            } else {
-                scrollHandler.setScreenShakeOffset(0);
-            }
+    private int getTimedShakeOffset() {
+        if (shakeTimer > 0 && shakeTimer <= SCREEN_SHAKE_ARRAY_TIMED.length) {
+            // ROM: move.b ScreenShakeArray(pc,d0.w),d1 / ext.w d1
+            return SCREEN_SHAKE_ARRAY_TIMED[shakeTimer - 1];
         }
+        return 0;
     }
 
     /**

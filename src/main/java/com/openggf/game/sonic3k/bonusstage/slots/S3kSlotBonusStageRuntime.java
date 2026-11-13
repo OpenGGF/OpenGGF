@@ -1076,6 +1076,7 @@ public final class S3kSlotBonusStageRuntime {
      * write is published by the following VBlank like any other palette owner.
      */
     private void palToBlack() {
+        if(slotArt!=null) slotArt.fadePaletteToBlack();
         LevelManager levelManager = GameServices.levelOrNull();
         var level = levelManager != null ? levelManager.getCurrentLevel() : null;
         if (level == null) {

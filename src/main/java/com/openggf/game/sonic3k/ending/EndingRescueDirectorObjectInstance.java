@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.ending;
 
+import com.openggf.game.internal.EndingFormController;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
@@ -100,7 +102,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
     }
     private void holdTailsCompanionPalette() {
         // Obj_5D86A's post-dispatch writer applies even without a powered form.
-        var p=mainPlayer();if(tails()&&p!=null&&p.getSuperStateController() instanceof Sonic3kSuperStateController powered)
+        var p=mainPlayer();if(tails()&&p!=null&&p.getSuperStateController() instanceof EndingFormController powered)
             powered.holdEndingTailsCompanionPaletteTimer();
     }
     private void rescue() {
@@ -117,7 +119,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                     routine=8;ending().setFlag(0);timer=0x20;setX(plane.getX()+0x20);
                     setY(plane.getY()-(tails()?0x27:0x2B));baseY=getY();
                     var p=mainPlayer();if(p!=null){ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(p));
-                        if(ending().progress()>0&&p.getSuperStateController() instanceof Sonic3kSuperStateController powered){
+                        if(ending().progress()>0&&p.getSuperStateController() instanceof EndingFormController powered){
                             // loc_5DB1C clears powered flags and restores normal mappings in this pass.
                             powered.beginEndingRescueRevert();powered.completeEndingRescueRevertMappings();
                         }
@@ -183,7 +185,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
             com.openggf.sprites.playable.PlayableSpriteInternalAccess.clearScriptedNativeStatus(p);
             p.setHighPriority(true);
             p.setAnimationId(0xF);p.setGSpeed((short)0x800);
-            if(p.getSuperStateController() instanceof Sonic3kSuperStateController powered){
+            if(p.getSuperStateController() instanceof EndingFormController powered){
                 powered.holdEndingRingDrain();
                 if(ending().progress()==0&&!tails()){
                     powered.initializeEndingSuperSonic();services().objectManager().createDynamicObject(EndingRescueRevertObjectInstance::new);
@@ -298,7 +300,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                     // The powered owner, rather than a time estimate, releases native object_control.
                     if(ending().progress()>=0&&(!tails()||ending().progress()!=0)){
                         routine=10;hidePlayer=false;
-                        var p=mainPlayer();if(p!=null&&p.getSuperStateController() instanceof Sonic3kSuperStateController powered)
+                        var p=mainPlayer();if(p!=null&&p.getSuperStateController() instanceof EndingFormController powered)
                             powered.startEndingReunionTransformation();
                     }
                     else{routine=8;timer=5;if(tails())flipX=true;}}
@@ -396,7 +398,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
         @Override public NativeSstState nativeSstState(){return NativeSstState.CLEARED;}
         @Override public void update(int vIntRunCount,PlayableEntity player){
             if(!(services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p)
-                    ||!(p.getSuperStateController() instanceof Sonic3kSuperStateController powered))return;
+                    ||!(p.getSuperStateController() instanceof EndingFormController powered))return;
             if(routine==0){routine=2;timer=119;}
             if(routine==2){if((timer=(short)(timer-1))<0){routine=4;powered.beginEndingRescueRevert();}}
             else{powered.completeEndingRescueRevertMappings();ObjectLifetimeOps.deleteNoRespawn(this);}

@@ -39,6 +39,13 @@ record PlayableDispatchContext(
                 debugModePressed, superSonicDebugPressed, true);
     }
 
+    /** An actual uncounted object-assembly pass still honors forced native controls. */
+    static PlayableDispatchContext nativeUncounted(ProcessSpritesEpoch epoch) {
+        return new PlayableDispatchContext(
+                epoch, InitialPlayableInput.nativeNeutral(), false, false, true,
+                false, false, false, false, false, false);
+    }
+
     static PlayableDispatchContext ordinaryWithoutInput(ProcessSpritesEpoch epoch) {
         return new PlayableDispatchContext(
                 epoch, InitialPlayableInput.nativeNeutral(), false, false, false,

@@ -1,0 +1,12 @@
+# bank selector image hotspotX hotspotY; image paths are relative to this table.
+continue/icon 0 s3k-menu-icon-00.png 0 12
+continue/icon 1 s3k-menu-icon-01.png 0 12
+continue/icon 2 s3k-02.png 12 12
+continue/icon 3 s3k-03.png 12 12
+continue/player 33 s3k-05.png 18 16
+continue/player 34 s3k-06.png 20 16
+continue/player 35 s3k-07.png 18 16
+continue/player 36 s3k-08.png 18 16
+continue/player 173 s3k-04.png 9 15
+continue/team-idle 5 s3k-00.png 16 14
+continue/team-idle 6 s3k-01.png 15 13

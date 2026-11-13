@@ -143,15 +143,17 @@ public final class SpritePresentationRenderer {
             frame = runtime == null ? com.openggf.level.objects.HudProfileAccess.projectPresentation(graphics, frame)
                     : com.openggf.level.objects.HudProfileAccess.projectPresentation(runtime.world(), graphics, frame);
             if (runtime != null && !runtime.trails().isEmpty()) drawTrails(graphics, frame, cameraX, cameraY, visible, runtime);
-            var nativeFrame = new Frame(frame.tiles().reversed(), java.util.List.of(), frame.patternVersions());
-            com.openggf.graphics.SpriteSatInternalAccess.replayNativeLayers(graphics, nativeFrame.tiles(), Tile::ghost,
-                    tiles -> drawPicture(graphics, tiles == nativeFrame.tiles() ? nativeFrame
-                                    : new Frame(tiles, java.util.List.of(), nativeFrame.patternVersions()),
+            // The frame's tile list is immutable: draw through a reversed view instead of
+            // copying it into a second Frame (and copying each native layer span again).
+            var nativeTiles = frame.tiles().reversed();
+            var versions = frame.patternVersions();
+            com.openggf.graphics.SpriteSatInternalAccess.replayNativeLayers(graphics, nativeTiles, Tile::ghost,
+                    tiles -> drawPicture(graphics, tiles, java.util.List.of(), versions,
                             cameraX, cameraY, visible, runtime, 1));
             if (!frame.primitives().isEmpty()) {
                 var overlays = frame.primitives().stream()
                         .map(primitive -> new Primitive(0, primitive.layer(), primitive.primitive(), primitive.subject())).toList();
-                drawPicture(graphics, new Frame(java.util.List.of(), overlays, java.util.Map.of()),
+                drawPicture(graphics, java.util.List.of(), overlays, java.util.Map.of(),
                         cameraX, cameraY, visible, runtime, 1);
             }
         } catch (RuntimeException | Error failure) {
@@ -204,18 +206,28 @@ public final class SpritePresentationRenderer {
     private record DisplayPart(String id,Part part) { }
     private static void drawPicture(GraphicsManager graphics,Frame frame,int cameraX,int cameraY,Predicate<Layer> visible,
                                      com.openggf.game.mutators.LivePresentationRuntime runtime,float opacity) {
+        drawPicture(graphics, frame.tiles(), frame.primitives(), frame.patternVersions(),
+                cameraX, cameraY, visible, runtime, opacity);
+    }
+
+    private static void drawPicture(GraphicsManager graphics, java.util.List<Tile> tiles, java.util.List<Primitive> primitives,
+                                    java.util.Map<Integer, PatternVersion> patternVersions, int cameraX, int cameraY,
+                                    Predicate<Layer> visible, com.openggf.game.mutators.LivePresentationRuntime runtime,
+                                    float opacity) {
         boolean priority = graphics.isUseSpritePriorityShader();
         int mask = graphics.getCurrentSpriteTileOcclusionPaletteMask();
         boolean ghost = graphics.isGhostRenderEffectActive();
         boolean ghostColour = graphics.isGhostRenderColourPreserved();
         float alpha = graphics.getGhostRenderAlpha();
         PatternDesc desc = new PatternDesc();
+        // One engine-caller check per picture, not one stack walk per frozen pattern or tile.
+        var presentation = com.openggf.graphics.PresentationGraphicsAccess.batch(graphics);
         graphics.beginPatternAtlasBatch();
         try {
-            for (var entry : frame.patternVersions().entrySet())
-                com.openggf.graphics.PresentationGraphicsAccess.restoreFrozenPattern(graphics, entry.getValue(), entry.getKey());
+            for (var entry : patternVersions.entrySet())
+                presentation.restoreFrozenPattern(entry.getValue(), entry.getKey());
         } finally { graphics.endPatternAtlasBatch(); }
-        var viewport = com.openggf.graphics.PresentationGraphicsAccess.viewport(graphics);
+        var viewport = presentation.viewport();
         var cameraMotion = com.openggf.graphics.SpriteMotionInternalAccess.cameraOffset(graphics);
         Tile previous = null;
         boolean previousPictureGeometry = false;
@@ -226,10 +238,10 @@ public final class SpritePresentationRenderer {
         graphics.flushPatternBatch();
         try {
             int primitiveIndex = 0;
-            for (int index = 0; index <= frame.tiles().size(); index++) {
-                while (primitiveIndex < frame.primitives().size()
-                        && frame.primitives().get(primitiveIndex).beforeTile() == index) {
-                    var primitive = frame.primitives().get(primitiveIndex++);
+            for (int index = 0; index <= tiles.size(); index++) {
+                while (primitiveIndex < primitives.size()
+                        && primitives.get(primitiveIndex).beforeTile() == index) {
+                    var primitive = primitives.get(primitiveIndex++);
                     if (visible.test(primitive.layer()) && !primitive.subject().suppressed()) {
                         graphics.flushPatternBatch();
                         graphics.enqueueDebugLineState();
@@ -238,8 +250,8 @@ public final class SpritePresentationRenderer {
                         previous = null;
                     }
                 }
-                if (index == frame.tiles().size()) break;
-                Tile tile = frame.tiles().get(index);
+                if (index == tiles.size()) break;
+                Tile tile = tiles.get(index);
                 if (!visible.test(tile.layer()) || tile.subject().suppressed()) continue;
                 var body = tile.subject().body();
                 var transform = policies.isEmpty() || body == null
@@ -274,7 +286,7 @@ public final class SpritePresentationRenderer {
                 if (previous == null || previousPictureGeometry != pictureGeometry || previous.priorityShader() != tile.priorityShader()
                         || previous.pixelOperation() != tile.pixelOperation()
                         || ((previous.priority() ? 0 : previous.occlusionMask()) != tileMask
-                            && !com.openggf.graphics.PresentationGraphicsAccess.maskIsPerInstance(graphics))
+                            && !presentation.maskIsPerInstance())
                         || previous.ghost() != tile.ghost() || previous.ghostAlpha() != tile.ghostAlpha()
                         || previous.ghostColour() != tile.ghostColour()) {
                     graphics.flushPatternBatch();
@@ -295,14 +307,16 @@ public final class SpritePresentationRenderer {
                 desc.setVFlip(tile.vFlip());
                 desc.setPriority(tile.priority());
                 float x = tile.x() + cameraX + motion.x(), y = tile.y() + cameraY + motion.y();
-                SpritePresentation.withSubject(graphics,tile.subject(),()-> {
+                // SpritePresentation.withSubject without a per-tile capturing lambda.
+                var previousSubject = SpritePresentation.enterSubject(graphics, tile.subject());
+                try {
                 if (shadow) {
                     com.openggf.graphics.SpriteSatInternalAccess.renderShadowTile(graphics, tile, cameraX, cameraY,
                             quad, opacity);
                 } else if(pictureGeometry) {
-                    com.openggf.graphics.PresentationGraphicsAccess.render(graphics, tile.patternId(), tile.palette(),
+                    presentation.render(tile.patternId(), tile.palette(),
                             tile.hFlip(), tile.vFlip(), tile.priority(), tile.rowStart(), tile.rowEnd(),
-                            quad,transform.hue(),opacity);
+                            quad,transform.hue(),opacity,0);
                 } else if (tile.rowClipped()) {
                     SpritePresentation.renderTileRows(graphics, tile, desc, (int) x, (int) y);
                 } else if (tile.width() == 8 && tile.height() == 8 && x == (int) x && y == (int) y) {
@@ -310,7 +324,9 @@ public final class SpritePresentationRenderer {
                 } else {
                     graphics.renderPatternWithIdScaled(tile.patternId(), desc, x, y, tile.width(), tile.height());
                 }
-                });
+                } finally {
+                    SpritePresentation.restoreSubject(graphics, previousSubject);
+                }
             }
         } finally {
             graphics.flushPatternBatch();

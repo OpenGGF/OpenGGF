@@ -457,7 +457,7 @@ public final class LevelRenderer {
                     if (pendingBgTilePassPerLineScroll) {
                         bgRenderer.uploadHScroll(pendingBgTilePassHScrollView);
                         tilemapRenderer.enablePerLineScroll(
-                                bgRenderer.getHScrollTextureId(), 224.0f,
+                                bgRenderer.getHScrollTextureId(), pendingBgTilePassHScrollView.size(),
                                 pendingBgTilePassVdpWrapWidth, pendingBgTilePassNametableBase,
                                 pendingBgTilePassPerLineScrollSampleYOffsetPx);
                     }
@@ -1052,6 +1052,8 @@ public final class LevelRenderer {
         }
     }
 
+    private com.openggf.game.internal.RetainedPlaneDescriptorSource nativeViewPlanes;
+
     void withNativeCompetitionView(NativeCompetitionRenderer.View view, Runnable draw) {
         if (nativeCompetitionScroll != null) throw new IllegalStateException("Nested native competition view");
         var camera = lm.camera;
@@ -1071,10 +1073,17 @@ public final class LevelRenderer {
         nativeCompetitionScroll = new LevelScrollPresentation(registers, view.horizontalScroll(),
                 null, null, null, null);
         lm.camera = projection;
+        int previousHeight = lm.cachedScreenHeight;
+        lm.cachedScreenHeight = view.horizontalScroll().length;
+        nativeViewPlanes = view.planes();
+        lm.tilemapManager.setRetainedPlaneOverride(view.planes());
         try { draw.run(); }
         finally {
             lm.camera = camera;
             nativeCompetitionScroll = null;
+            nativeViewPlanes = null;
+            lm.cachedScreenHeight = previousHeight;
+            lm.tilemapManager.setRetainedPlaneOverride(null);
             currentScrollPresentation = previousScroll;
             currentAdvancedRenderFrameState = previousMode;
         }
@@ -1438,6 +1447,7 @@ public final class LevelRenderer {
         com.openggf.graphics.TilemapGpuRendererInternalAccess.setClipHorizontal(tilemapRenderer, lm.camera.getWidth() > 320
                 && foregroundPlaneSource(currentAdvancedRenderFrameState) == TilemapGpuRenderer.Layer.FOREGROUND
                 && retainedPlane(foregroundPlaneSource(currentAdvancedRenderFrameState)) == null
+                && !ownsWidescreenMargins()
                 && (cinematicFullScroll != null ? !cinematicFullScroll.backgroundBuildParameters().foregroundWraps()
                 : lm.zoneFeatureProvider == null || !lm.zoneFeatureProvider.foregroundWrapsHorizontally()));
         boolean completeForeground = retainedPlane(TilemapGpuRenderer.Layer.FOREGROUND) != null;
@@ -1455,6 +1465,14 @@ public final class LevelRenderer {
         }
     }
 
+    /** A scene drawing its own margins addresses Plane A by plane, not camera, coordinates
+     * (final DEZ's robot scrolls with the boss past the 2560px layout); the finite
+     * camera-space clip would discard it. */
+    private boolean ownsWidescreenMargins() {
+        return lm.zoneFeatureProvider instanceof com.openggf.game.internal.NativeArenaCameraFraming framing
+                && framing.ownsWidescreenMargins();
+    }
+
     private com.openggf.game.internal.RetainedPlaneDescriptorSource.Plane retainedPlane(
             TilemapGpuRenderer.Layer layer) {
         if (cinematicFullScroll != null) {
@@ -1463,6 +1481,11 @@ public final class LevelRenderer {
             var image = layer == TilemapGpuRenderer.Layer.FOREGROUND
                     ? parameters.retainedForeground() : parameters.retainedBackground();
             return image.active() ? image : null;
+        }
+        if (nativeViewPlanes != null) {
+            var plane = layer == TilemapGpuRenderer.Layer.FOREGROUND
+                    ? nativeViewPlanes.foregroundPlane() : nativeViewPlanes.backgroundPlane();
+            return plane != null && plane.revision() != 0 ? plane : null;
         }
         if (!(lm.zoneFeatureProvider instanceof com.openggf.game.internal.RetainedPlaneDescriptorSource source)) {
             return null;
@@ -1925,7 +1948,7 @@ public final class LevelRenderer {
         int renderWidth = bgPeriodWidthPixels;
         // Add CHUNK_HEIGHT (16px) to cover VScroll range
         // This prevents bottom clipping when VScroll > 0 (max VScroll = 15, max gameY = 223, max fboY = 238 < 272)
-        int renderHeight = 256 + LevelConstants.CHUNK_HEIGHT;
+        int renderHeight = Math.max(256, lm.cachedScreenHeight) + LevelConstants.CHUNK_HEIGHT;
 
         // ROM parity: use the full background plane period and direct wrap sampling.
         // The intro path still uses the same VDP hscroll semantics as normal gameplay.
@@ -2129,6 +2152,11 @@ public final class LevelRenderer {
                 com.openggf.level.rings.RingDrawInternalAccess.drawPlaced(ringManager, lm.frameCounter,
                         lm.camera.getYWithShake(), lm.camera.screenYWrapValue());
             }
+            // One engine-caller check per pass, not one stack walk per bucket.
+            var objectPass = objectManager == null ? null
+                    : com.openggf.level.objects.ObjectDrawInternalAccess.bucketPass(objectManager, graphicsManager);
+            var attractedRings = objectPass == null || ringManager == null ? null
+                    : com.openggf.level.rings.RingDrawInternalAccess.attractedPass(ringManager);
             // SAT collection must follow sprite-table order, not painter order.
             // Draw_Sprite inserts into Sprite_table_input by ascending priority bucket,
             // and lower sprite slots end up in front later during rasterization.
@@ -2141,11 +2169,9 @@ public final class LevelRenderer {
                     // them like the players they stand for but never arms on them.
                     spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, ghostLayerHook);
                 }
-                if (objectManager != null) {
+                if (objectPass != null) {
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
-                    com.openggf.level.objects.ObjectDrawInternalAccess.drawBucket(objectManager, bucket, graphicsManager,
-                            ringManager == null ? java.util.List.of()
-                                    : com.openggf.level.rings.RingDrawInternalAccess.slottedAttracted(ringManager, bucket));
+                    objectPass.draw(bucket, attractedRings == null ? java.util.List.of() : attractedRings.slotted(bucket));
                 }
                 if (!(lm.gameModule instanceof com.openggf.game.internal.SpriteTableBuildProfile))
                     drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
@@ -2327,7 +2353,7 @@ public final class LevelRenderer {
         int height = mask ? pendingFboScreenH : pendingFgScreenH_low;
         // The background buffer extracts the low, physical Plane B HScroll word.
         background.uploadHScroll(pendingFgHScrollView);
-        renderer.enablePerLineScroll(background.getHScrollTextureId(), 224.0f, 0, 0, 0);
+        renderer.enablePerLineScroll(background.getHScrollTextureId(), pendingFgHScrollView.size(), 0, 0, 0);
         float worldY = backgroundVScroll(currentAdvancedRenderFrameState, 0);
         float waterline = pendingFgWaterlineScreenY_low + pendingFgWorldOffsetY_low - worldY;
         renderer.render(backgroundPlaneSource(currentAdvancedRenderFrameState), width, height,

@@ -91,7 +91,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
      * {@code (0x7F00, 0)} via {@code sub_13ECA} (sonic3k.asm:26840).
      * <p>
      * Engine analog: {@link com.openggf.level.objects.ObjectManager}'s
-     * {@code unloadCounterBasedOutOfRange} removes this instance from the
+     * {@code unloadIfOutsideLifetimeWindow} removes this instance from the
      * active object list and calls {@code onUnload()}, but the cage's
      * {@code destroyed} flag is never flipped by its own routine because
      * {@code Delete_Sprite_If_Not_In_Range} models reap-by-camera-distance,

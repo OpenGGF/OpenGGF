@@ -154,6 +154,9 @@ public class CNZSlotMachineRenderer implements ZoneFeatureRenderer {
         textureData.flip();
 
         // Create OpenGL texture
+        ByteBuffer rgba = com.openggf.game.presentation.ReelCharacterPresentation.atlas(textureData,
+                NUM_FACES, com.openggf.game.presentation.ReelCharacterPresentation.active(
+                        com.openggf.game.CharacterPresentation.Host.S2));
         int texId = glGenTextures();
 
         glBindTexture(GL_TEXTURE_2D, texId);
@@ -162,13 +165,14 @@ public class CNZSlotMachineRenderer implements ZoneFeatureRenderer {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, TEXTURE_WIDTH, TEXTURE_HEIGHT,
-                0, GL_RED, GL_UNSIGNED_BYTE, textureData);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, TEXTURE_WIDTH, TEXTURE_HEIGHT,
+                0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
 
         glBindTexture(GL_TEXTURE_2D, 0);
 
         // Free the native memory buffer
         MemoryUtil.memFree(textureData);
+        MemoryUtil.memFree(rgba);
 
         return texId;
     }
@@ -312,7 +316,7 @@ public class CNZSlotMachineRenderer implements ZoneFeatureRenderer {
                                int nextFace0, int nextFace1, int nextFace2,
                                float offset0, float offset1, float offset2) {
         gpuPass.draw(textureId, paletteTextureId, screenX, screenY, 0.0f,
-                face0, face1, face2, nextFace0, nextFace1, nextFace2, offset0, offset1, offset2);
+                face0, face1, face2, nextFace0, nextFace1, nextFace2, offset0, offset1, offset2, true);
     }
 
     /**

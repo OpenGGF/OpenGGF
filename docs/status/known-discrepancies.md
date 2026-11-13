@@ -10,6 +10,49 @@ This document tracks **intentional deviations** from the original Sonic 1 / 2 / 
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+## Hosted Competition checkpoint reload and monitor OFF (2026-11-07)
+
+`FAST_FROM_CHECKPOINT` omits the death reload's fades and initial title-card
+presentation. The ordinary native death decision still takes a life and selects
+GAME OVER or TIME OVER. The shared LevelManager reload owner preserves the banked
+star post, its act timer and the game's normal respawn consequences. Hosted attempt
+ordinals continue across this reload; they do not receive the star-post timer refund.
+
+S2 and S3K monitors under the hosted OFF rule delete their placement on initialization,
+without marking it remembered. This is a room rule rather than a ROM content value:
+content zero awards Robotnik/Eggman and cannot represent OFF. S1 is unchanged.
+See the [Competition design](../architecture/designs/2026-11-07-s3k-competition-time-attack-tracks-design.md#6-death-without-restarts).
+
+
+## Hosted S2 monitor draws and streamed Competition swaps (2026-11-07)
+
+Hosted S2 RANDOMISED applies the shipped 2P `Obj2E_Init` content draw,
+`(Level_frame_counter & 7) + 1`, to a one-player act. The draw occurs on the
+contents object's first actual execution. The absent P2's Tails 1-up does not
+credit P1. It is the default for S2 Competition rooms. Rooms offer no other
+item set on S2 acts: the arena-only COMPETITION_ITEMS rule is S3K's own item
+monitor. Teleport requires the local timer to run and the attempt's frozen
+`swapEnabled` policy; otherwise its contents become invincibility before rising.
+When no other racer is still streaming (the ROM's "either player done" case),
+the swap command falls back to invincibility after the box breaks, not at the
+icon draw.
+
+The network swap engine reconstructs centre, velocity, collision path and draw
+priority from a server-relayed pose, then rebuilds local camera/object/ring
+windows. It clears rolling, object standing and movement latches so ordinary
+physics can rederive them. Unlike the ROM's full two-player RAM exchange,
+shield, invincibility, shoes, air timer, rings, lives and score remain local.
+The native 64-pass object freeze and VBlank white flash follow a successful S2
+application. A command is admitted by local bounds, standing-radius terrain
+probes and local alive/control/hurt state. Each client applies independently at
+its next executed step; applications are not atomic across clients. With no
+partner, invincibility is awarded at the delayed fallback command rather than
+at native contents selection. Dead or finished recipients receive no effect.
+These deliberate differences permit independent one-player simulations; host
+logging, recording binding and verifier authorization remain separate owners.
+See the [field and admission contract](../architecture/designs/2026-11-07-s3k-competition-time-attack-tracks-design.md#83-what-is-swapped-and-what-the-command-carries).
+
+
 **TAS mechanism verdicts (2026-10-26):** the
 [executed verdict record](../architecture/validation/2026-10-26-tas-trick-verdicts.md)
 separates supported tricks from reached compatibility gaps. Newly demonstrated
@@ -72,7 +115,7 @@ no discrepancy entry was added or reclassified by the cutover.
 24. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
 25. [Mod Music Uses PCM Presentation Rather Than Mega Drive SMPS](#mod-music-uses-pcm-presentation-rather-than-mega-drive-smps)
 26. [S2 Native Debug Placement Capability Boundary](#s2-native-debug-placement-capability-boundary)
-27. [S2 Native Competition and Human-P2 Capability Unavailable](#s2-native-competition-and-human-p2-capability-unavailable)
+27. [S2 Competition Split Screen, Native Lag and Rewind Scope](#s2-competition-split-screen-native-lag-and-rewind-scope)
 28. [S2 Whole-Run V-int Clock Cannot Be Made Exact](#s2-whole-run-v-int-clock-cannot-be-made-exact)
 29. [S2 Push-Release Animation Restart Fires Once Extra At A Contact-End Frame](#s2-push-release-animation-restart-fires-once-extra-at-a-contact-end-frame)
 30. [S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)](#s2-cpz-boss-truncates-the-object-pass-fixbugs--0)
@@ -151,7 +194,7 @@ The shipped game takes `Vint_Lag` when the 68K main loop has not re-armed
 `Vint_routine` before the next VBlank. In a Sonic 2 special stage, that result
 depends on the variable cost of the complete `SS_MainLoop`, the substantial
 `Vint_S2SS` service path, DMA/DPLC work, and hardware contention. OpenGGF does
-not yet model those costs at cycle granularity. Ordinary interactive play
+not yet model those costs at cycle granularity. Ordinary and competitive interactive play
 therefore uses the existing stateless segment/speed approximation to retain the
 special stage's expected slowdown and speed simulation. Its ratios were fitted
 from one Stage 1 recording, not derived from the ROM routine, so it is an interim
@@ -162,7 +205,7 @@ it, and a recorded `lag_state.lagged` outcome admits the already-existing
 `VBlank_Lag` loop through the separate scheduling-only contract. That outcome
 supplies no gameplay value or work.
 
-Ordinary entry now spends the existing measured104-presentation NTSC load hold
+Ordinary and competitive entry spend the shared measured 104-presentation NTSC load hold
 after fade-to-white and before track/player work; recorded startup does not add
 it again. This closes the unwired live entry presentation, while its full CPU/
 device derivation and PAL duration remain unqualified. The recurring bucket
@@ -591,59 +634,158 @@ accepted.
 
 ---
 
-## S2 Native Competition and Human-P2 Capability Unavailable
+## S2 Competition Split Screen, Native Lag and Rewind Scope
 
-**Location:** S2 title, session, player state, camera/render, object lifetime,
-results, special-stage, and monitor owners
+**Activation:** the title offers 2 PLAYER for Emerald Hill, Mystic Cave and
+Casino Night (and the special stage) since 2026-11-08.
 
-**ROM Reference:** `docs/s2disasm/s2.asm:4535-4571,10708-11210,14777-15180,32920-33535,85333-85343`
+**Location:** `game/sonic2/competition/` (`Sonic2CompetitionVisit`,
+`Sonic2NativeCompetitionHost`, `specialstage/Sonic2CompetitiveHalfpipe`) and
+`game/sonic2/competition/view/` (`Sonic2CompetitionViews`,
+`Sonic2CompetitionViewRegisters`, `Sonic2CompetitionSatBuilder`,
+`Sonic2CompetitionFieldPatterns`, `Sonic2CompetitionArtResidency`), rendered by
+the shared `NativeCompetitionRenderer`
+
+**ROM Reference:** `H_Int` (s2.asm:1181-1235), `Vint_Lag` / `Vint0_noWater`
+(s2.asm:529-640), interlace setup (s2.asm:4852-4854), `BuildSprites_2P` /
+`BuildSprites_P2` (s2.asm:30987-31143), `SSObjectMove` (s2.asm:69868-69890),
+`Touch_Monitor` (s2.asm:85439-85475)
 
 ### Original Implementation
 
-`Touch_Monitor` allows a monitor break from above for `MainCharacter`, or for a
-second player only when the ROM-global `Two_player_mode` is nonzero; the roll
-animation check follows at `s2.asm:85342-85343`. CPU Tails
-is therefore blocked from that branch in ordinary one-player gameplay, while a
-human P2 can use it in the native competition mode.
+Two-player mode runs the VDP in interlace mode 2: 8x16 cells and 448
+interlaced lines, shown as two alternating 224-line fields. An H-interrupt at
+line 108 switches the lower view to player 2's foreground table, V-scroll words
+and sprite table, and blanks the display while it DMAs that table. The
+shipped `fixBugs = 0` build has no sprite-table page flip: `BuildSprites_P2`
+busy-waits on `Hint_flag` (s2.asm:31140-31141), and on a lag frame either view
+can show a partly built table. A lag frame occurs whenever the main loop has
+not finished before the next V-blank; `Level_frame_counter` then repeats while
+the V-int counter advances. `Touch_Monitor`'s break branch accepts a second
+player only while `Two_player_mode` is set (s2.asm:85463-85470), so CPU Tails
+cannot break monitors in one-player play and human Tails can in Competition.
+
+### Pre-act physical timing
+
+The frozen tie movie's native capture has synchronous initialization spans
+outside the semantic fade and Obj34 loops. Counts below are observations of
+that movie, not runtime delays.
+
+| Span | Native physical frames | Frames | `V_int_run_count` |
+| --- | --- | ---: | --- |
+| Title-to-menu masked initialization | 974–993 | 20 | unchanged |
+| EHZ1 title asset initialization | 1174–1183 | 10 | unchanged |
+| EHZ1 post-arrival decode | 1240–1254 | 15 | advances |
+| EHZ1 post-upload assembly | 1263–1303 | 41 | advances |
+| EHZ2 title asset initialization | 10211–10220 | 10 | unchanged |
+| EHZ2 post-arrival decode | 10277–10291 | 15 | advances |
+| EHZ2 post-upload assembly | 10300–10338 | 39 | advances |
+
+Each act also has two single counted initialization interruptions outside its
+semantic loops. The exported movie therefore retains a witnessed inlet of
+68 physical frames before EHZ1 ordinary play and 66 before EHZ2, reduced from
+178 and 176 when the whole visible card phase was omitted. CNZ1's corresponding
+inlet is 69, reduced from 186. The separate 20-frame menu span stays in the
+cold-prefix witness. The engine does not simulate CPU/decompression timing.
+The ROM fade passes and title-card waits belong to the semantic engine
+timeline, with gameplay held and `Level_frame_counter` zero until title release.
+`Level_TtlCard` (s2.asm:4914-4949) and `Level_FromCheckpoint`
+(s2.asm:4980-5086) own those waits. No native state is supplied to gameplay.
+
+The global V-int clocks remain different. On the tie route, the base engine
+was 137 ticks ahead at EHZ1 ordinary play; representing the real semantic
+waits makes the surplus 168, rather than preserving the base's accidental
+cancellation between startup overcount and omitted title waits. At EHZ2
+ordinary play the surplus is 121 (base 59). Startup's approximated SEGA/title
+phases and masked native initialization are not a clock authority. Nine
+uncounted native result-initialization frames add another nine ticks of
+surplus between acts. No fitted counter reset or offset is applied. Objects
+that read the global V-int clock can consequently differ after otherwise
+matching movement; this lane does not establish ring-recollection parity.
 
 ### Engine Implementation
 
-S2 has no connected competition world or human-P2 playable slot. The generic
-`TitleActionRoute.TWO_PLAYER` token is not a capability owner: absent a native
-competition provider, the shared title router reinitializes the title and remains
-in `TITLE_SCREEN` without loading an ordinary level. Stock S2 exposes its ROM
-one-player and options rows while that capability remains unavailable. The
-options screen selects the exact campaign team in a fresh no-save world and
-retains emerald progress on its direct level exit. `GameplayTeamBootstrap`
-constructs every configured secondary as a CPU sidekick, controller-2 bindings
-feed that sidekick's manual-input path, and
-`ObjectPlayerQuery.nativeP2OrNull()` names the first sidekick rather than a
-human slot. Score/lives/rings/time, camera, viewport, object/ring placement,
-and results are still single-owner. `MonitorObjectInstance` therefore retains
-the ROM-faithful lead-player/CPU-sidekick behavior; no object-local human-P2
-branch is advertised or fabricated.
+S2 Competition is a native two-human product: Sonic on controller 1, Tails on
+controller 2, the ROM's EHZ/MCZ/CNZ/special-stage menu, per-player state,
+teleport, results and the competitive special stage. The monitor branch
+follows the ROM through the native participant slot; ordinary CPU Tails stays
+blocked. The presentation and timing differences are:
+
+| ID | Engine behaviour |
+| --- | --- |
+| U-1 | S2 renders both halves progressively into 320x448 logical pixels, preserving all sixteen rows of each ROM 8x16 cell. The window keeps the native picture aspect with half-height pixels. There is no alternating field clock or interlace combing; this supersedes the earlier single-field scope (user decision, 2026-11-08). S3K retains its 224-line presentation. |
+| U-2 | Each view shows its last completed sprite page, so the lag-frame torn table cannot occur. The `Hint_flag` busy-wait plays no part in timing. |
+| U-3, U-4 | The split is exact at progressive line 216 (field line 108): no blanked band and no sprite carry-over from the upper table. Native pictures differ from the engine on field rows 108-112 at the seam. |
+| U-5 | The art residency holds only patterns the game loads. Cell words that point at VDP table memory show loaded art or zeros, not table bytes; DMA source wrap is not modelled. |
+| U-7 | Sprite pieces past the 80th table entry are dropped instead of overwriting the RAM after the table. |
+| Lag | Level iterations still complete in their frames. The competitive special stage now shares the one-player segment/speed lag approximation and 104-frame white entry load hold, with real startup waits and the outgoing results fade to white. This remains an empirical approximation, not exact native CPU-overrun pacing. |
+| Rewind | Held live rewind is off in `COMPETITION_MENU`, `COMPETITION` and `COMPETITION_RESULTS`, as in S3K Competition. Registry capture and restore of the Competition owners work and are tested. |
+
+Modelled ROM quirks, so not differences: the title-card and fade interrupts
+leave the upper view on player 2's foreground table with player 1's V-scroll;
+the teleport flash spares colour 32; teleport does not swap the foreground
+tables; the title-card leave rows read the live cameras (`Camera_X_pos_P2` in
+`loc_15714`, s2.asm:29125-29149, and `Camera_X_pos` in `loc_15758`,
+s2.asm:29151-29168), while player 2's copied camera bank stays stale during
+title V-ints.
 
 ### Rationale and Verification
 
-The reviewed
-[native competition design](../architecture/designs/2026-08-09-s2-native-competition-human-p2-design.md)
-and [evidence plan](../architecture/plans/2026-08-09-s2-native-competition-human-p2-plan.md)
-narrow the missing product to local competition with forced Sonic P1/Tails P2,
-EHZ/MCZ/CNZ plus the native special-stage entry, two acts per normal zone,
-independent results/state, two views, and two-camera object lifetime. This is
-not shared-screen co-op or arbitrary character pairing.
+Field parity, the interrupt's blanking length, the line-buffered sprite carry,
+the sprite-table race and lag frames all depend on beam position or CPU cycle
+cost. The [reimplementation boundary](../architecture/engine-map.md#reimplementation-boundary)
+excludes CPU and VDP timing, so none is emulated or approximated. The native
+recordings measure how often lag occurs:
 
-The unsupported title token is now rejected on both direct host exits and
-provider callbacks, covered by
-`TestGameLoop#testDoExitTitleScreenRejectsUnsupportedTwoPlayerWithoutStartingLevel`.
-The next safe production work is to migrate ordinary live paths to explicit participant roles, slot-indexed
-state, and a one-view semantic registry before the complete S2 product is
-activated atomically. The monitor branch is a final consumer of active
-competition plus the P2/HUMAN role, never the first slice. Existing monitor
-sidekick tests prove the supported path; the REV01 boundary test pins the
-native `$008E52` order while the ordinary bootstrap test protects CPU Tails.
-Neither test claims the competition route is implemented, and no title default
-is treated as proof of mode absence.
+- EHZ: 15 lag frames in 9,752 act-1 frames on the finish recording (about 1.5
+  per 1,000), first at frame 2895 where `Vint_Lag` interrupts
+  `BuildSprites_2P`; 16 in 21,996 frames over both acts (0.73 per 1,000).
+- MCZ, CNZ and the other EHZ recordings: none in their recorded intervals.
+- Competitive special stage: 305 of 841 active frames (36%), rising to 39%
+  once rings and bombs appear, usually two frames apart. The first, at frame
+  1312, interrupts player 1's `SSObjectMove`.
+
+Comparisons with native recordings therefore stop before the first native lag
+frame and never re-align after it. Within those prefixes, both players'
+positions and velocities, both cameras, rings, lives, score and
+`Level_frame_counter` match native post-frame samples:
+
+- EHZ: from the first gameplay frame (1329) through 2894 on the finish, flow
+  and zone recordings, and to the end of the five shorter recordings (up to
+  frame 3151).
+- MCZ: 827 rows from 1324 through 2151, covering the initial traversal only.
+- CNZ: 4,559 rows through 5896 and 814 rows through 2151. A longer
+  planner-authored route matches through 1852; at 1853 native player 1 lands
+  on a horizontal flipper (Obj86) and the engine falls. That frontier is open.
+- Special stage: the players, track, speed, checkpoints and item slots match
+  from the observed load boundary (1288) through 1310; ring, checkpoint and
+  result progression is not yet certified.
+
+These are state-prefix checks, not complete act, results or pixel
+certification. The headless diagnostic enters at the Competition menu, so its
+raw V-int counter starts far below native (EHZ 80 against 1094); that origin
+is reported separately and never offset into gameplay. Production entry
+through the title counts V-ints from power-on, but it still cannot equal the
+console's count, because engine loads do not take the console's frame-exact
+frontend and decompression time (see
+[S2 Whole-Run V-int Clock Cannot Be Made Exact](#s2-whole-run-v-int-clock-cannot-be-made-exact)).
+Anything the ROM seeds from `V_int_run_count` can therefore differ from a
+native run: the CNZ slot machine's reels, rewards and payout timing differ
+from CNZ physical frame 2228 in the planner route, even though reaching the
+slot and spinning it match native.
+
+Pixel evidence is fixed-field-0 comparisons of engine views with BizHawk
+references: 1.1-1.4% normalised differences on four cold EHZ gameplay pairs,
+and the Obj34 title card: every part position from frame 1184 to 1385 and
+every opaque text pixel match in both views, and the full-card and early-leave
+pictures match outside the seam rows.
+`TestSonic2CompetitionViewRegisters` covers the per-interrupt latches,
+`TestSonic2CompetitionViewsPixels` and `TestSonic2CompetitionFieldPixels`
+the field-0 projection, and `TestSonic2CompetitionViewsRestore` registry
+restore. The [Competition parity plan](../architecture/plans/2026-11-07-s2-competition-parity.md)
+records the evidence, rejected approaches and open items; the
+[2026-08-09 design](../architecture/designs/2026-08-09-s2-native-competition-human-p2-design.md)
+is the original product contract.
 
 ---
 
@@ -978,7 +1120,7 @@ A known cosmetic consequence at widescreen: when the camera is locked at `maxX`,
 
 ## Object Despawn and Visibility Windows
 
-**Location:** `AbstractObjectInstance.isInRange()`, `AbstractObjectInstance.isChkObjectVisible()`
+**Location:** `ObjectRangeOps`, `AbstractObjectInstance.isInRangeAt()`, `AbstractObjectInstance.isChkObjectVisible()`, `ObjectManager.isOutOfRangeS1()`
 **ROM Reference:** `Macros.asm` (`out_of_range` macro: `cmpi.w #128+320+192,d0`); `docs/s1disasm/_incObj/sub ChkObjectVisible.asm`
 
 ### Original Implementation
@@ -991,7 +1133,7 @@ Both constants encode the native Mega Drive screen dimensions: 320 × 224 pixels
 
 ### Our Implementation
 
-Both limits are derived from the cached `cameraBounds` rectangle rather than hardcoded constants:
+The object-side range and visibility helpers use the cached `cameraBounds` rectangle. The shared unsigned calculation lives in `ObjectRangeOps`; its caller chooses the bound:
 
 ```java
 // isInRange — despawn window scales with viewport width
@@ -1005,7 +1147,18 @@ if (dx < 0 || dx >= viewportWidth)  return false;
 return dy >= 0 && dy < viewportHeight;
 ```
 
-`cameraBounds` is updated once per frame by `ObjectManager.updateCameraBounds()` from `camera.getX() / getY() / getWidth() / getHeight()`, so the window always matches the configured viewport.
+`cameraBounds` is updated once per frame by `ObjectManager.updateCameraBounds()` from `camera.getX() / getY() / getWidth() / getHeight()`, so these object-side helpers use the configured viewport.
+
+The manager's standard S1 counter-placement check keeps the native bound **640**
+even at widescreen. Its other legacy paths select the viewport-aware bound;
+injected per-game windowing strategies keep their own rules. An object's
+`isPersistent()` hook can veto manager range retirement. Buzz Bomber uses that
+hook with its live X and the viewport-aware helper: at width 528, the helper's
+bound is **848**, so coarse distance 768 is retained even when the manager's
+native bound rejects it. This is an existing caller-policy difference, not a
+second arithmetic implementation. A different reference X alone belongs in
+`getOutOfRangeReferenceX()`. Render-flag visibility and object-owned self-delete
+routines retain their separate semantics.
 
 Objects that run their own `Sprite_OnScreen_Test2`-style delete-touch check
 (FBZ screw doors, elevator cars, magnetic spike balls and pendulums, platform
@@ -1017,7 +1170,7 @@ same `$80 + viewportWidth + $C0` window (`$280` at native width). A bare
 them at 640 and 800 pixels. Objects with a ROM-specific range (the FBZ piston's
 travel-derived `$200 + travel`) keep their own constant.
 
-**Load-ahead window is capped (intentionally narrower than the despawn window).** The despawn/visibility windows above scale by the *full* viewport width so on-screen objects at the wider right edge are never culled. The *spawn load-ahead* window (`AbstractPlacementManager.loadAheadFor`), however, grows only by the minimum pre-load lead — `max(320 + extraAhead, viewportWidth + 128)` — NOT by `viewportWidth + extraAhead`. The object slot pool is a fixed ROM-sized table (`ObjectSlotLayout`: S1=96, S2=112, S3K=89); a window that grew by the full extra width overran the pool in dense areas, so `allocateSlot()` returned −1 and spawns were silently dropped (objects intermittently failing to load when scrolling right at widescreen, in all games). Capping the load-ahead keeps the live-object count close to native (≈+2% at ULTRA_21_9 vs +27% before) so the pool no longer overruns, while the wider despawn/visibility windows still prevent right-edge culling. This narrower load window is deliberate — do not widen it to match the despawn window. Native (320) is byte-identical (load-ahead = `0x280`).
+**Load-ahead window is capped (intentionally narrower than the despawn window).** The viewport-aware despawn/visibility helpers above scale by the *full* viewport width. The *spawn load-ahead* window (`AbstractPlacementManager.loadAheadFor`), however, grows only by the minimum pre-load lead — `max(320 + extraAhead, viewportWidth + 128)` — NOT by `viewportWidth + extraAhead`. The object slot pool is a fixed ROM-sized table (`ObjectSlotLayout`: S1=96, S2=112, S3K=89); a window that grew by the full extra width overran the pool in dense areas, so `allocateSlot()` returned −1 and spawns were silently dropped (objects intermittently failing to load when scrolling right at widescreen, in all games). Capping the load-ahead keeps the live-object count close to native (≈+2% at ULTRA_21_9 vs +27% before) so the pool no longer overruns, while viewport-aware lifetime and visibility callers retain their wider windows. This narrower load window is deliberate — do not widen it to match the despawn window. Native (320) is byte-identical (load-ahead = `0x280`).
 
 Stage rings in Sonic 2 and Sonic 3 & Knuckles use their separate raw-camera
 window: `[cameraX - 8, cameraX + viewportWidth + 8)`, with the existing left
@@ -1055,11 +1208,25 @@ At `DISPLAY_ASPECT = NATIVE_4_3` (viewport width 320, height 224):
 
 ### Rationale
 
-At widescreen viewport widths (e.g. `ULTRA_21_9` = 528 px) the ROM's hardcoded 640 despawn distance is smaller than the distance from the camera to the visible right edge of the widened viewport (~656 px), causing objects near the right edge to be incorrectly deleted mid-screen. Similarly, `ChkObjectVisible` with `dx >= 320` would report objects past the native right edge as invisible even though they are fully in view. Scaling both checks with `viewportWidth` is the correct design decision for the widescreen extension — an object genuinely in view on the wider screen must not be culled or despawned. Note this is the opposite of the [Right-Boundary Is Viewport-Independent (Level Edge)](#right-boundary-is-viewport-independent-level-edge) entry above: despawn/visibility track what is *on screen* (so they widen), whereas the right level boundary tracks the *level's wall* (so it stays native).
+Viewport-aware lifetime and visibility helpers allow their callers to keep
+objects across the wider screen. `ChkObjectVisible` with the native `dx >= 320`
+would otherwise reject positions visible at width 528. The lifetime extension
+preserves the ROM's chunk alignment and unsigned comparison while changing the
+selected bound from 640 to 848 at that width. S1 counter placement still uses its
+native bound; object-specific persistence decides whether a wider lifetime
+applies. Preserve that decision at each caller. The
+[Right-Boundary Is Viewport-Independent (Level Edge)](#right-boundary-is-viewport-independent-level-edge)
+entry describes the separate level-wall boundary, which remains native.
 
 ### Verification
 
 `TestObjectViewportWindowWidth` covers all four cases: native `isInRange` at 640 and just past, widescreen `isInRange` at 768 (in range) and 896 (out of range); native `isChkObjectVisible` at dx/dy just inside and at exclusive bounds; widescreen `isChkObjectVisible` at dx=321/400 (visible past old 320 limit) and dx=528 (invisible at exclusive widescreen bound).
+
+`TestBuzzBomberLifecycle` covers the production badnik's current-position and
+manager-retirement boundary, including survival between the native and widened
+bounds and retirement after movement beyond both. `TestObjectRangeHelpers` and
+`TestAbstractObjectInstanceRange` cover unsigned word wrap; anchored-object and
+Stageplay checks remain separate caller-policy coverage.
 
 ### Removal Condition
 
@@ -1341,7 +1508,7 @@ scheduler live. A present empty file is an explicit v5 recorded stream with
 the complete registry and no edges. Legacy schema-1/schema-2 fixtures and
 their metadata selectors are not supported runtime inputs.
 
-### Coverage: implemented for S1 and S3K, fixtures S3K-only
+### Coverage: implemented and exercised by S1 and S3K fixtures
 
 Three separate questions; do not collapse them.
 
@@ -1363,19 +1530,26 @@ only when the capture observed an edge. **S2 is not implemented at either end**
 — no source under `game/sonic2/` references `HardwareWorkKind`, and no S2
 recorder constructs `HardwareTimingEventEngine`.
 
-**Fixture coverage is S3K-only.** Every committed `hardware_timing.jsonl` under
-`src/test/resources/traces` is beneath `s3k/` (272, plus 2
-`hardware_timing_interstitial.jsonl`). No committed S1 or S2 fixture carries
-one.
+**Fixture coverage includes one S1 chain and S3K.** The S1 complete-emerald
+chain carries 28 native timing streams with 242 Nemesis arm edges. Its four
+held-head queue axes clear through matching prepared production work. Its
+ending/credits continuation also consumes the existing synchronous-initialization
+contract, plus terminal lag admission; the full-chain terminal art comparison
+now matches through actual native cuts and counted ROM waits. All 68 physics/aux
+payloads reproduce the prior native observations exactly; their existing
+compressed files remain byte-identical. The dedicated root initialization
+companion covers 18 loads and 45 phases. Recorder guards reject unreviewed
+initial callback states and reached LZ setup clock reads; ending initial-object
+interrupts remain unsupported. This is neither arbitrary callback scheduling
+nor an exact live-load timing claim. Other S1 fixtures without a stream
+retain live admission. S3K has 244 per-segment streams and four interstitial
+streams; no S2 fixture supplies readiness.
 
-So the S1 path is **implemented but dormant**, which is not the same as absent.
-Recorded admission is installed only by
-`GameplayModeContext.activateRecordedHardwareAdmission()`; with no stream every
-kind stays at `HardwareReadinessAdmissionPolicy.LIVE`,
-`isRecordedAuthority()` is false, and the arm is released by the boundary that
-prepared it — the pre-timing-port behaviour. An S1 trace divergence today must
-be reasoned about against the native service model, because no committed
-fixture can supply an edge.
+The native S1 observer now samples the accepted pattern-count write instead
+of predicting it from routine entry. The original head identity remains
+available there. Entry-time tests can be invalidated by an intervening
+interrupt, so they cannot establish the visible arm row. This changes no
+kind, readiness authority or gameplay comparison.
 
 "Re-record it with the hardware-timing stream" is now available for S1 and
 still unavailable for S2. It is not the first resort for S1 in any case: a
@@ -3362,7 +3536,11 @@ Tier one (no dump) instead:
   `$33F06E`/`$33F74C`), with one logged warning per act.
 - Uses the S&K `ArtNem_KnucklesLifeIcon` for the HUD and 1-up monitor face
   and keeps the stock signpost, monitor icons, shield/stars, continue icon
-  and underwater palettes.
+  and underwater palettes. The icon's head is S&K's drawing, converted
+  through `ArtConvTable`; its "K.T.E" name was drawn for S&K's palette
+  line 1 and is recoloured to the chip name's line-0 colours, which makes it
+  identical to the chip's name tiles (`KnucklesLifeIconConversion`,
+  `TestKis2LivesNameColours`).
 
 Known deviations from the shipped lock-on game in both tiers (each cites
 the owning KiS2 routine in the catalogue):

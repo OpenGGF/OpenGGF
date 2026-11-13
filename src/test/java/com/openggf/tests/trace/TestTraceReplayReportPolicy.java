@@ -2,6 +2,7 @@ package com.openggf.tests.trace;
 
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.tests.SessionInvocationExtension.SessionInvocation;
+import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
@@ -152,6 +153,27 @@ class TestTraceReplayReportPolicy {
 
         assertFalse(Files.exists(context),
                 "a green rerun must not leave obsolete divergence context in reusable target output");
+    }
+
+    @Test
+    void diagnosticRouteIdentifiesThePublishedAllocationAndConcreteFixture() throws Exception {
+        SessionInvocation invocation = new SessionInvocation(
+                getClass().getName(), "diagnosticRoute", 0, "0123456789abcdef", "route");
+        TestSessionOutputPaths.ReportAllocation allocation = TraceReportWriter.writeReport(
+                tempDir, errorReport(), "trace", invocation, "single", "s2_ehz1",
+                TraceVerificationScope.ALL, 2);
+        Path fixture = tempDir.resolve("fixture's route with spaces");
+
+        String route = TraceReplayConsole.diagnosticRoute(invocation, fixture, allocation);
+
+        assertTrue(route.contains(invocation.className() + "#" + invocation.methodName()));
+        assertTrue(route.contains("fixture: " + fixture));
+        assertTrue(route.contains("report: " + allocation.physicalPath()));
+        assertTrue(route.contains("python3 tools/testing/maven_queue.py -Dmse=off exec:java"));
+        assertTrue(route.contains("-Dexec.mainClass=com.openggf.tools.TraceTriageTool"));
+        assertTrue(route.contains("--report "));
+        assertTrue(route.contains("--fixture "));
+        assertFalse(route.contains("error_count"), "the route must not duplicate the report body");
     }
 
     private static DivergenceReport errorReport() {

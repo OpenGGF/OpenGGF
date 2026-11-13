@@ -25,6 +25,7 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
     // ContinueScreen LEAs $78B6/$78CA/$78D8; ObjDA_Init mapping pointer $7A82.
     static final int ART_TAILS = 0x7BDBE, ART_MINI_SONIC = 0x7C0AA, ART_MINI_TAILS = 0x7C2F2;
     static final int MAP = 0x7CB6, PALETTE = 0x31C2, LETTERS = 0x7A5E;
+    private com.openggf.game.presentation.ScreenFrameRenderer replacement, tailsReplacement, iconReplacement;
     private ContinueScreenArtwork art;
     private ContinueScreenArtwork.Character sonic, tails;
     private PatternSpriteRenderer icons;
@@ -72,8 +73,7 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
         var sprites = GameServices.spritesOrNull();
         var main = sprites != null ? sprites.getMainPlayable() : null;
         boolean retainedSuperFlag = main != null && main.isSuperSonic();
-        boolean miniTails = tailsOnly != null ? tailsOnly : "tails".equalsIgnoreCase(
-                GameServices.configuration().getString(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE));
+        boolean miniTails = tailsOnly != null ? tailsOnly : com.openggf.game.session.ActiveGameplayTeamResolver.resolvePlayerCharacter(GameServices.configuration()) == com.openggf.game.PlayerCharacter.TAILS_ALONE;
         reset();
         // One Vint_Menu between RunObjects and Pal_FadeFromBlack decrements the initial 659.
         timer = 658;
@@ -141,6 +141,21 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
                     playerPresentation == null ? 0x20 : playerPresentation.waitingAnimation());
             if (playerPresentation == null) tails = new ContinueScreenArtwork.Character(playerArt.loadTails(),
                     new Tails("tails", (short) 0, (short) 0), 0x600, 0);
+            var frames = com.openggf.game.presentation.ScreenFrameRenderer.active(com.openggf.game.CharacterPresentation.Host.S2,
+                    com.openggf.game.presentation.StageCharacterPresentation.sonicDefinition());
+            if (frames != null && playerPresentation == null ) {
+                replacement = new com.openggf.game.presentation.ScreenFrameRenderer(frames, GameServices.graphics(),
+                        com.openggf.graphics.PatternAtlasRange.CONTINUE_SCREEN.base() + 0xA00, 2);
+                sonic.setReplacement(replacement);
+            }
+            var tailsFrames = com.openggf.game.presentation.ScreenFrameRenderer.active(com.openggf.game.CharacterPresentation.Host.S2,
+                    com.openggf.game.presentation.StageCharacterPresentation.tailsDefinition());
+            if (tailsFrames != null && tails != null) {
+                tailsReplacement = com.openggf.game.presentation.ScreenFrameRenderer.privatePalette(tailsFrames, GameServices.graphics(),
+                        com.openggf.graphics.PatternAtlasRange.CONTINUE_SCREEN.base() + 0x3000);
+                tails.setReplacement(tailsReplacement);
+            }
+            iconReplacement = miniTails ? tailsReplacement : replacement;
             // RunObjects once before fade. ObjDB always creates both characters, even in Tails-only mode.
             sonic.update(vint, 0);
             nagging.update();
@@ -185,12 +200,15 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
         art.cache();
         sonic.draw(sonicX + offset, 0x19C - 256);
         if (tails != null && accepted) tails.draw(tailsX + offset, 0x1A0 - 256);
-        else if (tails != null) art.draw(nagging.getMappingFrame(), tailsX + offset, 0x1A0 - 256);
+        else if (tails != null && (tailsReplacement == null || !tailsReplacement.draw("continue/nag",
+                nagging.getMappingFrame(), tailsX + offset, 0x1A0 - 256, false)))
+            art.draw(nagging.getMappingFrame(), tailsX + offset, 0x1A0 - 256);
         art.draw(0, 160 + offset, 64);
         int n = Math.min(15, Math.max(0, count - 1));
         for (int i = 0; i < n; i++) {
             if (i == n - 1 && count < 16 && accepted && (usedIconDeleted || (vint & 1) == 0)) continue;
             int iconX = 160 + (i % 2 == 0 ? -1 : 1) * (10 + i / 2 * 20) - ((n & 1) == 0 ? 10 : 0);
+            if (iconReplacement != null && iconReplacement.draw("continue/icon", iconFrame, iconX + offset, 80, false)) continue;
             icons.drawFrameIndexWithPaletteBase(iconFrame, iconX + offset, 80, false, false, 0);
         }
     }
@@ -199,6 +217,7 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
     @Override public boolean isAccepted() { return accepted; }
     @Override public boolean isFinished() { return finished; }
     @Override public void reset() {
+        replacement = null; tailsReplacement = null; iconReplacement = null;
         art = null; sonic = tails = null; icons = null; nagging = null; digits = null;
         accepted = finished = usedIconDeleted = false;
         timer = vint = sonicX = tailsX = sonicInertia = tailsInertia = count = 0;

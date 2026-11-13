@@ -9,5 +9,5 @@ public class TestS3kGumballBonusTraceReplay extends AbstractS3kBonusStageTraceRe
     @Override protected SonicGame game() { return SonicGame.SONIC_3K; }
     @Override protected int zone() { return 0x13; }
     @Override protected int act() { return 0; }
-    @Override protected Path traceDirectory() { return Path.of("src/test/resources/traces/s3k/bonus_gumball"); }
+    @Override protected Path traceDirectory() { return Path.of("src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss/gumball"); }
 }

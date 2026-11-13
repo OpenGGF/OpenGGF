@@ -8,6 +8,7 @@ import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.ScreenshotCapture;
+import com.openggf.route.InputScriptCompiler;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,28 +27,77 @@ import java.util.List;
  * S3K cold-route recovery (2026-10-13) added read-only native boss observations
  * so controller authoring can distinguish a dodge from an actual attack.
  * Candidates stop on death, level replacement or a game-mode transition.
+ * Hero-reel authoring (2026-11-06) added two leading options: {@code --input-start N}
+ * skips the first N movie rows, as GameplayCaptureTool does, so a level inside a
+ * complete-run movie can be branched from its own start; {@code --resume N} appends
+ * the movie's own next N rows after each candidate, so a candidate replaces only the
+ * rows it covers and the recording carries on unchanged; {@code --resume-from R} takes
+ * those rows from replayed row R instead, so input held across a live rewind can
+ * continue with the recording from the restored frame. {@code --skip-rows A,B}
+ * declares native lag rows by absolute movie index: {@code VBlank_Lag}
+ * (sonic.asm:711-712) never reaches {@code ReadJoypads}, so the native pad was not
+ * polled there and a direct boot, which polls every step, must not consume them.
  * A chosen candidate still needs a fresh uninterrupted replay and route certification.
  */
 public final class GameplayInputBranchTool {
     private GameplayInputBranchTool() { }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] argv) throws Exception {
+        int inputStart = 0;
+        int resume = 0;
+        int resumeFrom = -1;
+        var skipRows = new java.util.TreeSet<Integer>();
+        int first = 0;
+        while (first + 1 < argv.length && argv[first].startsWith("--")) {
+            switch (argv[first]) {
+                case "--input-start" -> inputStart = Integer.parseInt(argv[first + 1]);
+                case "--resume" -> resume = Integer.parseInt(argv[first + 1]);
+                case "--resume-from" -> resumeFrom = Integer.parseInt(argv[first + 1]);
+                case "--skip-rows" -> {
+                    for (String row : argv[first + 1].split(",")) skipRows.add(Integer.parseInt(row.trim()));
+                }
+                default -> throw new IllegalArgumentException("Unknown option: " + argv[first]);
+            }
+            first += 2;
+        }
+        String[] args = java.util.Arrays.copyOfRange(argv, first, argv.length);
         if (args.length < 11) {
-            throw new IllegalArgumentException("Usage: GameplayInputBranchTool ROM GAME ZONE ACT WIDTH "
-                    + "MAIN SIDEKICK INPUT PREFIX OUT_DIR SCRIPT [SCRIPT ...]");
+            throw new IllegalArgumentException("Usage: GameplayInputBranchTool [--input-start N] [--resume N] "
+                    + "[--resume-from R] [--skip-rows A,B] ROM GAME ZONE ACT WIDTH MAIN SIDEKICK INPUT PREFIX OUT_DIR SCRIPT [SCRIPT ...]");
         }
         var settings = new GameplayCaptureSession.Settings(Integer.parseInt(args[4]), args[5],
                 "none".equalsIgnoreCase(args[6]) ? "" : args[6], "off", null, null, null);
         run(Path.of(args[0]), args[1], GameplayCaptureTool.ZoneIds.resolve(args[1], args[2]),
                 Integer.parseInt(args[3]) - 1, settings, Path.of(args[7]), Integer.parseInt(args[8]),
-                Path.of(args[9]), List.of(args).subList(10, args.length));
+                Path.of(args[9]), List.of(args).subList(10, args.length), inputStart, resume, resumeFrom, skipRows);
     }
 
     static void run(Path rom, String game, int zone, int act, GameplayCaptureSession.Settings settings,
                     Path input, int prefix, Path output, List<String> candidates) throws Exception {
+        run(rom, game, zone, act, settings, input, prefix, output, candidates, 0, 0, -1, java.util.Set.of());
+    }
+
+    static void run(Path rom, String game, int zone, int act, GameplayCaptureSession.Settings settings,
+                    Path input, int prefix, Path output, List<String> candidates,
+                    int inputStart, int resume, int resumeFrom, java.util.Set<Integer> skipRows)
+            throws Exception {
         var loader = new Bk2MovieLoader();
         var baseMovie = loader.loadMovieOrInputLog(input);
-        String baseScript = prefixScript(baseMovie, prefix);
+        if (!skipRows.isEmpty()) {
+            Path polled = Files.createTempFile("branch-polled-", ".txt");
+            try {
+                InputLogAuthorTool.author(polledScript(baseMovie, inputStart, skipRows), polled, game);
+                baseMovie = loader.loadMovieOrInputLog(polled);
+            } finally {
+                Files.deleteIfExists(polled);
+            }
+            inputStart = 0;
+        }
+        String baseScript = movieScript(baseMovie, inputStart, prefix);
+        var continuations = new ArrayList<String>();
+        for (String candidate : candidates) {
+            continuations.add(continuation(baseMovie, inputStart, prefix, candidate, resume, resumeFrom));
+        }
         if (candidates.isEmpty()) throw new IllegalArgumentException("No candidate scripts");
         if (settings.startX() != null || settings.startY() != null) {
             throw new IllegalArgumentException("Branch authoring requires a cold entry");
@@ -63,7 +113,7 @@ public final class GameplayInputBranchTool {
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(rom, zone, act, settings);
             for (int frame = 0; frame < prefix; frame++) {
-                var pad = baseMovie.getFrame(frame);
+                var pad = baseMovie.getFrame(inputStart + frame);
                 session.step(pad);
                 session.render();
                 prefixRows.append(session.stateLine(frame, pad)).append('\n');
@@ -81,7 +131,7 @@ public final class GameplayInputBranchTool {
             }
             requireRestorableCheckpoint(checkpoint,
                     GameServices.level().hasPendingFreshLevelTransitionBoundary());
-            var previousInput = prefix == 0 ? null : baseMovie.getFrame(prefix - 1);
+            var previousInput = prefix == 0 ? null : baseMovie.getFrame(inputStart + prefix - 1);
             var objects = new StringBuilder();
             for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
                 if (object.getSpawn() != null
@@ -99,7 +149,7 @@ public final class GameplayInputBranchTool {
                 }
                 registry.restore(checkpoint);
                 session.restoreInputHistory(previousInput);
-                String script = baseScript + candidates.get(i) + '\n';
+                String script = baseScript + candidates.get(i) + '\n' + continuations.get(i);
                 Path stem = output.resolve("variant-" + i);
                 Files.writeString(Path.of(stem + ".script"), script, StandardOpenOption.CREATE_NEW);
                 InputLogAuthorTool.author(script, Path.of(stem + ".bk2"), game);
@@ -190,14 +240,41 @@ public final class GameplayInputBranchTool {
                 && session.loop().getCurrentGameMode() == mode;
     }
 
+    /** The movie rows resumed after a candidate: from just after it, or from replayed row {@code resumeFrom}. */
+    static String continuation(Bk2Movie movie, int inputStart, int prefix, String candidate,
+                               int resume, int resumeFrom) {
+        if (resume == 0) return "";
+        int from = resumeFrom >= 0 ? resumeFrom : prefix + InputScriptCompiler.compile(candidate).size();
+        return movieScript(movie, inputStart + from, resume);
+    }
+
+    /** The rows from {@code start} the native pad polled: every row except the declared lag rows. */
+    static String polledScript(Bk2Movie movie, int start, java.util.Set<Integer> skipRows) {
+        var result = new StringBuilder();
+        int from = start;
+        for (int row : new java.util.TreeSet<>(skipRows)) {
+            if (row < start || row >= movie.getFrameCount()) {
+                throw new IllegalArgumentException("Skipped row outside the replayed movie: " + row);
+            }
+            result.append(movieScript(movie, from, row - from));
+            from = row + 1;
+        }
+        return result.append(movieScript(movie, from, movie.getFrameCount() - from)).toString();
+    }
+
     static String prefixScript(Bk2Movie movie, int prefix) {
-        if (prefix < 0 || prefix > movie.getFrameCount()) {
-            throw new IllegalArgumentException("Prefix outside input movie: " + prefix);
+        return movieScript(movie, 0, prefix);
+    }
+
+    /** Compact script for {@code rows} movie rows from {@code start}. */
+    static String movieScript(Bk2Movie movie, int start, int rows) {
+        if (start < 0 || rows < 0 || start + rows > movie.getFrameCount()) {
+            throw new IllegalArgumentException("Prefix outside input movie: " + start + "+" + rows);
         }
         var result = new StringBuilder();
         String previous = null;
         int count = 0;
-        for (int i = 0; i < prefix; i++) {
+        for (int i = start; i < start + rows; i++) {
             var frame = movie.getFrame(i);
             if (frame.debugModeTogglePressed() || frame.debugShiftDown() || frame.debugControlDown()
                     || frame.debugAltDown() || frame.debugSuperDown()) {

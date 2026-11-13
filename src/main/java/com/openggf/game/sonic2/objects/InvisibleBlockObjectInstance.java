@@ -25,7 +25,7 @@ import java.util.List;
  *   Lower 4 bits: height = ((n & 0xF) + 1) * 16 pixels
  */
 public class InvisibleBlockObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.game.sonic2.competition.view.Sonic2NativeDisplaySource {
     // Obj74 is only collision geometry and has no facing body or child.
 
     private static final boolean DEBUG_VIEW_ENABLED = staticDebugViewEnabled();
@@ -117,5 +117,9 @@ public class InvisibleBlockObjectInstance extends BoxObjectInstance
 
     private boolean isDebugViewEnabled() {
         return DEBUG_VIEW_ENABLED && OVERLAY_MANAGER.isEnabled(DebugOverlayToggle.OVERLAY);
+    }
+    /** Obj74_Main (s2.asm:46603-46630): REV01 excludes the REV00 debug DisplaySprite branch. */
+    @Override public com.openggf.game.sonic2.competition.view.Sonic2CompetitionDisplayInputs.ObjectSlot nativeDisplaySlot() {
+        return null;
     }
 }

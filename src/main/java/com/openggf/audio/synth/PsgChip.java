@@ -105,6 +105,8 @@ public class PsgChip {
     private int preamp = 100;
     private int panning = 0xFF;
     private final boolean[] mutes = new boolean[CHANNELS];
+    /** Presentation gains, 256 = unity; never part of a snapshot or backup. */
+    private final int[] outputGains = {256, 256, 256, 256};
     private ChipWriteObserver writeObserver = ChipWriteObserver.NONE;
     /** Diagnostic-only native generator ticks; snapshots deliberately do not restore it. */
     private long physicalTick;
@@ -207,6 +209,22 @@ public class PsgChip {
         mutes[ch] = mute;
         updateAmplitude(ch);
         emitPhysicalBoundary(ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
+    }
+
+    /**
+     * Presentation-only output gain, 256 = unity. It lands at the next level
+     * boundary like a mute and is not chip state: snapshots, backups and
+     * resets neither capture nor clear it.
+     */
+    public void setOutputGain(int ch, int gain) {
+        if (ch < 0 || ch >= CHANNELS) {
+            return;
+        }
+        int clamped = Math.clamp(gain, 0, 256);
+        if (outputGains[ch] != clamped) {
+            outputGains[ch] = clamped;
+            updateAmplitude(ch);
+        }
     }
 
     /** Installs the diagnostic write sink; {@code null} means none. */
@@ -450,6 +468,9 @@ public class PsgChip {
 
     private void updateAmplitude(int ch) {
         int level = mutes[ch] ? 0 : LEVEL[attenuation[ch]] * preamp / 100;
+        if (outputGains[ch] != 256) {
+            level = (level * outputGains[ch]) >> 8;
+        }
         ampLeft[ch] = (panning & (0x10 << ch)) != 0 ? level : 0;
         ampRight[ch] = (panning & (0x01 << ch)) != 0 ? level : 0;
     }

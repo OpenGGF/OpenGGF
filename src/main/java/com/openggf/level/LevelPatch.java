@@ -1,6 +1,7 @@
 package com.openggf.level;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlacementEncoding;
 import com.openggf.level.rings.RingSpawn;
 import java.util.*;
 import java.util.function.Predicate;
@@ -19,6 +20,8 @@ public final class LevelPatch {
                     spawn.respawnTracked(),spawn.rawYWord(),spawn.layoutIndex(),bindingOwner,bindingKey);
         }
     }
+    private record Addition(String key, int x, int y, int subtype, int renderFlags, boolean respawnTracked) { }
+    private final List<Addition> additions;
     private final List<Operation> operations;
     private final Integer zoneIndex;
     private final Predicate<List<ObjectSpawn>> inventoryCondition;
@@ -26,11 +29,12 @@ public final class LevelPatch {
     private final BiFunction<List<RingSpawn>,List<ObjectSpawn>,List<RingSpawn>> ringRetention;
     private final String admittedOwner;
     private final Set<String> admittedObjectKeys;
-    private LevelPatch(List<Operation> operations,Integer zoneIndex,
+    private LevelPatch(List<Operation> operations,List<Addition> additions,Integer zoneIndex,
             Predicate<List<ObjectSpawn>> inventoryCondition,boolean nativePlacements,
             BiFunction<List<RingSpawn>,List<ObjectSpawn>,List<RingSpawn>> ringRetention,String admittedOwner,
             Set<String> admittedObjectKeys) {
         this.operations=List.copyOf(operations);
+        this.additions=List.copyOf(additions);
         this.zoneIndex=zoneIndex;
         this.inventoryCondition=inventoryCondition;
         this.nativePlacements=nativePlacements;
@@ -39,39 +43,63 @@ public final class LevelPatch {
         this.admittedObjectKeys=Set.copyOf(admittedObjectKeys);
     }
     private LevelPatch withOperations(List<Operation> operations) {
-        return new LevelPatch(operations,zoneIndex,inventoryCondition,nativePlacements,ringRetention,admittedOwner,admittedObjectKeys);
+        return new LevelPatch(operations,additions,zoneIndex,inventoryCondition,nativePlacements,ringRetention,admittedOwner,admittedObjectKeys);
     }
-    public static LevelPatch empty() { return new LevelPatch(List.of(),null,null,false,null,null,Set.of()); }
+    public static LevelPatch empty() { return new LevelPatch(List.of(),List.of(),null,null,false,null,null,Set.of()); }
     public Selection select(Predicate<ObjectSpawn> predicate) { return new Selection(this, Objects.requireNonNull(predicate)); }
 
     /** Restricts decoded admission to one ROM zone; other zones invoke no transformation callbacks. */
     public LevelPatch forZone(int zoneIndex) {
         if (zoneIndex<0) throw new IllegalArgumentException("Zone index must be non-negative");
-        return new LevelPatch(operations,zoneIndex,inventoryCondition,nativePlacements,ringRetention,admittedOwner,admittedObjectKeys);
+        return new LevelPatch(operations,additions,zoneIndex,inventoryCondition,nativePlacements,ringRetention,admittedOwner,admittedObjectKeys);
     }
     /** Reads the immutable original object inventory before applying any transformation. */
     public LevelPatch whenInventory(Predicate<List<ObjectSpawn>> condition) {
-        return new LevelPatch(operations,zoneIndex,Objects.requireNonNull(condition),nativePlacements,ringRetention,admittedOwner,admittedObjectKeys);
+        return new LevelPatch(operations,additions,zoneIndex,Objects.requireNonNull(condition),nativePlacements,ringRetention,admittedOwner,admittedObjectKeys);
     }
     /**
-     * Opts engine decoded admission into factory bindings and ring retention on the same native level.
+     * Opts engine decoded admission into owned factory bindings, additions and ring retention on the same native level.
      * Direct {@link #apply(Level)} keeps returning a separate {@link MutableLevel} snapshot.
      */
     public LevelPatch nativePlacements() {
-        return new LevelPatch(operations,zoneIndex,inventoryCondition,true,ringRetention,admittedOwner,admittedObjectKeys);
+        return new LevelPatch(operations,additions,zoneIndex,inventoryCondition,true,ringRetention,admittedOwner,admittedObjectKeys);
     }
+    /**
+     * Adds a placement using a local registered factory. ModContext supplies ownership and the
+     * engine assigns a unique identity after the original inventory, in declaration order.
+     * Coordinates use native centre positions; no stock numeric object id is needed.
+     * Apply through ModContext decoded admission so the host supplies its native flag encoding;
+     * direct apply/applyToObjects calls cannot encode additions without a host.
+     */
+    public LevelPatch addObject(String localObjectKey, int x, int y, int subtype,
+                                int renderFlags, boolean respawnTracked) {
+        com.openggf.game.ModKeySyntax.requireLocalName(localObjectKey);
+        if (x < 0 || x >= 0xFFFF || y < 0 || y > 0x0FFF || subtype < 0 || subtype > 255
+                || renderFlags < 0 || renderFlags > 3)
+            throw new IllegalArgumentException("Added placement exceeds native field ranges");
+        List<Addition> next=new ArrayList<>(additions);
+        next.add(new Addition(localObjectKey,x,y,subtype,renderFlags,respawnTracked));
+        return new LevelPatch(operations,next,zoneIndex,inventoryCondition,nativePlacements,
+                ringRetention,admittedOwner,admittedObjectKeys);
+    }
+
     /** Keeps an ordered subset of the exact original ring records; neither coordinates nor identities may change. */
     public LevelPatch retainRings(BiFunction<List<RingSpawn>,List<ObjectSpawn>,List<RingSpawn>> retention) {
-        return new LevelPatch(operations,zoneIndex,inventoryCondition,nativePlacements,Objects.requireNonNull(retention),admittedOwner,admittedObjectKeys);
+        return new LevelPatch(operations,additions,zoneIndex,inventoryCondition,nativePlacements,Objects.requireNonNull(retention),admittedOwner,admittedObjectKeys);
     }
 
     /** Takes one snapshot and publishes the final placements once; source geometry is preserved. */
     public MutableLevel apply(Level source) {
+        requireAdditionEncoding(null);
+        return apply(source, null);
+    }
+
+    MutableLevel apply(Level source, ObjectPlacementEncoding encoding) {
         MutableLevel result=MutableLevel.snapshot(Objects.requireNonNull(source));
         List<ObjectSpawn> originalObjects=List.copyOf(result.getObjects());
         if (!matchesZone(source) || !matchesInventory(originalObjects)) return result;
         List<RingSpawn> originalRings=List.copyOf(result.getRings());
-        List<ObjectSpawn> objects=applyToObjects(originalObjects);
+        List<ObjectSpawn> objects=applyToObjects(originalObjects, encoding);
         List<RingSpawn> rings=retainedRings(originalRings,originalObjects);
         result.replaceObjectSpawnsPersisted(objects);
         if (ringRetention!=null) result.replaceRingSpawnsPersisted(rings);
@@ -85,7 +113,7 @@ public final class LevelPatch {
         return inventoryCondition==null || inventoryCondition.test(originalObjects);
     }
 
-    Level applyNativeDecoded(AbstractLevel source) {
+    Level applyNativeDecoded(AbstractLevel source, ObjectPlacementEncoding encoding) {
         if (admittedOwner==null) throw new IllegalStateException("Native placements require ModContext decoded patch admission");
         for (Operation operation:operations) {
             if (operation.edit()!=null)
@@ -96,7 +124,7 @@ public final class LevelPatch {
         List<ObjectSpawn> originalObjects=List.copyOf(source.getObjects());
         List<RingSpawn> originalRings=List.copyOf(source.getRings());
         if (!matchesInventory(originalObjects)) return source;
-        List<ObjectSpawn> objects=applyToObjects(originalObjects);
+        List<ObjectSpawn> objects=applyToObjects(originalObjects, encoding);
         List<RingSpawn> rings=retainedRings(originalRings,originalObjects);
         source.installDecodedPlacements(objects,rings);
         return source;
@@ -119,6 +147,11 @@ public final class LevelPatch {
         return retained;
     }
     public List<ObjectSpawn> applyToObjects(List<ObjectSpawn> placements) {
+        return applyToObjects(placements, null);
+    }
+
+    private List<ObjectSpawn> applyToObjects(List<ObjectSpawn> placements, ObjectPlacementEncoding encoding) {
+        requireAdditionEncoding(encoding);
         for (Operation operation:operations) if (operation.edit()==null && operation.bindingOwner()==null)
             throw new IllegalStateException("Local object bindings require ModContext.decodedLevelPatch registration");
         List<ObjectSpawn> result=List.copyOf(placements);
@@ -134,13 +167,38 @@ public final class LevelPatch {
             }
             result=List.copyOf(edited);
         }
+        if (!additions.isEmpty()) {
+            if (admittedOwner==null) throw new IllegalStateException("Added objects require ModContext decoded patch admission");
+            // Reserve against the original inventory, including placements removed by this patch.
+            int highest=Math.max(-1,placements.stream().mapToInt(ObjectSpawn::layoutIndex).max().orElse(-1));
+            List<ObjectSpawn> appended=new ArrayList<>(result);
+            for (Addition addition:additions) {
+                highest=Math.incrementExact(highest);
+                String key=admittedOwner+":"+addition.key();
+                if (!admittedObjectKeys.contains(key)) throw new IllegalArgumentException("Added object needs a verified owner factory: "+key);
+                appended.add(encoding.createKeyed(addition.x(),addition.y(),key,addition.subtype(),
+                        addition.renderFlags(),addition.respawnTracked(),highest));
+            }
+            result=List.copyOf(appended);
+        }
         validateIdentities(result);
         return result;
+    }
+
+    private void requireAdditionEncoding(ObjectPlacementEncoding encoding) {
+        if (!additions.isEmpty()) {
+            if (admittedOwner==null) throw new IllegalStateException("Added objects require ModContext decoded patch admission");
+            if (encoding==null) throw new IllegalStateException("Added objects require the host game object placement encoding");
+        }
     }
 
     LevelPatch bindOwnership(String owner, Set<String> registeredObjectKeys) {
         com.openggf.game.ModKeySyntax.requireManifestId(owner);
         Objects.requireNonNull(registeredObjectKeys,"registeredObjectKeys");
+        for (Addition addition:additions) {
+            if (!registeredObjectKeys.contains(owner+":"+addition.key()))
+                throw new IllegalArgumentException("Added object needs a registered owner factory: "+addition.key());
+        }
         List<Operation> bound=new ArrayList<>(operations.size());
         for (Operation operation:operations) {
             if (operation.edit()!=null) { bound.add(operation); continue; }
@@ -151,7 +209,7 @@ public final class LevelPatch {
                 throw new IllegalArgumentException("Object binding needs a registered owner factory: "+key);
             bound.add(new Operation(operation.select(),null,owner,key));
         }
-        return new LevelPatch(bound,zoneIndex,inventoryCondition,nativePlacements,ringRetention,owner,registeredObjectKeys);
+        return new LevelPatch(bound,additions,zoneIndex,inventoryCondition,nativePlacements,ringRetention,owner,registeredObjectKeys);
     }
     private static void validateIdentities(List<ObjectSpawn> placements) {
         Set<Integer> identities=new HashSet<>();

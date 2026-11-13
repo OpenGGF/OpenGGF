@@ -150,6 +150,7 @@ class TestArchitecturalSourceGuard {
     }
 
     private static final String TITLE_CARD_LIFECYCLE_PATH = "com/openggf/GameLoopTitleCardLifecycle.java";
+    private static final String NATIVE_TITLE_CARD_ITERATION_PATH = "com/openggf/NativeTitleCardIteration.java";
     private static final String TITLE_CARD_HOST_CONTRACT = """
         LevelManager level(); SpriteManager sprites(); Camera camera(); InputHandler input();
         GameModule module(); GameMode currentMode(); boolean endOfLevelActive();
@@ -719,16 +720,18 @@ class TestArchitecturalSourceGuard {
             new MethodBudget(ENGINE_PATH, "renderAdvancedFrame", 153),
             // 2026-07-07: stepInternal 213 -> 235 in the develop->next merge (develop's
             // bonus-stage rewind capture/engage hooks stack onto next's time-attack hooks).
-            new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "update", 86),
+            // Ordinary and controlled hosts share the locked-title iteration.
+            new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "update", 23),
+            new MethodBudget(NATIVE_TITLE_CARD_ITERATION_PATH, "run", 76),
             new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "enterTitleCard", 47),
             new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "exitTitleCard", 65),
             new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "runInputNeutralTitleCardPlayerPrelude", 19),
-            new MethodBudget(GAME_LOOP_PATH, "stepInternal", 52),
+            new MethodBudget(GAME_LOOP_PATH, "stepInternal", 42),
             // 2026-10-27: native code mods remove the obsolete boot-notice dispatch.
             new MethodBudget(GAME_LOOP_PATH, "stepInternalBody", 256),
             new MethodBudget(BONUS_SESSION_PATH, "doExitBonusStage", 90),
             new MethodBudget(SPECIAL_STAGE_LIFECYCLE_PATH, "updateSpecialStageInput", 9),
-            new MethodBudget(ENDING_SESSION_PATH, "loadEndingDemoZone", 84),
+            new MethodBudget(ENDING_SESSION_PATH, "loadEndingDemoZone", 29),
             // 2026-08-26: exact merged spans after title-card destination/return
             // synthesis and bonus-stage rewind-adapter handoff.
             new MethodBudget(SPECIAL_STAGE_LIFECYCLE_PATH, "enterTitleCardFromResults", 8),
@@ -1406,18 +1409,19 @@ class TestArchitecturalSourceGuard {
     void levelManagerDelegatesTransientOscillationAndRespawnHandoffs() throws IOException {
         String levelManager = stripCommentsAndStrings(Files.readString(
                 SRC_MAIN.resolve("com/openggf/level/LevelManager.java")));
-        String gameLoop = stripCommentsAndStrings(Files.readString(
-                SRC_MAIN.resolve("com/openggf/GameLoop.java")));
         String checkpointCoordinator = stripCommentsAndStrings(Files.readString(
                 SRC_MAIN.resolve("com/openggf/level/LevelCheckpointCoordinator.java")));
 
         assertTrue(!levelManager.contains("suppressGlobalOscillationForTitleCardPass"),
                 "Title-card oscillator suppression belongs to OscillationManager");
         String titleCardLifecycle = stripCommentsAndStrings(Files.readString(
-                SRC_MAIN.resolve("com/openggf/GameLoopTitleCardLifecycle.java")));
-        assertTrue(gameLoop.contains("OscillationManager.suppressNextFrames(1)")
-                        || titleCardLifecycle.contains("OscillationManager.suppressNextFrames(1)"),
-                "The GameLoop title-card path should arm the oscillator-owned one-shot suppression directly");
+                SRC_MAIN.resolve(TITLE_CARD_LIFECYCLE_PATH)));
+        String nativeTitleCardIteration = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve(NATIVE_TITLE_CARD_ITERATION_PATH)));
+        assertTrue(titleCardLifecycle.contains("NativeTitleCardIteration.run("),
+                "The GameLoop title-card path should use the shared native title iteration");
+        assertTrue(nativeTitleCardIteration.contains("OscillationManager.suppressNextFrames(1)"),
+                "The shared native title iteration should arm oscillator-owned one-shot suppression directly");
         String frameUpdater = stripCommentsAndStrings(Files.readString(
                 SRC_MAIN.resolve("com/openggf/level/LevelFrameRuntimeUpdater.java")));
         assertTrue(frameUpdater.indexOf("consumeSuppressedUpdate(")

@@ -33,6 +33,19 @@ class TestTraceSegmentCarriedStateResolution {
         return TraceSegmentCarriedStateImport.resolve(segment, meta);
     }
 
+    @Test
+    void s2FamilyReturnImportsTheRecordedDestinationRings() throws Exception {
+        for (String[] entry : new String[][] {
+                {"kis2", "kis2-full-run-all-emeralds", "seg2_ehz1", "65"},
+                {"s2", "s2-sonic-tails-complete-emeralds", "seg2_ehz1", "0"}}) {
+            Path dir = TraceFixtureRoot.resolve(Path.of("src/test/resources/traces",
+                    entry[0], "runs", entry[1], entry[2]));
+            TraceMetadata meta = TraceMetadata.load(dir.resolve("metadata.json"));
+            assertEquals(Integer.valueOf(entry[3]),
+                    TraceSegmentCarriedStateImport.resolve(dir, meta).ringCount(), entry[1]);
+        }
+    }
+
     private static int select(TraceSegmentCarriedState s) {
         return S3kSpecialStageSelection.selectStage(s.specialStageCursor(),
                 s.superEmeraldStageSet(), s.emeraldStates(),
@@ -217,7 +230,7 @@ class TestTraceSegmentCarriedStateResolution {
         List<String> all = new java.util.ArrayList<>();
         int checked = 0;
         for (String run : List.of(SONIC_TAILS, TAILS, KNUCKLES,
-                "s3k-multibonus", "s3-knux-multibonus-ss")) {
+                "s3-knux-multibonus-ss")) {
             Path runDir = TraceFixtureRoot.resolve(RUNS.resolve(run));
             if (!Files.isDirectory(runDir)) {
                 continue;

@@ -6,7 +6,26 @@ import java.util.List;
 import java.util.Objects;
 
 public final class ModApiVersion {
+    // Candidate 0.7 includes final-plane pilot banks with per-frame binary native clear masks.
+    // Candidate 0.7: race observations/events/monitor policy are game.arena-owned.
+    // Rebuild matching creator artifacts after this intentional package migration.
     /**
+     * Optional final-orientation stage drawings preserve native selectors, timing, priority and fades.
+     * Sidekick-owned S2/S3K Tornado cockpit crops and explicit solo companion banks extend the unpublished candidate.
+     * Solo companion search photos, both S3K cockpit seats, the mid-size S3K Tornado's rider and cockpit head, and
+     * the partner's seat on the final S3 graphics card extend the unpublished candidate.
+     * Optional S3K Competition player/record portrait surfaces extend the unpublished candidate.
+     * Optional per-host title mascot banks include hotspots, independent palettes and plane masks.
+     * Title mascot pairs may exchange native S2 presentation slots without moving paths.
+     * Title plane masks select native opaque or transparent replacement indices per owned pixel.
+     * Optional per-host normal/powered 32x32 reel portraits extend the unpublished candidate.
+     * S3K Competition miniature body/tail surfaces extend indexed presentation frames.
+     * Host-independent powered canonical-script addresses support creator flight/transform cycles.
+     * Optional per-form powered GGFP banks and explicit normal aliases extend the unpublished candidate.
+     * Host-aware character presentation suppliers extend the unpublished 0.7 candidate.
+     * Optional directional canonical homing strike sheet keys extend this same 0.7 candidate.
+     * Creator strike trail colours (StrikeTrailStyle), per-form powered particles and emitters
+     * (PoweredEffects) and the powered-tier query extend the unpublished candidate.
      * Current unpublished compiled-mod API candidate, including the grouped landing animation rule,
      * saved rewind budget scope,
      * allowance and stage/life-loss controls, plus the saved sprite scanline-limit
@@ -14,7 +33,8 @@ public final class ModApiVersion {
      * UI_LANGUAGE preference, detached CPU-only title-preview providers and their RGBA
      * image/animation sequence contract, run-scoped native HUD profiles,
      * overlay HUD-origin measurement, and native decoded
-     * factory binding and original-ring retention on class-preserving levels,
+     * factory binding, owned additive placements and original-ring retention on class-preserving levels,
+     * shared creator menu chrome/theme and checkpoint-aware auxiliary presentation collections,
      * bounded S3K boss/special/bonus-stage difficulty policies, and native-owned
      * invitation, brittle-support and finite HCZ/MGZ/CNZ/ICZ/LBZ presets,
      * plus native MHZ wind, LRZ echo-jet, FBZ extra-beat and SOZ light/ghost recipes.
@@ -86,11 +106,20 @@ public final class ModApiVersion {
      * Hub preferences include optional title music, its volume, last focused game,
      * dismissed game support notices, and per-game last-act/leader history for
      * zone-start Continue.
+     * Competition fallback receipts carry a host refusal reason. RunStep exposes the
+     * saved checkpoint centre and the room wire binds it to its activation frame.
      * Shared network contracts include direct/relay room clients, JDK room hosting,
      * identity, bounded ghost transport and protocol messages/codecs. Protocol 6 adds
      * Full/Quick/Off communication with semantic quick content, a local English
      * catalogue and read-only global personal chat display preferences. Protocol 7 combines
      * these controls with private admission, invite authority and correlated master requests.
+     * RunSpec carries neutral-default swap enablement. Competition rounds carry start-in,
+     * standings swap taint and host-assigned solo-fallback IDs. Ghost streams reserve layer
+     * bit 7 for bounded anchored respawns; RaceSignal exposes arena death respawn to hosts.
+     * Protocol 9 adds competition track kinds, race clocks, monitor policies, lap/progress
+     * metadata, standings boards and bounded teleport event contracts. Remote ghost registries
+     * accept explicit local-track wrap geometry for playback and extrapolation; room hosts
+     * accept initial track kind/mode without changing legacy constructor defaults.
      * Protocol 8 adds broker-bound listed joins, explicit listener admission states,
      * complete direct registration ownership, acknowledged route retirement,
      * local broker-granted owner self-join, committed round revisions and
@@ -162,6 +191,7 @@ public final class ModApiVersion {
      * shared dialogue layout keep creator styling portable between both editors.
      * Native retail options and competition screens have explicit host game modes;
      * competition participant and session services remain engine internals.
+     * S&K Blue Spheres has its own native host game mode; its session is internal.
      * Stageplay's required voices list adds per-speaker PSG tone/rhythm/pitch/variation/length/level,
      * object dialogue speakers, cast identity on native object observations and bounded transient PCM.
      * Stageplay v8 also adds the required per-speaker voices list. These unpublished format and
@@ -170,6 +200,9 @@ public final class ModApiVersion {
      * are reopened by controlled title requests and relaunch sessions with a team;
      * controllers supply the native step's pad; scenes and controllers read typed text
      * while claiming the keyboard from host shortcuts.
+     * Powered forms can hold a strike palette while a strike flies (PoweredEffects.strikePalette),
+     * and strike trails can tint each after-image with its spawn-time cycle phase
+     * (StrikeTrailStyle.echoPhaseSlot); both add compatibility constructors within candidate 0.7.0.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

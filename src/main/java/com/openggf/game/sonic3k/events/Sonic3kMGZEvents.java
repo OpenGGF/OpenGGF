@@ -1,5 +1,8 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+import com.openggf.sprites.playable.Tails;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameServices;
@@ -45,7 +48,6 @@ import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.SidekickCarryTrigger;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Sonic;
-import com.openggf.sprites.playable.Tails;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -1643,7 +1645,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     private boolean isFocusedTailsPlayer(AbstractPlayableSprite player) {
-        return player instanceof Tails
+        return PlayableArchetype.isTails(player)
                 || player.getCode().toLowerCase(java.util.Locale.ROOT).startsWith("tails");
     }
 
@@ -1694,7 +1696,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     private boolean isBossTransitionTails(AbstractPlayableSprite sidekick) {
         String characterName = spriteManager().getSidekickCharacterName(sidekick);
         return "tails".equalsIgnoreCase(characterName)
-                || sidekick instanceof Tails
+                || PlayableArchetype.isTails(sidekick)
                 || sidekick.getCode().toLowerCase(java.util.Locale.ROOT).startsWith("tails");
     }
 

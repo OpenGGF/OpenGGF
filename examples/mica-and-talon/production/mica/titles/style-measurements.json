@@ -1,0 +1,273 @@
+{
+  "native_frames": {
+    "s1-0": {
+      "box": [
+        7,
+        0,
+        72,
+        88
+      ],
+      "colours": 14,
+      "area": 4065
+    },
+    "s1-1": {
+      "box": [
+        6,
+        0,
+        80,
+        83
+      ],
+      "colours": 14,
+      "area": 4258
+    },
+    "s1-2": {
+      "box": [
+        6,
+        0,
+        80,
+        80
+      ],
+      "colours": 14,
+      "area": 4212
+    },
+    "s1-3": {
+      "box": [
+        0,
+        2,
+        79,
+        88
+      ],
+      "colours": 14,
+      "area": 4392
+    },
+    "s1-4": {
+      "box": [
+        0,
+        0,
+        72,
+        87
+      ],
+      "colours": 15,
+      "area": 4375
+    },
+    "s1-5": {
+      "box": [
+        4,
+        6,
+        85,
+        94
+      ],
+      "colours": 14,
+      "area": 4820
+    },
+    "s1-6": {
+      "box": [
+        4,
+        6,
+        85,
+        94
+      ],
+      "colours": 14,
+      "area": 4831
+    },
+    "s1-7": {
+      "box": [
+        4,
+        6,
+        85,
+        94
+      ],
+      "colours": 14,
+      "area": 4615
+    },
+    "s3k-plane-1": {
+      "box": null,
+      "colours": 0,
+      "area": 0
+    },
+    "s3k-plane-2": {
+      "box": [
+        159,
+        44,
+        169,
+        58
+      ],
+      "colours": 10,
+      "area": 104
+    },
+    "s3k-plane-3": {
+      "box": [
+        163,
+        34,
+        177,
+        54
+      ],
+      "colours": 12,
+      "area": 173
+    },
+    "s3k-plane-4": {
+      "box": [
+        170,
+        22,
+        189,
+        45
+      ],
+      "colours": 12,
+      "area": 239
+    },
+    "s3k-plane-5": {
+      "box": [
+        178,
+        9,
+        202,
+        35
+      ],
+      "colours": 13,
+      "area": 351
+    },
+    "s3k-plane-6": {
+      "box": [
+        184,
+        0,
+        219,
+        35
+      ],
+      "colours": 12,
+      "area": 825
+    },
+    "s3k-plane-7": {
+      "box": [
+        148,
+        0,
+        254,
+        80
+      ],
+      "colours": 9,
+      "area": 7210
+    },
+    "s3k-plane-8": {
+      "box": [
+        0,
+        9,
+        320,
+        224
+      ],
+      "colours": 14,
+      "area": 52124
+    },
+    "s3k-plane-9": {
+      "box": [
+        0,
+        21,
+        320,
+        224
+      ],
+      "colours": 15,
+      "area": 40910
+    },
+    "s3k-plane-10": {
+      "box": [
+        44,
+        0,
+        233,
+        224
+      ],
+      "colours": 15,
+      "area": 23873
+    },
+    "s3k-plane-11": {
+      "box": [
+        69,
+        4,
+        231,
+        223
+      ],
+      "colours": 15,
+      "area": 18713
+    },
+    "s3k-plane-12": {
+      "box": [
+        96,
+        0,
+        232,
+        223
+      ],
+      "colours": 25,
+      "area": 19249
+    },
+    "s3k-plane-13": {
+      "box": [
+        44,
+        5,
+        284,
+        176
+      ],
+      "colours": 22,
+      "area": 31314
+    },
+    "s3k-sprite-0": {
+      "box": [
+        0,
+        0,
+        48,
+        56
+      ],
+      "colours": 15,
+      "area": 2623
+    },
+    "s3k-sprite-1": {
+      "box": [
+        0,
+        0,
+        48,
+        56
+      ],
+      "colours": 15,
+      "area": 2623
+    },
+    "s3k-sprite-2": {
+      "box": [
+        0,
+        0,
+        32,
+        48
+      ],
+      "colours": 15,
+      "area": 1526
+    },
+    "s3k-sprite-3": {
+      "box": [
+        0,
+        0,
+        32,
+        48
+      ],
+      "colours": 15,
+      "area": 1526
+    }
+  },
+  "native_conventions": {
+    "S1": {
+      "outline": "one native pixel, dark ink (dark blue on native Sonic, dark neutral on MICA)",
+      "material_shades": "native blue4-6, skin3, white3; new jade ramps in the approved15-colour bank",
+      "light": "upper-left; hard highlights",
+      "dither": "solid cel bands"
+    },
+    "S2": {
+      "outline": "one native pixel, dark ink",
+      "light": "upper-left, flat cel shade bands",
+      "dither": "solid cel bands"
+    },
+    "S3K": {
+      "outline": "no drawn contour; self-shadow edge",
+      "jade_shades": 7,
+      "cream_shades": 3,
+      "glove_shades": 3,
+      "light": "upper-left specular spot and broad ramp",
+      "dither": "2x2 ordered checker transitions",
+      "creator_opaque_colour_budget": 15,
+      "limit": "Native late composed planes may use multiple rows; creator keeps one16-entry bank."
+    }
+  },
+  "style_gate": "Every native/new pair reviewed at identical scale without labels; S1 geometry also reviewed with shared guides and coloured-image half-opacity onion skins."
+}

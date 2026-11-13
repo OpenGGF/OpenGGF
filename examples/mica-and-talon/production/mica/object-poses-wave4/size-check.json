@@ -1,0 +1,93 @@
+[
+  {
+    "set": "gravity-loop",
+    "frames": 12,
+    "nativeMeanArea": 506.6666666666667,
+    "authoredMeanArea": 559.9166666666666,
+    "ratio": 1.0512367403256635
+  },
+  {
+    "set": "cage-entry",
+    "frames": 12,
+    "nativeMeanArea": 539.4166666666666,
+    "authoredMeanArea": 578.6666666666666,
+    "ratio": 1.0357431090973468
+  },
+  {
+    "set": "chain",
+    "frames": 6,
+    "nativeMeanArea": 653.0,
+    "authoredMeanArea": 755.0,
+    "ratio": 1.0752684055392845
+  },
+  {
+    "set": "carry",
+    "frames": 4,
+    "nativeMeanArea": 590.5,
+    "authoredMeanArea": 575.5,
+    "ratio": 0.9872171992403029
+  },
+  {
+    "set": "hang",
+    "frames": 1,
+    "nativeMeanArea": 574.0,
+    "authoredMeanArea": 599.0,
+    "ratio": 1.0215449118705653
+  },
+  {
+    "set": "cutscene-hurt",
+    "frames": 2,
+    "nativeMeanArea": 669.0,
+    "authoredMeanArea": 683.0,
+    "ratio": 1.010409202428781
+  },
+  {
+    "set": "crane",
+    "frames": 1,
+    "nativeMeanArea": 637.0,
+    "authoredMeanArea": 757.0,
+    "ratio": 1.0901298296652113
+  },
+  {
+    "set": "emerald",
+    "frames": 1,
+    "nativeMeanArea": 605.0,
+    "authoredMeanArea": 724.0,
+    "ratio": 1.0939351968357327
+  },
+  {
+    "set": "wall-run",
+    "frames": 5,
+    "nativeMeanArea": 538.2,
+    "authoredMeanArea": 567.2,
+    "ratio": 1.0265881914150776
+  },
+  {
+    "set": "parachute",
+    "frames": 7,
+    "nativeMeanArea": 673.8571428571429,
+    "authoredMeanArea": 690.5714285714286,
+    "ratio": 1.0123259854337419
+  },
+  {
+    "set": "corkscrew",
+    "frames": 12,
+    "nativeMeanArea": 553.1666666666666,
+    "authoredMeanArea": 552.5,
+    "ratio": 0.9993972271905599
+  },
+  {
+    "set": "normal transformation",
+    "frames": 5,
+    "nativeMeanArea": 700.6,
+    "authoredMeanArea": 692.4,
+    "ratio": 0.994130648608621
+  },
+  {
+    "set": "rare inverted run",
+    "frames": 1,
+    "nativeMeanArea": 570.0,
+    "authoredMeanArea": 549.0,
+    "ratio": 0.9814060804462351
+  }
+]

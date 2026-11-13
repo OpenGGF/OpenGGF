@@ -26,7 +26,13 @@ public final class ControlledFrameRuntime {
                                         LogicalInputSnapshot snapshot, boolean audioFrameOwned) {
         return step(context, input, snapshot, audioFrameOwned, () -> { });
     }
+    /** Locked normal title drawing remains native even though the controlled host stays in LEVEL. */
+    public static boolean isNativeTitlePresentationActive(GameplayModeContext context) {
+        return context != null && context.isGameplayRuntimeReady()
+                && context.controlledPresentation().activeFor(context);
+    }
     public static boolean prepareSetup(GameplayModeContext context) {
+        if (context.controlledPresentation().hasPendingWork(context)) return false;
         return LevelFrameStep.admit(LevelFrameContext.from(context), context.getLevelManager(), false).result()
                 == LevelFrameResult.SETUP_ONLY;
     }
@@ -45,9 +51,11 @@ public final class ControlledFrameRuntime {
             else if (input != null) com.openggf.control.InputHandlerInternalAccess.releaseKeyboardText(input, controller);
             var disposition = java.util.Objects.requireNonNull(controller.beforeFrame(course, snapshot), "gameplay frame disposition");
             boolean advance = disposition != GameplayFrameDisposition.HOLD;
-            serviceTitleCardOverlay(context);
+            var presentation = context.controlledPresentation();
+            if (!presentation.hasPendingWork(context)) serviceTitleCardOverlay(context);
             boolean transition = serviceLevelTransition(context);
-            if (transition) advance = false;
+            boolean presenting = !transition && presentation.service(context);
+            if (transition || presenting) advance = false;
             if (advance) {
                 LogicalInputSnapshot nativeInput = disposition == GameplayFrameDisposition.ADVANCE_NATIVE_INPUT
                         ? snapshot : java.util.Objects.requireNonNull(controller.nativeInput(course), "native input");
@@ -65,7 +73,7 @@ public final class ControlledFrameRuntime {
                             });
                         });
             }
-            if (!advance && !transition) serviceHeldLevelEntry(context);
+            if (!advance && !transition && !presenting) serviceHeldLevelEntry(context);
             controller.afterTick(course, advance);
             return advance ? LevelFrameResult.GAMEPLAY_FRAME : LevelFrameResult.HELD;
         } catch (RuntimeException | Error failure) {
@@ -138,6 +146,115 @@ public final class ControlledFrameRuntime {
     private static void serviceHeldLevelEntry(GameplayModeContext context) {
         var profile = context.getWorldSession().getGameModule().getLevelInitProfile();
         if (profile.isLevelMusicPublicationPending()) profile.serviceLevelLoadVBlank();
+    }
+
+    /**
+     * Session-lifetime ownership of a normal destination card, independent of its released
+     * overlay tail. Registered with rewind alongside the provider and native assembly state.
+     * No gameplay owner is retained across a load; each iteration resolves the current visit.
+     */
+    public static final class PresentationOwner implements
+            com.openggf.game.rewind.RewindSnapshottable<PresentationOwner.Snapshot> {
+        private boolean active;
+        private long loadGeneration = -1;
+
+        private boolean activeFor(GameplayModeContext context) {
+            return active && (com.openggf.level.NativeLevelLoadAccess.isPending(context.getLevelManager())
+                    || loadGeneration == context.getLevelManager().getCompletedProductionLoadGeneration());
+        }
+
+        public boolean hasPendingWork(GameplayModeContext context) {
+            var level = context.getLevelManager();
+            return activeFor(context) || level.isTitleCardRequested()
+                    || level.hasPendingFreshLevelTransitionBoundary()
+                    || com.openggf.level.NativeLevelLoadAccess.isPending(level);
+        }
+
+        /** A presentation row is held even when it completes assembly; input belongs to the next row. */
+        private boolean service(GameplayModeContext context) {
+            if (!hasPendingWork(context)) return false;
+            EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();
+            context.plcFrameLifecycle().runLogicalIteration(frame -> {
+                if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE))
+                    LevelFrameStep.dispatchGameVBlank(LevelFrameContext.from(context), frame);
+            }, context.getFadeManager()::update, frame -> {
+                var level = context.getLevelManager();
+                if (com.openggf.level.NativeLevelLoadAccess.resumeScreenInitialization(level)
+                        || com.openggf.level.NativeLevelLoadAccess.resumeTitleless(level, context, frame)) return null;
+                var title = context.getWorldSession().getGameModule().getTitleCardProvider();
+                if (!activeFor(context)) {
+                    active = false;
+                    if (level.consumeTitleCardRequest()) {
+                        active = true;
+                        loadGeneration = level.getCompletedProductionLoadGeneration();
+                        boolean fresh = level.hasPendingFreshLevelTransitionBoundary();
+                        var player = context.getCamera().getFocusedSprite();
+                        if (!fresh && player != null) {
+                            player.setXSpeed((short) 0); player.setYSpeed((short) 0); player.setGSpeed((short) 0);
+                            player.setAir(false); player.setDead(false); player.setHurt(false);
+                            player.setDeathCountdown(0); player.setInvulnerableFrames(0); player.setRolling(false);
+                        }
+                        lockControls(context, true);
+                        if (title != null) {
+                            if (fresh) title.initializeFreshLevelTransition(level.getTitleCardZone(), level.getTitleCardAct());
+                            else title.initialize(level.getTitleCardZone(), level.getTitleCardAct());
+                        }
+                        if (fresh && title instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary
+                                && boundary.installsImmediateFreshLevelPalette())
+                            context.getFadeManager().clearOverlayForImmediatePaletteLoad();
+                        if (!fresh && !context.getCamera().getFrozen()) context.getCamera().updatePosition(true);
+                        if (title != null && title.shouldAdvanceVblankClockDuringLockedPhase()) {
+                            LevelFrameStep.executeHardwareTimedObjectScan(LevelFrameContext.from(context), frame,
+                                    PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> { });
+                            level.advanceTitleCardVblankOnly();
+                        }
+                        return null; // initialization is this row's sole title dispatch
+                    }
+                    // Explicit omission may already have completed the card. Native load and
+                    // assembly are separate obligations, never inferred from an overlay flag.
+                    if (!com.openggf.level.NativeLevelLoadAccess.isPending(level)) completeAssembly(context);
+                    return null;
+                }
+                NativeTitleCardIteration.run(title, frame, context, level,
+                        context.getSpriteManager(), context.getCamera(), () -> { }, () -> { },
+                        phase -> { if (frame.isOwnedBy(phase)) frame.prepareAfterLoop(phase); },
+                        LevelFrameStep.DIRECT_WRAPPER, () -> { },
+                        () -> context.getSpriteManager().updateWithoutInput(),
+                        () -> context.getSpriteManager().updateWithoutInput(), prelude -> {
+                            level.completeInitialTitleCardPresentation();
+                            lockControls(context, false);
+                            if (!level.hasPendingFreshLevelTransitionBoundary()) {
+                                var events = context.getWorldSession().getGameModule().getLevelEventProvider();
+                                if (events != null) events.applyZonePlayerStateAfterTitleCard();
+                            }
+                            active = false;
+                            completeAssembly(context);
+                        });
+                // A resumable load can complete during the native title scan.
+                loadGeneration = level.getCompletedProductionLoadGeneration();
+                return null;
+            });
+            return true;
+        }
+
+        private static void completeAssembly(GameplayModeContext context) {
+            var level = context.getLevelManager();
+            level.completeFreshLevelTransitionBoundary();
+            level.consumePendingInitialProcessSpritesPass();
+            com.openggf.level.LevelRewindBoundaryAccess.initialAssemblyCompleted(level);
+        }
+
+        private static void lockControls(GameplayModeContext context, boolean locked) {
+            for (var sprite : context.getSpriteManager().getAllSprites())
+                if (sprite instanceof com.openggf.sprites.playable.AbstractPlayableSprite playable)
+                    playable.setControlLocked(locked);
+        }
+
+        public record Snapshot(boolean active, long loadGeneration) { }
+        @Override public String key() { return "controlled-native-presentation"; }
+        @Override public Snapshot capture() { return new Snapshot(active, loadGeneration); }
+        @Override public void restore(Snapshot state) { active = state.active(); loadGeneration = state.loadGeneration(); }
+        @Override public void resetForMissingSnapshot() { active = false; loadGeneration = -1; }
     }
 
     public static boolean retainRolling(com.openggf.sprites.playable.AbstractPlayableSprite sprite) {

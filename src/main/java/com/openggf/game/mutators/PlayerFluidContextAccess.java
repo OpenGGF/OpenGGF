@@ -14,7 +14,6 @@ public final class PlayerFluidContextAccess {
     }
     public static boolean breathProtected(AbstractPlayableSprite sprite) { return localFluid(sprite); }
     private static boolean localFluid(AbstractPlayableSprite sprite) {
-        var motion = SpriteManagerInternalAccess.motionMutators(sprite);
-        return motion != null && motion.movementFluidActive(sprite);
+        return SpriteManagerInternalAccess.motionFluidActive(sprite);
     }
 }

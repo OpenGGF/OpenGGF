@@ -91,8 +91,17 @@ public final class S3kCompetitionViews implements S3kCompetitionNativeHost.Views
     /** The DTO already contains native mapping addition, positions, flips, palette, and priority. */
     static SpritePresentation.Frame prepareFrame(GraphicsManager graphics, S3kCompetitionArtProvider art,
             S3kCompetitionSpritePages.Frame frame, int rasterStart, int rasterHeight) {
+        return prepareFrame(graphics,art,frame,rasterStart,rasterHeight,bucket -> {});
+    }
+
+    static SpritePresentation.Frame prepareFrame(GraphicsManager graphics, S3kCompetitionArtProvider art,
+            S3kCompetitionSpritePages.Frame frame, int rasterStart, int rasterHeight,
+            java.util.function.IntConsumer ghosts) {
         return NativeCompetitionRenderer.prepareSprites(graphics, rasterStart, rasterHeight, () -> {
+            for (int bucket=0;bucket<8;bucket++) {
+            ghosts.accept(bucket);
             for (var piece : frame.pieces()) {
+                if (piece.bucket()!=bucket) continue;
                 var mapping = piece.mapping();
                 if (piece.maskPrefix()) {
                     // These raw offscreen SAT entries still consume table capacity and own native X masking.
@@ -112,7 +121,8 @@ public final class S3kCompetitionViews implements S3kCompetitionNativeHost.Views
                     SpritePresentation.bindPatternVersion(graphics, base + tile,
                             SpritePresentationRenderer.version(sheet.getPatterns()[tile]));
                 SpritePieceRenderer.preparePiece(mapping, piece.screenX(), piece.screenY(), base,
-                        -1, false, false, false, graphics::submitSpriteSatPiece);
+                        art.paletteLine(piece.artKey()), false, false, false, graphics::submitSpriteSatPiece);
+            }
             }
         });
     }

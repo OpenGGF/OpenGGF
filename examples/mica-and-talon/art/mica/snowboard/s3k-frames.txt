@@ -1,0 +1,14 @@
+# bank selector image hotspotX hotspotY; image paths are relative to this table.
+snowboard 0 mica-00.png 0 0
+snowboard 1 mica-01.png 22 36
+snowboard 2 mica-02.png 16 18
+snowboard 3 mica-03.png 23 23
+snowboard 4 mica-04.png 21 22
+snowboard 5 mica-05.png 19 22
+snowboard 6 mica-06.png 28 17
+snowboard 7 mica-07.png 28 17
+snowboard 8 mica-08.png 28 17
+snowboard 9 mica-09.png 27 15
+snowboard 10 mica-10.png 34 21
+snowboard 11 mica-11.png 28 18
+snowboard 12 mica-12.png 26 22

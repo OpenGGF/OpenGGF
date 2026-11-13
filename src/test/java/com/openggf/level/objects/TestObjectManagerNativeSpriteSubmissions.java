@@ -283,7 +283,7 @@ class TestObjectManagerNativeSpriteSubmissions {
         assertEquals(List.of(3), drawSat(manager, 3), "Rewind cannot restore an old resolver closure");
     }
 
-    @Test void fullResetAndSpawnResyncClearAdmissionsAndExternalBindingUntilRebound() {
+    @Test void fullResetAndSpawnResyncClearAdmissionsButKeepTheExternalBinding() {
         for (boolean resync : new boolean[] {false, true}) {
             ObjectManager manager = manager();
             manager.update(0, null, List.of(), 1, false);
@@ -296,7 +296,9 @@ class TestObjectManagerNativeSpriteSubmissions {
             assertEquals(List.of(), admissions(manager));
             assertTrue(submit(manager, 60, 3));
             assertFalse(nativePassPresent(manager), "A raw call must not manufacture an object pass");
-            assertEquals(List.of(), drawSat(manager, 3));
+            // Owner wiring survives: a reset that keeps the RingManager (trace-replay
+            // prelude) never rebinds, and an unbound pass dropped Obj_Attracted_Ring's draw.
+            assertEquals(List.of(1), drawSat(manager, 3));
             bindExternalResolver(manager, slot -> emission(slot, 3, 2));
             assertEquals(List.of(2), drawSat(manager, 3));
         }
@@ -416,7 +418,7 @@ class TestObjectManagerNativeSpriteSubmissions {
         assertTrue(visited.contains(41));
     }
 
-    @Test void resetAndResyncUnbindDispatchAndRewindNeverRestoresOldCallbackIdentity() {
+    @Test void resetAndResyncKeepDispatchAndRewindNeverRestoresOldCallbackIdentity() {
         for (boolean resync : new boolean[] {false, true}) {
             ObjectManager manager = manager();
             int[] first = {0};
@@ -432,7 +434,8 @@ class TestObjectManagerNativeSpriteSubmissions {
             assertEquals(1, second[0]);
             if (resync) manager.resyncSpawnList(List.of()); else manager.reset(0);
             manager.update(0, null, List.of(), 2, false);
-            assertEquals(1, second[0]);
+            assertEquals(0, first[0], "the rewound-away callback never returns");
+            assertEquals(2, second[0], "the live owner's dispatch survives reset/resync");
         }
     }
 

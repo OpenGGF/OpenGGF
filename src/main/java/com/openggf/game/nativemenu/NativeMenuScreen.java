@@ -6,6 +6,8 @@ import com.openggf.game.GameplayLaunchTeam;
 /** Internal host contract for a ROM-native menu outside the title provider. */
 public interface NativeMenuScreen {
     default com.openggf.game.GameMode mode() { return com.openggf.game.GameMode.OPTIONS; }
+    /** Native logical output rows; window aspect remains owned by the host. */
+    default int presentationHeight() { return 224; }
     void initialize();
     void update(InputHandler input);
     /**
@@ -19,7 +21,8 @@ public interface NativeMenuScreen {
     void reset();
     Exit consumeExit();
 
-    enum Destination { NONE, LEVEL, COMPETITION, TITLE_SCREEN }
+    /** {@code SPECIAL_STAGE} runs the module's armed {@link NativeMenuSpecialStage} and keeps this screen open. */
+    enum Destination { NONE, LEVEL, COMPETITION, TITLE_SCREEN, SEGA_SCREEN, SPECIAL_STAGE }
 
     /** A launch team applies to this launch only; native options retain emerald progress. */
     record Exit(Destination destination, GameplayLaunchTeam team, boolean resetProgress, int zone, int act) {

@@ -13,6 +13,7 @@ import com.openggf.game.LevelInputOverlay;
 import com.openggf.game.MenuChrome;
 import com.openggf.game.MenuTextEditor;
 import com.openggf.game.recording.*;
+import com.openggf.game.rewind.LiveRewindManager;
 import com.openggf.graphics.*;
 import com.openggf.graphics.shaderlib.*;
 import com.openggf.mods.mutators.MutatorWorldAccess;
@@ -140,10 +141,10 @@ public final class OverlayDesignCaptureTool {
             save("03-escape-tap", () -> toast(menuText, escape, false));
 
             Class<?> liveType = Class.forName("com.openggf.game.rewind.LiveRewindHudOverlay");
-            var constructor = liveType.getDeclaredConstructor(Supplier.class); constructor.setAccessible(true);
-            Object rewind = constructor.newInstance((Supplier<String>) () -> "REWIND 1248");
-            var render = liveType.getDeclaredMethod("render", PixelFontTextRenderer.class, com.openggf.graphics.GraphicsManager.class, int.class); render.setAccessible(true);
-            save("04-live-rewind", () -> render.invoke(rewind, debugText, GameServices.graphics(), width));
+            var render = liveType.getDeclaredMethod("render", PixelFontTextRenderer.class, GraphicsManager.class,
+                    int.class, Integer.class, LiveRewindManager.BudgetHudState.class);
+            render.setAccessible(true);
+            save("04-live-rewind", () -> render.invoke(null, debugText, GameServices.graphics(), width, 1248, null));
 
             // Trace states without a rewind: REW outranks ERR, DESYNC and COMPLETE on the plate, so a
             // rewind supplied here (as before 2026-10-28) drew one identical picture for all three.

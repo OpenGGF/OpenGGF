@@ -89,6 +89,31 @@ class TestSpiralObjectInstance {
     }
 
     @Test
+    void jumpingRiderReleasesWithoutGroundingOrDisturbingOtherPlayer() {
+        var sonic = playerAt("sonic", 0x0200 - 0xC8, 0x0120);
+        var tails = playerAt("tails_p2", 0x0200 - 0xC8, 0x0120);
+        for (var player : List.of(sonic, tails)) {
+            player.setAir(false);
+            player.setXSpeed((short) 0x700);
+        }
+        var spiral = newSpiral(new TestObjectServices().withSidekicks(List.of(tails)));
+        spiral.update(100, sonic);
+        sonic.setAir(true);
+        sonic.setOnObject(false);
+        sonic.setYSpeed((short) -0x680);
+        int jumpY = sonic.getCentreY();
+        spiral.update(101, sonic);
+        assertTrue(sonic.getAir(), "loc_215C0 must preserve a jumping rider's in_air bit");
+        assertFalse(sonic.isOnObject());
+        assertEquals(-0x680, sonic.getYSpeed());
+        assertEquals(jumpY, sonic.getCentreY());
+        assertFalse(isRiding(spiral, sonic));
+        assertTrue(isRiding(spiral, tails));
+        assertTrue(tails.isOnObject());
+        assertFalse(tails.getAir());
+    }
+
+    @Test
     void duplicateSidekickEntryIsProcessedOnlyOnce() {
         TestablePlayableSprite tails = playerAt("tails_p2", 0x0200 - 0x00C8, 0x0100 + 0x0020);
         tails.setAir(false);

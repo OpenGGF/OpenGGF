@@ -1,5 +1,19 @@
 # Headless testing
 
+This page covers tests that run the engine without a window. For a new level
+test, start with the `HeadlessTestFixture` builder in
+[Testing](testing.md#headlesstestfixture); it performs the setup steps listed
+under [Manual setup](#manual-setup-legacy) for you. Use the sections below when
+you need GL rendering, reset rules, ROM discovery or a separate test lane.
+
+| You want to | Read |
+|---|---|
+| Know which zone/act checks a level needs | [Zone and act testing standard](level-test-standard.md) |
+| Render real pixels without a display | [Offscreen rendering prerequisites](#offscreen-rendering-prerequisites) |
+| Keep tests isolated in a reused JVM | [Preferred setup](#preferred-setup) |
+| Run ROM-backed tests | [ROM-backed tests](#rom-backed-tests) |
+| Run audio reference or FBZ route lanes | [Audio references](#audio-references-and-test-concurrency), [FBZ routes](#fbz-compatibility-and-exhaustive-routes) |
+
 For required per-zone/act breadth, rewind spots, execution lanes and the new-level
 delivery checklist, follow the [zone and act testing standard](level-test-standard.md).
 Existing coverage is being audited through the [level backlog](../../status/level-test-coverage.md).
@@ -84,6 +98,15 @@ must not also call `FadeManager.update()` or `UiRenderPipeline.updateFade()`.
 Match `Engine`'s `ownsGameplayFadeLifecycle()` guard for the pre-runtime UI fallback;
 servicing both owners finishes fades and invokes load callbacks too early.
 
+### Drawing gaps in route checks
+
+Some route checks omit scene drawing between checkpoints to save time. Every
+gameplay tick still runs. Add `-Dopenggf.tests.drawEveryFrame=true` to the focused
+Maven command when an investigation needs every-frame rendering evidence.
+
+<details>
+<summary>Which route checks omit drawing, and what that does not certify</summary>
+
 Cold-route and checkpoint checks for SOZ, LRZ, SSZ, DEZ and the frozen
 FBZ routes can omit scene drawing during traversal between checkpoints. Every
 gameplay tick still executes; queued render-thread work is serviced every tick
@@ -120,6 +143,8 @@ comparisons. Capture tools and other pixel tests retain their drawing/readback b
 Use full drawing for investigations that require every-frame rendering evidence.
 The two frozen FBZ capture classes retain the separate `-Pfbz-routes` lane;
 ordinary selection still excludes their `fbz-route` tag.
+
+</details>
 
 ## Manual setup (legacy)
 

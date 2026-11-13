@@ -709,9 +709,12 @@ class DebugS1Lz2BubblesOccupancyProbe {
                                                      int firstSlot,
                                                      int lastSlotInclusive) {
         try {
-            java.lang.reflect.Field field = ObjectManager.class.getDeclaredField("reservedChildSlots");
+            java.lang.reflect.Field populationField = ObjectManager.class.getDeclaredField("population");
+            populationField.setAccessible(true);
+            Object population = populationField.get(objectManager);
+            java.lang.reflect.Field field = population.getClass().getDeclaredField("reservedChildren");
             field.setAccessible(true);
-            Map<ObjectSpawn, int[]> reserved = (Map<ObjectSpawn, int[]>) field.get(objectManager);
+            Map<ObjectSpawn, int[]> reserved = (Map<ObjectSpawn, int[]>) field.get(population);
             List<String> parts = new ArrayList<>();
             for (Map.Entry<ObjectSpawn, int[]> entry : reserved.entrySet()) {
                 ObjectSpawn spawn = entry.getKey();
@@ -755,9 +758,12 @@ class DebugS1Lz2BubblesOccupancyProbe {
 
     private static boolean isDynamicSlotEmpty(ObjectManager objectManager, int slot) {
         try {
-            java.lang.reflect.Field field = ObjectManager.class.getDeclaredField("slotAllocator");
+            java.lang.reflect.Field populationField = ObjectManager.class.getDeclaredField("population");
+            populationField.setAccessible(true);
+            Object population = populationField.get(objectManager);
+            java.lang.reflect.Field field = population.getClass().getDeclaredField("allocator");
             field.setAccessible(true);
-            Object allocator = field.get(objectManager);
+            Object allocator = field.get(population);
             java.lang.reflect.Method method = allocator.getClass().getDeclaredMethod("isEmpty", int.class);
             method.setAccessible(true);
             return (boolean) method.invoke(allocator, slot);

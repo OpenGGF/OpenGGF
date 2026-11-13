@@ -152,8 +152,14 @@ public final class RouteTapeJob implements AutoCloseable {
      */
     public record Update(long generation, Phase phase, Kind kind, int pass, int passes, int done, int total,
                          String message, String content, int row, RouteTapeOverlay path, Path saved,
-                         RepairOutcome repair, RouteArtifact planned, List<LiveObject> objects) {
+                         RepairOutcome repair, RouteArtifact planned, List<LiveObject> objects, Map<String,Integer> facts) {
+        public Update(long generation, Phase phase, Kind kind, int pass, int passes, int done, int total,
+                      String message, String content, int row, RouteTapeOverlay path, Path saved,
+                      RepairOutcome repair, RouteArtifact planned, List<LiveObject> objects) {
+            this(generation,phase,kind,pass,passes,done,total,message,content,row,path,saved,repair,planned,objects,Map.of());
+        }
         public Update {
+            facts = facts == null ? Map.of() : Map.copyOf(facts);
             objects = objects == null ? List.of() : List.copyOf(objects);
         }
 
@@ -197,6 +203,7 @@ public final class RouteTapeJob implements AutoCloseable {
     private long generation;
     private Thread task;
     private Process process;
+    private Update terminal;
 
     /** @param roms the configured ROM files by game id; the worker verifies each against the launch hash */
     public RouteTapeJob(Supplier<Map<String, Path>> roms) {
@@ -206,6 +213,7 @@ public final class RouteTapeJob implements AutoCloseable {
             if (command.contains(SURFACELESS)) {
                 builder.environment().remove("DISPLAY");
                 builder.environment().remove("WAYLAND_DISPLAY");
+                builder.environment().remove("LD_LIBRARY_PATH");
             }
             return builder.start();
         });
@@ -260,15 +268,27 @@ public final class RouteTapeJob implements AutoCloseable {
         long token = ++generation;
         update = new Update(token, Phase.RUNNING, request.kind(), 1, 1, 0, rows, "Starting the route worker", content,
                 -1, null, null);
-        task = Thread.ofVirtual().name("route-tape-job").start(() -> {
+        terminal = null;
+        task = Thread.ofVirtual().name("route-tape-job").unstarted(() -> {
             try {
                 run(wire, request.kind(), content, rows, token);
-            } catch (IOException | InterruptedException failure) {
+            } catch (IOException | InterruptedException | RuntimeException failure) {
                 publish(token, new Update(token, Phase.ERROR, request.kind(), 0, 0, 0, rows,
                         Objects.toString(failure.getMessage(), failure.getClass().getSimpleName()), content, -1, null,
                         null));
+                if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
+                throw new IllegalStateException("Route worker failed", failure);
+            } finally {
+                synchronized (RouteTapeJob.this) {
+                    if (token == generation) {
+                        if (terminal != null) update = terminal;
+                        task = null;
+                        process = null;
+                    }
+                }
             }
         });
+        task.start();
     }
 
     private void run(RouteEditorProtocol.Request request, Kind kind, String content, int rows, long token)
@@ -314,6 +334,7 @@ public final class RouteTapeJob implements AutoCloseable {
             String plannedText = null;
             var spans = new ArrayList<RepairSpan>();
             var objects = new ArrayList<LiveObject>();
+            var facts = new LinkedHashMap<String,Integer>();
             try (var input = new RouteEditorProtocol.LineReader(new InputStreamReader(child.getInputStream(), StandardCharsets.UTF_8))) {
                 for (String line; (line = input.readLine(64 * 1024)) != null; ) {
                     var record = RouteEditorProtocol.decodeResponse(line);
@@ -347,6 +368,9 @@ public final class RouteTapeJob implements AutoCloseable {
                         rowsText = record.rows();
                     } else if (record.planned() != null) {
                         plannedText = record.planned();
+                    } else if (!record.facts().isEmpty()) {
+                        if(facts.size() >= 4096) throw new IOException("Route fact inventory exceeds its bound");
+                        facts.putAll(record.facts());
                     } else if (record.object() != null) {
                         var o = record.object();
                         if (objects.size() >= 4096) throw new IOException("Route worker scan exceeds its bound");
@@ -374,7 +398,7 @@ public final class RouteTapeJob implements AutoCloseable {
             if (kind == Kind.SCAN) {
                 publish(token, result.verdict() == RouteEditorProtocol.Verdict.PASSED
                         ? new Update(token, Phase.SCANNED, kind, 1, 1, 1, 1, "scan", content, result.row(), null, null,
-                                null, null, objects)
+                                null, null, objects, facts)
                         : new Update(token, Phase.UNSUPPORTED, kind, 0, 0, 0, 0, result.detail(), content, -1, null, null));
                 return;
             }
@@ -410,7 +434,7 @@ public final class RouteTapeJob implements AutoCloseable {
                 case SOLVED, STOPPED -> throw new IOException("Route worker sent a repair result to a replay");
             };
             publish(token, new Update(token, phase, kind, 1, 1, rows, rows, result.detail(), content, result.row(), path,
-                    saved));
+                    saved, null, null, List.of(), facts));
         } finally {
             retire(child);
             stderr.join(2000);
@@ -442,7 +466,10 @@ public final class RouteTapeJob implements AutoCloseable {
     }
 
     private synchronized void publish(long token, Update next) {
-        if (token == generation) update = next;
+        if (token == generation) {
+            if (next.running()) update = next;
+            else terminal = next;
+        }
     }
 
     public synchronized void cancel() {

@@ -141,7 +141,8 @@ class TestActiveGameplayTeamResolver {
             openSession(registryWith(definition(key, archetype)),
                     new SelectedTeam(key.persisted(), List.of()));
 
-            assertEquals(archetype, ActiveGameplayTeamResolver.resolvePlayerCharacter(config),
+            // A paired Sonic route requires an actual follower, for native and mod teams.
+            assertEquals(archetype == PlayerCharacter.SONIC_AND_TAILS ? PlayerCharacter.SONIC_ALONE : archetype, ActiveGameplayTeamResolver.resolvePlayerCharacter(config),
                     () -> "declared archetype for " + key.persisted());
         }
     }

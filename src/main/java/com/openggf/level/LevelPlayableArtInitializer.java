@@ -120,6 +120,7 @@ final class LevelPlayableArtInitializer {
         }
     }
 
+    private final Map<AbstractPlayableSprite, com.openggf.level.objects.PoweredPlayableArtBinding.Result> poweredArt = new java.util.IdentityHashMap<>();
     private boolean runtimeRefresh;
 
     void refresh() {
@@ -180,6 +181,7 @@ final class LevelPlayableArtInitializer {
             List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
             List<SpriteArtSet> sidekickArts = new ArrayList<>(sidekicks.size());
             List<Palette> sidekickPalettes = new ArrayList<>(sidekicks.size());
+            List<Palette> sidekickWaterPalettes = new ArrayList<>(sidekicks.size());
             List<String> sidekickNames = new ArrayList<>(sidekicks.size());
             for (AbstractPlayableSprite sidekick : sidekicks) {
                 String name = spriteManager.getSidekickCharacterName(sidekick);
@@ -189,6 +191,7 @@ final class LevelPlayableArtInitializer {
                 sidekickNames.add(name);
                 sidekickArts.add(loadPlayableArt(sidekick, artProvider));
                 sidekickPalettes.add(loadCharacterPalette(sidekick, name, artProvider));
+                sidekickWaterPalettes.add(loadNativeDonorWater(sidekick, name));
             }
             if (!validArt(mainArt) || sidekickArts.stream().anyMatch(art -> !validArt(art))) {
                 return;
@@ -236,7 +239,7 @@ final class LevelPlayableArtInitializer {
             SpriteArtSet publishedMainArt = mainShiftedBase == null
                     ? mainArt : shiftToBank(mainArt, mainShiftedBase);
             RenderContext mainCharacterContext = createCharacterPaletteContext(
-                    playable, publishedMainArt, mainPalette);
+                    playable, publishedMainArt, mainPalette, mainWaterPalette);
             initializeMainPlayable(playable, publishedMainArt, crossGame, mainCharacterContext,
                     auxiliaries.getFirst());
             String mainName = resolveMainCharacterCode();
@@ -244,7 +247,7 @@ final class LevelPlayableArtInitializer {
                 initializeSidekick(sidekicks.get(i), sidekickNames.get(i), mainName,
                         sidekickArts.get(i), crossGame,
                         sidekickBases.get(i),
-                        sidekickPalettes.get(i), mainPalette, mainWaterPalette, mainCharacterContext,
+                        sidekickPalettes.get(i), sidekickWaterPalettes.get(i), mainPalette, mainWaterPalette, mainCharacterContext,
                         auxiliaries.get(i + 1));
             }
         } catch (IOException e) {
@@ -260,6 +263,14 @@ final class LevelPlayableArtInitializer {
     }
 
     private Palette loadNativeDonorWater(AbstractPlayableSprite playable, String character) {
+        CharacterDefinition definition = activeRegistry().find(playable.characterKey()).orElse(null);
+        if (definition != null && !definition.key().isBuiltin() && definition.underwaterPaletteSupplier() != null) {
+            try {
+                return definition.underwaterPaletteSupplier().load(playable.characterKey().persisted());
+            } catch (IOException failure) {
+                throw new java.io.UncheckedIOException(failure);
+            }
+        }
         return playable.characterKey().isBuiltin() && usesDonation(playable)
                 ? crossGameFeatures.loadUnderwaterCharacterPalette(character) : null;
     }
@@ -413,7 +424,7 @@ final class LevelPlayableArtInitializer {
             if (usesDonation(playable)) {
                 renderer.setRenderContext(crossGame.getDonorRenderContext());
             }
-            renderer.ensureCached(graphicsManager);
+            cachePlayableBank(playable, renderer, com.openggf.sprites.render.PlayerResidentBanks.Role.BODY);
             applyPlayableArt(playable, renderer, artSet);
             initSpindashDustLegacy(playable);
             initTailsTailsLegacy(playable, artSet);
@@ -494,7 +505,7 @@ final class LevelPlayableArtInitializer {
             } else if (usesDonation(sidekick)) {
                 sidekickRenderer.setRenderContext(crossGame.getDonorRenderContext());
             }
-            sidekickRenderer.ensureCached(graphicsManager);
+            cachePlayableBank(sidekick, sidekickRenderer, com.openggf.sprites.render.PlayerResidentBanks.Role.BODY);
             applyPlayableArt(sidekick, sidekickRenderer, sidekickArt);
             initSpindashDustLegacy(sidekick);
             initTailsTailsLegacy(sidekick, sidekickArt);
@@ -503,7 +514,7 @@ final class LevelPlayableArtInitializer {
             }
             initSuperState(sidekick);
         } catch (Exception e) {
-            LOGGER.log(SEVERE, "Failed to load sidekick sprite art for index " + index + ".", e);
+            throw new IllegalStateException("Failed to load sidekick sprite art for index " + index, e);
         }
     }
 
@@ -544,7 +555,7 @@ final class LevelPlayableArtInitializer {
             } else if (usesDonation(playable)) {
                 renderer.setRenderContext(crossGame.getDonorRenderContext());
             }
-            renderer.ensureCached(graphicsManager);
+            cachePlayableBank(playable, renderer, com.openggf.sprites.render.PlayerResidentBanks.Role.BODY);
             applyPlayableArt(playable, renderer, artSet);
             initSpindashDust(playable, auxiliary);
             initTailsTails(playable, auxiliary);
@@ -557,22 +568,21 @@ final class LevelPlayableArtInitializer {
                                    SpriteArtSet sourceArt,
                                    CrossGameFeatureProvider crossGame,
                                    int shiftedBase,
-                                   Palette sidekickPalette, Palette mainPalette, Palette mainWaterPalette,
+                                   Palette sidekickPalette, Palette sidekickWaterPalette, Palette mainPalette, Palette mainWaterPalette,
                                    RenderContext mainCharacterContext,
                                    PreparedAuxiliaryArt auxiliary) throws IOException {
             SpriteArtSet sidekickArt = shiftToBank(sourceArt, shiftedBase);
             PlayerSpriteRenderer sidekickRenderer = new PlayerSpriteRenderer(sidekickArt, graphicsManager);
-            Palette sidekickWaterPalette = loadNativeDonorWater(sidekick, sidekickCharName);
             RenderContext sidekickPaletteCtx = createSidekickPaletteContext(
                     sidekickCharName, mainCharName, sidekickPalette, mainPalette,
-                    usesDonation(sidekick) ? mainWaterPalette : null, sidekickWaterPalette,
-                    mainCharacterContext, sourceArt.paletteIndex());
+                    !sidekick.characterKey().isBuiltin() || usesDonation(sidekick) ? mainWaterPalette : null,
+                    sidekickWaterPalette, mainCharacterContext, sourceArt.paletteIndex());
             if (sidekickPaletteCtx != null) {
                 sidekickRenderer.setRenderContext(sidekickPaletteCtx);
             } else if (usesDonation(sidekick)) {
                 sidekickRenderer.setRenderContext(crossGame.getDonorRenderContext());
             }
-            sidekickRenderer.ensureCached(graphicsManager);
+            cachePlayableBank(sidekick, sidekickRenderer, com.openggf.sprites.render.PlayerResidentBanks.Role.BODY);
             applyPlayableArt(sidekick, sidekickRenderer, sidekickArt);
             initSpindashDust(sidekick, auxiliary);
             initTailsTails(sidekick, auxiliary);
@@ -593,6 +603,17 @@ final class LevelPlayableArtInitializer {
                     sourceArt.bankSize(),
                     sourceArt.animationProfile(),
                     sourceArt.animationSet());
+    }
+
+    private void cachePlayableBank(AbstractPlayableSprite player, PlayerSpriteRenderer renderer,
+                                   com.openggf.sprites.render.PlayerResidentBanks.Role role) {
+        if (GameServices.runtimeArtCoordinatorOrNull()
+                instanceof com.openggf.sprites.render.PlayerResidentBanks.Authority owner
+                && owner.getClass().getClassLoader() == com.openggf.sprites.render.PlayerResidentBanks.class.getClassLoader()
+                && owner.ownsBank(player, role)) {
+            com.openggf.sprites.render.PlayerResidentBanks.claim(renderer);
+        }
+        renderer.ensureCached(graphicsManager);
     }
 
     private void applyPlayableArt(AbstractPlayableSprite playable,
@@ -651,7 +672,45 @@ final class LevelPlayableArtInitializer {
                                          PlayerSpriteArtProvider fallback) throws IOException {
         CharacterDefinition definition = activeRegistry().find(playable.characterKey()).orElse(null);
         if (definition != null && !definition.key().isBuiltin()) {
-            return definition.artSupplier().load(playable.characterKey().persisted());
+            var art = definition.artSupplier().load(playable.characterKey().persisted());
+            if (com.openggf.level.objects.PlayableSheetAnimationBinding.requiresBinding(art)) {
+                var host = levelManager.activeGameModule();
+                if (host != null && host.getDonorCapabilities() == null) return art;
+                if (host == null || host.getDonorCapabilities() == null
+                        || !(levelManager.game instanceof PlayerSpriteArtProvider hostProvider))
+                    throw new IOException("Host cannot bind canonical playable animations");
+                String archetype = switch (definition.behavesLike()) {
+                    case TAILS_ALONE -> "tails"; case KNUCKLES -> "knuckles"; default -> "sonic";
+                };
+                // Creator routes can opt into a movement archetype absent from the
+                // host roster (for example cross-game flight). Bind their own art
+                // to the host's default motion vocabulary, without requiring donor art.
+                if (!host.getDonorCapabilities().getPlayableCharacters().contains(definition.behavesLike())) {
+                    archetype = "sonic";
+                }
+                var nativeArt = hostProvider.loadPlayerSpriteArt(archetype);
+                if (nativeArt == null || !(nativeArt.animationProfile() instanceof com.openggf.sprites.animation.ScriptedVelocityAnimationProfile profile))
+                    throw new IOException("Host cannot bind canonical playable animations");
+                art = com.openggf.level.objects.PlayableSheetAnimationBinding.bind(art, host.getDonorCapabilities().forPlayableCharacter(
+                        archetype.equals("tails") ? com.openggf.game.PlayerCharacter.TAILS_ALONE
+                                : com.openggf.game.PlayerCharacter.SONIC_ALONE), nativeArt);
+            }
+            if (definition.superFormSupplier() != null) {
+                var host = levelManager.activeGameModule();
+                var forms = definition.superFormSupplier().load(playable.characterKey().persisted()).games().get(host.getGameId());
+                if (forms != null && forms.values().stream().anyMatch(form -> form.poweredArt() != null)) {
+                    var archetype = definition.behavesLike() == com.openggf.game.PlayerCharacter.TAILS_ALONE
+                            && host.getDonorCapabilities().getPlayableCharacters().contains(definition.behavesLike())
+                            ? com.openggf.game.PlayerCharacter.TAILS_ALONE : com.openggf.game.PlayerCharacter.SONIC_ALONE;
+                    var source = levelManager.game instanceof com.openggf.game.internal.PoweredAnimationProvider provider
+                            ? provider.loadPoweredAnimations(archetype) : null;
+                    var combined = com.openggf.level.objects.PoweredPlayableArtBinding.combine(art, forms, source,
+                            host.getDonorCapabilities().forPlayableCharacter(archetype));
+                    poweredArt.put(playable, combined);
+                    art = combined.normal();
+                } else poweredArt.remove(playable);
+            }
+            return art;
         }
         var provider = artProviderFor(playable, fallback);
         return provider == null ? null : provider.loadPlayerSpriteArt(playable.getCode());
@@ -669,12 +728,18 @@ final class LevelPlayableArtInitializer {
 
     private RenderContext createCharacterPaletteContext(AbstractPlayableSprite playable,
                                                          SpriteArtSet artSet,
-                                                         Palette palette) {
-        if (palette == null || playable.characterKey().isBuiltin()) return null;
+                                                         Palette palette, Palette underwaterPalette) {
+        if (playable.characterKey().isBuiltin()) return null;
+        if (palette == null) {
+            var definition = activeRegistry().find(playable.characterKey()).orElse(null);
+            if (definition == null || definition.superFormSupplier() == null) return null;
+            palette = levelManager.getCurrentLevel().getPalette(artSet.paletteIndex());
+        }
         GameModule module = levelManager.activeGameModule();
         RenderContext context = RenderContext.createSidekickContext(
                 module == null ? null : module.getGameId());
         context.setPalette(artSet.paletteIndex(), palette);
+        context.setUnderwaterPalette(artSet.paletteIndex(), underwaterPalette);
         return context;
     }
 
@@ -712,7 +777,8 @@ final class LevelPlayableArtInitializer {
             return;
         }
         try {
-            String characterCode = SpriteManagerInternalAccess.usesNativeScriptedArt(spriteManager, playable)
+            String characterCode = !playable.characterKey().isBuiltin() ? "sonic"
+                    : SpriteManagerInternalAccess.usesNativeScriptedArt(spriteManager, playable)
                     ? playable.characterKey().persisted() : playable.getCode().endsWith("_p2")
                     ? playable.getCode().substring(0, playable.getCode().length() - 3)
                     : playable.getCode();
@@ -729,7 +795,7 @@ final class LevelPlayableArtInitializer {
             if (usesDonation(playable)) {
                 dustRenderer.setRenderContext(crossGame.getDonorRenderContext());
             }
-            dustRenderer.ensureCached(graphicsManager);
+            cachePlayableBank(playable, dustRenderer, com.openggf.sprites.render.PlayerResidentBanks.Role.ATTACHED_EFFECT);
             playable.setSpindashDustController(new SpindashDustController(
                     playable, dustRenderer, fixedDustSlotFor(playable)));
         } catch (IOException e) {
@@ -790,7 +856,7 @@ final class LevelPlayableArtInitializer {
         if (usesDonation(playable)) {
             tailsRenderer.setRenderContext(crossGame.getDonorRenderContext());
         }
-        tailsRenderer.ensureCached(graphicsManager);
+        cachePlayableBank(playable, tailsRenderer, com.openggf.sprites.render.PlayerResidentBanks.Role.APPENDAGE);
         playable.setTailsTailsController(new TailsTailsController(
                 playable, tailsRenderer, isS3k,
                 createDynamicArtOwner("tails-tails", tailsRenderer)));
@@ -807,7 +873,8 @@ final class LevelPlayableArtInitializer {
         } else {
             return null;
         }
-        String characterCode = SpriteManagerInternalAccess.usesNativeScriptedArt(spriteManager, playable)
+        String characterCode = !playable.characterKey().isBuiltin() ? "sonic"
+                    : SpriteManagerInternalAccess.usesNativeScriptedArt(spriteManager, playable)
                 ? playable.characterKey().persisted() : playable.getCode().endsWith("_p2")
                 ? playable.getCode().substring(0, playable.getCode().length() - 3)
                 : playable.getCode();
@@ -827,7 +894,7 @@ final class LevelPlayableArtInitializer {
             if (usesDonation(playable)) {
                 dustRenderer.setRenderContext(crossGameFeatures.getDonorRenderContext());
             }
-            dustRenderer.ensureCached(graphicsManager);
+            cachePlayableBank(playable, dustRenderer, com.openggf.sprites.render.PlayerResidentBanks.Role.ATTACHED_EFFECT);
             playable.setSpindashDustController(new SpindashDustController(
                     playable, dustRenderer, fixedDustSlotFor(playable)));
     }
@@ -907,7 +974,7 @@ final class LevelPlayableArtInitializer {
         if (usesDonation(playable)) {
             tailsRenderer.setRenderContext(crossGameFeatures.getDonorRenderContext());
         }
-        tailsRenderer.ensureCached(graphicsManager);
+        cachePlayableBank(playable, tailsRenderer, com.openggf.sprites.render.PlayerResidentBanks.Role.APPENDAGE);
         playable.setTailsTailsController(new TailsTailsController(
                 playable, tailsRenderer, prepared.separate(),
                 createDynamicArtOwner("tails-tails", tailsRenderer)));
@@ -949,6 +1016,9 @@ final class LevelPlayableArtInitializer {
     private void initSuperState(AbstractPlayableSprite playable) {
         if (runtimeRefresh && playable.getSuperStateController() instanceof
                 com.openggf.game.internal.RuntimeArtRefreshParticipant existing) {
+            com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindNormalAnimationProfile(playable);
+            if (existing instanceof com.openggf.sprites.playable.ProfileSuperStateController profileController)
+                profileController.bindPoweredArt(poweredArt.get(playable));
             existing.rebindAfterArtRefresh();
             return;
         }
@@ -957,8 +1027,25 @@ final class LevelPlayableArtInitializer {
         if (gameModule == null) {
             return;
         }
-        var superCtrl = gameModule.createSuperStateController(playable);
+        var definition = activeRegistry().find(playable.characterKey()).orElse(null);
+        com.openggf.sprites.playable.SuperStateController superCtrl;
+        if (!playable.characterKey().isBuiltin() && definition != null && definition.supportsSuperForm()
+                && definition.superFormSupplier() != null) {
+            try {
+                var profile = definition.superFormSupplier().load(playable.characterKey().persisted());
+                superCtrl = profile.games().containsKey(gameModule.getGameId())
+                        ? new com.openggf.sprites.playable.ProfileSuperStateController(playable, profile, gameModule.getGameId()) : null;
+            } catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+        } else {
+            superCtrl = gameModule.createSuperStateController(playable);
+        }
         playable.setSuperStateController(superCtrl);
+        if (superCtrl instanceof com.openggf.sprites.playable.ProfileSuperStateController profileController)
+            profileController.bindPoweredArt(poweredArt.get(playable));
+        // A literal native scene may temporarily replace this profile before
+        // the first rewind restore. The Super controller's normal resource
+        // must come from ordinary art initialization, never that borrowed view.
+        com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindNormalAnimationProfile(playable);
 
         if (superCtrl != null && !superCtrl.isRomDataPreLoaded()) {
             try {

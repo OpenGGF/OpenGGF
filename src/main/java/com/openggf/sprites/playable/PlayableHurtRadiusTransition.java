@@ -16,6 +16,8 @@ final class PlayableHurtRadiusTransition {
     }
 
     private static void apply(AbstractPlayableSprite sprite, boolean death) {
+        // Hurt_Sidekick (s2.asm:85629-85632), KillCharacter (s2.asm:85671-85677).
+        PlayableNativeFloorReset.resetChain(sprite);
         boolean wasRolling = sprite.getRolling();
         int nativeXBeforeRadiusChange = sprite.getCentreX();
         int nativeYBeforeRadiusChange = sprite.getCentreY();
@@ -28,7 +30,7 @@ final class PlayableHurtRadiusTransition {
         boolean usesCurrentRadiusDelta = rules != null
                 && rules.playerMovement() != null
                 && rules.playerMovement().landing().landingRollClearUsesCurrentYRadiusDelta();
-        boolean restoresSplitSidekickRadii = !(sprite instanceof Tails)
+        boolean restoresSplitSidekickRadii = !(PlayableArchetype.isTails(sprite))
                 || rules == null || rules.sidekickCpu() == null
                 || rules.sidekickCpu().sidekickHurtRestoresRadiiWithoutRoll();
         // S1/S2 reset radii only in the ball branch. S3K Player_TouchFloor

@@ -7,6 +7,7 @@ import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.MenuPage;
 import openggf.timeattack.ui.FullTextReader;
 import openggf.timeattack.ui.TextEntry;
+import openggf.timeattack.ui.TrackBadges;
 import openggf.timeattack.ui.ViewInput;
 
 import java.util.ArrayList;
@@ -24,6 +25,11 @@ import java.util.function.Consumer;
  * game that end in a results tally &mdash; then saves it in {@link TimeAttackSettings}. A pool
  * holds {@value VoteTrackPools#MIN_KEYS} to {@value VotePool#MAX_ACTS} acts: rooms carry at most
  * 32 vote tracks, and a vote offers three acts other than the one just raced.
+ *
+ * <p>For a Competition room of Sonic 3&amp;K the edit page adds an ARENAS group under its own
+ * caption: the five Competition arenas, which race in no other mode. A Time Attack room never lists
+ * them, and saving keeps any arena a pool already holds rather than dropping it unseen; the room's
+ * pool check then explains why that pool cannot host Time Attack.
  */
 public final class VotePoolEditorView {
     private static final int FIRST_ROW_Y = MenuPage.BODY_TOP - 2;
@@ -34,6 +40,8 @@ public final class VotePoolEditorView {
     private final Runnable changed;
     private final Consumer<MenuCue> cues;
     private final List<TimeAttackTrackCatalog.Track> eligible;
+    /** The arenas the edit page lists: S3K's in a Competition room, otherwise none. */
+    private final List<TimeAttackTrackCatalog.Track> arenas;
     private final List<String> gameCharacters;
     private boolean closeRequested;
     private int focus;
@@ -54,11 +62,20 @@ public final class VotePoolEditorView {
      * @param changed runs after a pool is saved or deleted (the owner saves the settings)
      */
     public VotePoolEditorView(TimeAttackSettings settings, String gameId, Runnable changed, Consumer<MenuCue> cues) {
+        this(settings, gameId, CompetitionRoomSettings.Mode.TIME_ATTACK, changed, cues);
+    }
+
+    /** @param mode the room's race mode, which decides whether the arenas are listed */
+    public VotePoolEditorView(TimeAttackSettings settings, String gameId, CompetitionRoomSettings.Mode mode,
+                              Runnable changed, Consumer<MenuCue> cues) {
         this.settings = Objects.requireNonNull(settings, "settings");
         this.gameId = Objects.requireNonNull(gameId, "gameId");
         this.changed = Objects.requireNonNull(changed, "changed");
         this.cues = Objects.requireNonNull(cues, "cues");
-        this.eligible = TimeAttackTrackCatalog.eligibleFor(gameId);
+        this.eligible = TimeAttackTrackCatalog.eligibleFor(gameId).stream()
+                .filter(track -> track.modes().contains(Objects.requireNonNull(mode, "mode"))).toList();
+        this.arenas = TimeAttackTrackCatalog.eligibleFor(gameId, mode).stream()
+                .filter(track -> track.group() == TimeAttackTrackCatalog.Group.ARENAS).toList();
         Set<String> characters = new LinkedHashSet<>();
         eligible.forEach(track -> characters.addAll(track.characters()));
         this.gameCharacters = List.copyOf(characters);
@@ -160,7 +177,12 @@ public final class VotePoolEditorView {
     private List<String> editRows() {
         List<String> rows = new ArrayList<>();
         rows.add("NAME");
-        eligible.forEach(track -> rows.add("act:" + track.zone() + ":" + track.act()));
+        if (!arenas.isEmpty()) rows.add("cap:" + TimeAttackMenuState.groupName(TimeAttackTrackCatalog.Group.ACTS));
+        eligible.forEach(track -> rows.add("act:" + poolText(track)));
+        if (!arenas.isEmpty()) {
+            rows.add("cap:" + TimeAttackMenuState.groupName(TimeAttackTrackCatalog.Group.ARENAS));
+            arenas.forEach(track -> rows.add("act:" + poolText(track)));
+        }
         rows.add("SAVE");
         if (!editingNew) rows.add("DELETE");
         rows.add("CANCEL");
@@ -200,6 +222,24 @@ public final class VotePoolEditorView {
         }
     }
 
+    /** A track as a pool stores it: {@code zone:act}, or {@code arena:N} for an arena. */
+    private static String poolText(TimeAttackTrackCatalog.Track track) {
+        return track.group() == TimeAttackTrackCatalog.Group.ARENAS ? "arena:" + track.zone()
+                : track.zone() + ":" + track.act();
+    }
+
+    /** The listed track a pool entry names, or null. */
+    private TimeAttackTrackCatalog.Track track(String text) {
+        for (TimeAttackTrackCatalog.Track track : eligible) if (poolText(track).equals(text)) return track;
+        for (TimeAttackTrackCatalog.Track track : arenas) if (poolText(track).equals(text)) return track;
+        return null;
+    }
+
+    /** What the page counts: acts, or tracks once arenas are listed beside them. */
+    private String unit() {
+        return arenas.isEmpty() ? "acts" : "tracks";
+    }
+
     private void toggle(String act) {
         if (draftActs.remove(act)) {
             status = "";
@@ -207,7 +247,7 @@ public final class VotePoolEditorView {
             return;
         }
         if (draftActs.size() >= VotePool.MAX_ACTS) {
-            status = "A pool holds at most " + VotePool.MAX_ACTS + " acts (the room limit)";
+            status = "A pool holds at most " + VotePool.MAX_ACTS + " " + unit() + " (the room limit)";
             cues.accept(MenuCue.ERROR);
             return;
         }
@@ -218,13 +258,16 @@ public final class VotePoolEditorView {
 
     private void save() {
         // Saved in the catalog's game order, the order votes rotate through.
+        // Arenas a Time Attack page does not list are kept, in their catalog place.
         List<String> acts = new ArrayList<>();
-        eligible.forEach(track -> {
-            String act = track.zone() + ":" + track.act();
+        List<TimeAttackTrackCatalog.Track> order = new ArrayList<>(TimeAttackTrackCatalog.eligibleFor(gameId));
+        order.addAll(TimeAttackTrackCatalog.arenas().stream().filter(arena -> arena.gameId().equals(gameId)).toList());
+        order.forEach(track -> {
+            String act = poolText(track);
             if (draftActs.contains(act)) acts.add(act);
         });
         if (acts.size() < VoteTrackPools.MIN_KEYS) {
-            status = "Choose at least " + VoteTrackPools.MIN_KEYS + " acts so a vote has a choice";
+            status = "Choose at least " + VoteTrackPools.MIN_KEYS + " " + unit() + " so a vote has a choice";
             cues.accept(MenuCue.ERROR);
             return;
         }
@@ -255,11 +298,18 @@ public final class VotePoolEditorView {
         if (input.up()) focus = Math.floorMod(focus - 1, count);
         if (input.down()) focus = (focus + 1) % count;
         focus = Math.min(focus, count - 1);
+        // Captions are not focusable: the arrows step over them in the direction pressed.
+        List<String> rows = editing == null ? List.of() : editRows();
+        while (focus < rows.size() && rows.get(focus).startsWith("cap:")) {
+            focus = Math.floorMod(focus + (input.up() ? -1 : 1), count);
+        }
         if (focus != before) {
             cues.accept(MenuCue.NAVIGATE);
             if (editing == null) status = "";
         }
-        if (focus < scroll) scroll = focus;
+        // A group's first row brings its caption into view.
+        int top = focus > 0 && focus - 1 < rows.size() && rows.get(focus - 1).startsWith("cap:") ? focus - 1 : focus;
+        if (top < scroll) scroll = top;
         if (focus >= scroll + VISIBLE_ROWS) scroll = focus - VISIBLE_ROWS + 1;
     }
 
@@ -348,7 +398,7 @@ public final class VotePoolEditorView {
         int width = canvas.width();
         boolean tooFew = draftActs.size() < VoteTrackPools.MIN_KEYS;
         MenuPage.page(canvas, editingNew ? "NEW POOL" : "EDIT POOL", MenuPage.gameName(gameId), null);
-        String count = draftActs.size() + " of " + VotePool.MAX_ACTS + " acts";
+        String count = draftActs.size() + " of " + VotePool.MAX_ACTS + " " + unit();
         NameFont.draw(canvas, count, MenuPage.MARGIN + 1, MenuPage.HEADER_H + 3, tooFew ? MenuPage.AMBER : MenuPage.MUTED);
         String note = !status.isEmpty() ? status : tooFew ? "Choose at least " + VoteTrackPools.MIN_KEYS : "";
         if (!note.isEmpty()) {
@@ -369,16 +419,36 @@ public final class VotePoolEditorView {
                         MenuPage.TEXT, focused, false);
                 NameFont.draw(canvas, NameFont.fit(draftName, right - 60), MenuPage.MARGIN + 6
                         + MenuPage.labelColumn(List.of("Name")), y, MenuPage.TEXT);
+            } else if (row.startsWith("cap:")) {
+                MenuPage.section(canvas, row.substring("cap:".length()), MenuPage.MARGIN + 6, y + 4,
+                        width - 2 * MenuPage.MARGIN - 12);
             } else if (row.startsWith("act:")) {
-                TimeAttackTrackCatalog.Track track = eligible.get(i - 1);
-                boolean on = draftActs.contains(track.zone() + ":" + track.act());
+                TimeAttackTrackCatalog.Track track = track(row.substring("act:".length()));
+                boolean on = draftActs.contains(poolText(track));
                 if (focused) MenuPage.focus(canvas, MenuPage.MARGIN, y, width - 2 * MenuPage.MARGIN, MenuPage.ROW_H);
                 MenuPage.checkbox(canvas, MenuPage.MARGIN + 6, y + 3, on, on ? MenuPage.CYAN : MenuPage.FAINT);
                 String only = characterNote(track);
-                int onlyWidth = only.isEmpty() ? 0 : MenuPage.tagWidth(only) + 6;
-                NameFont.draw(canvas, NameFont.fit(MenuPage.words(track.label()), right - MenuPage.MARGIN - 20 - onlyWidth),
-                        MenuPage.MARGIN + 20, y, on ? MenuPage.TEXT : MenuPage.DIM);
-                if (!only.isEmpty()) MenuPage.tag(canvas, right - onlyWidth + 6, y + 1, only, MenuPage.DIM);
+                // Kind and mode tags on the focused row only: most rows of a group share them.
+                List<String> tags = new ArrayList<>(focused ? TrackBadges.of(track) : List.of());
+                if (!only.isEmpty()) tags.add(only);
+                int tagsWidth = 0;
+                for (String tag : tags) tagsWidth += MenuPage.tagWidth(tag) + 3;
+                String label = MenuPage.words(track.label());
+                int labelRoom = right - MenuPage.MARGIN - 20 - tagsWidth - 3;
+                if (NameFont.width(label) > labelRoom && focused) {
+                    // A narrow page keeps the name whole and gives up the badges (Details lists them).
+                    tags.removeIf(tag -> !tag.equals(only));
+                    tagsWidth = only.isEmpty() ? 0 : MenuPage.tagWidth(only) + 3;
+                    labelRoom = right - MenuPage.MARGIN - 20 - tagsWidth - 3;
+                }
+                NameFont.draw(canvas, NameFont.fit(label, labelRoom), MenuPage.MARGIN + 20, y,
+                        on ? MenuPage.TEXT : MenuPage.DIM);
+                int tagX = right + 3 - tagsWidth;
+                for (int t = 0; t < tags.size(); t++) {
+                    String tag = tags.get(t);
+                    tagX += MenuPage.tag(canvas, tagX, y + 1, tag, focused && t == 0 && !tag.equals(only)
+                            ? MenuPage.CYAN : MenuPage.DIM) + 3;
+                }
             } else {
                 String label = switch (row) {
                     case "SAVE" -> "Save pool";
@@ -431,17 +501,25 @@ public final class VotePoolEditorView {
         }
         FullTextReader.Text text = FullTextReader.Text.of(editingNew ? "NEW POOL" : "EDIT POOL", MenuPage.gameName(gameId))
                 .field("Name", draftName)
-                .field("Acts", draftActs.size() + " of " + eligible.size() + " chosen; a pool needs at least "
+                .field(MenuPage.sentence(unit()), draftActs.size() + " of " + (eligible.size() + arenas.size())
+                        + " chosen; a pool needs at least "
                         + VoteTrackPools.MIN_KEYS + " and holds at most " + VotePool.MAX_ACTS)
                 .field("Status", status)
                 .section("Acts");
-        for (TimeAttackTrackCatalog.Track track : eligible) {
-            String racers = track.characters().containsAll(gameCharacters) ? ""
-                    : " (" + String.join(", ", track.characters().stream().map(MenuPage::sentence).toList()) + " only)";
-            text.field(MenuPage.words(track.label()),
-                    (draftActs.contains(track.zone() + ":" + track.act()) ? "In the pool" : "Not in the pool") + racers);
+        for (TimeAttackTrackCatalog.Track track : eligible) detailsRow(text, track);
+        if (!arenas.isEmpty()) {
+            text.section("Arenas");
+            text.line("Arenas race in Competition rooms only: " + arenas.getFirst().lapCount() + " laps each.");
+            for (TimeAttackTrackCatalog.Track track : arenas) detailsRow(text, track);
         }
         return text;
+    }
+
+    private void detailsRow(FullTextReader.Text text, TimeAttackTrackCatalog.Track track) {
+        String racers = track.characters().containsAll(gameCharacters) ? ""
+                : " (" + String.join(", ", track.characters().stream().map(MenuPage::sentence).toList()) + " only)";
+        text.field(MenuPage.words(track.label()),
+                (draftActs.contains(poolText(track)) ? "In the pool" : "Not in the pool") + racers);
     }
 
     List<String> detailsVisibleLines() { return reader.visibleLines(); }

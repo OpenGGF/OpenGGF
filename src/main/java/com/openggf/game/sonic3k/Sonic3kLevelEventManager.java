@@ -179,6 +179,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private int cnzAct2MinYAccumulator;
     private int cnzAct2MaxYAccumulator;
 
+    private final IczSnowboardArtLoader.CustomArt snowboardCustomArt = new IczSnowboardArtLoader.CustomArt();
+    public IczSnowboardArtLoader.CustomArt snowboardCustomArt() { return snowboardCustomArt; }
+
     public Sonic3kLevelEventManager() {
         super();
     }
@@ -2500,6 +2503,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         AizHollowTreeObjectInstance.resetTreeRevealCounter();
         AizPlaneIntroInstance.resetIntroPhaseState();
         IczSnowboardArtLoader.reset();
+        snowboardCustomArt.close();
     }
 
     @Override

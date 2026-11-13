@@ -84,7 +84,24 @@ public final class ObjectRangeOps {
      * and reports out of range, as it does on hardware.
      */
     public static boolean outOfRangeX(int objectX, int cameraX) {
+        return outOfRangeX(objectX, cameraX, OUT_OF_RANGE_BOUND);
+    }
+
+    /**
+     * The same unsigned comparison with a caller-selected bound. Window policy
+     * stays with the caller: S1 counter placement keeps the native bound, while
+     * viewport-aware object tails may use {@link #viewportOutOfRangeBound(int)}.
+     */
+    static boolean outOfRangeX(int objectX, int cameraX, int bound) {
         int delta = (objectX & COARSE_MASK) - coarseCameraX(cameraX);
-        return (delta & 0xFFFF) > OUT_OF_RANGE_BOUND;
+        return (delta & 0xFFFF) > bound;
+    }
+
+    /**
+     * Declared widescreen extension: $80 behind the camera, the viewport, then
+     * $C0 ahead. At native width this is the ROM's {@value #OUT_OF_RANGE_BOUND}.
+     */
+    static int viewportOutOfRangeBound(int viewportWidth) {
+        return 128 + viewportWidth + 192;
     }
 }

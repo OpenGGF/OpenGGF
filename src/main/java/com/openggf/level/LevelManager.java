@@ -1804,6 +1804,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             refreshObjectArtPatterns();
 
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
+            HudPaletteBridgeAccess.setCharacterLifeIcon(hudRenderManager,
+                    com.openggf.game.presentation.CharacterIconPalette.hasHudIcon());
             HudProfileAccess.install(hudRenderManager, activeHudProfile);
             HudProfileAccess.applyDisplaySettings(hudRenderManager, configService);
             hudRenderManager.setHudPalettes(provider.getHudTextPaletteLine(), provider.getHudFlashPaletteLine());
@@ -2578,6 +2580,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void invalidateForegroundTilemap() {
         if (tilemapManager != null) {
             tilemapManager.invalidateForegroundTilemap();
+        }
+    }
+
+    /** Redraws one rewritten foreground layout cell; see {@link LevelLayoutCellRedrawAccess}. */
+    void invalidateForegroundMapCell(int cellX, int cellY) {
+        if (tilemapManager != null) {
+            tilemapManager.invalidateForegroundMapCell(cellX, cellY);
         }
     }
 
@@ -3564,6 +3573,25 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         } finally {
             transitions.setLevelRoutineReentry(false);
         }
+    }
+
+    /**
+     * Rebuilds placement at an already reconstructed race target. The same camera/placement
+     * owners used by checkpoint load keep their current native boundaries and persistent banks.
+     * Power-ups and their timers remain with the local player.
+     */
+    public void reinitializeAfterRaceSwap() {
+        RaceSwapPlacement.reinitialize(camera, objectManager, ringManager, spriteManager,
+                this::reregisterPlayerDynamicObjects);
+    }
+
+    /** Full native checkpoint restore, omitting only the initial title-card presentation.
+     * The caller owns life loss and the GAME OVER/TIME OVER decision before requesting reload.
+     * Available to live execution and input-only replay; checkpoint time is restored by the load.
+     */
+    public void restartCurrentLevelFromCheckpointAfterDeath() {
+        restartCurrentLevelAfterDeath();
+        skipPendingInitialTitleCardPresentation();
     }
 
     /**

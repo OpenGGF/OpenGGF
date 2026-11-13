@@ -1,29 +1,39 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.CharacterDefinition;
+import com.openggf.game.GameId;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.SuperFormProfile;
+import com.openggf.game.presentation.StageCharacterPresentation;
 import com.openggf.game.sonic3k.Sonic3kPlayerArt;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.PlayableSheetAnimationBinding;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.physics.SwingMotion;
+import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
+import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -214,6 +224,12 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
      * would inherit "loaded" with null renderers and stop drawing intro Sonic.
      */
     private transient boolean renderersLoaded;
+    // Derived presentation caches, rebuilt after rewind recreation like the renderers.
+    private transient SpriteArtSet creatorIntroArt;
+    private transient boolean creatorUsesNativeAliases;
+    private transient Palette creatorBasePalette;
+    private transient SuperFormProfile.Form creatorSuperForm;
+    private transient List<Palette> creatorSuperCycle;
     private S3kKosModuleQueue introSpriteArtQueue;
     private HardwareWorkHandle planeArtHandle;
     private HardwareWorkHandle emeraldArtHandle;
@@ -277,6 +293,13 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
         return new AizPlaneIntroInstance(ctx.spawn());
     }
 
+    @Override
+    protected void afterGenericRewindStateRestored(com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        // Rewind can redraw a freshly recreated actor before another update.
+        // Rebuild creator inputs here so that redraw cannot latch native Sonic art.
+        prepareCreatorIntroRenderers();
+    }
+
     // -----------------------------------------------------------------------
     // ObjectInstance interface
     // -----------------------------------------------------------------------
@@ -298,11 +321,14 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        rebindIntroSpriteArtAfterRestore();
-        claimIntroSpriteArtIfReady();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         lastFrameCounter = vIntRunCount;
+        // The camera owner is read first so its failure is never masked by art preparation.
         AbstractPlayableSprite trackedPlayer = resolveTrackedPlayer(player);
+        prepareCreatorIntroRenderers();
+        ensureIntroSonicRenderersLoaded();
+        rebindIntroSpriteArtAfterRestore();
+        claimIntroSpriteArtIfReady();
 
         // ROM: routine dispatch FIRST (s3.asm line 81252-81259)
         switch (routine) {
@@ -367,7 +393,8 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
         var camera = services().camera();
         renderX += camera.getX() - 128;
         renderY += camera.getY() - 128;
-        renderer.drawFrame(mappingFrame, renderX, renderY, false, false);
+        updateCreatorPalette(renderer);
+        renderer.drawFrame(creatorMappingFrame(), renderX, renderY, false, false);
     }
 
     @Override
@@ -457,12 +484,88 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
         try {
             var rom = services().rom();
             Sonic3kPlayerArt art = new Sonic3kPlayerArt(RomByteReader.fromRom(rom));
-            sonicRenderer = new PlayerSpriteRenderer(art.loadSonic());
+            var nativeArt = art.loadSonic();
+            sonicRenderer = new PlayerSpriteRenderer(nativeArt);
             superSonicRenderer = new PlayerSpriteRenderer(art.loadSuperSonicArtSet());
             renderersLoaded = true;
         } catch (IOException e) {
             throw new UncheckedIOException("Could not load AIZ intro Sonic renderers", e);
         }
+    }
+
+    /** Creator art, aliases and palette inputs are prepared by the update owner, including after recreation. */
+    private void prepareCreatorIntroRenderers() {
+        if (renderersLoaded) return;
+        try {
+            var module = services().gameModule();
+            if (module == null || module.getPlayableCharacterRegistry() == null) return;
+            CharacterDefinition definition = null;
+            if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite player
+                    && !player.characterKey().isBuiltin()) {
+                definition = module.getPlayableCharacterRegistry().find(player.characterKey()).orElse(null);
+            }
+            if (definition == null || definition.artSupplier() == null) return;
+            var art = new Sonic3kPlayerArt(RomByteReader.fromRom(services().rom()));
+            var nativeArt = art.loadSonic();
+            var source = definition.artSupplier().load(definition.key().persisted());
+            creatorUsesNativeAliases = PlayableSheetAnimationBinding.hasNativeFrameAliases(source)
+                    || !PlayableSheetAnimationBinding.requiresBinding(source);
+            creatorIntroArt = PlayableSheetAnimationBinding.requiresBinding(source)
+                    ? PlayableSheetAnimationBinding.bind(source, module.getDonorCapabilities(),
+                            nativeArt) : source;
+            sonicRenderer = new PlayerSpriteRenderer(creatorIntroArt, services().graphicsManager());
+            StageCharacterPresentation.bindPalette(sonicRenderer, definition);
+            superSonicRenderer = sonicRenderer;
+            if (sonicRenderer.getRenderContext() != null) {
+                creatorBasePalette = sonicRenderer.getRenderContext().getPalette(sonicRenderer.paletteLine()).deepCopy();
+            }
+            if (definition.superFormSupplier() != null) {
+                var forms = definition.superFormSupplier().load(definition.key().persisted());
+                if (forms != null) creatorSuperForm = forms.games().getOrDefault(GameId.S3K, Map.of())
+                        .get(SuperFormProfile.Tier.SUPER);
+            }
+            if (creatorSuperForm != null) {
+                creatorSuperCycle = creatorSuperForm.dryCycle().stream().map(row -> {
+                    byte[] words = new byte[32];
+                    for (int i = 0; i < 16; i++) {
+                        words[i * 2] = (byte) (row.get(i) >>> 8);
+                        words[i * 2 + 1] = (byte) (int) row.get(i);
+                    }
+                    var palette = new Palette();
+                    palette.fromSegaFormat(words);
+                    return palette;
+                }).toList();
+            }
+            renderersLoaded = true;
+        } catch (IOException failure) {
+            throw new UncheckedIOException("Could not load AIZ creator intro renderers", failure);
+        }
+    }
+
+    private int creatorMappingFrame() {
+        if (creatorIntroArt == null) return mappingFrame;
+        if (!superSonicActive && creatorUsesNativeAliases && mappingFrame < creatorIntroArt.mappingFrames().size()) return mappingFrame;
+        if (!(creatorIntroArt.animationProfile() instanceof ScriptedVelocityAnimationProfile profile)
+                || creatorIntroArt.animationSet() == null) return 0;
+        boolean rolling = superSonicActive || mappingFrame != INTRO_MAPPING_FRAME;
+        var script = creatorIntroArt.animationSet().getScript(rolling ? profile.getRollAnimId() : profile.getIdleAnimId());
+        if (script == null || script.frames().isEmpty()) return 0;
+        int phase = rolling ? mappingFrame - (superSonicActive ? SUPER_MAPPING_FRAME_BASE : 0x96) : 0;
+        return script.frames().get(Math.floorMod(phase, script.frames().size()));
+    }
+
+    private void updateCreatorPalette(PlayerSpriteRenderer renderer) {
+        if (creatorIntroArt == null || creatorBasePalette == null || renderer.getRenderContext() == null) return;
+        var palette = creatorBasePalette;
+        if (superSonicActive && creatorSuperForm != null) {
+            // Presentation-only authored cycle on the object's V_int_run_count read.
+            int index = ((lastFrameCounter & 0xFFFF) / creatorSuperForm.cycleTicks()) % creatorSuperForm.dryCycle().size();
+            palette = creatorSuperCycle.get(index);
+        }
+        var context = renderer.getRenderContext();
+        context.setPalette(renderer.paletteLine(), palette);
+        if (services().graphicsManager().isGlInitialized()) services().graphicsManager().cachePaletteTexture(palette,
+                context.getEffectivePaletteLine(renderer.paletteLine()));
     }
 
     // -----------------------------------------------------------------------

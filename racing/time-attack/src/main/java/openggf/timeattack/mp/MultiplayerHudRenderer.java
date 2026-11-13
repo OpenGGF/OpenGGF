@@ -1,18 +1,35 @@
 package openggf.timeattack.mp;
 
 import com.openggf.mods.ui.CompactFont;
-import com.openggf.mods.ui.LevelOverlayCanvas;
 import com.openggf.net.protocol.ControlMessage;
+import openggf.timeattack.CompetitionHudState;
 import openggf.timeattack.TimeAttackTimeFormat;
 import openggf.timeattack.TimeAttackTrackCatalog;
+import openggf.timeattack.ui.LapTimeFormat;
 import com.openggf.net.client.RemoteGhostRegistry;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/** Compact room panels that share the run clock's right-hand column and clear stock HUD/cards. */
+/**
+ * Compact room panels that share the run clock's right-hand column and clear stock HUD/cards.
+ *
+ * <p>A Competition round replaces the Time Attack window rows with its own: a dim estimated
+ * position ({@code P4/37}), and on an arena the lap in progress and the best lap (the native arena
+ * HUD already shows the total and the lap number, so neither is repeated). Separate one-row plates
+ * under it carry the armed cutoff (amber), a teleport swap (cyan) and the mass start. Every value
+ * comes from {@link CompetitionHudState}; this class decides only where it goes.
+ */
 public final class MultiplayerHudRenderer {
+    /**
+     * Top of the right column over an arena: below the native lap digit, which the solo arena view
+     * keeps at its native screen place (CompetitionHudObjectInstance's LAP piece: x_pos $190,
+     * y_pos $98, twelve rows either side, so its bottom is screen row 36 of the native frame).
+     */
+    static final int ARENA_TOP = 0x98 - 0x80 + 0x0C + 4;
+    /** Space between stacked right-column plates. */
+    static final int PLATE_GAP = 3;
     private static final int PROGRESS_MARGIN = 4;
     private static final int PROGRESS_HEIGHT = 13;
     private static final int HURT = 0xFFFF3B3B;
@@ -27,19 +44,24 @@ public final class MultiplayerHudRenderer {
 
     private MultiplayerHudRenderer() { }
 
-    public static void render(LevelOverlayCanvas canvas, MultiplayerHudState state,
+    public static void render(com.openggf.mods.ui.PixelCanvas canvas, MultiplayerHudState state,
                               int levelWidth, int localCentreX, boolean showMinimap) {
         render(canvas, state, levelWidth, localCentreX, showMinimap, false);
     }
 
-    public static void render(LevelOverlayCanvas canvas, MultiplayerHudState state,
+    public static void render(com.openggf.mods.ui.PixelCanvas canvas, MultiplayerHudState state,
                               int levelWidth, int localCentreX, boolean showMinimap, boolean localFinished) {
         HudTextLayout.Panel panel = layout(canvas.width(), canvas.height(), state, localCentreX, localFinished);
         if (panel == null) return;
         HudTextLayout.Panel chat = chatLayout(canvas.width(), canvas.height(), state, panel);
         if (chat != null) HudTextLayout.drawPanel(canvas, chat);
         HudTextLayout.drawPanel(canvas, panel);
-        if (state.remainingCountdownMillis() > 0) {
+        for (HudTextLayout.Panel plate : plates(canvas.width(), canvas.height(), state, panel, localFinished)) {
+            HudTextLayout.drawPanel(canvas, plate);
+        }
+        // An arena's visible count is the ROM's own neon 3-2-1-GO; only acts draw the room's digit.
+        boolean arena = state.competition().isCompetition() && state.competition().isArena();
+        if (state.remainingCountdownMillis() > 0 && !arena) {
             drawCountdown(canvas, Math.max(1, (state.remainingCountdownMillis() + 999) / 1000));
         }
         if (showMinimap && !localFinished && "RUNNING".equals(state.phase()) && levelWidth > 0) {
@@ -75,7 +97,7 @@ public final class MultiplayerHudRenderer {
     }
 
     /** The room's countdown digit, centred above the action; also drawn after a fast restart. */
-    public static void drawCountdown(LevelOverlayCanvas canvas, long seconds) {
+    public static void drawCountdown(com.openggf.mods.ui.PixelCanvas canvas, long seconds) {
         String count = Long.toString(seconds);
         CompactFont.shadowed(canvas, count, (canvas.width() - CompactFont.width(count, 2)) / 2,
                 88, 2, HudTextLayout.GOLD, 0xC0000000);
@@ -89,6 +111,11 @@ public final class MultiplayerHudRenderer {
         int accent = HudTextLayout.ACCENT;
         int desiredWidth = HudTextLayout.PANEL_WIDTH;
         int top = HudTextLayout.ROOM_TOP;
+        CompetitionHudState competition = state.competition();
+        boolean race = competition.isCompetition();
+        if (race && !state.connectionLost() && state.kickReason() == null) {
+            return competitionLayout(width, height, state, localFinished);
+        }
         if (state.connectionLost() || state.kickReason() != null) {
             lines.add(new HudTextLayout.Line(state.connectionLost() ? "CONNECTION LOST"
                     : "KICKED: " + state.kickReason(), 0xFFFF8E83));
@@ -150,6 +177,129 @@ public final class MultiplayerHudRenderer {
         return HudTextLayout.panel(width, top, desiredWidth, lines, accent);
     }
 
+    /**
+     * The Competition panel: the mass start before release, the live finish order once the local
+     * player is home, the results at round end, otherwise the position and (arenas) lap rows.
+     */
+    private static HudTextLayout.Panel competitionLayout(int width, int height, MultiplayerHudState state,
+                                                         boolean localFinished) {
+        CompetitionHudState competition = state.competition();
+        List<HudTextLayout.Line> lines = new ArrayList<>();
+        int top = competition.isArena() ? ARENA_TOP : HudTextLayout.ROOM_TOP;
+        if (competition.lateJoin()) {
+            lines.add(new HudTextLayout.Line("NEXT ROUND", HudTextLayout.GOLD));
+            lines.add(new HudTextLayout.Line("JOINED AFTER START", HudTextLayout.MUTED));
+            return HudTextLayout.panel(width, top, HudTextLayout.PANEL_WIDTH, lines, HudTextLayout.GOLD);
+        }
+        if (competition.massStartPhase() != CompetitionHudState.MassStartPhase.RELEASED
+                && !"ROUND_END".equals(state.phase())) {
+            lines.add(new HudTextLayout.Line(startLabel(competition), HudTextLayout.GOLD));
+            if (competition.massStartPhase() == CompetitionHudState.MassStartPhase.LOADING) {
+                lines.add(new HudTextLayout.Line("LOADING", HudTextLayout.MUTED));
+            }
+            return HudTextLayout.panel(width, top, HudTextLayout.PANEL_WIDTH, lines, HudTextLayout.GOLD);
+        }
+        boolean roundEnd = "ROUND_END".equals(state.phase());
+        if (roundEnd || localFinished) {
+            // The finish strip already says FINISHED; the head keeps the column's width for the place.
+            String head = (roundEnd ? "FINAL " : "") + positionLabel(competition);
+            lines.add(verified(head, roundEnd ? HudTextLayout.GOLD : HudTextLayout.WHITE, competition));
+            displayOrder(competition.placements()).stream()
+                    .filter(row -> roundEnd || row.outcome() == CompetitionHudState.Outcome.FINISHED)
+                    .limit(3).forEach(row -> lines.add(placement(state, row)));
+            return HudTextLayout.panel(width, HudTextLayout.aboveFinishStrip(height, lines), HudTextLayout.PANEL_WIDTH,
+                    lines, roundEnd ? HudTextLayout.GOLD : HudTextLayout.ACCENT);
+        }
+        lines.add(verified(positionLabel(competition), HudTextLayout.MUTED, competition));
+        if (competition.isArena()) {
+            lines.add(new HudTextLayout.Line("LAP " + competition.currentLap() + "/" + competition.lapCount() + " "
+                    + LapTimeFormat.lap(competition.currentLapFrames()), HudTextLayout.WHITE));
+            if (competition.bestLapFrames() >= 0) {
+                lines.add(new HudTextLayout.Line("BEST " + LapTimeFormat.lap(competition.bestLapFrames()),
+                        HudTextLayout.MUTED));
+            }
+        }
+        return HudTextLayout.panel(width, top, HudTextLayout.PANEL_WIDTH, lines, HudTextLayout.ACCENT);
+    }
+
+    /** {@code START 0:08}: the host's scheduled start, counted down in whole seconds. */
+    static String startLabel(CompetitionHudState competition) {
+        return "START " + LapTimeFormat.countdown(competition.timeToStartMillis());
+    }
+
+    /** {@code P4/37}, an estimate (never a placement): {@code P-/37} before one is known. */
+    static String positionLabel(CompetitionHudState competition) {
+        String position = competition.estimatedPosition() > 0 ? Integer.toString(competition.estimatedPosition()) : "-";
+        return "P" + position + "/" + Math.max(competition.fieldSize(), competition.estimatedPosition());
+    }
+
+    /** A row with an amber UNVERIFIED tag at its right in an unverified room. */
+    private static HudTextLayout.Line verified(String text, int colour, CompetitionHudState competition) {
+        return competition.unverified() ? HudTextLayout.Line.split(text, colour, "UNVERIFIED", HudTextLayout.AMBER)
+                : new HudTextLayout.Line(text, colour);
+    }
+
+    /** A placement row: rank, name, and the total (or DNF/DNS), with a dim mark on a swap-tainted row. */
+    private static HudTextLayout.Line placement(MultiplayerHudState state, CompetitionHudState.PlacementRow row) {
+        int colour = row.slot() >= 0 && row.slot() == state.localSlot() ? HudTextLayout.WHITE : HudTextLayout.MUTED;
+        String rank = row.outcome() == CompetitionHudState.Outcome.FINISHED ? row.rank() + ". " : "-  ";
+        return HudTextLayout.Line.named(rank, row.name() + (row.taintedSwap() ? " *" : ""),
+                row.slot() >= 0 ? state.nameColour(row.slot(), colour) : colour,
+                placementTime(state.competition(), row), colour);
+    }
+
+    /** A placement's shown time: the ROM display for the track, or the outcome when unfinished. */
+    public static String placementTime(CompetitionHudState competition, CompetitionHudState.PlacementRow row) {
+        return switch (row.outcome()) {
+            case FINISHED -> LapTimeFormat.finish(competition.trackKind(), row.totalFrames(), row.lapFrames());
+            case DNF -> "DNF";
+            case DNS -> "DNS";
+        };
+    }
+
+    /** Finishers in rank order, then DNF, then DNS (the host's ranks are kept; nothing is re-ranked). */
+    public static List<CompetitionHudState.PlacementRow> displayOrder(List<CompetitionHudState.PlacementRow> rows) {
+        return rows.stream().sorted(Comparator
+                .comparingInt((CompetitionHudState.PlacementRow row) -> row.outcome().ordinal())
+                .thenComparingInt(CompetitionHudState.PlacementRow::rank)).toList();
+    }
+
+    /**
+     * The one-row plates stacked under the room panel in the right column: the armed cutoff
+     * ({@code CUT 0:42}, amber) and a teleport swap ({@code SWAP ⇄ NAME} or {@code SWAP: NONE},
+     * cyan) while its notice lasts. Each sizes to its text.
+     */
+    public static List<HudTextLayout.Panel> plates(int width, int height, MultiplayerHudState state,
+                                                   HudTextLayout.Panel room, boolean localFinished) {
+        if (state == null || !state.active()) return List.of();
+        CompetitionHudState competition = state.competition();
+        if (!competition.isCompetition() || competition.lateJoin() || state.connectionLost()
+                || state.kickReason() != null || "ROUND_END".equals(state.phase())) {
+            return List.of();
+        }
+        // Under a room panel in the top band; above the finish strip's panel, the top lane is free.
+        boolean under = room != null && room.y() < height / 2;
+        int y = under ? room.y() + room.height() + PLATE_GAP
+                : competition.isArena() ? ARENA_TOP : HudTextLayout.ROOM_TOP;
+        List<HudTextLayout.Panel> plates = new ArrayList<>();
+        if (competition.cutoffArmed()) {
+            HudTextLayout.Panel cut = HudTextLayout.panel(width, y, HudTextLayout.PANEL_WIDTH,
+                    List.of(new HudTextLayout.Line("CUT " + LapTimeFormat.countdown(competition.cutoffRemainingMillis()),
+                            HudTextLayout.AMBER)), HudTextLayout.AMBER);
+            plates.add(cut);
+            y += cut.height() + PLATE_GAP;
+        }
+        CompetitionHudState.SwapNotice swap = competition.swapNotice();
+        if (swap.remainingFrames() > 0 && !localFinished) {
+            HudTextLayout.Line line = swap.partnerName().isEmpty()
+                    ? new HudTextLayout.Line("SWAP: NONE", HudTextLayout.ACCENT)
+                    : HudTextLayout.Line.named("SWAP " + HudTextLayout.SWAP_MARK + " ", swap.partnerName(),
+                            HudTextLayout.WHITE, "", HudTextLayout.ACCENT);
+            plates.add(HudTextLayout.panel(width, y, HudTextLayout.PANEL_WIDTH, List.of(line), HudTextLayout.ACCENT));
+        }
+        return List.copyOf(plates);
+    }
+
     /** A ranked row: rank, the player's name in their colour, and the time in a right-aligned column. */
     private static HudTextLayout.Line standing(MultiplayerHudState state, ControlMessage.StandingsRow row) {
         int colour = row.rank() == state.localRank() ? HudTextLayout.WHITE : HudTextLayout.MUTED;
@@ -182,18 +332,10 @@ public final class MultiplayerHudRenderer {
                 : "ROUND_END".equals(state.phase()) ? "NO RANKED TIME" : "FINISHED";
     }
 
+    /** A track key's catalog label (an act's, or an arena's ROM zone name); the key itself when unknown. */
     static String trackLabel(String key) {
-        String[] parts = key == null ? new String[0] : key.split(":", -1);
-        if (parts.length != 3) return key == null ? "?" : key;
-        try {
-            int zone = Integer.parseInt(parts[1]);
-            int act = Integer.parseInt(parts[2]);
-            return TimeAttackTrackCatalog.eligibleFor(parts[0]).stream()
-                    .filter(track -> track.zone() == zone && track.act() == act)
-                    .map(TimeAttackTrackCatalog.Track::label).findFirst().orElse(key);
-        } catch (NumberFormatException ignored) {
-            return key;
-        }
+        if (key == null) return "?";
+        return TimeAttackTrackCatalog.forKey(key).map(TimeAttackTrackCatalog.Track::label).orElse(key);
     }
 
     /**
@@ -224,18 +366,36 @@ public final class MultiplayerHudRenderer {
             }
         }
         int stock = com.openggf.net.identity.PlayerAppearance.STOCK.nameArgb();
+        // A Competition round places racers by their share of the whole race (lap or star post, then
+        // the distance within it), so a lapped racer is behind on the strip, not level with you.
+        CompetitionHudState competition = state.competition();
+        java.util.Map<Integer, Integer> share = competition.isCompetition() ? competition.progressPermille()
+                : java.util.Map.of();
+        if (competition.isCompetition() && competition.isArena()) {
+            for (int tick : MinimapLayout.lapTicks(competition.lapCount(), trackWidth)) {
+                canvas.fill(left + tick + 1, middle - 2, 1, 5, 0xFF596F85);
+            }
+        }
         // {x on the track, slot, local}.
         List<int[]> markers = new ArrayList<>();
-        if (localCentreX >= 0) {
-            markers.add(new int[] {progressX(localCentreX, levelWidth, trackWidth), state.localSlot(), 1,
-                    state.hurtFlash(state.localSlot()) > 0 ? 1 : 0});
+        Integer localShare = share.get(state.localSlot());
+        if (localShare != null || localCentreX >= 0) {
+            int at = localShare != null ? MinimapLayout.permilleX(localShare, trackWidth)
+                    : progressX(localCentreX, levelWidth, trackWidth);
+            markers.add(new int[] {at, state.localSlot(), 1, state.hurtFlash(state.localSlot()) > 0 ? 1 : 0});
         }
         for (var player : state.farPlayers()) {
             if (player.status() != -1 && player.status() != 1 && player.status() != 2) continue;
             if (player.slot() == state.localSlot()) continue;
-            int position = player.status() == 2 ? levelWidth : player.cellX() * 64;
-            markers.add(new int[] {progressX(position, levelWidth, trackWidth), player.slot(), 0,
-                    state.hurtFlash(player.slot()) > 0 ? 1 : 0});
+            Integer racerShare = player.status() == 2 ? Integer.valueOf(MinimapLayout.PERMILLE) : share.get(player.slot());
+            int at;
+            if (!share.isEmpty()) {
+                if (racerShare == null) continue;
+                at = MinimapLayout.permilleX(racerShare, trackWidth);
+            } else {
+                at = progressX(player.status() == 2 ? levelWidth : player.cellX() * 64, levelWidth, trackWidth);
+            }
+            markers.add(new int[] {at, player.slot(), 0, state.hurtFlash(player.slot()) > 0 ? 1 : 0});
         }
         int base = y + PROGRESS_HEIGHT - 2;
         List<int[]> placed = stack(markers);

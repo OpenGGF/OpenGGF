@@ -304,26 +304,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
             objectManager.addAuxiliaryDynamicObject(object);
             return;
         }
-        // Rewind: if a captured entry is pending for this dynamic class (Shield/Stars),
-        // honour both the captured slot and the captured per-object field surface
-        // so the post-restore re-spawn lands on the same slot the reference run had
-        // and reapplies state like animation cursors that the constructor zeros.
-        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry restored =
-                consumePendingRestoredEntry(object);
-        if (restored != null) {
-            // A shield granted inside a creator callback retains that fault owner after player restore.
-            objectManager.restoreDynamicCallbackOwner(object, restored.ownerModId());
-            if (restored.objectId() != null) {
-                objectManager.addRestoredDynamicObjectAtSlot(
-                        object, restored.slotIndex(), restored.objectId());
-            } else {
-                // Legacy/injected entries predate captured dynamic identity.
-                ObjectLifetimeOps.addDynamicAtReservedSlot(
-                        objectManager, object, restored.slotIndex());
-            }
-            if (object instanceof AbstractObjectInstance aoi) {
-                aoi.restoreRewindState(restored.state());
-            }
+        if (objectManager.completePendingPlayerBoundObject(object)) {
             return;
         }
         int fixedSlot = fixedPowerUpSlotIndex(object);
@@ -341,24 +322,6 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
             return false;
         }
         return owner.isCpuControlled();
-    }
-
-    private com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry
-            consumePendingRestoredEntry(ObjectInstance object) {
-        if (object instanceof ShieldObjectInstance) {
-            ShieldObjectInstance shield = (ShieldObjectInstance) object;
-            return objectManager.consumePendingPlayerBoundEntry(
-                    ShieldObjectInstance.class,
-                    entry -> object.getClass().getName().equals(entry.className())
-                            && entry.playerOwner() == shield.getPlayer());
-        }
-        if (object instanceof PowerUpObject powerUp && powerUp.isInvincibilityStars()) {
-            return objectManager.consumePendingPlayerBoundEntry(
-                    InvincibilityStarsObjectInstance.class,
-                    entry -> object.getClass().getName().equals(entry.className())
-                            && entry.playerOwner() == powerUp.boundPlayer());
-        }
-        return null;
     }
 
     private int fixedPowerUpSlotIndex(ObjectInstance object) {

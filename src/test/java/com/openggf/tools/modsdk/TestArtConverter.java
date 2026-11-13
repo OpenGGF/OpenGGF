@@ -152,7 +152,10 @@ class TestArtConverter {
                         paletteIndex: 0
                         priority: false
                 """;
-        Files.writeString(yaml, manifest(0, 0, 8, 8) + secondFrame);
+        Files.writeString(yaml, manifest(0, 0, 8, 8) + secondFrame + "\nanimations:\n  WAIT: { frames: [0, 1], durations: [1, 7], end: loop-back, loopBackSteps: 1 }\n"
+                + "  WALK: { frames: [0, 1], speedDriven: true, end: loop, slopes: [[0, 1], [1, 0], [0, 0], [1, 1]] }\n"
+                + "  DUCK: { frames: [0, 1], durations: [2, 2], end: hold }\n"
+                + "  HURT: { frames: [1], durations: [4], end: next, next: WAIT }\n");
         Path output = temp.resolve("playable.ggfp");
         java.io.ByteArrayOutputStream message = new java.io.ByteArrayOutputStream();
 
@@ -165,6 +168,16 @@ class TestArtConverter {
         assertEquals(0, materialized.art().basePatternIndex(),
                 "GGFP remains position-independent; runtime rebases mod main art");
         assertEquals(2, materialized.art().bankSize());
+        var parsed = com.openggf.level.objects.PlayableSheetReader.read(Files.readAllBytes(output));
+        assertEquals(parsed, com.openggf.level.objects.PlayableSheetReader.read(PlayableSheetWriter.write(parsed)));
+        var wait = materialized.art().animationSet().getScript(com.openggf.game.CanonicalAnimation.WAIT.ordinal());
+        assertEquals(com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP_BACK, wait.endAction());
+        assertEquals(7, wait.endParam(), "one authored seven-tick step expands to seven entries");
+        assertEquals(com.openggf.sprites.animation.SpriteAnimationEndAction.HOLD,
+                materialized.art().animationSet().getScript(com.openggf.game.CanonicalAnimation.DUCK.ordinal()).endAction());
+        assertEquals(0xFF, materialized.art().animationSet().getScript(com.openggf.game.CanonicalAnimation.WALK.ordinal()).delay());
+        assertEquals(com.openggf.sprites.animation.SpriteAnimationEndAction.SWITCH,
+                materialized.art().animationSet().getScript(com.openggf.game.CanonicalAnimation.HURT.ordinal()).endAction());
         assertEquals(0, materialized.art().dplcFrames().get(0).requests().getFirst().destinationOffset());
         assertEquals(1, materialized.art().dplcFrames().get(1).requests().getFirst().destinationOffset());
         assertTrue(message.toString().contains("bank cost=2 patterns"), message.toString());

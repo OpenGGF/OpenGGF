@@ -70,7 +70,7 @@ class TestSpecialStageVisualTraceSession {
     void sonicOneStandaloneRowsUseTheirTypedFourteenColumnParser()
             throws Exception {
         Path directory = Path.of("src", "test", "resources", "traces",
-                "s1", "special_stage");
+                "s1", "runs", "s1-ghz-maze-roundtrip", "ss");
 
         TraceRunSpecialStageRows rows = TraceRunSpecialStageRows.load(
                 "s1_special_stage", directory);
@@ -101,7 +101,7 @@ class TestSpecialStageVisualTraceSession {
     void sonicThreeStandaloneRowsPreserveRecordedLagAdmission()
             throws Exception {
         Path directory = Path.of("src", "test", "resources", "traces",
-                "s3k", "special_stage");
+                "s3k", "runs", "s3-knux-multibonus-ss", "ss");
         TraceRunSpecialStageRows rows = TraceRunSpecialStageRows.load(
                 "s3k_special_stage", directory);
         S3kSpecialStageTraceData typed =

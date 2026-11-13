@@ -337,7 +337,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
         // Lives icon - Nemesis compressed, character-specific
         int livesIconAddr = resolveLifeIconAddr();
-        hudLivesPatterns = PatternDecompressor.nemesis(rom, livesIconAddr);
+        hudLivesPatterns = Sonic3kCharacterPresentation.hud(rom,
+                PatternDecompressor.nemesis(rom, livesIconAddr), Sonic3kCharacterPresentation.active());
         LOG.info("Loaded " + (hudLivesPatterns != null ? hudLivesPatterns.length : 0) + " HUD lives icon patterns");
 
         // Lives digits (0-9) - uncompressed
@@ -447,17 +448,20 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
         // Extend pattern array to cover life icon at offset 0x310
         // (1-Up monitor icon uses ArtTile_Player_Life_Icon = ArtTile_Monitors + $310)
+        Pattern[] monitorLifePatterns = Sonic3kCharacterPresentation.oneUp(
+                PatternDecompressor.nemesis(rom, resolveLifeIconAddr()),
+                Sonic3kCharacterPresentation.active());
         int lifeArtOffset = 0x310;
-        int requiredSize = lifeArtOffset + (hudLivesPatterns != null ? hudLivesPatterns.length : 0);
+        int requiredSize = lifeArtOffset + (monitorLifePatterns != null ? monitorLifePatterns.length : 0);
         requiredSize = Math.max(requiredSize, monitorBasePatterns.length);
 
         Pattern[] monitorPatterns = new Pattern[requiredSize];
         System.arraycopy(monitorBasePatterns, 0, monitorPatterns, 0, monitorBasePatterns.length);
 
         // Copy life icon patterns at offset 0x310
-        if (hudLivesPatterns != null && hudLivesPatterns.length > 0) {
-            System.arraycopy(hudLivesPatterns, 0, monitorPatterns, lifeArtOffset,
-                    Math.min(hudLivesPatterns.length, monitorPatterns.length - lifeArtOffset));
+        if (monitorLifePatterns != null && monitorLifePatterns.length > 0) {
+            System.arraycopy(monitorLifePatterns, 0, monitorPatterns, lifeArtOffset,
+                    Math.min(monitorLifePatterns.length, monitorPatterns.length - lifeArtOffset));
         }
 
         // Fill gaps with empty patterns to prevent NPEs
@@ -473,7 +477,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
         // Create and register sprite sheet
         ObjectSpriteSheet monitorSheet = new ObjectSpriteSheet(monitorPatterns, frames, 0, 1);
-        registerSheet(Sonic3kObjectArtKeys.MONITOR, monitorSheet);
+        registerSheet(Sonic3kObjectArtKeys.MONITOR, com.openggf.game.presentation.CharacterIconPalette.monitor(
+                monitorSheet, Sonic3kCharacterPresentation.active(),
+                com.openggf.game.CharacterPresentation.Host.S3K, lifeArtOffset));
 
         // Build and register animation set (Anim - Monitor.asm)
         SpriteAnimationSet monitorAnimations = buildMonitorAnimations();
@@ -1924,6 +1930,14 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                     new EnemyKosEntry(
                             Sonic3kConstants.ART_KOSM_ROCKN_ADDR,
                             Sonic3kConstants.ARTTILE_ROCKN));
+            // Both LRZ acts select the same ordered native batch. Standalone
+            // renderer decoding does not submit these Queue_Kos_Module jobs.
+            // LoadEnemyArt (sonic3k.asm:64321-64353),
+            // PLCKosM_LRZ (sonic3k.asm:64463-64467). No FixBugs conditional.
+            case Sonic3kZoneIds.ZONE_LRZ -> List.of(
+                    new EnemyKosEntry(Sonic3kConstants.ART_KOSM_FIREWORM_SEGMENTS_ADDR, 0x512),
+                    new EnemyKosEntry(Sonic3kConstants.ART_KOSM_IWAMODOKI_ADDR, 0x530),
+                    new EnemyKosEntry(Sonic3kConstants.ART_KOSM_TOXOMISTER_ADDR, 0x562));
             // Offs_LoadEnemyArt -> PLCKosM_SSZ, also restored by loc_91570.
             // This is physical residency, independent of the prepared standalone sheet.
             case Sonic3kZoneIds.ZONE_SSZ -> List.of(new EnemyKosEntry(

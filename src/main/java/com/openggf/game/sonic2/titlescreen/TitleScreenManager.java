@@ -1,5 +1,9 @@
 package com.openggf.game.sonic2.titlescreen;
 
+import com.openggf.game.presentation.TitleCharacterPresentation;
+import com.openggf.game.CharacterPresentation.Host;
+import com.openggf.game.CharacterPresentation.TitlePart;
+
 import com.openggf.control.InputHandler;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -52,6 +56,22 @@ import static com.openggf.control.InputHandlerInternalAccess.nativeMenuKeyPresse
  * </ul>
  */
 public class TitleScreenManager implements TitleScreenProvider {
+    private TitleCharacterPresentation titleLead;
+    private TitleCharacterPresentation titleSidekick;
+    private boolean titleCharactersResolved;
+    private void resolveTitleCharacters() {
+        if (titleCharactersResolved) return;
+        titleCharactersResolved = true;
+        titleLead = TitleCharacterPresentation.configured(Host.S2, false);
+        titleSidekick = TitleCharacterPresentation.configured(Host.S2, true);
+        // Exchange presentation owners, never object state or native drawing passes.
+        if (titleLead != null && titleSidekick != null && titleLead.swapsS2Slots()) {
+            var originalLead = titleLead;
+            titleLead = titleSidekick;
+            titleSidekick = originalLead;
+        }
+    }
+
     private static final Logger LOGGER = Logger.getLogger(TitleScreenManager.class.getName());
 
     private static TitleScreenManager instance;
@@ -68,6 +88,7 @@ public class TitleScreenManager implements TitleScreenProvider {
 
     // Fade timing
     private int fadeTimer = 0;
+    private int competitionExitFadePass;
     private static final int FADE_DURATION = 22;
     private static final Palette CLEARED_PALETTE = new Palette();
 
@@ -338,6 +359,8 @@ public class TitleScreenManager implements TitleScreenProvider {
 
     @Override
     public void initialize() {
+        titleCharactersResolved = false; titleLead = null; titleSidekick = null;
+        clearCompetitionExitPalette();
         LOGGER.info("Initializing title screen");
 
         // Load data if not already loaded
@@ -456,7 +479,10 @@ public class TitleScreenManager implements TitleScreenProvider {
             case INTRO_TEXT_FADE_OUT -> updateIntroTextFadeOut(input);
             case FADE_IN -> updateFadeIn(input);
             case ACTIVE -> updateActive(input);
-            case INACTIVE, EXITING -> { }
+            case EXITING -> {
+                if (competitionExitPalette() && competitionExitFadePass < FADE_DURATION) competitionExitFadePass++;
+            }
+            case INACTIVE -> { }
         }
     }
 
@@ -645,6 +671,7 @@ public class TitleScreenManager implements TitleScreenProvider {
                     case 1 -> TitleScreenAction.TWO_PLAYER;
                     default -> TitleScreenAction.OPTIONS;
                 };
+                competitionExitFadePass = 0;
                 state = State.EXITING;
                 LOGGER.info("Title screen exiting");
             }
@@ -1041,6 +1068,13 @@ public class TitleScreenManager implements TitleScreenProvider {
             return;
         }
 
+        if (competitionExitPalette()) {
+            // MenuScreen (s2.asm:11717-11724) calls
+            // Pal_FadeToBlack (s2.asm:3370-3383):
+            // each colour removes its own first nonzero channel, not a global RGB overlay.
+            gm.setPaletteFadePresentation(com.openggf.graphics.PaletteFadePresentation.Mode.TO_BLACK,
+                    competitionExitFadePass, com.openggf.graphics.PaletteFadePresentation.ALL_LINES);
+        }
         if (state == State.SEGA_LOGO) {
             drawSegaLogo(gm);
             return;
@@ -1536,7 +1570,31 @@ public class TitleScreenManager implements TitleScreenProvider {
     private void drawSprite(AnimatedSprite sprite) {
         int screenX = sprite.x - 128 + xOffset(); // centre with the logo (0 at native)
         int screenY = sprite.y - 128;
-        spriteRenderer.drawFrameIndex(sprite.mappingFrame, screenX, screenY);
+        resolveTitleCharacters();
+        var owner = sprite == sonicSprite || sprite == sonicHandSprite ? titleLead
+                : sprite == tailsSprite || sprite == tailsHandSprite ? titleSidekick : null;
+        var part = sprite == sonicHandSprite || sprite == tailsHandSprite ? TitlePart.HAND : TitlePart.BODY;
+        if (sprite == sonicSprite || sprite == tailsSprite) {
+            // Obj0E_MaskingSprite_Init (s2.asm:26688-26702), TitleScreen_Loop
+            // (s2.asm:4462-4490): the emblem's mask suppresses body rows 112..175.
+            // Translate that output into clipping, including transparent emblem gaps;
+            // repainting Plane A alone cannot mask a creator's different silhouette.
+            var gm = GameServices.graphics();
+            gm.flushPatternBatch();
+            gm.flushScreenSpace();
+            for (int[] band : new int[][] {{0, 112}, {176, SCREEN_HEIGHT - 176}}) {
+                if (!enableMdScissorRect(gm, 0, band[0], viewportWidth(), band[1])) continue;
+                gm.beginPatternBatch();
+                if (owner == null || !owner.draw(part, sprite.mappingFrame, screenX, screenY))
+                    spriteRenderer.drawFrameIndex(sprite.mappingFrame, screenX, screenY);
+                gm.flushPatternBatch();
+                gm.flushScreenSpace();
+                gm.disableScissor();
+            }
+            gm.beginPatternBatch();
+        } else if (owner == null || !owner.draw(part, sprite.mappingFrame, screenX, screenY)) {
+            spriteRenderer.drawFrameIndex(sprite.mappingFrame, screenX, screenY);
+        }
     }
 
     /**
@@ -1906,10 +1964,32 @@ public class TitleScreenManager implements TitleScreenProvider {
         Palette bgPal = dataLoader.getBackgroundPalette();
         if (bgPal != null) {
             Palette.Color backdrop = bgPal.getColor(0);
-            com.openggf.level.PaletteDisplayColor.glClear(backdrop, com.openggf.game.GameServices.graphics());
+            var graphics = com.openggf.game.GameServices.graphics();
+            // MenuScreen (s2.asm:11717-11724) fades the outgoing 2P title's
+            // backdrop along with its CRAM. Keep the campaign title path intact.
+            if (state == State.EXITING && titleSelection == 1) {
+                int rgb = com.openggf.graphics.PaletteFadePresentation.fadeRgb(
+                        backdrop.r & 255, backdrop.g & 255, backdrop.b & 255,
+                        com.openggf.graphics.PaletteFadePresentation.Mode.TO_BLACK, competitionExitFadePass);
+                int displayed = com.openggf.graphics.color.DisplayColorConverter.toPackedRgb(
+                        (rgb >>> 16) & 255, (rgb >>> 8) & 255, rgb & 255,
+                        graphics.getDisplayColorProfile(), graphics.getDisplayColorExpansion());
+                glClearColor(com.openggf.level.PaletteDisplayColor.red(displayed),
+                        com.openggf.level.PaletteDisplayColor.green(displayed),
+                        com.openggf.level.PaletteDisplayColor.blue(displayed), 1);
+            } else com.openggf.level.PaletteDisplayColor.glClear(backdrop, graphics);
         } else {
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         }
+    }
+
+    private boolean competitionExitPalette() {
+        return state == State.EXITING && titleSelection == 1;
+    }
+
+    private void clearCompetitionExitPalette() {
+        if (competitionExitPalette()) GameServices.graphics().clearPaletteFadePresentation();
+        competitionExitFadePass = 0;
     }
 
     private boolean finalPalettesWereCleared() {
@@ -1941,6 +2021,8 @@ public class TitleScreenManager implements TitleScreenProvider {
 
     @Override
     public void reset() {
+        titleCharactersResolved = false; titleLead = null; titleSidekick = null;
+        clearCompetitionExitPalette();
         GameServices.audio().stopSegaPcm();
         state = State.INACTIVE;
         flashingStarVisible = false;
@@ -1970,7 +2052,7 @@ public class TitleScreenManager implements TitleScreenProvider {
 
     @Override
     public boolean isExiting() {
-        return state == State.EXITING;
+        return state == State.EXITING && (titleSelection != 1 || competitionExitFadePass >= FADE_DURATION);
     }
 
     @Override

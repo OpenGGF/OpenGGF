@@ -408,3 +408,13 @@ The seven shared cases passed in the focused run; this does not qualify cold
 reachability, live rewind-floor recording, other configurations or complete routes.
 Those inherited obligations remain open. See the
 [shared ownership design](../../designs/2026-11-03-seamless-request-retargeting.md).
+
+## Constructor-family rewind ownership — 2026-11-07
+
+The end-boss restore candidate hook offers explosion/flame roles through the ship,
+matching their live spawning owner. `TestS3kCnzEndBossGraphRewind` is the focused
+strict graph/forward-replay oracle; the shared family witness covers interleaved
+parents. Validation for this increment is recorded in the existing
+[code-climb audit](../../audits/2026-11-06-ai-code-climb.md#sol-implementation--opus-review-continuation--2026-11-07).
+This restore-wiring correction adds no route, viewport, donor or team certification;
+the inherited matrix gaps above remain open.

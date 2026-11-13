@@ -1,0 +1,321 @@
+{
+  "method": "Fresh built-in GPT Image; native real-palette 8x references, approved model and core; two independent takes per frame, takeA selected for rounder plates and consistent light. Native-colour-budget ordered-dither reduction. No asset backing matte.",
+  "frames": [
+    {
+      "host": "S1",
+      "selector": 0,
+      "native_area": 4065,
+      "authored_area": 4342,
+      "native_box": [
+        7,
+        0,
+        72,
+        88
+      ],
+      "native_hotspot": [
+        0,
+        -8
+      ],
+      "take": "A"
+    },
+    {
+      "host": "S1",
+      "selector": 1,
+      "native_area": 4258,
+      "authored_area": 4570,
+      "native_box": [
+        6,
+        0,
+        80,
+        83
+      ],
+      "native_hotspot": [
+        0,
+        -16
+      ],
+      "take": "A"
+    },
+    {
+      "host": "S1",
+      "selector": 2,
+      "native_area": 4212,
+      "authored_area": 4355,
+      "native_box": [
+        6,
+        0,
+        80,
+        80
+      ],
+      "native_hotspot": [
+        0,
+        -16
+      ],
+      "take": "A"
+    },
+    {
+      "host": "S1",
+      "selector": 3,
+      "native_area": 4392,
+      "authored_area": 4741,
+      "native_box": [
+        0,
+        2,
+        79,
+        88
+      ],
+      "native_hotspot": [
+        -8,
+        -8
+      ],
+      "take": "A"
+    },
+    {
+      "host": "S1",
+      "selector": 4,
+      "native_area": 4375,
+      "authored_area": 4746,
+      "native_box": [
+        0,
+        0,
+        72,
+        87
+      ],
+      "native_hotspot": [
+        -16,
+        -8
+      ],
+      "take": "A"
+    },
+    {
+      "host": "S1",
+      "selector": 5,
+      "native_area": 4820,
+      "authored_area": 5172,
+      "native_box": [
+        4,
+        6,
+        85,
+        94
+      ],
+      "native_hotspot": [
+        0,
+        0
+      ],
+      "take": "A"
+    },
+    {
+      "host": "S1",
+      "selector": 6,
+      "native_area": 4831,
+      "authored_area": 5226,
+      "native_box": [
+        4,
+        6,
+        85,
+        94
+      ],
+      "native_hotspot": [
+        0,
+        0
+      ],
+      "take": "A",
+      "composition": "Stable generated frame5 head/torso, generated per-frame hand crop registered to native coordinates"
+    },
+    {
+      "host": "S1",
+      "selector": 7,
+      "native_area": 4615,
+      "authored_area": 5153,
+      "native_box": [
+        4,
+        6,
+        85,
+        94
+      ],
+      "native_hotspot": [
+        0,
+        0
+      ],
+      "take": "A",
+      "composition": "Stable generated frame5 head/torso, generated per-frame hand crop registered to native coordinates"
+    },
+    {
+      "host": "S3K",
+      "selector": 1,
+      "native_box": null,
+      "take": "semantic blank",
+      "native_area": 0,
+      "authored_area": 0
+    },
+    {
+      "host": "S3K",
+      "selector": 2,
+      "native_box": [
+        159,
+        44,
+        169,
+        58
+      ],
+      "take": "A",
+      "native_area": 104,
+      "authored_area": 90
+    },
+    {
+      "host": "S3K",
+      "selector": 3,
+      "native_box": [
+        163,
+        34,
+        177,
+        54
+      ],
+      "take": "A",
+      "native_area": 173,
+      "authored_area": 192
+    },
+    {
+      "host": "S3K",
+      "selector": 4,
+      "native_box": [
+        170,
+        22,
+        189,
+        45
+      ],
+      "take": "A",
+      "native_area": 239,
+      "authored_area": 323
+    },
+    {
+      "host": "S3K",
+      "selector": 5,
+      "native_box": [
+        178,
+        9,
+        202,
+        35
+      ],
+      "take": "A",
+      "native_area": 351,
+      "authored_area": 475
+    },
+    {
+      "host": "S3K",
+      "selector": 6,
+      "native_box": [
+        184,
+        0,
+        219,
+        35
+      ],
+      "take": "A",
+      "native_area": 825,
+      "authored_area": 974
+    },
+    {
+      "host": "S3K",
+      "selector": 7,
+      "native_box": [
+        148,
+        0,
+        254,
+        80
+      ],
+      "take": "A",
+      "native_area": 7210,
+      "authored_area": 7292
+    },
+    {
+      "host": "S3K",
+      "selector": 8,
+      "native_box": [
+        0,
+        9,
+        320,
+        224
+      ],
+      "take": "A",
+      "native_area": 52124,
+      "authored_area": 58577
+    },
+    {
+      "host": "S3K",
+      "selector": 9,
+      "native_box": [
+        0,
+        21,
+        320,
+        224
+      ],
+      "take": "A",
+      "native_area": 40910,
+      "authored_area": 50444
+    },
+    {
+      "host": "S3K",
+      "selector": 10,
+      "native_box": [
+        44,
+        0,
+        233,
+        224
+      ],
+      "take": "A",
+      "native_area": 23873,
+      "authored_area": 22011
+    },
+    {
+      "host": "S3K",
+      "selector": 11,
+      "native_box": [
+        69,
+        4,
+        231,
+        223
+      ],
+      "take": "A",
+      "native_area": 18713,
+      "authored_area": 20318
+    },
+    {
+      "host": "S3K",
+      "selector": 12,
+      "native_box": [
+        96,
+        0,
+        232,
+        223
+      ],
+      "take": "A",
+      "native_area": 19249,
+      "authored_area": 17930
+    },
+    {
+      "host": "S3K",
+      "selector": 13,
+      "native_box": [
+        90,
+        8,
+        225,
+        136
+      ],
+      "take": "A",
+      "native_area": 12222,
+      "authored_area": 11536
+    }
+  ],
+  "sources": {
+    "s3cg8": "c2f777237826e01d74d7ce4b7e05f5e843a9b48f3d62ceee4931e6f4d4795351",
+    "s3cg9": "0232ce12a77fca5f6f8706a7b4683c23fa4e07752d8041dee07169eecc8dc732",
+    "s3cg10": "b791960ac9296e52c352cdec83506d4841a3905b6dd9ed7fcff2e22f5cd03c79",
+    "s3cg11": "4fc377f944ec6f17059822a1b25fc9e830c328e949dd473c8f63e95759153519",
+    "s3cg12": "b585233f67c4c0cfa40da7a1ef9986463480e670539db8b48b35ca6320b6d98b",
+    "s3cg13": "1b0d0481471d8c34ecfddc5ea34b6315cc0e75885c1294a3808949f490434919",
+    "s3ballsResult": "c564d569851a776d4be0c370326180164cd9bf7964e9979d46afb199055c01a1",
+    "s1allResult": "6cca82e449df9eaa3ac8a68829796b24bc671f8dc68d16739621908880a02c55"
+  },
+  "size_checks": {
+    "S1": 1.0377625894600224,
+    "S3K": 1.0394752925760493
+  }
+}

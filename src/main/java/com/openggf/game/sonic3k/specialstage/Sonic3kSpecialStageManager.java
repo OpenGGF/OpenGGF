@@ -53,6 +53,13 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
     private boolean finished;
     private boolean emeraldCollected;
     private boolean superEmeraldMode;
+    /**
+     * Non-null while this stage runs as a Blue Spheres stage
+     * ({@code Blue_spheres_stage_flag} set). The generated layout is fixed for
+     * the stage's lifetime, so rewind keeps the reference.
+     */
+    private com.openggf.game.sonic3k.bluespheres.S3kBlueSpheresStage blueSpheresStage;
+    private PlayerCharacter blueSpheresCharacter;
     private int ringsCollected;
     private int spheresLeft;
     private int frameCounter;
@@ -270,6 +277,30 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
     }
 
     public void initialize(int stageIndex, EmeraldRewardKind rewardKind) throws IOException {
+        blueSpheresStage = null;
+        blueSpheresCharacter = null;
+        initializeStage(stageIndex, rewardKind);
+    }
+
+    /**
+     * Starts a Blue Spheres stage: the Blue Spheres title sets
+     * {@code Blue_spheres_stage_flag}, copies {@code Player_option} to
+     * {@code Player_mode} and clears {@code Current_special_stage}
+     * (loc_4D008, sonic3k.asm:100741-100751). sub_85B0 then takes
+     * the generated layout at loc_86C8.
+     */
+    public void initializeBlueSpheres(com.openggf.game.sonic3k.bluespheres.S3kBlueSpheresStage stage,
+                                      PlayerCharacter character) throws IOException {
+        blueSpheresStage = Objects.requireNonNull(stage, "stage");
+        blueSpheresCharacter = Objects.requireNonNull(character, "character");
+        initializeStage(0, EmeraldRewardKind.CHAOS_EMERALD);
+    }
+
+    public boolean isBlueSpheresStage() {
+        return blueSpheresStage != null;
+    }
+
+    private void initializeStage(int stageIndex, EmeraldRewardKind rewardKind) throws IOException {
         pacingOwner.beginEntry();
         java.util.Objects.requireNonNull(rewardKind, "rewardKind");
         LOGGER.info("Initializing S3K special stage " + stageIndex);
@@ -298,7 +329,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         this.musicSpedUp = false;
 
         // Resolve character from configuration
-        this.playerCharacter = resolvePlayerCharacter();
+        this.playerCharacter = blueSpheresCharacter != null ? blueSpheresCharacter : resolvePlayerCharacter();
         this.tailsEnabled = (playerCharacter == PlayerCharacter.SONIC_AND_TAILS);
         this.superEmeraldMode = isSuperEmeraldReward(rewardKind);
 
@@ -364,7 +395,10 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         renderer.setSphereMappingData(rom.readBytes(Sonic3kSpecialStageRomOffsets.MAP_SPHERE,
                 Sonic3kSpecialStageRomOffsets.MAP_SPHERE_SIZE));
         byte[] stageData;
-        if (!superEmeraldMode && currentStage < 8) {
+        if (blueSpheresStage != null) {
+            // sub_85B0: tst.b Blue_spheres_stage_flag / bne loc_86C8.
+            stageData = blueSpheresStage.layout();
+        } else if (!superEmeraldMode && currentStage < 8) {
             // S3 layouts
             long layoutAddr = Sonic3kSpecialStageRomOffsets.LAYOUT_S3_STAGE_1
                     + (long) currentStage * Sonic3kSpecialStageRomOffsets.LAYOUT_STAGE_SIZE;
@@ -385,12 +419,13 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         var module = world == null ? null : world.getGameModule();
         BlueSphereLayoutPolicy layoutPolicy = module == null ? null
                 : module.getGameService(BlueSphereLayoutPolicy.class);
-        if (layoutPolicy != null) {
+        if (layoutPolicy != null && blueSpheresStage == null) {
             stageData = S3kDifficultyRules.blueSphereLayout(stageData,
                     layoutPolicy.transformLayout(currentStage, stageData.clone()));
         }
         int[] params = grid.loadFromLayoutData(stageData);
-        player.initialize(params[0], params[1], params[2], false);
+        // loc_842C: Blue_spheres_stage_flag selects the 45-second rate timer.
+        player.initialize(params[0], params[1], params[2], blueSpheresStage != null);
         spheresLeft = grid.countBlueSpheres();
         ringsLeft = params[3]; // ROM: Special_stage_rings_left from layout trailer
         LOGGER.info("Loaded S3K SS layout for stage " + currentStage +
@@ -475,6 +510,9 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         nextBase += iconsPatterns.length;
 
         // Player art (Sonic by default)
+        renderer.loadCharacterStageArt();
+        palette.bindCharacterContext(renderer.characterPaletteContext());
+        palette.bindTailsContext(renderer.tailsPaletteContext());
         Pattern[] playerPatterns = loadPlayerArt();
         renderer.setPlayerPatternBase(nextBase);
         for (int i = 0; i < playerPatterns.length; i++) {
@@ -604,7 +642,14 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         // skMode=true would be for S&K standalone or super emerald stages.
         // Use SK palettes for Super Emerald stages and stages 8+ (S&K layout set)
         boolean skPalettes = superEmeraldMode || currentStage >= 8;
-        palette.initialize(dataLoader, currentStage & 7,
+        int paletteIndex = currentStage & 7;
+        if (blueSpheresStage != null) {
+            // loc_8798: Blue_spheres_current_stage+2 bits 0-2 pick the palette
+            // and bit 3 the +$130 S&K copy.
+            skPalettes = blueSpheresStage.skPalette();
+            paletteIndex = blueSpheresStage.paletteIndex();
+        }
+        palette.initialize(dataLoader, paletteIndex,
                 playerCharacter == PlayerCharacter.KNUCKLES, skPalettes);
         // The palette reaches the shared lines only once the entry
         // Pal_FadeToWhite has elapsed: the ROM loads it inside the masked-
@@ -903,7 +948,8 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         background.update(player);
 
         // HUD update
-        hud.update(spheresLeft, ringsCollected);
+        // loc_8890: Blue Spheres draws Special_stage_rings_left in the ring slot.
+        hud.update(spheresLeft, blueSpheresStage != null ? ringsLeft : ringsCollected);
     }
 
     /**
@@ -1051,6 +1097,13 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
 
         ringsCollected++;
 
+        if (blueSpheresStage != null) {
+            // loc_984C: Blue_spheres_stage_flag branches straight to the
+            // sfx_RingRight call, skipping the continue and extra-life awards.
+            GameServices.audio().playSfx(Sonic3kSfx.RING_RIGHT.id);
+            return;
+        }
+
         // Extra life thresholds
         if (ringsCollected == EXTRA_LIFE_THRESHOLD_CONTINUE) {
             GameServices.audio().playSfx(Sonic3kSfx.CONTINUE.id);
@@ -1073,7 +1126,13 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
      * ROM: loc_9CE6 (sonic3k.asm:12700)
      */
     private void collectEmerald() {
-        publishEmeraldReward();
+        if (blueSpheresStage != null) {
+            // loc_9CE6: Blue_spheres_stage_flag skips the emerald count and
+            // collected-array writes; the stage still counts as cleared.
+            emeraldCollected = true;
+        } else {
+            publishEmeraldReward();
+        }
 
         clearRoutine = 4; // Skip to completion
         player.setFadeTimer(1);
@@ -1184,6 +1243,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         player.setVelocity(CLEAR_VELOCITY);
         emeraldTimer = EMERALD_TIMER_INIT;
 
+        applyEmeraldPalette();
         queueEmeraldArtModule();
     }
 
@@ -1195,6 +1255,25 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
      * runs {@code Process_Kos_Module_Queue_Init} straight away (2671, 2694),
      * publishing {@code Kos_modules_left} for {@code loc_9C5C} to poll.
      */
+    /**
+     * loc_9C08 (sonic3k.asm:12621-12637) copies eight bytes of
+     * {@code Pal_SStage_Emeralds} into {@code Normal_palette_line_4+4}, indexed by
+     * {@code Current_special_stage}, or by {@code Blue_spheres_current_stage+2}
+     * when {@code Blue_spheres_stage_flag} is set.
+     */
+    private void applyEmeraldPalette() {
+        if (palette == null || dataLoader == null) {
+            return;
+        }
+        int index = blueSpheresStage != null ? blueSpheresStage.emeraldPaletteIndex() : currentStage;
+        try {
+            palette.applyEmeraldPalette(dataLoader.getEmeraldPalette(), index);
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to read the special-stage emerald palette", e);
+        }
+        uploadStagePalettes();
+    }
+
     private void queueEmeraldArtModule() {
         S3kKosModuleQueue queue = emeraldArtQueue();
         if (queue == null) {
@@ -1534,7 +1613,9 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
     }
 
     public void setEmeraldCollected(boolean collected) {
-        if (collected) {
+        if (collected && blueSpheresStage != null) {
+            this.emeraldCollected = true;
+        } else if (collected) {
             publishEmeraldReward();
         } else {
             this.emeraldCollected = false;

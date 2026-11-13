@@ -22,7 +22,18 @@ public interface S3kSlotBonusPlayer extends CustomPlayablePhysics {
     void setAngle(byte angle);
 
     static AbstractPlayableSprite create(String mainCode, short x, short y, S3kSlotPlayerRuntime runtime) {
-        return switch (normalize(mainCode)) {
+        String route = normalize(mainCode);
+        if (route.contains(":")) {
+            var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+            var definition = world == null ? null : world.getPlayableCharacterRegistry()
+                    .find(com.openggf.game.CharacterKey.parsePersisted(route)).orElse(null);
+            if (definition != null) route = switch (definition.behavesLike()) {
+                case TAILS_ALONE -> "tails";
+                case KNUCKLES -> "knuckles";
+                default -> "sonic";
+            };
+        }
+        return switch (route) {
             case "tails" -> new TailsSlotBonusPlayer(mainCode, x, y, runtime);
             case "knuckles" -> new KnucklesSlotBonusPlayer(mainCode, x, y, runtime);
             default -> new SonicSlotBonusPlayer(mainCode, x, y, runtime);

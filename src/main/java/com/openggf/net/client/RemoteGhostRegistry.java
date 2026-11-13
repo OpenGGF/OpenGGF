@@ -26,6 +26,13 @@ public final class RemoteGhostRegistry {
 
     // Allow short jitter stalls, then return to the current coarse roster position.
     private static final int STALE_PLAYBACK_FRAMES = 120;
+    private int wrapWidth, wrapHeight;
+    /** Sets the local track's loop dimensions; zero means an axis does not wrap. */
+    public void configureGeometry(int width, int height) {
+        if (width < 0 || height < 0) throw new IllegalArgumentException("negative wrap geometry");
+        wrapWidth = width; wrapHeight = height;
+        playbacks.values().forEach(p -> p.geometry(width, height));
+    }
     private final Map<Integer, Integer> quietFrames = new LinkedHashMap<>();
     private final Map<Integer, RemoteGhostPlayback> playbacks = new LinkedHashMap<>();
     private final Map<Integer, Roster> roster = new LinkedHashMap<>();
@@ -38,7 +45,7 @@ public final class RemoteGhostRegistry {
                 continue;
             }
             quietFrames.put(entry.playerSlot(), 0);
-            playbacks.computeIfAbsent(entry.playerSlot(), ignored -> new RemoteGhostPlayback())
+            playbacks.computeIfAbsent(entry.playerSlot(), ignored -> { var p = new RemoteGhostPlayback(); p.geometry(wrapWidth, wrapHeight); return p; })
                     .onEntry(entry);
         }
     }
@@ -131,6 +138,6 @@ public final class RemoteGhostRegistry {
     private boolean attemptEnded(int slot, RemoteGhostPlayback playback) {
         GhostPackets.RosterEntry status = rosterState.get(slot);
         return playback.isStalled() && !playback.hasPendingFrames() && status != null
-                && status.status() != GhostPackets.ROSTER_STATUS_RUNNING;
+                && (status.status() & 0x0F) != GhostPackets.ROSTER_STATUS_RUNNING;
     }
 }

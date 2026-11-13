@@ -165,6 +165,50 @@ class TestMultiplayerRaceCoordinator {
     }
 
     @Test
+    void competitionArenaReleasesDuringCountdownAndPublishesStart(@TempDir Path root) {
+        FakeTransport transport = new FakeTransport();
+        ClientRaceSession session = new ClientRaceSession(() -> now);
+        session.applyJoin(new ControlMessage.JoinAccepted("tok", 0,
+                new ControlMessage.RoomDescriptor("LAN", "s3k", 0, 0, "OPEN", null, 8, false),
+                new ControlMessage.RoundSnapshot("LOBBY", null, 0, 0, List.of())));
+        var config = new ControlMessage.RoundConfig("s3k", 0, 0, 630, "OPEN", null,
+                "ARENA", "COMPETITION", "OFF", 60);
+        session.onControl(start(config, 1, now + 10000, now + 640000));
+        var runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("id"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", List.of(),
+                com.openggf.mods.run.TrackKind.ARENA, openggf.timeattack.CompetitionRoomSettings.Mode.COMPETITION,
+                com.openggf.game.arena.MonitorRule.OFF, false));
+        var coordinator = new MultiplayerRaceCoordinator(transport, session, () -> now);
+        coordinator.attachRuntime(runtime);
+        levelReady(runtime);
+        assertFalse(runtime.admitStep(keys()));
+        now += 5999;
+        assertFalse(runtime.admitStep(keys()));
+        now++;
+        assertTrue(runtime.admitStep(keys()));
+        assertEquals(1, transport.sentControl.stream().filter(ControlMessage.AttemptStart.class::isInstance).count());
+        runtime.afterStep(new RunStep(0, 0, false, new PlayerPose(100, 100, 0, false, false, 2, false),
+                false, -1, false, new com.openggf.game.arena.RaceClock(false, 0, 0,
+                        com.openggf.game.arena.RaceClock.Failure.NONE), com.openggf.game.arena.RaceSignal.NONE,
+                com.openggf.game.arena.RaceEventResult.NONE));
+        assertTrue(runtime.isAttemptActive());
+        assertFalse(coordinator.mayRetry());
+        assertFalse(coordinator.continueAfterActCompletion());
+        transport.inbound.add(new RaceClient.Control(new ControlMessage.RaceCutoff(1, now + 60000)));
+        coordinator.pump();
+        var hud = runtime.competitionHudState();
+        assertTrue(hud.cutoffArmed()); assertEquals(60000, hud.cutoffRemainingMillis());
+        assertEquals(openggf.timeattack.CompetitionHudState.MassStartPhase.COUNTDOWN, hud.massStartPhase());
+        assertTrue(hud.unverified());
+        var row = new ControlMessage.StandingsRow(0, "Racer", "sonic", 100, 1, "UNVERIFIED", "FINISHED", 10,
+                List.of(10, 20, 20, 20, 30));
+        transport.inbound.add(new RaceClient.Control(new ControlMessage.RoundEnd(List.of(row))));
+        coordinator.pump();
+        assertEquals(1, runtime.competitionHudState().placements().size());
+        assertEquals(100, runtime.competitionHudState().placements().getFirst().totalFrames());
+    }
+
+    @Test
     void attemptLifecyclePublishesEveryFrameAndHashes(@TempDir Path root) {
         Rig rig = rig(root);
         TimeAttackRuntimeTestBridge.begin(rig.runtime(), "0.6:cafe");
@@ -730,6 +774,140 @@ class TestMultiplayerRaceCoordinator {
         rig.runtime().admitStep(keys());
         assertEquals(0, handle.leaves, "the results tally stays on screen");
         assertFalse(rig.runtime().retryOnActCompletion(), "the tally's exit ends the run");
+    }
+
+    /** A Competition arena round whose GO is {@code goInMillis} away, with the runtime attached. */
+    private Rig arenaRig(Path root, long goInMillis) {
+        FakeTransport transport = new FakeTransport();
+        ClientRaceSession session = new ClientRaceSession(() -> now);
+        session.applyJoin(new ControlMessage.JoinAccepted("tok", 0,
+                new ControlMessage.RoomDescriptor("LAN", "s3k", 0, 0, "OPEN", null, 8, false),
+                new ControlMessage.RoundSnapshot("LOBBY", null, 0, 0, List.of())));
+        var config = new ControlMessage.RoundConfig("s3k", 3, 0, 630, "OPEN", null,
+                "ARENA", "COMPETITION", "OFF", 60);
+        session.onControl(start(config, 1, now + goInMillis, now + goInMillis + 630_000));
+        var runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("id"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 3, 0, "sonic", List.of(),
+                com.openggf.mods.run.TrackKind.ARENA, openggf.timeattack.CompetitionRoomSettings.Mode.COMPETITION,
+                com.openggf.game.arena.MonitorRule.OFF, false));
+        var coordinator = new MultiplayerRaceCoordinator(transport, session, () -> now);
+        coordinator.attachRuntime(runtime);
+        return new Rig(transport, session, runtime, coordinator);
+    }
+
+    private static void arenaStep(Rig rig, int x, boolean finished) {
+        rig.runtime().afterStep(new RunStep(0, 0, false, new PlayerPose(x, 100, 0, false, false, 2, false),
+                finished, -1, false, new com.openggf.game.arena.RaceClock(true, 1, 0,
+                        com.openggf.game.arena.RaceClock.Failure.NONE), com.openggf.game.arena.RaceSignal.NONE,
+                com.openggf.game.arena.RaceEventResult.NONE));
+    }
+
+    /** A released arena run that has finished: the native session takes no more steps. */
+    private Rig finishedArena(Path root) {
+        Rig rig = arenaRig(root, 0);
+        levelReady(rig.runtime());
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "fp0", "ME", "sonic"),
+                new ControlMessage.PlayerInfo(3, "fp3", "PEER", "tails")))));
+        for (int x = 10; x < 13; x++) {
+            assertTrue(rig.runtime().admitStep(keys()));
+            arenaStep(rig, x, x == 12);
+        }
+        assertTrue(rig.runtime().isAttemptFinished());
+        return rig;
+    }
+
+    @Test
+    void anArenaFinisherLeavesWhenTheHostClosesTheRound(@TempDir Path root) {
+        Rig rig = finishedArena(root);
+        CountingHandle handle = handle(rig);
+        rig.runtime().admitStep(keys());
+        rig.runtime().admitStep(keys());
+        assertEquals(0, handle.leaves, "the finisher watches the room until the host closes the round");
+
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundEnd(List.of())));
+        rig.runtime().admitStep(keys());
+        rig.runtime().admitStep(keys());
+        assertEquals(1, handle.leaves, "an arena has no results tally to end the run");
+    }
+
+    @Test
+    void anActFinisherKeepsItsTallyWhenTheHostClosesTheRound(@TempDir Path root) {
+        Rig rig = rig(root);
+        CountingHandle handle = handle(rig);
+        levelReady(rig.runtime());
+        runToFinish(rig, 10);
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundEnd(List.of())));
+        rig.runtime().admitStep(keys());
+        rig.runtime().admitStep(keys());
+        assertEquals(0, handle.leaves, "the act's results tally ends the run");
+    }
+
+    @Test
+    void remoteGhostsKeepMovingWhileAFinishedArenaTakesNoSteps(@TempDir Path root) {
+        Rig rig = finishedArena(root);
+        byte[] data = new byte[24 * GhostFrameCodec.BYTES];
+        for (int k = 0; k < 24; k++) GhostFrameCodec.encode(frame(200 + k), data, k * GhostFrameCodec.BYTES);
+        rig.transport().inbound.add(new RaceClient.GhostData(new GhostPackets.Aggregate(0, List.of(
+                new GhostPackets.AggregateEntry(3, 1, 0, 24, data)))));
+        // The results request stops the native steps; only the admission runs each frame.
+        List<Integer> xs = new ArrayList<>();
+        for (int frame = 0; frame < 6; frame++) {
+            assertTrue(rig.runtime().admitStep(keys()));
+            List<com.openggf.mods.run.GhostPose> ghosts = rig.coordinator().remoteActiveGhosts();
+            xs.add(ghosts.isEmpty() ? -1 : ghosts.getFirst().pose().centreX());
+        }
+        assertEquals(List.of(-1, 200, 201, 202, 203, 204), xs,
+                "each frame without a step advances the room one display frame");
+
+        // A frame that steps advances once, in its step, not again at the next admission.
+        assertTrue(rig.runtime().admitStep(keys()));
+        int before = rig.coordinator().remoteActiveGhosts().getFirst().pose().centreX();
+        arenaStep(rig, 12, true);
+        assertEquals(before + 1, rig.coordinator().remoteActiveGhosts().getFirst().pose().centreX());
+        assertTrue(rig.runtime().admitStep(keys()));
+        assertEquals(before + 1, rig.coordinator().remoteActiveGhosts().getFirst().pose().centreX());
+    }
+
+    @Test
+    void theArenaStartCardCoversTheHoldAndFadesOutAtRelease(@TempDir Path root) {
+        Rig rig = arenaRig(root, 10_000);
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "fp0", "ME", "sonic"),
+                new ControlMessage.PlayerInfo(3, "fp3", "PEER", "tails"),
+                new ControlMessage.PlayerInfo(1, "fp1", "ALSO", "knuckles")))));
+        rig.coordinator().pump();
+        levelReady(rig.runtime());
+        assertFalse(rig.runtime().admitStep(keys()));
+        ArenaStartCard.Card card = rig.coordinator().arenaStartCard();
+        assertNotNull(card, "the held arena shows the start card");
+        assertEquals("DESERT PALACE", card.track());
+        assertEquals(5, card.laps());
+        assertEquals(10_000, card.toStartMillis());
+        assertEquals(10_000 - openggf.timeattack.MassStartRelease.ARENA_LEAD_FRAMES * 1000L / 60,
+                card.toReleaseMillis());
+        assertEquals(List.of("ME", "ALSO", "PEER"), card.racers().stream().map(ArenaStartCard.Racer::name).toList(),
+                "this player first, then the room in slot order");
+        assertTrue(card.racers().getFirst().local());
+        assertEquals(0, ArenaStartCard.fadeAlpha(card.toReleaseMillis()));
+
+        now += card.toReleaseMillis() - 1;
+        assertFalse(rig.runtime().admitStep(keys()));
+        assertTrue(ArenaStartCard.fadeAlpha(rig.coordinator().arenaStartCard().toReleaseMillis()) > 240,
+                "black just before release");
+        now += 1;
+        assertTrue(rig.runtime().admitStep(keys()), "release is the hub schedule, unchanged");
+        assertNull(rig.coordinator().arenaStartCard(), "the native 3-2-1-GO plays from release");
+    }
+
+    @Test
+    void actRoundsShowNoArenaStartCard(@TempDir Path root) {
+        Rig rig = rig(root);
+        rig.session().onControl(new ControlMessage.RoundStart(
+                new ControlMessage.RoundConfig("s3k", 0, 0, 60, "OPEN", null), now + 3_000, now + 63_000));
+        levelReady(rig.runtime());
+        assertTrue(rig.coordinator().holdGameplay());
+        assertNull(rig.coordinator().arenaStartCard());
     }
 
     @Test

@@ -245,6 +245,59 @@ final class GameLoopNativeMenus {
                 input.get(), publisher);
     }
 
+    private com.openggf.game.nativemenu.NativeExtra pendingExtra;
+
+    /** Holds a built-in extra until the master title's update has returned; null clears it. */
+    void requestExtra(com.openggf.game.nativemenu.NativeExtra extra) {
+        pendingExtra = extra;
+    }
+
+    /** Launches the pending extra's host game once no fade is running; true when it did. */
+    boolean launchPendingExtra() {
+        if (pendingExtra == null || loop.resolveFadeManager().isActive()) return false;
+        var extra = pendingExtra;
+        pendingExtra = null;
+        var host = java.util.Arrays.stream(com.openggf.game.MasterTitleScreen.GameEntry.values())
+                .filter(entry -> entry.gameId.equals(extra.hostGameId())).findFirst()
+                .orElseThrow(() -> new IllegalStateException("Unknown extra host " + extra.hostGameId()));
+        loop.launchGameByEntry(host, () -> openNativeExtra(extra));
+        return true;
+    }
+
+    /** Starts the special stage the open native screen armed on the module's provider. */
+    private void enterNativeMenuSpecialStage() {
+        var module = GameServices.module();
+        var provider = module == null ? null : module.getSpecialStageProvider();
+        if (!(provider instanceof com.openggf.game.nativemenu.NativeMenuSpecialStage nativeStage)
+                || !nativeStage.returnsToNativeMenu() || nativeMenus.screen() == null) {
+            throw new IllegalStateException("Native special-stage launch requires an armed provider and screen");
+        }
+        // The screen wrote the special stage's game mode itself: no level, ring flash,
+        // power-up clear or entry sound. The stage's own fade-to-white runs over the screen.
+        loop.doEnterSpecialStage(provider, 0, false);
+    }
+
+    /** True while a native-launched stage's entry fade still shows the launching screen. */
+    static boolean entryShowsNativeMenu(com.openggf.game.nativemenu.NativeMenuScreen screen,
+                                        com.openggf.game.SpecialStageProvider active) {
+        return screen != null && active instanceof com.openggf.game.nativemenu.NativeMenuSpecialStage stage
+                && stage.returnsToNativeMenu();
+    }
+
+    /**
+     * Shows a built-in extra's first screen in place of its freshly loaded host
+     * game's title. The screen runs its own palette fades, so the launch's
+     * fade-in is dropped.
+     */
+    void openNativeExtra(com.openggf.game.nativemenu.NativeExtra extra) {
+        var screen = extra.open(nativeMenuHostContext());
+        loop.resolveFadeManager().cancel();
+        if (!nativeMenus.open(screen)) return;
+        loop.camera.setX((short) 0);
+        loop.camera.setY((short) 0);
+        loop.setGameMode(screen.mode());
+    }
+
     void openNativeTitleMode(boolean options) {
         var module = GameServices.module();
         var provider = module == null ? null : module.getGameService(
@@ -274,6 +327,17 @@ final class GameLoopNativeMenus {
                 nativeMenus.close();
                 loop.initializeTitleScreenMode();
             }
+            case SEGA_SCREEN -> {
+                nativeMenus.close();
+                // TwoPlayerResultsDone_Game enters SegaScreen. The title provider's
+                // initialize() begins at SEGA_LOGO, as the GAME OVER exit does.
+                GameLoopGameOverExit.startToBlack(GameOverExit.TITLE_SCREEN, loop.levelManager,
+                        audioManager, loop.resolveFadeManager(), loop.resolveGameplayModeContext(),
+                        () -> GameLoopGameOverExit.exitToTitleScreen(loop.spriteManager, loop.levelManager,
+                                loop.camera, () -> loop.setGameMode(GameMode.TITLE_SCREEN),
+                                loop.getTitleScreenProviderLazy(), loop.resolveFadeManager(),
+                                loop.resolveGameplayModeContext()));
+            }
             case COMPETITION -> {
                 var module = GameServices.module();
                 var provider = module == null ? null : module.getGameService(
@@ -286,6 +350,9 @@ final class GameLoopNativeMenus {
                 }
             }
             case LEVEL -> startNativeMenuLevel(exit);
+            // The screen stays open: its last frame shows under the stage's
+            // entry fade, and the stage hands control back to it.
+            case SPECIAL_STAGE -> enterNativeMenuSpecialStage();
         }
     }
 

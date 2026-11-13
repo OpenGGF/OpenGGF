@@ -1,0 +1,13 @@
+# Source for s3k-aiz2-bomb-rewind.txt (InputLogAuthorTool --script). Angel Island 2 from a
+# declared position before the bombing run (x 16604, y 366, 72 rings): run right into the
+# battleship's bombing loop, stop under the bombs (a bomb hits at about frame 576), then the
+# capture holds the live rewind key (setup.rewind 630:90). After the rewind, run and jump clear.
+470 R
+230 -
+20 R
+1 A
+40 R
+1 A
+40 R
+1 A
+100 R

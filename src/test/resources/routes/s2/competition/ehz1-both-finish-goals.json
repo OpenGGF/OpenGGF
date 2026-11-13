@@ -1,0 +1,156 @@
+{
+  "guard": {
+    "allowHurt": true,
+    "allowRingLoss": true,
+    "allowDeath": false,
+    "allowBoundary": true,
+    "holds": {
+      "kind": "fact-equals",
+      "key": "competition.p2.dead",
+      "value": 0
+    }
+  },
+  "startRow": 1200,
+  "legs": [
+    {
+      "id": "p1-upper-approach",
+      "maxRows": 6000,
+      "guard": {
+        "allowHurt": true,
+        "allowRingLoss": true,
+        "allowDeath": false,
+        "allowBoundary": true
+      },
+      "goal": {
+        "kind": "achieve",
+        "condition": {
+          "kind": "player-in",
+          "player": "P1",
+          "region": [
+            4600,
+            0,
+            4800,
+            700
+          ]
+        }
+      }
+    },
+    {
+      "id": "p1-over-lower-wall",
+      "maxRows": 6000,
+      "guard": {
+        "allowHurt": true,
+        "allowRingLoss": true,
+        "allowDeath": false,
+        "allowBoundary": true
+      },
+      "goal": {
+        "kind": "achieve",
+        "condition": {
+          "kind": "player-in",
+          "player": "P1",
+          "region": [
+            6300,
+            0,
+            6500,
+            800
+          ]
+        }
+      }
+    },
+    {
+      "id": "p1-act1-finish",
+      "maxRows": 7000,
+      "guard": {
+        "allowHurt": true,
+        "allowRingLoss": true,
+        "allowDeath": false,
+        "allowBoundary": true
+      },
+      "goal": {
+        "kind": "achieve",
+        "condition": {
+          "kind": "all",
+          "clauses": [
+            {
+              "kind": "player-in",
+              "player": "P1",
+              "region": [
+                10816,
+                0,
+                11328,
+                850
+              ]
+            },
+            {
+              "kind": "fact-equals",
+              "key": "competition.p1.timerPaused",
+              "value": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "p2-act1-finish",
+      "maxRows": 7000,
+      "guard": {
+        "allowHurt": true,
+        "allowRingLoss": true,
+        "allowDeath": false,
+        "allowBoundary": true
+      },
+      "goal": {
+        "kind": "achieve",
+        "condition": {
+          "kind": "all",
+          "clauses": [
+            {
+              "kind": "player-in",
+              "player": "P2",
+              "region": [
+                10816,
+                0,
+                11328,
+                2048
+              ]
+            },
+            {
+              "kind": "fact-equals",
+              "key": "competition.p2.timerPaused",
+              "value": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "act1-results-ready",
+      "maxRows": 3000,
+      "guard": {
+        "allowHurt": true,
+        "allowRingLoss": true,
+        "allowDeath": false,
+        "allowBoundary": true
+      },
+      "goal": {
+        "kind": "achieve",
+        "condition": {
+          "kind": "all",
+          "clauses": [
+            {
+              "kind": "fact-equals",
+              "key": "competition.phase",
+              "value": 2
+            },
+            {
+              "kind": "fact-equals",
+              "key": "competition.resultsReady",
+              "value": 1
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

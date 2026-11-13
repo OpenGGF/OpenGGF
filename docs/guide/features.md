@@ -1,9 +1,9 @@
 # OpenGGF features
 
 This page lists what OpenGGF can do, with a link to the guide for each feature. It
-covers version 0.7, which is still in development. Items marked "New in 0.7" aren't
-in the 0.6 release. Items marked "Experimental" work, but have limits listed in their
-guides and may change.
+covers the 0.7.20261105 release and the 0.8 development line that follows it. Items
+marked "New in 0.7" aren't in the 0.6 release. Items marked "Experimental" work, but
+have limits listed in their guides and may change.
 
 We haven't tested every feature in every game, level and setting yet.
 [Game status](playing/game-status.md) says how complete each game is, and the
@@ -50,7 +50,13 @@ The engine also has these:
 - **Each game's own screens.** Title screens, level select, title cards, results
   and continue screens all come from the game's own data.
 
-Sonic 2's two-player competition mode is not available yet.
+Sonic 2's two-player Competition mode is available: choose 2 PLAYER on the
+Sonic 2 title for the game's own split-screen mode, with Sonic on controller 1
+and Tails on controller 2, Emerald Hill, Mystic Cave, Casino Night or the
+special stage, each player's rings, lives, score and time, and the game's
+results screens. Live rewind is off in this mode. See
+[known discrepancies](../status/known-discrepancies.md#s2-competition-split-screen-native-lag-and-rewind-scope)
+for how the split screen differs from the original.
 
 ## Accuracy
 
@@ -218,6 +224,21 @@ The [`examples/`](../../examples/) folder holds complete mods that use the API.
 | [Three Islands](../../examples/three-islands/README.md) | A turn-based RPG across all three games |
 | [Typing of the Hedgehog](../../examples/typing-of-the-hedgehog/README.md) | Type words to defeat badniks |
 
+## Blue Spheres
+
+New in 0.8. Open it from **Extras > Blue Spheres**. It is the game Sonic & Knuckles
+starts when Sonic 1 is locked on top. It appears when both the Sonic 3&K and the
+Sonic 1 ROMs are in your ROM folder; Sonic 1 is read only for its header.
+
+- **NO WAY!** Press any button to open the menu. The cartridge needs A, B and C
+  held together; OpenGGF accepts any button.
+- **Levels and codes.** Each cleared stage moves to the next level, and a perfect
+  stage (every ring collected) skips ten. Each level has a 12-digit code; pick
+  **CODE**, enter the digits and press Start to jump to that level.
+- **Sonic or Knuckles.** Press A, B or C on the menu to switch character.
+
+The single fixed stage other cartridges unlock is not offered.
+
 ## Time Attack and multiplayer
 
 New in 0.7. Experimental. Time Attack is a bundled mod. Open it from
@@ -226,6 +247,17 @@ New in 0.7. Experimental. Time Attack is a bundled mod. Open it from
 - **Solo runs.** Time your runs, retry instantly and race ghosts of your best times.
 - **Racing.** Host or join races on your local network, or browse public and private
   rooms on a master server. Every player needs the same engine build and ROM.
+- **Competition mode.** New in 0.8. A room can race in Competition mode instead of
+  Time Attack: everyone starts together, there are no restarts, and the first past
+  the post wins. The host picks the monitor rules and a cutoff after the first
+  finisher. Sonic 2 and Sonic 3&K acts work in either mode. Sonic 1 stays Time
+  Attack only.
+- **Sonic 3&K Competition arenas.** New in 0.8. Azure Lake, Balloon Park, Chrome
+  Gadget, Desert Palace and Endless Mine are Competition tracks. You race them alone
+  under the original five-lap rules, and lap times, total time and best lap are
+  ranked. The view is the original top half's camera, magnified twice, with
+  full-size characters and ghosts. Rooms without a verifier label their results
+  UNVERIFIED.
 - **Chat.** Players can chat, and an optional filter masks profanity.
 
 Time Attack comes with every build, including the native packages. See
@@ -250,7 +282,8 @@ Time Attack comes with every build, including the native packages. See
 - **Operating systems.** OpenGGF runs on Windows, macOS and Linux, on any system with
   an OpenGL 4.1 driver.
 - **Native packages.** Packages for Windows x64, Linux x64 and Apple Silicon macOS
-  need no Java install. They load mods that contain code and include Time Attack.
+  need no Java install. The 0.7.20261105 release has Windows and Linux packages
+  only; use the `.jar` build on macOS for that release. They load mods that contain code and include Time Attack.
   This support is new, so a mod that relies on unusual Java features may still need
   the `.jar` build.
 - **The JVM build.** The `.jar` build needs Java 25. It runs on every platform,

@@ -313,6 +313,14 @@ class TestRoomHostLobby {
     }
 
     @Test
+    void reservedShoeKindCountsTowardLobbyKick() throws Exception {
+        admitOwner(); var guest = admitGuests(1).getFirst();
+        byte[] packet = poses(1,0,0x100,0x200,1);
+        packet[packet.length-1] |= 0x60;
+        for (int i=0;i<GhostStreamValidator.KICK_THRESHOLD;i++) room.onBinary(guest.connection(),packet);
+        assertEquals("lobby presence violations",guest.connection().closedReason);
+    }
+    @Test
     void invalidLobbyStreamsAreDroppedAndRepeatedViolationsCloseTheMember() throws Exception {
         Member host = admitOwner();
         Member guest = admitGuests(1).getFirst();

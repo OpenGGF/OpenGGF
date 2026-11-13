@@ -41,7 +41,7 @@ class TestBuildToolingGuard {
     private static final String FULL_CI_JOB_CONDITION = "github.event_name == 'workflow_dispatch'"
             + " || (github.event_name == 'pull_request' && !github.event.pull_request.draft)";
     private static final String NATIVE_PREPARE_COMMAND =
-            "mvn -Dmse=off package -Pnative -Dmaven.test.skip=true -Dnative.python=python"
+            "mvn -Dmse=off package -Pnative -Dmaven.test.skip=true -Dnative.python=python -Dbundled.python=python"
                     + " -Dnative.stage=prepare -Dnative.macos.package.skip=true -B";
 
     private static final Path POLICY_SCRIPT = Path.of(".githooks/validate-policy.sh").toAbsolutePath();
@@ -4334,7 +4334,7 @@ class TestBuildToolingGuard {
         assertTrue(modules.contains("url = https://github.com/OpenGGF/TraceChaser.git"));
         assertFalse(modules.substring(modules.indexOf("[submodule \"tools/tracechaser\"]"))
                 .contains("branch ="), "TraceChaser must never float on a branch");
-        assertEquals("160000 e6ea72332b559a4a52519166f0e5c108cb8d5385 0\ttools/tracechaser",
+        assertEquals("160000 161e45ac81f972559280597a36c0c9d97286fc61 0\ttools/tracechaser",
                 gitOutput(Path.of("."), "ls-files", "-s", "--", "tools/tracechaser").strip());
 
         String pom = Files.readString(Path.of("pom.xml"));

@@ -65,6 +65,13 @@ ROM explicitly polls a hardware-owned readiness gate.
 
 ### 2026-11-03 approved extension: synchronous initialization phases
 
+S1 implements real `GM_Ending`, credits-font setup and credits-demo `GM_Level`
+continuations through the existing `level_setup`, `initial_placement`,
+`initial_objects` and `initial_presentation` vocabulary. Its dedicated root
+companion covers the complete-emerald chain's 18 loads and 45 phases. Native
+callback qualification rejects unreviewed clock-sensitive paths; this is bounded
+coverage, not permission to commute arbitrary initial callbacks.
+
 The implemented S3K phases cover fresh `Level:` entry. They do not cover the
 separate `SpecialStage` startup masking block and do not repair clock error
 inherited from an earlier unsupported interval. Qualification reports that
@@ -171,10 +178,11 @@ handoff. Its provenance frame never selects readiness.
 This authorizes the bounded extension; it is not an implementation or fixture
 coverage claim. Production, parser, recorder and replay wiring are under implementation.
 Ordinary synchronous loads retain their existing rewindable title boundary.
-The production continuation is selected by explicitly installing its phase-admission
-interface before loading, independently of any row, event, or comparison value.
-It executes the ROM-selected load operations through that interface; the timing
-client cannot select their content. This does not establish exact live-play
+S3K selects its production continuation by explicitly installing the phase-admission
+interface before loading. S1's actual ending/demo caller selects its continuation
+through the same controller, with immediate readiness when the stream is absent.
+Both select operations independently of any row, event or comparison value;
+the timing client cannot select their content. This does not establish exact live-play
 loading time or replace ordinary title-boundary snapshots.
 Production must genuinely defer work, preserve failure/commit boundaries and
 transfer the advanced live clock when managers change. A facade around atomic
@@ -208,21 +216,28 @@ Kosinski pipelines, under the single authority boundary defined here.
   `HardwareTimingEventEngine`. The S2 DPLC pipeline is inside the contract's
   permitted scope and outside its built scope. Do not describe it as available.
 
-**Fixture coverage -- S3K only.** Every committed `hardware_timing.jsonl` in
-`src/test/resources/traces` is under `s3k/` (272 of them, plus 2
-`hardware_timing_interstitial.jsonl`). No committed S1 or S2 fixture carries
-one.
+**Fixture coverage -- S1 and S3K.** S3K has 244 committed
+`hardware_timing.jsonl` streams and four interstitial streams. The S1
+complete-emerald chain has 28 per-level streams carrying 242 observed
+`NEMESIS_PLC_QUEUE` arm edges. Its physics/aux payloads reproduce the prior
+capture byte-for-byte; publication preserves their original gzip containers.
+No S2 fixture carries recorded readiness.
 
-The consequence for S1 is specific, and is not the same thing as the mechanism
-being absent. Recorded admission is installed only by
-`GameplayModeContext.activateRecordedHardwareAdmission()`; with no stream, every
-kind stays at `HardwareReadinessAdmissionPolicy.LIVE`,
-`Sonic1PlcArmTiming.isRecordedAuthority()` returns false, and the arm is
-released by the same boundary that prepared it -- exactly the behaviour that
-predates the timing port. So the S1 path today is **implemented but dormant**:
-it is exercised by unit and guard tests, and by no committed trace fixture.
-A round debugging an S1 PLC divergence should reason about the native service
-model, not about a recorded edge, until an S1 fixture carrying a stream lands.
+The S1 chain now exercises `Sonic1PlcArmTiming` end to end. Admission is
+installed by `GameplayModeContext.activateRecordedHardwareAdmission()` and
+releases only a matching prepared production arm. Other S1 fixtures without a
+stream retain `HardwareReadinessAdmissionPolicy.LIVE`; coverage is a property
+of the dedicated stream, never the game or recorder name. The chain's four
+queue frontiers and ending-load frontier clear through their independent authorities.
+
+S1's optional manifest `terminal_admission_runs` extends the existing lag census
+across the unrecorded terminal movie tail. Alternating non-lag/lag run lengths
+must cover exactly `[last-segment offset + row count, original movie length)`;
+only the first run may be zero. This field selects the existing lag loop and
+contains no gameplay state. An active prepared initialization continuation owns
+its observed service ordering instead of borrowing lag admission. The complete
+chain carries 147 runs over 10,943 rows, including 710 lag rows. Other S1
+fixtures retain their existing inputs and behavior.
 
 Recorded timing is not the first resort for S1 in any case: a divergence that
 looks like elapsed hardware cost is usually a counted ROM wait loop in the
@@ -870,7 +885,12 @@ For the S3K Kos queues:
 - terminate within a bounded window.
 
 For the S1 Nemesis PLC queue, `S1PlcHardwareTimingObserver` follows the same
-rules against the ROM's own `v_plc_buffer` FIFO. Two of its properties are
+rules against the ROM's own `v_plc_buffer` FIFO. It observes the accepted
+shipped `RunPLC` count-writing instruction, after both eligibility tests and
+before the original head pointer is overwritten. Routine entry is too early:
+an intervening interrupt can cross the write or retire the old decoder before
+the tests. `FixBugs=0` writes before `NemDec_BuildCodeTable`; the fixed branch
+writes after it (`RunPLC`, sonic.asm:1379-1420). Two of its properties are
 load-bearing for the engine side and must not drift: it observes the head
 before the shift that destroys head identity, and it discards anything seen
 before a segment's first recorded row. The latter is why

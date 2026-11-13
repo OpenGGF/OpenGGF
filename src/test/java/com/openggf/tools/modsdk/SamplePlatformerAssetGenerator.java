@@ -528,6 +528,8 @@ public final class SamplePlatformerAssetGenerator {
         sb.append("]\n");
         sb.append("frames:\n");
         for (String frame : frames) sb.append(frame);
+        if (fileName.equals("bolt-sheet.yaml"))
+            sb.append("animations:\n  WAIT: { frames: [0, 1], durations: [30, 30], end: loop }\n");
         Files.writeString(MOD_DIR.resolve(fileName), sb.toString(), StandardCharsets.UTF_8);
     }
 

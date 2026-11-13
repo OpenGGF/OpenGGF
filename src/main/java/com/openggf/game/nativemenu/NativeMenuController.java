@@ -11,12 +11,13 @@ public final class NativeMenuController {
 
     public static boolean handles(GameMode mode) {
         return mode == GameMode.OPTIONS || mode == GameMode.COMPETITION_MENU
-                || mode == GameMode.COMPETITION || mode == GameMode.COMPETITION_RESULTS;
+                || mode == GameMode.COMPETITION || mode == GameMode.COMPETITION_RESULTS
+                || mode == GameMode.BLUE_SPHERES;
     }
 
     public static com.openggf.game.resources.PlcLifecyclePhase phase(GameMode mode) {
         return switch (mode) {
-            case OPTIONS, COMPETITION_MENU -> com.openggf.game.resources.PlcLifecyclePhase.LEVEL_SELECT;
+            case OPTIONS, COMPETITION_MENU, BLUE_SPHERES -> com.openggf.game.resources.PlcLifecyclePhase.LEVEL_SELECT;
             case COMPETITION -> com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL;
             case COMPETITION_RESULTS -> com.openggf.game.resources.PlcLifecyclePhase.TWO_PLAYER_RESULTS;
             default -> throw new IllegalArgumentException("Not a native menu mode: " + mode);

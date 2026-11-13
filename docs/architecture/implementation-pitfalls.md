@@ -23,6 +23,27 @@ owner, report success only after real completion, and preserve primary/suppresse
 failure identity. Verify a real return route as well as once-only cleanup; see
 [load ownership evidence](designs/2026-11-03-synchronous-load-vint-accounting.md#enclosing-ownership-corrections).
 
+**Observation anchors can become rewind state.** A host's first gameplay anchor
+looked immutable when synchronous loading always completed before route search.
+Visible title waits let lookahead cross that anchor and restore an earlier leave
+checkpoint. Capture both first-gameplay and latest-level anchors in the host's
+checkpoint, or the earlier observation acquires a future fact and deterministic
+search fails. Refuse planner checkpoints while initialization is still registering
+owners; replay neutral rows through that phase. `TestCompetitionTitleRoute` covers
+restoring a leave checkpoint after lookahead has passed control release.
+
+**A returned native load may still own visible startup waits.** Competition
+positioned probes must drive the real title continuation to control release
+before injecting gameplay effects, counting ordinary frames or capturing a
+stable rewind graph. Structural load return precedes the first native player
+walk and HUD-art registration. Use `Sonic2CompetitionTestFlow` to drive those
+waits through the fixture's admitted-token runner; never replace them with a
+fixed skip or make early gameplay assertions pass by unlocking actors.
+`Level_TtlCard` (s2.asm:4914-4949) and `Level_FromCheckpoint`
+(s2.asm:4980-5086) own the boundary. Read-only pixel witnesses must also use the
+active output geometry and pattern projection: a former field index can read
+unrelated resident art even when the source bytes are correct.
+
 **A counter's name does not establish its native clock.** In S2 continuous
 loads, title object passes and gameplay have distinct clock ownership. Obj2C
 needs the native level word (held at zero during the locked title), not execution
@@ -67,6 +88,42 @@ bit2-clear sprite or fixed presentation mask hides the native scene. Project fro
 copies plus shake, refresh derived playable offsets at the existing post-camera
 Render_Sprites boundary, and preserve both native words. See the
 [ending lifecycle evidence](designs/2026-10-13-s3k-ending-lifecycle.md).
+
+Looping arena cameras and actors can occupy different images of the same track.
+In the hosted arena probe, camera X1936 and actor X1072 still placed P1 at screen
+X160 through the native 1024px wrap; raw subtraction put a nearby ghost offscreen.
+Derive the display origin from P1's native wrapped SAT anchor, including its range
+half extent, and keep the native camera unchanged. Check a ghost relative to P1,
+not only a ghost placed relative to the renderer's own camera origin: that latter
+fixture can pass while hiding an image-selection error. The
+[hosted arena validation](validation/2026-11-07-s3k-hosted-arena-lane-b.md) retains
+the failed probes, accepted SAT evidence and RGB-alpha checks (2026-11-07).
+
+A native death's life-loss row is earlier than its reload request. A direct
+checkpoint-reload comparison must wait for and consume the same production
+respawn request as GameLoop. Calling the owner at life loss produced unequal
+`prePhysicsYSpeed` and `prePhysicsCentreY`, even though position, lives and timer
+matched. Compare the full captured player and keep those fields in the oracle;
+fix the invocation boundary instead of excluding them. See the
+[hosted checkpoint evidence](validation/2026-11-07-s3k-hosted-arena-lane-b.md).
+
+Cross-boot rewind comparisons must compare ROM resources by contents, while
+retaining the snapshot's gameplay bytes. A resumed S2 object pass held separate
+`SpriteAnimationSet` instances with equal scripts in the live and replay boots.
+Canonicalize every script field, including trailing ROM bytes, inside compact
+blob opaque values; retain the blob schema, type and every scalar byte. Negative
+controls must change both a resource frame and a scalar byte and fail equality.
+Do not drop the opaque array or compare resource `toString()` values. The
+[Competition engine evidence](validation/2026-11-07-s3k-hosted-arena-lane-b.md)
+records this oracle correction and its bounded replay test.
+
+Clearing the active gameplay session does not reset a cached game module. For a
+cold-boot equivalence test, reset both SessionManager and GameModuleRegistry
+before each side. Reusing S2's module produced PLC load epochs 3/5 and title-card
+frame counts 53/106 while all gameplay owners matched. Keep those lifetime fields
+in the oracle; isolate the boots instead of filtering the fields. The
+[complete checkpoint comparison](validation/2026-11-07-s3k-hosted-arena-lane-b.md)
+compares every registered owner after this fixture correction (2026-11-07).
 
 Capture boot must preserve an existing native camera binding. After ScreenInit
 sets `Scroll_lock`, even `Camera.setFocusedSprite` resets physical and render-copy
@@ -436,6 +493,12 @@ Use the internal `EngineCallerAccess` inspection bridge for new admission gates;
 its immutable JDK walker comes from the `EngineContext` bootstrap factory, without
 locating a live gameplay session. Keep lower-level consumers on the utility bridge
 and inspect a module-lineage provider's actual defining loader before calling it.
+Each inspection walks and allocates stack frames, so a per-tile or per-bucket
+gate on the draw path is a measurable garbage source. Hot engine loops take
+a checked handle once per batch (`PresentationGraphicsAccess.batch`,
+`ObjectDrawInternalAccess.bucketPass`, `RingDrawInternalAccess.attractedPass`)
+and keep it in locals or engine-private fields; never cache a verdict keyed
+on a reported caller.
 Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md).
 
 **Returned concrete values can contain deferred creator callbacks.** An owned
@@ -2332,6 +2395,21 @@ same SST4/5/6 and P1 as the fixture callback, with VInt unchanged, then matched
 all three boss milestones. Match the actual callback/slot/input boundary before
 reauthoring ordinary controls; never suppress setup or shift gameplay clocks.
 
+**A routine comparison is not a dispatch witness.** The S3K complete-run
+recorder writes main `player_present=1` even while the native slot is cleared;
+`TraceCharacterState.routineFromSprite` normally derives 2 from constructed
+engine state. Neither proves that `Sonic_Init` or the first `Process_Sprites`
+ran. At the four fresh shrine handoffs, native zero radii/collision pointers,
+absent sidekick, old rings and cleared objects identify pre-player load state.
+The executed engine gate rejects phase admission and requests initial sprites
+with heuristic 2; a compiled, comparison-only HPZS first-dispatch observer emits
+no witness. Preserve that controlled zero instead of claiming early execution.
+`loc_62B6` (sonic3k.asm:7762-7767) skips the shrine title, but not
+`loc_7870`'s terrain wait (sonic3k.asm:9772-9780). Model the real production
+continuation with independently observed timing; never fit the 61 recorded rows,
+force the routine, remove objects or skip the native scan. See the
+[bounded current-source record](validation/levels/s3k-mhz-act1.md#fresh-shrine-routine-frontier--2026-11-07).
+
 **A width override does not resize an already-created test camera.** The ROM
 Jupiter extension creates its gameplay managers before a test's session override.
 A local HeadlessTestFixture can retain that camera. Explicitly refresh its viewport
@@ -2481,6 +2559,19 @@ for detached UI fades. Keep renderer attachment separate: only the actively
 bound palette owner publishes CRAM fades. Origin: 2026-10-17 white-fade
 architecture guard repair; existing native component/22-V-int and immediate-scene
 rewind-release semantics are unchanged.
+
+
+**Scene capture must observe the uploaded palette generation.** CPU palette colors
+may already contain the next cycle while production drawing still uses the
+previous V-int publication. Copying live colors into a scene can rotate only
+animated colors, despite identical tile and player geometry. Keep a defensive
+color copy at the existing upload owner and read it through
+`PaletteUploadPresentation.copyDisplayedPaletteArgb`; never publish pending
+writes just to capture a picture. Headless rows without an upload retain the
+live-palette fallback. Origin: Competition fix lane G, 2026-11-08; exact smoke
+batch 17 reproduced 24,783 waterfall pixel differences, and texture readback
+identified only indices 19,20,30,31. See the
+[lane validation](validation/2026-11-07-s3k-hosted-arena-lane-b.md#fix-lane-g--2026-11-08).
 
 
 **A restored palette owner can rebind without submitting new work.** Whole-world

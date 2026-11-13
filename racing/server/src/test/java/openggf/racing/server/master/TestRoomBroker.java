@@ -669,7 +669,7 @@ class TestRoomBroker {
         broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
                 descriptor, "DIRECT", 27888, "0.6:cafe", List.of("s2:0:0"),
                 DIRECT_CERT_PIN, "fixture-instance", 0, null)));
-        assertEquals("invalid vote track pool: s2:0:0 is not a s3k act",
+        assertEquals("invalid vote track pool: s2:0:0 is not a s3k track",
                 ((ControlMessage.RoomCreateRejected) lastMessage(host)).reason());
         broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
                 descriptor, "DIRECT", 27888, "0.6:cafe", List.of("s3k:0:1", "s3k:12:0"),

@@ -1419,6 +1419,53 @@ public class TestSonic3kAIZEvents {
                         + Integer.toHexString(minX));
     }
 
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"8,15360,10,2", "24,15232,26,1"})
+    void aiz2ResizeArtSubmissionsFollowNativeCharacterBranch(
+            int routine, int threshold, int nextRoutine, int moduleCount) {
+        var events = ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getAizEvents();
+        events.init(1);
+        var camera = GameServices.camera();
+        var timing = GameServices.hardwareTiming();
+        var before = timing.capture().jobs().stream().map(HardwareTimingJob.Snapshot::handle).toList();
+        camera.setX((short) (threshold - 1));
+        events.setDynamicResizeRoutine(routine);
+        events.update(1, 0);
+        assertEquals(routine, events.getDynamicResizeRoutine());
+        assertEquals(before, timing.capture().jobs().stream().map(HardwareTimingJob.Snapshot::handle).toList());
+
+        camera.setX((short) threshold);
+        events.update(1, 1);
+        var submitted = timing.capture().jobs().stream().filter(job -> !before.contains(job.handle())).toList();
+        var modules = submitted.stream().filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE).toList();
+        assertEquals(moduleCount, modules.size(), "Native Knux resize omits Sonic's object-ship archive");
+        assertEquals(0x3B48C6, modules.get(0).romSourceAddress());
+        assertEquals(0x1FC * 32, modules.get(0).destinationAddress());
+        var blocks = submitted.stream().filter(job -> job.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE).toList();
+        assertEquals(1, blocks.size());
+        assertEquals(Sonic3kConstants.AIZ2_16X16_BOMBERSHIP_ADDR, blocks.getFirst().romSourceAddress());
+        assertEquals(S3kKosRamDestinations.blockTableOffset(0xAB8), blocks.getFirst().destinationAddress());
+        if (moduleCount == 2) {
+            assertEquals(0x399CC4, modules.get(1).romSourceAddress());
+            assertEquals(0xA000, modules.get(1).destinationAddress());
+        }
+        assertEquals(nextRoutine, events.getDynamicResizeRoutine());
+        assertTrue(events.isEventsFg5());
+        assertFalse(events.isBattleshipTerrainLoaded());
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var pending = registry.capture();
+        events.setDynamicResizeRoutine(0);
+        registry.restore(pending);
+        assertEquals(nextRoutine, events.getDynamicResizeRoutine());
+        assertEquals(submitted.stream().map(HardwareTimingJob.Snapshot::handle).toList(),
+                timing.capture().jobs().stream().filter(job -> !before.contains(job.handle()))
+                        .map(HardwareTimingJob.Snapshot::handle).toList());
+        // The real producers own these jobs; this test supplies neither readiness nor jobs.
+        events.update(1, 2);
+        assertEquals(submitted.size(), timing.capture().jobs().stream()
+                .filter(job -> !before.contains(job.handle())).count());
+    }
+
     @Test
     public void aiz2BattleshipBombingStartsFromEventsFg4Handoff() {
         Camera camera = GameServices.camera();

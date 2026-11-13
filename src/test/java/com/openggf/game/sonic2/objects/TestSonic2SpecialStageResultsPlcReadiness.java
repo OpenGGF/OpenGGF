@@ -28,7 +28,8 @@ class TestSonic2SpecialStageResultsPlcReadiness {
             public <T> T gameService(Class<T> type) {
                 return GameServices.module().getGameService(type);
             }
-        }.withGameModule(GameServices.module());
+        }.withGameModule(GameServices.module())
+                .withRom(TestEnvironment.currentRom()).withRomManager(GameServices.rom());
         results = new Sonic2SpecialStageResultsScreen(5, false, 0, 0, services);
     }
 

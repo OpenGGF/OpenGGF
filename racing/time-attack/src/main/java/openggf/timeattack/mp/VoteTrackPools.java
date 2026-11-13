@@ -1,6 +1,8 @@
 package openggf.timeattack.mp;
 
 import openggf.timeattack.TimeAttackTrackCatalog;
+import openggf.timeattack.CompetitionRoomSettings.Mode;
+import com.openggf.net.protocol.TrackKey;
 import openggf.timeattack.VotePool;
 
 import java.util.ArrayList;
@@ -46,6 +48,11 @@ public final class VoteTrackPools {
      * catalog, duplicates and, for a locked room, that the locked character may race every act.
      */
     public static Optional<String> rejection(String gameId, List<String> keys, String lockedCharacter) {
+        return rejection(gameId, keys, lockedCharacter, Mode.TIME_ATTACK);
+    }
+
+    /** Mode-aware validation for Competition pools, including arena identities. */
+    public static Optional<String> rejection(String gameId, List<String> keys, String lockedCharacter, Mode mode) {
         if (keys == null || keys.isEmpty()) {
             return Optional.of("The vote pool is empty");
         }
@@ -57,18 +64,23 @@ public final class VoteTrackPools {
         }
         Set<String> seen = new HashSet<>();
         for (String key : keys) {
-            String[] parts = key == null ? new String[0] : key.split(":", -1);
-            if (parts.length != 3 || !parts[1].matches("[0-9]{1,3}") || !parts[2].matches("[0-9]{1,3}")) {
+            TrackKey parsed;
+            try {
+                parsed = TrackKey.parse(key);
+            } catch (IllegalArgumentException ex) {
                 return Optional.of("Malformed vote track \"" + key + "\" (expected game:zone:act)");
             }
-            if (!parts[0].equals(gameId)) {
+            if (!parsed.gameId().equals(gameId)) {
                 return Optional.of("Vote track " + key + " is not a " + gameId.toUpperCase() + " act");
             }
             Optional<TimeAttackTrackCatalog.Track> track = TimeAttackTrackCatalog.forKey(key);
             if (track.isEmpty()) {
                 return Optional.of("Vote track " + key + " is not an act Time Attack can finish");
             }
-            if (!seen.add(key)) {
+            if (!track.get().modes().contains(mode)) {
+                return Optional.of(track.get().label() + " is not eligible for " + mode);
+            }
+            if (!seen.add(track.get().key())) {
                 return Optional.of(track.get().label() + " is in the vote pool twice");
             }
             if (lockedCharacter != null && !track.get().characters().contains(lockedCharacter)) {

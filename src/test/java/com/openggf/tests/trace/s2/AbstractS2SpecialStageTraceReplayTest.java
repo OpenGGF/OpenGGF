@@ -115,7 +115,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * <p>The pipeline writes a complete report and
  * {@link #assertNoReleaseBlockingDivergences} rejects any comparator divergence.
  */
-@ExtendWith(SessionInvocationExtension.class)
+@ExtendWith({SessionInvocationExtension.class,
+        com.openggf.tests.trace.TraceReplayRomCatalogueExtension.class})
 public abstract class AbstractS2SpecialStageTraceReplayTest {
 
     /** Location of the committed MVP trace (also used by the determinism test). */
@@ -291,6 +292,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         // (re)applied inside the harness ctor afterwards.
         TestEnvironment.configureRomFixture(rom);
         GraphicsManager.getInstance().initHeadless();
+        com.openggf.trace.replay.TraceReplaySessionBootstrap.prepareConfiguration(null, trace.metadata());
+        com.openggf.tests.trace.TraceReplayTestSession.reopenForRecordedTeam(trace.metadata());
 
         if (context != null && context.manifest() != null) {
             S2SpecialStagePredecessorReplay.replayInheritedPrefix(
@@ -301,7 +304,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         int offset = trace.metadata().bk2FrameOffset();
         int ssIndex = specialStageIndex(trace);
         Path bk2 = dir.resolve(trace.metadata().sourceBk2());
-        return new S2SpecialStageReplayHarness(bk2, offset, ssIndex);
+        return new S2SpecialStageReplayHarness(bk2, offset, ssIndex,
+                trace.metadata().recordedMainCharacter(), trace.metadata().recordedSidekicks());
     }
 
     // ==================== Comparator ====================

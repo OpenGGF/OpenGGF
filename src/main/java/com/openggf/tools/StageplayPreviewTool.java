@@ -38,6 +38,9 @@ public final class StageplayPreviewTool {
                     : StageplayPreviewAssets.source(null,null);
             var config = GameServices.configuration();
             config.setSessionOverride(SonicConfiguration.AUDIO_ENABLED, true);
+            // Films record at full level whatever volumes the player saved.
+            config.setSessionOverride(SonicConfiguration.AUDIO_MUSIC_VOLUME, 100);
+            config.setSessionOverride(SonicConfiguration.AUDIO_SFX_VOLUME, 100);
             config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
             config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
             config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);

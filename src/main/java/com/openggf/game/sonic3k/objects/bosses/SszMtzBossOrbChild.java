@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -21,7 +23,6 @@ import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
-import com.openggf.sprites.playable.Tails;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 
@@ -513,7 +514,7 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
             int ability = hit.getDoubleJumpFlag();
             return ability == 1 || ability == 3;
         }
-        if (hit instanceof Tails tails) {
+        if (hit instanceof AbstractPlayableSprite tails && PlayableArchetype.isTails(hit)) {
             if (hit.getDoubleJumpFlag() == 0 || PlayerFluidContextAccess.movementUnderwater(tails)) {
                 return false;
             }

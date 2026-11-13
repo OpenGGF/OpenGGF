@@ -167,6 +167,8 @@ class TestCompetitiveHalfpipeSessionEvents {
             var adapter = new Sonic2CompetitiveSpecialStageAdapter(session, halfpipe);
             var input = new InputHandler();
             adapter.load();
+            // Assert RingCheckTrigger's 48/70 RunObjects passes, not physical lag VBlanks.
+            halfpipe.setLiveLagSimulationEnabled(false);
             while (session.specialSector() != 3 && halfpipe.ticks() < 15_000) {
                 clock.incrementAndGet(); adapter.step(input);
             }

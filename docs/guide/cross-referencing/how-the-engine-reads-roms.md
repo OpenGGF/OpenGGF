@@ -16,7 +16,7 @@ hardware behavior has been reimplemented at a higher level of abstraction:
 | VDP pattern table + sprite table | GPU texture atlas + instanced quad rendering |
 | VDP scroll planes A/B | Tilemap shader with per-line scroll offsets |
 | Z80 running SMPS sound driver | Reimplemented SMPS sequencer in the main process |
-| YM2612 FM synthesis chip | Software FM synthesis through the Nuked-OPN2 port |
+| YM2612 FM synthesis chip | Software FM synthesis: a fast clean-room core by default, or the Nuked-OPN2 port with `audio.fmCore: "accurate"` |
 | SN76489 PSG chip | Software PSG emulation |
 | Object RAM (64-byte S1/S2 slots; 74-byte S3K slots) | Typed object instances with named fields |
 | RAM variables (camera, state) | Dedicated manager classes |

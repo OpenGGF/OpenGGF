@@ -308,10 +308,11 @@ public final class CourseControl {
         if (active) context.getFadeManager().update();
         return active;
     }
-    /** Entry fade and native released title text must finish before capturing a reusable lie. */
+    /** Native load, title, player assembly and released overlay must finish before capturing a reusable lie. */
     public boolean presentationReady() {
         var title = context.getWorldSession().getGameModule().getTitleCardProvider();
-        return !context.getFadeManager().isActive() && (title == null || !title.isOverlayActive());
+        return !context.controlledPresentation().hasPendingWork(context)
+                && !context.getFadeManager().isActive() && (title == null || !title.isOverlayActive());
     }
     public String engineIdentity() { return com.openggf.version.AppVersion.get(); }
     public String apiIdentity() { return com.openggf.ModSubsystem.current().apiIdentity(); }

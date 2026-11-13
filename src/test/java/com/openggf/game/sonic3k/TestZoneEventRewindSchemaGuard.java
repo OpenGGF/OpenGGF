@@ -151,6 +151,8 @@ public class TestZoneEventRewindSchemaGuard {
             "wallOffsetFixed",
             "wallOffsetPixels",
             "shakeTimer",
+            "pendingScreenShakeOffset",
+            "act2BgUpdatedPrePhysics",
             "carrierMovementPending",
             "carrierUpdatedBeforeDynamicObjects",
             "carrierP1Active",

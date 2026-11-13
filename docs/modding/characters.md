@@ -74,10 +74,34 @@ persist `CharacterKey.persisted()`.
   strategy appropriate to the character;
 - `behavesLike` — the existing ROM routing bucket used by events and level logic;
 - `secondaryAbility` — one built-in double-jump ability or `NONE`;
-- `supportsSuperForm` — must be `false` for mod characters in playable format v2;
+- `supportsSuperForm` — enables the authored `SuperFormProfile` supplied by `superFormSupplier`;
 - `artSupplier` — the full `SpriteArtSet` from a baked playable sheet; and
 - optional `paletteSupplier` — the character palette, or `null` to retain the host
-  game's palette fallback.
+  game's palette fallback;
+- optional `underwaterPaletteSupplier` — an authored 16-colour water line. The full
+  constructor takes this after `movementAbilities`; existing constructors default
+  it to `null`. Suppliers have the same owner fault boundary as the dry palette;
+- `movementAbilities` — immutable native-move declarations, described below;
+- optional `presentationSupplier` — names and non-gameplay image slots; and
+- optional `superFormSupplier` — the authored per-host powered-form profile.
+
+A `SuperFormProfile.Form` may also carry an optional `PoweredPlayableSheet`: a
+second GGFP bank for poses that differ in Super/Hyper form, plus explicit
+whole-animation and phase aliases back to the normal sheet. The engine combines
+both banks once at art initialization and plays the host's native powered
+scripts with their timing; an animation the bank omits keeps the normal one.
+The older `Form` constructor supplies no bank. MICA's `MicaGilded` is the example.
+
+When absent, water colours are derived at rendering time using the host zone's
+normal and underwater palette pair, including zone changes and palette cycles.
+The native games load authored ROM tables: S1 replaces line zero with LZ/SBZ3
+Sonic water colours; S2 uses CPZ/ARZ water palettes; S3K selects a zone water
+palette and applies character-specific patches. The shared renderer estimates
+their per-channel colour shift for custom rows; this is a creator fallback,
+not a claim that the ROM transforms arbitrary character palettes.
+
+The maintained [MICA example](../../examples/mica-and-talon/README.md) demonstrates
+`baseGame: any` registration and acceptance in all three games.
 
 The archetypes are routing contracts, not cosmetic labels:
 
@@ -90,7 +114,7 @@ The archetypes are routing contracts, not cosmetic labels:
 
 Choose the route whose geometry and events the character can actually complete.
 The engine does not silently remap `SONIC_ALONE` to a team route when sidekicks are
-present.
+present. A `SONIC_AND_TAILS` definition uses `SONIC_ALONE` for a solo launch.
 
 ## Sprite and physics
 
@@ -121,7 +145,8 @@ public final class MyRunner extends AbstractPlayableSprite {
 }
 ```
 
-`drawStandardArt()` submits the installed current pose when visible. The host
+`drawStandardArt()` submits host ROM dust effects and the installed current pose
+when visible. Dust uses its own ROM art, independent of the canonical sheet. The host
 continues to own the renderer and its pattern bank; drawing changes no simulation
 state. Runtime main/sidekick suffixes have no effect on the factory-bound key, and
 the same sprite class can serve several distinct registered definitions. Outside
@@ -147,6 +172,18 @@ to the stock launch configuration. Its display name comes from the registry. A s
 team stores that same key, and rewind recreates the owner class through the original
 mod class loader.
 
+### Movement ability declarations
+
+`CharacterDefinition.movementAbilities` is an immutable set of declared native
+moves. Existing convenience constructors declare an empty set; use the full
+constructor with `Set.of(CharacterDefinition.MovementAbility.SPINDASH)` when the
+actor implements native spindash. The registry intersects each actor's declaration
+with its donor's enabled native rules. Stageplay uses that result to offer and
+validate route starting actions, without branching on actor or game names. The
+contract is extensible to future moves and mod actors; Stageplay's current stock
+cast/asset limits still apply.
+
+
 ## Baked playable art
 
 Ordinary object sheets and playable sheets are different containers:
@@ -168,11 +205,340 @@ capacity overflow before installing art. Materialize the validated file with
 `PlayableSheetMaterializer.read(...)`, then supply its `art()` and `palette()` from
 the definition as shown by the sample.
 
-Playable v2 has no custom HUD life icon or data-select portrait. Those presentations
-use the host fallback. Mod characters also do not receive Tails' separate tail
-appendage renderer automatically.
+Playable GGFP v2 carries the gameplay sheet; presentation is supplied separately
+through `CharacterPresentation`. GGFP presentation sections remain pending.
+Mod characters do not receive Tails' separate tail appendage renderer automatically.
+Package indexed presentation PNGs beside the GGFP, read them with
+`PresentationImages.read(context.modAssets(), relativePath)`, and pass the resulting
+presentation from the definition's supplier. `ModAssetRoot.readBounded` loads the
+GGFP under the asset limits; `PlayableSheetMaterializer.read` validates it.
+See [MicaMod.java](../../examples/mica-and-talon/src/main/java/micaandtalon/MicaMod.java),
+[MicaPresentation.java](../../examples/mica-and-talon/src/main/java/micaandtalon/MicaPresentation.java)
+and [build.py](../../examples/mica-and-talon/build.py) for loading and jar layout.
+
+### Canonical vocabulary
+
+The exact enum is [CanonicalAnimation.java](../../src/main/java/com/openggf/game/CanonicalAnimation.java).
+Names describe poses, not permission to perform the corresponding move; the
+host profile and character ability still own dispatch.
+
+| Group | Names |
+|---|---|
+| Core movement (shared across all games) | `WALK`, `RUN`, `ROLL`, `ROLL2`, `PUSH`, `WAIT`, `DUCK`, `LOOK_UP`, `SPRING`, `BALANCE`, `BALANCE2`, `BALANCE3`, `BALANCE4` |
+| Combat / state | `HURT`, `DEATH`, `DROWN` |
+| S1-specific animations | `STOP`, `WARP1`, `WARP2`, `WARP3`, `WARP4`, `FLOAT3`, `FLOAT4`, `LEAP1`, `LEAP2`, `SURF`, `GET_AIR`, `BURNT`, `SHRINK`, `WATER_SLIDE`, `NULL_ANIM` |
+| Shared (present in multiple games) | `FLOAT`, `FLOAT2`, `HANG` |
+| S2+ animations (introduced in Sonic 2) | `SPINDASH`, `SKID`, `SLIDE`, `HANG2`, `BUBBLE`, `HURT2`, `FLY`, `TAILS_FLY`, `TAILS_FLY_ASCEND`, `TAILS_FLY_CARRY`, `TAILS_FLY_CARRY_ASCEND`, `TAILS_FLY_TIRED`, `TAILS_SWIM`, `TAILS_SWIM_ASCEND`, `TAILS_SWIM_CARRY`, `TAILS_SWIM_TIRED` |
+| S3K animations (introduced in Sonic 3&K) | `BLINK`, `GET_UP`, `VICTORY`, `BLANK`, `HURT_FALL`, `GLIDE_DROP`, `GLIDE_LAND`, `GLIDE_SLIDE`, `TAILS_CARRIED` |
+| Powered transformation | `SUPER_TRANSFORM` |
+| Character-owned strike | `HOMING_DIVE`, `HOMING_DIVE_FORWARD`, `HOMING_DIVE_FORWARD_UP`, `HOMING_DIVE_UP`, `HOMING_DIVE_FORWARD_DOWN`, `HOMING_DIVE_DOWN` |
+
+### Authoring the animation table
+
+Playable sheet manifests require an `animations` table with uppercase
+`CanonicalAnimation` names. `WAIT` is mandatory; there is no `idle` alias.
+One baked sheet works in all three hosts. The host binds native animation IDs
+at installation, using its native velocity profile and canonical fallback map;
+an authored equivalent sharing a host fallback destination (for example STOP/SKID)
+can serve that destination. An absent pose whose fallback is unavailable uses `WAIT`.
+
+```yaml
+animations:
+  WAIT: { frames: [0], durations: [8], end: loop }
+  WALK:
+    frames: [1, 2, 3, 4]
+    speedDriven: true
+    end: loop
+    slopes:
+      - [1, 2, 3, 4]
+      - [5, 6, 7, 8]
+      - [9, 10, 11, 12]
+      - [13, 14, 15, 16]
+  RUN: { frames: [17, 18], speedDriven: true, end: loop }
+  ROLL: { frames: [19, 20], speedDriven: true, end: loop }
+  SPRING: { frames: [21], durations: [8], end: hold }
+  HURT: { frames: [22, 23], durations: [4, 8], end: next, next: WAIT }
+```
+
+Frame indices refer to the manifest's top-level `frames`. Fixed `durations` are
+positive ticks per frame and must match the frame list length. `speedDriven`
+is required for `WALK`, `RUN`, `ROLL`, `ROLL2`, and `PUSH`, selecting native
+walk/run, roll or push timing. Other poses require fixed durations. End actions are `loop` (default), `loop-back` with `loopBackSteps: N`, `hold`, or `next`
+with an authored canonical `next` target. WALK and RUN share the host's speed
+threshold and native slope orientation rules.
+
+`loop-back` repeats the final N authored steps (1 through the script length),
+including their full durations; it never counts unique drawings or elapsed ticks.
+`hold` keeps the final frame. `next` writes the target animation ID when the
+source duration expires; its first frame publishes on the following update.
+The binding translates only `next` targets into host IDs and preserves rewind counts.
+GGFP v2 ANIM end tags are 0=loop, 1=hold, 2=next, 3=loop-back;
+only tag 3 adds an unsigned big-endian 16-bit step count before the next-key string.
+This unreleased format has no migration path.
+
+Native ownership: SAnim_End_FE (s2.asm:38430-38437) rewinds from the
+terminator and immediately publishes the target frame; SAnim_End_FD
+(s2.asm:38440-38446) writes only the animation byte. MICA's 179-step S2
+intro repeats the last six steps, matching SonAni_Wait (s2.asm:38702-38714).
+TALON repeats 28, matching TailsAni_Wait (s2.asm:41566-41569).
+Other native hosts use rewind 2 in SonAni_Wait (_anim/Sonic.asm:181-188),
+53 in AniSonic05 (General/Sprites/Sonic/Anim - Sonic.asm:43-49), and
+28 in AniTails05 (General/Sprites/Tails/Anim - Tails.asm:49-52). These are
+host references, not substitutions for an authored sheet's rewind count.
+Finite S2 BLINK/GET_UP hand off to WALK (native ID 0), as SonAni_Blink
+(s2.asm:38724) and SonAni_GetUp (s2.asm:38726) specify; creators can use
+`next: WALK` for that behavior. `hold` is equivalent to a final-frame-only
+native rewind, used by SonAni_LookUp (s2.asm:38718) and SonAni_Duck
+(s2.asm:38720). Authored scripts retain their chosen timing on every host.
+
+
+Optional WALK/RUN `slopes` contains four equal, even-length cycles in native
+slope-selector order (0, 2, 4, 6), including the flat cycle first. Their length
+must equal `frames`; they require speed timing. Without slopes, the flat cycle
+is repeated in all four orientations. Mapping and DPLC references are packed
+into strides at materialization; source tiles are shared. Mod sheets have no
+implicit native tumble or Super alternate frames.
+
+ROM-free standalone modules have no native ID vocabulary; their default presentation
+retains the authored `WAIT` cycle. Native profile binding applies to stock hosts.
+
+Optional fixed-duration strike keys are `HOMING_DIVE_FORWARD`,
+`HOMING_DIVE_FORWARD_UP`, `HOMING_DIVE_UP`, `HOMING_DIVE_FORWARD_DOWN` and
+`HOMING_DIVE_DOWN`. Both world-owned `HomingAttack` modes select by current
+velocity, with normal facing mirroring leftward flight. Measured clockwise from
+forward (positive y is down), the sectors are [-22.5°, 22.5°) forward,
+[-67.5°, -22.5°) forward-up, [-90°, -67.5°) up,
+[22.5°, 67.5°) forward-down and [67.5°, 90°] down.
+A nonzero x velocity sets facing in the homing runtime; zero keeps facing.
+Tiny x values naturally select vertical poses; a stopped strike selects forward.
+
+Selection falls back from the exact direction to `HOMING_DIVE`, then the native
+animation. A sheet supplying only `HOMING_DIVE` retains its existing behavior.
+Direction changes preserve the script cursor and timer, immediately publishing
+the corresponding pose even during held ticks; differing cycle lengths wrap the
+cursor. Keep matching frame counts and durations for aligned directional phases.
+Only script execution sees reserved creator IDs: collision retains native Roll.
+Landing, hurt, control takeover and completion restore native selection. Direction
+is derived each frame; existing world strike and script rewind state suffice.
+
+
+## Presentation contract
+
+| Surface | Slot or bank | Host |
+|---|---|---|
+| Names | `displayName`, `hudName`, `supplementaryGlyphs` by `Font(Host, Style)` | S1/S2/S3K HUD and results; S2 half-pipe HUD |
+| Life/1-up | `Art.hudLifeIcon`, `Art.oneUpFace` | S1/S2/S3K; life icon also in data select |
+| Signs | `Art.signpostFace`, `endSignFace`, semantic `sign` poses/backings | S1/S2/S3K |
+| Stage players | `stages`: `S2_HALF_PIPE`, `S3K_BLUE_SPHERE`, `S3K_SLOT_MACHINE` | S1 instead reuses the playable roll sheet |
+| Continue | `Art.screenFrames`: `continue/player`, `continue/icon`, `continue/floor`, `continue/team-idle` | Host-specific native frame IDs |
+| Portrait | `Art.screenFrames`: `portrait`, frame 5 | S3K data select, including donated menus |
+| Snowboard | `Art.screenFrames`: `snowboard`, frames 0–12 | S3K ICZ rider |
+| Endings | `endings`: `EndingSpriteSet.Surface` | S1/S2/S3K; selectors listed below |
+
+The optional `CharacterDefinition.presentationSupplier` constructor argument follows
+`underwaterPaletteSupplier` and precedes `superFormSupplier`. It receives the canonical persisted character key and
+runs inside the character owner's fault boundary, like the art and palette
+suppliers. Existing constructors default it to `null`.
+
+`CharacterPresentation` carries an optional display name, an optional short HUD
+name (up to five characters), indexed images per host, and supplementary glyphs
+keyed by host and letter style. `Art` has independent HUD life icon (16×16),
+1-up face, signpost face and end-sign face slots. Null names and images mean native
+fallback. `Image` uses palette indices 0–15, with zero transparent; it copies pixel
+arrays on construction and access. Presentation maps are immutable snapshots.
+`Art.sign` optionally supplies semantic face, alternate, spin1, edge and spin3
+poses. Each pose has a character-palette face and optional native-palette backing;
+backing RGB colours are matched to its declared host palette line (0–3). Spin
+images are already oriented. Null poses retain native frames and poles remain
+native. The four-argument `Art` constructor remains supported.
+`com.openggf.mods.assets.PresentationImages` reads indexed PNG assets through `ModAssetRoot`, bounded to
+256×256 and at most the smaller of 256 KiB and the root asset-byte limit;
+MICA packages its HUD, monitor, sign and supplementary S1 HUD glyph assets this way.
+
+S1, S2 and S3K consume the HUD life icon/name, act-results name, special-stage
+results name (S2 including the Super announcement; S3K Blue Sphere) and 1-up
+monitor face slots. HUD names use each host's small font in the upper 32×8 row of its native
+32×16 word/counter cell; the lower row retains the ROM cross and counter space.
+Creator glyphs cannot extend into that lower row. The short name is preferred
+when supplied. S3K removes wholly transparent glyph-edge
+columns only when the ordinary word exceeds 32 pixels; it never scales, removes
+ink or replaces native glyphs. If the packed word still exceeds the cell, S3K
+rejects it. This allows full names such as TALON without new font art. Results
+use the host title/results alphabet.
+Absent slots retain native presentation. S1/S2 names with unsupported glyphs or
+oversized HUD words retain native presentation; S3K rejects unsupported or
+oversized names. 1-up faces must be 16×16; other sizes retain the
+native face. Stock characters without a supplier keep their native tiles and
+mappings. The internal name composer reports native, supplementary and missing
+glyph coverage and extracts pixel crops across tile boundaries. Title-font readers
+for all three hosts and small HUD-font readers use the ROM pipeline. The S3K reader
+inventories each zone separately, including shared ZONE letters and pixel crops
+within multi-letter pieces, plus the results-name banks. Native glyphs take
+precedence over supplements: MICA needs supplementary M and A only in the S1 HUD
+font. Stock S2 results select Miles/Tails for Tails alone using the native
+graphics-region setting. Sign objects in all three hosts consume the optional
+face, spin and backing poses, retaining native poles, timing and fallback frames.
+`CharacterPresentation.stages` optionally supplies `StageSpriteSet` entries for
+`S2_HALF_PIPE`, `S3K_BLUE_SPHERE` and `S3K_SLOT_MACHINE`. Each entry maps the host's
+native mapping-frame ID to a bounded indexed image and its hotspot. Each actor
+has a 32,768-pattern compilation budget within the reserved presentation range. Animation,
+movement, jump projection and flips stay with the native stage owner. Empty maps
+retain stock art; supplied sets must cover every frame used by their archetype.
+S1 instead binds the ordinary canonical playable sheet to its native roll scripts.
+The stage player uses the character palette supplier in an isolated render-context
+row; native palette lines remain available to stage art and stock sidekicks.
+In S2 and S3K, native Tails-body banks resolve independently: a Tails-role solo
+main owns that actor; otherwise the first selected follower owns it. The leader's
+set remains separate in team play. Supplying a Tails body set suppresses the native
+separate tail object; integrate appendages into the authored body frames. Pattern
+addresses and palettes are isolated between the two owners. The blank S3K mapping
+0 can be omitted while mappings 1–11 remain present.
+MICA and TALON package their PNG sets through `PresentationImages` and `ModAssetRoot`.
+
+S2 half-pipe and S3K Blue Sphere banks may add dedicated final-orientation
+drawings with `set.withMirroredFrames(Map.of(nativeId, drawing))`, or
+`set.withOrientationFrames(horizontalFlip, verticalFlip, drawings)` for S2's
+vertical and combined orientations. Keys passed to these methods remain native
+IDs 0–255 and must have a base frame. The returned immutable set contains bounded
+compiler slots for the variants; do not feed those slots to gameplay selectors.
+Draw the complete final pose, including its hotspot, with a consistent screen
+light and anatomical feature placement. The engine selects the variant only
+when its native flags match, and suppresses those render flips. Missing variants
+retain the existing draw rules. Native art, mapping order, animation clocks,
+sprite-list ownership, priority and palette/fades stay unchanged. Blue Sphere
+gets the orientation from its ROM mapping pieces; existing independent creator
+selectors remain independent when no variant is supplied. Slot-machine,
+Competition and title consumers do not select these optional variants.
+
+This is an additive seam in the unpublished 0.7 candidate. The original
+one-component `StageSpriteSet` record and constructor are preserved; its
+release descriptor is validated unchanged at candidate `0.7.0`, as required
+by the ordinary-regeneration policy; the `ModApiVersion` note and normalized
+mutable signature pin were updated together. MICA/TALON's `oriented-stage/native-pose-generation.json` files retain
+the selected original pixels and fresh-generation provenance.
+
+`Art.screenFrames` optionally supplies immutable indexed poses with hotspots and
+sixteen RGB colours. Continue consumers use `continue/player`, `continue/icon`
+and the S1 `continue/floor` / S3K `continue/team-idle` banks, keyed by native
+mapping frame. They retain the native animation and movement owners. Separate
+screen palette lines preserve native text and Tails; omitted banks/frames fall
+back to ROM art. S2's Tails actor additionally uses `continue/nag` mappings 2/3
+before acceptance, `continue/player` for its native walk/run mappings and
+`continue/icon` 4/5. S3K's Tails actor uses `continue/team-idle` 5/6,
+`continue/player` $AD and $21–$24, and `continue/icon` 2/3. Supply aliases at 0/1
+for data-select counters. These actors resolve from the Tails-role solo main or
+the selected follower independently from the Sonic actor. Existing four/five-argument
+`Art` constructors remain supported.
+The S3K `portrait` bank (frame 5) supplies the data-select bust, composed with
+stock team portraits using its authored hotspot. Its palette is isolated in a
+renderer-owned graphics bank; no native menu line is replaced. Custom portrait
+art faces right canonically; the right team member is mirrored inward, while
+solo and left portraits retain their authored orientation.
+Data-select saved-slot life counters also use `hudLifeIcon` with the character's
+palette; miniature continue counters reuse S3K `continue/icon` frame 0 when its
+visible pixels fit the 16×24 menu figure cell. Native crosses/digits and every
+stock fallback remain unchanged. NO SAVE uses the same solo/team portrait
+composer and refreshes immediately when the selected team changes.
+The S3K `snowboard` bank supplies the 13 native rider mapping IDs (0–12).
+The host retains intro timing, movement, separate board/spray and snow occlusion;
+private renderer palettes keep rider and native effects independent.
+
+`CharacterPresentation.endings` adds optional `EndingSpriteSet` entries. S3K
+supports `S3K_NORMAL_POSE` / `S3K_POWERED_POSE` reunion poses, the `S3K_PASSENGER`
+rider on the mid-size Tornado that reaches the island (native selector 14 for a
+Sonic-role lead, 15 for a Tails-role lead), the `S3K_EYECATCH` figure on the final
+S3 graphics card (selectors 1–4 in the Sonic seat, 10 and 11 in the Tails seat), and
+`S3K_PLAYER` / `S3K_POWERED_PLAYER` ending frames. The partner's scenes resolve from
+the first creator sidekick, or on a solo team from the lead's own companion banks:
+the full-size cockpit (`S3K_TORNADO_PILOT` / `S3K_SOLO_TORNADO_PILOT`, selector 12 in
+the Tails seat and 11 in the Sonic seat), the mid-size cockpit head
+(`S3K_MINI_TORNADO_PILOT` / `S3K_SOLO_MINI_TORNADO_PILOT`, selectors 12 and 13), the
+other seat on the final card (the sidekick's `S3K_EYECATCH`, or `S3K_SOLO_EYECATCH`),
+and Sonic 2's search photos (`S2_PHOTOS` / `S2_SOLO_PHOTOS`). A Tails-role lead takes
+its float and transformation scripts from Tails's table. Frames retain native mapping IDs
+and hotspots; missing entries fall back to the native host renderer. Indexed
+images are bounded to 256×256 pixels to include the enlarged reunion art. Each
+set carries sixteen RGB colours; the renderer keeps it on a private palette
+row. Powered player/reunion frames use the live authored form palette. Vehicle,
+companion, banner, choreography and script timing stay native. Existing four- and
+five-argument presentation constructors retain empty ending maps.
+
+S1's ending actor consumes `S1_ENDING`; absent slots retain its ROM art. Images
+are bounded to 256×256 to cover the native leap close-up. Shared native palettes
+remain intact for the emeralds, flowers, logo and companions.
+
+S2 consumes `S2_ENDING` (normal ObjCF selectors), `S2_SUPER` (powered
+ObjCF selectors), `S2_FLOAT` (native Float2 frame IDs), and `S2_PHOTOS` (0–3).
+Photo panels 1–3 are complete search-party illustrations owned by the first
+configured sidekick; photo 0 stays native. They show the search for the missing
+hero. Normal rider overlays contain no
+vehicle pixels: the host retains the native Tornado pieces and separate Tails
+pilot unless that sidekick supplies `S2_TORNADO_PILOT`. This optional set uses
+native Tails pilot mapping IDs 1, 2, 3, 4 and 16, each a 24×16 cockpit crop with
+hotspot (48, 8) relative to the Tornado origin. The host retains its 24-step,
+nine-clock sequence and DPLC submissions. The ending and SCZ/WFZ vehicles share
+this override. Solo teams may supply `S2_SOLO_TORNADO_PILOT` on the main's
+presentation to depict their companion, with Sonic pilot selectors 45–48 and
+hotspot (50, 8) on Tails-role routes, or Tails selectors 1–4/16 with hotspot
+(48, 8) on Sonic-role routes. The four Sonic-pilot mapping frames 4–7 share the
+same cockpit replacement path. Missing
+character, set or selector retains the native cockpit. Ending fades apply to the
+private pilot palette; powered lead palettes never recolour the sidekick.
+Normal and Super paths retain their native choreography. Powered poses
+use the character's S2 Super profile palette cycle; native fade steps also apply
+to the private rows. The existing KiS2 presentation keeps its own route behavior.
+
+Palette ownership follows `Pal_AC7E / Pal_AC9E / Pal_ACDE / Pal_AD1E / Pal_AD3E`
+(docs/s2disasm/s2.asm:14332-14336) and the line-1 rider versus line-0 vehicle
+pieces in `Map_objCF_0132` (docs/s2disasm/mappings/sprite/objCF.asm:80-89).
+Private rows preserve all of these ROM-owned colours, including the native Tails
+pilot drawn separately from MICA's solo photo panels.
+
+S2's half-pipe ring HUD composes the short/display name from its own native
+SONIC/MILES/TAILS letters in a 40×8 cell, with HUD-style supplements only for
+missing letters. Stock and unsupported names retain their native art.
+GGFP presentation sections are pending.
+
+## Native ground abilities
+
+Declare `CharacterDefinition.MovementAbility.SPINDASH` in the definition's
+movement-ability set to use the host's native charge/release path. The registry
+intersects declarations with native host capabilities: MICA can spindash in S2
+and S3K; S1 retains its native no-spindash rule. A canonical sheet should supply
+SPINDASH poses. Canonical sheets enable native deep-wait Blink/GetUp interrupts
+only when those scripts are authored; a looping WAIT fallback cannot finish an
+input-locking native interrupt.
 
 ## Ability and super-form rules
+
+Characters can own the world-session homing capability independently of Mutator Lab.
+Import `com.openggf.sprites.playable.HomingAttack` and return
+`HomingAttack.start(this, HomingAttack.Mode.HOMING)` from `onAbilityActivate`.
+Choose `Mode.INSTAGIB` per call for a powered strike (MICA reserves it for Hyper); no
+menu setting or native character identity is required. A target uses native contact/defeat rules, refreshes
+the air action for chaining, and retains the existing effects and camera lag.
+Without a target, `start` dashes forward. Use `startIfTarget(this, mode)` to
+return false without dashing when a native air move should get the press instead.
+
+Override `protected void onMovementTick()` for per-tick character behavior. It runs
+inside the character owner's fault boundary before movement input and homing preview
+selection (live movement ticks, excluding death). Use the subclass rewind hooks for
+mutable state. For a normal homing preview, call
+`HomingAttack.requestReticle(this, getAir())`; the runtime gates availability and
+keeps the target locked during the strike.
+
+For a flight move, call `HomingAttack.requestReticle(this, downHeld)` from `onMovementTick()`, and `HomingAttack.divebomb(this, mode)` on the down+jump activation. Release
+the request with `false` to hide the reticle, including during a strike. The dive
+uses the previewed live target; without one it dives steeply forward-down. The
+facade accepts a free airborne controlled leader, including flight without native
+`jumping` state, and rejects a spent air action, grounded, hurt, dead, controlled or
+locked player. It does not grant flight or intercept native flapping input: the
+character owns that dispatch. Returning false leaves native air moves available.
+
+The runtime, air-action latch and plain-value rewind snapshot belong to the world;
+characters must not cache engine targets or serialize the runtime. Other character
+state still follows the subclass rewind contract below.
+
 
 Use `INSTA_SHIELD`, `FLY`, `GLIDE`, or `NONE` when an existing
 `SecondaryAbility` is sufficient. For one novel airborne activation, override:
@@ -197,9 +563,103 @@ hooks run through the character's owner fault boundary during simulation. Drawin
 must not change gameplay state. Rewind restores captured state without emitting
 landing/reset events, so an ability latch must still be captured explicitly.
 
-Mod characters cannot opt into stock super forms in the current 0.7 contract: set
-`supportsSuperForm` to `false`. This prevents a custom sprite from transforming with
-Sonic's art merely because the stock ring and emerald requirements are met.
+Opt in with `supportsSuperForm = true` and the final `SuperFormSupplier` constructor
+argument (after the optional presentation supplier). The supplier runs through the
+registered owner fault boundary. It returns an immutable `SuperFormProfile` mapping
+host `GameId` to supported `SUPER` and optional S3K `HYPER` tiers. Existing constructors
+remain available and default to no profile. Enabling a mod form without a profile
+is rejected.
+
+Each tier supplies 1–256 fade rows and dry-cycle rows, an optional underwater
+cycle of the same length as the dry cycle, ticks per frame in 1–256, a physics profile, a canonical transformation
+animation and optional canonical animation overrides. Rows are sixteen packed
+Mega Drive colour words. An optional `PoweredPlayableSheet` carries a canonical
+GGFP bank, explicit normal-animation aliases and optional normal-phase aliases.
+The old Form constructor keeps its normal-sheet behavior. Banks combine once
+at art initialization; missing complete powered families retain their whole bound
+normal animation. Host providers select the movement archetype's native timing
+and selectors; Tails-family creators do not consume Super Sonic's movement table.
+Authored powered scripts also have host-independent runtime addresses through
+`PoweredPlayableSheet.animationId(key)`. Read these from the active animation set;
+their frame indices are already relocated into the shared mapping bank. A normal
+alias has no authored powered address. This lets integrated wing cycles and
+transformation scripts play even where the host has no corresponding native ID,
+including S1 creator forms. A host without native powered scripts uses authored
+canonical GGFP timings without a donor ROM. Existing `animations` overrides take precedence and address the combined bank.
+The profile controller restores views during transformation, Super/Hyper, revert,
+rewind and art refresh. MICA's S2/S3K bank and Hyper geometry sharing are documented
+in her [powered-art provenance](../../examples/mica-and-talon/production/mica/powered/provenance.json).
+Missing water rows use the live host-zone derivation.
+Hyper trails (`afterImages`) use the character's own renderer and rewind-captured
+position history; native S3K stars (`stars`) are opt-in. Both draw only for the Hyper
+tier in S3K. Neither Sonic's palette nor his alternate mappings are installed.
+
+#### Strike colours and powered effects
+
+`StrikeTrailStyle` gives a homing or divebomb strike its colours: three ember colours
+(hottest first), one to eight heat-front layers from the outer haze to the nose
+(`FrontLayer(rgb, radius, size, alpha, arc)`), an after-image tint (`-1` keeps the
+character's own colours) and an ember density (25–400 % of stock). An optional fifth
+component, `echoPhaseSlot` (1–15, or `-1`), tints each after-image with that palette slot's
+colour as the after-image spawns, so a cycling form leaves a banded trail; an authored
+form reports its running cycle row even beneath a strike palette. Colours are
+`0xRRGGBB`. Override `AbstractPlayableSprite.strikeTrailStyle()` for the normal form;
+a powered form's `PoweredEffects.trail()` replaces it while that form is active.
+Supplying neither keeps the stock look exactly: blue for ordinary homing, and native
+art hue-rotated to flame for Instagib.
+
+`SuperFormProfile.Form` takes an optional `PoweredEffects(trail, particles, emitters,
+strikePalette)` as its last component (older constructors pass null). `strikePalette` is
+empty or sixteen Mega Drive colour words shown on the character's line while a homing or
+divebomb strike of that form flies; the form's cycle keeps its own clock underneath and
+its live row returns the tick the strike ends. It is derived from the strike state each
+tick, so rewind needs nothing extra. The three-argument constructor keeps the cycle. A `Particle` is one to eight
+`StageSpriteSet.Frame`s of at most 32×32 pixels and a frame time; pixels index the
+character's own live palette line, so they follow the form's palette cycle. A cycle at
+least as long as the particle's life plays once; a shorter one loops from a random
+phase, as a twinkle. An `Emitter` names its particles and a trigger:
+
+| Trigger | Fires |
+| --- | --- |
+| `TRANSFORM` | once, as the transformation completes and the form becomes active |
+| `FAST` | every `interval` ticks at 6 px/frame or more, not rolling or striking |
+| `ROLLING` | every `interval` ticks rolling or in the jump ball at 2 px/frame or more, not striking |
+| `STRIKING` | every `interval` ticks while a homing or divebomb strike flies |
+| `FLYING` | every `interval` ticks in flight |
+| `FLAP` | once per flight flap |
+| `STRIKE_HIT` | once each time a strike lands |
+
+`RING` places `count` particles around a circle of `radius` moving outward at
+`speedX`; `SCATTER` places them in a box of half-size `radius` moving at
+(`speedX`, `speedY`). Offsets and horizontal speeds are facing-relative (+x in front);
+speeds, `jitter` and `gravity` are in 1/256 px per tick. At most 16 particles, 16
+emitters and 48 live particles per character. The engine draws particles as native
+sprite pieces with the character's priority, behind its body, in S1, S2 and S3K.
+They are presentation only: never read by gameplay, not captured by rewind (a restore
+clears them) and gone on reload.
+
+`AbstractPlayableSprite.poweredTier()` answers `SUPER`, `HYPER` or null (normal form),
+for native and authored forms alike.
+
+S2 defaults to seven emeralds and 50 rings, its jump-apex trigger and native drain.
+S3K uses the explicit air-ability trigger, seven Chaos Emeralds before conversion
+for Super, and seven Super Emeralds for Hyper, retaining the native shield and
+invincibility gates. S1's six-emerald, 50-ring form is **mod-defined**, borrowing S2's
+trigger and drain with S1 invincibility music. S1 has no native Super form; this
+path needs no donor ROM. Stock character controllers are unchanged.
+
+The MICA example registers `GildedSettings`: enable its settings override in the
+host settings overlay to edit per-game form switches, S1 emerald requirement,
+ring requirement and S1 music. These existing `MutatorOption` widgets admit at
+LOAD. The small `CharacterSuperFormPolicy` extension is necessary because existing
+policies cannot address a character's authored form. The host accepts a policy
+only for a matching owner and local character; inactive overrides retain profile
+defaults. No creator callback receives world mutation authority.
+
+An ability can read `isSuperSonic()` (including the transformation) and `poweredTier()`.
+MICA selects `INSTAGIB` only when `poweredTier()` is `HYPER`; Super Gilded and Solar
+TALON strike with ordinary homing. The controller captures palette cursor,
+phase, display frame, tier and ring drain for whole-player rewind.
 
 ## Failure, rewind, and acceptance checklist
 
@@ -221,7 +681,7 @@ alongside the base snapshot:
   `captureRewindState(boolean)` call, which includes keyframe-exact seeks and
   cached-segment scrubs, not just the "live" forward-play capture path. Return
   an immutable payload implementing the empty marker interface
-  `PerObjectRewindSnapshot.PlayerRewindExtra.PlayableSubclassRewindExtra`
+  `PerObjectRewindSnapshot.PlayableSubclassRewindExtra`
   (typically a `record`), or `null` if there is no subclass state to capture.
   The default implementation returns `null`, which is correct for the base
   Sonic/Tails/Knuckles sprites and any subclass that has not overridden the
@@ -297,13 +757,230 @@ reusing an instance from an earlier construction is rejected because it retains
 its previous runtime callback boundary.
 
 
-### Movement ability declarations
+## Current limits
 
-`CharacterDefinition.movementAbilities` is an immutable set of declared native
-moves. Existing convenience constructors declare an empty set; use the full
-constructor with `Set.of(CharacterDefinition.MovementAbility.SPINDASH)` when the
-actor implements native spindash. The registry intersects each actor's declaration
-with its donor's enabled native rules. Stageplay uses that result to offer and
-validate route starting actions, without branching on actor or game names. The
-contract is extensible to future moves and mod actors; Stageplay's current stock
-cast/asset limits still apply.
+S2 competitive 2P presentation, title/branding art, slot-reel prize symbols and
+custom Tornado pilots are outside the delivered character presentation surfaces.
+The slot-machine *player* set is delivered; its reel symbols are separate art.
+GGFP presentation sections are pending: keep using bounded sidecar PNG assets.
+MICA and TALON are a framework demonstration. Focused acceptance and surface
+captures do not establish complete title-to-ending routes. For a build-along, see
+[MICA and TALON: an original character in nine parts](guides/original-character/README.md).
+
+### Object-owned native mapping poses
+
+Playable YAML optionally supplies `nativeFrames`, a map from semantic pose keys
+(for example `hang/0`) to authored mapping indices. The GGFP v2 `NFRM` section
+retains these aliases. Each host declares its native bytes through
+`DonorCapabilities.getNativeFramePoses()`; shared binding consumes semantic keys
+and canonical fallbacks rather than game-name branches. The stock host vocabularies describe normal Sonic and S2/S3K Tails archetypes,
+selected through `forPlayableCharacter`; Knuckles remains separate work. Missing
+pose aliases use the descriptor's canonical fallback. Unknown native byte slots
+use the creator's first WAIT pose, never an accidental packed frame; stock art
+bypasses binding. S2 tumble bytes $75–$80 and S3K object tables can therefore
+use creator art without changing object clocks or gameplay state.
+
+When aliases are supplied, bound canonical scripts move above the 256 native
+byte slots, including slope sets and DPLCs. Index zero stays invisible for native
+cutscenes. Creator code should use the installed scripts rather than cache the
+unbound sheet's mapping indices. Authored native aliases remain in byte slots.
+
+The AIZ intro actor also binds the custom normal sheet. Its riding and lift-off
+native mappings use aliases; its separate powered bank falls back to canonical
+ROLL with the authored S3K Super palette cycle. The native intro gate follows
+the registered Sonic archetype, including custom Sonic stand-ins.
+
+
+### Tails archetype and flight extensions
+
+A definition with `behavesLike = TAILS_ALONE` receives native Tails gameplay
+branches (including touch attacks, object geometry and rolling rules), without
+receiving the native appendage renderer or Super Flickies. Use
+`SidekickRespawnStrategy::tails` for native fly-in/CPU recovery when following.
+Declare `SecondaryAbility.FLY` for the shared flight model. S3K enables it
+natively; `MovementAbility.CROSS_GAME_FLIGHT` explicitly enables the same model
+in S1/S2 as a mod-defined extension. `SUPER_FLIGHT_LIFT` doubles the native
+flap acceleration only while the authored super form is active. Neither
+extension changes stock Tails.
+
+The full `CharacterDefinition` constructor accepts an optional `defaultSidekick`
+key. It must share the leader's owner and cannot accompany `SONIC_ALONE`.
+Selecting that leader in the launch panel selects its available default
+sidekick; users may still choose none for solo play. Old constructors retain
+solo defaults. Registered mod characters are selectable as sidekicks as well
+as leaders. A host that lacks sidekicks still needs explicit module support.
+The MICA patch supplies that support in S1.
+
+The TALON example uses its own sheet, palette and Solar tables. Holding down
+while airborne requests the homing reticle; down+jump starts a divebomb
+(an ordinary strike in every form, with Solar's own heat trail), and jump alone flaps
+normally.
+
+### Shared animation families
+
+Normal Sonic scripts in each stock module publish `DonorCapabilities.getAnimationFamilies()`.
+Each binding names a canonical animation, its drawing family and an ordered list
+of phase numbers. `family-float2/0`, for example, is a normal `nativeFrames` alias
+in the playable sheet. Supply each phase once; several host scripts may reuse it.
+Keep the canonical script table for movement, custom timing and missing-family
+fallbacks. No container version or canonical enum ordinal changes are required.
+
+Host-aware binding reads delay, repeated step order, LOOP_BACK count and SWITCH
+from the host's ROM-loaded script. A family binds only when all its phases are
+supplied. Native stock art bypasses this path. Directional ledge balance families
+remain distinct: BALANCE/BALANCE2 face the edge; BALANCE3/BALANCE4 face away,
+with separate near-edge entry and wobble phases. FLOAT–FLOAT4 share FLOAT2;
+SLIDE/WATER_SLIDE share HURT_FALL; GET_AIR shares BUBBLE. Numeric phase indices
+are explicit module correspondence, never interpolation by cycle length.
+
+Cross-game Sonic donation uses these same correspondences. Missing donor script
+names borrow family phases into host-timed scripts in a private ID namespace;
+typed `AnimationId` and canonical requests select them. Raw integer animation
+writes retain their existing meaning. Unused native dash slots are N/A, not
+proof of a leap pose. Warp, ending leap/surf and shrink retain compatibility
+fallbacks where a donor lacks their family. Tails-archetype creator art selects a separate native vocabulary through
+`DonorCapabilities.forPlayableCharacter(TAILS_ALONE)`. S2/S3K providers publish
+Tails' own phase counts, repeated steps and LOOP_BACK tails; the binder retains
+the loaded Tails script clocks and terminators. Native stock characters and
+cross-game Sonic donation continue using the original unscoped vocabulary.
+Hosts without a native Tails route retain their default pose vocabulary.
+Creator flight can ask `TailsFlightController.selectAnimation(carrying)` for the
+same native flight/swim branch without duplicating fluid, fatigue or carry rules.
+When installing private scripts, offset source mapping indices by the native-frame
+alias reservation; never overwrite every variant with a normal-flight script.
+
+A binding may omit a canonical animation name while still defining its family:
+Sonic's native carried-exit script shares TAILS_CARRIED phases and retains its
+own finite terminator. A null family means explicit N/A. Normal Sonic's legacy
+FLY slot belongs to WAIT's lying phases; Tails' actual flight remains separate.
+
+Bindings can also declare a small mapping offset when native scripts reuse the
+same drawing at a different anchor. The binder creates mapping views sharing the
+same tiles and DPLC, so these variants require no duplicate sheet drawings.
+
+### Optional reel portraits
+
+`CharacterPresentation.withReelFaces(Map<Host, ReelFace>)` supplies 32×32 indexed
+head portraits for S2 CNZ and S3K Slots. `ReelFace` has normal/powered images and
+independent sixteen-entry RGB palettes; a null powered image keeps native art.
+Old constructors remain available. Images/palettes/maps are defensively copied.
+Native backing, scrolling, symbol selection and rewards stay with the host.
+Selected main owns Sonic's symbol; first sidekick owns Tails'. A Tails-archetype
+solo main supplies both portraits, plus the powered portrait when supplied.
+Other prize symbols never change. This extends the unpublished 0.7 candidate;
+rebuild compiled mods against the refreshed normalized signature pin.
+
+### S3K Competition miniature presentation
+
+The unpublished candidate supports `StageSpriteSet.Surface.S3K_COMPETITION`
+(body) and `S3K_COMPETITION_TAIL` (appendage) in
+`CharacterPresentation.stages`. Keys are the native **2P** mapping IDs, separate
+from normal player and Blue Sphere IDs. Each indexed image has its own hotspot.
+Omitting a surface or an ID preserves that archetype's native art. To remove a
+native appendage, supply a transparent frame for each of its IDs; omitting the
+bank means fallback, not suppression. The character's palette supplier owns
+private presentation rows without replacing arena palettes.
+
+Competition uses the configured lead and sidekick team to substitute registered
+creator characters into the existing Sonic/Tails/Knuckles wheel slots. The first
+configured character for each archetype wins. With a native team, the wheel
+launches native art. The miniature simulation and record identities
+remain native archetype-owned: campaign sprite factories, physics and abilities
+are not invoked. The maintained MICA/TALON example shows all body selectors,
+explicit transparent tail frames and independent per-frame hotspots.
+
+`S3K_SOLO_TORNADO_PILOT` optionally supplies the solo main's companion in that
+same selector 12 and hotspot (12, 8). It does not replace the title fly-by plane.
+`S3K_TORNADO_PILOT` belongs to the first configured sidekick on the Sonic/team
+ending route. It replaces native plane selector 12 at hotspot (12,8). The 24×16
+crop shares the S2 side-view cockpit geometry, so creators may reuse that image.
+Tails-alone's Sonic pilot stays native. Missing slots retain native art.
+
+### S3K Competition menu identity
+
+`CharacterPresentation.competitionPortraits` optionally supplies `S3K_PLAYER`
+(the shared wheel/results full-body sprite) and `S3K_RECORD` (the small record
+icon). Each `CompetitionPortrait` has a `PresentationFrameSet.Pose` containing
+indexed pixels and its native origin/hotspot, plus an independent sixteen-colour
+RGB palette. Omitted surfaces retain native art. Existing constructors remain
+available, and `withReelFaces` preserves Competition portraits. Like miniatures,
+the configured creator team supplies the existing archetype slots; no wheel
+positions, abilities, race rules or record identities change. Saved records store
+native archetypes, so their icons reflect the currently configured substitution.
+
+The renderer keeps SAT ordering, wheel depth, plane occlusion, scrolling, native
+shadow intensity, palette fade and display conversion. Portraits occupy detached
+presentation patterns and never overwrite ROM patterns or the four menu palettes.
+
+Native surface inventory (locked-on ROM):
+
+| Surface | Native owner | Character identity |
+| --- | --- | --- |
+| Mode/items menu | Competition_Menu (sonic3k.asm:13480-13631) | N/A: mode labels, item switch and pointers only |
+| Grand Prix character wheel | Obj_CompetitionPlayerSprite (sonic3k.asm:14643-14667); ObjDat_B6C8 (sonic3k.asm:14683-14716) | `S3K_PLAYER`, all three wheel positions for each admitted participant |
+| Match Race/Time Attack arena selector | ObjDat_CompetitionMatchRace (sonic3k.asm:14292-14328); ObjDat_CompetitionTimeAttack (sonic3k.asm:14330-14353) | Same `S3K_PLAYER` wheel sprites, including horizontal scroll |
+| Grand Prix results | Obj_Competition_B9A6 (sonic3k.asm:14888-14903); ObjDat_BB4A (sonic3k.asm:15069-15095) | `S3K_PLAYER` at each participant result panel |
+| Time Attack results/records player panel | ObjDat_BF58 (sonic3k.asm:15350-15367) | Same `S3K_PLAYER` sprite |
+| Time Attack top-three records | Obj_Competition_BEF8 (sonic3k.asm:15315-15350) | `S3K_RECORD`; keeps native blink admission and fixed icon positions |
+| Race, lap/time/item HUD | Existing miniature body/tail surfaces | Miniatures already supplied; numeric HUD/player labels contain no character name or face |
+| Character-name lettering, all Competition menus/results | Native object/copy tables above | N/A: these screens identify characters with sprites, not character-name strings. Arena names, mode labels, rank and 1P/2P labels are host text. No supplementary glyphs are needed or generated. |
+
+The ROM's `Map_CompetitionPlayerSprite_` table has three full-body frames, not
+headshots. Native Time Attack records reuse `Map_Results` frames $29..$2B.
+MICA/TALON supply original transformed poses at both sizes. This inventory covers
+the native Competition flow; campaign and special-stage results use their own
+existing presentation contracts.
+
+
+### Native title mascots
+
+`CharacterPresentation.withTitleMascots(Map<Host, TitleMascot>)` optionally replaces
+mascot art for the configured launch-default leader. S2 resolves the configured
+sidekick separately; selection never comes from the previous level's team.
+Missing hosts or selectors retain their exact native drawing path.
+
+`TitleMascot.parts` maps `TitlePart` to indexed `StageSpriteSet` frames, carrying
+source-local hotspots relative to the native object origin. `rgb` supplies sixteen
+local colours; roles have independent palette contexts and each part has its own
+texture residency. Host controllers continue to own clocks, placement and occlusion.
+
+| Host | Parts and selectors |
+| --- | --- |
+| S1 | `BODY` 0–7 |
+| S2 | Lead `BODY` 5/6/7/18, `HAND` 9; sidekick `BODY` 0–4, `HAND` 19 |
+| S3K | `PLANE_LEFT`/`PLANE_RIGHT` 1–13, `FINGER` 0/1 (optional resting patch 4), `WINK` 2/3 |
+
+S3K plane halves are 160×224 at zero hotspots. `TitlePlaneMask(pixels,
+clearedPixels)` supplies native palette indices for owned pixels after removal.
+The one-argument constructor retains transparent clearing (all zero). Both arrays
+are 320×224: ownership stays binary; replacement indices are 0–15 and must be zero
+outside ownership. Arrays are copied defensively. Indices refer to the original
+tile's native palette line. Verify every used row: S3K final art uses black 15
+inside the ring aperture and transparency outside it. This removes native portrait
+backing above the ring without exposing sky through the aperture. Neither array
+contains RGB or native tile data. Use transparent sprite contours rather than
+cutting rectangular holes in the authored plane.
+
+A `TitlePlaneMask` contains exactly
+320×224 binary bytes: one removes the native mascot pixel, zero retains the host
+pixel. Masks must exclude the logo/emblem; replacement pixels must also leave that
+branding transparent. The engine masks per-cell copies, so shared native tiles
+used elsewhere in the logo remain intact. Without an authored resting patch, empty sprite selector 4 stays native.
+A bank that splits the resting hand out of its plane can supply `FINGER` 4.
+The host composes that patch during the native empty/wait selector and uses the
+native finger selectors 0/1 during a wag; it does not add another clock.
+This is presentation only: it supplies no title script, music, gameplay or timing.
+See the maintained example's `TitlePresentation.java` and `art/*/titles/` banks.
+
+### S2 final-plane cockpit
+
+The final front-view Tornado is an Enigma backdrop, separate from the animated
+side-view cockpit. A companion supplies `S2_FINAL_TORNADO_PILOT`; a solo main may
+supply `S2_SOLO_FINAL_TORNADO_PILOT`. Selector 0 is positioned relative to the
+184×120 backdrop's top-left and scrolls with it. Supply a matching binary image
+in `EndingSpriteSet.nativeClearMasks`: 1 removes an owned native pilot pixel,
+0 preserves the native plane. Masks must match their authored frame dimensions.
+The existing two-argument constructor keeps an empty mask map. The host creates
+private native tile copies at initialization, draws the creator behind retained
+vehicle pixels and applies ending fades to the creator's independent palette.
+Neither the mask nor the overlay changes the ROM backdrop or shared art.

@@ -39,7 +39,11 @@ class TestNativePlcFadeOwnerCoverage {
         assertTrue(credits.contains(
                 "state = State.DEMO_FADING_OUT;"));
         assertTrue(credits.contains("startFadeToBlack(() ->"));
-        assertTrue(ending.contains("startFadeToWhite(() ->"));
+        // End_AllEmlds (sonic.asm:3704-3723) keeps executing objects during
+        // whiteout. End_SlowFade (sonic.asm:3725-3748) later blocks in
+        // PaletteWhiteIn after DrawChunks; only that reveal takes the marker.
+        assertTrue(ending.contains("PaletteFadePresentation.Mode.TO_WHITE"));
+        assertTrue(ending.contains("FadeManagerInternalAccess.startFadeFromWhite(fade, marker.wrapCompletion"));
         assertTrue(provider.contains(
                 "PlcLifecyclePhase.CREDITS_DEMO_FADE"));
     }

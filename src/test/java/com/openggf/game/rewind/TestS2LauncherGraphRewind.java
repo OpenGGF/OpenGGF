@@ -91,6 +91,12 @@ class TestS2LauncherGraphRewind {
             when(art.getSheet(key)).thenReturn(sheet);
             when(art.getRenderer(key)).thenReturn(renderer);
             when(renderer.isReady()).thenReturn(true);
+            // c677fe848: loc_24F04 (s2.asm:51040-51077) and
+            // BreakObjectToPieces (s2.asm:29727-29763)
+            // reads logical pieces from ROM, independent of renderer readiness.
+            // Supply an explicit S2-format two-piece fixture instead of StubObjectServices' S3K ROM.
+            launcherRom = launcherRom(decoy, piece);
+            AbstractObjectInstance.updateCameraBounds(0x1000, 0x300, 0x1140, 0x3E0, 0);
             TestablePlayableSprite player = player("sonic");
             ObjectManager manager = Harness.create(player, List.of(), art).objectManager();
             var parent = manager.createDynamicObject(() -> new OOZLauncherObjectInstance(
@@ -99,7 +105,7 @@ class TestS2LauncherGraphRewind {
             player.setAnimationId(Sonic2AnimationIds.ROLL);
             parent.update(0, player);
             parent.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
-            var source = only(manager, OOZLauncherObjectInstance.LauncherFragmentInstance.class);
+            var source = only(manager, com.openggf.game.sonic2.objects.Sonic2BreakPieceObjectInstance.class);
             assertEquals(3, manager.getActiveObjects().size());
             int parentSlot = parent.getSlotIndex();
             int childSlot = source.getSlotIndex();
@@ -127,7 +133,7 @@ class TestS2LauncherGraphRewind {
             when(art.getRenderer(key)).thenReturn(currentRenderer);
             registry.restore(snapshot);
 
-            var restored = only(manager, OOZLauncherObjectInstance.LauncherFragmentInstance.class);
+            var restored = only(manager, com.openggf.game.sonic2.objects.Sonic2BreakPieceObjectInstance.class);
             assertNotSame(source, restored);
             assertEquals(childId, objectId(manager, restored));
             assertEquals(childSlot, restored.getSlotIndex());
@@ -583,6 +589,26 @@ class TestS2LauncherGraphRewind {
         }
     }
 
+    private static com.openggf.data.RomByteReader launcherRom;
+
+    private static com.openggf.data.RomByteReader launcherRom(SpriteMappingPiece... pieces) {
+        var bytes = java.nio.ByteBuffer.allocate(0x25100);
+        for (int frame = 0; frame < 4; frame++) bytes.putShort(0x250BA + frame * 2, (short) 8);
+        bytes.position(0x250C2);
+        bytes.putShort((short) pieces.length);
+        for (var piece : pieces) {
+            bytes.put((byte) piece.yOffset());
+            bytes.put((byte) (((piece.widthTiles() - 1) << 2) | (piece.heightTiles() - 1)));
+            int tile = piece.tileIndex() | (piece.hFlip() ? 0x800 : 0)
+                    | (piece.vFlip() ? 0x1000 : 0) | (piece.paletteIndex() << 13)
+                    | (piece.priority() ? 0x8000 : 0);
+            bytes.putShort((short) tile).putShort((short) tile).putShort((short) piece.xOffset());
+        }
+        bytes.putShort(0x2507A, (short) -0x400).putShort(0x2507C, (short) -0x400);
+        bytes.putShort(0x2507E, (short) -0x200).putShort(0x25080, (short) -0x400);
+        return com.openggf.data.RomByteReader.fromBytes(bytes.array());
+    }
+
     private static final class MutableServices extends StubObjectServices {
         private ObjectManager objectManager;
         private final Camera camera;
@@ -595,6 +621,7 @@ class TestS2LauncherGraphRewind {
             this.sidekicks = sidekicks;
         }
 
+        @Override public com.openggf.data.RomByteReader romReader() { return launcherRom; }
         @Override public ObjectManager objectManager() { return objectManager; }
         @Override public Camera camera() { return camera; }
         @Override public ObjectRenderManager renderManager() { return art; }

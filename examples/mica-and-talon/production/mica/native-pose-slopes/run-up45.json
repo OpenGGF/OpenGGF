@@ -1,0 +1,247 @@
+{
+  "tool": "built-in GPT Image, latest exposed; model version not returned",
+  "concept": "../../../concept/mica.png",
+  "native_pin": "34fc7f130a96db171e1a1c43e28e0bad81cd6ca7",
+  "frames": [
+    {
+      "id": "run-up45-00",
+      "mapping": 49,
+      "label": "Map_Sonic_071E",
+      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame run-up45-00: 45-degree uphill, head upper-left and feet lower-right. Keep the native rotated pose, do NOT turn upright. Preserve the native phase of the circular coral boot-speed streak, with anatomically connected bent limbs. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
+      "raw_sha256": "3619e0ef64de1c3f2a565720bca4603cd5896f936c1e0a8b0200799245ae4bd7",
+      "size": [
+        37,
+        38
+      ],
+      "hotspot": [
+        17,
+        19
+      ],
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "run-up45-00",
+          "game": "S2",
+          "mapping": 49,
+          "label": "Map_Sonic_071E",
+          "size": [
+            37,
+            39
+          ],
+          "hotspot": [
+            17,
+            19
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            37,
+            38
+          ],
+          "hotspot": [
+            17,
+            19
+          ]
+        },
+        "native_size": [
+          37,
+          38
+        ],
+        "previous_size": [
+          41,
+          42
+        ],
+        "previous_hotspot": [
+          21,
+          18
+        ],
+        "hotspot": [
+          17,
+          19
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 19.091883
+      }
+    },
+    {
+      "id": "run-up45-01",
+      "mapping": 50,
+      "label": "Map_Sonic_0740",
+      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame run-up45-01: 45-degree uphill, head upper-left and feet lower-right. Keep the native rotated pose, do NOT turn upright. Preserve the native phase of the circular coral boot-speed streak, with anatomically connected bent limbs. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
+      "raw_sha256": "05e969fc481490d7ae96f39645fb8084acd03c575c092da7f52e8cfc7eddd768",
+      "size": [
+        35,
+        39
+      ],
+      "hotspot": [
+        15,
+        20
+      ],
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "run-up45-01",
+          "game": "S2",
+          "mapping": 50,
+          "label": "Map_Sonic_0740",
+          "size": [
+            35,
+            40
+          ],
+          "hotspot": [
+            15,
+            20
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            35,
+            39
+          ],
+          "hotspot": [
+            15,
+            20
+          ]
+        },
+        "native_size": [
+          35,
+          39
+        ],
+        "previous_size": [
+          41,
+          42
+        ],
+        "previous_hotspot": [
+          21,
+          18
+        ],
+        "hotspot": [
+          15,
+          20
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 19.091883
+      }
+    },
+    {
+      "id": "run-up45-02",
+      "mapping": 51,
+      "label": "Map_Sonic_075A",
+      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame run-up45-02: 45-degree uphill, head upper-left and feet lower-right. Keep the native rotated pose, do NOT turn upright. Preserve the native phase of the circular coral boot-speed streak, with anatomically connected bent limbs. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
+      "raw_sha256": "7d86a9b7fdb4aeeaf81d6f2518935ffe6821cd1d533de50ae12457df8a0a4517",
+      "size": [
+        36,
+        38
+      ],
+      "hotspot": [
+        17,
+        19
+      ],
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "run-up45-02",
+          "game": "S2",
+          "mapping": 51,
+          "label": "Map_Sonic_075A",
+          "size": [
+            36,
+            39
+          ],
+          "hotspot": [
+            17,
+            19
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            36,
+            38
+          ],
+          "hotspot": [
+            17,
+            19
+          ]
+        },
+        "native_size": [
+          36,
+          38
+        ],
+        "previous_size": [
+          41,
+          42
+        ],
+        "previous_hotspot": [
+          21,
+          18
+        ],
+        "hotspot": [
+          17,
+          19
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 19.091883
+      }
+    },
+    {
+      "id": "run-up45-03",
+      "mapping": 52,
+      "label": "Map_Sonic_077C",
+      "prompt": "Use case: style-transfer. Draw ONE original 16-bit pixel sprite of MICA the jade pangolin on transparent background. Image 1 is this frame's stock native pose: match its exact stride phase, limb/boot positions, rotation, framing and silhouette size, redrawing all anatomy as MICA; never recolour Sonic. Image 2 is MICA concept (jade form). Images 3/4 are approved flat WALK and RUN style anchors. MICA: rounded overlapping jade pangolin scales, small round ears, long tapered scaled tail, cream muzzle/belly, white gloves, coral hiking boots with tan lug soles. No Sonic spines, ears, face or shoes. Frame run-up45-03: 45-degree uphill, head upper-left and feet lower-right. Keep the native rotated pose, do NOT turn upright. Preserve the native phase of the circular coral boot-speed streak, with anatomically connected bent limbs. New drawing consistent with the flat pilot, compact crisp pixel clusters, dark native one-pixel outline, restrained scale highlights. One character only; no ground, shadow, text, grid or extra frames.",
+      "raw_sha256": "e48a8442e53d6c1fe1d10e392e4da76fd50d35a87ba6686e9a25e4f24c26462a",
+      "size": [
+        35,
+        40
+      ],
+      "hotspot": [
+        15,
+        20
+      ],
+      "reduction": "largest alpha component; Lanczos to existing box; fixed palette indices; inside outline; support normalization (at most 10% shrink around unchanged hotspot or transparent right padding)",
+      "finish": {
+        "reference": {
+          "id": "run-up45-03",
+          "game": "S2",
+          "mapping": 52,
+          "label": "Map_Sonic_077C",
+          "size": [
+            35,
+            40
+          ],
+          "hotspot": [
+            15,
+            20
+          ]
+        },
+        "geometry_reference": {
+          "size": [
+            35,
+            40
+          ],
+          "hotspot": [
+            15,
+            20
+          ]
+        },
+        "native_size": [
+          35,
+          40
+        ],
+        "previous_size": [
+          41,
+          43
+        ],
+        "previous_hotspot": [
+          21,
+          18
+        ],
+        "hotspot": [
+          15,
+          20
+        ],
+        "cleanup": "Integer contour retreat and edge trimming, no scaling. Transparent native-box margins removed by shared pipeline. Planted sole extended in integer pixels to within one diagonal pixel of native contact.",
+        "native_support": 19.091883
+      }
+    }
+  ]
+}

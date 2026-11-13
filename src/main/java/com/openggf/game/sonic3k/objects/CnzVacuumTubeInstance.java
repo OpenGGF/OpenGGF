@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.sprites.playable.PlayableArchetype;
+
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -11,7 +13,6 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.Tails;
 
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -187,7 +188,7 @@ public final class CnzVacuumTubeInstance extends AbstractObjectInstance implemen
         }
 
         liftAmount >>= 2;
-        if (!(player instanceof Tails)) {
+        if (!(PlayableArchetype.isTails(player))) {
             liftAmount >>= 1;
         }
         player.setCentreYPreserveSubpixel((short) (player.getCentreY() - liftAmount));

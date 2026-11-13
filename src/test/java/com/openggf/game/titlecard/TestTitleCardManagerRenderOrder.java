@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -67,25 +68,27 @@ class TestTitleCardManagerRenderOrder {
 
     @ParameterizedTest
     @ValueSource(ints = {320, 424})
-    void sonic2DrawsSwooshFirstThenOtherElementsAndMappingPiecesInForwardOrder(int width) throws Exception {
+    void sonic2DrawsThePublishedNativeSlotsInReverseSubmissionOrder(int width) throws Exception {
         graphics.setProjectionWidth(width);
         int offset = (width - 320) / 2;
         var manager = new TitleCardManager();
         stageArt(manager, "combinedPatterns");
-        TitleCardElement swoosh = element(TitleCardMappings.FRAME_ACT_2, 80, 100);
-        set(manager, "elements", List.of(
-                element(TitleCardMappings.FRAME_ZONE, 160, 70),
-                element(TitleCardMappings.FRAME_ACT_1, 240, 90), swoosh));
-        set(manager, "leftSwooshElement", swoosh);
+        manager.beginOmittedPresentationLeave(0, 0);
+        manager.update(); // VInt publishes the prepared native sprite page.
+        set(manager, "presentationOmitted", false);
+        var before = com.openggf.game.sonic2.titlecard.TitleCardNativeDisplayAccess.read(manager);
         manager.draw();
-        assertPatternOrder(PatternAtlasRange.TITLE_CARDS.base(),
-                0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23,
-                0x0C, 0x0D, 0x0E, 0x0F, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3,
-                0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17);
-        assertEquals(80 + offset, graphics.submissions.getFirst().x());
-        assertEquals(100, graphics.submissions.getFirst().y());
-        assertEquals(161 + offset, graphics.submissions.get(12).x());
-        assertEquals(70, graphics.submissions.get(12).y());
+        assertEquals(before, com.openggf.game.sonic2.titlecard.TitleCardNativeDisplayAccess.read(manager));
+        // Omitted arrival retains DrawLevelTitleCard's plane writes. The red
+        // cell fill ($580+$58) precedes sprites, as in the native full-card image.
+        assertEquals(PatternAtlasRange.TITLE_CARDS.base() + 0x58,
+                graphics.submissions.getFirst().patternId());
+        // Reverse native sprite submission: left stripes first, zone name last/front.
+        var firstStripe = graphics.submissions.stream().filter(p ->
+                p.patternId() == PatternAtlasRange.TITLE_CARDS.base() + 0x54).findFirst().orElseThrow();
+        assertEquals(112 + offset, firstStripe.x());
+        assertEquals(0, firstStripe.y());
+        assertTrue(graphics.submissions.stream().anyMatch(p -> p.y() == 56));
     }
 
     @ParameterizedTest

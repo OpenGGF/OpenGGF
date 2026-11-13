@@ -70,6 +70,32 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
             new com.openggf.sprites.render.ShieldPatternBanks();
     private SpriteArtSet instaShieldArtSet;
     private DonorCapabilities donorCapabilities;
+    private final Map<CanonicalAnimation, Integer> familyAnimationIds = new java.util.EnumMap<>(CanonicalAnimation.class);
+    private static final int FAMILY_ANIMATION_BASE = 0x200;
+
+    @EngineOnly
+    public int resolveFamilyAnimation(CanonicalAnimation animation) {
+        Integer exact = familyAnimationIds.get(animation);
+        if (exact != null) return exact;
+        var family = AnimationFamilies.familyOf(animation);
+        Integer preferred = familyAnimationIds.get(family);
+        if (preferred != null) return preferred;
+        for (var entry : familyAnimationIds.entrySet())
+            if (AnimationFamilies.familyOf(entry.getKey()) == family) return entry.getValue();
+        return -1;
+    }
+
+    /** Canonical requests address the loaded donor art, including families absent from the host. */
+    @EngineOnly
+    public int resolveDonatedAnimation(CanonicalAnimation animation) {
+        int family = resolveFamilyAnimation(animation);
+        if (family >= 0 || donorCapabilities == null) return family;
+        int nativeId = donorCapabilities.resolveNativeId(animation);
+        if (nativeId >= 0) return nativeId;
+        var fallback = donorCapabilities.getAnimationFallbacks().get(animation);
+        return fallback == null ? -1 : donorCapabilities.resolveNativeId(fallback);
+    }
+
     private boolean active;
     private final RomManager romManager;
     private final SonicConfigurationService configService;
@@ -107,6 +133,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
      */
     public void initialize(String donorGameCode) throws IOException {
         instaShieldBanks.clear();
+        familyAnimationIds.clear();
         this.donorGameId = GameId.fromCode(donorGameCode);
 
         // Same-game guard: disable donation when donor == host
@@ -193,9 +220,57 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         if (donorArt.animationProfile() instanceof ScriptedVelocityAnimationProfile donorProfile) {
             ScriptedVelocityAnimationProfile translated = AnimationTranslator.translate(
                     donorCapabilities, donorProfile, donorArt.animationSet());
+            // Host-owned object scripts borrow phases from the same profile used by creator sheets.
+            var scripts = donorArt.animationSet();
+            if (active && "sonic".equalsIgnoreCase(characterCode)) {
+                var host = GameServices.module().getDonorCapabilities();
+                if (host != null) {
+                    var nativeHost = host.getPlayerArtProvider(RomByteReader.fromRom(romManager().getRom()))
+                            .loadPlayerSpriteArt(characterCode);
+                    if (nativeHost != null) {
+                        var donated = new com.openggf.sprites.animation.SpriteAnimationSet();
+                        scripts.getAllScripts().forEach(donated::addScript);
+                        AnimationFamilies.donate(host, nativeHost.animationSet(), donorCapabilities, scripts)
+                                .forEach((animation, script) -> {
+                                    int id = FAMILY_ANIMATION_BASE + animation.ordinal();
+                                    familyAnimationIds.put(animation, id);
+                                    donated.addScript(id, script);
+                                });
+                        scripts = donated;
+                        if (nativeHost.animationProfile() instanceof ScriptedVelocityAnimationProfile hostProfile) {
+                            // Prepared finite host exits retain the host's deep-idle gate.
+                            // Obj01_MdNormal_Checks (s2.asm:36444-36468).
+                            if (hostProfile.getBlinkAnimId() >= 0)
+                                translated.setBlinkAnimId(resolveFamilyAnimation(CanonicalAnimation.BLINK));
+                            if (hostProfile.getGetUpAnimId() >= 0)
+                                translated.setGetUpAnimId(resolveFamilyAnimation(CanonicalAnimation.GET_UP));
+                        }
+                    }
+                }
+            }
+            if ("sonic".equalsIgnoreCase(characterCode)) {
+                if (familyAnimationIds.containsKey(CanonicalAnimation.WAIT))
+                    translated.setIdleAnimId(familyAnimationIds.get(CanonicalAnimation.WAIT));
+                if (familyAnimationIds.containsKey(CanonicalAnimation.HURT))
+                    translated.setHurtAnimId(familyAnimationIds.get(CanonicalAnimation.HURT));
+                if (familyAnimationIds.containsKey(CanonicalAnimation.BALANCE))
+                    translated.setBalanceAnimId(familyAnimationIds.get(CanonicalAnimation.BALANCE));
+                if (familyAnimationIds.containsKey(CanonicalAnimation.BALANCE2))
+                    translated.setBalance2AnimId(familyAnimationIds.get(CanonicalAnimation.BALANCE2));
+                if (familyAnimationIds.containsKey(CanonicalAnimation.BALANCE3))
+                    translated.setBalance3AnimId(familyAnimationIds.get(CanonicalAnimation.BALANCE3));
+                if (familyAnimationIds.containsKey(CanonicalAnimation.BALANCE4))
+                    translated.setBalance4AnimId(familyAnimationIds.get(CanonicalAnimation.BALANCE4));
+                int skid = familyAnimationIds.getOrDefault(CanonicalAnimation.SKID,
+                        familyAnimationIds.getOrDefault(CanonicalAnimation.STOP, -1));
+                if (skid >= 0) translated.setSkidAnimId(skid);
+                int slide = familyAnimationIds.getOrDefault(CanonicalAnimation.SLIDE,
+                        familyAnimationIds.getOrDefault(CanonicalAnimation.WATER_SLIDE, -1));
+                if (slide >= 0) translated.setSlideAnimId(slide);
+            }
             return new SpriteArtSet(donorArt.artTiles(), donorArt.mappingFrames(),
                     donorArt.dplcFrames(), donorArt.paletteIndex(), donorArt.basePatternIndex(),
-                    donorArt.frameDelay(), donorArt.bankSize(), translated, donorArt.animationSet());
+                    donorArt.frameDelay(), donorArt.bankSize(), translated, scripts);
         }
         return donorArt;
     }
@@ -420,10 +495,12 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
     }
 
     public void resetState() {
+        familyAnimationIds.clear();
         close();
     }
 
     public void close() {
+        familyAnimationIds.clear();
         donorGameId = null;
         donorReader = null;
         donorProvider = null;

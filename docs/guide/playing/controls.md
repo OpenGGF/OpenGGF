@@ -26,10 +26,9 @@ Keyboard B and C action bindings are intentionally unbound by default. All
 three Mega Drive actions act as jump buttons during platforming gameplay when
 bound.
 
-In Sonic 2, these Player 2 bindings control the configured sidekick/manual-input
-path; they do not enable the ROM's native two-player/competition mode. Human-P2
-competition gameplay, including its monitor-break branch, is not currently
-available.
+In Sonic 2, outside Competition, these Player 2 bindings control the configured
+sidekick/manual-input path. In Competition (2 PLAYER on the title) they control
+Tails.
 
 ## Continue screens
 
@@ -256,9 +255,13 @@ the engine tabs. Settings and text editors expose full manually scrollable Detai
 the north controller button. Numeric values use a numeric keypad; Up from a path
 field opens the file browser. Mods requires explicit Apply to save drafts.
 
+### Returning to the master title
+
 During a game, tap **Escape** to see the *Hold to return to games* toast at the top
 of the screen; hold it for one second to return to the master title. At the
 master title Escape is Back: it returns to the game card, then opens **Quit OpenGGF?**.
+
+### Paused games
 
 Sonic 1, Sonic 2 and Sonic 3 & Knuckles games are paused rather than closed: the game
 freezes and smoothly shrinks into a **Paused** card, showing the moment you left,
@@ -290,6 +293,8 @@ Mod scenes and standalone mod games often use a tap of Escape themselves (for
 example, to open their own pause menu). While one is running, a tap reaches the mod
 and shows no toast; the toast appears once Escape has been held for a quarter of a
 second, and the full one-second hold still returns to the master title.
+
+### Editor command menu
 
 The experimental level editor opens its command menu with F1 or controller
 Menu (Start/Options). The north button opens the brush library. Directions choose

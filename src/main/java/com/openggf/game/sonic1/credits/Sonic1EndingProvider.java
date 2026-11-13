@@ -29,7 +29,7 @@ import com.openggf.game.GameServices;
  *   <li>FINISHED &rarr; {@link EndingPhase#POST_CREDITS} (triggers TryAgainEnd)</li>
  * </ul>
  */
-public class Sonic1EndingProvider implements EndingProvider, NativeFadeLifecycleAware {
+public class Sonic1EndingProvider implements EndingProvider, NativeFadeLifecycleAware, com.openggf.game.internal.EndingEntryPresentation, com.openggf.game.internal.NativeEndingVBlank, com.openggf.game.internal.NativeEndingDemoAssembly {
     private static final Logger LOGGER = Logger.getLogger(Sonic1EndingProvider.class.getName());
 
     private Sonic1CreditsManager creditsManager;
@@ -58,6 +58,21 @@ public class Sonic1EndingProvider implements EndingProvider, NativeFadeLifecycle
     // ========================================================================
     // EndingProvider lifecycle
     // ========================================================================
+
+    // Ephemeral production-load ownership; ending modes do not rewind this continuation.
+    private boolean nativeDemoAssemblyPrepared;
+    @Override public void beginDemoLoad() { nativeDemoAssemblyPrepared = false; }
+    @Override public boolean ownsInitialDemoAssembly() { return nativeDemoAssemblyPrepared; }
+    public void nativeDemoAssemblyPrepared() { nativeDemoAssemblyPrepared = true; }
+    @Override public void serviceEndingVBlank(PlcLifecyclePhase phase) {
+        if (creditsManager != null && !creditsManager.shouldRunDemoGameplay()) {
+            // VBlank_Exit ticks even while the credits page/entry waits have
+            // no ExecuteObjects. A running demo retains its object-pass owner.
+            com.openggf.level.NativeLevelLoadAccess.serviceZeroRoutineInitializationVInt(GameServices.level());
+        }
+    }
+
+    @Override public boolean ownsEntryPresentation() { return true; }
 
     @Override
     public void initialize() {
@@ -121,6 +136,9 @@ public class Sonic1EndingProvider implements EndingProvider, NativeFadeLifecycle
 
     @Override
     public Optional<PlcLifecyclePhase> plcLifecyclePhaseOverride() {
+        // Level_Delay (sonic.asm:2957-2967) selects VBlank_Levels without RunPLC.
+        if (creditsManager != null && creditsManager.getState() == Sonic1CreditsManager.State.DEMO_LOAD_DELAY)
+            return Optional.of(PlcLifecyclePhase.LEVEL_ENTRY_WAIT);
         if (creditsManager != null
                 && creditsManager.getState() == Sonic1CreditsManager.State.DEMO_FADING_OUT) {
             return Optional.of(PlcLifecyclePhase.CREDITS_DEMO_FADE);
@@ -145,7 +163,8 @@ public class Sonic1EndingProvider implements EndingProvider, NativeFadeLifecycle
     @Override
     public void consumeDemoLoadRequest() {
         // Already consumed in hasDemoLoadRequest() — Sonic1CreditsManager uses
-        // a consume-on-read pattern, so this is intentionally a no-op.
+        // a consume-on-read pattern. Enter the selected demo phase on this tail.
+        currentPhase = EndingPhase.CREDITS_DEMO;
     }
 
     @Override
@@ -172,6 +191,7 @@ public class Sonic1EndingProvider implements EndingProvider, NativeFadeLifecycle
     public void onDemoZoneLoaded() {
         if (creditsManager != null) {
             creditsManager.onDemoZoneLoaded();
+            currentPhase = EndingPhase.CREDITS_DEMO;
         }
     }
 
@@ -231,6 +251,7 @@ public class Sonic1EndingProvider implements EndingProvider, NativeFadeLifecycle
     public void onReturnToText() {
         if (creditsManager != null) {
             creditsManager.onReturnToText();
+            currentPhase = EndingPhase.CREDITS_TEXT;
         }
     }
 

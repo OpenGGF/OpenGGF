@@ -96,7 +96,11 @@ public final class Sonic2CompetitionPlayerState implements LevelState {
         extraLifeFlags = state.extraLifeFlags(); frames = state.frames();
         timerPaused = state.paused(); timedOut = state.timedOut(); nextExtraLifeScore = state.nextLife(); checkpoint = state.checkpoint();
     }
-    @Override public void update() {
+    /** HudUpdate owns competition time in the preceding native interrupt, never the level-body tail. */
+    @Override public void update() { }
+
+    /** loc_40F50 / loc_40F90 (s2.asm:88027-88065), before Obj0D clears the enable byte. */
+    public void updateNativeHudTimer() {
         if (timerPaused) return;
         if (frames == 35999) markTimeOver(); else frames++;
     }

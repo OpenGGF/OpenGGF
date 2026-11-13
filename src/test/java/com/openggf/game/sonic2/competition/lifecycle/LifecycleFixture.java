@@ -119,7 +119,7 @@ final class LifecycleFixture {
     }
     void timeout(int slot) {
         session.levelState(slot).setTimerFrames(35999);
-        session.levelState(slot).update();
+        session.playerState(slot).updateNativeHudTimer();
     }
     void press(int slot, int actions, boolean start) {
         var state = PlayerInputState.of(0, 0, actions, actions, start, start);

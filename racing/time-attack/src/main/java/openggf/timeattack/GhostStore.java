@@ -59,6 +59,8 @@ public final class GhostStore {
     private synchronized SaveResult saveChecked(GhostRecording candidate,AttemptInputRecording inputs) throws IOException {
         Objects.requireNonNull(candidate,"candidate");Objects.requireNonNull(inputs,"inputs");
         GhostHeader h=candidate.header();
+        if (h.mode() == CompetitionRoomSettings.Mode.COMPETITION || h.trackKind() == com.openggf.mods.run.TrackKind.ARENA)
+            throw new IllegalArgumentException("Competition runs do not publish solo bests");
         Path best=bestPath(h.gameId(),h.zone(),h.act(),h.character());
         if(inputs.frameCount()>AttemptInputRecording.MAX_FRAMES)throw new IOException("Attempt recording exceeds frame limit");
         byte[] encoded=inputs.encode();
@@ -146,6 +148,14 @@ public final class GhostStore {
             if(legacyLimit)throw new IOException("Recording sidecar scan limit exceeded");
             return Optional.empty();
         } catch(UncheckedIOException failure) { throw failure.getCause(); }
+    }
+
+    public Path pathFor(com.openggf.net.protocol.TrackKey track, String character) throws IOException {
+        GhostFileCodec.validateRoute(track.gameId(), track.zone(), track.act(), character);
+        String safe = java.net.URLEncoder.encode(character, java.nio.charset.StandardCharsets.UTF_8);
+        return root.resolve(track.gameId()).resolve(track.kind().equals("ARENA")
+                ? "arena-" + track.zone() + "-" + safe + ".ggfghost"
+                : track.zone() + "-" + track.act() + "-" + safe + ".ggfghost");
     }
 
     private Path bestPath(String gameId,int zone,int act,String character) throws IOException {

@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.level.objects.ObjectVisualFacing;
+import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.AbstractPointsObjectInstance;
 import com.openggf.level.objects.ObjectServices;
@@ -21,6 +22,10 @@ public class PointsObjectInstance extends AbstractPointsObjectInstance implement
     public PointsObjectInstance(ObjectSpawn spawn, ObjectServices services, int points) {
         super(spawn, "Points", services, points);
     }
+
+    // Obj29_Init (s2.asm:24918-24926): Numbers art_tile bit15 and native bucket1.
+    @Override public boolean isHighPriority() { return true; }
+    @Override public int getPriorityBucket() { return RenderPriority.bucket(1); }
 
     @Override
     protected int getFrameForScore(int score) {

@@ -1,0 +1,3 @@
+palette S2_FINAL_TORNADO_PILOT front.png
+S2_FINAL_TORNADO_PILOT 0 front.png 0 0
+mask S2_FINAL_TORNADO_PILOT 0 front-mask.png

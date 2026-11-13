@@ -9,4 +9,10 @@ import com.openggf.control.LogicalInputSnapshot;
 @FunctionalInterface
 public interface NativeWaitInput {
     LogicalInputSnapshot sampleAfterWait();
+
+    /** Observe the actual input owner; this never polls or advances its edge latch. */
+    static NativeWaitInput from(com.openggf.control.InputHandler input) {
+        java.util.Objects.requireNonNull(input, "native input owner");
+        return input::logical;
+    }
 }

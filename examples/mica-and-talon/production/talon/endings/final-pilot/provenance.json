@@ -1,0 +1,30 @@
+{
+  "method": "Fresh GPT Image native-pose, real ending palette 8x native references, approved model and pixel frames. Two independent candidate rows; bottom selected. Landmark-locked 20x20 head, rotated 20 degrees to match the native bank, fixed native character palette. Native vehicle stays ROM-backed; binary clear-mask owns pilot only.",
+  "source_sha256": "b0d1641763802c3c85227294a5a6a35769aa5ad63ed831df29b6f0fbd5895086",
+  "prompt": "Two columns TALON and MICA, two independent rows, front-three-quarter cockpit heads matching native pose and tilt; 1992 Sonic2 pixel style. No fox features or quills.",
+  "frame": {
+    "character": "talon",
+    "native_area": 298,
+    "authored_area": 297,
+    "ratio": 0.998,
+    "head_landmarks": {
+      "native_crown": [
+        86,
+        49
+      ],
+      "authored_box": [
+        70,
+        47,
+        96,
+        73
+      ]
+    },
+    "surface": "S2_FINAL_TORNADO_PILOT",
+    "selector": 0,
+    "hotspot": [
+      0,
+      0
+    ],
+    "native_map": "MapEng_EndingTailsPlane"
+  }
+}

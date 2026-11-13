@@ -1,18 +1,25 @@
 # Troubleshooting
 
+Find your symptom, then follow its section.
+
+| Symptom | Check first |
+|---|---|
+| Black screen, crash or no window at startup | [ROM identity, Java and OpenGL](#black-screen-or-crash-on-startup) |
+| No sound | [`audio.enabled` and the audio device](#no-sound) |
+| Game runs too fast or too slow | [Region and display pacing](#game-runs-too-fast-or-too-slow) |
+| Garbled graphics or wrong colours | [Driver, window size and ROM identity](#garbled-graphics-or-wrong-colors) |
+| `Object registry missing id` in the log | [Unimplemented objects](#object-registry-missing-id-0xnn-warnings) |
+| A special stage looks wrong or will not start | [Special stage issues](#special-stage-issues) |
+| A Sonic 3 & Knuckles route fails | [S3K routes](#an-s3k-route-or-late-game-sequence-fails) |
+
 ## Black screen or crash on startup
 
-**Wrong ROM revision.** The engine is verified against specific ROM revisions. Using a
-different revision (e.g., Sonic 2 REV00 instead of REV01) will cause incorrect ROM address
-lookups, which can result in crashes, garbled graphics, or a black screen.
-
-Check that your ROM files match these revisions:
-
-| Game | Required Revision |
-|------|-------------------|
-| Sonic 1 | World, REV01 |
-| Sonic 2 | World, REV01 |
-| Sonic 3&K | World, lock-on combined |
+**Unverified ROM image.** The engine is verified against the retail dumps listed in
+[Expected ROM Files](getting-started.md#expected-rom-files): Sonic 1 and Sonic 2
+REV00 or REV01, and the Sonic 3 & Knuckles lock-on image. Each revision is selected
+from its own bytes. Other editions and modified images remain unverified and can
+load data from the wrong addresses, which shows as crashes, garbled graphics or a
+black screen. Compare your file's CRC32 or SHA-1 with that table.
 
 **Missing ROM file.** Current development builds keep missing games on the hub
 and offer **Locate ROM** or **Add your games → Scan a folder**. Files may remain
@@ -72,8 +79,9 @@ OpenGL 4.1 core profile features that may not work correctly with outdated drive
 `debug.window.height` are set to unusual values, the output may look incorrect. Re-enable
 autosize or reset the debug window dimensions.
 
-**Wrong ROM revision.** Some graphics data is loaded from specific ROM offsets. A different
-ROM revision will cause art to be loaded from wrong addresses, producing garbled tiles.
+**Unverified ROM image.** The engine loads graphics data from fixed ROM offsets. An
+edition or modified image outside the verified table can load art from the wrong
+addresses and produce garbled tiles.
 
 ## "Object registry missing id 0xNN" warnings
 
@@ -98,10 +106,10 @@ compared to the original. This is a known area for improvement.
 
 ## An S3K route or late-game sequence fails
 
-The 0.7 development branch includes late zones and native ending flows. A failure
+The development branch includes late zones and native ending flows. A failure
 beyond Angel Island is not automatically an unimplemented zone. Check
 [Game Status](game-status.md) and the [S3K bug list](../../status/s3k-known-bugs.md)
 for the affected route. When reporting a problem, include the build/commit, ROM
 identity, zone/act, character and sidekick, donor, aspect ratio, entry path
 (new game, checkpoint or side-stage return), and steps or a recording to reproduce
-it. Published 0.6 builds have a different feature set.
+it. Published releases can have a different feature set from the development branch.

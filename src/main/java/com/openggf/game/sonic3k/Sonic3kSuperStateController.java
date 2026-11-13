@@ -44,7 +44,7 @@ import java.util.logging.Logger;
  *   <li>2 = fading out (reverting) - timer 3, retreat 6 bytes, stop at 0</li>
  * </ul>
  */
-public class Sonic3kSuperStateController extends SuperStateController implements com.openggf.game.internal.RuntimeArtRefreshParticipant {
+public class Sonic3kSuperStateController extends SuperStateController implements com.openggf.game.internal.RuntimeArtRefreshParticipant, com.openggf.game.internal.EndingFormController {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSuperStateController.class.getName());
 
     /** Palette fade state: 0=off, 1=fading in, -1=cycling, 2=fading out. */

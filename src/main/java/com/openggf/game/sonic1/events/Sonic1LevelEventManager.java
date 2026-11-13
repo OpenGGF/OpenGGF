@@ -127,6 +127,11 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         }
     }
 
+    /** End_LoadSonic installs forced movement before its first ExecuteObjects pass. */
+    public void prepareEndingInitialPlayer(com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        endingEvents.prepareNativeInitialPlayer(player);
+    }
+
     @Override
     public void updateFixedInLevelObjectsBeforeDynamicObjects() {
         fixedAirCountdownManager.update();
