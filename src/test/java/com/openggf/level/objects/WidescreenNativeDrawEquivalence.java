@@ -29,7 +29,7 @@ final class WidescreenNativeDrawEquivalence {
                  List<String> objects) { }
 
     record Run(List<Frame> frames, int simulationWidth, int presentationWidth, int poses,
-               Frame beforeBake, Frame afterBake, int dormantFrames) { }
+               Frame beforeBake, Frame afterBake, int dormantFrames, int dormantRingFrames) { }
 
     static Run run(SonicGame game, int zone, int act, String aspect, String drawMode, int frames)
             throws Exception {
@@ -58,14 +58,18 @@ final class WidescreenNativeDrawEquivalence {
 
             List<Frame> trace = new ArrayList<>(frames);
             int dormantFrames = 0;
+            int dormantRingFrames = 0;
             for (int frame = 0; frame < frames; frame++) {
                 boolean jump = frame % 90 >= 60 && frame % 90 < 64;
                 fixture.stepFrame(false, false, false, true, jump);
                 trace.add(sample(frame, fixture));
                 if (hasDormantDraws(objects)) dormantFrames++;
+                if (com.openggf.level.rings.DormantRingProbe.count(GameServices.level().getRingManager(), camera) > 0) {
+                    dormantRingFrames++;
+                }
             }
             return new Run(trace, camera.getWidth(), CameraPresentationAccess.width(camera), poses, before, after,
-                    dormantFrames);
+                    dormantFrames, dormantRingFrames);
         } finally {
             if (level != null) level.dispose();
             config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, oldAspect);
@@ -117,7 +121,7 @@ final class WidescreenNativeDrawEquivalence {
     }
 
     /** NATIVE at 32:9 must equal native 4:3 frame for frame, and the bake must be invisible. */
-    static void assertEquivalent(SonicGame game, int zone, int act, int frames) throws Exception {
+    static Run assertEquivalent(SonicGame game, int zone, int act, int frames) throws Exception {
         Run nativeRun = run(game, zone, act, "NATIVE_4_3", "EDGE", frames);
         // 32:9 has the widest margins: its left band lies beyond the native 0x80 unload distance.
         Run wide = run(game, zone, act, "SUPER_32_9", "NATIVE", frames);
@@ -130,10 +134,12 @@ final class WidescreenNativeDrawEquivalence {
         assertEquals(wide.beforeBake(), wide.afterBake(), "the dormant pose bake left a gameplay trace");
         assertEquals(0, nativeRun.dormantFrames());
         assertTrue(wide.dormantFrames() > 0, "no frame drew a dormant object in the margins");
-        System.out.printf("%s: %d poses, dormant draws on %d of %d frames%n",
-                game, wide.poses(), wide.dormantFrames(), frames);
+        assertEquals(0, nativeRun.dormantRingFrames(), "no margin, no dormant rings");
+        System.out.printf("%s: %d poses, dormant draws on %d of %d frames, dormant rings on %d%n",
+                game, wide.poses(), wide.dormantFrames(), frames, wide.dormantRingFrames());
         for (int i = 0; i < frames; i++) {
             assertEquals(nativeRun.frames().get(i), wide.frames().get(i), "gameplay diverged at frame " + i);
         }
+        return wide;
     }
 }

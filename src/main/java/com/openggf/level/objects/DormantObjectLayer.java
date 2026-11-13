@@ -12,6 +12,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.render.SpriteSlotEmission;
+import com.openggf.level.rings.RingDrawInternalAccess;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -215,8 +216,12 @@ final class DormantObjectLayer {
         }
         try {
             scratch.clear();
-            manager.runObjectCallback(entry.instance(),
+            Runnable append = () -> manager.runObjectCallback(entry.instance(),
                     () -> ObjectRenderParts.appendRenderCommands(entry, scratch, bucket, manager.objectServices));
+            var rings = manager.objectServices == null ? null : manager.objectServices.ringManager();
+            // Ring objects (S1) draw through the live ring manager; hold them on one spin frame.
+            if (rings != null) RingDrawInternalAccess.withFrozenSpin(rings, append);
+            else append.run();
         } catch (RuntimeException failure) {
             broken.set(poseIndex);
             LOG.log(Level.FINE, failure, () -> "Dormant pose stopped drawing: " + entry.instance());

@@ -75,6 +75,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     // Frame-local phase ownership, deliberately absent from RingSnapshot. The queue
     // restores numeric admissions; binders always dereference this manager's live DTOs.
     private boolean nativeRingPassBegun;
+    /** Spin frame forced while a NATIVE widescreen dormant pose draws a ring object; -1 otherwise. */
+    private int frozenSpinFrame = -1;
     private int nativeRingPassClock;
 
 
@@ -705,6 +707,98 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             }
             drawPlacedObject(ring, frameCounter, drawY);
         }
+        drawDormantMargins();
+    }
+
+    /**
+     * NATIVE widescreen draw mode: layout rings in the extra display width that the native
+     * 320-pixel window has not loaded are drawn frozen (first spin frame) at their layout
+     * position, outside the ring window. Collected rings stay gone. Presentation only: no
+     * placement, collection or touch state is read beyond the collected and active sets.
+     * See docs/architecture/designs/2026-11-13-widescreen-native-draw-mode.md (D12).
+     */
+    private void drawDormantMargins() {
+        Camera camera = GameServices.camera();
+        var style = dormantStyle(camera);
+        if (style == null) return;
+        List<RingSpawn> dormant = dormantMarginRings(camera);
+        if (dormant.isEmpty()) return;
+        boolean greyscale = style == com.openggf.configuration.WidescreenDormantStyle.GREYSCALE;
+        GraphicsManager graphics = renderer.graphics;
+        if (greyscale) {
+            graphics.flushPatternBatch();
+            graphics.beginGhostRenderEffect(1.0f, false);
+            graphics.beginPatternBatch();
+        }
+        try {
+            for (RingSpawn ring : dormant) renderer.drawFrameIndex(0, ring.x(), ring.y());
+        } finally {
+            if (greyscale) {
+                graphics.flushPatternBatch();
+                graphics.endGhostRenderEffect();
+                graphics.beginPatternBatch();
+            }
+        }
+    }
+
+    /** The dormant style to draw with, or null when there is no NATIVE margin or the style is HIDDEN. */
+    private static com.openggf.configuration.WidescreenDormantStyle dormantStyle(Camera camera) {
+        if (camera == null || !com.openggf.camera.CameraPresentationAccess.hasMargin(camera)) return null;
+        var config = GameServices.configuration();
+        var style = config == null ? com.openggf.configuration.WidescreenDormantStyle.GREYSCALE
+                : com.openggf.configuration.WidescreenDormantStyle.parse(
+                        config.getString(com.openggf.configuration.SonicConfiguration.WIDESCREEN_DORMANT_STYLE));
+        return style == com.openggf.configuration.WidescreenDormantStyle.HIDDEN ? null : style;
+    }
+
+    /**
+     * Layout rings inside the presentation viewport but outside the native window that the
+     * ring window has not loaded and that are not collected. Empty without a NATIVE margin.
+     */
+    List<RingSpawn> dormantMarginRings(Camera camera) {
+        if (camera == null || !com.openggf.camera.CameraPresentationAccess.hasMargin(camera)) return List.of();
+        int nativeLeft = camera.getX();
+        int nativeRight = nativeLeft + camera.getWidth();
+        int viewLeft = com.openggf.camera.CameraPresentationAccess.leftWithShake(camera) - DORMANT_RING_MARGIN;
+        int viewRight = viewLeft + com.openggf.camera.CameraPresentationAccess.width(camera) + 2 * DORMANT_RING_MARGIN;
+        int top = camera.getYWithShake() - DORMANT_RING_MARGIN;
+        int span = camera.getHeight() + 2 * DORMANT_RING_MARGIN;
+        int wrap = camera.isVerticalWrapEnabled() ? camera.getVerticalWrapRange() : 0;
+        List<RingSpawn> spawns = placement.getAllSpawns();
+        List<RingSpawn> dormant = null;
+        for (int index = firstSpawnAtOrAfter(spawns, viewLeft); index < spawns.size(); index++) {
+            RingSpawn ring = spawns.get(index);
+            if (ring.x() >= viewRight) break;
+            if (ring.x() >= nativeLeft && ring.x() < nativeRight) continue;
+            if (placement.activeIndexMembership.get(index) || placement.isCollected(index)) continue;
+            int dy = ring.y() - top;
+            if (wrap > 0 ? Math.floorMod(dy, wrap) >= span : dy < 0 || dy >= span) continue;
+            if (dormant == null) dormant = new ArrayList<>();
+            dormant.add(ring);
+        }
+        return dormant == null ? List.of() : dormant;
+    }
+
+    private static final int DORMANT_RING_MARGIN = 16;
+
+    private static int firstSpawnAtOrAfter(List<RingSpawn> spawns, int x) {
+        int low = 0, high = spawns.size();
+        while (low < high) {
+            int mid = (low + high) >>> 1;
+            if (spawns.get(mid).x() < x) low = mid + 1; else high = mid;
+        }
+        return low;
+    }
+
+    /** Draws {@code body} with ring objects held on their first spin frame (dormant poses). */
+    void withFrozenSpin(Runnable body) {
+        int previous = frozenSpinFrame;
+        frozenSpinFrame = 0;
+        try {
+            body.run();
+        } finally {
+            frozenSpinFrame = previous;
+        }
     }
 
     /** Object-slot emission uses the same resident art/collection state without a second list draw. */
@@ -724,7 +818,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int index = placement.getSpawnIndex(ring);
         if (index < 0) return;
         if (!placement.isCollected(index)) {
-            renderer.drawFrameIndex(stageRingFrame(frameCounter), ring.x(), drawY);
+            renderer.drawFrameIndex(frozenSpinFrame >= 0 ? frozenSpinFrame : stageRingFrame(frameCounter),
+                    ring.x(), drawY);
             return;
         }
         int started = placement.getSparkleStartFrame(index);

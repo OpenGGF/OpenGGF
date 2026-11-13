@@ -9,7 +9,10 @@ import org.junit.jupiter.api.Test;
 class TestWidescreenNativeDrawSonic3k {
     @Test
     void nativeDrawModeAtThirtyTwoByNineMatchesFourByThree() throws Exception {
-        WidescreenNativeDrawEquivalence.assertEquivalent(SonicGame.SONIC_3K, 0, 0, 900);
+        var wide = WidescreenNativeDrawEquivalence.assertEquivalent(SonicGame.SONIC_3K, 0, 0, 900);
+        // Placed rings (stage ring list) outside the ring window are drawn frozen too.
+        org.junit.jupiter.api.Assertions.assertTrue(wide.dormantRingFrames() > 0,
+                "no frame drew a dormant ring in the margins");
     }
 
     @Test

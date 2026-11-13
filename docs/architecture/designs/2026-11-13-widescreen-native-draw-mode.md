@@ -100,6 +100,11 @@ A presentation-only layer, `DormantObjectLayer` (level/objects), owned by the
   wider than the simulation window (D10). Poses are cached by spawn.
 - **Live hand-off:** a live instance always wins. When the ROM unloads the object
   it is drawn again from its cached pose at the spawn position.
+- **Rings:** placed rings (S2/S3K stage ring list) that the native ring window has not
+  loaded and that are not collected are drawn frozen on their first spin frame at
+  their layout position, in the same style, after the live rings (D12). S1 rings are
+  layout objects, so they get dormant poses like any other object; the pose draw holds
+  the ring manager on the first spin frame.
 - **Style:** `GREYSCALE` draws through the existing ghost shader mode with alpha
   1.0 (opaque desaturated); `NORMAL` draws plainly; `HIDDEN` skips the layer.
 
@@ -159,3 +164,4 @@ recorded here and then folded into the section text.
 | D9 | 2026-11-13 | Renderer helpers go through non-API access classes (`CameraPresentationAccess`, `RewindPresentationProbeAccess`, `DormantObjectPresentationAccess`); only the two config constants change the Mod API pin | Public methods on `Camera`, `RewindRegistry`, `ObjectManager` | The signature snapshot showed eight new members on `@ModApi` types. Project idiom (`CameraMotionInternalAccess`) keeps engine-only helpers off the surface. |
 | D10 | 2026-11-13 | The dormant layer and scroll rebase activate on "display wider than simulation", not on a non-zero inset | Gate on `inset > 0` | After D8 the inset is 0 at level start, so the bake never ran: the equivalence test's pose assertion went red (0 poses) at 32:9. |
 | D11 | 2026-11-13 | Probe restores run all derived-state post-restore callbacks but Engine's `live-scheduling` callback skips them (`isPresentationProbeRestore`) | Skip all callbacks; no rewind bracket | That callback discards queued gameplay input and restarts pacing, which would make a NATIVE run diverge from 4:3 at the bake frame. The other callbacks re-derive state the restore needs. |
+| D12 | 2026-11-13 | Frozen rings: uncollected stage-list rings outside the ring window are drawn on spin frame 0 in the dormant style, from `RingManager` (collected and active sets only); S1 ring objects' poses hold spin frame 0 | Leave rings to the object layer only; animate dormant rings | User request ("we should show frozen rings too"). S2/S3K rings are not objects, so the object layer never saw them. A fixed frame matches the other frozen poses. The collected `BitSet` persists across unloads, so a collected ring never reappears. |

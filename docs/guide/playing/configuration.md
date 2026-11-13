@@ -387,7 +387,7 @@ display:
 ```
 
 `NATIVE` keeps the game on the original 320-pixel screen and draws the extra width as
-scenery. Objects there that the original game has not woken up yet are shown frozen
+scenery. Objects and rings there that the original game has not woken up yet are shown frozen
 where they start: `GREYSCALE` (the default), `NORMAL` colours, or `HIDDEN`. They come to
 life when the original screen reaches them. `EDGE` (the default draw mode) keeps the
 existing behaviour. Both settings take effect at the next level load.
