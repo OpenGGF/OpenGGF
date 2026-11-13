@@ -623,12 +623,58 @@ flat; it stays selectable for comparison but nothing ships with it.
 `despeckle.py` is the shared cleanup: isolated pixels, one-pixel anti-alias steps and two-pixel flecks
 fold into the surrounding shade of their own material. The caller supplies the index-to-material map,
 so nothing crosses a material, and unmapped detail and ink pass through untouched; protected materials
-(white, cream) are never darkened.
+(white, cream) are never darkened. `lines=True` keeps a pixel or fleck that continues diagonally into
+its own index: art whose detail is one-pixel diagonal lines (MICA's scale edges, her title portrait)
+loses its shapes to the plain rules.
 
 `examples/mica-and-talon/production/slope_sets.py --check` derives MICA's WALK/RUN slopes and
 homing-dive directions, her Open Cone slopes and Solar TALON's slopes; TALON's normal WALK/RUN set is
 `production/talon/walk_cleanup.py`, which also cleans its flats. `test_playable_art_slopes.py`
 re-derives MICA's 36 slope frames from her flats and runs both scripts.
+
+## Style audit against a sheet's own reference poses
+
+`style_audit.py PROFILE` answers "which frames look like another artist drew them, and why". Poses
+reduced one by one from separately drawn sources differ in line weight and in how many shading
+bands survive, and an absolute threshold cannot tell a deliberate style from a damaged one. The
+profile names, per sheet, its ramps (dark to light), the crisp reference animations, the animations
+with no comparable drawing and the frames accepted as they are. Each frame is measured for outline
+gaps, dark rim inside the ink (line weight), surviving bands, distance from the references' use of
+each ramp, mean same-index patch size, isolated pixels and one-pixel steps; a measure more than three
+reference spreads off on its bad side flags the frame. `--summary` groups by animation, `--json`
+writes every row, and `--check` fails on a flagged frame the profile does not accept.
+
+```bash
+python3 tools/modding/playable_art/style_audit.py examples/mica-and-talon/production/style-audit.json --summary
+```
+
+The audit cannot see a different face or beak design; it found TALON's heavy rims and merged bands,
+and `examples/mica-and-talon/production/talon/lineart_pass.py` fixed both those and the heads by
+redrawing each off-style pose's head from WAIT's (placed on the pose's own goggle lens and beak,
+turned from WAIT's source where the head is pitched) instead of reducing each pose's source again.
+
+## Source drawings for reduction: line weight
+
+A generated drawing reduced to a sprite keeps an interior line only if the line is about one
+sprite pixel thick in the source. `pipeline.outline()` inks the silhouette and nothing else, so
+every separation inside it (an arm across the body, one plate over the next, a dark wing on a dark
+body) has to come from the drawing. Measured on 2026-11-12 with six poses per character
+(`examples/mica-and-talon/production/idle-sign-victory.json` names the experiment's result): the
+crisp reference sprites carry 19–22% ink inside the silhouette; flat sources with no lines, and
+sources whose lines are a darker shade of the fill, reduce to under 3%; pixel-art sources with
+1 px borders to 6%, because a 4 px line at a 10:1 reduction is 0.4 sprite px and averages into the
+fill. Near-black interior lines of 10–12 px on a 3×2 sheet at 1536×1024 (about 400 px figures,
+reduced 10:1 to 11:1) reach 19–23% with the unmodified pipeline.
+
+So ask for flat colour, no pixel grid, no line round the silhouette, and near-black interior lines
+at a stated pixel width, and make that width the headline of the prompt with a list of what to
+simplify to leave room for it: giving only the reduction factor got 5 px lines. Accept a sheet when
+its median interior line divided by its reduction factor is at least 0.9 sprite px, and each
+reduced, cleaned frame has 15–30% interior ink. A model may draw a silhouette line anyway; it lands
+on the pixel `outline()` inks and does no harm. Turning a sprite pixel to ink where a third of its
+source block is line rescues thin-line sources and over-inks sources that already pass, so it is a
+fallback for a failed sheet, not a step of the pipeline. Put a standing pose in the first cell of
+every sheet and take the sheet's one reduction factor from it.
 
 ## Production special-stage character probe
 

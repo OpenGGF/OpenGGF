@@ -23,6 +23,7 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
     private final PlayerSpriteRenderer playable;
     private final SpriteArtSet nativePlayer;
     private final SpriteArtSet characterArt;
+    private final SpriteArtSet playableArt;
     private Palette[] nativePalettes;
     private final SuperFormProfile.Form powered;
     private final Map<Integer, Integer> finalPlanePatterns = new HashMap<>();
@@ -38,12 +39,12 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
             var presentation = definition.presentationSupplier().load(definition.key().persisted());
             if (presentation != null) sets.putAll(presentation.endings());
         }
-        // Photos depict the search party, not the missing main character.
+        // Photos depict the search party, not the missing main character: the first sidekick's
+        // own photos, or on a solo team the companion photos the lead supplies for its partner.
         sets.remove(EndingSpriteSet.Surface.S2_PHOTOS);
         sets.remove(EndingSpriteSet.Surface.S2_TORNADO_PILOT);
-        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
-        var sidekicks = com.openggf.game.session.ActiveGameplayTeamResolver.resolveSidekicks(GameServices.configuration());
-        var photos = world == null ? null : sidekickPhotos(world.getPlayableCharacterRegistry(), sidekicks);
+        var photos = EndingCharacterPresentation.companion(EndingSpriteSet.Surface.S2_PHOTOS,
+                EndingSpriteSet.Surface.S2_SOLO_PHOTOS);
         if (photos != null) sets.put(EndingSpriteSet.Surface.S2_PHOTOS, photos);
         var pilot = EndingCharacterPresentation.pilot(EndingSpriteSet.Surface.S2_TORNADO_PILOT);
         if (pilot != null) sets.put(EndingSpriteSet.Surface.S2_TORNADO_PILOT, pilot);
@@ -53,13 +54,6 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
         if (!sets.containsKey(EndingSpriteSet.Surface.S2_TORNADO_PILOT) && !sets.containsKey(EndingSpriteSet.Surface.S2_ENDING) && !sets.containsKey(EndingSpriteSet.Surface.S2_PHOTOS)) return null;
         return new ModEndingPresentation(rom, definition, sets);
     }
-    static EndingSpriteSet sidekickPhotos(PlayableCharacterRegistry registry, List<String> sidekicks) throws IOException {
-        if (sidekicks.isEmpty()) return null;
-        var sidekick = registry.find(CharacterKey.parsePersisted(sidekicks.getFirst())).orElse(null);
-        if (sidekick == null || sidekick.presentationSupplier() == null) return null;
-        var presentation = sidekick.presentationSupplier().load(sidekick.key().persisted());
-        return presentation == null ? null : presentation.endings().get(EndingSpriteSet.Surface.S2_PHOTOS);
-    }
     private ModEndingPresentation(Rom rom, CharacterDefinition definition,
             Map<EndingSpriteSet.Surface, EndingSpriteSet> sets) throws IOException {
         this.rom=rom; this.definition=definition; this.sets=sets;
@@ -67,7 +61,8 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
         nativePlayer = Sonic2EndingArt.determineEndingRoutine() == Sonic2EndingArt.EndingRoutine.TAILS
                 ? nativeArt.loadTails() : nativeArt.loadSonic();
         characterArt=definition == null ? nativePlayer : definition.artSupplier().load(definition.key().persisted());
-        playable = new PlayerSpriteRenderer(StageCharacterPresentation.playable(nativePlayer));
+        playableArt = privateBank(StageCharacterPresentation.playable(nativePlayer));
+        playable = new PlayerSpriteRenderer(playableArt);
         StageCharacterPresentation.bindPalette(playable, definition);
         for (var entry:sets.entrySet()) if(java.util.EnumSet.of(EndingSpriteSet.Surface.S2_ENDING,
                 EndingSpriteSet.Surface.S2_SUPER, EndingSpriteSet.Surface.S2_FLOAT,
@@ -79,6 +74,19 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
         powered=profile==null?null:profile.games().getOrDefault(GameId.S2,Map.of()).get(SuperFormProfile.Tier.SUPER);
         updatePalettes();
     }
+    /**
+     * Creator sheets carry no atlas address of their own (gameplay relocates them to the player
+     * bank), and the ending keeps the level's background tiles on screen. The scene's playable
+     * bank therefore sits directly above the VDP tile space of the ending's VRAM-relative art.
+     */
+    private static com.openggf.sprites.art.SpriteArtSet privateBank(com.openggf.sprites.art.SpriteArtSet art) {
+        var range = com.openggf.graphics.PatternAtlasRange.SONIC2_ENDING_VRAM;
+        int base = range.base() + 0x800;
+        if (art.bankSize() > range.base() + range.size() - base)
+            throw new IllegalArgumentException("Playable sheet bank exceeds the Sonic 2 ending range: " + art.bankSize());
+        return new com.openggf.sprites.art.SpriteArtSet(art.artTiles(), art.mappingFrames(), art.dplcFrames(),
+                art.paletteIndex(), base, art.frameDelay(), art.bankSize(), art.animationProfile(), art.animationSet());
+    }
     @Override public boolean nativeSuperChoreography() { return true; }
     @Override public void applyArt(Sonic2EndingArt art) {
         nativePalettes=Arrays.stream(art.getEndingPalettes()).map(Palette::deepCopy).toArray(Palette[]::new);
@@ -89,8 +97,20 @@ final class ModEndingPresentation implements Sonic2EndingCutsceneManager.Present
     }
     @Override public int[] floatingFrames() { return new int[]{84,85,86,87,88}; }
     @Override public int floatingFrameDuration() { return 8; }
-    @Override public int[] walkingFrames() { return definition == null ? new int[]{0,1,2,3,4,5} : characterArt.animationSet().getScript(CanonicalAnimation.WALK.ordinal()).frames().stream().mapToInt(Integer::intValue).toArray(); }
-    @Override public int waitingFrame() { return definition == null ? 1 : characterArt.animationSet().getScript(CanonicalAnimation.WAIT.ordinal()).frames().getFirst(); }
+    @Override public int[] walkingFrames() { return definition == null ? new int[]{0,1,2,3,4,5} : playableScript(CanonicalAnimation.WALK).stream().mapToInt(Integer::intValue).toArray(); }
+    @Override public int waitingFrame() { return definition == null ? 1 : playableScript(CanonicalAnimation.WAIT).getFirst(); }
+    /**
+     * Frames of the sheet the scene actually draws. Host binding renumbers a creator sheet
+     * (native pose aliases first, authored frames after them) and keys its scripts by the
+     * host's animation ids, so the creator's own canonical script indices do not address it.
+     */
+    private List<Integer> playableScript(CanonicalAnimation animation) {
+        int id = GameServices.module().getDonorCapabilities().forPlayableCharacter(definition.behavesLike())
+                .resolveNativeId(animation);
+        var script = id < 0 ? null : playableArt.animationSet().getScript(id);
+        if (script == null) throw new IllegalStateException("Playable sheet has no host " + animation + " script");
+        return script.frames();
+    }
     @Override public String playerCode() { return definition == null ? "sonic" : definition.key().persisted(); }
     @Override public Palette[] palettes() { return Arrays.stream(nativePalettes).map(Palette::deepCopy).toArray(Palette[]::new); }
     @Override public Sonic2EndingArt.EndingRoutine endingRoutine() { return Sonic2EndingArt.determineEndingRoutine(); }

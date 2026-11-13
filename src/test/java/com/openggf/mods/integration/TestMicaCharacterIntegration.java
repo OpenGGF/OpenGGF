@@ -514,10 +514,15 @@ class TestMicaCharacterIntegration {
     void micaSlotsCapture() throws Exception { captureStage("s3k", true); }
 
     @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
-    void micaS1EndingCapture() throws Exception {
-        Path output=Path.of(System.getProperty("mica.s2.captureRoot", "target/mica-s2-ending-captures")).resolve("s1");
+    void micaS1EndingCapture() throws Exception { captureS1Ending(CODE,"s1"); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_1)
+    void talonS1EndingCelebratesInHisOwnDrawings() throws Exception { captureS1Ending("mica-and-talon:talon","s1-talon"); }
+
+    /** The Sonic 1 celebration: the ending actor draws the lead's own eight S1_ENDING frames in its palette. */
+    private void captureS1Ending(String main, String folder) throws Exception {
+        Path output=Path.of(System.getProperty("mica.s2.captureRoot", "target/mica-s2-ending-captures")).resolve(folder);
         Files.createDirectories(output);
-        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,CODE,"","off",null,null,null);
+        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,main,"","off",null,null,null);
         try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
             session.applyMod(buildSample());
             session.boot(com.openggf.tests.RomTestUtils.ensureSonic1RomAvailable().toPath(),7,0,settings);
@@ -590,6 +595,11 @@ class TestMicaCharacterIntegration {
                     com.openggf.game.sonic2.credits.Sonic2EndingArt.EndingRoutine.SONIC,privateField(manager,"routine"));
             var definition = com.openggf.game.presentation.StageCharacterPresentation.activeDefinition();
             assertFalse(definition.presentationSupplier().load(CODE).endings().containsKey(EndingSpriteSet.Surface.S2_PHOTOS));
+            @SuppressWarnings("unchecked")
+            var photoSets=(Map<EndingSpriteSet.Surface,EndingSpriteSet>)privateField(adapter,"sets");
+            // A solo MICA supplies her partner's photos; a stock sidekick keeps the host's.
+            assertEquals(!sidekick.equals("tails"),photoSets.containsKey(EndingSpriteSet.Surface.S2_PHOTOS),
+                    "search photos follow the partner, sidekick '"+sidekick+"'");
             var seenPhotos = new HashSet<Integer>();
             var csv=new StringBuilder("frame,state,photo,objCe,rotation,white\n");
             String last="";
@@ -653,6 +663,13 @@ class TestMicaCharacterIntegration {
                     assertTrue(cycle.contains(words),"Gilded cycle owns the flight palette");
                 }
             }
+            var playable=(PlayerSpriteRenderer)privateField(adapter,"playable");
+            int playableStart=playable.patternBankBase(), playableEnd=playableStart+playable.patternBankCapacity();
+            assertTrue(playableStart>=com.openggf.graphics.PatternAtlasRange.SONIC2_ENDING_VRAM.base()+0x800
+                            && playableEnd<=com.openggf.graphics.PatternAtlasRange.SONIC2_ENDING_VRAM.base()
+                                    +com.openggf.graphics.PatternAtlasRange.SONIC2_ENDING_VRAM.size(),
+                    "The lead's playable bank sits above the ending's VRAM art, never in the level tiles the sky draws from");
+            assertTrue(residentRanges.stream().allMatch(range -> playableEnd <= range[0] || playableStart >= range[1]));
             @SuppressWarnings("unchecked")
             var planeTiles=(Map<Integer,Integer>)privateField(adapter,"finalPlanePatterns");
             for (int tile : planeTiles.values()) assertTrue(residentRanges.stream()
@@ -700,11 +717,16 @@ class TestMicaCharacterIntegration {
             var definition = com.openggf.game.presentation.StageCharacterPresentation.activeDefinition();
             assertNotNull(definition);
             var presentation = definition.presentationSupplier().load(CODE);
-            // S1/S2 and S3K ending sets share one map; the six S3K surfaces must all be present.
+            // S1/S2 and S3K ending sets share one map; these S3K surfaces must all be present.
             assertTrue(presentation.endings().keySet().containsAll(java.util.EnumSet.of(
                     EndingSpriteSet.Surface.S3K_NORMAL_POSE, EndingSpriteSet.Surface.S3K_POWERED_POSE,
-                    EndingSpriteSet.Surface.S3K_PASSENGER, EndingSpriteSet.Surface.S3K_EYECATCH,
-                    EndingSpriteSet.Surface.S3K_PLAYER, EndingSpriteSet.Surface.S3K_POWERED_PLAYER)));
+                    EndingSpriteSet.Surface.S3K_EYECATCH, EndingSpriteSet.Surface.S3K_SOLO_TORNADO_PILOT,
+                    EndingSpriteSet.Surface.S3K_PLAYER, EndingSpriteSet.Surface.S3K_POWERED_PLAYER,
+                    EndingSpriteSet.Surface.S3K_PASSENGER, EndingSpriteSet.Surface.S3K_SOLO_MINI_TORNADO_PILOT,
+                    EndingSpriteSet.Surface.S3K_SOLO_EYECATCH)));
+            // Native selectors 22 and 23 are that plane's exhaust flame and are never a character's.
+            assertEquals(java.util.Set.of(14),
+                    presentation.endings().get(EndingSpriteSet.Surface.S3K_PASSENGER).sprites().frames().keySet());
             for (var entry : presentation.endings().entrySet()) {
                 var compiled = com.openggf.game.presentation.StageSpriteCompiler.compile(entry.getValue().sprites(),null);
                 for (var frame : entry.getValue().sprites().frames().entrySet()) {
@@ -752,7 +774,6 @@ class TestMicaCharacterIntegration {
                         assertNotNull(context);
                         assertTrue(context.getEffectivePaletteLine(0)>3,"private character palette row");
                         if (entry.getKey() == EndingSpriteSet.Surface.S3K_NORMAL_POSE
-                                || entry.getKey() == EndingSpriteSet.Surface.S3K_PASSENGER
                                 || entry.getKey() == EndingSpriteSet.Surface.S3K_EYECATCH) {
                             int[] rgb = presentation.endings().get(entry.getKey()).rgb();
                             for (int color=0;color<16;color++) {
@@ -766,14 +787,137 @@ class TestMicaCharacterIntegration {
                 lastMapping=mapping;
             }
             assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_PLAYER));
-            assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_PASSENGER));
+            assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_TORNADO_PILOT),"TALON flies a solo MICA's Tornado");
+            assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_PASSENGER),"MICA rides the mid-size Tornado to the island");
+            assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_MINI_TORNADO_PILOT),"TALON flies the mid-size Tornado");
+            assertDisjointEndingBanks(cache);
             assertTrue(drawn.contains(progress < 0 ? EndingSpriteSet.Surface.S3K_NORMAL_POSE : EndingSpriteSet.Surface.S3K_POWERED_POSE));
             if (progress >= 0) assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_POWERED_PLAYER));
-            if (progress == 2) assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_EYECATCH));
+            if (progress == 2) {
+                assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_EYECATCH));
+                assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_SOLO_EYECATCH),"TALON stands beside MICA on the final card");
+            }
             Files.writeString(output.resolve("state.csv"),csv);
             if (progress < 2) assertTrue(floatSeen,"native Float2 frames must run");
             assertTrue(rideSeen,"native plane ride must run");
             if (progress >= 0) assertTrue(transformSeen,"native reunion transform frames must run");
+        } finally {
+            if (previous == null) System.clearProperty("openggf.saveRoot"); else System.setProperty("openggf.saveRoot",previous);
+        }
+    }
+
+    /** Several ending surfaces share a picture (rider and cockpit), so no two may share a DPLC bank. */
+    private static void assertDisjointEndingBanks(Map<Object,Map<EndingSpriteSet.Surface,PlayerSpriteRenderer>> cache) {
+        for (var renderers : cache.values()) {
+            var ranges = new ArrayList<int[]>();
+            for (var entry : renderers.entrySet()) {
+                int start = entry.getValue().patternBankBase(), end = start + entry.getValue().patternBankCapacity();
+                assertTrue(ranges.stream().allMatch(range -> end <= range[0] || start >= range[1]),
+                        "S3K ending surfaces must own disjoint pattern banks: " + entry.getKey());
+                ranges.add(new int[]{start,end});
+            }
+        }
+    }
+
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void s2EndingDrawsMicaOnTheTornadoUnderTheSky() throws Exception { assertS2TornadoRide(CODE,false); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void s2EndingDrawsGildedMicaBesideTheTornadoUnderTheSky() throws Exception { assertS2TornadoRide(CODE,true); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_2)
+    void s2EndingDrawsTalonOnTheTornadoUnderTheSky() throws Exception { assertS2TornadoRide("mica-and-talon:talon",false); }
+
+    /**
+     * The Tornado ride of the Sonic 2 ending: the level's sky stays on screen behind a creator lead,
+     * and the lead is drawn where the cutscene places it (on the wing, or beside the plane when
+     * powered). Regression for a playable bank that overwrote the level tiles and for wait/walk
+     * frames read from the unbound sheet (2026-11-12 endings check).
+     */
+    private void assertS2TornadoRide(String main, boolean powered) throws Exception {
+        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,main,"","off",null,null,null);
+        try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            session.boot(com.openggf.tests.RomTestUtils.ensureSonic2RomAvailable().toPath(),10,0,settings);
+            session.loop().closePresence();
+            var engine=new com.openggf.Engine();
+            engine.setInputHandler(new com.openggf.control.InputHandler());
+            var bind=com.openggf.Engine.class.getDeclaredMethod("bindGameplayMode",
+                    com.openggf.game.session.GameplayModeContext.class);
+            bind.setAccessible(true); bind.invoke(engine,com.openggf.game.session.SessionManager.getCurrentGameplayMode());
+            var reshape=com.openggf.Engine.class.getDeclaredMethod("reshape",int.class,int.class);
+            reshape.setAccessible(true); reshape.invoke(engine,320,224);
+            GameServices.graphics().setProjectionMatrixBuffer(engine.getProjectionMatrixBuffer());
+            var loop=engine.getGameLoop();
+            GameServices.fade().cancel();
+            if(powered) for(int e=0;e<7;e++) GameServices.gameState().markEmeraldCollected(e);
+            GameServices.level().requestCreditsTransition(); loop.step();
+            var manager=privateField(privateField(privateField(loop,"endingSession"),"endingProvider"),"cutsceneManager");
+            int held=0;
+            for(int i=0;i<6000 && held<120 && loop.getCurrentGameMode()==GameMode.ENDING_CUTSCENE;i++) {
+                loop.step(); renderEnding(engine);
+                if("BIRDS_AND_HOLD".equals(String.valueOf(privateField(manager,"tornadoSubState")))) held++;
+            }
+            assertEquals(120,held,"the ending reached the Tornado ride");
+            var picture=renderEnding(engine);
+            var counts=new HashMap<Integer,Integer>();
+            for(int pixel:picture.pixels()) counts.merge(pixel,1,Integer::sum);
+            int sky=counts.entrySet().stream().max(Map.Entry.comparingByValue()).orElseThrow().getKey();
+            // The sky is the level's own background plane. Overwritten level tiles left it black.
+            assertNotEquals(0xFF000000,sky,"the level's sky fills the picture, not black");
+            assertTrue((sky&0xFF)>((sky>>16)&0xFF) && (sky&0xFF)>((sky>>8)&0xFF),"the sky is blue: "+Integer.toHexString(sky));
+            int x=(int)privateField(manager,"charOnTornadoX"), y=(int)privateField(manager,"charOnTornadoY"), lead=0;
+            // The sprite's origin is its centre; this band is above the Tornado's wing and beside its hull.
+            for(int py=y-14;py<y-2;py++) for(int px=x-8;px<x+8;px++) if(picture.argb(px,py)!=sky) lead++;
+            assertTrue(lead>=40,"the lead is drawn at "+x+","+y+" (pixels "+lead+")");
+            loop.closePresence();
+        } finally { com.openggf.Engine.clearGlobalInstance(); }
+    }
+
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void talonS3kEndingFallsOnTailsFramesWithMicaInTheCockpit() throws Exception { assertTalonS3kEnding(-2); }
+    @Test @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void talonS3kHyperCardSeatsMicaBesideHim() throws Exception { assertTalonS3kEnding(2); }
+
+    /**
+     * A Tails-role creator lead in the S3K ending: its fall takes Tails's script (mapping ids
+     * $B5..$BC, never Sonic's $C8..$CF), its partner sits in the Sonic seat of both cockpits, it
+     * rides the mid-size Tornado itself, and the final card seats both. Regression for the
+     * 2026-11-12 endings check.
+     */
+    private void assertTalonS3kEnding(int progress) throws Exception {
+        String talon="mica-and-talon:talon";
+        var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320,talon,"","off",null,null,null,null,false,false);
+        String previous = System.getProperty("openggf.saveRoot");
+        System.setProperty("openggf.saveRoot",temp.resolve("talon-ending-saves").toString());
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(buildSample());
+            session.boot(com.openggf.tests.RomTestUtils.ensureSonic3kRomAvailable().toPath(),13,1,settings);
+            if (progress == 2) GameServices.gameState().restoreS3kEmeraldProgress(java.util.Collections.nCopies(7,3),true);
+            var cacheField = Class.forName("com.openggf.game.sonic3k.ending.EndingCharacterPresentation").getDeclaredField("CACHE");
+            cacheField.setAccessible(true);
+            @SuppressWarnings("unchecked") var cache = (Map<Object,Map<EndingSpriteSet.Surface,PlayerSpriteRenderer>>)cacheField.get(null);
+            cache.clear();
+            var drawn = java.util.EnumSet.noneOf(EndingSpriteSet.Surface.class);
+            boolean tailsFloat=false, sonicFloat=false;
+            for (int i=0;i<18000;i++) {
+                session.step(null);
+                if (session.loop().getCurrentGameMode() == GameMode.TITLE_SCREEN) break;
+                int mapping = GameServices.sprites().getMainPlayable().getMappingFrame();
+                tailsFloat |= mapping >= 0xB5 && mapping <= 0xBC;
+                sonicFloat |= mapping >= 0xC8 && mapping <= 0xCF;
+                if (i % 30 == 0) session.renderFrame();
+                for (var renderers : cache.values()) drawn.addAll(renderers.keySet());
+            }
+            if (progress < 0) assertTrue(tailsFloat,"the fall runs Tails's float mapping ids");
+            assertFalse(sonicFloat,"a Tails-role lead never takes Sonic's float mapping ids");
+            assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_TORNADO_PILOT),"MICA sits in the Sonic seat of TALON's Tornado");
+            assertTrue(drawn.contains(progress < 0 ? EndingSpriteSet.Surface.S3K_NORMAL_POSE : EndingSpriteSet.Surface.S3K_POWERED_POSE));
+            assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_PASSENGER),"TALON rides the mid-size Tornado to the island");
+            assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_MINI_TORNADO_PILOT),"MICA flies the mid-size Tornado");
+            if (progress == 2) {
+                assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_SOLO_EYECATCH),"MICA fills the Sonic seat of TALON's final card");
+                assertTrue(drawn.contains(EndingSpriteSet.Surface.S3K_EYECATCH),"TALON fills his own seat of the final card");
+            }
+            assertDisjointEndingBanks(cache);
         } finally {
             if (previous == null) System.clearProperty("openggf.saveRoot"); else System.setProperty("openggf.saveRoot",previous);
         }
@@ -1551,7 +1695,7 @@ class TestMicaCharacterIntegration {
             var encoded = Files.readAllBytes(temp.resolve("classes/art/talon.ggfp"));
             var sheet = com.openggf.level.objects.PlayableSheetReader.read(encoded);
             var materialized = com.openggf.level.objects.PlayableSheetMaterializer.read(encoded);
-            assertEquals(282, sheet.frames().size());
+            assertEquals(297, sheet.frames().size());
             assertEquals(47, sheet.animations().size());
             assertEquals(6, sheet.animations().get("TAILS_FLY").steps().size());
             assertEquals(6, sheet.animations().get("TAILS_FLY_TIRED").steps().size());
@@ -2072,10 +2216,39 @@ class TestMicaCharacterIntegration {
                 for (int i = 0; i < 180; i++) { session.step(null); session.renderFrame(); }
                 com.openggf.graphics.ScreenshotCapture.savePNG(session.render(), output.resolve(game + "-" + mode + "-act-results.png"));
             }
+            captureSignpostInLevel(game, mode, settings, jar, romProperty, output);
         }
         } finally {
             if (priorSaveRoot == null) System.clearProperty("openggf.saveRoot");
             else System.setProperty("openggf.saveRoot", priorSaveRoot);
+        }
+    }
+
+    /**
+     * The host's own signpost object, spawned beside the player in a booted level and stepped through its
+     * spin, so the plate that lands is the one {@code CharacterSignRenderer.draw} gives the real object.
+     * S1 Sign_Touch and S2 Obj0D start when the player is 0..$1F pixels past the post; the S3K post falls and lands.
+     * Both then lock the camera's left edge to its right limit, which is the act's end, so the right limit is
+     * first brought to where the camera stands: the post that spins is the one in view.
+     */
+    private void captureSignpostInLevel(String game, String mode,
+            com.openggf.tools.GameplayCaptureSession.Settings settings, Path jar, String romProperty, Path output) throws Exception {
+        try (var session = new com.openggf.tools.GameplayCaptureSession(settings)) {
+            session.applyMod(jar); session.boot(Path.of(System.getProperty(romProperty)), 0, 0, settings);
+            for (int i = 0; i < 120; i++) session.step(null);
+            int x = session.player().getCentreX(), y = session.player().getCentreY();
+            if (!game.equals("s3k")) GameServices.camera().setMaxX(GameServices.camera().getX());
+            var spawn = new com.openggf.level.objects.ObjectSpawn(x - 8, y, 0x0D, 0, 0, false, 0);
+            assertNotNull(GameServices.level().getObjectManager().createDynamicObject(() -> switch (game) {
+                case "s1" -> new com.openggf.game.sonic1.objects.Sonic1SignpostObjectInstance(spawn);
+                case "s2" -> new com.openggf.game.sonic2.objects.SignpostObjectInstance(spawn, "Signpost");
+                default -> new com.openggf.game.sonic3k.objects.S3kSignpostInstance(x + 32, 0);
+            }));
+            for (int i = 1; i <= 300; i++) {
+                session.step(null);
+                if (i % 20 == 0) com.openggf.graphics.ScreenshotCapture.savePNG(session.render(),
+                        output.resolve(game + "-" + mode + "-signpost-" + String.format("%03d", i) + ".png"));
+            }
         }
     }
 

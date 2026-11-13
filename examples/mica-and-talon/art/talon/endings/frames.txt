@@ -26,3 +26,15 @@ S3K_POWERED_POSE 3 s3k-03.png 24 29
 S3K_POWERED_POSE 4 s3k-04.png 48 48
 palette S3K_TORNADO_PILOT pilot-10.png
 S3K_TORNADO_PILOT 12 pilot-10.png 12 8
+# Mid-size Tornado (island arrival and Angel Island return). TALON riding is native selector 15
+# (Tails seat): the native piece is 16x16 with hotspot 12 8; his figure is 24 tall, so the hotspot
+# is 12 16 and his feet stay on the wing. His cockpit head is native selector 12, 16x8, hotspot 8 4.
+palette S3K_PASSENGER arrival-rider-0f.png
+S3K_PASSENGER 15 arrival-rider-0f.png 12 16
+palette S3K_MINI_TORNADO_PILOT arrival-pilot-0c.png
+S3K_MINI_TORNADO_PILOT 12 arrival-pilot-0c.png 8 4
+# Final S3 graphics card: the Tails seat body, native selectors 10 and 11, 24x40, hotspot 12 20.
+# The native twin tail is not drawn beside these.
+palette S3K_EYECATCH eyecatch-0a.png
+S3K_EYECATCH 10 eyecatch-0a.png 12 20
+S3K_EYECATCH 11 eyecatch-0b.png 12 20

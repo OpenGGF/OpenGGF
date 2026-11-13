@@ -25,7 +25,9 @@ index of the same material; transparency and ink never change, so the silhouette
      (cheek, eye, glove shine) and the speckle to remove is the darker fringe. Plumage goes both ways.
   4. Slate-light 5 that does not touch white or cream becomes slate 4, leaving plumage on the
      three bands of his wait and flight frames; a 5 shading a white part stays.
-  5. Hand patches from the record, x,y,index, last.
+  5. Light pixels that belong to another part are put back: a white/cream patch with no plumage
+     beside it that touches amber, brown or red is a goggle glint, beak shine or shoe white.
+  6. Hand patches from the record, x,y,index, last.
 A pixel alone in its material is a feature (eye, glint, strap end) and is never touched.
 
 Slopes: derive_slopes.derive(method='mode'). The flat's silhouette ink is lifted, the drawing is
@@ -50,6 +52,8 @@ from despeckle import despeckle  # noqa: E402
 N4 = ((-1, 0), (1, 0), (0, -1), (0, 1))
 MATERIAL = {2: 'plumage', 3: 'plumage', 4: 'plumage', 5: 'plumage',
             6: 'light', 7: 'light', 8: 'light', 12: 'light', 13: 'light'}
+PLUMAGE = {2, 3, 4, 5}
+ACCENT = {9, 10, 11, 14, 15}  # satchel-brown, shoe reds, amber: goggles, beak, strap, satchel, shoes
 ROUNDS = 3
 STAMP = 'Cleanup 2026-11-12'
 FLAT_NOTE = (' Cleanup 2026-11-12 (walk_cleanup.py): plumage and white/cream despeckled within their own material, '
@@ -60,8 +64,38 @@ SLOPE_NOTE = ('Cleanup 2026-11-12 (walk_cleanup.py): derive_slopes.derive(method
 RESCALE_NOTE = '2026-11-12: walk_cleanup.py, see walk-cleanup.json.'
 
 
+def part_detail(grid):
+    """Rule 5: pixels of white/cream patches that sit in goggles, beak or shoes rather than on the body."""
+    height, width = len(grid), len(grid[0])
+    seen, detail = set(), set()
+    for y in range(height):
+        for x in range(width):
+            if MATERIAL.get(grid[y][x]) != 'light' or (x, y) in seen:
+                continue
+            patch, todo, beside = [(x, y)], [(x, y)], set()
+            seen.add((x, y))
+            while todo:
+                cx, cy = todo.pop()
+                for a, b in N4:
+                    near = (cx + a, cy + b)
+                    if not (0 <= near[0] < width and 0 <= near[1] < height):
+                        continue
+                    value = grid[near[1]][near[0]]
+                    if MATERIAL.get(value) == 'light':
+                        if near not in seen:
+                            seen.add(near)
+                            patch.append(near)
+                            todo.append(near)
+                    else:
+                        beside.add(value)
+            if not beside & PLUMAGE and beside & ACCENT:
+                detail.update(patch)
+    return detail
+
+
 def clean(grid, lum):
-    """Rules 1-3 are tools/modding/playable_art/despeckle.py; rule 4 is his plumage band."""
+    """Rules 1-3 are tools/modding/playable_art/despeckle.py; rule 4 is his plumage band; rule 5 part_detail."""
+    source = grid
     grid = despeckle(grid, lum, MATERIAL, protect=('light',), rounds=ROUNDS)
     height, width = len(grid), len(grid[0])
 
@@ -72,6 +106,8 @@ def clean(grid, lum):
         for x in range(width):
             if grid[y][x] == 5 and not any(MATERIAL.get(at(x + a, y + b)) == 'light' for a, b in N4):
                 grid[y][x] = 4
+    for x, y in part_detail(source):  # rule 5
+        grid[y][x] = source[y][x]
     return grid
 
 

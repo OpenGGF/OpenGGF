@@ -1,4 +1,5 @@
-"""Noise metric sanity, and TALON's cleaned WALK/RUN set stays reproducible and clean."""
+"""Noise metric sanity, and TALON's cleaned sheet stays reproducible and clean."""
+import importlib.util
 import json
 import subprocess
 import sys
@@ -72,6 +73,78 @@ class TalonWalkCleanupTests(unittest.TestCase):
                 for a,b in zip(was,now):
                     if a!=b:self.assertTrue({a,b}<=plumage or {a,b}<=light,(a,b))
                 self.assertGreater(sum(a!=b for a,b in zip(was,now)),20)
+
+
+class TalonPoseCleanupTests(unittest.TestCase):
+    SHEET=ROOT/'examples/mica-and-talon/art/talon/sheet'
+    PROD=ROOT/'examples/mica-and-talon/production/talon'
+
+    def records(self):
+        walk=json.loads((self.PROD/'walk-cleanup.json').read_text())['flats']
+        poses=json.loads((self.PROD/'pose-cleanup.json').read_text())['drawings']
+        return walk,poses
+
+    def test_recorded_pose_cleanup_reproduces_the_shipped_frames(self):
+        result=subprocess.run([sys.executable,'-I',str(self.PROD/'pose_cleanup.py'),'--check'],capture_output=True,text=True)
+        self.assertEqual(0,result.returncode,result.stdout+result.stderr)
+
+    def test_every_flat_pose_is_cleaned_or_listed_as_left_alone(self):
+        walk,poses=self.records()
+        left=json.loads((self.PROD/'pose-cleanup.json').read_text())['left_alone']
+        manifest=json.loads((self.SHEET/'frames.yaml').read_text())['frames']
+        kept={'roll-00','roll-01','roll-02','roll-03','spindash-03','family-super-transform-02','family-blank-00'}
+        kept|={f'wait-{n}' for n in range(13,22)}              # the feather composites and look_up-00 on the idle's ground line
+        self.assertTrue({'roll-00..03','spindash-03','family-super-transform-02','family-blank-00','wait-13..21'}<=set(left))
+        flight={'TAILS_FLY','TAILS_FLY_ASCEND','TAILS_FLY_CARRY','TAILS_FLY_CARRY_ASCEND'}
+        cleaned={d['id'] for d in walk}|{d['id'] for d in poses}
+        for frame in manifest:
+            if frame['angle_set']!='flat' or frame['animation'] in flight:continue
+            self.assertNotEqual(frame['id'] in cleaned,frame['id'] in kept,frame['id'])
+        self.assertEqual(209,len(poses))                        # 203 less the six retired idle frames, plus his twelve
+
+    def test_cleanup_stays_inside_a_material_and_leaves_goggles_beak_and_shoes_as_drawn(self):
+        spec=importlib.util.spec_from_file_location('walk_cleanup',self.PROD/'walk_cleanup.py')
+        walk_cleanup=importlib.util.module_from_spec(spec);spec.loader.exec_module(walk_cleanup)
+        sys.path.insert(0,str(self.PROD))
+        import pose_cleanup
+        from PIL import Image
+        plumage,light={2,3,4,5},{6,7,8,12,13}
+        walk,poses=self.records()
+        colors=json.loads((self.SHEET/'palette.yaml').read_text())['colors']
+        # The cleanup stage alone: lineart_pass.py redraws heads on top of it, and has its own tests.
+        staged=pose_cleanup.cleaned(json.loads((self.PROD/'pose-cleanup.json').read_text()),colors)
+        redrawn=json.loads((self.PROD/'lineart-pass.json').read_text())['frames']
+        protected=0
+        for drawing in walk+poses:
+            with self.subTest(frame=drawing['id']), Image.open(self.SHEET/'frames'/(drawing['id']+'.png')) as image:
+                rows=drawing['source_rows'];width=len(rows[0])
+                was=[int(v,16) for row in rows for v in row]
+                if drawing['id'] in staged:
+                    now=[int(v,16) for row in staged[drawing['id']] for v in row]
+                    if drawing['id'] not in redrawn:                     # WAIT, BLINK, VICTORY: the stage is the frame
+                        self.assertEqual(now,list(image.get_flattened_data()))
+                else:
+                    now=list(image.get_flattened_data())
+                self.assertEqual(len(was),len(now))
+                for a,b in zip(was,now):
+                    if a!=b:self.assertTrue({a,b}<=plumage or {a,b}<=light,(a,b))
+                # A white/cream patch with no plumage beside it that touches amber, brown or red is a goggle
+                # glint, beak shine or shoe white: part of something the cleanup must not redraw.
+                for x,y in walk_cleanup.part_detail([[int(v,16) for v in row] for row in rows]):
+                    self.assertEqual(was[y*width+x],now[y*width+x],(x,y));protected+=1
+        self.assertGreater(protected,500)                       # 840 such pixels across the 215 drawings
+
+    def test_cleaned_poses_score_with_the_walk_and_the_sheet_median_follows(self):
+        # Before the 2026-11-12 pose cleanup these drawings scored 0.20-0.46 (median 0.34); the sheet median was 0.32.
+        rows=noise.sheet(self.SHEET)
+        by_id={name:m for _,_,name,m in rows}
+        _,poses=self.records()
+        scores=sorted(by_id[d['id']]['noise'] for d in poses)
+        self.assertLessEqual(scores[-1],0.29)
+        self.assertLessEqual(scores[len(scores)//2],0.21)
+        every=sorted(m['noise'] for *_,m in rows)
+        self.assertLessEqual(every[len(every)//2],0.20)
+        self.assertTrue(all(m['edge']==1 for *_,m in rows))
 
 
 if __name__=='__main__':

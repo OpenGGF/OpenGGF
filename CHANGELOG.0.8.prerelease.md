@@ -235,9 +235,16 @@ under the matching area heading; see the
   Solar pose keeps one gloved wing-arm per side; new
   profile-facing flight art matches his carry identity, and his flight and carry
   frames, like MICA's carried frames, share the ink outline and shading of their
-  other poses; his walk and run frames are despeckled, and every slope and
+  other poses; his normal sheet is despeckled, his flight, carry, victory and
+  other oversized poses are redrawn to the head scale of his idle, most of his poses now
+  share his idle's head and line weight instead of each drawing's own, MICA's flat poses
+  and her Sonic 1 title portrait are despeckled with their scale edges kept, and every slope and
   homing-dive frame of both characters, powered forms included, is re-derived
-  with a cleaner rotation. S1 creator
+  with a cleaner rotation. TALON's idle is now his own: he preens a flight feather,
+  ruffles up and catches a loose feather instead of repeating Tails' blink and yawn.
+  His victory is a two-finger salute off his goggles, and both characters' signposts
+  carry one readable portrait in all three games (MICA's peace sign, TALON's salute).
+  MICA keeps her idle. S1 creator
   forms play animated transformations. Joint native-pose carry redraws now
   keep MICA’s raised gloves against TALON’s shoes throughout his wingbeat,
   with native-style material contours and the complete S3K hanging sequence.
@@ -272,7 +279,17 @@ under the matching area heading; see the
   for solo TALON and TALON pilot for MICA; ending and SCZ/WFZ support both native
   pilot mapping families, and Tails-role ending art binds its own animation families.
   The separate final front-view cockpit now selects the companion too, using
-  bounded native clear masks and independent ending-surface pattern residency. Native Competition has no character-name
+  bounded native clear masks and independent ending-surface pattern residency. Ending
+  fixes: in Sonic 2 a creator lead is drawn on the Tornado again under the level's sky
+  (its playable bank no longer overwrites the level tiles, and wait/walk frames come from
+  the bound sheet); in S3K every ending surface owns its pattern bank, so the rider is no
+  longer doubled and the cockpit no longer corrupts through the credits; a Tails-role lead
+  falls on Tails's float script and is flown by its partner from the Sonic seat; a solo
+  lead can supply its partner's Sonic 2 search photos (`S2_SOLO_PHOTOS`) and the partner's
+  seat on the final S3 graphics card (`S3K_SOLO_EYECATCH`); the mid-size Tornado's rider
+  and cockpit head are creator surfaces (`S3K_PASSENGER` selectors 14/15,
+  `S3K_MINI_TORNADO_PILOT`), and its exhaust flame is native again. TALON has his own Sonic 1
+  celebration, final-card figure and island-arrival sprites. Native Competition has no character-name
   strings. S3K Competition renders MICA/TALON with
   independent native-ID miniature banks and hotspots, per-frame native fallback
   and private palettes; configured creator team members occupy their native

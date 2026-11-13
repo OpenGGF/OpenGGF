@@ -444,9 +444,18 @@ The host retains intro timing, movement, separate board/spray and snow occlusion
 private renderer palettes keep rider and native effects independent.
 
 `CharacterPresentation.endings` adds optional `EndingSpriteSet` entries. S3K
-supports `S3K_NORMAL_POSE` / `S3K_POWERED_POSE` reunion poses, `S3K_PASSENGER`
-tiny passengers, the `S3K_EYECATCH` Sonic trio-eyecatch child, and
-`S3K_PLAYER` / `S3K_POWERED_PLAYER` ending frames. Frames retain native mapping IDs
+supports `S3K_NORMAL_POSE` / `S3K_POWERED_POSE` reunion poses, the `S3K_PASSENGER`
+rider on the mid-size Tornado that reaches the island (native selector 14 for a
+Sonic-role lead, 15 for a Tails-role lead), the `S3K_EYECATCH` figure on the final
+S3 graphics card (selectors 1–4 in the Sonic seat, 10 and 11 in the Tails seat), and
+`S3K_PLAYER` / `S3K_POWERED_PLAYER` ending frames. The partner's scenes resolve from
+the first creator sidekick, or on a solo team from the lead's own companion banks:
+the full-size cockpit (`S3K_TORNADO_PILOT` / `S3K_SOLO_TORNADO_PILOT`, selector 12 in
+the Tails seat and 11 in the Sonic seat), the mid-size cockpit head
+(`S3K_MINI_TORNADO_PILOT` / `S3K_SOLO_MINI_TORNADO_PILOT`, selectors 12 and 13), the
+other seat on the final card (the sidekick's `S3K_EYECATCH`, or `S3K_SOLO_EYECATCH`),
+and Sonic 2's search photos (`S2_PHOTOS` / `S2_SOLO_PHOTOS`). A Tails-role lead takes
+its float and transformation scripts from Tails's table. Frames retain native mapping IDs
 and hotspots; missing entries fall back to the native host renderer. Indexed
 images are bounded to 256×256 pixels to include the enlarged reunion art. Each
 set carries sixteen RGB colours; the renderer keeps it on a private palette

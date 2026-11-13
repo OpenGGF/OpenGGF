@@ -15,7 +15,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 100,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "wait-01",
@@ -28,7 +28,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 7,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "wait-02",
@@ -41,7 +41,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "wait-03",
@@ -54,7 +54,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 50,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "wait-04",
@@ -67,7 +67,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "wait-05",
@@ -80,7 +80,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "wait-06",
@@ -93,7 +93,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 100,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "wait-07",
@@ -106,7 +106,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 100,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "wait-08",
@@ -119,7 +119,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 100,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "roll-00",
@@ -184,7 +184,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "walk-01",
@@ -197,7 +197,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "walk-02",
@@ -210,7 +210,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "walk-03",
@@ -223,7 +223,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "walk-04",
@@ -236,7 +236,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "walk-05",
@@ -249,7 +249,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "walk-06",
@@ -262,7 +262,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "walk-07",
@@ -275,7 +275,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "run-00",
@@ -288,7 +288,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Round3 generated native pose; chosen B2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen B2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "run-01",
@@ -301,7 +301,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Round3 generated native pose; chosen 3; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 3; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "run-02",
@@ -314,7 +314,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Round3 generated native pose; chosen B2; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen B2; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "run-03",
@@ -327,7 +327,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Round3 generated native pose; chosen 1; native aspect padded, no repainting."
+      "notes": "Round3 generated native pose; chosen 1; native aspect padded, no repainting. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "spring-00",
@@ -340,7 +340,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 48,
-      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "hurt-00",
@@ -353,7 +353,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "homing_dive-00",
@@ -366,7 +366,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "homing_dive-01",
@@ -379,7 +379,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 3; no painted pixel patches. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "homing_dive-02",
@@ -392,7 +392,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 6; no painted pixel patches."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 6; no painted pixel patches. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "homing_dive-03",
@@ -405,7 +405,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 4,
-      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 2; no painted pixel patches."
+      "notes": "Built-in GPT Image native-pose regeneration; chosen candidate 2; no painted pixel patches. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "spindash-00",
@@ -977,7 +977,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
-      "notes": ""
+      "notes": "Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "death-01",
@@ -990,7 +990,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
-      "notes": ""
+      "notes": "Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "push-00",
@@ -1003,7 +1003,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Consistency: re-reduced; original source uniform 32.906667:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 32.906667:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "push-01",
@@ -1016,7 +1016,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Consistency: re-reduced; original source uniform 32.911790:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 32.911790:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "duck-00",
@@ -1029,7 +1029,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": "Consistency: regenerated; original source uniform 20.370370:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: regenerated; original source uniform 20.370370:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "duck-01",
@@ -1042,7 +1042,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": "Consistency: regenerated; original source uniform 30.000000:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: regenerated; original source uniform 30.000000:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "look_up-00",
@@ -1055,7 +1055,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
-      "notes": "Consistency: re-reduced; original source uniform 36.954733:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 36.954733:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "look_up-01",
@@ -1068,7 +1068,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
-      "notes": "Consistency: re-reduced; original source uniform 42.057613:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 42.057613:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "skid-00",
@@ -1081,7 +1081,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
-      "notes": "Consistency: re-reduced; original source uniform 33.742690:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 33.742690:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "skid-01",
@@ -1094,7 +1094,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
-      "notes": "Consistency: re-reduced; original source uniform 33.304094:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 33.304094:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "skid-02",
@@ -1107,7 +1107,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
-      "notes": "Consistency: re-reduced; original source uniform 31.441441:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 31.441441:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "skid-03",
@@ -1120,7 +1120,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
-      "notes": "Consistency: re-reduced; original source uniform 35.719373:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 35.719373:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "balance-00",
@@ -1133,7 +1133,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Consistency: regenerated; original source uniform 15.111111:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: regenerated; original source uniform 15.111111:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "balance-01",
@@ -1146,7 +1146,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Consistency: regenerated; original source uniform 16.111111:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: regenerated; original source uniform 16.111111:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "balance-02",
@@ -1159,7 +1159,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Consistency: regenerated; original source uniform 15.000000:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: regenerated; original source uniform 15.000000:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "balance-03",
@@ -1172,7 +1172,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Consistency: regenerated; original source uniform 15.555556:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: regenerated; original source uniform 15.555556:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "drown-00",
@@ -1185,7 +1185,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": ""
+      "notes": "Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "drown-01",
@@ -1198,7 +1198,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": ""
+      "notes": "Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "drown-02",
@@ -1211,7 +1211,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 10,
-      "notes": ""
+      "notes": "Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "get_air-00",
@@ -1224,7 +1224,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
-      "notes": "Consistency: re-reduced; original source uniform 34.722222:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 34.722222:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "get_air-01",
@@ -1237,7 +1237,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 12,
-      "notes": "Consistency: re-reduced; original source uniform 37.006173:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 37.006173:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "hang-00",
@@ -1289,7 +1289,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
-      "notes": ""
+      "notes": "Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "stop-01",
@@ -1302,7 +1302,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
-      "notes": ""
+      "notes": "Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "stop-02",
@@ -1315,7 +1315,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
-      "notes": ""
+      "notes": "Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "stop-03",
@@ -1328,7 +1328,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 5,
-      "notes": ""
+      "notes": "Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "native-pose-ca",
@@ -1341,7 +1341,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Reuse original MICA normal-Sonic mapping art from endings/s3k/rescue_float-ca.png; no scaling or native pixel copying."
+      "notes": "Reuse original MICA normal-Sonic mapping art from endings/s3k/rescue_float-ca.png; no scaling or native pixel copying. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "native-pose-cb",
@@ -1354,7 +1354,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Reuse original MICA normal-Sonic mapping art from endings/s3k/rescue_float-cb.png; no scaling or native pixel copying."
+      "notes": "Reuse original MICA normal-Sonic mapping art from endings/s3k/rescue_float-cb.png; no scaling or native pixel copying. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "native-pose-24",
@@ -1367,7 +1367,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-24.png; no scaling or native pixel copying."
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-24.png; no scaling or native pixel copying. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "native-pose-55",
@@ -1380,7 +1380,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-55.png; no scaling or native pixel copying."
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-55.png; no scaling or native pixel copying. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "native-pose-56",
@@ -1393,7 +1393,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-56.png; no scaling or native pixel copying."
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-56.png; no scaling or native pixel copying. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "native-pose-57",
@@ -1406,7 +1406,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-57.png; no scaling or native pixel copying."
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-57.png; no scaling or native pixel copying. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "native-pose-59",
@@ -1419,7 +1419,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-59.png; no scaling or native pixel copying."
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-59.png; no scaling or native pixel copying. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "native-pose-5a",
@@ -1432,7 +1432,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-5a.png; no scaling or native pixel copying."
+      "notes": "Reuse original MICA normal-Sonic mapping art from continue/s3k-player-5a.png; no scaling or native pixel copying. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "homing_dive_forward-00",
@@ -1653,7 +1653,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s1-43",
@@ -1666,7 +1666,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s1-44",
@@ -1679,7 +1679,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s1-4b",
@@ -1692,7 +1692,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s1-49",
@@ -1705,7 +1705,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s1-4e",
@@ -1718,7 +1718,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s2-6c",
@@ -1731,7 +1731,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-c5",
@@ -1744,7 +1744,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-c6",
@@ -1757,7 +1757,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-c7",
@@ -1770,7 +1770,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-8f",
@@ -1783,7 +1783,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-a1",
@@ -1796,7 +1796,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-a2",
@@ -1809,7 +1809,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Consistency: re-reduced; original source uniform 8.571429:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 8.571429:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-a3",
@@ -1822,7 +1822,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Consistency: re-reduced; original source uniform 8.611111:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 8.611111:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-c8",
@@ -1835,7 +1835,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Consistency: re-reduced; original source uniform 9.259259:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 9.259259:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-c9",
@@ -1848,7 +1848,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Consistency: re-reduced; original source uniform 9.259259:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 9.259259:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-ca",
@@ -1861,7 +1861,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-cb",
@@ -1874,7 +1874,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-cc",
@@ -1887,7 +1887,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Consistency: re-reduced; original source uniform 9.120370:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 9.120370:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-cd",
@@ -1900,7 +1900,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-ce",
@@ -1913,7 +1913,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-cf",
@@ -1926,7 +1926,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-b0",
@@ -1939,7 +1939,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-b2",
@@ -1952,7 +1952,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-b1",
@@ -1965,7 +1965,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-b3",
@@ -1978,7 +1978,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-ac",
@@ -1991,7 +1991,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-03",
@@ -2004,7 +2004,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Consistency: re-reduced; original source uniform 8.859649:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 8.859649:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-04",
@@ -2017,7 +2017,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Consistency: re-reduced; original source uniform 8.809524:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 8.809524:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-8c",
@@ -2030,7 +2030,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-8d",
@@ -2043,7 +2043,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-d0",
@@ -2056,7 +2056,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s3k-d1",
@@ -2069,7 +2069,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s2-0a",
@@ -2082,7 +2082,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s1-33-rot52",
@@ -2095,7 +2095,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s1-33-rot53",
@@ -2108,7 +2108,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s1-33-rot54",
@@ -2121,7 +2121,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s1-4e-scale79",
@@ -2134,7 +2134,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s1-4e-scale80",
@@ -2147,7 +2147,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s1-4e-scale81",
@@ -2160,7 +2160,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-s1-4e-scale82",
@@ -2173,7 +2173,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "Batch2 native-pose generation; no painted pixels."
+      "notes": "Batch2 native-pose generation; no painted pixels. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "variant-blank",
@@ -2199,7 +2199,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-5b",
@@ -2212,7 +2212,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-5c",
@@ -2225,7 +2225,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-5d",
@@ -2238,7 +2238,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-5e",
@@ -2251,7 +2251,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-5f",
@@ -2264,7 +2264,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-60",
@@ -2277,7 +2277,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-61",
@@ -2290,7 +2290,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-62",
@@ -2303,7 +2303,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-63",
@@ -2316,7 +2316,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-64",
@@ -2329,7 +2329,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-65",
@@ -2342,7 +2342,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-66",
@@ -2355,7 +2355,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-67",
@@ -2368,7 +2368,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-68",
@@ -2381,7 +2381,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-69",
@@ -2394,7 +2394,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Consistency: re-reduced; original source uniform 10.349206:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 10.349206:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-6a",
@@ -2407,7 +2407,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Consistency: re-reduced; original source uniform 10.761905:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 10.761905:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-6b",
@@ -2420,7 +2420,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Consistency: re-reduced; original source uniform 10.793651:1; anatomical scale, never silhouette fit."
+      "notes": "Consistency: re-reduced; original source uniform 10.793651:1; anatomical scale, never silhouette fit. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-6c",
@@ -2433,7 +2433,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-6d",
@@ -2446,7 +2446,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-6e",
@@ -2459,7 +2459,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-6f",
@@ -2472,7 +2472,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-70",
@@ -2485,7 +2485,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-71",
@@ -2498,7 +2498,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-72",
@@ -2511,7 +2511,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-73",
@@ -2524,7 +2524,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-74",
@@ -2537,7 +2537,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-75",
@@ -2550,7 +2550,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-76",
@@ -2563,7 +2563,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-77",
@@ -2576,7 +2576,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-78",
@@ -2589,7 +2589,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-79",
@@ -2602,7 +2602,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-7a",
@@ -2615,7 +2615,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-7b",
@@ -2628,7 +2628,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-7c",
@@ -2641,7 +2641,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-7d",
@@ -2654,7 +2654,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-7e",
@@ -2667,7 +2667,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-7f",
@@ -2680,7 +2680,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-94",
@@ -2693,7 +2693,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object-pose-95",
@@ -2706,7 +2706,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json."
+      "notes": "Batch3 object-owned native pose; see object-poses/provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-80",
@@ -2719,7 +2719,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-81",
@@ -2732,7 +2732,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-82",
@@ -2745,7 +2745,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-83",
@@ -2758,7 +2758,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-84",
@@ -2771,7 +2771,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-85",
@@ -2784,7 +2784,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-8c",
@@ -2797,7 +2797,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-8d",
@@ -2810,7 +2810,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-93",
@@ -2823,7 +2823,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Re-reduced 6% larger for independent area check."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Re-reduced 6% larger for independent area check. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-b4",
@@ -2836,7 +2836,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-b5",
@@ -2849,7 +2849,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Uniform 50\u219248px height reduction for current indexed atlas cell."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Uniform 50\u219248px height reduction for current indexed atlas cell. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-c0",
@@ -2862,7 +2862,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-c4",
@@ -2875,7 +2875,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-df",
@@ -2888,7 +2888,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-e0",
@@ -2901,7 +2901,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-e1",
@@ -2914,7 +2914,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-e2",
@@ -2927,7 +2927,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-e3",
@@ -2940,7 +2940,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-e4",
@@ -2953,7 +2953,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-e6",
@@ -2966,7 +2966,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-e7",
@@ -2979,7 +2979,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-e8",
@@ -2992,7 +2992,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-e9",
@@ -3005,7 +3005,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-ea",
@@ -3018,7 +3018,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-ef",
@@ -3031,7 +3031,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-f0",
@@ -3044,7 +3044,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-f1",
@@ -3057,7 +3057,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-f2",
@@ -3070,7 +3070,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-f3",
@@ -3083,7 +3083,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-f4",
@@ -3096,7 +3096,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-f5",
@@ -3109,7 +3109,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-f6",
@@ -3122,7 +3122,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-f7",
@@ -3135,7 +3135,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-f8",
@@ -3148,7 +3148,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-f9",
@@ -3161,7 +3161,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-fa",
@@ -3174,7 +3174,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-31",
@@ -3187,7 +3187,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-32",
@@ -3200,7 +3200,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-33",
@@ -3213,7 +3213,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-34",
@@ -3226,7 +3226,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-35",
@@ -3239,7 +3239,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-36",
@@ -3252,7 +3252,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-37",
@@ -3265,7 +3265,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-38",
@@ -3278,7 +3278,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-39",
@@ -3291,7 +3291,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-3a",
@@ -3304,7 +3304,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-3b",
@@ -3317,7 +3317,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-3c",
@@ -3330,7 +3330,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-49",
@@ -3343,7 +3343,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-4a",
@@ -3356,7 +3356,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-4b",
@@ -3369,7 +3369,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-4c",
@@ -3382,7 +3382,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-4d",
@@ -3395,7 +3395,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-4e",
@@ -3408,7 +3408,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-4f",
@@ -3421,7 +3421,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-50",
@@ -3434,7 +3434,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-51",
@@ -3447,7 +3447,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-52",
@@ -3460,7 +3460,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-53",
@@ -3473,7 +3473,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-54",
@@ -3486,7 +3486,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-43",
@@ -3499,7 +3499,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-d2",
@@ -3512,7 +3512,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-d3",
@@ -3525,7 +3525,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-d4",
@@ -3538,7 +3538,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-d5",
@@ -3551,7 +3551,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     },
     {
       "id": "object4-s3k-d6",
@@ -3564,7 +3564,7 @@
       ],
       "angle_set": "flat",
       "duration_ticks": 1,
-      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json."
+      "notes": "Object pose wave4: GPT Image native-pose transformation; object-poses-wave4/native-pose-provenance.json. Despeckle 2026-11-12 (sheet_despeckle.py): lone pixels and flecks folded into their own material, scale edges kept; silhouette, ink and hotspot unchanged."
     }
   ],
   "scripts": {

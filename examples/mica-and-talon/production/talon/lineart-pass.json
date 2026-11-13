@@ -1,0 +1,5851 @@
+{
+ "frames": {
+  "death-00": {
+   "animation": "DEATH",
+   "hotspot_before": [
+    17,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     14.4,
+     5.0
+    ],
+    "far": [
+     20.9,
+     4.9
+    ],
+    "tip": [
+     18.2,
+     17.4
+    ],
+    "band": 0.858,
+    "span": 0.983
+   },
+   "head": null,
+   "why": "front view: the beak sits between the two lenses, and the reference head is three-quarter"
+  },
+  "duck-00": {
+   "animation": "DUCK",
+   "hotspot_before": [
+    22,
+    7
+   ],
+   "landmarks": {
+    "lens": [
+     26.3,
+     6.5
+    ],
+    "far": [
+     31.8,
+     6.3
+    ],
+    "tip": [
+     31.5,
+     16.4
+    ],
+    "band": 0.866,
+    "span": 0.742
+   },
+   "head": null,
+   "why": "head tucked into the crouch: an upright reference head breaks the pose"
+  },
+  "family-balance-00": {
+   "animation": "BALANCE",
+   "hotspot_before": [
+    15,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     19.8,
+     5.2
+    ],
+    "far": [
+     25.4,
+     5.0
+    ],
+    "tip": [
+     26.0,
+     14.9
+    ],
+    "band": 0.953,
+    "span": 0.872
+   },
+   "head": {
+    "lens": [
+     20,
+     5
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-balance-01": {
+   "animation": "BALANCE",
+   "hotspot_before": [
+    14,
+    16
+   ],
+   "landmarks": {
+    "lens": [
+     19.6,
+     5.5
+    ],
+    "far": [
+     25.4,
+     5.4
+    ],
+    "tip": [
+     25.8,
+     14.5
+    ],
+    "band": 0.899,
+    "span": 0.823
+   },
+   "head": {
+    "lens": [
+     20,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-balance2-00": {
+   "animation": "BALANCE2",
+   "hotspot_before": [
+    15,
+    11
+   ],
+   "landmarks": {
+    "lens": [
+     23.1,
+     5.8
+    ],
+    "far": [
+     28.7,
+     6.7
+    ],
+    "tip": [
+     28.2,
+     15.4
+    ],
+    "band": 1.38,
+    "span": 1.031
+   },
+   "head": {
+    "lens": [
+     23,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-balance2-01": {
+   "animation": "BALANCE2",
+   "hotspot_before": [
+    14,
+    13
+   ],
+   "landmarks": {
+    "lens": [
+     20.6,
+     5.1
+    ],
+    "far": [
+     26.5,
+     6.1
+    ],
+    "tip": [
+     27.0,
+     16.3
+    ],
+    "band": 1.444,
+    "span": 1.234
+   },
+   "head": {
+    "lens": [
+     21,
+     5
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-balance2-02": {
+   "animation": "BALANCE2",
+   "hotspot_before": [
+    13,
+    12
+   ],
+   "landmarks": {
+    "lens": [
+     19.8,
+     5.1
+    ],
+    "far": [
+     25.3,
+     5.2
+    ],
+    "tip": [
+     25.8,
+     15.4
+    ],
+    "band": 1.315,
+    "span": 1.149
+   },
+   "head": {
+    "lens": [
+     20,
+     5
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-balance3-00": {
+   "animation": "BALANCE3",
+   "hotspot_before": [
+    19,
+    23
+   ],
+   "landmarks": {
+    "lens": [
+     14.2,
+     5.6
+    ],
+    "far": [
+     20.3,
+     3.2
+    ],
+    "tip": [
+     26.7,
+     13.3
+    ],
+    "band": 1.088,
+    "span": 1.114
+   },
+   "head": {
+    "lens": [
+     14,
+     6
+    ],
+    "angle": -26,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -26 degrees"
+  },
+  "family-balance3-01": {
+   "animation": "BALANCE3",
+   "hotspot_before": [
+    20,
+    19
+   ],
+   "landmarks": {
+    "lens": [
+     13.8,
+     5.2
+    ],
+    "far": [
+     19.5,
+     2.5
+    ],
+    "tip": [
+     27.3,
+     10.0
+    ],
+    "band": 1.004,
+    "span": 1.095
+   },
+   "head": {
+    "lens": [
+     14,
+     5
+    ],
+    "angle": -38,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -38 degrees"
+  },
+  "family-balance4-00": {
+   "animation": "BALANCE4",
+   "hotspot_before": [
+    13,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     12.8,
+     4.0
+    ],
+    "far": [
+     19.2,
+     3.8
+    ],
+    "tip": [
+     21.5,
+     13.5
+    ],
+    "band": 0.92,
+    "span": null,
+    "by_hand": [
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     13,
+     4
+    ],
+    "angle": -10,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -10 degrees"
+  },
+  "family-balance4-01": {
+   "animation": "BALANCE4",
+   "hotspot_before": [
+    17,
+    16
+   ],
+   "landmarks": {
+    "lens": [
+     11.3,
+     4.2
+    ],
+    "far": [
+     17.0,
+     2.4
+    ],
+    "tip": [
+     22.5,
+     11.0
+    ],
+    "band": 1.235,
+    "span": null,
+    "by_hand": [
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     11,
+     4
+    ],
+    "angle": -22,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -26 degrees"
+  },
+  "family-balance4-02": {
+   "animation": "BALANCE4",
+   "hotspot_before": [
+    19,
+    15
+   ],
+   "landmarks": {
+    "lens": [
+     10.5,
+     5.1
+    ],
+    "far": [
+     16.2,
+     2.5
+    ],
+    "tip": [
+     22.3,
+     10.7
+    ],
+    "band": 1.213,
+    "span": 1.177
+   },
+   "head": {
+    "lens": [
+     10,
+     5
+    ],
+    "angle": -32,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -32 degrees"
+  },
+  "family-balance4-03": {
+   "animation": "BALANCE4",
+   "hotspot_before": [
+    19,
+    14
+   ],
+   "landmarks": {
+    "lens": [
+     9.2,
+     5.2
+    ],
+    "far": null,
+    "tip": [
+     22.3,
+     9.1
+    ],
+    "band": 1.275,
+    "span": 1.321
+   },
+   "head": {
+    "lens": [
+     9,
+     5
+    ],
+    "angle": -41,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -41 degrees"
+  },
+  "family-balance4-04": {
+   "animation": "BALANCE4",
+   "hotspot_before": [
+    17,
+    19
+   ],
+   "landmarks": {
+    "lens": [
+     12.8,
+     5.0
+    ],
+    "far": [
+     20.0,
+     4.1
+    ],
+    "tip": [
+     24.5,
+     13.5
+    ],
+    "band": 1.045,
+    "span": null,
+    "by_hand": [
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     13,
+     5
+    ],
+    "angle": -22,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -22 degrees"
+  },
+  "family-blink-00": {
+   "animation": "BLINK",
+   "hotspot_before": [
+    12,
+    18
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "blink and yawn drawings: the eye and beak state is the drawing, so each keeps its own head; body rule only"
+  },
+  "family-blink-01": {
+   "animation": "BLINK",
+   "hotspot_before": [
+    12,
+    16
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "blink and yawn drawings: the eye and beak state is the drawing, so each keeps its own head; body rule only"
+  },
+  "family-blink-02": {
+   "animation": "BLINK",
+   "hotspot_before": [
+    12,
+    17
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "blink and yawn drawings: the eye and beak state is the drawing, so each keeps its own head; body rule only"
+  },
+  "family-blink-03": {
+   "animation": "BLINK",
+   "hotspot_before": [
+    14,
+    23
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "blink and yawn drawings: the eye and beak state is the drawing, so each keeps its own head; body rule only"
+  },
+  "family-blink-04": {
+   "animation": "BLINK",
+   "hotspot_before": [
+    16,
+    15
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "blink and yawn drawings: the eye and beak state is the drawing, so each keeps its own head; body rule only"
+  },
+  "family-bubble-00": {
+   "animation": "BUBBLE",
+   "hotspot_before": [
+    18,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     15.6,
+     3.7
+    ],
+    "far": null,
+    "tip": [
+     25.8,
+     10.9
+    ],
+    "band": 1.386,
+    "span": 1.239
+   },
+   "head": {
+    "lens": [
+     16,
+     4
+    ],
+    "angle": -21,
+    "mirror": false,
+    "beak": "open"
+   },
+   "why": "reference head on the pose's lens, turned -22 degrees, open beak"
+  },
+  "family-bubble-01": {
+   "animation": "BUBBLE",
+   "hotspot_before": [
+    18,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     16.5,
+     3.8
+    ],
+    "far": [
+     23.2,
+     3.9
+    ],
+    "tip": [
+     27.2,
+     11.7
+    ],
+    "band": 1.451,
+    "span": 1.298
+   },
+   "head": {
+    "lens": [
+     16,
+     4
+    ],
+    "angle": -21,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -21 degrees"
+  },
+  "family-bubble-02": {
+   "animation": "BUBBLE",
+   "hotspot_before": [
+    18,
+    19
+   ],
+   "landmarks": {
+    "lens": [
+     15.3,
+     4.0
+    ],
+    "far": [
+     21.6,
+     3.9
+    ],
+    "tip": [
+     25.2,
+     11.5
+    ],
+    "band": 1.408,
+    "span": 1.235
+   },
+   "head": {
+    "lens": [
+     15,
+     4
+    ],
+    "angle": -21,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -20 degrees"
+  },
+  "family-drown-00": {
+   "animation": "DROWN",
+   "hotspot_before": [
+    19,
+    27
+   ],
+   "landmarks": {
+    "lens": [
+     15.9,
+     6.2
+    ],
+    "far": [
+     24.8,
+     6.2
+    ],
+    "tip": [
+     21.3,
+     17.8
+    ],
+    "band": 1.068,
+    "span": 0.954
+   },
+   "head": null,
+   "why": "front view: the beak sits between the two lenses, and the reference head is three-quarter"
+  },
+  "family-float2-00": {
+   "animation": "FLOAT2",
+   "hotspot_before": [
+    21,
+    12
+   ],
+   "landmarks": {
+    "lens": [
+     33.6,
+     5.3
+    ],
+    "far": null,
+    "tip": [
+     40.4,
+     14.5
+    ],
+    "band": 1.177,
+    "span": 0.938
+   },
+   "head": {
+    "lens": [
+     34,
+     5
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-float2-01": {
+   "animation": "FLOAT2",
+   "hotspot_before": [
+    18,
+    12
+   ],
+   "landmarks": {
+    "lens": [
+     26.2,
+     4.8
+    ],
+    "far": null,
+    "tip": [
+     33.0,
+     14.6
+    ],
+    "band": 1.17,
+    "span": 0.987
+   },
+   "head": {
+    "lens": [
+     26,
+     5
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-float2-02": {
+   "animation": "FLOAT2",
+   "hotspot_before": [
+    18,
+    13
+   ],
+   "landmarks": {
+    "lens": [
+     21.4,
+     5.1
+    ],
+    "far": [
+     13.6,
+     5.2
+    ],
+    "tip": [
+     17.8,
+     17.3
+    ],
+    "band": 1.109,
+    "span": 1.037
+   },
+   "head": null,
+   "why": "front view: the beak sits between the two lenses, and the reference head is three-quarter"
+  },
+  "family-float2-03": {
+   "animation": "FLOAT2",
+   "hotspot_before": [
+    18,
+    12
+   ],
+   "landmarks": {
+    "lens": [
+     9.4,
+     4.6
+    ],
+    "far": null,
+    "tip": [
+     1.6,
+     14.8
+    ],
+    "band": 1.136,
+    "span": 1.042
+   },
+   "head": {
+    "lens": [
+     9,
+     5
+    ],
+    "angle": 0,
+    "mirror": true,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, mirrored"
+  },
+  "family-float2-04": {
+   "animation": "FLOAT2",
+   "hotspot_before": [
+    20,
+    11
+   ],
+   "landmarks": {
+    "lens": [
+     6.8,
+     4.8
+    ],
+    "far": null,
+    "tip": null,
+    "band": 1.253,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "family-float2-05": {
+   "animation": "FLOAT2",
+   "hotspot_before": [
+    17,
+    15
+   ],
+   "landmarks": {
+    "lens": [
+     3.4,
+     4.1
+    ],
+    "far": null,
+    "tip": null,
+    "band": null,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "family-float2-06": {
+   "animation": "FLOAT2",
+   "hotspot_before": [
+    16,
+    15
+   ],
+   "landmarks": {
+    "lens": [
+     11.9,
+     1.6
+    ],
+    "far": [
+     20.8,
+     1.6
+    ],
+    "tip": null,
+    "band": null,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "family-float2-07": {
+   "animation": "FLOAT2",
+   "hotspot_before": [
+    17,
+    15
+   ],
+   "landmarks": {
+    "lens": [
+     30.3,
+     4.0
+    ],
+    "far": null,
+    "tip": null,
+    "band": null,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "family-get-up-00": {
+   "animation": "GET_UP",
+   "hotspot_before": [
+    24,
+    6
+   ],
+   "landmarks": {
+    "lens": [
+     33.7,
+     6.4
+    ],
+    "far": [
+     40.3,
+     6.3
+    ],
+    "tip": [
+     41.5,
+     16.5
+    ],
+    "band": 1.106,
+    "span": null,
+    "by_hand": [
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     34,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-get-up-01": {
+   "animation": "GET_UP",
+   "hotspot_before": [
+    11,
+    19
+   ],
+   "landmarks": {
+    "lens": [
+     14.2,
+     4.1
+    ],
+    "far": [
+     19.6,
+     3.8
+    ],
+    "tip": [
+     21.5,
+     12.0
+    ],
+    "band": 0.979,
+    "span": null,
+    "by_hand": [
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     14,
+     4
+    ],
+    "angle": -10,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -10 degrees"
+  },
+  "family-hang-00": {
+   "animation": "HANG",
+   "hotspot_before": [
+    23,
+    12
+   ],
+   "landmarks": {
+    "lens": [
+     18.2,
+     4.8
+    ],
+    "far": [
+     13.1,
+     4.3
+    ],
+    "tip": [
+     10.5,
+     14.7
+    ],
+    "band": 1.208,
+    "span": 1.102
+   },
+   "head": {
+    "lens": [
+     18,
+     5
+    ],
+    "angle": 0,
+    "mirror": true,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, mirrored"
+  },
+  "family-hang-01": {
+   "animation": "HANG",
+   "hotspot_before": [
+    22,
+    12
+   ],
+   "landmarks": {
+    "lens": [
+     18.4,
+     5.7
+    ],
+    "far": [
+     13.4,
+     5.3
+    ],
+    "tip": [
+     11.0,
+     15.7
+    ],
+    "band": 1.244,
+    "span": 1.081
+   },
+   "head": {
+    "lens": [
+     18,
+     6
+    ],
+    "angle": 0,
+    "mirror": true,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, mirrored"
+  },
+  "family-hang2-00": {
+   "animation": "HANG2",
+   "hotspot_before": [
+    16,
+    16
+   ],
+   "landmarks": {
+    "lens": [
+     15.4,
+     9.7
+    ],
+    "far": [
+     20.9,
+     9.8
+    ],
+    "tip": [
+     23.5,
+     19.7
+    ],
+    "band": 0.989,
+    "span": 0.97
+   },
+   "head": {
+    "lens": [
+     15,
+     10
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-hang2-01": {
+   "animation": "HANG2",
+   "hotspot_before": [
+    15,
+    16
+   ],
+   "landmarks": {
+    "lens": [
+     15.3,
+     8.4
+    ],
+    "far": [
+     20.7,
+     8.5
+    ],
+    "tip": [
+     23.4,
+     18.5
+    ],
+    "band": 0.923,
+    "span": 0.982
+   },
+   "head": {
+    "lens": [
+     15,
+     8
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-hurt-fall-00": {
+   "animation": "HURT_FALL",
+   "hotspot_before": [
+    14,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     12.7,
+     5.1
+    ],
+    "far": [
+     19.2,
+     5.0
+    ],
+    "tip": [
+     19.3,
+     15.7
+    ],
+    "band": 1.475,
+    "span": 1.304
+   },
+   "head": {
+    "lens": [
+     13,
+     5
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "open"
+   },
+   "why": "reference head on the pose's lens, open beak"
+  },
+  "family-hurt-fall-01": {
+   "animation": "HURT_FALL",
+   "hotspot_before": [
+    16,
+    19
+   ],
+   "landmarks": {
+    "lens": [
+     13.8,
+     4.9
+    ],
+    "far": [
+     19.8,
+     4.6
+    ],
+    "tip": [
+     19.8,
+     15.2
+    ],
+    "band": 1.482,
+    "span": 1.258
+   },
+   "head": {
+    "lens": [
+     14,
+     5
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "open"
+   },
+   "why": "reference head on the pose's lens, open beak"
+  },
+  "family-push-00": {
+   "animation": "PUSH",
+   "hotspot_before": [
+    25,
+    17
+   ],
+   "landmarks": {
+    "lens": [
+     26.9,
+     4.7
+    ],
+    "far": [
+     32.6,
+     4.7
+    ],
+    "tip": [
+     33.4,
+     14.8
+    ],
+    "band": 1.038,
+    "span": 0.899
+   },
+   "head": {
+    "lens": [
+     27,
+     5
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-push-01": {
+   "animation": "PUSH",
+   "hotspot_before": [
+    15,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     17.5,
+     4.7
+    ],
+    "far": [
+     22.9,
+     4.7
+    ],
+    "tip": [
+     23.8,
+     14.5
+    ],
+    "band": 0.993,
+    "span": 0.891
+   },
+   "head": {
+    "lens": [
+     18,
+     5
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-push-02": {
+   "animation": "PUSH",
+   "hotspot_before": [
+    17,
+    19
+   ],
+   "landmarks": {
+    "lens": [
+     19.5,
+     4.9
+    ],
+    "far": [
+     24.9,
+     4.7
+    ],
+    "tip": [
+     25.9,
+     15.1
+    ],
+    "band": 0.98,
+    "span": 0.91
+   },
+   "head": {
+    "lens": [
+     20,
+     5
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-push-03": {
+   "animation": "PUSH",
+   "hotspot_before": [
+    19,
+    19
+   ],
+   "landmarks": {
+    "lens": [
+     20.1,
+     4.7
+    ],
+    "far": [
+     26.1,
+     4.6
+    ],
+    "tip": [
+     27.5,
+     15.0
+    ],
+    "band": 1.081,
+    "span": 0.966
+   },
+   "head": {
+    "lens": [
+     20,
+     5
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-super-transform-00": {
+   "animation": "SUPER_TRANSFORM",
+   "hotspot_before": [
+    17,
+    16
+   ],
+   "landmarks": {
+    "lens": [
+     14.5,
+     6.1
+    ],
+    "far": [
+     19.9,
+     5.6
+    ],
+    "tip": [
+     19.4,
+     16.5
+    ],
+    "band": 1.65,
+    "span": 1.243
+   },
+   "head": null,
+   "why": "front view: the beak sits between the two lenses, and the reference head is three-quarter"
+  },
+  "family-super-transform-01": {
+   "animation": "SUPER_TRANSFORM",
+   "hotspot_before": [
+    20,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     19.2,
+     4.6
+    ],
+    "far": [
+     24.6,
+     4.4
+    ],
+    "tip": [
+     26.9,
+     14.4
+    ],
+    "band": 1.412,
+    "span": 1.293
+   },
+   "head": {
+    "lens": [
+     19,
+     5
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-super-transform-03": {
+   "animation": "SUPER_TRANSFORM",
+   "hotspot_before": [
+    23,
+    21
+   ],
+   "landmarks": {
+    "lens": [
+     21.6,
+     4.0
+    ],
+    "far": [
+     27.6,
+     4.0
+    ],
+    "tip": [
+     30.2,
+     13.0
+    ],
+    "band": 1.198,
+    "span": 1.057
+   },
+   "head": {
+    "lens": [
+     22,
+     4
+    ],
+    "angle": -10,
+    "mirror": false,
+    "beak": "open"
+   },
+   "why": "reference head on the pose's lens, turned -11 degrees, open beak"
+  },
+  "family-super-transform-04": {
+   "animation": "SUPER_TRANSFORM",
+   "hotspot_before": [
+    22,
+    22
+   ],
+   "landmarks": {
+    "lens": [
+     20.4,
+     4.3
+    ],
+    "far": [
+     26.5,
+     4.5
+    ],
+    "tip": [
+     29.3,
+     13.9
+    ],
+    "band": 1.127,
+    "span": 1.074
+   },
+   "head": {
+    "lens": [
+     20,
+     4
+    ],
+    "angle": -10,
+    "mirror": false,
+    "beak": "open"
+   },
+   "why": "reference head on the pose's lens, turned -10 degrees, open beak"
+  },
+  "family-tails-carried-00": {
+   "animation": "TAILS_CARRIED",
+   "hotspot_before": [
+    16,
+    24
+   ],
+   "landmarks": {
+    "lens": [
+     18.7,
+     10.2
+    ],
+    "far": [
+     24.2,
+     10.1
+    ],
+    "tip": [
+     26.8,
+     19.4
+    ],
+    "band": 1.148,
+    "span": 1.025
+   },
+   "head": {
+    "lens": [
+     19,
+     10
+    ],
+    "angle": -9,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -9 degrees"
+  },
+  "family-tails-carried-01": {
+   "animation": "TAILS_CARRIED",
+   "hotspot_before": [
+    17,
+    24
+   ],
+   "landmarks": {
+    "lens": [
+     22.2,
+     10.2
+    ],
+    "far": [
+     28.1,
+     10.2
+    ],
+    "tip": [
+     30.0,
+     20.0
+    ],
+    "band": 1.177,
+    "span": 1.041
+   },
+   "head": {
+    "lens": [
+     22,
+     10
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-tails-carried-02": {
+   "animation": "TAILS_CARRIED",
+   "hotspot_before": [
+    21,
+    24
+   ],
+   "landmarks": {
+    "lens": [
+     22.5,
+     9.3
+    ],
+    "far": [
+     28.1,
+     9.3
+    ],
+    "tip": [
+     30.3,
+     18.6
+    ],
+    "band": 1.245,
+    "span": 0.995
+   },
+   "head": {
+    "lens": [
+     22,
+     9
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-tails-swim-00": {
+   "animation": "TAILS_SWIM",
+   "hotspot_before": [
+    24,
+    22
+   ],
+   "landmarks": {
+    "lens": [
+     23.0,
+     6.7
+    ],
+    "far": [
+     28.9,
+     6.8
+    ],
+    "tip": [
+     30.4,
+     16.2
+    ],
+    "band": 1.182,
+    "span": 0.994
+   },
+   "head": {
+    "lens": [
+     23,
+     7
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-tails-swim-01": {
+   "animation": "TAILS_SWIM",
+   "hotspot_before": [
+    24,
+    22
+   ],
+   "landmarks": {
+    "lens": [
+     24.3,
+     7.2
+    ],
+    "far": [
+     30.1,
+     7.2
+    ],
+    "tip": [
+     31.8,
+     16.7
+    ],
+    "band": 1.25,
+    "span": 1.0
+   },
+   "head": {
+    "lens": [
+     24,
+     7
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-tails-swim-02": {
+   "animation": "TAILS_SWIM",
+   "hotspot_before": [
+    30,
+    22
+   ],
+   "landmarks": {
+    "lens": [
+     28.2,
+     7.1
+    ],
+    "far": [
+     34.2,
+     7.1
+    ],
+    "tip": [
+     35.9,
+     16.3
+    ],
+    "band": 1.177,
+    "span": 0.988
+   },
+   "head": {
+    "lens": [
+     28,
+     7
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-tails-swim-03": {
+   "animation": "TAILS_SWIM",
+   "hotspot_before": [
+    26,
+    22
+   ],
+   "landmarks": {
+    "lens": [
+     23.8,
+     6.8
+    ],
+    "far": [
+     29.9,
+     6.8
+    ],
+    "tip": [
+     31.7,
+     16.3
+    ],
+    "band": 1.183,
+    "span": 1.009
+   },
+   "head": {
+    "lens": [
+     24,
+     7
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-tails-swim-04": {
+   "animation": "TAILS_SWIM",
+   "hotspot_before": [
+    26,
+    22
+   ],
+   "landmarks": {
+    "lens": [
+     25.0,
+     7.2
+    ],
+    "far": [
+     30.9,
+     7.2
+    ],
+    "tip": [
+     32.1,
+     16.8
+    ],
+    "band": 1.239,
+    "span": 0.984
+   },
+   "head": {
+    "lens": [
+     25,
+     7
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-tails-swim-ascend-00": {
+   "animation": "TAILS_SWIM_ASCEND",
+   "hotspot_before": [
+    26,
+    21
+   ],
+   "landmarks": {
+    "lens": [
+     24.3,
+     6.1
+    ],
+    "far": [
+     30.0,
+     5.7
+    ],
+    "tip": [
+     31.6,
+     15.5
+    ],
+    "band": 1.076,
+    "span": 0.914
+   },
+   "head": {
+    "lens": [
+     24,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-tails-swim-ascend-01": {
+   "animation": "TAILS_SWIM_ASCEND",
+   "hotspot_before": [
+    30,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     28.8,
+     5.8
+    ],
+    "far": [
+     34.5,
+     5.5
+    ],
+    "tip": [
+     35.5,
+     14.7
+    ],
+    "band": 1.089,
+    "span": 0.851
+   },
+   "head": {
+    "lens": [
+     29,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-tails-swim-ascend-02": {
+   "animation": "TAILS_SWIM_ASCEND",
+   "hotspot_before": [
+    24,
+    21
+   ],
+   "landmarks": {
+    "lens": [
+     22.8,
+     5.9
+    ],
+    "far": [
+     28.5,
+     5.6
+    ],
+    "tip": [
+     30.1,
+     15.5
+    ],
+    "band": 1.071,
+    "span": 0.903
+   },
+   "head": {
+    "lens": [
+     23,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-tails-swim-ascend-03": {
+   "animation": "TAILS_SWIM_ASCEND",
+   "hotspot_before": [
+    26,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     24.1,
+     5.8
+    ],
+    "far": [
+     29.8,
+     5.6
+    ],
+    "tip": [
+     31.3,
+     15.1
+    ],
+    "band": 1.082,
+    "span": 0.898
+   },
+   "head": {
+    "lens": [
+     24,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-tails-swim-ascend-04": {
+   "animation": "TAILS_SWIM_ASCEND",
+   "hotspot_before": [
+    25,
+    21
+   ],
+   "landmarks": {
+    "lens": [
+     24.0,
+     5.4
+    ],
+    "far": [
+     30.0,
+     5.0
+    ],
+    "tip": [
+     31.6,
+     14.7
+    ],
+    "band": 1.1,
+    "span": 0.908
+   },
+   "head": {
+    "lens": [
+     24,
+     5
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-tails-swim-carry-00": {
+   "animation": "TAILS_SWIM_CARRY",
+   "hotspot_before": [
+    28,
+    28
+   ],
+   "landmarks": {
+    "lens": [
+     26.0,
+     6.6
+    ],
+    "far": [
+     31.9,
+     6.2
+    ],
+    "tip": [
+     32.8,
+     15.3
+    ],
+    "band": 1.163,
+    "span": 0.832
+   },
+   "head": {
+    "lens": [
+     26,
+     7
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-tails-swim-carry-01": {
+   "animation": "TAILS_SWIM_CARRY",
+   "hotspot_before": [
+    29,
+    28
+   ],
+   "landmarks": {
+    "lens": [
+     27.4,
+     6.7
+    ],
+    "far": [
+     33.3,
+     6.1
+    ],
+    "tip": [
+     34.0,
+     15.2
+    ],
+    "band": 1.162,
+    "span": 0.808
+   },
+   "head": {
+    "lens": [
+     27,
+     7
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "family-tails-swim-tired-00": {
+   "animation": "TAILS_SWIM_TIRED",
+   "hotspot_before": [
+    23,
+    24
+   ],
+   "landmarks": {
+    "lens": [
+     21.4,
+     7.6
+    ],
+    "far": [
+     28.3,
+     7.5
+    ],
+    "tip": [
+     29.8,
+     17.0
+    ],
+    "band": 1.137,
+    "span": 1.028
+   },
+   "head": {
+    "lens": [
+     21,
+     8
+    ],
+    "angle": -10,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -9 degrees"
+  },
+  "family-tails-swim-tired-01": {
+   "animation": "TAILS_SWIM_TIRED",
+   "hotspot_before": [
+    22,
+    22
+   ],
+   "landmarks": {
+    "lens": [
+     20.0,
+     6.5
+    ],
+    "far": [
+     27.0,
+     6.7
+    ],
+    "tip": [
+     28.4,
+     15.8
+    ],
+    "band": 1.147,
+    "span": 1.022
+   },
+   "head": {
+    "lens": [
+     20,
+     6
+    ],
+    "angle": -10,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -10 degrees"
+  },
+  "family-tails-swim-tired-02": {
+   "animation": "TAILS_SWIM_TIRED",
+   "hotspot_before": [
+    23,
+    21
+   ],
+   "landmarks": {
+    "lens": [
+     20.7,
+     5.8
+    ],
+    "far": [
+     27.8,
+     5.7
+    ],
+    "tip": [
+     29.6,
+     15.2
+    ],
+    "band": 1.15,
+    "span": 1.058
+   },
+   "head": {
+    "lens": [
+     21,
+     6
+    ],
+    "angle": -10,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -11 degrees"
+  },
+  "family-victory-00": {
+   "animation": "VICTORY",
+   "hotspot_before": [
+    13,
+    17
+   ],
+   "landmarks": {
+    "lens": [
+     13,
+     7
+    ],
+    "far": [
+     19.5,
+     6.5
+    ],
+    "tip": [
+     21,
+     16
+    ],
+    "by_hand": [
+     "lens",
+     "far",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     13,
+     7
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed",
+    "over": [
+     [
+      3,
+      7,
+      11,
+      14
+     ]
+    ]
+   },
+   "why": "reference head placed by hand on the reduced frame, the hand kept in front of it"
+  },
+  "family-victory-01": {
+   "animation": "VICTORY",
+   "hotspot_before": [
+    13,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     14,
+     6
+    ],
+    "far": [
+     20,
+     6.5
+    ],
+    "tip": [
+     22,
+     16
+    ],
+    "by_hand": [
+     "lens",
+     "far",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     14,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed",
+    "over": [
+     [
+      4,
+      7,
+      12,
+      15
+     ]
+    ]
+   },
+   "why": "reference head placed by hand on the reduced frame, the hand kept in front of it"
+  },
+  "family-victory-02": {
+   "animation": "VICTORY",
+   "hotspot_before": [
+    13,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     13,
+     6
+    ],
+    "far": [
+     19,
+     6
+    ],
+    "tip": [
+     22,
+     15
+    ],
+    "by_hand": [
+     "lens",
+     "far",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     13,
+     6
+    ],
+    "angle": -16,
+    "mirror": false,
+    "beak": "open"
+   },
+   "why": "reference head placed by hand on the reduced frame, turned -16 degrees, open beak"
+  },
+  "family-victory-03": {
+   "animation": "VICTORY",
+   "hotspot_before": [
+    13,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     13,
+     7
+    ],
+    "far": [
+     20,
+     7
+    ],
+    "tip": [
+     22,
+     16
+    ],
+    "by_hand": [
+     "lens",
+     "far",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     13,
+     7
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "open",
+    "eye": "shut",
+    "over": [
+     [
+      2,
+      8,
+      11,
+      16
+     ]
+    ]
+   },
+   "why": "reference head placed by hand on the reduced frame, open beak, eye shut, the hand kept in front of it"
+  },
+  "fly_tired-00": {
+   "animation": "TAILS_FLY_TIRED",
+   "hotspot_before": [
+    21,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     21.5,
+     6.3
+    ],
+    "far": [
+     27.5,
+     6.0
+    ],
+    "tip": [
+     30.5,
+     12.5
+    ],
+    "angle": -22,
+    "by_hand": [
+     "angle",
+     "far",
+     "lens",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     22,
+     6
+    ],
+    "angle": -22,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -22 degrees"
+  },
+  "fly_tired-01": {
+   "animation": "TAILS_FLY_TIRED",
+   "hotspot_before": [
+    21,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     23.3,
+     6.2
+    ],
+    "far": [
+     29.0,
+     6.0
+    ],
+    "tip": [
+     31.5,
+     12.5
+    ],
+    "angle": -22,
+    "by_hand": [
+     "angle",
+     "far",
+     "lens",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     23,
+     6
+    ],
+    "angle": -22,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -22 degrees"
+  },
+  "fly_tired-02": {
+   "animation": "TAILS_FLY_TIRED",
+   "hotspot_before": [
+    22,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     22.3,
+     6.0
+    ],
+    "far": [
+     28.0,
+     6.0
+    ],
+    "tip": [
+     30.5,
+     12.5
+    ],
+    "angle": -22,
+    "by_hand": [
+     "angle",
+     "far",
+     "lens",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     22,
+     6
+    ],
+    "angle": -22,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -22 degrees"
+  },
+  "fly_tired-03": {
+   "animation": "TAILS_FLY_TIRED",
+   "hotspot_before": [
+    18,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     20.5,
+     6.0
+    ],
+    "far": [
+     25.5,
+     6.0
+    ],
+    "tip": [
+     29.5,
+     12.3
+    ],
+    "angle": -22,
+    "by_hand": [
+     "angle",
+     "far",
+     "lens",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     20,
+     6
+    ],
+    "angle": -22,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -22 degrees"
+  },
+  "fly_tired-04": {
+   "animation": "TAILS_FLY_TIRED",
+   "hotspot_before": [
+    21,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     22.8,
+     6.0
+    ],
+    "far": [
+     28.0,
+     6.0
+    ],
+    "tip": [
+     31.5,
+     12.3
+    ],
+    "angle": -22,
+    "by_hand": [
+     "angle",
+     "far",
+     "lens",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     23,
+     6
+    ],
+    "angle": -22,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -22 degrees"
+  },
+  "fly_tired-05": {
+   "animation": "TAILS_FLY_TIRED",
+   "hotspot_before": [
+    20,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     21.8,
+     6.2
+    ],
+    "far": [
+     27.5,
+     6.0
+    ],
+    "tip": [
+     30.5,
+     12.3
+    ],
+    "angle": -22,
+    "by_hand": [
+     "angle",
+     "far",
+     "lens",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     22,
+     6
+    ],
+    "angle": -22,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -22 degrees"
+  },
+  "hurt-00": {
+   "animation": "HURT",
+   "hotspot_before": [
+    17,
+    17
+   ],
+   "landmarks": {
+    "lens": [
+     16.9,
+     5.9
+    ],
+    "far": [
+     22.5,
+     5.9
+    ],
+    "tip": [
+     23.2,
+     15.6
+    ],
+    "band": 1.011,
+    "span": 0.877
+   },
+   "head": {
+    "lens": [
+     17,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "look_up-00": {
+   "animation": "LOOK_UP",
+   "hotspot_before": [
+    13,
+    21
+   ],
+   "landmarks": {
+    "lens": [
+     14.5,
+     4.7
+    ],
+    "far": null,
+    "tip": [
+     25.0,
+     9.9
+    ],
+    "band": 1.067,
+    "span": 0.882
+   },
+   "head": {
+    "lens": [
+     14,
+     5
+    ],
+    "angle": -31,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -31 degrees"
+  },
+  "object4-s3k-82": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    19,
+    26
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object4-s3k-8d": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    18,
+    16
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-31": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    15,
+    19
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-32": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    16,
+    15
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-33": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     21.1,
+     7.6
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.419,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-34": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    15,
+    8
+   ],
+   "landmarks": {
+    "lens": [
+     22.6,
+     10.8
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.959,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-35": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    15,
+    16
+   ],
+   "landmarks": {
+    "lens": [
+     17.2,
+     27.9
+    ],
+    "far": [
+     24.5,
+     26.8
+    ],
+    "tip": null,
+    "band": 1.327,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-36": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    15,
+    17
+   ],
+   "landmarks": {
+    "lens": [
+     18.3,
+     31.6
+    ],
+    "far": [
+     24.8,
+     29.0
+    ],
+    "tip": null,
+    "band": 1.343,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-37": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    13,
+    16
+   ],
+   "landmarks": {
+    "lens": [
+     14.8,
+     31.9
+    ],
+    "far": [
+     22.6,
+     29.7
+    ],
+    "tip": null,
+    "band": 1.336,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-38": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     15.4,
+     31.9
+    ],
+    "far": [
+     22.5,
+     29.5
+    ],
+    "tip": null,
+    "band": 1.282,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-39": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    15,
+    17
+   ],
+   "landmarks": {
+    "lens": [
+     11.8,
+     28.6
+    ],
+    "far": [
+     18.8,
+     27.7
+    ],
+    "tip": null,
+    "band": 1.105,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-3a": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    13
+   ],
+   "landmarks": {
+    "lens": [
+     22.0,
+     8.2
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.497,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-3b": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    15,
+    13
+   ],
+   "landmarks": {
+    "lens": [
+     21.4,
+     3.4
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.464,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-3c": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    15
+   ],
+   "landmarks": {
+    "lens": [
+     19.5,
+     4.1
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.716,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-3d": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    17
+   ],
+   "landmarks": {
+    "lens": [
+     14.6,
+     5.7
+    ],
+    "far": [
+     20.4,
+     4.9
+    ],
+    "tip": [
+     23.2,
+     16.6
+    ],
+    "band": 1.388,
+    "span": 1.058
+   },
+   "head": {
+    "lens": [
+     15,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "object5-3e": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    16,
+    16
+   ],
+   "landmarks": {
+    "lens": [
+     16.2,
+     5.4
+    ],
+    "far": [
+     21.1,
+     4.0
+    ],
+    "tip": [
+     24.0,
+     14.5
+    ],
+    "band": 1.28,
+    "span": 0.906
+   },
+   "head": {
+    "lens": [
+     16,
+     5
+    ],
+    "angle": -8,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -8 degrees"
+  },
+  "object5-3f": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    16
+   ],
+   "landmarks": {
+    "lens": [
+     15.3,
+     16.6
+    ],
+    "far": [
+     22.4,
+     13.6
+    ],
+    "tip": [
+     20.5,
+     27.8
+    ],
+    "band": 1.328,
+    "span": 0.929
+   },
+   "head": null,
+   "why": "seen from behind and above: the lens and beak readings are the satchel and a claw, no face shows"
+  },
+  "object5-40": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    15,
+    17
+   ],
+   "landmarks": {
+    "lens": [
+     17.7,
+     6.9
+    ],
+    "far": null,
+    "tip": [
+     23.0,
+     14.3
+    ],
+    "band": 0.982,
+    "span": 0.697
+   },
+   "head": null,
+   "why": "beak 9.1 px from the lens against the reference 13.0: turned to or from the viewer"
+  },
+  "object5-41": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    16,
+    17
+   ],
+   "landmarks": {
+    "lens": [
+     23.8,
+     6.2
+    ],
+    "far": null,
+    "tip": null,
+    "band": 1.035,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-42": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    19,
+    16
+   ],
+   "landmarks": {
+    "lens": [
+     23.6,
+     5.3
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.81,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-43": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    15
+   ],
+   "landmarks": {
+    "lens": [
+     19.0,
+     6.2
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.587,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-44": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    15,
+    17
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-45": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    17,
+    14
+   ],
+   "landmarks": {
+    "lens": [
+     23.0,
+     8.9
+    ],
+    "far": null,
+    "tip": null,
+    "band": 1.128,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-46": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    15,
+    12
+   ],
+   "landmarks": {
+    "lens": [
+     2.7,
+     16.7
+    ],
+    "far": [
+     18.3,
+     14.5
+    ],
+    "tip": null,
+    "band": 0.822,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-47": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    12,
+    19
+   ],
+   "landmarks": {
+    "lens": [
+     13.6,
+     6.1
+    ],
+    "far": [
+     18.7,
+     5.4
+    ],
+    "tip": [
+     21.7,
+     15.3
+    ],
+    "band": 1.186,
+    "span": 0.917
+   },
+   "head": {
+    "lens": [
+     14,
+     6
+    ],
+    "angle": -9,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -9 degrees"
+  },
+  "object5-48": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    13,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     13.9,
+     5.5
+    ],
+    "far": [
+     18.8,
+     4.9
+    ],
+    "tip": [
+     21.4,
+     14.1
+    ],
+    "band": 1.107,
+    "span": 0.857
+   },
+   "head": {
+    "lens": [
+     14,
+     6
+    ],
+    "angle": -9,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -9 degrees"
+  },
+  "object5-49": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    20,
+    17
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-4a": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    18,
+    17
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-4b": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    17,
+    13
+   ],
+   "landmarks": {
+    "lens": [
+     32.5,
+     9.9
+    ],
+    "far": null,
+    "tip": [
+     30.8,
+     20.8
+    ],
+    "band": 0.563,
+    "span": 0.816
+   },
+   "head": null,
+   "why": "lying on his back with the face foreshortened: the reference head read as a white blob"
+  },
+  "object5-4c": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    13,
+    14
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-4d": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    16
+   ],
+   "landmarks": {
+    "lens": [
+     26.4,
+     6.3
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.586,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-4e": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    19,
+    16
+   ],
+   "landmarks": {
+    "lens": [
+     28.8,
+     8.5
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.612,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-4f": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    19,
+    22
+   ],
+   "landmarks": {
+    "lens": [
+     30.9,
+     13.2
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.41,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-50": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    16,
+    21
+   ],
+   "landmarks": {
+    "lens": [
+     28.1,
+     11.7
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.375,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-51": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    17,
+    19
+   ],
+   "landmarks": {
+    "lens": [
+     27.2,
+     13.2
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.419,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-52": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    17,
+    12
+   ],
+   "landmarks": {
+    "lens": [
+     23.7,
+     18.6
+    ],
+    "far": [
+     27.9,
+     15.8
+    ],
+    "tip": [
+     27.9,
+     7.9
+    ],
+    "band": 0.503,
+    "span": 0.589
+   },
+   "head": null,
+   "why": "head turned 169 degrees (tumbling, diving or inverted): seen briefly, and a reference head turned that far read no better than its own"
+  },
+  "object5-53": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    19,
+    13
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-54": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    21,
+    14
+   ],
+   "landmarks": {
+    "lens": [
+     29.7,
+     5.6
+    ],
+    "far": [
+     35.6,
+     7.5
+    ],
+    "tip": [
+     35.5,
+     17.6
+    ],
+    "band": 1.121,
+    "span": 0.999
+   },
+   "head": {
+    "lens": [
+     30,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "object5-58": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    11,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     16.0,
+     7.0
+    ],
+    "far": [
+     7.5,
+     6.8
+    ],
+    "tip": [
+     11.3,
+     19.2
+    ],
+    "band": 1.149,
+    "span": 0.995
+   },
+   "head": null,
+   "why": "front view: the beak sits between the two lenses, and the reference head is three-quarter"
+  },
+  "object5-59": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    12,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     4.9,
+     5.6
+    ],
+    "far": null,
+    "tip": [
+     0.9,
+     17.9
+    ],
+    "band": 1.213,
+    "span": 0.975
+   },
+   "head": {
+    "lens": [
+     5,
+     6
+    ],
+    "angle": -14,
+    "mirror": true,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -14 degrees, mirrored"
+  },
+  "object5-5a": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    10,
+    15
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-5b": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    10,
+    14
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-5c": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    16,
+    12
+   ],
+   "landmarks": {
+    "lens": [
+     9.2,
+     13.1
+    ],
+    "far": [
+     11.8,
+     5.8
+    ],
+    "tip": [
+     21.9,
+     13.7
+    ],
+    "band": 1.1,
+    "span": 0.945
+   },
+   "head": null,
+   "why": "front view: the beak sits between the two lenses, and the reference head is three-quarter"
+  },
+  "object5-5d": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    1,
+    13
+   ],
+   "landmarks": {
+    "lens": [
+     7.7,
+     20.6
+    ],
+    "far": null,
+    "tip": [
+     2.3,
+     10.3
+    ],
+    "band": 1.16,
+    "span": 0.868
+   },
+   "head": null,
+   "why": "head turned -175 degrees (tumbling, diving or inverted): seen briefly, and a reference head turned that far read no better than its own"
+  },
+  "object5-5e": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    19,
+    13
+   ],
+   "landmarks": {
+    "lens": [
+     20.8,
+     22.5
+    ],
+    "far": null,
+    "tip": [
+     15.9,
+     12.9
+    ],
+    "band": 1.163,
+    "span": 0.828
+   },
+   "head": null,
+   "why": "head turned -175 degrees (tumbling, diving or inverted): seen briefly, and a reference head turned that far read no better than its own"
+  },
+  "object5-5f": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    26,
+    13
+   ],
+   "landmarks": {
+    "lens": [
+     20.9,
+     23.5
+    ],
+    "far": null,
+    "tip": [
+     11.9,
+     18.5
+    ],
+    "band": 1.139,
+    "span": 0.787
+   },
+   "head": null,
+   "why": "head turned 152 degrees (tumbling, diving or inverted): seen briefly, and a reference head turned that far read no better than its own"
+  },
+  "object5-60": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    13,
+    13
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-61": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    29,
+    12
+   ],
+   "landmarks": {
+    "lens": [
+     8.1,
+     12.1
+    ],
+    "far": [
+     8.1,
+     6.0
+    ],
+    "tip": [
+     19.2,
+     9.0
+    ],
+    "band": 1.242,
+    "span": 0.874
+   },
+   "head": null,
+   "why": "front view: the beak sits between the two lenses, and the reference head is three-quarter"
+  },
+  "object5-62": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    22,
+    14
+   ],
+   "landmarks": {
+    "lens": [
+     18.7,
+     6.2
+    ],
+    "far": [
+     25.0,
+     4.8
+    ],
+    "tip": [
+     27.7,
+     15.3
+    ],
+    "band": 1.067,
+    "span": 0.954
+   },
+   "head": {
+    "lens": [
+     19,
+     6
+    ],
+    "angle": -12,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -12 degrees"
+  },
+  "object5-63": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    16
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-5c turned 270 degrees: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-5c",
+    "angle": 270,
+    "flip": false
+   }
+  },
+  "object5-64": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    12,
+    1
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-5d turned 270 degrees: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-5d",
+    "angle": 270,
+    "flip": false
+   }
+  },
+  "object5-65": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    19
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-5e turned 270 degrees: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-5e",
+    "angle": 270,
+    "flip": false
+   }
+  },
+  "object5-66": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    26
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-5f turned 270 degrees: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-5f",
+    "angle": 270,
+    "flip": false
+   }
+  },
+  "object5-67": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    13
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-60 turned 270 degrees: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-60",
+    "angle": 270,
+    "flip": false
+   }
+  },
+  "object5-68": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    13,
+    29
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-61 turned 270 degrees: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-61",
+    "angle": 270,
+    "flip": false
+   }
+  },
+  "object5-69": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    17,
+    16
+   ],
+   "landmarks": {
+    "lens": [
+     23.8,
+     6.2
+    ],
+    "far": [
+     27.4,
+     4.8
+    ],
+    "tip": [
+     30.5,
+     15.9
+    ],
+    "band": 1.327,
+    "span": 1.031
+   },
+   "head": null,
+   "why": "front view: the beak sits between the two lenses, and the reference head is three-quarter"
+  },
+  "object5-6a": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    21,
+    16
+   ],
+   "landmarks": {
+    "lens": [
+     23.7,
+     5.6
+    ],
+    "far": [
+     28.9,
+     4.3
+    ],
+    "tip": [
+     31.9,
+     15.5
+    ],
+    "band": 1.133,
+    "span": 0.958
+   },
+   "head": {
+    "lens": [
+     24,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "object5-6b": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    15,
+    19
+   ],
+   "landmarks": {
+    "lens": [
+     11.3,
+     4.6
+    ],
+    "far": [
+     16.9,
+     2.4
+    ],
+    "tip": [
+     21.0,
+     11.9
+    ],
+    "band": 1.017,
+    "span": 0.925
+   },
+   "head": {
+    "lens": [
+     11,
+     5
+    ],
+    "angle": -21,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -21 degrees"
+  },
+  "object5-6c": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    20,
+    14
+   ],
+   "landmarks": {
+    "lens": [
+     8.2,
+     9.6
+    ],
+    "far": [
+     8.1,
+     4.2
+    ],
+    "tip": [
+     18.8,
+     5.9
+    ],
+    "band": 1.137,
+    "span": 0.852
+   },
+   "head": null,
+   "why": "front view: the beak sits between the two lenses, and the reference head is three-quarter"
+  },
+  "object5-6d": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    17,
+    10
+   ],
+   "landmarks": {
+    "lens": [
+     6.1,
+     3.4
+    ],
+    "far": null,
+    "tip": [
+     1.3,
+     16.9
+    ],
+    "band": 1.169,
+    "span": 1.243
+   },
+   "head": {
+    "lens": [
+     6,
+     3
+    ],
+    "angle": -13,
+    "mirror": true,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -13 degrees, mirrored"
+  },
+  "object5-6e": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    10
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-6f": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    12,
+    11
+   ],
+   "landmarks": {
+    "lens": [
+     10.5,
+     9.4
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.557,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-70": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    17,
+    11
+   ],
+   "landmarks": {
+    "lens": [
+     27.6,
+     4.3
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.739,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-71": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    17,
+    11
+   ],
+   "landmarks": {
+    "lens": [
+     29.5,
+     4.8
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.636,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-72": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    18,
+    12
+   ],
+   "landmarks": {
+    "lens": [
+     26.7,
+     11.4
+    ],
+    "far": [
+     32.3,
+     5.9
+    ],
+    "tip": null,
+    "band": 1.038,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-73": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    18,
+    12
+   ],
+   "landmarks": {
+    "lens": [
+     27.3,
+     6.7
+    ],
+    "far": [
+     33.4,
+     6.6
+    ],
+    "tip": [
+     34.5,
+     16.2
+    ],
+    "band": 1.182,
+    "span": 0.902
+   },
+   "head": {
+    "lens": [
+     27,
+     7
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "object5-74": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    13
+   ],
+   "landmarks": {
+    "lens": [
+     22.6,
+     6.6
+    ],
+    "far": null,
+    "tip": [
+     29.2,
+     16.4
+    ],
+    "band": 1.134,
+    "span": 0.904
+   },
+   "head": {
+    "lens": [
+     23,
+     7
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "object5-75": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    13,
+    11
+   ],
+   "landmarks": {
+    "lens": [
+     18.1,
+     6.5
+    ],
+    "far": null,
+    "tip": [
+     23.8,
+     15.4
+    ],
+    "band": 1.02,
+    "span": 0.797
+   },
+   "head": {
+    "lens": [
+     18,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "object5-76": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    16,
+    13
+   ],
+   "landmarks": {
+    "lens": [
+     6.4,
+     17.2
+    ],
+    "far": null,
+    "tip": [
+     16.7,
+     16.5
+    ],
+    "band": 1.015,
+    "span": 0.778
+   },
+   "head": null,
+   "why": "head turned -126 degrees (tumbling, diving or inverted): seen briefly, and a reference head turned that far read no better than its own"
+  },
+  "object5-77": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    17,
+    14
+   ],
+   "landmarks": {
+    "lens": [
+     12.2,
+     6.3
+    ],
+    "far": [
+     17.7,
+     4.9
+    ],
+    "tip": [
+     22.9,
+     13.9
+    ],
+    "band": 1.128,
+    "span": 0.988
+   },
+   "head": {
+    "lens": [
+     12,
+     6
+    ],
+    "angle": -22,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -22 degrees"
+  },
+  "object5-78": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    26
+   ],
+   "landmarks": {
+    "lens": [
+     18.1,
+     5.7
+    ],
+    "far": [
+     23.4,
+     5.5
+    ],
+    "tip": [
+     24.1,
+     16.5
+    ],
+    "band": 1.313,
+    "span": 1.101
+   },
+   "head": {
+    "lens": [
+     18,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "object5-79": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    26,
+    28
+   ],
+   "landmarks": {
+    "lens": [
+     14.3,
+     12.7
+    ],
+    "far": [
+     19.1,
+     10.1
+    ],
+    "tip": [
+     23.0,
+     20.7
+    ],
+    "band": 1.276,
+    "span": 1.058
+   },
+   "head": null,
+   "why": "front view: the beak sits between the two lenses, and the reference head is three-quarter"
+  },
+  "object5-7a": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    26,
+    16
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-78 turned 90 degrees: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-78",
+    "angle": 90,
+    "flip": false
+   }
+  },
+  "object5-7b": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    28,
+    11
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-79 turned 90 degrees: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-79",
+    "angle": 90,
+    "flip": false
+   }
+  },
+  "object5-7c": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    16,
+    9
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-78 turned 180 degrees: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-78",
+    "angle": 180,
+    "flip": false
+   }
+  },
+  "object5-7d": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    11,
+    8
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-79 turned 180 degrees: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-79",
+    "angle": 180,
+    "flip": false
+   }
+  },
+  "object5-7e": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    6,
+    14
+   ],
+   "landmarks": {
+    "lens": [
+     28.7,
+     16.8
+    ],
+    "far": [
+     27.2,
+     12.8
+    ],
+    "tip": [
+     15.6,
+     21.7
+    ],
+    "band": 1.319,
+    "span": 1.285
+   },
+   "head": null,
+   "why": "head turned 102 degrees (tumbling, diving or inverted): seen briefly, and a reference head turned that far read no better than its own"
+  },
+  "object5-7f": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    8,
+    26
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-79 turned 270 degrees: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-79",
+    "angle": 270,
+    "flip": false
+   }
+  },
+  "object5-80": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    18,
+    25
+   ],
+   "landmarks": {
+    "lens": [
+     18.9,
+     7.0
+    ],
+    "far": [
+     24.4,
+     6.7
+    ],
+    "tip": [
+     26.3,
+     17.4
+    ],
+    "band": 1.143,
+    "span": 1.069
+   },
+   "head": {
+    "lens": [
+     19,
+     7
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "object5-81": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    25,
+    23
+   ],
+   "landmarks": {
+    "lens": [
+     23.5,
+     10.5
+    ],
+    "far": [
+     29.1,
+     10.0
+    ],
+    "tip": [
+     31.0,
+     20.5
+    ],
+    "band": 1.28,
+    "span": 1.126
+   },
+   "head": {
+    "lens": [
+     24,
+     10
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "object5-83": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    19,
+    25
+   ],
+   "landmarks": {
+    "lens": [
+     19.5,
+     4.3
+    ],
+    "far": [
+     24.5,
+     3.6
+    ],
+    "tip": [
+     27.7,
+     13.1
+    ],
+    "band": 1.305,
+    "span": 1.071
+   },
+   "head": {
+    "lens": [
+     20,
+     4
+    ],
+    "angle": -11,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -11 degrees"
+  },
+  "object5-84": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    22,
+    23
+   ],
+   "landmarks": {
+    "lens": [
+     21.1,
+     8.3
+    ],
+    "far": null,
+    "tip": [
+     29.6,
+     17.6
+    ],
+    "band": 1.303,
+    "span": 1.133
+   },
+   "head": {
+    "lens": [
+     21,
+     8
+    ],
+    "angle": -10,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -10 degrees"
+  },
+  "object5-85": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    19,
+    22
+   ],
+   "landmarks": {
+    "lens": [
+     22.7,
+     5.7
+    ],
+    "far": [
+     29.2,
+     6.0
+    ],
+    "tip": [
+     30.1,
+     17.0
+    ],
+    "band": 1.281,
+    "span": 1.226
+   },
+   "head": {
+    "lens": [
+     23,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "object5-90": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    13,
+    27
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-92": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    11,
+    27
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-93": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    9,
+    27
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-94": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    19,
+    27
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-95": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    16,
+    29
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-ca": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    24,
+    7
+   ],
+   "landmarks": {
+    "lens": [
+     15.1,
+     13.1
+    ],
+    "far": [
+     19.1,
+     9.3
+    ],
+    "tip": null,
+    "band": 1.168,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-df": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    15,
+    22
+   ],
+   "landmarks": {
+    "lens": [
+     12.9,
+     6.5
+    ],
+    "far": [
+     19.1,
+     6.6
+    ],
+    "tip": [
+     20.3,
+     17.6
+    ],
+    "band": 1.167,
+    "span": 1.111
+   },
+   "head": {
+    "lens": [
+     13,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "object5-e0": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    12,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     11.6,
+     19.4
+    ],
+    "far": [
+     5.4,
+     22.2
+    ],
+    "tip": [
+     11.9,
+     29.9
+    ],
+    "band": 1.045,
+    "span": 0.807
+   },
+   "head": null,
+   "why": "front view: the beak sits between the two lenses, and the reference head is three-quarter"
+  },
+  "object5-e1": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    12,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     11.6,
+     19.5
+    ],
+    "far": [
+     18.8,
+     19.4
+    ],
+    "tip": [
+     15.1,
+     31.5
+    ],
+    "band": 1.141,
+    "span": 0.951
+   },
+   "head": null,
+   "why": "front view: the beak sits between the two lenses, and the reference head is three-quarter"
+  },
+  "object5-e2": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    11,
+    21
+   ],
+   "landmarks": {
+    "lens": [
+     14.4,
+     6.8
+    ],
+    "far": [
+     20.6,
+     7.3
+    ],
+    "tip": [
+     19.4,
+     18.0
+    ],
+    "band": 1.313,
+    "span": 1.017
+   },
+   "head": {
+    "lens": [
+     14,
+     7
+    ],
+    "angle": 8,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned 8 degrees"
+  },
+  "object5-e3": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    15,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     8.5,
+     7.8
+    ],
+    "far": [
+     2.0,
+     7.4
+    ],
+    "tip": [
+     1.0,
+     17.9
+    ],
+    "band": 1.359,
+    "span": 1.092
+   },
+   "head": {
+    "lens": [
+     8,
+     8
+    ],
+    "angle": 0,
+    "mirror": true,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, mirrored"
+  },
+  "object5-e4": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    15,
+    24
+   ],
+   "landmarks": {
+    "lens": [
+     28.6,
+     5.4
+    ],
+    "far": null,
+    "tip": [
+     25.3,
+     19.7
+    ],
+    "band": 0.983,
+    "span": 1.1
+   },
+   "head": null,
+   "why": "head turned 45 degrees (tumbling, diving or inverted): seen briefly, and a reference head turned that far read no better than its own"
+  },
+  "object5-e5": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     25.0,
+     5.2
+    ],
+    "far": null,
+    "tip": [
+     26.0,
+     18.6
+    ],
+    "band": 0.883,
+    "span": 1.015
+   },
+   "head": {
+    "lens": [
+     25,
+     5
+    ],
+    "angle": 28,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned 28 degrees"
+  },
+  "object5-e6": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    11,
+    22
+   ],
+   "landmarks": {
+    "lens": [
+     22.0,
+     6.4
+    ],
+    "far": null,
+    "tip": [
+     18.9,
+     19.7
+    ],
+    "band": 0.923,
+    "span": 1.031
+   },
+   "head": null,
+   "why": "head turned 46 degrees (tumbling, diving or inverted): seen briefly, and a reference head turned that far read no better than its own"
+  },
+  "object5-e7": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    12,
+    24
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-e8": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    23
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-e9": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    11,
+    20
+   ],
+   "landmarks": {
+    "lens": [
+     2.3,
+     6.1
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.811,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-ea": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    10,
+    24
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-ef": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    17,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     33.1,
+     7.2
+    ],
+    "far": null,
+    "tip": [
+     33.5,
+     19.0
+    ],
+    "band": null,
+    "span": null
+   },
+   "head": {
+    "lens": [
+     33,
+     7
+    ],
+    "angle": 31,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned 31 degrees"
+  },
+  "object5-f0": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    15,
+    18
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "object5-f1": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    18,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     29.4,
+     7.3
+    ],
+    "far": null,
+    "tip": [
+     24.4,
+     19.8
+    ],
+    "band": null,
+    "span": null
+   },
+   "head": null,
+   "why": "head turned 54 degrees (tumbling, diving or inverted): seen briefly, and a reference head turned that far read no better than its own"
+  },
+  "object5-f2": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    18,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     15.4,
+     7.2
+    ],
+    "far": [
+     22.8,
+     7.3
+    ],
+    "tip": [
+     19.2,
+     19.2
+    ],
+    "band": 1.048,
+    "span": 0.955
+   },
+   "head": null,
+   "why": "front view: the beak sits between the two lenses, and the reference head is three-quarter"
+  },
+  "object5-f3": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    13,
+    18
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-f1 turned 0 degrees and mirrored: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-f1",
+    "angle": 0,
+    "flip": true
+   }
+  },
+  "object5-f4": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    15,
+    18
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-f0 turned 0 degrees and mirrored: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-f0",
+    "angle": 0,
+    "flip": true
+   }
+  },
+  "object5-f5": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    18,
+    18
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-ef turned 0 degrees and mirrored: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-ef",
+    "angle": 0,
+    "flip": true
+   }
+  },
+  "object5-f6": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     5.9,
+     10.0
+    ],
+    "far": null,
+    "tip": [
+     1.0,
+     20.8
+    ],
+    "band": 1.332,
+    "span": 0.898
+   },
+   "head": {
+    "lens": [
+     6,
+     10
+    ],
+    "angle": -8,
+    "mirror": true,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens, turned -8 degrees, mirrored"
+  },
+  "object5-f7": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    13,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     1.7,
+     8.7
+    ],
+    "far": null,
+    "tip": null,
+    "band": 0.518,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-f8": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    18,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     9.7,
+     2.6
+    ],
+    "far": [
+     24.2,
+     2.2
+    ],
+    "tip": null,
+    "band": 0.645,
+    "span": null
+   },
+   "head": null,
+   "why": "no beak in view to set the head by"
+  },
+  "object5-f9": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    14,
+    18
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-f7 turned 0 degrees and mirrored: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-f7",
+    "angle": 0,
+    "flip": true
+   }
+  },
+  "object5-fa": {
+   "animation": "NATIVE_POSE",
+   "hotspot_before": [
+    16,
+    18
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "object5-f6 turned 0 degrees and mirrored: redrawn from it after this pass",
+   "copy": {
+    "source": "object5-f6",
+    "angle": 0,
+    "flip": true
+   }
+  },
+  "skid-00": {
+   "animation": "SKID",
+   "hotspot_before": [
+    26,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     21.7,
+     6.7
+    ],
+    "far": [
+     27.1,
+     6.5
+    ],
+    "tip": [
+     27.0,
+     16.9
+    ],
+    "band": 1.05,
+    "span": 0.873
+   },
+   "head": {
+    "lens": [
+     22,
+     7
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "skid-01": {
+   "animation": "SKID",
+   "hotspot_before": [
+    25,
+    19
+   ],
+   "landmarks": {
+    "lens": [
+     20.6,
+     6.8
+    ],
+    "far": [
+     26.1,
+     6.8
+    ],
+    "tip": [
+     25.9,
+     17.2
+    ],
+    "band": 1.02,
+    "span": 0.864
+   },
+   "head": {
+    "lens": [
+     21,
+     7
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head on the pose's lens"
+  },
+  "spindash-00": {
+   "animation": "SPINDASH",
+   "hotspot_before": [
+    16,
+    14
+   ],
+   "landmarks": {
+    "lens": [
+     21.8,
+     10.2
+    ],
+    "far": [
+     28.9,
+     12.6
+    ],
+    "tip": [
+     26.5,
+     24.6
+    ],
+    "band": 1.482,
+    "span": 1.114
+   },
+   "head": null,
+   "why": "ball drawing"
+  },
+  "spindash-01": {
+   "animation": "SPINDASH",
+   "hotspot_before": [
+    16,
+    15
+   ],
+   "landmarks": {
+    "lens": [
+     19.4,
+     13.0
+    ],
+    "far": [
+     27.6,
+     15.0
+    ],
+    "tip": [
+     21.7,
+     25.0
+    ],
+    "band": 1.496,
+    "span": 0.9
+   },
+   "head": null,
+   "why": "ball drawing"
+  },
+  "spindash-02": {
+   "animation": "SPINDASH",
+   "hotspot_before": [
+    16,
+    12
+   ],
+   "landmarks": {
+    "lens": [
+     22.7,
+     11.8
+    ],
+    "far": null,
+    "tip": [
+     27.0,
+     24.0
+    ],
+    "band": 1.374,
+    "span": 0.99
+   },
+   "head": null,
+   "why": "ball drawing"
+  },
+  "spring-00": {
+   "animation": "SPRING",
+   "hotspot_before": [
+    18,
+    19
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "no goggle lens in view (back view, curled or hidden head)"
+  },
+  "wait-01": {
+   "animation": "WAIT",
+   "hotspot_before": [
+    10,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     14,
+     5
+    ],
+    "far": [
+     18.5,
+     5
+    ],
+    "tip": [
+     19,
+     16
+    ],
+    "by_hand": [
+     "lens",
+     "far",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     14,
+     5
+    ],
+    "angle": 8,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head placed by hand on the reduced frame, turned 8 degrees"
+  },
+  "wait-02": {
+   "animation": "WAIT",
+   "hotspot_before": [
+    10,
+    17
+   ],
+   "landmarks": {
+    "lens": [
+     15,
+     7
+    ],
+    "far": [
+     20,
+     7.5
+    ],
+    "tip": [
+     18,
+     18
+    ],
+    "by_hand": [
+     "lens",
+     "far",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     15,
+     7
+    ],
+    "angle": 16,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head placed by hand on the reduced frame, turned 16 degrees"
+  },
+  "wait-03": {
+   "animation": "WAIT",
+   "hotspot_before": [
+    11,
+    17
+   ],
+   "landmarks": {
+    "lens": [
+     14,
+     4
+    ],
+    "far": [
+     19.5,
+     4.3
+    ],
+    "tip": [
+     22,
+     13
+    ],
+    "by_hand": [
+     "lens",
+     "far",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     14,
+     4
+    ],
+    "angle": -11,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head placed by hand on the reduced frame, turned -11 degrees"
+  },
+  "wait-04": {
+   "animation": "WAIT",
+   "hotspot_before": [
+    12,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     15,
+     3
+    ],
+    "far": [
+     20.5,
+     2.5
+    ],
+    "tip": [
+     26,
+     10
+    ],
+    "by_hand": [
+     "lens",
+     "far",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     15,
+     3
+    ],
+    "angle": -26,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head placed by hand on the reduced frame, turned -26 degrees"
+  },
+  "wait-05": {
+   "animation": "WAIT",
+   "hotspot_before": [
+    12,
+    15
+   ],
+   "landmarks": {
+    "lens": [
+     16,
+     5
+    ],
+    "far": [
+     21.5,
+     5
+    ],
+    "tip": [
+     24,
+     15
+    ],
+    "by_hand": [
+     "lens",
+     "far",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     16,
+     5
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed",
+    "eye": "shut"
+   },
+   "why": "reference head placed by hand on the reduced frame, eye shut"
+  },
+  "wait-06": {
+   "animation": "WAIT",
+   "hotspot_before": [
+    18,
+    21
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "feathers fluffed out: the head is a different shape by design and keeps its own drawing"
+  },
+  "wait-07": {
+   "animation": "WAIT",
+   "hotspot_before": [
+    16,
+    18
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "feathers fluffed out: the head is a different shape by design and keeps its own drawing"
+  },
+  "wait-08": {
+   "animation": "WAIT",
+   "hotspot_before": [
+    18,
+    20
+   ],
+   "landmarks": null,
+   "head": null,
+   "why": "feathers fluffed out: the head is a different shape by design and keeps its own drawing"
+  },
+  "wait-09": {
+   "animation": "WAIT",
+   "hotspot_before": [
+    12,
+    19
+   ],
+   "landmarks": {
+    "lens": [
+     16,
+     7
+    ],
+    "far": [
+     22,
+     7
+    ],
+    "tip": [
+     21,
+     19
+    ],
+    "by_hand": [
+     "lens",
+     "far",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     16,
+     7
+    ],
+    "angle": 12,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head placed by hand on the reduced frame, turned 12 degrees"
+  },
+  "wait-10": {
+   "animation": "WAIT",
+   "hotspot_before": [
+    11,
+    16
+   ],
+   "landmarks": {
+    "lens": [
+     18,
+     6
+    ],
+    "far": [
+     23.5,
+     5.5
+    ],
+    "tip": [
+     24,
+     16
+    ],
+    "by_hand": [
+     "lens",
+     "far",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     18,
+     6
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head placed by hand on the reduced frame"
+  },
+  "wait-11": {
+   "animation": "WAIT",
+   "hotspot_before": [
+    12,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     12,
+     4
+    ],
+    "far": [
+     18.5,
+     4
+    ],
+    "tip": [
+     19,
+     14
+    ],
+    "by_hand": [
+     "lens",
+     "far",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     12,
+     4
+    ],
+    "angle": 0,
+    "mirror": false,
+    "beak": "closed"
+   },
+   "why": "reference head placed by hand on the reduced frame"
+  },
+  "wait-12": {
+   "animation": "WAIT",
+   "hotspot_before": [
+    12,
+    18
+   ],
+   "landmarks": {
+    "lens": [
+     11,
+     4
+    ],
+    "far": [
+     17,
+     3.5
+    ],
+    "tip": [
+     20,
+     12
+    ],
+    "by_hand": [
+     "lens",
+     "far",
+     "tip"
+    ]
+   },
+   "head": {
+    "lens": [
+     11,
+     4
+    ],
+    "angle": -21,
+    "mirror": false,
+    "beak": "open"
+   },
+   "why": "reference head placed by hand on the reduced frame, turned -21 degrees, open beak"
+  }
+ },
+ "kit": {
+  "donor": "wait-00",
+  "neck": 16,
+  "lens": [
+   14,
+   5
+  ],
+  "tip": [
+   21,
+   16
+  ],
+  "turned": {
+   "closed": {
+    "-41": {
+     "rows": [
+      "000000000000111110000000",
+      "0000000000001e88f1000000",
+      "00000001111119ff91000000",
+      "0000011221ff911111100000",
+      "000113331e78f13333100000",
+      "00122331f876f13333310000",
+      "00122331feef112223331000",
+      "0011233119911121133ff110",
+      "0013333399111cc4138feee1",
+      "01333333ff331ccc998eef10",
+      "01333331913333ccc88ef100",
+      "133333319133334cc8f98000",
+      "133133319134774118670000",
+      "111333319134771114600000",
+      "101333319234772111000000",
+      "001333311244776440000000",
+      "001313311233886000000000",
+      "001111311223220000000000",
+      "000100100111100000000000"
+     ],
+     "lens": [
+      10,
+      5
+     ]
+    },
+    "-38": {
+     "rows": [
+      "0000000000000111110000000",
+      "00000000000001f88f1000000",
+      "00000000111111ffff1000000",
+      "00000111221ff911111000000",
+      "0000133331e78e13333100000",
+      "000133331fe76f13333310000",
+      "000111331feef113333310000",
+      "0001133311991111114491100",
+      "00113333291111cc1144fee11",
+      "001333331e9331ccc198eeef1",
+      "013333331913313cccf8ef910",
+      "013333339934333ccc6e9f000",
+      "0131333399344663338880000",
+      "1111333399338761136700000",
+      "0001333311338751119000000",
+      "0001313311338773300000000",
+      "0001213311333776000000000",
+      "0001101101223320000000000",
+      "0000001101111100000000000"
+     ],
+     "lens": [
+      11,
+      5
+     ]
+    },
+    "-32": {
+     "rows": [
+      "000000000000001100000000",
+      "000000000000019f11100000",
+      "00000011111111fe8e910000",
+      "00000133321ff91999100000",
+      "0001133339e7ee1221110000",
+      "000122331ee77f1333310000",
+      "000113331feef91333331000",
+      "001133331199111113331000",
+      "001333339f1111d411319100",
+      "013333339f1315cc114fee11",
+      "13333331913333ccc14eeee1",
+      "13113331913333ccc88eef11",
+      "111333399244dd2ddd8ff100",
+      "001333319244782116880000",
+      "001333311348751126600000",
+      "001313311348771110000000",
+      "001113111338777800000000",
+      "000001001333330000000000",
+      "000001001111000000000000"
+     ],
+     "lens": [
+      11,
+      5
+     ]
+    },
+    "-31": {
+     "rows": [
+      "000000000000001100000000",
+      "000000000000019f11100000",
+      "000000111111119e88910000",
+      "00001133321ff91999100000",
+      "0001333339e7ee1211110000",
+      "000133331ee77f1333310000",
+      "000113331feef91333331000",
+      "001333331199111113331000",
+      "013333339f11115913319100",
+      "013333339f1315cc113fee11",
+      "13333331913315cc418eeee1",
+      "13133331913333ccc88eef11",
+      "111333399333dd5c66eff100",
+      "001333391336781126888000",
+      "001313311346741136700000",
+      "001113111446741110000000",
+      "011113112336777500000000",
+      "000011001333440000000000",
+      "000000001111000000000000"
+     ],
+     "lens": [
+      11,
+      5
+     ]
+    },
+    "-26": {
+     "rows": [
+      "0000000000000001111000000",
+      "0000001111111119e88110000",
+      "0000013333219f91ffef10000",
+      "00001333339e7ee1111100000",
+      "0000113331ee77e1333310000",
+      "0001133331feef91333310000",
+      "0013333331999111333331000",
+      "013333333ff11124113331000",
+      "013333331f93316c413399100",
+      "133133339914316cc198fee10",
+      "111333339934444ccf98eeef1",
+      "001333319134474cc68eef110",
+      "0013333193347753228ff1000",
+      "0013133114467711167800000",
+      "0111131114467711130000000",
+      "00001211233677d3000000000",
+      "0000110011334400000000000",
+      "0000000001110000000000000"
+     ],
+     "lens": [
+      12,
+      4
+     ]
+    },
+    "-22": {
+     "rows": [
+      "000000000010000111000000",
+      "0000001111311111f8110000",
+      "0000113344119f11fe8f1000",
+      "00001133449e7ee119991000",
+      "0000113331ee77e122111000",
+      "0011333331feef9133331000",
+      "011333333199911333331000",
+      "013333331e91112211333100",
+      "133133331913336611433100",
+      "11133331913333cc3149ff10",
+      "00133339913331ccc94eeee1",
+      "00133339133375ccc88eeee1",
+      "013333191337773338eff910",
+      "01113311333773113688f000",
+      "010011113377711136000000",
+      "000010013337783100000000",
+      "000000011223300000000000",
+      "000000000110000000000000"
+     ],
+     "lens": [
+      12,
+      4
+     ]
+    },
+    "-21": {
+     "rows": [
+      "0000000001010000111000000",
+      "00000011131311111f8110000",
+      "00000133444119f11fe8f1000",
+      "000001133449e7ee119f91000",
+      "00000113331ee77e122111000",
+      "00011333331feef9133331000",
+      "0013333333199911333331000",
+      "0133333331e91112211331000",
+      "0131133339913136611433100",
+      "111133331913313cc1149f100",
+      "000133339933333ccc14eee11",
+      "001332319133372ccc88eeee1",
+      "0013122191337773338eff911",
+      "0011133113387711188fff000",
+      "0000131113387711137700000",
+      "0000110013387722100000000",
+      "0000000011224400000000000",
+      "0000000001110000000000000"
+     ],
+     "lens": [
+      13,
+      4
+     ]
+    },
+    "-14": {
+     "rows": [
+      "000000011111100000000000",
+      "000001133333311011110000",
+      "00000113333119911fe81100",
+      "00001113333fe7ef19fee100",
+      "00013333331ee77e11199100",
+      "00133333331feef913331000",
+      "014333333991991133333100",
+      "1111333319e1111113333100",
+      "101333331913315691333100",
+      "00133331993331cc41331100",
+      "01332339933331dcc144ff10",
+      "01312219133374dcc9feeef1",
+      "0111221144477746666eeee1",
+      "000121114467711146fff111",
+      "000110124467411277881000",
+      "000000114467731130000000",
+      "000000001122200000000000"
+     ],
+     "lens": [
+      13,
+      4
+     ]
+    },
+    "-13": {
+     "rows": [
+      "000000011111100000000000",
+      "000001133333311011110000",
+      "00000113333119911fe81000",
+      "00001113333fe7ef19f8e100",
+      "00113333331ee77e11199100",
+      "01333333331feef913311000",
+      "0133333339f1991133333100",
+      "1111333319f1111113333100",
+      "001333339913315d91333100",
+      "00133331913331cc51333100",
+      "01333339933331cc4144f100",
+      "01213319133374cc694eee11",
+      "0111331144477746666eeee1",
+      "000111114477711158fff111",
+      "000110133477311378881000",
+      "000000113477831140000000",
+      "000000011122800000000000"
+     ],
+     "lens": [
+      13,
+      4
+     ]
+    },
+    "-12": {
+     "rows": [
+      "000000011111100000000000",
+      "000001133333311011110000",
+      "00000113333119911fe81000",
+      "00001133331fe7ef19f8e100",
+      "00113333331ee77e9119f100",
+      "01333333331feeff13311000",
+      "1333333339f1991133333100",
+      "111133331ff1111133333100",
+      "001333339913315d91333100",
+      "01333339913332cc31333100",
+      "013333191433326c3133f100",
+      "12113319144dd46c693eee10",
+      "0101311144777446688eeee1",
+      "000111134477311188fff111",
+      "0001001333773113788f1000",
+      "000000113377821180000000",
+      "000000011122000000000000"
+     ],
+     "lens": [
+      13,
+      4
+     ]
+    },
+    "-11": {
+     "rows": [
+      "000000111111100000000000",
+      "000001233333311001110000",
+      "00000111333119911fef1000",
+      "00001223331fe7ef19e8e100",
+      "00113333431ee77e919ff100",
+      "01333333431feeff13311100",
+      "1333333349f1991133332100",
+      "111133331ff1111133332100",
+      "001333319913315d11333100",
+      "01333339914333cc91333100",
+      "01333319144333cc31339100",
+      "11113311444dd4cc698fee10",
+      "0001311144777446688eeef1",
+      "000111133477411288eff1f1",
+      "000100133777111478ff1000",
+      "000000113377511180000000",
+      "000000011122000000000000"
+     ],
+     "lens": [
+      13,
+      4
+     ]
+    },
+    "-10": {
+     "rows": [
+      "000000111111100000000000",
+      "000001233333311001100000",
+      "00000111333119911fe11000",
+      "00011333331fe7ef19e8e100",
+      "00133333431ee77e919ff100",
+      "01443333431feeff13311100",
+      "1121333349f1991133331000",
+      "101333331ff1111133333100",
+      "001333319913315d11333100",
+      "01333339913333cc91333100",
+      "13313319133333cc91399100",
+      "11112311333884cc698fef10",
+      "00012111447774cc688eee10",
+      "001111133d77311388effef1",
+      "000000133d77111878ff1110",
+      "000000113377411380000000",
+      "000000011114000000000000"
+     ],
+     "lens": [
+      13,
+      4
+     ]
+    },
+    "-9": {
+     "rows": [
+      "00000011111110000000000",
+      "00000113333331100110000",
+      "000001113331199119e1100",
+      "00011333331fe7ef19e8f10",
+      "01133333431ee77e919ff10",
+      "01433333431feeff1311110",
+      "1111333349f199113333100",
+      "001333331ff111113333310",
+      "01333331911421d51133310",
+      "01333339944414cc1133310",
+      "13313319134444cc1139910",
+      "11123111333884ccf9dfe10",
+      "00011114447784cc68eeee1",
+      "001101124777211388eeee1",
+      "00000122477711186fff111",
+      "00000012337741146800000",
+      "00000001111000000000000"
+     ],
+     "lens": [
+      13,
+      4
+     ]
+    },
+    "-8": {
+     "rows": [
+      "00000011111110000000000",
+      "00000113333331100110000",
+      "000011113331199119e1100",
+      "00113333331fe7ef19e8f10",
+      "01333333331fe77e919fe10",
+      "13333333331feeff1311910",
+      "111133333ff199113333100",
+      "001333331f9211113333310",
+      "01333331914421d51133310",
+      "01333319944414c61133310",
+      "13113319134444c61131100",
+      "11133111333755cc99dfe10",
+      "00121113337774cc88eeee1",
+      "00110123367711148eeeee1",
+      "00000122267411268fff111",
+      "00000012227731157800000",
+      "00000001111000000000000"
+     ],
+     "lens": [
+      13,
+      4
+     ]
+    },
+    "8": {
+     "rows": [
+      "00000000111000000000000",
+      "00000000133110000000000",
+      "00001111133331100000000",
+      "00113333333333310000000",
+      "01333333333319911001000",
+      "011113333331fe8ef11f100",
+      "001333333311fe77e99e810",
+      "0133333339f99fe8f11f8f1",
+      "1333333199f111991221ff1",
+      "11133319913331113333110",
+      "00133199133313331333210",
+      "0121111433331ccd1233100",
+      "0110113443733cc31233100",
+      "0000133477773cc91233100",
+      "0000133777722ccf9291000",
+      "00000133771112866eee100",
+      "000000136611188feeee100",
+      "0000000000811878fffef10",
+      "00000000000000000111100"
+     ],
+     "lens": [
+      14,
+      6
+     ]
+    },
+    "12": {
+     "rows": [
+      "00000000111100000000000",
+      "00000010123311000000000",
+      "00011131113333110000000",
+      "01133333333333310000000",
+      "01111333333319911000000",
+      "001133333331fe8ef111100",
+      "013333333391fe77e19ef10",
+      "1333333319e19fe8f19e810",
+      "11133339999111991219ef1",
+      "00133199133321113331991",
+      "01331111444314413333110",
+      "0111114444433cc91333100",
+      "0000134446633cc11333100",
+      "000123377766ccc19333100",
+      "0000133777115cc95991000",
+      "00001137791115c88fe1000",
+      "00000013741157feeee1000",
+      "0000000000015789ffee100",
+      "0000000000000000f111100"
+     ],
+     "lens": [
+      14,
+      6
+     ]
+    },
+    "16": {
+     "rows": [
+      "00000000111110000000000",
+      "00011111113331000000000",
+      "01133333333333110000000",
+      "01133333333332221000000",
+      "0001133333331f911000000",
+      "011333333331fe8ef111100",
+      "133333333999fe77e11f100",
+      "1113333199e19fe8e19e810",
+      "0133319991121199111f810",
+      "01231191333311113331f91",
+      "01111113434315413331110",
+      "000113434441cc611333100",
+      "000133477773cc411333100",
+      "000133d7775ccc913331000",
+      "000112d77113cc994131000",
+      "0000013751213688fe10000",
+      "0000000062137feeee10000",
+      "00000000000377ffeee1000",
+      "000000000000000f11f1000",
+      "00000000000000000010000"
+     ],
+     "lens": [
+      14,
+      6
+     ]
+    },
+    "28": {
+     "rows": [
+      "0001111100111000000000",
+      "0012333311133110000000",
+      "0001133333133310000000",
+      "0011113333333331000000",
+      "1133333333333313100000",
+      "1333333333311ff1100000",
+      "011333331191fe8e910000",
+      "013331999fe1fe77e11100",
+      "1111199911119f88e19f10",
+      "001111133333119f91fe10",
+      "0011333333311111229e81",
+      "0013333333146513331ff1",
+      "001347777d2cc613331110",
+      "001147775ddcc911333100",
+      "0001366211cc8113331000",
+      "00000581112c8953331000",
+      "000000031388888f910000",
+      "00000000047ffeee100000",
+      "000000000007ffee100000",
+      "000000000000011ef10000",
+      "0000000000000001100000"
+     ],
+     "lens": [
+      14,
+      7
+     ]
+    },
+    "31": {
+     "rows": [
+      "0011111110111000000000",
+      "0001233331133110000000",
+      "0000113333333310000000",
+      "0111333333333331000000",
+      "1333333333333313100000",
+      "0113333333311ff1100000",
+      "0133333119f1fe8e910000",
+      "1133119999f1fe77e11100",
+      "0011191111119f88e19f10",
+      "001113333333119f91fe10",
+      "0113443334412111219810",
+      "00133488841cc233331ef1",
+      "00135777744cc813331910",
+      "0001577344ccc113332100",
+      "0000374112cc9133331000",
+      "00000841214c9933310000",
+      "00000001188888f9310000",
+      "000000000689eeee100000",
+      "0000000000669eee100000",
+      "00000000000011ee100000",
+      "0000000000000011100000"
+     ],
+     "lens": [
+      14,
+      7
+     ]
+    }
+   },
+   "open": {
+    "-21": {
+     "rows": [
+      "00000000010100001110000000",
+      "00000011131311111f81100000",
+      "00000133444119f11fe8f10000",
+      "000001133449e7ee119f910000",
+      "00000113331ee77e1221110000",
+      "00011333331feef91333310000",
+      "00133333331999113333310000",
+      "0133333331e911122113310000",
+      "01311333399131366114331000",
+      "111133331913313cc1149f1000",
+      "000133339933333ccc14eee110",
+      "001332319133372ccc88ee1000",
+      "0013122191337773351efb1000",
+      "00111331133877111101bbb111",
+      "0000131113387711110019f110",
+      "00001100133877221011881000",
+      "00000000112244000006000000",
+      "00000000011100000000000000"
+     ],
+     "lens": [
+      13,
+      4
+     ]
+    },
+    "-16": {
+     "rows": [
+      "0000000011111000010000000",
+      "0000011133333110191100000",
+      "00000123333119f11fe811000",
+      "00000113333fe7ef11fee1000",
+      "00011333331ee77e121191000",
+      "00133333331feef9133311000",
+      "0133333331919911333331000",
+      "1331333339e11111133331000",
+      "1111333319133146411431000",
+      "001333339933316cc13411000",
+      "001333319133345cc194fe100",
+      "013313311333755ccff8ee110",
+      "0111331114477754666ee1000",
+      "0000111134477311311bb1000",
+      "00011101337771111001bb111",
+      "000000013337751191199f110",
+      "0000000011133000087880000"
+     ],
+     "lens": [
+      13,
+      4
+     ]
+    },
+    "-10": {
+     "rows": [
+      "000000111111100000000000",
+      "000001233333311001100000",
+      "00000111333119911fe11000",
+      "00011333331fe7ef19e8e100",
+      "00133333431ee77e919ff100",
+      "01443333431feeff13311100",
+      "1121333349f1991133331000",
+      "101333331ff1111133333100",
+      "001333319913315d11333100",
+      "01333339913333cc91333100",
+      "13313319133333cc91399100",
+      "11112311333884cc69dfef10",
+      "00012111447774cc68eee110",
+      "001111133d77311318ef1000",
+      "000000133d77111101bb1000",
+      "0000001133774111001bf111",
+      "000000011114000011fff110",
+      "000000000000000086000000"
+     ],
+     "lens": [
+      13,
+      4
+     ]
+    }
+   }
+  }
+ }
+}

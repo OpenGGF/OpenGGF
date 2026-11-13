@@ -60,6 +60,42 @@ unchanged. `production/mica/carried_reshade.py --check` rebuilds them from the o
 sheet found no other un-inked frame; the remaining statistical outliers are intended drawings and
 are listed in that record.
 
+**Line-art pass (2026-11-12).** On the owner's line-art feedback her sheet was scored against her
+own references (WAIT, WALK and RUN; `tools/modding/playable_art/style_audit.py`, profile
+`production/style-audit.json`). Unlike TALON she does not have a different face per source sheet:
+her poses were already brought to one skull and face (`consistency-landmarks.json`). What set her
+apart from his cleaned sheet was speckle, a noise median of 0.33 against his 0.19.
+`production/mica/sheet_despeckle.py` folds lone pixels and two-pixel flecks into their own material
+on 207 flat drawings with `despeckle.py`'s `lines=True`, which keeps one-pixel diagonal lines: her
+scale edges. The plain sprite cleanup reads those as isolated pixels and flattens her scales into
+one jade mass (0.17, and no pangolin left), so it was rejected; with the edges kept the sheet median
+is 0.23. Alpha, ink, sizes and hotspots are identical, and `production/slope_sets.py` re-derives her
+WALK/RUN slopes and homing-dive directions from the cleaned flats. Left alone, with reasons in
+[`sheet-despeckle.json`](../../production/mica/sheet-despeckle.json): the three carried frames
+(`carried_reshade.py`) and the ball drawings. Her idle, `wait-00`
+to `wait-08`, is kept exactly as drawn, hand-on-chin beat included, and cleaned like any other pose.
+Her four VICTORY frames joined the cleanup on the same day, once the idle lane had decided to keep
+her drawings (203 drawings before them, 207 with them).
+
+**Idle, signposts and victory (2026-11-12).** The owner kept her idle ("it comes across as sassy,
+with a hand on chin for thinking"), so no frame of it changed. Her four signpost plates had been
+drawn one by one and differed between Sonic 1 and the other games. They are now one portrait, her
+peace sign with both eyes open, on every plate, and the six spin plates are that portrait on the
+turning panel. `production/idle_sign_victory.py --check` rebuilds them from
+[`idle-sign-victory.json`](../../production/idle-sign-victory.json); the backings are untouched.
+Against those cleaned references the audit still flags object, variant and dive poses whose scales
+use a different mix of the jade ramp (two-tone shading, or a curled or back view that is nearly all
+scales); a cleanup cannot re-band them and she has no source landmarks to redraw from, so they are
+listed as deferred in the profile. Gilded MICA was scored and not changed: one Open Cone
+design throughout, with the frames whose gloves, shoes and plate tips sit on the silhouette without
+the contour slot listed as deferred.
+
+**Sonic 1 title (2026-11-12).** `production/mica/titles/s1_despeckle.py` applies the same
+line-preserving cleanup to the eight BODY frames of her Sonic 1 title portrait (`titles/s1-0..7.png`):
+noise 0.15-0.20 before, 0.09-0.14 after, scale edges kept. `s1-frames.txt`, its bank, selectors and
+hotspots are untouched, and no pixel changes its alpha or ink.
+
+
 ## Powered-form feedback, 2026-11-11
 
 Fresh native-pose generations and selected indexed rows live in
@@ -94,6 +130,19 @@ companion presentation selects them; MICA's solo companion bank selects existing
 TALON pilot art. Fresh GPT Image candidates and native references stay in the
 feedback-round scratch directory; reduction and area checks are recorded in
 `production/mica/endings/pilot/provenance.json` (scale ratios 0.988–1.017).
+
+The S3K cockpit rows cover both seats: selector 12 (the Tails seat) and selector 11 (the
+Sonic seat, where MICA sits when TALON is the lead). `MicaEndings` also binds TALON's banks
+as her solo companion: his Sonic 2 search photos (`S2_SOLO_PHOTOS`), his cockpits, and,
+once drawn, his mid-size cockpit head and his figure on the final S3 graphics card. To keep
+the host's own photos for a solo MICA, drop the `S2_SOLO_PHOTOS` line in `MicaEndings`.
+
+`endings/s3k/arrival_rider-0e.png` (the rider on the mid-size Tornado, `S3K_PASSENGER`
+selector 14, 16×24) and `endings/pilot/arrival_pilot-0d.png` (that plane's cockpit head,
+`S3K_MINI_TORNADO_PILOT` selector 13, 16×8) were placed by hand from her own drawings; the
+record is in `production/talon/endings/celebration-generation.json`.
+`endings/s3k/tiny_passenger-16.png` and `-17.png` are no longer bound: they were drawn for
+native selectors 22 and 23, which are that plane's exhaust flame.
 
 `endings/final-pilot/` contains the front-view cockpit overlay and binary native
 clear mask (184×120, selector 0, hotspot 0,0). It follows the independently

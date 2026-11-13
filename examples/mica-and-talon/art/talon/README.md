@@ -1,6 +1,6 @@
 # TALON art surfaces
 
-The playable sheet has 282 frames, 47 animation keys. Runtime art is indexed with transparency
+The playable sheet has 297 frames, 47 animation keys. Runtime art is indexed with transparency
 at index zero. [Shared art rules and build commands](../../README.md) apply.
 Frame bindings are in adjacent `frames.txt` or host-specific `*-frames.txt` files;
 see the [table format](../../README.md#editing-frame-tables).
@@ -16,7 +16,7 @@ the repository root. `assemble.py` is `tools/modding/playable_art/assemble.py`.
 | `hud-and-screens/` | 29 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `portrait/` | `*-frames.txt`; 1 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `reels/` | 2 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
-| `sheet/` | 282 PNGs | Approved native-pose drawings and deterministic slopes | `assemble.py art/talon/sheet <target-output>` packages the handoff; it does not redraw approved frames. `production/talon/tonal_reshade.py --check` covers the 24 flight and carry frames and `production/talon/walk_cleanup.py --check` the 48 WALK/RUN frames. |
+| `sheet/` | 297 PNGs | Approved native-pose drawings and deterministic slopes | `assemble.py art/talon/sheet <target-output>` packages the handoff; it does not redraw approved frames. `production/talon/tonal_reshade.py --check` covers the 24 flight and carry frames `production/talon/walk_cleanup.py --check` the 48 WALK/RUN frames `production/talon/pose_cleanup.py --check` the other 209 flat poses and `production/idle_sign_victory.py --check` the eight feather frames of his idle. |
 | `special-stage/` | `frames.txt` (per host for MICA endings); 72 PNGs | Canonical indexed parts, native body motion and joint placements | `python3 tools/modding/playable_art/locked_stage.py examples/mica-and-talon/production/talon/consistent-stage --check` (omit `--check` to rebuild). |
 | `stage-poses/` | `frames.txt` (per host for MICA endings); 36 PNGs | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
 | `titles/` | `*-frames.txt`; 50 PNGs; masks and clear mask | Selected native-pose generation, locked palette and native hotspots | Use the matching production recipe/manifest and selected indexed rows; raw input paths in provenance require the original external scratch inputs. |
@@ -105,6 +105,93 @@ change size or hotspot by one pixel. Flat WALK now scores 0.22 on the audit's no
 [`walk-cleanup.json`](../../production/talon/walk-cleanup.json). The rest of the sheet was measured
 and left as it is: WAIT and most other poses score what WALK did before.
 
+**Pose cleanup (2026-11-12).** The owner then asked for the rest of the sheet to match the cleaned
+walk and run. `production/talon/pose_cleanup.py` applies the same rules (`walk_cleanup.clean`) to
+the other 203 flat drawings: WAIT, BLINK, LOOK_UP, DUCK, SKID, PUSH, the BALANCE sets, SPRING, HURT,
+HURT_FALL, DEATH, DROWN, GET_UP, VICTORY, HANG, HANG2, BUBBLE, FLOAT2, SPINDASH 00–02, SUPER_TRANSFORM
+00/01/03/04, TAILS_CARRIED, the tired and swim sets and the 113 object poses. Speckle folds into
+the surrounding shade inside plumage and inside white/cream only; white is never darkened; alpha,
+ink, sizes and hotspots are identical, and there are no hand pixels. These drawings averaged 0.34 on
+the audit's noise measure (0.25–0.41 by animation) and now average 0.19 (0.13–0.26); the sheet
+median falls from 0.32 to 0.19, with the cleaned WALK/RUN flats at 0.20–0.22 and the flight set at
+0.15. Left as drawn, and listed with reasons in
+[`pose-cleanup.json`](../../production/talon/pose-cleanup.json): the four ROLL frames and the
+SPINDASH blur ball, whose one-pixel steps are curve shading and motion streaks and which already
+score 0.10–0.18, and the white transformation flash. `pose_cleanup.py --check` rebuilds the
+drawings from their original rows (203 then; 209 since his own idle replaced six of them with twelve).
+**Scale rebuild (2026-11-12).** The owner still saw his poses at varying sizes. Frame height cannot
+tell (a spread wing or a crouch changes it without changing the bird), so
+`production/talon/scale_audit.py` measures two rigid head parts on each frame's high-resolution
+source drawing, the thickness of the largest goggle lens and that lens's centre to the beak tip,
+divides each by the frame's own reduction factor and by WAIT, and takes their geometric mean as the
+head scale. The band alone reads WALK at 1.09–1.17 although WALK stands exactly the reference
+height, and the span alone shortens when the beak turns to the viewer; their mean reads WALK 1.05
+and RUN 1.03, so one frame is good to roughly 8%. The cause was the 2026-11-10 area-matching
+enlargements (×1.10–1.47 per family), a flight set drawn to a larger skull, and object poses each
+fitted to its own native box. 68 drawings beyond 8% are rebuilt at the corrected factor, 67 reduced
+again from their source and SPRING by the route 2 fallback: the flight set ×0.82, carry ×0.89,
+VICTORY ×0.85 (it stood 45–47 px, now 38–40), BUBBLE ×0.76, HURT_FALL ×0.73, BALANCE2 ×0.79,
+BALANCE4 01–03 ×0.77–0.84, HANG ×0.86, SUPER_TRANSFORM ×0.70–0.91, TAILS_CARRIED ×0.91, TAILS_SWIM and
+its tired set ×0.92, FLOAT2 ×0.92, thirteen object poses ×0.83–0.92 (and the five turned from them),
+with DUCK and SPRING enlarged ×1.15 by hand. Hotspots follow the rung's anchors: the sole's distance
+for grounded and carrying frames, the top for hanging and carried ones, about the hotspot otherwise,
+so MICA's gloves still meet his shoes in all 36 pairings. The rebuilt drawings then pass through
+`pose_cleanup.py` and `tonal_reshade.py` like the rest of the sheet.
+[`scale-audit.json`](../../production/talon/scale-audit.json) holds the reading, decision and reason
+for every drawing, the ones still outside 8% (a standing object pose with a large head for its body,
+BALANCE and DEATH read small but stand the right height, 44 object poses hide the lens or beak) and
+MICA's audit. `scale_audit.py --check` needs no source drawings; `measure` and `rebuild` need the
+external ones its header names.
+**Line-art pass (2026-11-12).** The owner's remaining complaint was line art: standing and flying
+read crisp while balancing and the air bubble "look like a completely different artist drew them".
+Each pose had been reduced from its own separately drawn source, so each sheet arrived with its own
+face (a plain white mask where WAIT has a cream cheek, brow and eye stripe), goggles and beak, and a
+dark rim inside the ink that reads as a heavier outline. `tools/modding/playable_art/style_audit.py`
+scores every frame against WAIT, WALK, RUN and TAILS_FLY, and `production/talon/lineart_pass.py`
+redraws instead of cleaning: 87 drawings now carry WAIT's own head, cut from cleaned `wait-00`,
+placed on the pose's goggle lens, turned to the pose's head pitch (from WAIT's source drawing, so a
+turned head is as crisp as a straight one), mirrored where the pose faces left, with an open-beak
+variant for the gasp and shout poses. Bodies keep their pose and size and lose the lit side of the
+dark rim. A loop takes the head on every frame or on none, 16 turned object poses are redrawn
+from their source pose, and the flagged frames fell from 25 to 11, all accepted with a reason in
+[`style-audit.json`](../../production/style-audit.json). Drawings with no head to match keep their
+own and are listed with the reason in [`lineart-pass.json`](../../production/talon/lineart-pass.json):
+front and back views, balls, hidden beaks, heads turned past 42° (tumbles and dives) and DUCK. The
+other idle frames, BLINK and VICTORY were left to the idle lane, below. `pose_cleanup.py`
+applies the pass as its second stage, so `pose_cleanup.py --check` reproduces it.
+
+**His own idle, signposts and victory (2026-11-12).** His idle copied Tails': blink, look at the
+camera, yawn. The owner approved one of his own, recorded by `production/idle_sign_victory.py`.
+After a 2.7 s stand he preens a flight feather from base to tip twice, squashes into a puffed-up
+ruffle with three shakes that slow down, stands sleek, watches a loose feather sway down past his
+beak, snatches it in one 50 ms frame and flicks it away. The loop is 7.1 s: twelve new drawings
+(`wait-01` to `wait-12`) and eight feather frames (`wait-13` to `wait-20`), which are the loose
+feather composited on a finished drawing, so its sway costs no drawing. `wait-21` is his LOOK_UP
+drawing on the idle's ground line (as `look_up-00` it stands 3 px higher, and the loop would hop).
+The Tails-style `wait-01` to `wait-06` are retired. Native wait frames (`family-wait/*`) now select his own drawings, and the
+two blink selectors his BLINK frames, which keep their drawings and their script. VICTORY is
+redrawn with his gesture, a two-finger salute off the goggle rim (wind-up, hold, salute flicked
+out, wink), in place of the raised-wing frames that smeared.
+
+The new drawings are flat-colour sources with near-black interior lines about one sprite pixel
+thick (see [line weight](../../../../tools/modding/playable_art/README.md#source-drawings-for-reduction-line-weight)),
+reduced with one factor per sheet and moved one step down his plumage ramp. They are ordinary
+drawings of `pose-cleanup.json` and `lineart-pass.json`: nine idle and all four victory drawings
+carry WAIT's head, and the three fluffed drawings keep their own. The pass gained two options for
+them, a shut eye (the wind-up and the wink) and a hand kept in front of the face (the salute).
+`style_audit.py` now passes WAIT, BLINK and VICTORY with no blanket acceptance. His four signpost
+plates carry one portrait with that salute, and the six spin plates are the same portrait on the
+turning panel. `idle_sign_victory.py --check` rebuilds the feather frames, the WAIT script, the
+native-frame map and the plates; the prompts, raw hashes and each drawing's gate numbers are in
+[`idle-sign-victory.json`](../../production/idle-sign-victory.json).
+Solar TALON was scored with the same audit (`talon-solar-s2`, `talon-solar-s3k`) and not changed:
+the Corona Crest set was drawn as one design and reads as one, with three accepted outliers (the
+white flash and the two busiest poses, HURT and SPRING), and the cleanup rules leave it as it is.
+The pose cleanup also corrected the shared rule: a white or cream patch with no plumage beside it that
+touches amber, brown or red is a goggle glint, beak shine or shoe white, and is now put back exactly
+as drawn. The walk cleanup had rewritten seven such pixels on `walk-04`, `walk-05`, `walk-07`,
+`run-01` and `run-03`; those five flats and their fifteen slope frames are rebuilt.
+
 **Solar slopes on the mode reduction (2026-11-12).** The 48 up45/inverted Solar WALK and RUN
 frames (S2 and S3K banks) are re-derived from their unchanged flats with the same reduction, by
 `production/slope_sets.py`. Bronze slot 2 (contour, bars, moustache) is lifted from the silhouette
@@ -123,6 +210,22 @@ presentation probe: build the example, compile it against `target/classes` and
 WAYLAND_DISPLAY unset, surfaceless EGL and an owned save root. The probe declares
 emeralds/rings, an airborne transformation start, camera registration and held
 pose speed 0x900; it is art/palette evidence, not route certification.
+
+`TalonEndings` binds MICA's banks as his solo companion: her cockpits (in S3K she takes the
+Sonic seat, selector 11) and her figure in the Sonic seat of the final S3 graphics card. In
+the S3K ending TALON falls on his own flight frames: a Tails-role lead takes Tails's float
+script, whose mapping ids his sheet aliases.
+
+`endings/s1/ending-00..07.png` are his Sonic 1 celebration (`S1_ENDING`, native EndSonic
+selectors 0 to 7: stand, look up, the emerald wait, the crouch, the leap and the close-up).
+`endings/eyecatch-0a.png` and `-0b.png` are his figure on the final S3 graphics card
+(`S3K_EYECATCH` selectors 10 and 11, 24×40), which a MICA lead also seats beside her.
+`endings/arrival-rider-0f.png` (`S3K_PASSENGER` selector 15, 16×24) and
+`endings/arrival-pilot-0c.png` (`S3K_MINI_TORNADO_PILOT` selector 12, 16×8) are the mid-size
+Tornado's rider and cockpit head. The ten larger drawings were generated in the sheet's
+flat-colour, heavy-line style and reduced with the sheet pipeline; the two arrival sprites
+were placed by hand from his own drawings. Prompts, source hashes, factors and the line and
+ink measurements are in `production/talon/endings/celebration-generation.json`.
 
 `endings/final-pilot/` contains the front-view cockpit overlay and binary native
 clear mask (184×120, selector 0, hotspot 0,0). It follows the independently
