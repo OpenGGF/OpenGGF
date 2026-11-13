@@ -42,9 +42,14 @@ public final class EndingNativePlayerBinding {
                 player.setSpriteRenderer(new EndingPlayerSpriteRenderer(player.getSpriteRenderer(), player, services));
             // AniSonic0F and AniSonic1F retain native script timing and mapping IDs.
             // AniSonic1F (docs/skdisasm/General/Sprites/Sonic/Anim - Sonic.asm:119).
+            // A Tails-role lead takes the same two script ids from Tails's own table, as the
+            // native Tails route does: its float and transformation address Tails's mapping ids,
+            // which are the ids a Tails-role sheet is numbered by.
             try {
                 var art = new Sonic3kPlayerArt(services.romReader());
-                var nativeArt = art.loadForCharacter("sonic");
+                boolean tailsRole = services.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState zone
+                        && zone.playerCharacter() == com.openggf.game.PlayerCharacter.TAILS_ALONE;
+                var nativeArt = art.loadForCharacter(tailsRole ? "tails" : "sonic");
                 var animations = new SpriteAnimationSet();
                 player.getAnimationSet().getAllScripts().forEach(animations::addScript);
                 animations.addScript(0xF,nativeArt.animationSet().getScript(0xF));

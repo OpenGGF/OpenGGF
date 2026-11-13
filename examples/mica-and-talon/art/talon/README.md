@@ -186,6 +186,22 @@ WAYLAND_DISPLAY unset, surfaceless EGL and an owned save root. The probe declare
 emeralds/rings, an airborne transformation start, camera registration and held
 pose speed 0x900; it is art/palette evidence, not route certification.
 
+`TalonEndings` binds MICA's banks as his solo companion: her cockpits (in S3K she takes the
+Sonic seat, selector 11) and her figure in the Sonic seat of the final S3 graphics card. In
+the S3K ending TALON falls on his own flight frames: a Tails-role lead takes Tails's float
+script, whose mapping ids his sheet aliases.
+
+`endings/s1/ending-00..07.png` are his Sonic 1 celebration (`S1_ENDING`, native EndSonic
+selectors 0 to 7: stand, look up, the emerald wait, the crouch, the leap and the close-up).
+`endings/eyecatch-0a.png` and `-0b.png` are his figure on the final S3 graphics card
+(`S3K_EYECATCH` selectors 10 and 11, 24×40), which a MICA lead also seats beside her.
+`endings/arrival-rider-0f.png` (`S3K_PASSENGER` selector 15, 16×24) and
+`endings/arrival-pilot-0c.png` (`S3K_MINI_TORNADO_PILOT` selector 12, 16×8) are the mid-size
+Tornado's rider and cockpit head. The ten larger drawings were generated in the sheet's
+flat-colour, heavy-line style and reduced with the sheet pipeline; the two arrival sprites
+were placed by hand from his own drawings. Prompts, source hashes, factors and the line and
+ink measurements are in `production/talon/endings/celebration-generation.json`.
+
 `endings/final-pilot/` contains the front-view cockpit overlay and binary native
 clear mask (184×120, selector 0, hotspot 0,0). It follows the independently
 scrolling ending-plane backdrop. The native-pose reference, two candidate rows,

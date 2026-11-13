@@ -34,10 +34,22 @@ class TestSidekickEndingPresentation {
                 code->new CharacterPresentation("Lead","Lead",Map.of(),Map.of(),Map.of(),Map.of(
                         EndingSpriteSet.Surface.S2_TORNADO_PILOT,own,
                         EndingSpriteSet.Surface.S2_SOLO_TORNADO_PILOT,companion,
-                        EndingSpriteSet.Surface.S3K_SOLO_TORNADO_PILOT,companion)),null);
+                        EndingSpriteSet.Surface.S3K_SOLO_TORNADO_PILOT,companion,
+                        EndingSpriteSet.Surface.S3K_SOLO_MINI_TORNADO_PILOT,companion,
+                        EndingSpriteSet.Surface.S3K_EYECATCH,own,
+                        EndingSpriteSet.Surface.S3K_SOLO_EYECATCH,companion)),null);
         var registry=PlayableCharacterRegistry.empty().register(key,definition);
         assertSame(companion,EndingCharacterPresentation.pilot(registry,"test:lead",List.of(),EndingSpriteSet.Surface.S2_TORNADO_PILOT));
         assertSame(companion,EndingCharacterPresentation.pilot(registry,"test:lead",List.of(),EndingSpriteSet.Surface.S3K_TORNADO_PILOT));
+        assertSame(companion,EndingCharacterPresentation.pilot(registry,"test:lead",List.of(),EndingSpriteSet.Surface.S3K_MINI_TORNADO_PILOT));
+        assertNull(EndingCharacterPresentation.pilot(registry,"sonic",List.of("test:lead"),EndingSpriteSet.Surface.S3K_MINI_TORNADO_PILOT));
+        // The final card's other hero seat: a sidekick's own eyecatch, or the solo lead's companion set.
+        assertSame(own,EndingCharacterPresentation.companion(registry,"sonic",List.of("test:lead"),
+                EndingSpriteSet.Surface.S3K_EYECATCH,EndingSpriteSet.Surface.S3K_SOLO_EYECATCH));
+        assertSame(companion,EndingCharacterPresentation.companion(registry,"test:lead",List.of(),
+                EndingSpriteSet.Surface.S3K_EYECATCH,EndingSpriteSet.Surface.S3K_SOLO_EYECATCH));
+        assertThrows(IllegalArgumentException.class,() -> EndingCharacterPresentation.pilot(registry,"test:lead",List.of(),
+                EndingSpriteSet.Surface.S3K_EYECATCH));
         assertSame(own,EndingCharacterPresentation.pilot(registry,"sonic",List.of("test:lead"),EndingSpriteSet.Surface.S2_TORNADO_PILOT));
         assertNull(EndingCharacterPresentation.pilot(registry,"test:lead",List.of("tails"),EndingSpriteSet.Surface.S2_TORNADO_PILOT));
         assertNull(EndingCharacterPresentation.pilot(registry,"tails",List.of(),EndingSpriteSet.Surface.S2_TORNADO_PILOT));

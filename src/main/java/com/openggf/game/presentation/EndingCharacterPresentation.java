@@ -31,23 +31,39 @@ public final class EndingCharacterPresentation {
     }
     /** Configured companions own their portrait; solo leads may explicitly supply companion art. */
     public static EndingSpriteSet pilot(EndingSpriteSet.Surface surface) throws IOException {
-        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
-        if (world == null) return null;
-        var config = GameServices.configuration();
-        return pilot(world.getPlayableCharacterRegistry(),
-                com.openggf.game.session.ActiveGameplayTeamResolver.resolveMainCharacterCode(config),
-                com.openggf.game.session.ActiveGameplayTeamResolver.resolveSidekicks(config), surface);
+        return companion(surface, soloCockpit(surface));
     }
-    public static EndingSpriteSet pilot(PlayableCharacterRegistry registry, String main,
-            java.util.List<String> companions, EndingSpriteSet.Surface surface) throws IOException {
-        if (!companions.isEmpty()) return sidekick(registry, companions, surface);
-        var soloSurface = switch (surface) {
+    private static EndingSpriteSet.Surface soloCockpit(EndingSpriteSet.Surface surface) {
+        return switch (surface) {
             case S2_FINAL_TORNADO_PILOT -> EndingSpriteSet.Surface.S2_SOLO_FINAL_TORNADO_PILOT;
             case S2_TORNADO_PILOT -> EndingSpriteSet.Surface.S2_SOLO_TORNADO_PILOT;
             case S3K_TORNADO_PILOT -> EndingSpriteSet.Surface.S3K_SOLO_TORNADO_PILOT;
+            case S3K_MINI_TORNADO_PILOT -> EndingSpriteSet.Surface.S3K_SOLO_MINI_TORNADO_PILOT;
             default -> throw new IllegalArgumentException("Not a cockpit surface: " + surface);
         };
+    }
+    /**
+     * The partner's art for a scene the lead is not the subject of: the first configured
+     * sidekick's {@code sidekickSurface}, or on a solo team the lead's own {@code soloSurface}.
+     */
+    public static EndingSpriteSet companion(EndingSpriteSet.Surface sidekickSurface,
+            EndingSpriteSet.Surface soloSurface) throws IOException {
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        if (world == null) return null;
+        var config = GameServices.configuration();
+        return companion(world.getPlayableCharacterRegistry(),
+                com.openggf.game.session.ActiveGameplayTeamResolver.resolveMainCharacterCode(config),
+                com.openggf.game.session.ActiveGameplayTeamResolver.resolveSidekicks(config), sidekickSurface, soloSurface);
+    }
+    public static EndingSpriteSet companion(PlayableCharacterRegistry registry, String main,
+            java.util.List<String> companions, EndingSpriteSet.Surface sidekickSurface,
+            EndingSpriteSet.Surface soloSurface) throws IOException {
+        if (!companions.isEmpty()) return sidekick(registry, companions, sidekickSurface);
         return sidekick(registry, java.util.List.of(main), soloSurface);
+    }
+    public static EndingSpriteSet pilot(PlayableCharacterRegistry registry, String main,
+            java.util.List<String> companions, EndingSpriteSet.Surface surface) throws IOException {
+        return companion(registry, main, companions, surface, soloCockpit(surface));
     }
     public static PlayerSpriteRenderer renderer(EndingSpriteSet set) {
         return renderer(set, com.openggf.graphics.PatternAtlasRange.CHARACTER_STAGE_PRESENTATION.base());

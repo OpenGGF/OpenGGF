@@ -12,6 +12,8 @@ public final class ModApiVersion {
     /**
      * Optional final-orientation stage drawings preserve native selectors, timing, priority and fades.
      * Sidekick-owned S2/S3K Tornado cockpit crops and explicit solo companion banks extend the unpublished candidate.
+     * Solo companion search photos, both S3K cockpit seats, the mid-size S3K Tornado's rider and cockpit head, and
+     * the partner's seat on the final S3 graphics card extend the unpublished candidate.
      * Optional S3K Competition player/record portrait surfaces extend the unpublished candidate.
      * Optional per-host title mascot banks include hotspots, independent palettes and plane masks.
      * Title mascot pairs may exchange native S2 presentation slots without moving paths.
