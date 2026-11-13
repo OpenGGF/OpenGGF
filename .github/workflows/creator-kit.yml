@@ -32,7 +32,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install bundled character art tooling
-        run: python -m pip install Pillow==11.3.0
+        run: python -m pip install Pillow==13.0.0
       - name: Verify portable kit tooling
         run: python3 -m unittest discover -s tools/modding -p 'test_*.py'
       - name: Build matching candidate artifacts

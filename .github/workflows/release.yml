@@ -295,7 +295,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install bundled character art tooling
-        run: python -m pip install Pillow==11.3.0
+        run: python -m pip install Pillow==13.0.0
 
       # Community 25.4.4.1.1+1.1: pinned archives/digests for all three targets.
       - name: Set up GraalVM Community 25.4.4.1.1+1.1
@@ -551,7 +551,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install bundled character art tooling
-        run: python -m pip install Pillow==11.3.0
+        run: python -m pip install Pillow==13.0.0
 
       - name: Build universal JVM jar
         shell: bash

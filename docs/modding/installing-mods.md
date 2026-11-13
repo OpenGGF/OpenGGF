@@ -121,7 +121,7 @@ Standalone game saves live under `saves/<mod-id>/`; scene storage is under
 Continue route. Keep those files for reinstalls; do not assume a different mod with
 the same display name shares its identity or save format.
 
-Building distributions now requires Python 3 with Pillow (CI uses 11.3.0) to
+Building distributions now requires Python 3.11+ with Pillow (CI uses 13.0.0) to
 assemble the bundled character art. Override the Python executable with
 `-Dbundled.python=/path/to/python` or omit bundled packaging with
 `-Dopenggf.bundled.skip=true` for development-only builds.
