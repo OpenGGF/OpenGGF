@@ -463,6 +463,36 @@ public class TestSonic3kSSEntryRingFormation {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
+    public void superEmeraldRingOffScreenPutsBackTheColoursTheHudShares() {
+        Camera camera = mock(Camera.class);
+        services.withCamera(camera);
+        when(camera.getY()).thenReturn((short) 0);
+        Sonic3kSSEntryRingObjectInstance ring = createRing(0x80);
+        ring.update(1, null);
+        ring.update(2, null);
+        assertArrayEquals(new int[] {0xECE, 0xA8A, 0x868}, ring.getLastAppliedPaletteWordsForTest(),
+                "on screen the rotation script has changed palette line 2 colours 5, 6 and 15");
+
+        // The camera moves on until the ring's $20 render box is left of the picture but still inside
+        // SSEntryRing_Display's $280 band: loc_61928, not the deletion at loc_6196A.
+        int left = RING_X + 0x60;
+        when(camera.getX()).thenReturn((short) left);
+        AbstractObjectInstance.updateCameraBounds(left, 0, left + 320, 224, 0);
+        ring.update(3, null);
+
+        assertFalse(ring.isDestroyed(), "near enough to stay loaded");
+        assertArrayEquals(new int[] {0x0EE, 0x088, 0x044}, ring.getLastAppliedPaletteWordsForTest(),
+                "loc_61928 writes $EE0088 and $44 back: the HUD's yellow and its shadow are the first two");
+        for (int frame = 4; frame <= 12; frame++) {
+            ring.update(frame, null);
+        }
+        assertEquals(1, ring.getPaletteStepForTest(),
+                "Run_PalRotationScript is not reached off screen, so the script stands still");
+        assertArrayEquals(new int[] {0x0EE, 0x088, 0x044}, ring.getLastAppliedPaletteWordsForTest());
+    }
+
+    @Test
     public void s3kProviderDoesNotDoublePlayFlashOwnedEnterSfx() {
         assertEquals(-1, new Sonic3kSpecialStageProvider().getTransitionSfxId());
     }

@@ -69,6 +69,16 @@ under the matching area heading; see the
   black patches appeared at the bottom of the extended planet while the screen
   shook. Both are fixed. This shipped in 0.7.
 
+- **Mushroom Hill swing bars and the HUD after a giant ring:** the horizontal and
+  vertical swing bars were always drawn unflipped, so a bar the level places
+  mirrored showed its plain end where its cap belongs. They now follow the
+  layout's flip bits, as the original's sprite code does. Separately, after
+  running past a Super Emerald giant ring the HUD's yellow stayed a pale cream
+  for the rest of the zone. The ring flashes three palette colours, two of which
+  the HUD draws with; the original puts them back on every frame the ring is off
+  screen, and the engine did so only when the ring was entered or paid out. It
+  now restores them off screen too, and the flashing script stands still there.
+
 - **Separate music and sound-effect volumes:** Settings → Audio has Music
   volume and Sound effects volume sliders (`audio.musicVolume`,
   `audio.sfxVolume`, 0–100%, applied on save). Each sound-chip channel takes
