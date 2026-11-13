@@ -481,6 +481,18 @@ under the matching area heading; see the
   each frame started, so a recording can be lined up with it. The trace catalogue
   now opens the Sonic 1 Scrap Brain Act 3 trace, which the ROM stores as Labyrinth
   act 4, as Scrap Brain Act 3; trace tools failed to start it before.
+  `RouteFrameBudgetProbe --audio` now presents one audio frame per step, as the
+  game loop does. Before, the sound driver never advanced in route runs: an
+  extra-life jingle never ended, so every later sound effect was refused, and
+  sound commands queued up and were applied in one burst at the next music
+  change. That burst is the 17-25 ms "first sound effect" frame the first sweep
+  reported in FBZ1, SOZ1, LRZ1, DEZ1 and DDZ; with audio presented those
+  frames take 1-2 ms.
+
+- **Quieter extra-life sound effects:** a sound effect requested while the
+  extra-life jingle plays is still dropped, as the ROM drivers drop it, but no
+  longer writes a warning to the log for each request. The admission observer
+  still records the refusal.
 
 - **Accurate FM performance:** fold the Nuked sine and exponential lookup arithmetic
   into derived tables while preserving cycle-level output. A paired six-voice
