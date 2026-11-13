@@ -41,7 +41,14 @@ under the matching area heading; see the
   camera jump, picture width or per-line scroll. A respawn in the same act keeps the
   drawn layer and redraws only the cells the reloaded layout changes, and the Angel
   Island intro and fire transition no longer build whole-level layers in advance.
-  Tests check every step against a whole-level build. Pixels are unchanged.
+  Tests check every step against a whole-level build. In Sonic 3&K a death
+  respawn also decodes its act on a background thread during the fade to black;
+  the reload still happens on the same frame and uses that decode only if the
+  inputs a load at that moment would use are unchanged, else it decodes as
+  before. Death respawn frames went from 33-45 ms to 17-32 ms, act changes from
+  25-82 ms to 15-25 ms (Casino Night 2 to Icecap 1 from 73-133 ms to 26-52 ms),
+  and the frames that follow stay under 2 ms of foreground work. A new game
+  after GAME OVER is unchanged (40-75 ms). Pixels and gameplay are unchanged.
 
 - **Art upload stutters:** changing level art, animated tiles or a tilemap no
   longer makes the frame wait for the graphics driver. Uploading straight from

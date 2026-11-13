@@ -737,9 +737,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 ? activeModZoneRuntimeContribution.runtimeProfile() : null;
         activeCustomZonePaletteBridge = null;
         Level loaded = gameModule != null ? gameModule.loadLevelOverride(levelIndex) : null;
+        PreparedLevelBuild prepared = loaded == null ? takePreparedReload(levelIndex) : null;
         discardPreparedLevelLoad();
         if (loaded == null) {
-            loaded = game.loadLevel(levelIndex);
+            loaded = prepared != null
+                    ? ((PreparableLevelLoader) game).installPreparedLevel(prepared)
+                    : game.loadLevel(levelIndex);
         }
         loaded = gameModule == null ? loaded : java.util.Objects.requireNonNull(gameModule.transformDecodedLevel(loaded), "Decoded level transform");
         if (activeModZoneRuntimeContribution != null) {
@@ -785,6 +788,58 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         var task = loader.prepareLevelBuildTask(levelIndex, mutationKey);
         loadPreparer.prepare(loader, levelIndex, mutationKey, task);
         return true;
+    }
+
+    /**
+     * Starts decoding the current act on the shared preparer thread for a reload of it the
+     * game has committed to: a death respawn whose fade to black has begun. The decode is
+     * pure ROM work, so it runs during the fade instead of on the frame the fade completes.
+     * The reload itself happens exactly where it did; it installs the build only if the
+     * inputs a synchronous load would use at that moment equal those the build was made
+     * from (otherwise it loads synchronously, as when nothing was prepared).
+     *
+     * @return true when a build was started
+     */
+    boolean prepareCurrentLevelReload() {
+        if (!(game instanceof PreparableLevelLoader loader) || level == null || gameModule == null) {
+            return false;
+        }
+        if (currentZone < 0 || currentZone >= levels.size()
+                || currentAct < 0 || currentAct >= levels.get(currentZone).size()) {
+            return false;
+        }
+        // Additive levels belong to the module override loader, not the stock ROM preparer.
+        if (gameModule != null && gameModule.getZoneRegistry().zoneKey(currentZone) instanceof ZoneKey.Mod) {
+            return false;
+        }
+        int levelIndex = levels.get(currentZone).get(currentAct).levelIndex();
+        var task = loader.prepareReloadBuildTask(levelIndex);
+        if (task == null) {
+            return false;
+        }
+        // The reload creates a new Game for the same module (InitGameModule), so the build
+        // belongs to the module; the new Game decides at install whether it still matches.
+        loadPreparer.prepare(gameModule, LevelLoadPreparer.Purpose.RELOAD, levelIndex, null, task);
+        return true;
+    }
+
+    /** A prepared reload of {@code levelIndex} whose inputs still match a synchronous load now. */
+    private PreparedLevelBuild takePreparedReload(int levelIndex) {
+        if (!(game instanceof PreparableLevelLoader loader) || gameModule == null) {
+            return null;
+        }
+        return loadPreparer.take(gameModule, LevelLoadPreparer.Purpose.RELOAD, levelIndex, null,
+                loader::reloadInputsStillMatch);
+    }
+
+    /** Takes a pending act-transition build into {@code levelIndex} (package tests). */
+    PreparedLevelBuild takePreparedActTransitionForTests(int levelIndex) {
+        return takePreparedLevelLoad(levelIndex, null);
+    }
+
+    /** Purpose of the pending prepared build, or {@code null}; test observability. */
+    LevelLoadPreparer.Purpose pendingPreparedLevelLoadPurpose() {
+        return loadPreparer.pendingPurpose();
     }
 
     /** Drops any level build prepared for a transition that will no longer happen. */
@@ -3676,7 +3731,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload,
             boolean titleCardRequiredInHeadlessMode, boolean queueFreshLevelRuntimeArt,
             com.openggf.game.LevelLoadCause loadCause) {
-        discardPreparedLevelLoad();
+        // A reload prepared during the fade stays for this load's LoadLevelData step,
+        // which installs it only if a synchronous load would use the same inputs.
+        loadPreparer.discardUnless(LevelLoadPreparer.Purpose.RELOAD);
         // BEGIN HCZ1_DIRECT_FF_OUTER_LOAD_BEGIN: profile success does not certify this later tail.
         boolean plcOuterLoadCompleted = false;
         // END HCZ1_DIRECT_FF_OUTER_LOAD_BEGIN
