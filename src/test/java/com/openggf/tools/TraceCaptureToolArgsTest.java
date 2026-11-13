@@ -75,6 +75,18 @@ class TraceCaptureToolArgsTest {
     }
 
     @Test
+    void musicIsRecordedAtFullLevelUnlessNoMusicSilencesIt() {
+        TraceCaptureTool.Args withMusic = TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1"});
+        assertFalse(withMusic.noMusic());
+        assertEquals(100, TraceCaptureTool.capturedMusicVolume(withMusic));
+
+        TraceCaptureTool.Args effectsOnly = TraceCaptureTool.Args.parse(
+                new String[]{"--trace", "aiz1", "--no-music"});
+        assertTrue(effectsOnly.noMusic());
+        assertEquals(0, TraceCaptureTool.capturedMusicVolume(effectsOnly));
+    }
+
+    @Test
     void acceptsNegativeIntegerValuesAsBefore() {
         TraceCaptureTool.Args args = TraceCaptureTool.Args.parse(
                 new String[]{"--trace", "aiz1", "--scale", "-3", "--fps", "-30", "--tail-frames", "-1"});

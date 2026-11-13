@@ -48,7 +48,7 @@ under the matching area heading; see the
   the volume of whichever track last wrote to it, so a sound effect that
   borrows a music channel keeps the sound-effect volume. Music at 0% gives
   game audio with only sound effects, for example for recordings; the
-  headless gameplay capture tool has `--no-music` for the same. The volumes
+  headless gameplay and trace capture tools have `--no-music` for the same. The volumes
   only scale the output: the sound driver, gameplay, rewind and traces are
   unchanged, and at 100% the output is bit-identical to before.
 
