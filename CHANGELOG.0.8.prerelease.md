@@ -7,6 +7,16 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **Lava Reef 1 frame hitches:** two stutters on the Lava Reef Act 1 route are
+  gone. When the rock crusher opens the floor, the engine rebuilt the whole
+  foreground layer (10-60 ms in a frame); it now redraws only the rewritten layout
+  cells and uploads only their rows, and a test checks the result against a full
+  rebuild. A sprite update of about 65-70 scattered tiles passed the old 64-tile
+  limit and uploaded their whole bounding rectangle, about 37 times the changed
+  bytes, and that one driver call took 1-100 ms. Changes of up to 256 tiles now
+  upload only those tiles, joining neighbours in a row (about 0.02 ms there). The tilemap shader also no longer looks up its uniform
+  locations on every draw. Pixels are unchanged.
+
 - **Blue Spheres:** new under **Extras** when the Sonic 3&K and Sonic 1 ROMs
   are both present. It is the game Sonic & Knuckles starts with Sonic 1 locked
   on, rebuilt from the S&K ROM: the title and menu, endless generated stages,
