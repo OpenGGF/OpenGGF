@@ -6,8 +6,6 @@ import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
@@ -42,7 +40,6 @@ public final class RouteFrameBudgetProbe {
     }
 
     public static void main(String[] argv) throws Exception {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         Path route = null;
         Path frameLog = null;
         int zone = 9;
@@ -74,7 +71,6 @@ public final class RouteFrameBudgetProbe {
         Bk2Movie movie = new Bk2MovieLoader().loadMovieOrInputLog(route);
         int count = frames < 0 ? movie.getFrameCount() : Math.min(frames, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, main, sidekick, "off", null, null, null);
-        Path rom = TraceToolRomLocations.resolve("s3k", GameServices.configuration(), Path.of(""));
 
         var threads = (com.sun.management.ThreadMXBean) ManagementFactory.getThreadMXBean();
         threads.setThreadAllocatedMemoryEnabled(true);
@@ -90,6 +86,7 @@ public final class RouteFrameBudgetProbe {
         int[][] where = new int[count][6];
 
         try (var session = new GameplayCaptureSession(settings)) {
+            Path rom = TraceToolRomLocations.resolve("s3k", GameServices.configuration(), Path.of(""));
             if (rewind) {
                 session.enableLiveRewind();
             }
