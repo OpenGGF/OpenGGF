@@ -89,7 +89,27 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
     @EngineOnly
     public int resolveDonatedAnimation(CanonicalAnimation animation) {
         int family = resolveFamilyAnimation(animation);
-        if (family >= 0 || donorCapabilities == null) return family;
+        return family >= 0 ? family : resolveDonorNativeAnimation(animation);
+    }
+
+    /**
+     * The donor's own number for a pose of a built-in character it supplies, as the donor's module
+     * resolves it at home. Only Sonic has host scripts rebuilt on donor art; a donated Tails or
+     * Knuckles wears the donor's scripts as loaded, and the host's numbering does not describe them.
+     *
+     * @return the donor's animation ID, or -1 when the donor has no such character or pose
+     */
+    int resolveDonorAnimation(CharacterKey character, CanonicalAnimation animation) {
+        if (donorCapabilities == null || character == null || !character.isBuiltin()) return -1;
+        PlayerCharacter archetype = CharacterKey.TAILS.equals(character) ? PlayerCharacter.TAILS_ALONE
+                : CharacterKey.KNUCKLES.equals(character) ? PlayerCharacter.KNUCKLES
+                : PlayerCharacter.SONIC_ALONE;
+        return donorCapabilities.getPlayableCharacters().contains(archetype)
+                ? resolveDonorNativeAnimation(animation) : -1;
+    }
+
+    private int resolveDonorNativeAnimation(CanonicalAnimation animation) {
+        if (donorCapabilities == null) return -1;
         int nativeId = donorCapabilities.resolveNativeId(animation);
         if (nativeId >= 0) return nativeId;
         var fallback = donorCapabilities.getAnimationFallbacks().get(animation);
