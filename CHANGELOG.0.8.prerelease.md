@@ -40,7 +40,13 @@ under the matching area heading; see the
   through a pixel buffer that the GPU copies from, so the frame carries on. Over
   twelve runs per side on the integrated GPU, uploads slower than 16.7 ms after
   the level had loaded went from seven (worst 701 ms) to none (worst 8 ms); the
-  discrete GPU was already below 12 ms. Waits while a level loads remain. Each
+  discrete GPU was already below 12 ms. Loading object, HUD, player, title-card,
+  special-stage and title-screen art, and Sonic 1 and 2 animated tiles, still sent
+  each 8x8 tile through the buffer on its own: about 7,500 uploads per Sandopolis
+  respawn, one of which waited 83 ms on the integrated GPU and up to 278 ms on the
+  discrete GPU at a special stage entry. That art is now written in one batch per
+  set-up step, so a respawn makes about five uploads for it, taking well under a
+  millisecond. Level tiles are still uploaded one at a time while a level loads. Each
   art upload also stopped allocating a version record and a boxed tile number,
   about 16% of Angel Island's per-frame allocation. Pixels are unchanged.
 

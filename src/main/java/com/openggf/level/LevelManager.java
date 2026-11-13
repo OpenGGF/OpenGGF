@@ -1252,8 +1252,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Phase C: Load object art and player sprite art into the pattern atlas.
      */
     public void initArt() {
-        initObjectArt();
-        initPlayableArt();
+        PatternAtlasBatchScope.run(graphicsManager, () -> { initObjectArt(); initPlayableArt(); });
     }
 
     void initPlayableArt() { playableArtInitializer.initializeForLoad(); }
@@ -1724,7 +1723,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * gameplay, such as MGZ2's boss-transition Tails rescue object.
      */
     public void refreshPlayableSpriteArt() {
-        playableArtInitializer.refresh();
+        PatternAtlasBatchScope.run(graphicsManager, playableArtInitializer::refresh);
     }
 
     /**
@@ -1773,7 +1772,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
     }
 
-    void initObjectArt() {
+    void initObjectArt() { PatternAtlasBatchScope.run(graphicsManager, this::installObjectArt); }
+
+    private void installObjectArt() {
         activeCustomZonePaletteBridge = null;
         PatternAtlas patternAtlas = graphicsManager.getPatternAtlas();
         if (patternAtlas != null) {
