@@ -2449,166 +2449,6 @@
     ]
    }
   },
-  "family-victory-00": {
-   "group": "family/victory@57087963",
-   "kind": "family",
-   "origin": "exec-18976a5b-4615-41a3-8bb9-a70757087963.png cell 0,0 of 4x3; sha256 058c64a6cb23",
-   "factor": 6.5385,
-   "band_source_px": 21.1,
-   "span_source_px": 83.6,
-   "band": 1.202,
-   "span": 1.151,
-   "head": 1.176,
-   "animation": "VICTORY",
-   "before_size": [
-    29,
-    47
-   ],
-   "before_hotspot": [
-    14,
-    27
-   ],
-   "multiplier": 1.171,
-   "decision": "rebuild",
-   "why": "group",
-   "after": 1.004,
-   "rebuilt": {
-    "factor_37": 6.4149,
-    "resize": 0.854,
-    "size": [
-     24,
-     40
-    ],
-    "hotspot": [
-     12,
-     20
-    ],
-    "uncleaned_sha256": "9bbabea34a483cd5",
-    "frames": [
-     "family-victory-00"
-    ]
-   }
-  },
-  "family-victory-01": {
-   "group": "family/victory@57087963",
-   "kind": "family",
-   "origin": "exec-18976a5b-4615-41a3-8bb9-a70757087963.png cell 1,1 of 4x3; sha256 058c64a6cb23",
-   "factor": 6.6154,
-   "band_source_px": 21.8,
-   "span_source_px": 81.4,
-   "band": 1.228,
-   "span": 1.107,
-   "head": 1.166,
-   "animation": "VICTORY",
-   "before_size": [
-    33,
-    45
-   ],
-   "before_hotspot": [
-    15,
-    25
-   ],
-   "multiplier": 1.171,
-   "decision": "rebuild",
-   "why": "group",
-   "after": 0.996,
-   "rebuilt": {
-    "factor_37": 6.4904,
-    "resize": 0.854,
-    "size": [
-     28,
-     39
-    ],
-    "hotspot": [
-     13,
-     19
-    ],
-    "uncleaned_sha256": "73d5bc4a3ee8f5d1",
-    "frames": [
-     "family-victory-01"
-    ]
-   }
-  },
-  "family-victory-02": {
-   "group": "family/victory@57087963",
-   "kind": "family",
-   "origin": "exec-18976a5b-4615-41a3-8bb9-a70757087963.png cell 2,2 of 4x3; sha256 058c64a6cb23",
-   "factor": 6.6923,
-   "band_source_px": 21.0,
-   "span_source_px": 84.5,
-   "band": 1.169,
-   "span": 1.136,
-   "head": 1.152,
-   "animation": "VICTORY",
-   "before_size": [
-    35,
-    45
-   ],
-   "before_hotspot": [
-    17,
-    25
-   ],
-   "multiplier": 1.171,
-   "decision": "rebuild",
-   "why": "group",
-   "after": 0.984,
-   "rebuilt": {
-    "factor_37": 6.5659,
-    "resize": 0.854,
-    "size": [
-     29,
-     39
-    ],
-    "hotspot": [
-     14,
-     19
-    ],
-    "uncleaned_sha256": "52269d8db0b2ebbe",
-    "frames": [
-     "family-victory-02"
-    ]
-   }
-  },
-  "family-victory-03": {
-   "group": "family/victory@57087963",
-   "kind": "family",
-   "origin": "exec-18976a5b-4615-41a3-8bb9-a70757087963.png cell 3,1 of 4x3; sha256 058c64a6cb23",
-   "factor": 6.5385,
-   "band_source_px": 21.7,
-   "span_source_px": 81.4,
-   "band": 1.236,
-   "span": 1.12,
-   "head": 1.177,
-   "animation": "VICTORY",
-   "before_size": [
-    33,
-    47
-   ],
-   "before_hotspot": [
-    15,
-    27
-   ],
-   "multiplier": 1.171,
-   "decision": "rebuild",
-   "why": "group",
-   "after": 1.005,
-   "rebuilt": {
-    "factor_37": 6.4149,
-    "resize": 0.854,
-    "size": [
-     28,
-     40
-    ],
-    "hotspot": [
-     13,
-     20
-    ],
-    "uncleaned_sha256": "b563bfc91b42972c",
-    "frames": [
-     "family-victory-03"
-    ]
-   }
-  },
   "fly-00": {
    "group": "flight",
    "kind": "flight",
@@ -6186,150 +6026,6 @@
    "why": "within 8%",
    "after": 0.992
   },
-  "wait-01": {
-   "group": "core/wait",
-   "kind": "core",
-   "origin": "talon-art-20261109/wait-attempt-2.png figure 1",
-   "factor": 9.3226,
-   "band_source_px": 28.1,
-   "span_source_px": 103.6,
-   "band": 1.123,
-   "span": 1.0,
-   "head": 1.06,
-   "animation": "WAIT",
-   "before_size": [
-    24,
-    37
-   ],
-   "before_hotspot": [
-    12,
-    18
-   ],
-   "multiplier": 1.0,
-   "decision": "keep",
-   "why": "within 8%",
-   "after": 1.06
-  },
-  "wait-02": {
-   "group": "core/wait",
-   "kind": "core",
-   "origin": "talon-art-20261109/wait-attempt-2.png figure 2",
-   "factor": 9.2903,
-   "band_source_px": 25.2,
-   "span_source_px": 104.5,
-   "band": 1.01,
-   "span": 1.012,
-   "head": 1.011,
-   "animation": "WAIT",
-   "before_size": [
-    24,
-    37
-   ],
-   "before_hotspot": [
-    12,
-    18
-   ],
-   "multiplier": 1.0,
-   "decision": "keep",
-   "why": "within 8%",
-   "after": 1.011
-  },
-  "wait-03": {
-   "group": "core/wait",
-   "kind": "core",
-   "origin": "talon-art-20261109/wait-attempt-2.png figure 3",
-   "factor": 9.3226,
-   "band_source_px": 24.3,
-   "span_source_px": 96.6,
-   "band": 0.971,
-   "span": 0.932,
-   "head": 0.951,
-   "animation": "WAIT",
-   "before_size": [
-    24,
-    37
-   ],
-   "before_hotspot": [
-    12,
-    18
-   ],
-   "multiplier": 1.0,
-   "decision": "keep",
-   "why": "within 8%",
-   "after": 0.951
-  },
-  "wait-04": {
-   "group": "core/wait",
-   "kind": "core",
-   "origin": "talon-art-20261109/wait-attempt-2.png figure 4",
-   "factor": 9.6316,
-   "band_source_px": 25.0,
-   "span_source_px": 107.0,
-   "band": 0.967,
-   "span": 1.0,
-   "head": 0.983,
-   "animation": "WAIT",
-   "before_size": [
-    23,
-    37
-   ],
-   "before_hotspot": [
-    11,
-    18
-   ],
-   "multiplier": 1.0,
-   "decision": "keep",
-   "why": "within 8%",
-   "after": 0.983
-  },
-  "wait-05": {
-   "group": "core/wait",
-   "kind": "core",
-   "origin": "talon-art-20261109/wait-attempt-2.png figure 5",
-   "factor": 9.3226,
-   "band_source_px": 24.4,
-   "span_source_px": 107.0,
-   "band": 0.975,
-   "span": 1.033,
-   "head": 1.004,
-   "animation": "WAIT",
-   "before_size": [
-    24,
-    37
-   ],
-   "before_hotspot": [
-    12,
-    18
-   ],
-   "multiplier": 1.0,
-   "decision": "keep",
-   "why": "within 8%",
-   "after": 1.004
-  },
-  "wait-06": {
-   "group": "core/wait",
-   "kind": "core",
-   "origin": "talon-art-20261109/wait-attempt-2.png figure 6",
-   "factor": 9.3226,
-   "band_source_px": 25.4,
-   "span_source_px": 106.0,
-   "band": 1.015,
-   "span": 1.023,
-   "head": 1.019,
-   "animation": "WAIT",
-   "before_size": [
-    25,
-    37
-   ],
-   "before_hotspot": [
-    12,
-    18
-   ],
-   "multiplier": 1.0,
-   "decision": "keep",
-   "why": "within 8%",
-   "after": 1.019
-  },
   "walk-00": {
    "group": "core/walk",
    "kind": "core",
@@ -7091,34 +6787,19 @@
     1.016
    ]
   },
-  "VICTORY": {
-   "drawings": 4,
-   "read": 4,
-   "rebuilt": 4,
-   "before": [
-    1.152,
-    1.171,
-    1.177
-   ],
-   "after": [
-    0.984,
-    1.0,
-    1.005
-   ]
-  },
   "WAIT": {
-   "drawings": 7,
-   "read": 7,
+   "drawings": 1,
+   "read": 1,
    "rebuilt": 0,
    "before": [
-    0.951,
-    1.004,
-    1.06
+    0.992,
+    0.992,
+    0.992
    ],
    "after": [
-    0.951,
-    1.004,
-    1.06
+    0.992,
+    0.992,
+    0.992
    ]
   },
   "WALK": {
@@ -7173,7 +6854,32 @@
   "object5-f4": "object5-f0 turned 0 degrees and mirrored; follows it",
   "object5-f5": "object5-ef turned 0 degrees and mirrored; follows it",
   "object5-f9": "object5-f7 turned 0 degrees and mirrored; follows it",
-  "object5-fa": "object5-f6 turned 0 degrees and mirrored; follows it"
+  "object5-fa": "object5-f6 turned 0 degrees and mirrored; follows it",
+  "wait-01": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; it carries WAIT's head",
+  "wait-02": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; it carries WAIT's head",
+  "wait-03": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; it carries WAIT's head",
+  "wait-04": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; it carries WAIT's head",
+  "wait-05": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; it carries WAIT's head",
+  "wait-06": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; its head is fluffed out by design",
+  "wait-07": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; its head is fluffed out by design",
+  "wait-08": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; its head is fluffed out by design",
+  "wait-09": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; it carries WAIT's head",
+  "wait-10": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; it carries WAIT's head",
+  "wait-11": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; it carries WAIT's head",
+  "wait-12": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; it carries WAIT's head",
+  "family-victory-00": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; it carries WAIT's head",
+  "family-victory-01": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; it carries WAIT's head",
+  "family-victory-02": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; it carries WAIT's head",
+  "family-victory-03": "2026-11-12 drawing (production/idle_sign_victory.py), reduced at the 37 px rung from a sheet whose standing cell sets the factor; it carries WAIT's head",
+  "wait-13": "wait-21 with the loose feather composited",
+  "wait-14": "wait-21 with the loose feather composited",
+  "wait-15": "wait-00 with the loose feather composited",
+  "wait-16": "wait-00 with the loose feather composited",
+  "wait-17": "wait-09 with the loose feather composited",
+  "wait-18": "wait-09 with the loose feather composited",
+  "wait-19": "wait-12 with the loose feather composited",
+  "wait-20": "wait-12 with the loose feather composited",
+  "wait-21": "the pixels of look_up-00 on the idle's ground line"
  },
  "mica": {
   "method": "hood/skull width in px from production/mica/consistency-landmarks.json (hand-marked, about 1 px, so one step is 5.6%), over wait-00's 18 px. Her frames are not changed.",

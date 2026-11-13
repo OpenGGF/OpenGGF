@@ -66,14 +66,23 @@ own references (WAIT, WALK and RUN; `tools/modding/playable_art/style_audit.py`,
 her poses were already brought to one skull and face (`consistency-landmarks.json`). What set her
 apart from his cleaned sheet was speckle, a noise median of 0.33 against his 0.19.
 `production/mica/sheet_despeckle.py` folds lone pixels and two-pixel flecks into their own material
-on 203 flat drawings with `despeckle.py`'s `lines=True`, which keeps one-pixel diagonal lines: her
+on 207 flat drawings with `despeckle.py`'s `lines=True`, which keeps one-pixel diagonal lines: her
 scale edges. The plain sprite cleanup reads those as isolated pixels and flattens her scales into
 one jade mass (0.17, and no pangolin left), so it was rejected; with the edges kept the sheet median
 is 0.23. Alpha, ink, sizes and hotspots are identical, and `production/slope_sets.py` re-derives her
 WALK/RUN slopes and homing-dive directions from the cleaned flats. Left alone, with reasons in
-[`sheet-despeckle.json`](../../production/mica/sheet-despeckle.json): her VICTORY frames (another
-lane's), the three carried frames (`carried_reshade.py`) and the ball drawings. Her idle, `wait-00`
+[`sheet-despeckle.json`](../../production/mica/sheet-despeckle.json): the three carried frames
+(`carried_reshade.py`) and the ball drawings. Her idle, `wait-00`
 to `wait-08`, is kept exactly as drawn, hand-on-chin beat included, and cleaned like any other pose.
+Her four VICTORY frames joined the cleanup on the same day, once the idle lane had decided to keep
+her drawings (203 drawings before them, 207 with them).
+
+**Idle, signposts and victory (2026-11-12).** The owner kept her idle ("it comes across as sassy,
+with a hand on chin for thinking"), so no frame of it changed. Her four signpost plates had been
+drawn one by one and differed between Sonic 1 and the other games. They are now one portrait, her
+peace sign with both eyes open, on every plate, and the six spin plates are that portrait on the
+turning panel. `production/idle_sign_victory.py --check` rebuilds them from
+[`idle-sign-victory.json`](../../production/idle-sign-victory.json); the backings are untouched.
 Against those cleaned references the audit still flags object, variant and dive poses whose scales
 use a different mix of the jade ramp (two-tone shading, or a curled or back view that is nearly all
 scales); a cleanup cannot re-band them and she has no source landmarks to redraw from, so they are

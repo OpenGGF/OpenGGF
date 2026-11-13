@@ -3,8 +3,8 @@
  "method": "TALON in-level rescale to the owner-approved 37 px rung (31 -> 37).\n\nRoute 1: re-reduce from the raw generation with the frame's original recorded method (cell crop,\naspect-safe pad to the native box, LANCZOS, indexed palette, 1 px inside outline), at the native\nbox scaled by 37/31, then re-apply recorded post-reduction rules. Each route-1 frame is validated by\nreducing the same raw at the old box: if that does not reproduce the installed pixels (agreement\nbelow AGREE), the frame carries an unrecorded edit and is routed to route 2 instead.\nRoute 2: Scale2x x3 of the approved pixels (an 8x smooth master), reduced with the same method at\nthe new box: uniform 1 px outlines, no uneven row/column doubling.\nPlain: Scale2x x3 then nearest to the new box (shown only for comparison).\nFeet and hotspot stay fixed: the hotspot keeps its distance above the sole scaled by 37/31.",
  "anchors": "Anchors: the sole keeps its distance below the hotspot for grounded, rolling and flying frames (feet\non the ground, carry shoes where MICA grips); hanging and carried poses keep their top (the hands on\nthe bar or carrier); object poses scale about the hotspot. Slopes are re-derived from the rescaled\nflats at the replaced frames' support distance. Writes PNGs, frames.yaml hotspots, recipe.json\nnative_pixels and production/talon/rescale-37.json (route and reason per frame). argv[1] = repo.",
  "summary": {
-  "route 1": 37,
-  "route 2": 209,
+  "route 1": 33,
+  "route 2": 207,
   "derived slope": 36
  },
  "frames": [
@@ -20,150 +20,6 @@
    ],
    "new_size": [
     24,
-    37
-   ],
-   "old_hotspot": [
-    10,
-    12
-   ],
-   "new_hotspot": [
-    12,
-    18
-   ],
-   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
-  },
-  {
-   "id": "wait-01",
-   "file": "frames/wait-01.png",
-   "animation": "WAIT",
-   "route": "route 2",
-   "reason": "raw at 31 reproduces 52% of installed pixels (unrecorded edit)",
-   "old_size": [
-    20,
-    31
-   ],
-   "new_size": [
-    24,
-    37
-   ],
-   "old_hotspot": [
-    10,
-    12
-   ],
-   "new_hotspot": [
-    12,
-    18
-   ],
-   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
-  },
-  {
-   "id": "wait-02",
-   "file": "frames/wait-02.png",
-   "animation": "WAIT",
-   "route": "route 1",
-   "reason": "raw talon-art-20261109/wait-attempt-2.png cell 2; reproduces 98% at 31",
-   "old_size": [
-    20,
-    31
-   ],
-   "new_size": [
-    24,
-    37
-   ],
-   "old_hotspot": [
-    10,
-    12
-   ],
-   "new_hotspot": [
-    12,
-    18
-   ],
-   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
-  },
-  {
-   "id": "wait-03",
-   "file": "frames/wait-03.png",
-   "animation": "WAIT",
-   "route": "route 1",
-   "reason": "raw talon-art-20261109/wait-attempt-2.png cell 3; reproduces 97% at 31",
-   "old_size": [
-    20,
-    31
-   ],
-   "new_size": [
-    24,
-    37
-   ],
-   "old_hotspot": [
-    10,
-    12
-   ],
-   "new_hotspot": [
-    12,
-    18
-   ],
-   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
-  },
-  {
-   "id": "wait-04",
-   "file": "frames/wait-04.png",
-   "animation": "WAIT",
-   "route": "route 2",
-   "reason": "raw at 31 reproduces 43% of installed pixels (unrecorded edit)",
-   "old_size": [
-    19,
-    31
-   ],
-   "new_size": [
-    23,
-    37
-   ],
-   "old_hotspot": [
-    9,
-    12
-   ],
-   "new_hotspot": [
-    11,
-    18
-   ],
-   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
-  },
-  {
-   "id": "wait-05",
-   "file": "frames/wait-05.png",
-   "animation": "WAIT",
-   "route": "route 1",
-   "reason": "raw talon-art-20261109/wait-attempt-2.png cell 5; reproduces 99% at 31",
-   "old_size": [
-    20,
-    31
-   ],
-   "new_size": [
-    24,
-    37
-   ],
-   "old_hotspot": [
-    10,
-    12
-   ],
-   "new_hotspot": [
-    12,
-    18
-   ],
-   "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json."
-  },
-  {
-   "id": "wait-06",
-   "file": "frames/wait-06.png",
-   "animation": "WAIT",
-   "route": "route 1",
-   "reason": "raw talon-art-20261109/wait-attempt-2.png cell 6; reproduces 98% at 31",
-   "old_size": [
-    21,
-    31
-   ],
-   "new_size": [
-    25,
     37
    ],
    "old_hotspot": [
@@ -2856,7 +2712,7 @@
    "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json.",
    "lineart": {
     "size": [
-     24,
+     23,
      35
     ],
     "hotspot": [
@@ -3007,15 +2863,16 @@
    },
    "lineart": {
     "size": [
-     24,
-     40
+     27,
+     37
     ],
     "hotspot": [
-     12,
-     20
+     14,
+     17
     ],
     "note": "2026-11-12: lineart_pass.py"
-   }
+   },
+   "replaced": "2026-11-12: redrawn by production/idle_sign_victory.py; route, reason and sizes above describe the retired drawing"
   },
   {
    "id": "family-victory-01",
@@ -3053,15 +2910,16 @@
    },
    "lineart": {
     "size": [
-     28,
-     39
+     27,
+     38
     ],
     "hotspot": [
      13,
-     19
+     18
     ],
     "note": "2026-11-12: lineart_pass.py"
-   }
+   },
+   "replaced": "2026-11-12: redrawn by production/idle_sign_victory.py; route, reason and sizes above describe the retired drawing"
   },
   {
    "id": "family-victory-02",
@@ -3099,15 +2957,16 @@
    },
    "lineart": {
     "size": [
-     29,
-     39
+     32,
+     38
     ],
     "hotspot": [
-     14,
-     19
+     13,
+     18
     ],
     "note": "2026-11-12: lineart_pass.py"
-   }
+   },
+   "replaced": "2026-11-12: redrawn by production/idle_sign_victory.py; route, reason and sizes above describe the retired drawing"
   },
   {
    "id": "family-victory-03",
@@ -3145,15 +3004,16 @@
    },
    "lineart": {
     "size": [
-     28,
-     40
+     27,
+     38
     ],
     "hotspot": [
-     13,
-     20
+     14,
+     18
     ],
     "note": "2026-11-12: lineart_pass.py"
-   }
+   },
+   "replaced": "2026-11-12: redrawn by production/idle_sign_victory.py; route, reason and sizes above describe the retired drawing"
   },
   {
    "id": "family-tails-carried-00",
@@ -4802,7 +4662,7 @@
    "cleanup": "2026-11-12: pose_cleanup.py, see pose-cleanup.json.",
    "lineart": {
     "size": [
-     27,
+     25,
      39
     ],
     "hotspot": [
@@ -10008,5 +9868,6 @@
     21
    ]
   }
- ]
+ ],
+ "retired": "2026-11-12: wait-01..06 (the Tails-style idle) left the sheet with production/idle_sign_victory.py; wait-01..20 are new drawings at the 37 px rung and have no entry here."
 }

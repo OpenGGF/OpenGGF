@@ -64,12 +64,12 @@
       "order": 1,
       "file": "frames/wait-01.png",
       "hotspot": [
-        12,
-        18
+        10,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image wait strip attempt 2, cell 1; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-idle-c-1-preen v1, cell 2); reduced 11.378:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "wait-02",
@@ -77,12 +77,12 @@
       "order": 2,
       "file": "frames/wait-02.png",
       "hotspot": [
-        12,
-        18
+        10,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image wait strip attempt 2, cell 2; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-idle-c-1-preen v1-r1, cell 3); reduced 11.432:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "wait-03",
@@ -90,12 +90,12 @@
       "order": 3,
       "file": "frames/wait-03.png",
       "hotspot": [
-        12,
-        18
+        11,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image wait strip attempt 2, cell 3; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-idle-c-1-preen v1-r1, cell 4); reduced 11.432:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "wait-04",
@@ -103,12 +103,12 @@
       "order": 4,
       "file": "frames/wait-04.png",
       "hotspot": [
-        11,
-        18
+        12,
+        19
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image wait strip attempt 2, cell 4; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-idle-c-1-preen v1-r1, cell 5); reduced 11.432:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "wait-05",
@@ -117,11 +117,11 @@
       "file": "frames/wait-05.png",
       "hotspot": [
         12,
-        18
+        15
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image wait strip attempt 2, cell 5; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-idle-c-1-preen v1-r1, cell 6); reduced 11.432:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "wait-06",
@@ -129,12 +129,207 @@
       "order": 6,
       "file": "frames/wait-06.png",
       "hotspot": [
+        18,
+        21
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-idle-c-2-ruffle v1, cell 2); reduced 10.459:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
+    },
+    {
+      "id": "wait-07",
+      "animation": "WAIT",
+      "order": 7,
+      "file": "frames/wait-07.png",
+      "hotspot": [
+        16,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-idle-c-2-ruffle v1, cell 3); reduced 10.459:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
+    },
+    {
+      "id": "wait-08",
+      "animation": "WAIT",
+      "order": 8,
+      "file": "frames/wait-08.png",
+      "hotspot": [
+        18,
+        20
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-idle-c-2-ruffle v1, cell 4); reduced 10.459:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): dark plumage rim thinned to WAIT's line weight."
+    },
+    {
+      "id": "wait-09",
+      "animation": "WAIT",
+      "order": 9,
+      "file": "frames/wait-09.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-idle-c-2-ruffle v1, cell 5); reduced 10.459:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
+    },
+    {
+      "id": "wait-10",
+      "animation": "WAIT",
+      "order": 10,
+      "file": "frames/wait-10.png",
+      "hotspot": [
+        11,
+        16
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-idle-c-3-catch v1, cell 2); reduced 11.865:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
+    },
+    {
+      "id": "wait-11",
+      "animation": "WAIT",
+      "order": 11,
+      "file": "frames/wait-11.png",
+      "hotspot": [
+        14,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-idle-c-3-catch v1, cell 3); reduced 11.865:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
+    },
+    {
+      "id": "wait-12",
+      "animation": "WAIT",
+      "order": 12,
+      "file": "frames/wait-12.png",
+      "hotspot": [
+        14,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-idle-c-3-catch v1, cell 4); reduced 11.865:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
+    },
+    {
+      "id": "wait-13",
+      "animation": "WAIT",
+      "order": 13,
+      "file": "frames/wait-13.png",
+      "hotspot": [
+        15,
+        27
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Idle 2026-11-12 (idle_sign_victory.py): wait-21 with the loose feather composited at [13, -27]; see idle-sign-victory.json."
+    },
+    {
+      "id": "wait-14",
+      "animation": "WAIT",
+      "order": 14,
+      "file": "frames/wait-14.png",
+      "hotspot": [
+        15,
+        23
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Idle 2026-11-12 (idle_sign_victory.py): wait-21 with the loose feather composited at [10, -23], mirrored; see idle-sign-victory.json."
+    },
+    {
+      "id": "wait-15",
+      "animation": "WAIT",
+      "order": 15,
+      "file": "frames/wait-15.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Idle 2026-11-12 (idle_sign_victory.py): wait-00 with the loose feather composited at [14, -19]; see idle-sign-victory.json."
+    },
+    {
+      "id": "wait-16",
+      "animation": "WAIT",
+      "order": 16,
+      "file": "frames/wait-16.png",
+      "hotspot": [
         12,
         18
       ],
       "angle_set": "flat",
       "duration_ticks": 6,
-      "notes": "Built-in GPT Image wait strip attempt 2, cell 6; aspect-safe reduction; far shoe palette shading only on walk5-7/run0-1. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged."
+      "notes": "Idle 2026-11-12 (idle_sign_victory.py): wait-00 with the loose feather composited at [11, -15], mirrored; see idle-sign-victory.json."
+    },
+    {
+      "id": "wait-17",
+      "animation": "WAIT",
+      "order": 17,
+      "file": "frames/wait-17.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Idle 2026-11-12 (idle_sign_victory.py): wait-09 with the loose feather composited at [14, -11]; see idle-sign-victory.json."
+    },
+    {
+      "id": "wait-18",
+      "animation": "WAIT",
+      "order": 18,
+      "file": "frames/wait-18.png",
+      "hotspot": [
+        12,
+        19
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Idle 2026-11-12 (idle_sign_victory.py): wait-09 with the loose feather composited at [11, -8], mirrored; see idle-sign-victory.json."
+    },
+    {
+      "id": "wait-19",
+      "animation": "WAIT",
+      "order": 19,
+      "file": "frames/wait-19.png",
+      "hotspot": [
+        14,
+        22
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Idle 2026-11-12 (idle_sign_victory.py): wait-12 with the loose feather composited at [16, -22]; see idle-sign-victory.json."
+    },
+    {
+      "id": "wait-20",
+      "animation": "WAIT",
+      "order": 20,
+      "file": "frames/wait-20.png",
+      "hotspot": [
+        14,
+        27
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Idle 2026-11-12 (idle_sign_victory.py): wait-12 with the loose feather composited at [22, -27], mirrored; see idle-sign-victory.json."
+    },
+    {
+      "id": "wait-21",
+      "animation": "WAIT",
+      "order": 21,
+      "file": "frames/wait-21.png",
+      "hotspot": [
+        15,
+        18
+      ],
+      "angle_set": "flat",
+      "duration_ticks": 6,
+      "notes": "Idle 2026-11-12 (idle_sign_victory.py): the pixels of look_up-00, registered to the ground line of WAIT; see idle-sign-victory.json."
     },
     {
       "id": "walk-00",
@@ -1624,12 +1819,12 @@
       "order": 0,
       "file": "frames/family-victory-00.png",
       "hotspot": [
-        12,
-        20
+        14,
+        17
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image VICTORY: attempt row 1, phase 0; uniform anatomical/goggle scale 8.5000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.538462 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-victory v2, cell 2); reduced 11.811:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-victory-01",
@@ -1638,11 +1833,11 @@
       "file": "frames/family-victory-01.png",
       "hotspot": [
         13,
-        19
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image VICTORY: attempt row 2, phase 1; uniform anatomical/goggle scale 8.6000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.615385 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-victory v2, cell 3); reduced 11.811:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-victory-02",
@@ -1650,12 +1845,12 @@
       "order": 2,
       "file": "frames/family-victory-02.png",
       "hotspot": [
-        14,
-        19
+        13,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image VICTORY: attempt row 3, phase 2; uniform anatomical/goggle scale 8.7000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.692308 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-victory v2, cell 4); reduced 11.811:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-victory-03",
@@ -1663,12 +1858,12 @@
       "order": 3,
       "file": "frames/family-victory-03.png",
       "hotspot": [
-        13,
-        20
+        14,
+        18
       ],
       "angle_set": "flat",
       "duration_ticks": 8,
-      "notes": "GPT Image VICTORY: attempt row 2, phase 3; uniform anatomical/goggle scale 8.5000:1. No painted contours. 2026-11-10: re-reduced original generation at 6.538462 source pixels/native pixel; uniform anatomy correction 1.3; no painted contours. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Scale rebuild 2026-11-12 (scale_audit.py): redrawn from its source at x0.85 of its size, to the 37 px rung; see scale-audit.json. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
+      "notes": "GPT Image 2.6 Sunburst flat-colour drawing with heavy interior lines, 2026-11-12 (talon-victory v2, cell 5); reduced 11.811:1 by pipeline.build(), plumage one step down his ramp; see production/idle-sign-victory.json. Cleanup 2026-11-12 (pose_cleanup.py): plumage and white/cream despeckled within their own material, three plumage bands; silhouette, ink and hotspot unchanged. Line art 2026-11-12 (lineart_pass.py): head redrawn from WAIT's on this pose's lens and beak; dark plumage rim thinned to his line weight."
     },
     {
       "id": "family-tails-carried-00",
@@ -3716,128 +3911,78 @@
     "WAIT": {
       "frames": [
         "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-02",
         "wait-01",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
         "wait-02",
-        "wait-01",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-00",
-        "wait-03",
-        "wait-03",
-        "wait-03",
-        "wait-03",
-        "wait-03",
-        "wait-03",
-        "wait-03",
-        "wait-03",
-        "wait-03",
-        "wait-03",
-        "wait-03",
-        "wait-03",
-        "wait-03",
-        "wait-03",
-        "wait-03",
         "wait-03",
         "wait-04",
+        "wait-02",
+        "wait-03",
+        "wait-04",
+        "wait-01",
+        "wait-00",
         "wait-05",
         "wait-06",
-        "wait-05",
+        "wait-07",
+        "wait-08",
+        "wait-07",
+        "wait-08",
+        "wait-07",
+        "wait-08",
         "wait-06",
         "wait-05",
-        "wait-06",
-        "wait-05",
-        "wait-06",
-        "wait-05",
-        "wait-06",
-        "wait-04"
+        "wait-21",
+        "wait-13",
+        "wait-14",
+        "wait-15",
+        "wait-16",
+        "wait-17",
+        "wait-18",
+        "wait-10",
+        "wait-11",
+        "wait-19",
+        "wait-20",
+        "wait-12",
+        "wait-01",
+        "wait-00"
       ],
       "durations": [
+        160,
+        6,
         8,
         8,
+        12,
+        6,
+        8,
+        14,
+        8,
+        24,
+        8,
+        18,
+        4,
+        4,
+        6,
+        6,
         8,
         8,
+        6,
+        6,
+        12,
+        7,
+        7,
+        7,
+        7,
+        7,
+        6,
+        3,
+        30,
+        4,
+        4,
+        6,
         8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8,
-        8
+        150
       ],
       "end": "loop-back",
-      "loopBackSteps": 28
+      "loopBackSteps": 33
     },
     "SPRING": {
       "frames": [
@@ -4584,12 +4729,12 @@
     "family-run/2": "run-02",
     "family-run/3": "run-03",
     "family-wait/0": "wait-00",
-    "family-wait/1": "wait-01",
-    "family-wait/2": "wait-02",
-    "family-wait/3": "wait-03",
-    "family-wait/4": "wait-04",
-    "family-wait/5": "wait-05",
-    "family-wait/6": "wait-06",
+    "family-wait/1": "family-blink-01",
+    "family-wait/2": "family-blink-02",
+    "family-wait/3": "wait-09",
+    "family-wait/4": "wait-01",
+    "family-wait/5": "wait-02",
+    "family-wait/6": "wait-04",
     "family-skid/0": "skid-00",
     "family-skid/1": "skid-01",
     "family-spindash/0": "spindash-03",
@@ -4608,8 +4753,8 @@
     "family-roll/4": "roll-03",
     "family-spindash/4": "spindash-00",
     "family-spindash/5": "spindash-02",
-    "family-wait/7": "wait-05",
-    "family-wait/8": "wait-06",
+    "family-wait/7": "wait-02",
+    "family-wait/8": "wait-04",
     "family-balance/2": "family-balance2-00",
     "family-skid/2": "skid-00",
     "family-skid/3": "skid-01",

@@ -36,8 +36,14 @@ their outline read two pixels thick; WAIT keeps that shade for the shadow side o
 pixel outside any 2x2 slate-deep block, with ink to its left or above and none to its right or
 below, becomes slate-shadow: the sheet is lit from the upper left. Solid shadows stay.
 
-Not touched: WAIT, WALK, RUN and the flight and carry sets (the references and their own
-tools), ROLL and SPINDASH (balls), and anything HAND lists with what was seen.
+Not touched: wait-00 (the donor), WALK, RUN and the flight and carry sets (the references and their
+own tools), ROLL and SPINDASH (balls), and anything HAND lists with what was seen.
+
+The idle, blink and victory drawings (WAIT but wait-00, BLINK, VICTORY) came later, from
+production/idle_sign_victory.py's lane: their entries were placed by hand on the reduced frames, and
+`measure` carries them over. Two head options exist for them: `eye: shut` (the straight head with a
+lid line, for a wink or a wind-up) and `over` boxes (a hand the pose holds in front of its face is
+drawn back over the head, so a salute stays in front of the goggles).
 """
 import argparse
 import json
@@ -59,8 +65,10 @@ LENS, TIP = (14, 5), (21, 16)        # donor landmarks, frame pixels
 STRAIGHT = 8                         # degrees: smaller turns are not made
 FAR_TURN = 42                        # degrees: beyond this the pose tumbles or hangs inverted and keeps its head
 CANVAS = 64                          # a turned head is built with its lens at the centre of this square
-REFERENCE = {'WAIT', 'WALK', 'RUN', 'TAILS_FLY', 'TAILS_FLY_ASCEND', 'TAILS_FLY_CARRY', 'TAILS_FLY_CARRY_ASCEND'}
-OTHER_LANE = {'BLINK', 'VICTORY'}    # owned by another lane since 2026-11-12: neither rule touches them
+REFERENCE = {'WALK', 'RUN', 'TAILS_FLY', 'TAILS_FLY_ASCEND', 'TAILS_FLY_CARRY', 'TAILS_FLY_CARRY_ASCEND'}   # and DONOR itself
+# Entered with their drawings by production/idle_sign_victory.py's lane (2026-11-12): they have no source drawing in
+# scale-audit.json, so `measure` carries their entries over instead of reading them.
+ENTERED = {'WAIT', 'BLINK', 'VICTORY'}
 NO_HEAD = {'ROLL': 'ball drawing', 'SPINDASH': 'ball drawing', 'BLANK': 'empty frame'}
 AMBER, RED = (14, 15), (10, 11)
 # The open beak on the straight head: the donor's upper mandible stays, a red mouth and a dropped lower
@@ -71,6 +79,10 @@ OPEN_BEAK = (
     (14, 17, 1), (15, 17, 1), (16, 17, 15), (17, 17, 15), (18, 17, 15), (19, 17, 14), (20, 17, 1),
     (16, 18, 1), (17, 18, 1), (18, 18, 1), (19, 18, 1),
 )
+# The shut eye on the straight head (a wink, a wind-up): the white and pupil go, a lid line stays.
+SHUT_EYE = ((14, 10, 4), (15, 10, 4), (14, 11, 4), (15, 11, 4), (16, 11, 3), (17, 11, 3),
+            (13, 12, 1), (14, 12, 1), (15, 12, 1), (16, 12, 1), (14, 13, 4), (15, 13, 4))
+GLOVE = (12, 13)                     # a hand held in front of the face is drawn back over the head ('over' boxes)
 # Decisions by eye, after seeing the automatic result beside WAIT: frame -> (head or None, what was seen).
 # A head may be given whole (lens, angle, mirror, beak) where the source drawing hides a landmark.
 HAND = {
@@ -167,6 +179,9 @@ def head_for(spec, donor, kit):
         if opened:
             for x, y, index in OPEN_BEAK:
                 grid[y][x] = index
+        if spec.get('eye') == 'shut':
+            for x, y, index in SHUT_EYE:
+                grid[y][x] = index
         lens = LENS
     pixels = {(x - lens[0], y - lens[1]): v for y, row in enumerate(grid) for x, v in enumerate(row) if v}
     if spec['mirror']:
@@ -196,6 +211,14 @@ def transplant(grid, spec, marks, donor, kit):
         out[y - y0][x - x0] = 0
     for (x, y), value in placed.items():
         out[y - y0][x - x0] = value
+    # a hand the pose holds in front of its face stays in front: its glove pixels and the ink round them
+    for bx0, by0, bx1, by1 in spec.get('over', ()):
+        hand = {(x, y) for y in range(max(0, by0), min(height, by1 + 1)) for x in range(max(0, bx0), min(width, bx1 + 1))
+                if grid[y][x] in GLOVE}
+        ring = {(x + a, y + b) for x, y in hand for a in (-1, 0, 1) for b in (-1, 0, 1)
+                if 0 <= x + a < width and 0 <= y + b < height and grid[y + b][x + a] == 1}
+        for x, y in hand | ring:
+            out[y - y0][x - x0] = grid[y][x]
     outside, todo = {(0, 0)}, [(0, 0)]
     while todo:
         cx, cy = todo.pop()
@@ -272,7 +295,7 @@ def measure():
         fid = source['id']
         if fid == DONOR:
             donor_figure = source['figure']
-        if fid not in uncleaned or listed[fid]['animation'] in REFERENCE | OTHER_LANE:
+        if fid not in uncleaned or fid == DONOR or listed[fid]['animation'] in REFERENCE | ENTERED:
             continue
         figure = source['figure']
         px = figure.load()
@@ -310,7 +333,10 @@ def measure():
     frames = {}
     for fid, rows in uncleaned.items():
         animation = listed[fid]['animation']
-        if animation in REFERENCE | OTHER_LANE:
+        if fid == DONOR or animation in REFERENCE:
+            continue
+        if animation in ENTERED:
+            frames[fid] = before[fid]
             continue
         kept = before.get(fid, {})
         marks = dict(read.get(fid) or dict(lens=None, far=None, tip=None))
@@ -437,9 +463,9 @@ def check():
     drawings = {d['id'] for d in json.loads((PROD / 'pose-cleanup.json').read_text())['drawings']}
     wrong = []
     for fid in drawings:
-        reference = listed[fid]['animation'] in REFERENCE | OTHER_LANE
+        reference = fid == DONOR or listed[fid]['animation'] in REFERENCE
         if reference == (fid in record['frames']):
-            wrong.append(fid + (' is a reference or another lane\'s and must not be listed' if reference else ' has no entry'))
+            wrong.append(fid + (' is a reference and must not be listed' if reference else ' has no entry'))
     for fid, entry in record['frames'].items():
         if entry['head'] and not {'lens', 'angle', 'mirror', 'beak'} <= entry['head'].keys():
             wrong.append(fid + ' head is incomplete')

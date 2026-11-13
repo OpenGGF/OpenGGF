@@ -93,13 +93,14 @@ class TalonPoseCleanupTests(unittest.TestCase):
         left=json.loads((self.PROD/'pose-cleanup.json').read_text())['left_alone']
         manifest=json.loads((self.SHEET/'frames.yaml').read_text())['frames']
         kept={'roll-00','roll-01','roll-02','roll-03','spindash-03','family-super-transform-02','family-blank-00'}
-        self.assertTrue({'roll-00..03','spindash-03','family-super-transform-02','family-blank-00'}<=set(left))
+        kept|={f'wait-{n}' for n in range(13,22)}              # the feather composites and look_up-00 on the idle's ground line
+        self.assertTrue({'roll-00..03','spindash-03','family-super-transform-02','family-blank-00','wait-13..21'}<=set(left))
         flight={'TAILS_FLY','TAILS_FLY_ASCEND','TAILS_FLY_CARRY','TAILS_FLY_CARRY_ASCEND'}
         cleaned={d['id'] for d in walk}|{d['id'] for d in poses}
         for frame in manifest:
             if frame['angle_set']!='flat' or frame['animation'] in flight:continue
             self.assertNotEqual(frame['id'] in cleaned,frame['id'] in kept,frame['id'])
-        self.assertEqual(203,len(poses))
+        self.assertEqual(209,len(poses))                        # 203 less the six retired idle frames, plus his twelve
 
     def test_cleanup_stays_inside_a_material_and_leaves_goggles_beak_and_shoes_as_drawn(self):
         spec=importlib.util.spec_from_file_location('walk_cleanup',self.PROD/'walk_cleanup.py')

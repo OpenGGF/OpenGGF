@@ -107,7 +107,8 @@ class MicaCleanupTests(unittest.TestCase):
         record=json.loads((self.MICA/'sheet-despeckle.json').read_text())
         cleaned={drawing['id'] for drawing in record['drawings']}
         self.assertTrue({f'wait-0{i}' for i in range(9)}<=cleaned)        # her idle is kept and cleaned like any pose
-        self.assertFalse(cleaned&{'variant-s3k-b0','variant-s3k-b1','variant-s3k-b2','variant-s3k-b3','hang-00','hang-01','hang-02'})
+        self.assertTrue({'variant-s3k-b0','variant-s3k-b1','variant-s3k-b2','variant-s3k-b3'}<=cleaned)   # her victory keeps its drawings too
+        self.assertFalse(cleaned&{'hang-00','hang-01','hang-02'})
         self.assertGreaterEqual(len(cleaned),200)
 
     def test_the_tutorial_checkpoint_ships_the_cleaned_sheets_own_bytes(self):
@@ -215,7 +216,7 @@ class TalonLineartTests(unittest.TestCase):
         result=subprocess.run([sys.executable,'-I',str(PROD/'lineart_pass.py'),'--check'],capture_output=True,text=True)
         self.assertEqual(0,result.returncode,result.stdout+result.stderr)
         for name,frame in self.listed.items():
-            if frame['animation'] in lineart.REFERENCE|lineart.OTHER_LANE:self.assertNotIn(name,self.frames)
+            if name==lineart.DONOR or frame['animation'] in lineart.REFERENCE:self.assertNotIn(name,self.frames)
         self.assertGreaterEqual(sum(1 for entry in self.frames.values() if entry['head']),80)
 
     def test_references_and_the_other_lanes_frames_are_the_cleanup_stage_unchanged(self):
@@ -228,6 +229,7 @@ class TalonLineartTests(unittest.TestCase):
         for name,entry in self.frames.items():
             head=entry['head']
             if not head or head['angle'] or head['mirror'] or head['beak']!='closed':continue
+            if head.get('eye') or head.get('over'):continue           # a shut eye or a hand in front changes the head on purpose
             grid=self.grid(name)
             dx=self.listed[name]['hotspot'][0]-entry['hotspot_before'][0]
             dy=self.listed[name]['hotspot'][1]-entry['hotspot_before'][1]
