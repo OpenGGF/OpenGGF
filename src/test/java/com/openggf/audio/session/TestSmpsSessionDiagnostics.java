@@ -2,6 +2,7 @@ package com.openggf.audio.session;
 
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.driver.SmpsDriverServiceObserver;
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
 import com.openggf.audio.presentation.AudioPresentationCommand;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
@@ -17,6 +18,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -166,5 +168,55 @@ class TestSmpsSessionDiagnostics {
         registry.publishCommittedDiagnostics(registryMutation);
         session.publishCommittedDiagnostics();
         assertEquals(List.of(true), decisions);
+    }
+
+    @Test
+    void blockedSfxIsAnAdmissionDecisionNotAWarning() {
+        // The extra-life jingle blocks SFX requests natively (S3K zUpdateMusic
+        // .clr_sfx, Sound/Z80 Sound Driver.asm:662-679). That rejection is
+        // recorded through the admission observer; it is not a fault, and a
+        // warning per dropped request flooded the game-thread log.
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                new SmpsSessionTestFixtures.RecordingObserver());
+        session.install();
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(
+                new SmpsCoordFlagRuntimeState());
+        AudioPresentationSourceFactory factory =
+                new AudioPresentationSourceFactory(
+                        () -> true, handlers,
+                        AudioPresentationSourceFactory.Settings.defaults(),
+                        session);
+        List<String> warnings = new ArrayList<>();
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(
+                factory, factory, handlers, warnings::add, session);
+        List<SmpsRequestAdmissionPolicy.RejectionReason> reasons =
+                new ArrayList<>();
+        factory.setAdmissionObserver(decision ->
+                reasons.add(decision.result().reason()));
+        SmpsAssetKey key = new SmpsAssetKey(
+                "test", SmpsAssetKey.Route.BASE_ID, 0xA0, null);
+        factory.registerSmpsSfxAsset(
+                key, 0, new AudioTestFixtures.StubSmpsData("sfx"),
+                SmpsSessionTestFixtures.dac(),
+                new SmpsSequencerConfig.Builder().build(), false);
+        var source = factory.resolveSmpsSfx(
+                1, key, 1 << 16, 0x40, 0, 0, 128);
+        var command = new AudioPresentationCommand.AddSmpsSfx(
+                source, factory.prepareCached(source));
+        registry.setSfxBlocked(true);
+
+        SmpsDriverSession.LiveMutationToken sessionMutation =
+                session.captureLiveMutation();
+        AudioVoiceRegistry.LiveMutationToken registryMutation =
+                registry.captureLiveMutation();
+        assertNull(registry.prepareSessionSfx(command));
+        registry.commitLiveMutation(registryMutation);
+        session.commitLiveMutation(sessionMutation);
+        registry.publishCommittedDiagnostics(registryMutation);
+        session.publishCommittedDiagnostics();
+
+        assertEquals(List.of(SmpsRequestAdmissionPolicy.RejectionReason.BLOCKED),
+                reasons);
+        assertEquals(List.of(), warnings);
     }
 }
