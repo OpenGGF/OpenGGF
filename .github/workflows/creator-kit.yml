@@ -28,6 +28,11 @@ jobs:
           java-version: '25'
           distribution: temurin
           cache: maven
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install bundled character art tooling
+        run: python -m pip install Pillow==11.3.0
       - name: Verify portable kit tooling
         run: python3 -m unittest discover -s tools/modding -p 'test_*.py'
       - name: Build matching candidate artifacts
