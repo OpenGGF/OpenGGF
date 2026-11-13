@@ -470,6 +470,18 @@ under the matching area heading; see the
 
 ## Maintenance and release preparation
 
+- **All-level performance sweep:** `tools/performance/level_sweep.py` plays every
+  trace fixture and Sonic 3&K route movie through the frame-time probes, one at a
+  time. It reports frame time, allocation, garbage collection and hitches per
+  level and how far each replay got. It lists the slow frames that recur across
+  runs, and it matches profiler samples, including JDK 25 method traces, to those
+  frames. `RouteFrameBudgetProbe` takes a route's launch settings (`--game`,
+  `--width`, `--title-card`, `--intros`, `--emeralds`, `--vint-run-count`,
+  `--setup-step`, `--input-start`). `TraceBenchmarkTool --frame-log` records when
+  each frame started, so a recording can be lined up with it. The trace catalogue
+  now opens the Sonic 1 Scrap Brain Act 3 trace, which the ROM stores as Labyrinth
+  act 4, as Scrap Brain Act 3; trace tools failed to start it before.
+
 - **Accurate FM performance:** fold the Nuked sine and exponential lookup arithmetic
   into derived tables while preserving cycle-level output. A paired six-voice
   core benchmark measured 3.9% less rendering time; this is not a gameplay FPS claim.

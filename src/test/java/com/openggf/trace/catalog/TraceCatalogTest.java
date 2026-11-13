@@ -19,6 +19,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TraceCatalogTest {
 
     @Test
+    void sonic1Sbz3RecordedAsLabyrinthActFourLoadsScrapBrainActThree() {
+        // The ROM stores SBZ3 as id_LZ act index 3; its metadata reads zone_id 1, act 4.
+        TraceEntry sbz3 = TraceCatalog.scan(Path.of("src/test/resources/traces/s1")).stream()
+                .filter(entry -> entry.dir().getFileName().toString().equals("sbz3_completerun"))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(5, sbz3.zone(), "SBZ progression index");
+        assertEquals(2, sbz3.act(), "SBZ3 engine act index");
+
+        TraceEntry lz3 = TraceCatalog.scan(Path.of("src/test/resources/traces/s1")).stream()
+                .filter(entry -> entry.dir().getFileName().toString().equals("lz3_completerun"))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(3, lz3.zone(), "LZ progression index");
+        assertEquals(2, lz3.act(), "LZ3 engine act index");
+    }
+
+    @Test
     void everyCurrentV5RunManifestHasOneLaunchableCatalogEntry(@TempDir Path root)
             throws Exception {
         Path run = TraceV5RunFixture.writeS3kBonusRun(root.resolve("s3k/runs"));
