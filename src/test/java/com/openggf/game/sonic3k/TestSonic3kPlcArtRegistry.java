@@ -1102,6 +1102,9 @@ public class TestSonic3kPlcArtRegistry {
                                 reader, entry.mappingAddr(), entry.mappingFrameCount(), entry.mappingFormat())
                                 : S3kSpriteDataLoader.loadMappingFrames(
                                 reader, entry.mappingAddr(), entry.mappingFormat());
+                        // The whole parsed table is decoded on every level load, so a frame
+                        // filter must not hide a table read past its end.
+                        assertSaneMappingFrames(context + " level art table " + entry.key(), frames, -1);
                         if (entry.frameFilter() != null) {
                             List<SpriteMappingFrame> filtered = new ArrayList<>();
                             for (int frameIndex : entry.frameFilter()) {
@@ -1114,6 +1117,37 @@ public class TestSonic3kPlcArtRegistry {
 
                     for (Sonic3kPlcArtRegistry.StandaloneArtEntry entry : plan.standaloneArt()) {
                         assertSaneStandaloneEntry(context, reader, rom, art, entry);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void springLevelArtParsesOnlyItsOwnElevenFrameTables() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            for (int zone : new int[] {0, Sonic3kZoneIds.ZONE_MGZ, Sonic3kZoneIds.ZONE_LRZ}) {
+                for (Sonic3kPlcArtRegistry.LevelArtEntry entry : Sonic3kPlcArtRegistry.getPlan(zone, 0).levelArt()) {
+                    if (entry.mappingAddr() != Sonic3kConstants.MAP_SPRING_ADDR
+                            && entry.mappingAddr() != Sonic3kConstants.MAP_SPRING2_ADDR) {
+                        continue;
+                    }
+                    assertEquals(11, entry.mappingFrameCount(), entry.key());
+                    // The selected frames are the same frames a first-word count reaches;
+                    // only the neighbouring table's garbage tail is no longer decoded.
+                    List<SpriteMappingFrame> bounded = S3kSpriteDataLoader.loadMappingFrames(
+                            reader, entry.mappingAddr(), entry.mappingFrameCount(), entry.mappingFormat());
+                    List<SpriteMappingFrame> unbounded = S3kSpriteDataLoader.loadMappingFrames(
+                            reader, entry.mappingAddr(), entry.mappingFormat());
+                    assertTrue(unbounded.size() > bounded.size(), entry.key());
+                    assertEquals(unbounded.subList(0, bounded.size()), bounded, entry.key());
+                    for (int frame : entry.frameFilter()) {
+                        assertTrue(frame < bounded.size(), entry.key() + " frame " + frame);
                     }
                 }
             }
