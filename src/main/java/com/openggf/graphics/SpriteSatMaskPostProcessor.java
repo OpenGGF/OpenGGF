@@ -148,14 +148,50 @@ public final class SpriteSatMaskPostProcessor {
         }
         int total = 0;
         int nativeEntries = 0;
+        int tableSprites = raster.tableSprites();
         for (int slot = 0; slot < ordered; slot++) {
             int index = scratch.order[slot];
-            if (!scanlineLimits || entries.get(index).isGhost() || nativeEntries++ < raster.tableSprites()) {
+            if (!scanlineLimits || entries.get(index).isGhost() || nativeEntries++ < tableSprites) {
                 scratch.order[total++] = index;
             }
         }
+        // Hoist admitted geometry into slot-ordered primitive arrays: the scanline loop
+        // below visits every admitted entry on every raster line.
+        int height = raster.height();
+        int rasterX = raster.x();
+        int rasterRight = raster.x() + raster.width();
+        int rasterWidth = raster.width();
+        int hardwareWidth = raster.hardwareWidth();
+        int lineSprites = raster.lineSprites();
+        int firstLine = Integer.MAX_VALUE;
+        int endLine = Integer.MIN_VALUE;
+        for (int slot = 0; slot < total; slot++) {
+            int index = scratch.order[slot];
+            SpriteSatEntry entry = entries.get(index);
+            SpritePiece piece = entry.piece();
+            int top = piece.y();
+            int bottom = piece.endYExclusive();
+            scratch.top[slot] = top;
+            scratch.bottom[slot] = bottom;
+            scratch.width[slot] = piece.widthTiles();
+            scratch.ghost[slot] = entry.isGhost();
+            scratch.inside[slot] = piece.endXExclusive() > rasterX && piece.x() < rasterRight;
+            int rawX = scratch.xOverride[index];
+            if (rawX < 0) {
+                int biasedX = piece.x() - rasterX + 128;
+                // Expanded raster coordinates exceed the native nine-bit SAT field.
+                rawX = rasterWidth <= 320 ? biasedX & 0x1FF : biasedX;
+            }
+            scratch.rawX[slot] = rawX;
+            if (top < firstLine) firstLine = top;
+            if (bottom > endLine) endLine = bottom;
+        }
+        // A line no entry covers only clears the carried mask arm, so evaluation may
+        // start at the first covered line with nothing carried and stop after the last.
+        int firstRow = (int) Math.max(0L, Math.min(height, (long) firstLine - raster.y()));
+        int endRow = (int) Math.max(0L, Math.min(height, (long) endLine - raster.y()));
         boolean carry = false;
-        for (int row = 0; row < raster.height(); row++) {
+        for (int row = firstRow; row < endRow; row++) {
             int line = raster.y() + row;
             boolean armed = carry;
             boolean masked = false;
@@ -164,37 +200,30 @@ public final class SpriteSatMaskPostProcessor {
             int pixels = 0;
             boolean nativeExhausted = false;
             for (int slot = 0; slot < total; slot++) {
+                if (line < scratch.top[slot] || line >= scratch.bottom[slot]) continue;
                 int index = scratch.order[slot];
-                SpriteSatEntry entry = entries.get(index);
-                if (line < entry.piece().y() || line >= entry.piece().endYExclusive()) continue;
-                if (entry.isGhost()) {
-                    if (!masked && entry.piece().endXExclusive() > raster.x() && entry.piece().x() < raster.x() + raster.width()) {
-                        scratch.columns[index * raster.height() + row] = entry.piece().widthTiles();
+                if (scratch.ghost[slot]) {
+                    if (!masked && scratch.inside[slot]) {
+                        scratch.columns[index * height + row] = scratch.width[slot];
                     }
                     continue;
                 }
                 if (nativeExhausted) continue;
-                if (scanlineLimits && count++ == raster.lineSprites()) {
+                if (scanlineLimits && count++ == lineSprites) {
                     nativeExhausted = true;
                     continue;
                 }
-                int rawX = scratch.xOverride[index];
-                if (rawX < 0) {
-                    int biasedX = entry.piece().x() - raster.x() + 128;
-                    // Expanded raster coordinates exceed the native nine-bit SAT field.
-                    rawX = raster.width() <= 320 ? biasedX & 0x1FF : biasedX;
-                }
-                if (rawX != 0) armed = true;
+                if (scratch.rawX[slot] != 0) armed = true;
                 else if (armed) masked = true;
+                int widthTiles = scratch.width[slot];
                 int columns = scanlineLimits
-                        ? Math.min(entry.piece().widthTiles(), Math.max(0, (raster.hardwareWidth() - pixels) / 8))
-                        : entry.piece().widthTiles();
-                pixels += entry.piece().widthTiles() * 8;
-                if (!masked && !scratch.control[index]
-                        && entry.piece().endXExclusive() > raster.x() && entry.piece().x() < raster.x() + raster.width()) {
-                    scratch.columns[index * raster.height() + row] = columns;
+                        ? Math.min(widthTiles, Math.max(0, (hardwareWidth - pixels) / 8))
+                        : widthTiles;
+                pixels += widthTiles * 8;
+                if (!masked && !scratch.control[index] && scratch.inside[slot]) {
+                    scratch.columns[index * height + row] = columns;
                 }
-                if (scanlineLimits && pixels >= raster.hardwareWidth()) {
+                if (scanlineLimits && pixels >= hardwareWidth) {
                     carry = true;
                     nativeExhausted = true;
                 }
@@ -232,12 +261,16 @@ public final class SpriteSatMaskPostProcessor {
                 left = Math.max(left, entry.piece().startColTile());
                 right = Math.min(right, entry.piece().startColTile() + entry.piece().colCountTiles());
                 if (right > left) {
-                    SpriteSatEntry clipped = left == entry.piece().startColTile() && right - left == entry.piece().colCountTiles()
-                            ? entry : entry.clipRect(left, right - left, entry.piece().startRowTile(), entry.piece().rowCountTiles());
-                    if (start != Math.max(entry.piece().y(), entry.visibleTopY())
-                            || end != Math.min(entry.piece().endYExclusive(), entry.visibleBottomY())) {
-                        clipped = clipped.withVisibleScanlines(start, end);
-                    }
+                    boolean wholeColumns = left == entry.piece().startColTile()
+                            && right - left == entry.piece().colCountTiles();
+                    boolean wholeLines = start == Math.max(entry.piece().y(), entry.visibleTopY())
+                            && end == Math.min(entry.piece().endYExclusive(), entry.visibleBottomY());
+                    SpriteSatEntry clipped;
+                    if (wholeColumns && wholeLines) clipped = entry;
+                    else if (wholeColumns) clipped = entry.withVisibleScanlines(start, end);
+                    else clipped = entry.clipRectAndScanlines(left, right - left, entry.piece().startRowTile(),
+                            entry.piece().rowCountTiles(), wholeLines ? entry.visibleTopY() : start,
+                            wholeLines ? entry.visibleBottomY() : end);
                     appendReplay(clipped, scratch.processed);
                 }
             }
@@ -254,7 +287,9 @@ public final class SpriteSatMaskPostProcessor {
                 ? admitted.piece().widthTiles() - admitted.piece().startColTile() - admitted.piece().colCountTiles()
                 : admitted.piece().startColTile()) * 8;
         int right = left + admitted.piece().colCountTiles() * 8;
-        for (SpriteSatEntry fragment : admitted.replayFragments()) {
+        List<SpriteSatEntry> fragments = admitted.replayFragments();
+        for (int i = 0, n = fragments.size(); i < n; i++) {
+            SpriteSatEntry fragment = fragments.get(i);
             int firstScreenCol = Math.max(0, Math.floorDiv(left - fragment.piece().x() + 7, 8));
             int endScreenCol = Math.min(fragment.piece().widthTiles(), Math.floorDiv(right - fragment.piece().x(), 8));
             int sourceLeft = fragment.piece().hFlip() ? fragment.piece().widthTiles() - endScreenCol : firstScreenCol;
@@ -266,8 +301,8 @@ public final class SpriteSatMaskPostProcessor {
             int bottom = Math.min(Math.min(admitted.visibleBottomY(), admitted.piece().endYExclusive()),
                     Math.min(fragment.piece().endYExclusive(), fragment.visibleBottomY()));
             if (sourceRight > sourceLeft && bottom > top) {
-                output.add(fragment.clipRect(sourceLeft, sourceRight - sourceLeft,
-                        fragment.piece().startRowTile(), fragment.piece().rowCountTiles()).withVisibleScanlines(top, bottom));
+                output.add(fragment.clipRectAndScanlines(sourceLeft, sourceRight - sourceLeft,
+                        fragment.piece().startRowTile(), fragment.piece().rowCountTiles(), top, bottom));
             }
         }
     }
@@ -278,6 +313,13 @@ public final class SpriteSatMaskPostProcessor {
         int[] xOverride = new int[0];
         int[] order = new int[0];
         boolean[] control = new boolean[0];
+        // Slot-ordered admitted geometry, valid for the current call only.
+        int[] top = new int[0];
+        int[] bottom = new int[0];
+        int[] width = new int[0];
+        int[] rawX = new int[0];
+        boolean[] ghost = new boolean[0];
+        boolean[] inside = new boolean[0];
 
         void reset(int size, int height) {
             int cells = Math.multiplyExact(size, height);
@@ -287,6 +329,12 @@ public final class SpriteSatMaskPostProcessor {
                 order = new int[size];
                 xOverride = new int[size];
                 control = new boolean[size];
+                top = new int[size];
+                bottom = new int[size];
+                width = new int[size];
+                rawX = new int[size];
+                ghost = new boolean[size];
+                inside = new boolean[size];
             } else Arrays.fill(control, 0, size, false);
             Arrays.fill(xOverride, 0, size, -1);
         }
