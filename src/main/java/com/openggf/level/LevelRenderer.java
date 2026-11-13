@@ -1298,12 +1298,12 @@ public final class LevelRenderer {
 
     private int[] presentationHScroll() {
         return currentScrollPresentation == null ? lm.parallaxManager.getHScrollForShader()
-                : currentScrollPresentation.horizontal();
+                : currentScrollPresentation.horizontalView();
     }
 
     private short[] presentationForegroundColumns() {
         return currentScrollPresentation == null ? lm.parallaxManager.getVScrollPerColumnFGForShader()
-                : currentScrollPresentation.foregroundColumns();
+                : currentScrollPresentation.foregroundColumnsView();
     }
 
     private short presentationForegroundY() {
@@ -1853,9 +1853,9 @@ public final class LevelRenderer {
 
         int[] hScrollData = presentationHScroll();
         short[] vScrollData = currentScrollPresentation == null
-                ? lm.parallaxManager.getVScrollPerLineBGForShader() : currentScrollPresentation.backgroundLines();
+                ? lm.parallaxManager.getVScrollPerLineBGForShader() : currentScrollPresentation.backgroundLinesView();
         short[] vScrollColumnData = currentScrollPresentation == null
-                ? lm.parallaxManager.getVScrollPerColumnBGForShader() : currentScrollPresentation.backgroundColumns();
+                ? lm.parallaxManager.getVScrollPerColumnBGForShader() : currentScrollPresentation.backgroundColumnsView();
 
         int bgCameraX = currentScrollPresentation == null ? lm.parallaxManager.getBgCameraX()
                 : currentScrollPresentation.registers().backgroundX();

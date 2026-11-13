@@ -493,11 +493,27 @@ under the matching area heading; see the
   second of FM sound while that compile runs.
 
 - **Draw-path caller checks:** engine renderers now pass the engine-caller
-  stack check once per picture or sprite-table pass, not once per frozen
-  pattern, tile or bucket. Calls from mod-loaded classes, including method
-  references, are still refused. Physics reads the local-fluid flag without
-  a stack walk. The Lava Reef 1 allocation profile put about 30% of the game's
-  per-frame allocation in these walks; this is not a frame-rate claim.
+  stack check once per render host, not once per picture, frozen pattern, tile,
+  bucket or frame. Sonic 1's placed rings keep their admitted draw handle instead
+  of checking each ring every frame, and the sprite-table and HUD submissions
+  check once. Calls from mod-loaded classes, including method references, are
+  still refused. Physics reads the local-fluid flag without a stack walk. The
+  Lava Reef 1 allocation profile put about 30% of the game's per-frame
+  allocation in these walks; this is not a frame-rate claim.
+
+- **Steady per-frame allocation:** native sprite drawing keeps one scratch
+  stencil image per GL context instead of creating and deleting a renderbuffer
+  and framebuffer every frame. The widescreen bounds-mask fade shares identical
+  opacity rows between frames instead of copying seven rows a frame; each state
+  still has its own unchangeable copy. Sprite-table assembly looks up each
+  queued object slot once per pass instead of scanning every object per slot,
+  and skips that scan for empty slots that hold no attracted ring. The HUD time
+  text, the scroll arrays passed to the renderer, unchanged H-scroll uploads and
+  the per-tile sprite replay callback no longer allocate or upload every frame.
+  Which object owns a slot, and so the order in which objects run, is unchanged.
+  Across Sonic 1 Green Hill 1 and Spring Yard 1, Sonic 2 Emerald Hill 1 and
+  Sonic 3&K Angel Island trace replays, median allocation per frame fell from
+  108-148 KB to 70-111 KB (25-37% less), so young collections run less often.
 
 - **Sonic 3&K level load and respawn cost:** every Sonic 3&K level load, including
   each death respawn, read the spring mapping tables using a frame count taken
