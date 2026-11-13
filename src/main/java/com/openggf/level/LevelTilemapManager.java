@@ -244,6 +244,9 @@ public class LevelTilemapManager {
 
     /** Snapshot native residency before directing another view; never mutate its descriptor arrays. */
     LevelTilemapManager cinematicBackgroundCopy() {
+        // The copy clones the foreground array and has no layout record or coverage owner,
+        // so a streamed image must be complete before it is cloned.
+        completeForegroundStream();
         var copy = new LevelTilemapManager(geometry, graphicsManager, gameState);
         copy.cinematicBackground = true;
         copy.backgroundDescriptorRevision = backgroundDescriptorRevision;
