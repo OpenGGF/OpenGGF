@@ -54,7 +54,8 @@
              classes (META-INF/openggf/bundled-mods.json); an empty list writes an empty
              manifest. The universal-jar profile embeds the jars; native packages carry
              the same jars in bundled/ beside the executable. -->
-        <openggf.bundled.mods>racing/time-attack</openggf.bundled.mods>
+        <openggf.bundled.mods>racing/time-attack,examples/mica-and-talon</openggf.bundled.mods>
+        <bundled.python>python3</bundled.python>
         <!-- Multiplayer channel of player builds: selects this build's default master host
              from racing/deploy/master-channels.properties (master, develop or next) into the
              generated network-defaults.properties of every bundled mod. CI passes the branch
@@ -1572,6 +1573,21 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                                 <argument>--channel=${openggf.multiplayer.channel}</argument>
                                 <argument>--default-master=${openggf.multiplayer.defaultMaster}</argument>
                                 <argument>--output=${project.build.directory}/bundled-mod-overlay</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>prepare-mica-bundled-resources</id>
+                        <phase>prepare-package</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <skip>${openggf.bundled.skip}</skip>
+                            <executable>${bundled.python}</executable>
+                            <arguments>
+                                <argument>${project.basedir}/examples/mica-and-talon/build.py</argument>
+                                <argument>--prepare-resources</argument>
+                                <argument>${project.build.directory}/bundled-mod-resources/examples/mica-and-talon</argument>
+                                <argument>--classpath</argument><classpath/>
                             </arguments>
                         </configuration>
                     </execution>

@@ -42,7 +42,11 @@ def main():
     parser.add_argument("--run", action="store_true", help="launch the JVM engine with this development mod")
     parser.add_argument("--save-root", type=Path, default=OUTPUT / "player-settings",
                         help="developer player settings root (requested settings only)")
+    parser.add_argument("--prepare-resources", type=Path, help="prepare bundled art only in this directory")
+    parser.add_argument("--classpath", help="matching engine build classpath for resource preparation")
     args = parser.parse_args()
+    if args.prepare_resources and (not args.classpath or args.run):
+        parser.error("--prepare-resources requires --classpath and cannot be combined with --run")
     java_home = os.environ.get("JAVA_HOME")
     suffix = ".exe" if os.name == "nt" else ""
     def java_tool(name):
@@ -50,17 +54,20 @@ def main():
     def run(command):
         subprocess.run(command, cwd=ROOT, check=True)
     import sys
-    run([sys.executable, "tools/testing/maven_queue.py", "-B", "-Dmse=off", "-DskipTests",
-         "compile", "dependency:build-classpath", "-Dmdep.outputFile=target/mica-classpath.txt"])
-    classes = OUTPUT / "classes"
+    if not args.prepare_resources:
+        run([sys.executable, "tools/testing/maven_queue.py", "-B", "-Dmse=off", "-DskipTests",
+             "compile", "dependency:build-classpath", "-Dmdep.outputFile=target/mica-classpath.txt"])
+    classes = args.prepare_resources or OUTPUT / "classes"
     if classes.exists():
         shutil.rmtree(classes)
     classes.mkdir(parents=True)
-    classpath = os.pathsep.join([str(ROOT / "target/classes"),
+    classpath = args.classpath or os.pathsep.join([str(ROOT / "target/classes"),
                                 (ROOT / "target/mica-classpath.txt").read_text().strip()])
-    run([java_tool("javac"), "--release", "25", "-cp", classpath, "-d", str(classes),
-         *map(str, sorted((PROJECT / "src/main/java").rglob("*.java")))])
-    shutil.copytree(PROJECT / "src/main/resources", classes, dirs_exist_ok=True)
+    if not args.prepare_resources:
+        run([java_tool("javac"), "--release", "25", "-cp", classpath, "-d", str(classes),
+             *map(str, sorted((PROJECT / "src/main/java").rglob("*.java")))])
+    if not args.prepare_resources:
+        shutil.copytree(PROJECT / "src/main/resources", classes, dirs_exist_ok=True)
     (classes / "art").mkdir(exist_ok=True)
     cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath,
            "com.openggf.tools.modsdk.GgfModCli"]
@@ -77,6 +84,8 @@ def main():
                 target = classes / destination / asset.relative_to(PROJECT / source)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(asset, target)
+    if args.prepare_resources:
+        return
     jar = OUTPUT / "mica-and-talon.jar"
     jar.unlink(missing_ok=True)
     run([*cli, "package", "--input", str(classes), "--out", str(jar)])

@@ -41,7 +41,7 @@ class TestBuildToolingGuard {
     private static final String FULL_CI_JOB_CONDITION = "github.event_name == 'workflow_dispatch'"
             + " || (github.event_name == 'pull_request' && !github.event.pull_request.draft)";
     private static final String NATIVE_PREPARE_COMMAND =
-            "mvn -Dmse=off package -Pnative -Dmaven.test.skip=true -Dnative.python=python"
+            "mvn -Dmse=off package -Pnative -Dmaven.test.skip=true -Dnative.python=python -Dbundled.python=python"
                     + " -Dnative.stage=prepare -Dnative.macos.package.skip=true -B";
 
     private static final Path POLICY_SCRIPT = Path.of(".githooks/validate-policy.sh").toAbsolutePath();
