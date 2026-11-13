@@ -30,6 +30,8 @@ public record SpritePiece(
     }
 
     public SpritePiece clipRect(int col, int cols, int row, int rows) {
+        // Immutable: an unchanged window is this piece (SAT fragment replay mostly re-clips whole pieces).
+        if (col == startColTile && cols == colCountTiles && row == startRowTile && rows == rowCountTiles) return this;
         return new SpritePiece(x, y, widthTiles, heightTiles, firstPatternIndex, rawTileWordLow11, paletteIndex,
                 hFlip, vFlip, piecePriority, globalHighPriority, maskReplayRole, col, cols, row, rows, debugSource);
     }

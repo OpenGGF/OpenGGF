@@ -55,8 +55,10 @@ class TestPresentationGraphicsAccess {
                 public static Function<GraphicsManager,Object> hiddenBatch(){return PresentationGraphicsAccess::batch;}
                 public static Object objects(ObjectManager m,GraphicsManager g){return ObjectDrawInternalAccess.bucketPass(m,g);}
                 public static BiFunction<ObjectManager,GraphicsManager,Object> hiddenObjects(){return ObjectDrawInternalAccess::bucketPass;}
-                public static Object rings(RingManager m){return RingDrawInternalAccess.attractedPass(m);}
-                public static Function<RingManager,Object> hiddenRings(){return RingDrawInternalAccess::attractedPass;}
+                public static Object rings(RingManager m){return RingDrawInternalAccess.engine(m);}
+                public static Function<RingManager,Object> hiddenRings(){return RingDrawInternalAccess::engine;}
+                public static Object sat(GraphicsManager g){return SpriteSatInternalAccess.engine(g);}
+                public static Function<GraphicsManager,Object> hiddenSat(){return SpriteSatInternalAccess::engine;}
             }
             """);
         assertEquals(0,ToolProvider.getSystemJavaCompiler().run(null,null,null,"--release","25","-classpath",System.getProperty("java.class.path"),"-d",temp.toString(),source.toString()));
@@ -65,7 +67,8 @@ class TestPresentationGraphicsAccess {
             var graphics=new GraphicsManager();
             for(var direct:new Object[][]{{"batch",new Class<?>[]{GraphicsManager.class},new Object[]{graphics}},
                     {"objects",new Class<?>[]{com.openggf.level.objects.ObjectManager.class,GraphicsManager.class},new Object[]{null,graphics}},
-                    {"rings",new Class<?>[]{com.openggf.level.rings.RingManager.class},new Object[]{null}}}) {
+                    {"rings",new Class<?>[]{com.openggf.level.rings.RingManager.class},new Object[]{null}},
+                    {"sat",new Class<?>[]{GraphicsManager.class},new Object[]{graphics}}}) {
                 var denied=assertThrows(InvocationTargetException.class,
                         ()->probe.getMethod((String)direct[0],(Class<?>[])direct[1]).invoke(null,(Object[])direct[2]));
                 assertInstanceOf(SecurityException.class,denied.getCause(),(String)direct[0]);
@@ -76,6 +79,8 @@ class TestPresentationGraphicsAccess {
             assertThrows(SecurityException.class,()->objects.apply(null,graphics));
             @SuppressWarnings("unchecked")var rings=(java.util.function.Function<com.openggf.level.rings.RingManager,Object>)probe.getMethod("hiddenRings").invoke(null);
             assertThrows(SecurityException.class,()->rings.apply(null));
+            @SuppressWarnings("unchecked")var sat=(java.util.function.Function<GraphicsManager,Object>)probe.getMethod("hiddenSat").invoke(null);
+            assertThrows(SecurityException.class,()->sat.apply(graphics));
         }
     }
     @Test void anAdmittedBatchAnswersLikeTheCheckedBridgeWithoutAllocatingPerCall() {

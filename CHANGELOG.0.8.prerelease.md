@@ -31,6 +31,19 @@ under the matching area heading; see the
   writer's result against a full rebuild. The Lava Reef crusher's single-cell path
   is folded into it. Pixels are unchanged.
 
+- **Art upload stutters:** changing level art, animated tiles or a tilemap no
+  longer makes the frame wait for the graphics driver. Uploading straight from
+  memory made the engine wait until the driver had worked through everything
+  queued before it. On an integrated GPU that also draws the desktop, one small
+  update could take 100-700 ms: the Angel Island 1 intro, Hydrocity, Flying
+  Battery, and about 230 ms at the Marble Garden act change. The art now goes
+  through a pixel buffer that the GPU copies from, so the frame carries on. Over
+  twelve runs per side on the integrated GPU, uploads slower than 16.7 ms after
+  the level had loaded went from seven (worst 701 ms) to none (worst 8 ms); the
+  discrete GPU was already below 12 ms. Waits while a level loads remain. Each
+  art upload also stopped allocating a version record and a boxed tile number,
+  about 16% of Angel Island's per-frame allocation. Pixels are unchanged.
+
 - **Blue Spheres:** new under **Extras** when the Sonic 3&K and Sonic 1 ROMs
   are both present. It is the game Sonic & Knuckles starts with Sonic 1 locked
   on, rebuilt from the S&K ROM: the title and menu, endless generated stages,
@@ -495,6 +508,18 @@ under the matching area heading; see the
   each frame started, so a recording can be lined up with it. The trace catalogue
   now opens the Sonic 1 Scrap Brain Act 3 trace, which the ROM stores as Labyrinth
   act 4, as Scrap Brain Act 3; trace tools failed to start it before.
+  `RouteFrameBudgetProbe --audio` now presents one audio frame per step, as the
+  game loop does. Before, the sound driver never advanced in route runs: an
+  extra-life jingle never ended, so every later sound effect was refused, and
+  sound commands queued up and were applied in one burst at the next music
+  change. That burst is the 17-25 ms "first sound effect" frame the first sweep
+  reported in FBZ1, SOZ1, LRZ1, DEZ1 and DDZ; with audio presented those
+  frames take 1-2 ms.
+
+- **Quieter extra-life sound effects:** a sound effect requested while the
+  extra-life jingle plays is still dropped, as the ROM drivers drop it, but no
+  longer writes a warning to the log for each request. The admission observer
+  still records the refusal.
 
 - **Accurate FM performance:** fold the Nuked sine and exponential lookup arithmetic
   into derived tables while preserving cycle-level output. A paired six-voice
@@ -507,11 +532,27 @@ under the matching area heading; see the
   second of FM sound while that compile runs.
 
 - **Draw-path caller checks:** engine renderers now pass the engine-caller
-  stack check once per picture or sprite-table pass, not once per frozen
-  pattern, tile or bucket. Calls from mod-loaded classes, including method
-  references, are still refused. Physics reads the local-fluid flag without
-  a stack walk. The Lava Reef 1 allocation profile put about 30% of the game's
-  per-frame allocation in these walks; this is not a frame-rate claim.
+  stack check once per render host, not once per picture, frozen pattern, tile,
+  bucket or frame. Sonic 1's placed rings keep their admitted draw handle instead
+  of checking each ring every frame, and the sprite-table and HUD submissions
+  check once. Calls from mod-loaded classes, including method references, are
+  still refused. Physics reads the local-fluid flag without a stack walk. The
+  Lava Reef 1 allocation profile put about 30% of the game's per-frame
+  allocation in these walks; this is not a frame-rate claim.
+
+- **Steady per-frame allocation:** native sprite drawing keeps one scratch
+  stencil image per GL context instead of creating and deleting a renderbuffer
+  and framebuffer every frame. The widescreen bounds-mask fade shares identical
+  opacity rows between frames instead of copying seven rows a frame; each state
+  still has its own unchangeable copy. Sprite-table assembly looks up each
+  queued object slot once per pass instead of scanning every object per slot,
+  and skips that scan for empty slots that hold no attracted ring. The HUD time
+  text, the scroll arrays passed to the renderer, unchanged H-scroll uploads and
+  the per-tile sprite replay callback no longer allocate or upload every frame.
+  Which object owns a slot, and so the order in which objects run, is unchanged.
+  Across Sonic 1 Green Hill 1 and Spring Yard 1, Sonic 2 Emerald Hill 1 and
+  Sonic 3&K Angel Island trace replays, median allocation per frame fell from
+  108-148 KB to 70-111 KB (25-37% less), so young collections run less often.
 
 - **Sonic 3&K level load and respawn cost:** every Sonic 3&K level load, including
   each death respawn, read the spring mapping tables using a frame count taken
@@ -523,6 +564,24 @@ under the matching area heading; see the
   headless Lava Reef 1 measurement a respawn now allocates 8.8 MB instead of
   65.6 MB and takes about 10-15 ms instead of 21-28 ms once warm; the first load
   allocates about 103 MB instead of 160 MB.
+
+- **Load, act-transition and menu load cost:** five Sonic 2 sprite tables
+  (springs, breathing bubbles, the Grabber's string, Grounder and its rocks)
+  and the Sonic 3&K Gumball bonus springs took their frame count from a first
+  offset word that points past the table, so loading them decoded up to about
+  a million meaningless sprite pieces (about 40 MB for the Grabber string
+  alone). They now read the number of frames the disassembly lists; the frames
+  that are drawn are unchanged. Kosinski Moduled art now decompresses straight
+  from the ROM instead of from a copied 64 KB-256 KB window, and the title
+  card, title screen, continue screen, character font and Sonic 3&K data
+  select no longer copy everything from the art to the end of the ROM before
+  decompressing it. Pattern decoding reuses one tile buffer, and ROM reads use
+  the ROM's in-memory copy instead of a locked file read. In headless
+  measurements a Sonic 3&K seamless act transition allocates about 3.1-4.1 MB
+  instead of 3.9-5.1 MB (FBZ 6.8 MB instead of 7.6 MB), a respawn reload about
+  1.5-2.5 MB less, a Sonic 2 CPZ or ARZ respawn about 3 MB instead of
+  11-12 MB, the Sonic 3&K data select load 1 MB instead of 24 MB and a title
+  card's art 0.1 MB instead of 36 MB.
 
 - **Sprite presentation performance:** the native SAT post-pass evaluates each
   scanline from primitive per-entry arrays and only over lines that sprites cover.

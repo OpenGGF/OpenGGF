@@ -484,6 +484,7 @@ class TestNativeSpriteOwnershipPixels {
                 assertFalse(java.util.Arrays.equals(java.util.Arrays.copyOfRange(original, 0, 32 * 2),
                         java.util.Arrays.copyOfRange(original, (224 * 352 + 320) * 2, (224 * 352 + 352) * 2)),
                         "Positive control: depth sentinels differ outside the viewport");
+                int firstScratch = 0;
                 for (int replay = 0; replay < 3; replay++) {
                     fixture.clear(scene.fboId());
                     glBindFramebuffer(GL_READ_FRAMEBUFFER, foreignRead.fboId());
@@ -503,7 +504,11 @@ class TestNativeSpriteOwnershipPixels {
                     try (var ignored = NativeSpriteOwnership.open(fixture.graphics)) {
                         scratch = packedScratchDepth(scene, 352, 256, 0);
                     }
-                    assertFalse(glIsRenderbuffer(scratch), "The scratch image must be deleted on normal close");
+                    // The scratch image is context-owned: it survives the scope, detached, and is reused.
+                    assertTrue(glIsRenderbuffer(scratch), "The context-owned scratch image survives a normal close");
+                    assertEquals(scratch, fixture.graphics.nativeSpriteScratch().renderbufferName());
+                    if (replay == 0) firstScratch = scratch;
+                    else assertEquals(firstScratch, scratch, "Every scope reuses one scratch image");
                     assertEquals(before, state());
                     if (replay == 0) fixture.sat(1, false, false, 2, true);
                     else fixture.layers(replay == 2, new ReplayLayer(1, true, .5f), new ReplayLayer(2, true, null));
@@ -528,12 +533,15 @@ class TestNativeSpriteOwnershipPixels {
                             }, 0, 0, 320, 224));
                     assertEquals("injected depth target draw failure", failure.getMessage());
                     assertTrue(failedScratch[0] != 0);
-                    assertFalse(glIsRenderbuffer(failedScratch[0]), "Queued failure must delete the scratch image");
+                    assertEquals(firstScratch, failedScratch[0], "A queued draw failure keeps the reusable image");
+                    assertTrue(glIsRenderbuffer(failedScratch[0]));
                     assertEquals(before, state());
                     assertDepthTargetRestored(scene, 352, 256, original);
                     assertFalse(fixture.graphics.nativeSpriteOwnershipActive());
                     assertEquals(GL_NO_ERROR, glGetError());
                 }
+                fixture.graphics.nativeSpriteScratch().delete();
+                assertFalse(glIsRenderbuffer(firstScratch), "Releasing the context's scratch deletes the image");
             } finally {
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);
                 glBindRenderbuffer(GL_RENDERBUFFER, 0);
@@ -574,6 +582,8 @@ class TestNativeSpriteOwnershipPixels {
                 });
                 assertEquals("clearing native SAT coverage: GL error 0x500", failure.getMessage());
                 assertEquals(0, failure.getSuppressed().length);
+                assertEquals(0, fixture.graphics.nativeSpriteScratch().renderbufferName(),
+                        "A failed begin releases the scratch so the next scope recreates it");
                 assertEquals(before, state());
                 assertDepthTargetRestored(scene, 320, 224, original);
                 assertFalse(fixture.graphics.nativeSpriteOwnershipActive());

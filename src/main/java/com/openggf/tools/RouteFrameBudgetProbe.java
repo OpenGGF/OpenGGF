@@ -38,7 +38,10 @@ import static org.lwjgl.opengl.GL11.glFinish;
  * {@code --setup-step} (one neutral step before the movie, as captures that
  * consume the one-shot setup pass do) and {@code --input-start N} (first movie
  * row to drive),
- * {@code --frames N} (default whole movie), {@code --rewind}, {@code --audio},
+ * {@code --frames N} (default whole movie), {@code --rewind}, {@code --audio}
+ * (presents one outer audio frame per step, as {@code GameLoop} and
+ * {@link TraceBenchmarkTool} do; without it the SMPS driver never advances,
+ * so an extra-life jingle never restores and queued commands drain in bursts),
  * {@code --paced} (sleep to 60 Hz so background preparers get real wall time)
  * and {@code --frame-log <csv>}. Origin: 2026-11-12 LRZ frame-budget study;
  * launch-state flags added by the 2026-11-13 all-level performance sweep
@@ -129,6 +132,9 @@ public final class RouteFrameBudgetProbe {
             }
             if (setupStep) {
                 session.step(null);
+                if (audio) {
+                    HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+                }
             }
             PerformanceProfiler profiler = GameServices.profiler();
             profiler.reset();
@@ -148,6 +154,11 @@ public final class RouteFrameBudgetProbe {
                 long stepped = System.nanoTime();
                 session.renderFrame();
                 long rendered = System.nanoTime();
+                if (audio) {
+                    profiler.beginSection("audio");
+                    HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+                    profiler.endSection("audio");
+                }
                 stepMs[frame] = (stepped - start) / 1e6;
                 renderMs[frame] = (rendered - stepped) / 1e6;
                 profiler.beginSection("render.gpu_wait");

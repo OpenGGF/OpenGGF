@@ -430,12 +430,16 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         }
         releaseSfxBlockWhenFadeInEnds();
         if (sfxBlocked) {
+            // Native policy, not a fault: the drivers drop SFX requests while
+            // the extra-life jingle owns the music (S3K zUpdateMusic .clr_sfx,
+            // Sound/Z80 Sound Driver.asm:662-679; S1/S2 f_1up_playing and
+            // f_fadein_flag, s1.sounddriver.asm:978-982, s2.sounddriver.asm:
+            // 2118-2120). The admission observer records the BLOCKED decision;
+            // a warning per request flooded the log on the game thread.
             observeAdmissionQuarantined(
                     sfxInstantiation.rejectedAdmission(admission,
                             SmpsRequestAdmissionPolicy.RejectionReason
                                     .BLOCKED));
-            warnRejected(source.standaloneVoiceId(),
-                    "SMPS SFX blocked at presentation boundary");
             return null;
         }
         com.openggf.audio.session.PreparedSmpsSfxProgram program;

@@ -1,11 +1,15 @@
 package com.openggf.data.compression;
 
+import com.openggf.data.RomByteReader;
+import com.openggf.data.RomChannel;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.SeekableByteChannel;
 import java.util.Arrays;
 
 /**
@@ -234,9 +238,48 @@ public class KosinskiReader {
         if (offset + 2 > data.length) {
             throw new IOException("Not enough data for Kosinski Moduled header");
         }
+        return decompressModuled(decodeModuledSize(data, offset), offset, data.length, pos -> {
+            int remaining = data.length - pos;
+            ByteArrayInputStream bais = new ByteArrayInputStream(data, pos, remaining);
+            byte[] moduleData = decompress(Channels.newChannel(bais));
+            return new DecodedModule(moduleData, remaining - bais.available());
+        });
+    }
 
-        // Read 2-byte big-endian header: total uncompressed size
-        int fullSize = decodeModuledSize(data, offset);
+    /**
+     * Decompresses Kosinski Moduled data straight from a ROM reader. Each module
+     * reads only its own bytes, so a caller need not copy a guessed window of the
+     * ROM first; the result equals {@link #decompressModuled(byte[], int)} over
+     * any array holding the same archive bytes.
+     *
+     * @param reader  The ROM reader holding the archive.
+     * @param address The address of the archive's two-byte size header.
+     * @return The decompressed data as a byte array.
+     * @throws IOException If the archive is truncated or malformed.
+     */
+    public static byte[] decompressModuled(RomByteReader reader, int address) throws IOException {
+        if (address < 0 || address + 2 > reader.size()) {
+            throw new IOException("Not enough data for Kosinski Moduled header");
+        }
+        int encoded = reader.readU16BE(address);
+        int fullSize = encoded == 0xA000 ? 0x8000 : encoded;
+        return decompressModuled(fullSize, address, reader.size(), pos -> {
+            SeekableByteChannel channel = RomChannel.at(reader, pos);
+            byte[] moduleData = decompress(channel);
+            return new DecodedModule(moduleData, (int) (channel.position() - pos));
+        });
+    }
+
+    private record DecodedModule(byte[] data, int compressedBytesConsumed) {
+    }
+
+    @FunctionalInterface
+    private interface ModuleDecoder {
+        DecodedModule decodeAt(int position) throws IOException;
+    }
+
+    private static byte[] decompressModuled(int fullSize, int offset, int limit, ModuleDecoder decoder)
+            throws IOException {
         if (fullSize == 0) {
             return new byte[0];
         }
@@ -246,22 +289,17 @@ public class KosinskiReader {
         }
 
         ByteArrayOutputStream output = new ByteArrayOutputStream(fullSize);
-        int pos = offset + 2; // current position in the data array
+        int pos = offset + 2; // current position in the source
 
         while (output.size() < fullSize) {
-            if (pos >= data.length) {
+            if (pos >= limit) {
                 throw new IOException("Unexpected end of data in Kosinski Moduled stream");
             }
 
             // Decompress one standard Kosinski module
-            int remaining = data.length - pos;
-            ByteArrayInputStream bais = new ByteArrayInputStream(data, pos, remaining);
-            ReadableByteChannel channel = Channels.newChannel(bais);
-            byte[] moduleData = decompress(channel);
-            int compressedBytesConsumed = remaining - bais.available();
-
-            output.write(moduleData);
-            pos += compressedBytesConsumed;
+            DecodedModule module = decoder.decodeAt(pos);
+            output.write(module.data());
+            pos += module.compressedBytesConsumed();
 
             if (output.size() >= fullSize) {
                 break;
