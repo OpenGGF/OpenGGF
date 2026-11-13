@@ -80,10 +80,10 @@ class TestS3kPreparedReloadEquivalence {
         int installs = manager.preparedLevelInstallCount();
         Level before = manager.getCurrentLevel();
         assertTrue(LevelReloadPreparationAccess.prepareCurrentLevelReload(manager));
-        assertEquals(LevelLoadPreparer.Purpose.RELOAD, manager.pendingPreparedLevelLoadPurpose());
+        assertEquals(LevelLoadPreparer.Purpose.RELOAD, manager.preparedLoads.preparer.pendingPurpose());
         manager.respawnPlayer();
         assertEquals(installs + 1, manager.preparedLevelInstallCount(), "the respawn used the prepared build");
-        assertNull(manager.pendingPreparedLevelLoadPurpose());
+        assertNull(manager.preparedLoads.preparer.pendingPurpose());
         assertNotSame(before, manager.getCurrentLevel());
         Level prepared = manager.getCurrentLevel();
         int[] preparedState = {GameServices.camera().getX(), GameServices.camera().getY(),
@@ -115,7 +115,7 @@ class TestS3kPreparedReloadEquivalence {
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, character);
         }
         assertEquals(installs, manager.preparedLevelInstallCount(), "a stale build must not be installed");
-        assertNull(manager.pendingPreparedLevelLoadPurpose());
+        assertNull(manager.preparedLoads.preparer.pendingPurpose());
     }
 
     /** A wrong guess (the next load is another act) is discarded, and an act transition never takes it. */
@@ -126,9 +126,9 @@ class TestS3kPreparedReloadEquivalence {
         assertTrue(LevelReloadPreparationAccess.prepareCurrentLevelReload(manager));
         manager.loadZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 1);
         assertEquals(installs, manager.preparedLevelInstallCount());
-        assertNull(manager.pendingPreparedLevelLoadPurpose());
+        assertNull(manager.preparedLoads.preparer.pendingPurpose());
         assertTrue(LevelReloadPreparationAccess.prepareCurrentLevelReload(manager));
-        assertNull(manager.takePreparedActTransitionForTests(levelIndex(manager)),
+        assertNull(manager.preparedLoads.takeActTransition(manager, levelIndex(manager), null),
                 "a reload build is not an act-transition build");
     }
 
