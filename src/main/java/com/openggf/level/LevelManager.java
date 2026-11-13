@@ -2250,6 +2250,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
     }
 
+    /** A from-scratch foreground image of the current layout; the retained one is untouched (package tests). */
+    byte[] buildForegroundImageForComparison() {
+        return tilemapManager.buildForegroundImageForComparison(this::getBlockAtPosition,
+                zoneFeatureProvider, currentZone);
+    }
+
     /**
      * Ensures the live foreground tilemap cache represents the current layout
      * before a ROM-style script mutates layout RAM without requesting a redraw.
@@ -2580,13 +2586,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void invalidateForegroundTilemap() {
         if (tilemapManager != null) {
             tilemapManager.invalidateForegroundTilemap();
-        }
-    }
-
-    /** Redraws one rewritten foreground layout cell; see {@link LevelLayoutCellRedrawAccess}. */
-    void invalidateForegroundMapCell(int cellX, int cellY) {
-        if (tilemapManager != null) {
-            tilemapManager.invalidateForegroundMapCell(cellX, cellY);
         }
     }
 

@@ -67,12 +67,15 @@ public final class ObjectDrawInternalAccess {
         }
         return new BucketPass(java.util.Objects.requireNonNull(manager), graphics);
     }
-    /** Admitted engine pass; hold it only in the renderer's locals. */
+    /** Admitted engine pass; hold it only in the renderer's locals or engine-private fields. */
     public static final class BucketPass {
         private final ObjectManager manager;
         private final GraphicsManager graphics;
         private BucketPass(ObjectManager manager, GraphicsManager graphics) {
             this.manager = manager; this.graphics = graphics;
+        }
+        public boolean boundTo(ObjectManager manager, GraphicsManager graphics) {
+            return this.manager == manager && this.graphics == graphics;
         }
         public void draw(int bucket, List<SpriteSlotEmission> external) {
             manager.drawBucketWithSlotEmissions(bucket, graphics, external);
@@ -131,9 +134,20 @@ public final class ObjectDrawInternalAccess {
             this.externalResolver = externalResolver;
         }
 
+        /** Rebuilt per population; nothing in it survives into simulation or rewind state. */
+        private final ObjectNativeSstOverwrite.OwnerIndex ownerIndex = new ObjectNativeSstOverwrite.OwnerIndex();
+        private final IntFunction<AbstractObjectInstance> indexedOwner = ownerIndex::owner;
+
         void populateBuckets(Collection<ObjectInstance> active, List<ObjectInstance> dynamic,
                 NativeSpriteSubmissionQueue queue) {
-            ObjectRenderParts.populateBuckets(active, dynamic, queue, currentOwner, externalResolver,
+            // Population is a read-only presentation pass: no object moves slot or is destroyed
+            // while queued slots resolve, so one index answers exactly like a scan per slot.
+            IntFunction<AbstractObjectInstance> owners = currentOwner;
+            if (queue.size() > 0) {
+                ownerIndex.rebuild(active, dynamic, objectCallbacks);
+                owners = indexedOwner;
+            }
+            ObjectRenderParts.populateBuckets(active, dynamic, queue, owners, externalResolver,
                     manager.stageplayDirection, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
         }
 

@@ -112,12 +112,10 @@ public class LevelTilemapManager {
     private int foregroundTilemapWidthTiles;
     private int foregroundTilemapHeightTiles;
     private boolean foregroundTilemapDirty = true;
-    // Layer-0 layout cells rewritten since the last foreground build, packed
-    // (cellY << 16) | cellX. A flat FG tilemap is a pure function of layout plus
-    // block/chunk data, so a layout write changes only the tiles under its cell;
-    // the next ensure redraws those in place instead of rebuilding the level image.
-    private int[] pendingForegroundMapCells = new int[8];
-    private int pendingForegroundMapCellCount;
+    // The layout the flat FG image was drawn from. A flat FG tilemap is a pure
+    // function of layout plus block/chunk data, so a redraw request rewrites only
+    // the cells whose inputs differ from this record instead of the level image.
+    private final ForegroundLayoutBaseline foregroundBaseline = new ForegroundLayoutBaseline();
     private long foregroundDescriptorRevision;
     // Derived images only: rewind restores the owner, then invalidates these keys.
     private final RetainedPlaneDescriptorSource[] retainedSources = new RetainedPlaneDescriptorSource[2];
@@ -247,8 +245,8 @@ public class LevelTilemapManager {
         copy.foregroundTilemapData = foregroundTilemapData == null ? null : foregroundTilemapData.clone();
         copy.foregroundTilemapWidthTiles = foregroundTilemapWidthTiles;
         copy.foregroundTilemapHeightTiles = foregroundTilemapHeightTiles;
-        // Pending cell redraws are not carried into the copy; its full rebuild covers them.
-        copy.foregroundTilemapDirty = foregroundTilemapDirty || pendingForegroundMapCellCount > 0;
+        // The layout baseline is not carried into the copy; a pending redraw rebuilds it in full.
+        copy.foregroundTilemapDirty = foregroundTilemapDirty;
         copy.foregroundDescriptorRevision = foregroundDescriptorRevision;
         copy.lastForegroundWrap = lastForegroundWrap;
         copy.foregroundRingSeeded = foregroundRingSeeded;
@@ -512,17 +510,6 @@ public class LevelTilemapManager {
             return;
         }
 
-        if (pendingForegroundMapCellCount > 0) {
-            boolean redrawn = !foregroundTilemapDirty && !fgWrap && foregroundTilemapData != null
-                    && redrawPendingForegroundMapCells(blockLookup, zoneFeatureProvider, currentZone, level);
-            pendingForegroundMapCellCount = 0;
-            if (redrawn) {
-                ensurePatternLookupData();
-                return;
-            }
-            foregroundTilemapDirty = true;
-        }
-
         // FG ring active and already built: incremental window reconcile only
         // (fills columns entering the visible window on either edge).
         if (fgWrap && !foregroundTilemapDirty && foregroundTilemapData != null
@@ -535,7 +522,16 @@ public class LevelTilemapManager {
         }
 
         if (!foregroundTilemapDirty && foregroundTilemapData != null) {
+            if (foregroundBaselineCapturePending) {
+                captureSwappedForegroundBaseline(zoneFeatureProvider, currentZone, fgWrap, level);
+            }
             ensurePatternLookupData();
+            return;
+        }
+        foregroundBaselineCapturePending = false;
+
+        if (!fgWrap && redrawChangedForegroundCells(blockLookup, zoneFeatureProvider, currentZone, level)) {
+            foregroundTilemapDirty = false;
             return;
         }
 
@@ -580,6 +576,7 @@ public class LevelTilemapManager {
                 clearRetainedPlaneKey(layer);
                 if (foreground) {
                     foregroundTilemapData = null;
+                    foregroundBaseline.invalidate();
                     foregroundTilemapDirty = true;
                     foregroundRingSeeded = false;
                 } else {
@@ -615,6 +612,7 @@ public class LevelTilemapManager {
             retainedRevisions[layer] = revision;
             if (foreground) {
                 foregroundTilemapData = data;
+                foregroundBaseline.invalidate();
                 foregroundTilemapWidthTiles = width;
                 foregroundTilemapHeightTiles = height;
                 foregroundRingSeeded = false;
@@ -1077,8 +1075,8 @@ public class LevelTilemapManager {
                                             int currentZone,
                                             ParallaxManager parallaxManager,
                                             boolean verticalWrapEnabled) {
-        TilemapData data = buildTilemapData((byte) 0, blockLookup, zoneFeatureProvider,
-                currentZone, parallaxManager, verticalWrapEnabled);
+        BgBuildParams params = computeBuildParams((byte) 0, zoneFeatureProvider, currentZone);
+        TilemapData data = buildTilemapData((byte) 0, params, blockLookup);
         int ringRows = cinematicParameters != null ? cinematicParameters.foregroundRingRows()
                 : foregroundDescriptorRevision != 0
                 && zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride ring
@@ -1091,8 +1089,15 @@ public class LevelTilemapManager {
         foregroundTilemapData = data.data;
         foregroundTilemapWidthTiles = data.widthTiles;
         foregroundTilemapHeightTiles = data.heightTiles;
-        pendingForegroundMapCellCount = 0;
         foregroundFullBuildCount++;
+        boolean fgWrap = cinematicParameters != null ? cinematicParameters.foregroundWraps()
+                : zoneFeatureProvider != null && zoneFeatureProvider.foregroundWrapsHorizontally();
+        if (ringRows == 0 && !fgWrap && flatForegroundImage(params)) {
+            foregroundBaseline.capture(geometry.level(), foregroundTilemapData,
+                    params.builtWidthPx(), params.builtHeightPx(), geometry.blockPixelSize());
+        } else {
+            foregroundBaseline.invalidate();
+        }
         if (foregroundDescriptorRevision != 0) {
             var descriptors = cinematicParameters != null ? cinematicParameters.foregroundDescriptors()
                     : zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride owner
@@ -1513,63 +1518,66 @@ public class LevelTilemapManager {
         foregroundTilemapDirty = true;
     }
 
-    /**
-     * Marks one foreground layout cell (map block coordinates) as rewritten. The next
-     * ensure redraws only that cell's tiles when the foreground is a flat layout image
-     * that is otherwise current; any other foreground mode, or a full rebuild already
-     * pending, falls back to {@link #invalidateForegroundTilemap()}.
-     */
-    void invalidateForegroundMapCell(int cellX, int cellY) {
-        if (foregroundTilemapDirty || foregroundTilemapData == null || !foregroundCellRedrawEligible()
-                || cellX < 0 || cellY < 0 || cellX > 0xFFFF || cellY > 0xFFFF) {
-            foregroundTilemapDirty = true;
-            return;
-        }
-        if (pendingForegroundMapCellCount == pendingForegroundMapCells.length) {
-            pendingForegroundMapCells = java.util.Arrays.copyOf(pendingForegroundMapCells,
-                    pendingForegroundMapCellCount * 2);
-        }
-        pendingForegroundMapCells[pendingForegroundMapCellCount++] = (cellY << 16) | cellX;
-    }
-
     /** Cell redraw serves only the ordinary flat layout image, not owner-authored planes. */
     private boolean foregroundCellRedrawEligible() {
         return cinematicParameters == null && retainedPlanes[0] == null && foregroundDescriptorRevision == 0;
     }
 
+    /** True when a full build with {@code params} draws exactly the flat layer-0 layout image. */
+    private boolean flatForegroundImage(BgBuildParams params) {
+        return foregroundCellRedrawEligible()
+                && params.xQueryOffset() == 0 && params.yQueryOffset() == 0
+                && params.xQueryWrapWidthPx() == 0 && !params.bgLinearRowOverflow()
+                && params.builtWidthPx() == geometry.fgWidthPx()
+                && params.builtHeightPx() == geometry.fgHeightPx();
+    }
+
     /**
-     * Rewrites the tiles of every pending layout cell with the same per-chunk writer
-     * the full build uses, then publishes only the affected tilemap rows. Returns
-     * false (caller falls back to a full rebuild) unless the current image has the
-     * exact flat-layout geometry a full build would produce.
+     * A layout-cell count above which the in-place redraw stops; the image is rebuilt.
+     * Each changed cell costs the same chunk writes as in a full build, so the redraw
+     * only loses once nearly every cell changed (a level swap reusing the image).
      */
-    private boolean redrawPendingForegroundMapCells(BlockLookup blockLookup,
-                                                    ZoneFeatureProvider zoneFeatureProvider,
-                                                    int currentZone, Level level) {
-        if (!foregroundCellRedrawEligible()) {
+    private static int foregroundCellRedrawLimit(int cellCount) {
+        return cellCount / 2;
+    }
+
+    /**
+     * Rewrites the tiles of every layout cell whose layout, block or chunk data changed
+     * since the image was drawn, with the same per-chunk writer the full build uses,
+     * then publishes only the affected tilemap rows. Returns false (the caller rebuilds
+     * the image) unless the current image is the recorded flat build of this level and
+     * geometry and at most {@link #foregroundCellRedrawLimit} cells changed.
+     */
+    private boolean redrawChangedForegroundCells(BlockLookup blockLookup,
+                                                 ZoneFeatureProvider zoneFeatureProvider,
+                                                 int currentZone, Level level) {
+        if (foregroundTilemapData == null) {
             return false;
         }
         BgBuildParams params = computeBuildParams((byte) 0, zoneFeatureProvider, currentZone);
         int widthTiles = params.builtWidthPx() / Pattern.PATTERN_WIDTH;
         int heightTiles = params.builtHeightPx() / Pattern.PATTERN_HEIGHT;
-        if (widthTiles != foregroundTilemapWidthTiles || heightTiles != foregroundTilemapHeightTiles
-                || params.xQueryOffset() != 0 || params.yQueryOffset() != 0
-                || params.xQueryWrapWidthPx() != 0 || params.bgLinearRowOverflow()
-                || foregroundTilemapData.length != widthTiles * heightTiles * 4) {
+        int blockPixelSize = geometry.blockPixelSize();
+        if (!flatForegroundImage(params)
+                || widthTiles != foregroundTilemapWidthTiles || heightTiles != foregroundTilemapHeightTiles
+                || foregroundTilemapData.length != widthTiles * heightTiles * 4
+                || !foregroundBaseline.describes(level, foregroundTilemapData,
+                        params.builtWidthPx(), params.builtHeightPx(), blockPixelSize)) {
             return false;
         }
-        int blockPixelSize = geometry.blockPixelSize();
-        int firstRow = Integer.MAX_VALUE;
-        int endRow = 0;
-        for (int i = 0; i < pendingForegroundMapCellCount; i++) {
-            int packed = pendingForegroundMapCells[i];
+        int changed = foregroundBaseline.collectChangedCells(level,
+                foregroundCellRedrawLimit(foregroundBaseline.cellCount()));
+        if (changed < 0) {
+            return false;
+        }
+        boolean lookupStale = patternLookupDirty || patternLookupData == null;
+        changedForegroundCellRows.clear();
+        for (int i = 0; i < changed; i++) {
+            int packed = foregroundBaseline.changedCell(i);
             int x0 = (packed & 0xFFFF) * blockPixelSize;
             int y0 = (packed >>> 16) * blockPixelSize;
             int x1 = Math.min(x0 + blockPixelSize, params.builtWidthPx());
             int y1 = Math.min(y0 + blockPixelSize, params.builtHeightPx());
-            if (x0 >= x1 || y0 >= y1) {
-                continue;
-            }
             // Same chunk walk and query coordinates as fillChunkColumn with zero offsets.
             for (int y = y0; y < y1; y += LevelConstants.CHUNK_HEIGHT) {
                 for (int x = x0; x < x1; x += LevelConstants.CHUNK_WIDTH) {
@@ -1579,30 +1587,70 @@ public class LevelTilemapManager {
                             x, y, params, blockLookup, level, blockPixelSize);
                 }
             }
-            firstRow = Math.min(firstRow, y0 / Pattern.PATTERN_HEIGHT);
-            endRow = Math.max(endRow, Math.min(heightTiles, (y1 + Pattern.PATTERN_HEIGHT - 1) / Pattern.PATTERN_HEIGHT));
+            changedForegroundCellRows.set(packed >>> 16);
         }
         foregroundCellRedrawCount++;
-        if (endRow > firstRow) {
-            publishForegroundRows(firstRow, endRow - firstRow);
+        foregroundRedrawnCellCount += changed;
+        ensurePatternLookupData();
+        TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
+        if (renderer == null) {
+            return true;
+        }
+        // One row span per run of changed cell rows.
+        int rowsPerCell = blockPixelSize / Pattern.PATTERN_HEIGHT;
+        for (int first = changedForegroundCellRows.nextSetBit(0); first >= 0;
+                first = changedForegroundCellRows.nextSetBit(first)) {
+            int end = first + 1;
+            while (changedForegroundCellRows.get(end)) {
+                end++;
+            }
+            int firstRow = first * rowsPerCell;
+            com.openggf.graphics.TilemapGpuRendererInternalAccess.setForegroundTilemapRows(renderer,
+                    foregroundTilemapData, widthTiles, heightTiles,
+                    firstRow, Math.min(end * rowsPerCell, heightTiles) - firstRow);
+            first = end;
+        }
+        if (lookupStale || changed > 0) {
+            renderer.setPatternLookupData(patternLookupData, patternLookupSize);
         }
         return true;
     }
 
-    /** Diagnostic: incremental layout-cell redraws performed (package tests). */
-    int foregroundCellRedrawCount;
+    private final java.util.BitSet changedForegroundCellRows = new java.util.BitSet();
 
-    private void publishForegroundRows(int firstRow, int rowCount) {
-        TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
-        if (renderer == null) {
-            return;
+    // Set when a prebuilt image is swapped in; cleared by its capture or any rebuild.
+    private boolean foregroundBaselineCapturePending;
+
+    /**
+     * Records the layout of a swapped-in prebuilt image. {@link LevelTilemapPrebuilder}
+     * requires its bytes to equal a full build of the installed layout (callers
+     * invalidate them after any later edit), so the clean image describes the live layout.
+     */
+    private void captureSwappedForegroundBaseline(ZoneFeatureProvider zoneFeatureProvider,
+                                                  int currentZone, boolean fgWrap, Level level) {
+        foregroundBaselineCapturePending = false;
+        BgBuildParams params = computeBuildParams((byte) 0, zoneFeatureProvider, currentZone);
+        if (!fgWrap && flatForegroundImage(params)
+                && params.builtWidthPx() / Pattern.PATTERN_WIDTH == foregroundTilemapWidthTiles
+                && params.builtHeightPx() / Pattern.PATTERN_HEIGHT == foregroundTilemapHeightTiles) {
+            foregroundBaseline.capture(level, foregroundTilemapData,
+                    params.builtWidthPx(), params.builtHeightPx(), geometry.blockPixelSize());
         }
-        ensurePatternLookupData();
-        com.openggf.graphics.TilemapGpuRendererInternalAccess.setForegroundTilemapRows(renderer,
-                foregroundTilemapData, foregroundTilemapWidthTiles, foregroundTilemapHeightTiles,
-                firstRow, rowCount);
-        renderer.setPatternLookupData(patternLookupData, patternLookupSize);
     }
+
+    /**
+     * Builds a from-scratch flat foreground image of the current layout without touching
+     * the retained image, for comparing an in-place redraw with a full rebuild (package tests).
+     */
+    byte[] buildForegroundImageForComparison(BlockLookup blockLookup,
+                                             ZoneFeatureProvider zoneFeatureProvider, int currentZone) {
+        return buildTilemapData((byte) 0, computeBuildParams((byte) 0, zoneFeatureProvider, currentZone),
+                blockLookup).data;
+    }
+
+    /** Diagnostic: in-place layout-cell redraws performed, and the cells they rewrote (package tests). */
+    int foregroundCellRedrawCount;
+    long foregroundRedrawnCellCount;
 
     /**
      * Marks only the pattern atlas lookup as dirty. Tilemap cell data stays
@@ -1638,9 +1686,9 @@ public class LevelTilemapManager {
     }
 
     /**
-     * Handles dirty block/map-cell updates from a MutableLevel.
-     * Currently triggers a full foreground tilemap rebuild; incremental
-     * partial updates can be added later if needed for performance.
+     * Handles dirty block/map-cell updates from a MutableLevel. A dirty foreground
+     * is redrawn by the next ensure, which rewrites only the layout cells whose
+     * layout, block or chunk data changed.
      *
      * @param dirtyBlocks  block indices that changed (unused for now)
      * @param dirtyMapCells linearized map cell indices that changed (unused for now)
@@ -1718,6 +1766,7 @@ public class LevelTilemapManager {
         if (retainedPlanes[0] != null) {
             clearRetainedPlaneKey(0);
             foregroundTilemapData = null;
+            foregroundBaseline.invalidate();
             foregroundTilemapDirty = true;
         }
         // Legacy event-owned FG cells can reuse a revision with restored contents,
@@ -2032,7 +2081,12 @@ public class LevelTilemapManager {
         }
 
         int offset = (tileY * foregroundTilemapWidthTiles + tileX) * 4;
-        return writeTilemapDescriptor(foregroundTilemapData, offset, descriptor);
+        if (!writeTilemapDescriptor(foregroundTilemapData, offset, descriptor)) {
+            return false;
+        }
+        // Not drawn from the layout: the next redraw request replaces it, as a rebuild would.
+        foregroundBaseline.markOverwrittenTile(tileX, tileY);
+        return true;
     }
 
     private static boolean writeTilemapDescriptor(byte[] tilemapData, int offset, int descriptor) {
@@ -2173,6 +2227,10 @@ public class LevelTilemapManager {
         }
 
         foregroundTilemapData = prebuiltFgTilemap;
+        foregroundBaseline.invalidate();
+        // The prebuilt image is, by the prebuild contract, the current layout: record it
+        // at the next ensure, where the zone's wrap and geometry policy is known.
+        foregroundBaselineCapturePending = true;
         foregroundTilemapWidthTiles = prebuiltFgWidth;
         foregroundTilemapHeightTiles = prebuiltFgHeight;
         foregroundTilemapDirty = false;
@@ -2276,7 +2334,8 @@ public class LevelTilemapManager {
         bgTilemapBaseX = 0;
         currentBgPeriodWidth = VDP_BG_PLANE_WIDTH_PX;
         foregroundTilemapDirty = true;
-        pendingForegroundMapCellCount = 0;
+        foregroundBaseline.invalidate();
+        foregroundBaselineCapturePending = false;
         patternLookupDirty = true;
         multiAtlasWarningLogged = false;
         bgWindowShiftCandidate = false;

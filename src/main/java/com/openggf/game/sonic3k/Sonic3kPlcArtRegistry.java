@@ -502,7 +502,8 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 Sonic3kConstants.MAP_SPRING_ADDR,
                 0,
-                -1
+                -1,
+                SPRING_MAPPING_FRAME_COUNT
         ));
     }
 

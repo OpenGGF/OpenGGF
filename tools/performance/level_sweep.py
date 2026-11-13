@@ -24,6 +24,8 @@ Usage (from the worktree root; probe JVMs run strictly one at a time):
         [--html target/perf-sweep/report.html] [--notes findings.html]
   python3 tools/performance/level_sweep.py attribute --csv X.csv --jfr X.jfr
         [--threshold 16.67] [--output X.txt]
+  python3 tools/performance/level_sweep.py compare --base OLD_DIR --new NEW_DIR
+        [--base-label L] [--new-label L] [--html report.html] [--notes findings.html] [--json X]
 
 ``run`` skips cases whose CSV already exists, so an interrupted sweep resumes;
 ``--repeat N`` adds runs r2..rN. ``--jfr`` records a 1 ms execution-sample JFR
@@ -34,7 +36,10 @@ render-time rebuild. ``summarise`` writes ``summary.json`` and
 report. ``attribute`` matches JFR samples to spike frames through the CSV's
 ``epoch_us`` column and prints per-spike inclusive/leaf/allocation sites,
 traced calls, and the steady-state allocation and CPU profile of the other
-settled frames. Environment variables pass through to the probes, so
+settled frames. ``compare`` reads two sweeps' CSV directories (neither is
+written) and reports, per level, median mean/p99/p99.9, allocation and GC over
+runs and the frames over 8.33 and 16.67 ms that recur in at least two runs, with
+paired dot charts in the HTML. Environment variables pass through to the probes, so
 ``DRI_PRIME=1`` (discrete GPU) and ``mesa_glthread=false`` serve as controls.
 Statistics exclude the first ``--warmup`` frames (default 600) of each fresh
 JVM, which are JIT/class-loading cost reported separately as ``warm_*``.
@@ -332,6 +337,8 @@ def summarise_file(path, warmup):
         "sections_mean": dict(sorted(mean_sec.items(), key=lambda kv: -kv[1])[:8]),
         "progress": progress(kind, cols, rows),
         "spikes": spikes[:25],
+        # Every settled frame over 8.33 ms, for recurrence across runs (compare).
+        "over_8_frames": sorted([s["frame"], round(s["wall"], 2), s["tag"]] for s in spikes),
         "spikes_over_16": [s for s in spikes if s["wall"] > BUDGET_60],
         "open_over_16": sum(1 for s in spikes if s["wall"] > BUDGET_60 and s["tag"] == "open"),
         "reload_over_16": sum(1 for s in spikes if s["wall"] > BUDGET_60 and s["tag"] == "reload"),
@@ -515,6 +522,180 @@ def chart(rows):
                    f"<title>max {s['max']:.1f} ms</title></circle>")
     out.append("</svg><p>Grey dot p50, blue dot p99, red/grey dot max (ms, log scale). Dashed lines 8.33 / "
                "16.67 ms budgets.</p>")
+    return "".join(out)
+
+
+# ---------------------------------------------------------------- compare
+
+def recurring(runs, threshold, slack=2):
+    """Frames over ``threshold`` ms in at least two runs of one case (within ``slack`` frames).
+
+    Returns a list of (frame, [ms per run], tag); ``None`` when the case has a single run.
+    """
+    if len(runs) < 2:
+        return None
+    seen, kept = [], []
+    for r in runs:
+        for frame, wall, tag in r["over_8_frames"]:
+            if wall <= threshold or any(abs(frame - f) <= slack for f in seen):
+                continue
+            seen.append(frame)
+            ms = [max((w for f, w, _ in o["over_8_frames"] if abs(f - frame) <= slack), default=0.0)
+                  for o in runs]
+            if sum(1 for v in ms if v > threshold) >= 2:
+                kept.append((frame, ms, tag))
+    return sorted(kept)
+
+
+def sweep_cases(directory, warmup):
+    """Summarise every ``<case>-rN.csv`` in a sweep directory, grouped by case, reading only."""
+    by_case = {}
+    for path in sorted(Path(directory).glob("*-r[0-9]*.csv")):
+        m = re.match(r"(.+)-r(\d+)\.csv$", path.name)
+        try:
+            s = summarise_file(path, warmup)
+        except Exception as e:
+            print(f"skip {path}: {e}", file=sys.stderr)
+            continue
+        s.update({"id": m.group(1), "rep": int(m.group(2))})
+        by_case.setdefault(m.group(1), []).append(s)
+    out = {}
+    for cid, runs in by_case.items():
+        runs.sort(key=lambda r: r["rep"])
+        med = lambda key: statistics.median(r[key] for r in runs)
+        rec8, rec16 = recurring(runs, BUDGET_120), recurring(runs, BUDGET_60)
+        out[cid] = {
+            "id": cid, "game": cid.split("-")[0], "kind": runs[0]["kind"], "runs": len(runs),
+            "frames": runs[0]["frames"], "mean": med("mean"), "p99": med("p99"), "p999": med("p999"),
+            "max": [r["max"] for r in runs], "over_8": [r["over_8"] for r in runs],
+            "over_16": [r["over_16"] for r in runs], "alloc_med_kb": med("alloc_med_kb"),
+            "gc_count": med("gc_count"), "gc_ms": med("gc_ms"),
+            "rec8": rec8, "rec16": rec16, "progress": runs[0]["progress"],
+        }
+    return out
+
+
+def cmd_compare(args):
+    """Side-by-side per-level comparison of two sweeps (CSV directories), with an HTML report."""
+    base, new = sweep_cases(args.base, args.warmup), sweep_cases(args.new, args.warmup)
+    ids = [c["id"] for c in matrix() if c["id"] in base or c["id"] in new]
+    ids += sorted((set(base) | set(new)) - set(ids))
+    fmt_rec = lambda c, k: "-" if c is None or c[k] is None else str(len(c[k]))
+    print(f"{'level':22} {'runs':>5} {'frames':>13} {'mean':>11} {'p99':>11} {'p99.9':>11} "
+          f"{'rec>8.3':>9} {'rec>16.7':>9} {'allocKB':>13} {'gc n':>9} {'gc ms':>11}")
+    for cid in ids:
+        b, n = base.get(cid), new.get(cid)
+        pair = lambda key, f="{:.2f}": f"{f.format(b[key]) if b else '-':>5}>{f.format(n[key]) if n else '-':<5}"
+        print(f"{cid:22} {(b['runs'] if b else 0)}/{(n['runs'] if n else 0):<3} "
+              f"{(b['frames'] if b else '-'):>6}>{(n['frames'] if n else '-'):<6} {pair('mean')} {pair('p99')} "
+              f"{pair('p999')} {fmt_rec(b, 'rec8'):>4}>{fmt_rec(n, 'rec8'):<4} {fmt_rec(b, 'rec16'):>4}>"
+              f"{fmt_rec(n, 'rec16'):<4} {pair('alloc_med_kb', '{:.1f}')} {pair('gc_count', '{:.0f}')} "
+              f"{pair('gc_ms', '{:.0f}')}")
+    if args.json:
+        Path(args.json).write_text(json.dumps({"base": base, "new": new}, indent=1))
+    if args.html:
+        write_compare_html(ids, base, new, args)
+        print("Wrote", args.html)
+
+
+def write_compare_html(ids, base, new, args):
+    bl, nl = esc(args.base_label), esc(args.new_label)
+    games = {"s1": "Sonic 1", "s2": "Sonic 2", "s3k": "Sonic 3 & Knuckles"}
+    parts = ["<!doctype html><meta charset=utf-8><title>OpenGGF performance sweep comparison</title>",
+             "<style>.viz-root{--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--grid:#e4e3df;"
+             "--base:#eb6834;--new:#2a78d6;--bad:#b3261e;--good:#1d7a3a}"
+             "body{font:14px system-ui,sans-serif;margin:24px;max-width:1500px;color:var(--ink);"
+             "background:var(--surface)}table{border-collapse:collapse;margin:8px 0 24px}"
+             "td,th{border-bottom:1px solid var(--grid);padding:3px 7px;text-align:right;white-space:nowrap}"
+             "th{background:#f4f4f6;position:sticky;top:0}td.l,th.l{text-align:left}.bad{color:var(--bad);"
+             "font-weight:600}.good{color:var(--good)}.b{color:var(--ink2)}h2{margin-top:32px}"
+             ".note{max-width:1150px}.note td{white-space:normal;vertical-align:top}svg text{font:11px system-ui,sans-serif;fill:var(--ink2)}"
+             ".key{display:inline-block;width:10px;height:10px;border-radius:5px;margin:0 4px 0 12px}</style>",
+             "<div class=viz-root>",
+             f"<h1>OpenGGF performance sweep: {bl} vs {nl}</h1>"]
+    if args.notes and Path(args.notes).exists():
+        parts.append(f"<div class=note>{Path(args.notes).read_text()}</div>")
+    legend = (f"<p><span class=key style='background:var(--base)'></span>{bl}"
+              f"<span class=key style='background:var(--new)'></span>{nl}</p>")
+    rows = [cid for cid in ids if cid in base and cid in new]
+    rec = lambda c, k: len(c[k]) if c[k] is not None else max(c["over_16" if k == "rec16" else "over_8"])
+    parts.append("<h2>Recurring frames over 8.33 ms per level</h2>" + legend +
+                 "<p>Frames over budget at the same frame (&plusmn;2) in at least two runs; single-run cases show "
+                 "that run's count (marked with a hollow dot).</p>")
+    parts.append(dot_chart(rows, base, new, lambda c: rec(c, "rec8"), "frames", False,
+                           lambda c: c["runs"] < 2))
+    parts.append("<h2>Recurring frames over 16.67 ms per level</h2>" + legend)
+    parts.append(dot_chart(rows, base, new, lambda c: rec(c, "rec16"), "frames", False,
+                           lambda c: c["runs"] < 2))
+    parts.append("<h2>Median allocation per settled frame (KB)</h2>" + legend)
+    parts.append(dot_chart(rows, base, new, lambda c: c["alloc_med_kb"], "KB/frame", False, lambda c: False))
+    for game in ("s1", "s2", "s3k"):
+        gids = [cid for cid in ids if cid.split("-")[0] == game]
+        if not gids:
+            continue
+        parts.append(f"<h2>{games[game]}</h2><p class=b>Each cell: {bl} &rarr; {nl}. Mean/p99/p99.9/alloc/GC are "
+                     "medians over runs; max lists every run; recurring counts need two runs.</p>"
+                     "<table><tr><th class=l>level</th><th>runs</th><th>frames</th><th>mean ms</th><th>p99</th>"
+                     "<th>p99.9</th><th class=l>max per run</th><th>&gt;8.33 recurring</th>"
+                     "<th>&gt;16.67 recurring</th><th class=l>&gt;16.67 recurring frames (new)</th>"
+                     "<th>alloc KB/f</th><th>GC n</th><th>GC ms</th></tr>")
+        for cid in gids:
+            b, n = base.get(cid), new.get(cid)
+
+            def cell(key, f="{:.2f}", lower_better=True):
+                if not b or not n:
+                    return f"<td>{f.format(b[key]) if b else '-'} &rarr; {f.format(n[key]) if n else '-'}</td>"
+                cls = ""
+                if b[key] > 0 and abs(n[key] - b[key]) / b[key] >= 0.1:
+                    cls = "good" if (n[key] < b[key]) == lower_better else "bad"
+                return f"<td class={cls}><span class=b>{f.format(b[key])}</span> &rarr; {f.format(n[key])}</td>"
+
+            def rcell(key):
+                bv = "-" if not b or b[key] is None else len(b[key])
+                nv = "-" if not n or n[key] is None else len(n[key])
+                cls = "bad" if isinstance(nv, int) and isinstance(bv, int) and nv > bv else (
+                    "good" if isinstance(nv, int) and isinstance(bv, int) and nv < bv else "")
+                return f"<td class={cls}><span class=b>{bv}</span> &rarr; {nv}</td>"
+
+            mx = lambda c: "/".join(f"{v:.0f}" for v in c["max"]) if c else "-"
+            frames16 = ", ".join(f"{f} ({'/'.join(f'{v:.0f}' for v in ms)}, {t})"
+                                 for f, ms, t in (n["rec16"] or [])[:6]) if n else ""
+            parts.append(f"<tr><td class=l>{esc(cid)}</td><td>{b['runs'] if b else 0} &rarr; {n['runs'] if n else 0}</td>"
+                         f"<td>{b['frames'] if b else '-'} &rarr; {n['frames'] if n else '-'}</td>"
+                         f"{cell('mean')}{cell('p99')}{cell('p999')}"
+                         f"<td class=l><span class=b>{mx(b)}</span> &rarr; {mx(n)}</td>{rcell('rec8')}{rcell('rec16')}"
+                         f"<td class=l>{esc(frames16)}</td>{cell('alloc_med_kb', '{:.1f}')}"
+                         f"{cell('gc_count', '{:.0f}')}{cell('gc_ms', '{:.0f}')}</tr>")
+        parts.append("</table>")
+    parts.append("</div>")
+    Path(args.html).write_text("\n".join(parts))
+
+
+def dot_chart(ids, base, new, value, unit, log, hollow):
+    """Paired dot plot: one row per level, the base and new value on one shared linear axis."""
+    width, row_h, left, plot = 960, 15, 170, 720
+    vals = [value(c[i]) for c in (base, new) for i in ids]
+    hi = max(vals + [1])
+    step = next(s for s in (1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000) if hi / s <= 8)
+    hi = math.ceil(hi / step) * step
+    height = 30 + row_h * len(ids)
+    x = lambda v: left + v / hi * plot
+    out = [f"<svg width={width} height={height} role=img aria-label='per-level comparison, {unit}'>"]
+    for t in range(0, int(hi) + 1, step):
+        out.append(f"<line x1='{x(t):.1f}' x2='{x(t):.1f}' y1='18' y2='{height - 4}' style='stroke:var(--grid)'/>"
+                   f"<text x={x(t):.1f} y=12 text-anchor=middle>{t}</text>")
+    for k, cid in enumerate(ids):
+        y = 26 + k * row_h
+        b, n = base[cid], new[cid]
+        vb, vn = value(b), value(n)
+        out.append(f"<text x={left - 6} y={y + 4} text-anchor=end>{esc(cid)}</text>")
+        out.append(f"<line x1='{x(min(vb, vn)):.1f}' x2='{x(max(vb, vn)):.1f}' y1='{y}' y2='{y}' "
+                   f"style='stroke:#c9c9d4;stroke-width:2'/>")
+        for v, c, col in ((vb, b, "var(--base)"), (vn, n, "var(--new)")):
+            fill = "var(--surface)" if hollow(c) else col
+            out.append(f"<circle cx='{x(v):.1f}' cy='{y}' r='4.5' style='fill:{fill};stroke:{col};stroke-width:2'>"
+                       f"<title>{esc(cid)}: {v:.1f} {unit}</title></circle>")
+    out.append("</svg>")
     return "".join(out)
 
 
@@ -718,8 +899,18 @@ def main():
     att.add_argument("--depth", type=int, default=14, help="rows per spike / steady list")
     att.add_argument("--output")
     att.add_argument("--trace-limit", type=int, default=200, help="traced method calls to print")
+    cmp = sub.add_parser("compare", help="compare two sweeps' CSV directories level by level")
+    cmp.add_argument("--base", required=True, help="earlier sweep directory (read only)")
+    cmp.add_argument("--new", required=True, help="later sweep directory")
+    cmp.add_argument("--base-label", default="base")
+    cmp.add_argument("--new-label", default="new")
+    cmp.add_argument("--warmup", type=int, default=600)
+    cmp.add_argument("--html")
+    cmp.add_argument("--json")
+    cmp.add_argument("--notes", help="HTML fragment (findings) to place above the charts")
     args = parser.parse_args()
-    {"list": cmd_list, "run": cmd_run, "summarise": cmd_summarise, "attribute": cmd_attribute}[args.command](args)
+    {"list": cmd_list, "run": cmd_run, "summarise": cmd_summarise, "attribute": cmd_attribute,
+     "compare": cmd_compare}[args.command](args)
 
 
 if __name__ == "__main__":

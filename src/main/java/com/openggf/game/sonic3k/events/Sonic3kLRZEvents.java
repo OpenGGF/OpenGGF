@@ -21,7 +21,6 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.Level;
-import com.openggf.level.LevelLayoutCellRedrawAccess;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.game.mutation.MutationEffects;
@@ -594,11 +593,10 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         if (level == null) {
             return;
         }
-        // The write knows its cell, so its foreground redraw covers only that cell's
-        // tiles instead of rebuilding the whole level image (a 10-60 ms frame).
+        // The foreground redraw rewrites only the cells whose layout changed
+        // (LevelTilemapManager), not the whole level image (a 10-60 ms frame).
         LayoutMutationContext context = new LayoutMutationContext(
-                LevelMutationSurface.forLevel(level),
-                LevelLayoutCellRedrawAccess.effectSinkForCell(manager, layer, column, row));
+                LevelMutationSurface.forLevel(level), manager::applyMutationEffects);
         zoneLayoutMutationPipeline().applyImmediately(
                 ctx -> ctx.surface().setBlockInMap(layer, column, row, blockId), context);
     }
