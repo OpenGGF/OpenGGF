@@ -67,12 +67,15 @@ public final class ObjectDrawInternalAccess {
         }
         return new BucketPass(java.util.Objects.requireNonNull(manager), graphics);
     }
-    /** Admitted engine pass; hold it only in the renderer's locals. */
+    /** Admitted engine pass; hold it only in the renderer's locals or engine-private fields. */
     public static final class BucketPass {
         private final ObjectManager manager;
         private final GraphicsManager graphics;
         private BucketPass(ObjectManager manager, GraphicsManager graphics) {
             this.manager = manager; this.graphics = graphics;
+        }
+        public boolean boundTo(ObjectManager manager, GraphicsManager graphics) {
+            return this.manager == manager && this.graphics == graphics;
         }
         public void draw(int bucket, List<SpriteSlotEmission> external) {
             manager.drawBucketWithSlotEmissions(bucket, graphics, external);
