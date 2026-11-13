@@ -772,6 +772,14 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
     }
 
+    /** Whether {@link #dispatchNativeSlot} can find a ring for this slot; reads no other state. */
+    boolean reservesNativeSlot(int slot) {
+        for (AttractedRing ring : attractedRings) {
+            if (ring.active && !ring.slotAllocationPending && ring.objectSlotIndex == slot) return true;
+        }
+        return false;
+    }
+
     void dispatchNativeSlot(int slot, com.openggf.game.PlayableEntity target, int cameraX) {
         if (!(target instanceof AbstractPlayableSprite player)) return;
         // loc_1A88C (sonic3k.asm:35763-35787) and loc_1A920

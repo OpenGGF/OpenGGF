@@ -1298,12 +1298,12 @@ public final class LevelRenderer {
 
     private int[] presentationHScroll() {
         return currentScrollPresentation == null ? lm.parallaxManager.getHScrollForShader()
-                : currentScrollPresentation.horizontal();
+                : currentScrollPresentation.horizontalView();
     }
 
     private short[] presentationForegroundColumns() {
         return currentScrollPresentation == null ? lm.parallaxManager.getVScrollPerColumnFGForShader()
-                : currentScrollPresentation.foregroundColumns();
+                : currentScrollPresentation.foregroundColumnsView();
     }
 
     private short presentationForegroundY() {
@@ -1853,9 +1853,9 @@ public final class LevelRenderer {
 
         int[] hScrollData = presentationHScroll();
         short[] vScrollData = currentScrollPresentation == null
-                ? lm.parallaxManager.getVScrollPerLineBGForShader() : currentScrollPresentation.backgroundLines();
+                ? lm.parallaxManager.getVScrollPerLineBGForShader() : currentScrollPresentation.backgroundLinesView();
         short[] vScrollColumnData = currentScrollPresentation == null
-                ? lm.parallaxManager.getVScrollPerColumnBGForShader() : currentScrollPresentation.backgroundColumns();
+                ? lm.parallaxManager.getVScrollPerColumnBGForShader() : currentScrollPresentation.backgroundColumnsView();
 
         int bgCameraX = currentScrollPresentation == null ? lm.parallaxManager.getBgCameraX()
                 : currentScrollPresentation.registers().backgroundX();
@@ -2089,6 +2089,26 @@ public final class LevelRenderer {
         graphicsManager.registerCommand(disableWaterShaderCommand);
     }
 
+    /** Admitted once per render host instead of one engine-caller stack walk per frame. */
+    private com.openggf.graphics.SpriteSatInternalAccess.Engine satAccess;
+    private com.openggf.level.objects.ObjectDrawInternalAccess.BucketPass objectPass;
+    private com.openggf.level.rings.RingDrawInternalAccess.Engine ringAccess;
+
+    private com.openggf.level.objects.ObjectDrawInternalAccess.BucketPass objectPass(
+            ObjectManager objectManager, GraphicsManager graphicsManager) {
+        if (objectPass == null || !objectPass.boundTo(objectManager, graphicsManager)) {
+            objectPass = com.openggf.level.objects.ObjectDrawInternalAccess.bucketPass(objectManager, graphicsManager);
+        }
+        return objectPass;
+    }
+
+    private com.openggf.level.rings.RingDrawInternalAccess.Engine ringAccess(RingManager ringManager) {
+        if (ringAccess == null || !ringAccess.boundTo(ringManager)) {
+            ringAccess = com.openggf.level.rings.RingDrawInternalAccess.engine(ringManager);
+        }
+        return ringAccess;
+    }
+
     private void prepareOrDrawLiveSprites(SpriteManager spriteManager) {
         // Render ALL sprites in unified bucket order (7→0)
         // Sprite-to-sprite ordering is by bucket number regardless of isHighPriority
@@ -2125,13 +2145,16 @@ public final class LevelRenderer {
                 zoneFeatureProvider instanceof com.openggf.level.render.PriorityBucketSpriteSource source
                         ? source : null;
         {
+            if (satAccess == null || !satAccess.boundTo(graphicsManager)) {
+                satAccess = com.openggf.graphics.SpriteSatInternalAccess.engine(graphicsManager);
+            }
             if ((lm.cachedScreenWidth & 7) == 0) {
-                com.openggf.graphics.SpriteSatInternalAccess.beginCollection(graphicsManager,
+                satAccess.beginCollection(
                         com.openggf.graphics.SpriteSatMaskPostProcessor.Raster.extended(
                                 lm.camera.getXWithShake(), lm.camera.getYWithShake(),
                                 lm.cachedScreenWidth, lm.cachedScreenHeight));
             } else {
-                com.openggf.graphics.SpriteSatInternalAccess.beginLogicalCollection(graphicsManager,
+                satAccess.beginLogicalCollection(
                         com.openggf.graphics.SpriteSatMaskPostProcessor.LogicalViewport.h40(
                                 lm.camera.getXWithShake(), lm.camera.getYWithShake(),
                                 lm.cachedScreenWidth, lm.cachedScreenHeight));
@@ -2149,14 +2172,12 @@ public final class LevelRenderer {
             if (ringManager != null && lm.gameModule instanceof com.openggf.game.internal.SpriteTableBuildProfile profile
                     && profile.placedRingEmission() == com.openggf.game.internal.SpriteTableBuildProfile.PlacedRings.BEFORE_OBJECT_BUCKETS) {
                 SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.RINGS);
-                com.openggf.level.rings.RingDrawInternalAccess.drawPlaced(ringManager, lm.frameCounter,
+                ringAccess(ringManager).drawPlaced(lm.frameCounter,
                         lm.camera.getYWithShake(), lm.camera.screenYWrapValue());
             }
-            // One engine-caller check per pass, not one stack walk per bucket.
-            var objectPass = objectManager == null ? null
-                    : com.openggf.level.objects.ObjectDrawInternalAccess.bucketPass(objectManager, graphicsManager);
-            var attractedRings = objectPass == null || ringManager == null ? null
-                    : com.openggf.level.rings.RingDrawInternalAccess.attractedPass(ringManager);
+            // One engine-caller check per render host, not one stack walk per bucket or frame.
+            var objectPass = objectManager == null ? null : objectPass(objectManager, graphicsManager);
+            var attractedRings = objectPass == null || ringManager == null ? null : ringAccess(ringManager);
             // SAT collection must follow sprite-table order, not painter order.
             // Draw_Sprite inserts into Sprite_table_input by ascending priority bucket,
             // and lower sprite slots end up in front later during rasterization.
@@ -2171,7 +2192,7 @@ public final class LevelRenderer {
                 }
                 if (objectPass != null) {
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
-                    objectPass.draw(bucket, attractedRings == null ? java.util.List.of() : attractedRings.slotted(bucket));
+                    objectPass.draw(bucket, attractedRings == null ? java.util.List.of() : attractedRings.slottedAttracted(bucket));
                 }
                 if (!(lm.gameModule instanceof com.openggf.game.internal.SpriteTableBuildProfile))
                     drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);

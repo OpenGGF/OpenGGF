@@ -103,6 +103,8 @@ public class GraphicsManager {
     SpriteSatEntry.PixelOperation currentSpritePixelOperation = SpriteSatEntry.PixelOperation.NORMAL;
     Shadow15Backdrop currentShadow15Backdrop;
     private NativeSpriteOwnership nativeSpriteOwnership;
+    /** Native SAT scratch stencil/backup images; created once per GL context, deleted by cleanup. */
+    private NativeSpriteScratch nativeSpriteScratch = new NativeSpriteScratch();
 	private final List<SpriteSatEntry> spriteSatEntries = new ArrayList<>();
 	// Reusable buffers/scratch for endSpriteSatCollectionAndReplay() — avoids per-frame
 	// ArrayList and PatternDesc allocations on the SAT replay hot path.
@@ -423,6 +425,8 @@ public class GraphicsManager {
 			return;
 		}
 		this.glInitialized = true;
+		// Names from any earlier context are meaningless on this one.
+		this.nativeSpriteScratch = new NativeSpriteScratch();
 		this.patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT, profiler);
 		this.patternAtlas.init();
 		this.defaultShaderProgram = new ShaderProgram(BASIC_VERTEX_SHADER_PATH, pixelShaderPath); // Load default shader
@@ -1492,6 +1496,7 @@ public class GraphicsManager {
 		discardCommands(commands, 0);
 		commands.clear();
 		if (headlessMode || !glInitialized) {
+			nativeSpriteScratch.forget();
 			// In headless mode, just clear the tracking maps
 			if (patternAtlas != null) {
 				patternAtlas.cleanupHeadless();
@@ -1539,6 +1544,7 @@ public class GraphicsManager {
 		if (tilePriorityFBO != null) {
 			tilePriorityFBO.cleanup();
 		}
+		nativeSpriteScratch.delete();
 		// Reset fade manager
 		if (fadeManager != null) {
             fadeManager.bindPaletteGraphics(null);
@@ -1745,6 +1751,7 @@ public class GraphicsManager {
 	}
 
     boolean nativeSpriteOwnershipActive() { return nativeSpriteOwnership != null; }
+    NativeSpriteScratch nativeSpriteScratch() { return nativeSpriteScratch; }
 
     SpritePriorityShaderProgram nativeShadowShader() {
         if (nativeShadowShaderProgram == null) throw new IllegalStateException("Native shadow shader unavailable");
@@ -2313,47 +2320,66 @@ public class GraphicsManager {
 		}
 	}
 
+	/** Reused per-tile sink: a capturing lambda here was allocated for every replayed SAT entry. */
+	private final class ReplayTileSink implements SpritePiece.TileConsumer {
+		private SpriteSatEntry entry;
+		private int paletteTextureId;
+		@Override public void render(int patternIndex, boolean pieceHFlip, boolean pieceVFlip, int paletteIndex,
+				int drawX, int drawY) {
+			appendBatchedReplayTile(entry, paletteTextureId, patternIndex, pieceHFlip, pieceVFlip, paletteIndex,
+					drawX, drawY);
+		}
+	}
+	private final ReplayTileSink replayTileSink = new ReplayTileSink();
+
 	private void appendBatchedReplayTiles(SpriteSatEntry entry, int paletteTextureId) {
-		entry.piece().forEachTile(
-				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
-					// CPU preparation uses this same tile decoder before any atlas lookup.
-					// A sprite-mask band can hide single scanlines of this tile.
-					int rowStart = entry.visibleTileRowStart(drawY);
-					int rowEnd = entry.visibleTileRowEnd(drawY);
-					if (rowStart >= rowEnd) {
-						return;
-					}
-					if (spritePresentationBuilder != null) {
-						prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
-						if (rowStart == 0 && rowEnd == 8) {
-							renderPatternWithId(patternIndex, reusableReplayDesc, drawX, drawY);
-						} else {
-							renderPatternRowsWithId(patternIndex, reusableReplayDesc, paletteIndex, pieceHFlip, pieceVFlip,
-									entry.piece().effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
-						}
-						return;
-					}
-					PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
-					if (atlasEntry == null) {
-						return;
-					}
-                    if(entry.presentationSubject().paletteReplay()!=null
-                            || entry.pixelOperation() == SpriteSatEntry.PixelOperation.SHADOW_15) {
-                        prepareReplayDesc(entry,patternIndex,pieceHFlip,pieceVFlip,paletteIndex);
-                        flushSatReplayBatch();
-                        registerCommand(obtainReplayCommand(entry,atlasEntry,paletteTextureId,paletteIndex,
-                                pieceHFlip,pieceVFlip,drawX,drawY,rowStart,rowEnd));return;
-                    }
-					prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
-					if (addToSatReplayBatch(entry, atlasEntry, paletteIndex, pieceHFlip, pieceVFlip, drawX, drawY,
-							rowStart, rowEnd)) {
-						return;
-					}
-					// Unsupported state: flush first so draw order is preserved, then draw direct.
-					flushSatReplayBatch();
-					registerCommand(obtainReplayCommand(entry, atlasEntry, paletteTextureId, paletteIndex,
-							pieceHFlip, pieceVFlip, drawX, drawY, rowStart, rowEnd));
-				});
+		// A nested replay (none is expected) gets its own sink rather than clobbering the outer one.
+		ReplayTileSink sink = replayTileSink.entry == null ? replayTileSink : new ReplayTileSink();
+		sink.entry = entry;
+		sink.paletteTextureId = paletteTextureId;
+		try { entry.piece().forEachTile(sink); }
+		finally { sink.entry = null; }
+	}
+
+	private void appendBatchedReplayTile(SpriteSatEntry entry, int paletteTextureId, int patternIndex,
+			boolean pieceHFlip, boolean pieceVFlip, int paletteIndex, int drawX, int drawY) {
+		// CPU preparation uses this same tile decoder before any atlas lookup.
+		// A sprite-mask band can hide single scanlines of this tile.
+		int rowStart = entry.visibleTileRowStart(drawY);
+		int rowEnd = entry.visibleTileRowEnd(drawY);
+		if (rowStart >= rowEnd) {
+			return;
+		}
+		if (spritePresentationBuilder != null) {
+			prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
+			if (rowStart == 0 && rowEnd == 8) {
+				renderPatternWithId(patternIndex, reusableReplayDesc, drawX, drawY);
+			} else {
+				renderPatternRowsWithId(patternIndex, reusableReplayDesc, paletteIndex, pieceHFlip, pieceVFlip,
+						entry.piece().effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
+			}
+			return;
+		}
+		PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
+		if (atlasEntry == null) {
+			return;
+		}
+        if(entry.presentationSubject().paletteReplay()!=null
+                || entry.pixelOperation() == SpriteSatEntry.PixelOperation.SHADOW_15) {
+            prepareReplayDesc(entry,patternIndex,pieceHFlip,pieceVFlip,paletteIndex);
+            flushSatReplayBatch();
+            registerCommand(obtainReplayCommand(entry,atlasEntry,paletteTextureId,paletteIndex,
+                    pieceHFlip,pieceVFlip,drawX,drawY,rowStart,rowEnd));return;
+        }
+		prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
+		if (addToSatReplayBatch(entry, atlasEntry, paletteIndex, pieceHFlip, pieceVFlip, drawX, drawY,
+				rowStart, rowEnd)) {
+			return;
+		}
+		// Unsupported state: flush first so draw order is preserved, then draw direct.
+		flushSatReplayBatch();
+		registerCommand(obtainReplayCommand(entry, atlasEntry, paletteTextureId, paletteIndex,
+				pieceHFlip, pieceVFlip, drawX, drawY, rowStart, rowEnd));
 	}
 
 	private boolean addToSatReplayBatch(SpriteSatEntry satEntry, PatternAtlas.Entry atlasEntry, int paletteIndex,
