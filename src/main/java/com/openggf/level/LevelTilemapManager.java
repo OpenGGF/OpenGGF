@@ -1600,7 +1600,10 @@ public class LevelTilemapManager {
         int rowsPerCell = blockPixelSize / Pattern.PATTERN_HEIGHT;
         for (int first = changedForegroundCellRows.nextSetBit(0); first >= 0;
                 first = changedForegroundCellRows.nextSetBit(first)) {
-            int end = changedForegroundCellRows.nextClearBit(first);
+            int end = first + 1;
+            while (changedForegroundCellRows.get(end)) {
+                end++;
+            }
             int firstRow = first * rowsPerCell;
             com.openggf.graphics.TilemapGpuRendererInternalAccess.setForegroundTilemapRows(renderer,
                     foregroundTilemapData, widthTiles, heightTiles,
